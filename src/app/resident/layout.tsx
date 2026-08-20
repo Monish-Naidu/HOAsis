@@ -1,5 +1,5 @@
 import { ResidentShell } from "@/components/app/resident-shell";
-import { association, currentOwner } from "@/lib/data";
+import { assistantContext, association, currentOwner } from "@/lib/data";
 
 export const metadata = { title: { default: "Resident", template: "%s · HOAsis" } };
 
@@ -10,6 +10,7 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
       ownerName={currentOwner.members[0]}
       unit={currentOwner.unit}
       address={currentOwner.address}
+      assistant={assistantContext()}
     >
       {children}
     </ResidentShell>

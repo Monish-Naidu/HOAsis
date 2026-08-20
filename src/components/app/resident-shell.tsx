@@ -8,6 +8,8 @@ import { Avatar } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { residentTabs } from "@/components/app/resident-nav";
+import { Assistant } from "@/components/app/assistant";
+import type { AssistantContext } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,12 +28,14 @@ export function ResidentShell({
   ownerName,
   unit,
   address,
+  assistant,
 }: {
   children: React.ReactNode;
   associationName: string;
   ownerName: string;
   unit: string;
   address: string;
+  assistant: AssistantContext;
 }) {
   const [phonePreview, setPhonePreview] = useState(false);
   const pathname = usePathname();
@@ -131,6 +135,7 @@ export function ResidentShell({
               address={address}
             />
             <main className="no-scrollbar flex-1 overflow-y-auto px-4 pb-6 pt-4">{children}</main>
+            <Assistant context={assistant} variant="inset" />
             <TabBar pathname={pathname} />
           </div>
         </div>
@@ -192,6 +197,7 @@ export function ResidentShell({
         </aside>
         <main className="min-w-0 flex-1 lg:max-w-2xl">{children}</main>
       </div>
+      <Assistant context={assistant} />
       <div className="lg:hidden">
         <TabBar pathname={pathname} />
       </div>

@@ -246,6 +246,87 @@ export function ownerBalanceDue() {
   };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Assistant context                                                           */
+/*                                                                             */
+/* A serializable snapshot the in-app assistant answers from. Every number it  */
+/* can say comes from here, so it cannot invent one.                           */
+/* -------------------------------------------------------------------------- */
+
+export function assistantContext() {
+  const due = ownerBalanceDue();
+  const cash = cashPosition();
+  const interest = interestSummary();
+  const reserve = reserveSummary();
+  const mine = requestsForOwner(CURRENT_OWNER_ID);
+  const lastPayment = ownerCharges.find((c) => c.kind === "payment");
+  const live = liveMeeting();
+
+  return {
+    owner: {
+      name: currentOwner.members[0],
+      unit: currentOwner.unit,
+      balanceCents: due.balanceCents,
+      nextChargeDate: due.nextChargeDate,
+      standing: currentOwner.standing,
+      daysPastDue: currentOwner.daysPastDue,
+      autopay: currentOwner.autopay,
+      lastPayment: lastPayment
+        ? {
+            date: lastPayment.date,
+            amountCents: Math.abs(lastPayment.amountCents),
+            method: lastPayment.method,
+            appliedTo: lastPayment.appliedTo?.map((a) => a.label) ?? [],
+          }
+        : undefined,
+    },
+    association: {
+      name: association.name,
+      duesCents: association.duesCents,
+      unitCount: association.unitCount,
+      operatingCents: cash.operating,
+      reserveCents: cash.reserve,
+      interestYtdCents: interest.earnedYtd,
+      blendedApy: interest.blendedApy,
+      reservePercentFunded: reserve.percentFunded,
+    },
+    methods: paymentMethods.map((m) => ({
+      label: m.label,
+      kind: m.kind,
+      feeCents: m.feeCents,
+      feePercent: m.feePercent,
+    })),
+    meetings: upcomingMeetings().map((m) => ({
+      title: m.title,
+      date: m.date,
+      time: m.time,
+      location: m.location,
+      dialIn: m.dialIn,
+      status: m.status,
+    })),
+    liveMeeting: live ? { title: live.title, attendees: live.attendees.length } : undefined,
+    events: events.map((e) => ({ title: e.title, date: e.date, time: e.time, location: e.location })),
+    ballots: ballots
+      .filter((b) => b.audience === "owners" && b.status === "open")
+      .map((b) => ({
+        title: b.title,
+        closesDate: b.closesDate,
+        voted: Boolean(b.myVoteOptionId),
+      })),
+    requests: mine.map((r) => ({
+      reference: r.reference,
+      title: r.title,
+      status: r.status,
+      submittedDate: r.submittedDate,
+    })),
+    documentCount: documents.filter((d) => d.visibility !== "board").length,
+    amenities: amenities.map((a) => ({ name: a.name, status: a.status, detail: a.detail })),
+    support: { phone: "(888) 555-0199", hours: "7am to 11pm, every day" },
+  };
+}
+
+export type AssistantContext = ReturnType<typeof assistantContext>;
+
 export function publicDocuments() {
   return documents.filter((d) => d.visibility === "public");
 }
