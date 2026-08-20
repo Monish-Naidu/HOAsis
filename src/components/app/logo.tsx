@@ -35,7 +35,12 @@ export function Wordmark({ className, size = 28 }: { className?: string; size?: 
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <Logo size={size} />
-      <span className="text-[15px] font-semibold tracking-[-0.02em] text-fg">HOAsis</span>
+      <span
+        className="font-semibold tracking-[-0.02em] text-fg"
+        style={{ fontSize: size * 0.54 }}
+      >
+        HOAsis
+      </span>
     </span>
   );
 }
