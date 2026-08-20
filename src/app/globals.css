@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   HOAsis design tokens
+   Navy carries brand + hierarchy; warm neutrals carry surfaces and text.
+   Every value below is mirrored in src/lib/tokens.ts so a future React Native
+   app can consume the identical palette.
+--------------------------------------------------------------------------- */
+
+:root {
+  /* navy ramp */
+  --navy-50:  #f2f5f9;
+  --navy-100: #e3e9f1;
+  --navy-200: #c7d3e3;
+  --navy-300: #9aaec9;
+  --navy-400: #6684a9;
+  --navy-500: #43618b;
+  --navy-600: #2f4a70;
+  --navy-700: #24395a;
+  --navy-800: #1b2b45;
+  --navy-900: #131f33;
+  --navy-950: #0b1524;
+
+  /* warm neutral ramp */
+  --neutral-50:  #fafaf9;
+  --neutral-100: #f4f4f2;
+  --neutral-200: #e7e6e3;
+  --neutral-300: #d5d3ce;
+  --neutral-400: #a8a6a0;
+  --neutral-500: #78766f;
+  --neutral-600: #57554f;
+  --neutral-700: #413f3b;
+  --neutral-800: #2a2926;
+  --neutral-900: #1a1917;
+
+  /* semantic, light */
+  --bg:          var(--neutral-100);
+  --surface:     #ffffff;
+  --surface-2:   var(--neutral-50);
+  --surface-3:   var(--neutral-200);
+  --border:      #e4e3df;
+  --border-2:    #d5d3ce;
+  --fg:          #16202e;
+  --fg-muted:    #6b6f78;
+  --fg-subtle:   #9296a0;
+  --brand:       var(--navy-800);
+  --brand-fg:    #ffffff;
+  --brand-soft:  var(--navy-50);
+  --brand-soft-fg: var(--navy-700);
+  --accent:      #2c6cd1;
+  --ring:        #2c6cd1;
+
+  --ok:        #2e7d5b;
+  --ok-soft:   #e6f2ec;
+  --warn:      #a8710f;
+  --warn-soft: #fbf1de;
+  --danger:    #b3453b;
+  --danger-soft: #fbeae8;
+  --info:      #2c6cd1;
+  --info-soft: #e8f0fc;
+
+  --shadow-sm: 0 1px 2px rgb(11 21 36 / 0.05);
+  --shadow-md: 0 2px 4px -1px rgb(11 21 36 / 0.06), 0 6px 16px -4px rgb(11 21 36 / 0.08);
+  --shadow-lg: 0 8px 32px -8px rgb(11 21 36 / 0.16);
+}
+
+.dark {
+  --bg:          var(--navy-950);
+  --surface:     #101c2e;
+  --surface-2:   var(--navy-900);
+  --surface-3:   var(--navy-800);
+  --border:      #1f3050;
+  --border-2:    #2a4064;
+  --fg:          #e9edf3;
+  --fg-muted:    #9aa8bd;
+  --fg-subtle:   #6c7d96;
+  --brand:       var(--navy-100);
+  --brand-fg:    var(--navy-950);
+  --brand-soft:  var(--navy-800);
+  --brand-soft-fg: var(--navy-100);
+  --accent:      #6ea0f0;
+  --ring:        #6ea0f0;
+
+  --ok:        #5cbd92;
+  --ok-soft:   #122d24;
+  --warn:      #dfa845;
+  --warn-soft: #33270f;
+  --danger:    #e2837a;
+  --danger-soft: #351b19;
+  --info:      #6ea0f0;
+  --info-soft: #12233d;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.35), 0 6px 16px -4px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 8px 32px -8px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-navy-50:  var(--navy-50);
+  --color-navy-100: var(--navy-100);
+  --color-navy-200: var(--navy-200);
+  --color-navy-300: var(--navy-300);
+  --color-navy-400: var(--navy-400);
+  --color-navy-500: var(--navy-500);
+  --color-navy-600: var(--navy-600);
+  --color-navy-700: var(--navy-700);
+  --color-navy-800: var(--navy-800);
+  --color-navy-900: var(--navy-900);
+  --color-navy-950: var(--navy-950);
+
+  --color-bg:        var(--bg);
+  --color-surface:   var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border:    var(--border);
+  --color-border-2:  var(--border-2);
+  --color-fg:        var(--fg);
+  --color-fg-muted:  var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-brand:     var(--brand);
+  --color-brand-fg:  var(--brand-fg);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-fg: var(--brand-soft-fg);
+  --color-accent:    var(--accent);
+
+  --color-ok:        var(--ok);
+  --color-ok-soft:   var(--ok-soft);
+  --color-warn:      var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger:    var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info:      var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --shadow-card: var(--shadow-sm);
+  --shadow-raised: var(--shadow-md);
+  --shadow-float: var(--shadow-lg);
+
+  --radius-card: 0.875rem;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--navy-200);
+    color: var(--navy-950);
+  }
+  .dark ::selection {
+    background: var(--navy-600);
+    color: #fff;
+  }
+}
+
+@layer utilities {
+  /* money, counts, dates: anything that aligns in a column */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@keyframes hoasis-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-rise { animation: hoasis-rise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }

@@ -1,0 +1,411 @@
+import type { ComponentProps, ReactNode } from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+/* -------------------------------------------------------------------------- */
+/* Surface                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export function Card({
+  className,
+  children,
+  as: As = "div",
+  ...props
+}: ComponentProps<"div"> & { as?: "div" | "section" | "article" }) {
+  return (
+    <As
+      className={cn(
+        "rounded-card border border-border bg-surface shadow-card",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </As>
+  );
+}
+
+export function CardHeader({
+  title,
+  subtitle,
+  action,
+  icon,
+  className,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+  icon?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-start justify-between gap-4 border-b border-border px-5 py-4",
+        className,
+      )}
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        {icon ? (
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
+            {icon}
+          </span>
+        ) : null}
+        <div className="min-w-0">
+          <h2 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-fg">
+            {title}
+          </h2>
+          {subtitle ? (
+            <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{subtitle}</p>
+          ) : null}
+        </div>
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+export function SectionTitle({
+  children,
+  action,
+  className,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("mb-3 flex items-baseline justify-between gap-4", className)}>
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+        {children}
+      </h2>
+      {action}
+    </div>
+  );
+}
+
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        {eyebrow ? (
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+            {eyebrow}
+          </p>
+        ) : null}
+        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.025em] text-fg">
+          {title}
+        </h1>
+        {description ? (
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-fg-muted">{description}</p>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </header>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Button                                                                      */
+/* -------------------------------------------------------------------------- */
+
+const buttonStyles = {
+  base: "inline-flex items-center justify-center gap-2 rounded-lg text-[13px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
+  variant: {
+    primary: "bg-brand text-brand-fg hover:opacity-90",
+    secondary: "border border-border-2 bg-surface text-fg hover:bg-surface-2",
+    ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
+    danger: "border border-danger/30 bg-danger-soft text-danger hover:border-danger/50",
+    quiet: "bg-surface-3 text-fg hover:opacity-80",
+  },
+  size: {
+    sm: "h-8 px-3",
+    md: "h-9 px-4",
+    lg: "h-11 px-5 text-sm",
+  },
+} as const;
+
+type ButtonVariant = keyof typeof buttonStyles.variant;
+type ButtonSize = keyof typeof buttonStyles.size;
+
+export function Button({
+  variant = "secondary",
+  size = "md",
+  className,
+  ...props
+}: ComponentProps<"button"> & { variant?: ButtonVariant; size?: ButtonSize }) {
+  return (
+    <button
+      className={cn(
+        buttonStyles.base,
+        buttonStyles.variant[variant],
+        buttonStyles.size[size],
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function ButtonLink({
+  variant = "secondary",
+  size = "md",
+  className,
+  ...props
+}: ComponentProps<typeof Link> & { variant?: ButtonVariant; size?: ButtonSize }) {
+  return (
+    <Link
+      className={cn(
+        buttonStyles.base,
+        buttonStyles.variant[variant],
+        buttonStyles.size[size],
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Badge                                                                       */
+/* -------------------------------------------------------------------------- */
+
+const tones = {
+  neutral: "bg-surface-3 text-fg-muted",
+  brand: "bg-brand-soft text-brand-soft-fg",
+  ok: "bg-ok-soft text-ok",
+  warn: "bg-warn-soft text-warn",
+  danger: "bg-danger-soft text-danger",
+  info: "bg-info-soft text-info",
+} as const;
+
+export type Tone = keyof typeof tones;
+
+export function Badge({
+  tone = "neutral",
+  className,
+  children,
+  dot,
+}: {
+  tone?: Tone;
+  className?: string;
+  children: ReactNode;
+  dot?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-[0.01em]",
+        tones[tone],
+        className,
+      )}
+    >
+      {dot ? <span className="size-1.5 rounded-full bg-current" /> : null}
+      {children}
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Data display                                                                */
+/* -------------------------------------------------------------------------- */
+
+export function Stat({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+  icon,
+  className,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: Tone;
+  icon?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("rounded-card border border-border bg-surface p-4 shadow-card", className)}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          {label}
+        </p>
+        {icon ? <span className="text-fg-subtle">{icon}</span> : null}
+      </div>
+      <p
+        className={cn(
+          "tnum mt-2 text-[24px] font-semibold leading-none tracking-[-0.03em]",
+          tone === "ok" && "text-ok",
+          tone === "danger" && "text-danger",
+          tone === "warn" && "text-warn",
+          tone === "neutral" && "text-fg",
+          tone === "brand" && "text-fg",
+          tone === "info" && "text-info",
+        )}
+      >
+        {value}
+      </p>
+      {hint ? <p className="mt-1.5 text-[12px] leading-snug text-fg-muted">{hint}</p> : null}
+    </div>
+  );
+}
+
+export function Meter({
+  value,
+  tone = "brand",
+  className,
+  "aria-label": ariaLabel,
+}: {
+  value: number;
+  tone?: Tone;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  const pct = Math.max(0, Math.min(1, value)) * 100;
+  const fill = {
+    brand: "bg-navy-700 dark:bg-navy-200",
+    ok: "bg-ok",
+    warn: "bg-warn",
+    danger: "bg-danger",
+    info: "bg-info",
+    neutral: "bg-fg-subtle",
+  }[tone];
+  return (
+    <div
+      className={cn("h-1.5 w-full overflow-hidden rounded-full bg-surface-3", className)}
+      role="progressbar"
+      aria-valuenow={Math.round(pct)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={ariaLabel}
+    >
+      <div className={cn("h-full rounded-full transition-all", fill)} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+export function Avatar({
+  name,
+  className,
+  tone = "brand",
+}: {
+  name: string;
+  className?: string;
+  tone?: "brand" | "neutral";
+}) {
+  const text = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("");
+  return (
+    <span
+      className={cn(
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+        tone === "brand" ? "bg-brand-soft text-brand-soft-fg" : "bg-surface-3 text-fg-muted",
+        className,
+      )}
+      aria-hidden
+    >
+      {text}
+    </span>
+  );
+}
+
+export function Row({
+  className,
+  children,
+  ...props
+}: ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function KeyValue({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-1.5">
+      <dt className="text-[13px] text-fg-muted">{label}</dt>
+      <dd className="tnum text-[13px] font-medium text-fg">{children}</dd>
+    </div>
+  );
+}
+
+export function EmptyState({
+  icon,
+  title,
+  description,
+}: {
+  icon?: ReactNode;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+      {icon ? <div className="mb-3 text-fg-subtle">{icon}</div> : null}
+      <p className="text-sm font-medium text-fg">{title}</p>
+      {description ? (
+        <p className="mt-1 max-w-sm text-[13px] text-fg-muted">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function Callout({
+  tone = "info",
+  title,
+  children,
+  icon,
+  action,
+  className,
+}: {
+  tone?: Tone;
+  title: ReactNode;
+  children?: ReactNode;
+  icon?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
+  const border = {
+    neutral: "border-border",
+    brand: "border-navy-200 dark:border-navy-700",
+    ok: "border-ok/25",
+    warn: "border-warn/30",
+    danger: "border-danger/30",
+    info: "border-info/25",
+  }[tone];
+  return (
+    <div className={cn("rounded-card border p-4", border, tones[tone], className)}>
+      <div className="flex items-start gap-3">
+        {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold">{title}</p>
+          {children ? (
+            <div className="mt-1 text-[13px] leading-relaxed opacity-90">{children}</div>
+          ) : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+    </div>
+  );
+}

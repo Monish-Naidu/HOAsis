@@ -1,0 +1,115 @@
+# HOAsis
+
+Community management for self-managed HOAs. This repo is a **clickable prototype**: real
+screens, real navigation, real derived numbers, backed by fixture data rather than a
+database.
+
+Two experiences share one system of record:
+
+- **`/resident`** is the homeowner portal. It runs two ways from the same screens: a normal
+  responsive website with a sidebar (how most owners will sign in) and an app preview inside a
+  device frame, switched from the top bar. Below `lg` the two are identical. Rendered inside a device frame on desktop
+  because it's designed at phone width and is meant to become the native app.
+- **`/board`** is the treasurer and board workspace: reconciliation, reserve yield,
+  delinquencies, vendor ACH, voting and meetings, and a live compliance register.
+- **`/`** is the landing page and role picker.
+
+## Running it
+
+```bash
+pnpm install
+pnpm dev        # http://localhost:3000
+pnpm build      # production build, all routes prerender
+pnpm lint
+```
+
+## What the product is arguing
+
+Positioning comes from `docs/research/payhoa-competitive-teardown.md`. Three claims drive
+the design:
+
+1. **Books that tie out.** Reconciliation status is a first-class, always-visible concept.
+   Transactions that need a human decision are held *out* of every report until confirmed,
+   and the dashboard says so instead of quietly averaging them in. Nothing is auto-categorized:
+   suggestions carry a confidence score and require a click.
+2. **An app residents use.** Pay, look something up, file a request. Payment methods quote
+   their real processing cost before you commit, and every payment shows which charges it
+   paid off, oldest first.
+3. **Voting people finish.** Ballots carry paragraphs, not one unformatted block. Tallies,
+   quorum, and threshold are visible without opening each ballot. Owners get a receipt code;
+   the secretary gets a tally that reconciles to the receipts. Meetings carry a call and a
+   dial-in, so a vote can happen while everyone is on the line.
+4. **Reserves that earn.** Balance, blended yield, interest earned, deposit insurance
+   exposure, and what moving the balance to a better rate would be worth.
+5. **Compliance as a feature.** Obligations are dated, cited, assigned, and carry the
+   evidence a board would need to produce if challenged: reserve study cadence, budget
+   ratification, records requests, corporate good standing.
+
+## Architecture
+
+```
+src/
+  app/
+    page.tsx              landing / role picker
+    resident/             phone-first shell + tab bar
+    board/                sidebar workspace
+  components/
+    ui/primitives.tsx     Card, Button, Badge, Stat, Meter, Callout, …
+    app/                  shells, nav, theme toggle, logo
+  lib/
+    types.ts              domain model, the contract between UI and data
+    tokens.ts             platform-agnostic design tokens (for the RN app)
+    utils.ts              money/date formatting, `cn`
+    data/                 fixtures + repository layer
+      index.ts            every screen imports from here and nowhere else
+```
+
+**The repository layer is the seam.** Screens never touch a fixture file directly; they call
+selectors in `src/lib/data/index.ts`. Swapping in Supabase means reimplementing those
+functions, not rewriting screens.
+
+**Derived numbers are computed, never stored.** Collection rate, percent funded, budget pace,
+payout speed, and compliance score all derive from the underlying records, so the figure on
+the dashboard cannot drift from the figure on the detail page.
+
+**Money is integer cents. Dates are `YYYY-MM-DD` strings.** `TODAY` in `src/lib/utils.ts` is
+pinned to 2026-08-20 so relative dates ("in 5 days") read identically on every machine.
+
+## Design system
+
+Navy carries brand and hierarchy; warm neutrals carry surfaces and text. Tokens live in two
+places that must stay in sync:
+
+- `src/app/globals.css` holds CSS custom properties, mapped into Tailwind v4 via `@theme inline`.
+  Semantic names (`--bg`, `--surface`, `--fg`, `--brand`) are redefined under `.dark`, so
+  components use `bg-surface` / `text-fg` and never a raw ramp value.
+- `src/lib/tokens.ts` holds the same palette as plain TypeScript, for the React Native app.
+
+Theme has three states (light / dark / system), toggled via `ThemeToggle` and applied
+pre-paint by an inline script so there's no flash on reload.
+
+## Fixture data
+
+A fictional 88-unit Washington HOA (Cedar Hollow, Brier). Fourteen households are hand-written
+because the prototype tells stories about them; the remaining 76 are generated
+deterministically so roster-wide rates are honest.
+
+**The compliance register is parked.** Cedar Hollow was recorded in 2015, so RCW 64.38 governs
+rather than WUCIOA (RCW 64.90), which covers communities created on or after July 1, 2018. The
+entries there are chapter level placeholders: the chapter is right, the deadline math is not
+verified, and the screen says so. Do not deepen them without a legal pass.
+
+## Not built yet
+
+Auth, persistence, real payments, and the native app. Every write action in the UI is inert or
+local component state.
+
+The meeting room is a design surface, not a working call: no WebRTC or call provider is wired
+up, so participant tiles show initials and the camera slot says so out loud. Dropping in Daily,
+LiveKit, or Twilio later would replace `src/components/app/meeting-room.tsx` and nothing else.
+
+**On a board app.** Worth doing, but not as a shrunken version of this workspace. The board
+work that is genuinely phone-shaped is approvals, votes, a balance check, and answering an
+owner. Reconciliation, budgets, and reports stay on a desktop. The board screens here are
+responsive down to phone width for that reason, but the native board app should ship as that
+short list, not the whole sidebar.

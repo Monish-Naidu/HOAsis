@@ -1,0 +1,202 @@
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileWarning,
+  Landmark,
+  ShieldAlert,
+  Timer,
+  Truck,
+} from "lucide-react";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  PageHeader,
+  Stat,
+} from "@/components/ui/primitives";
+import { payouts, payoutSpeed, payoutsAwaitingApproval, vendorGaps, vendors } from "@/lib/data";
+import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
+
+export const metadata = { title: "Vendors" };
+
+const payoutTone = {
+  paid: "ok",
+  "in-transit": "warn",
+  scheduled: "info",
+  "needs-approval": "warn",
+} as const;
+
+export default function BoardVendors() {
+  const gaps = vendorGaps();
+  const speed = payoutSpeed();
+  const awaiting = payoutsAwaitingApproval();
+  const achShare = vendors.filter((v) => v.achEnabled).length / vendors.length;
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Payables"
+        title="Vendors"
+        
+        action={<Button variant="primary" size="md">Add vendor</Button>}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          label="ACH enabled"
+          value={`${Math.round(achShare * 100)}%`}
+          tone="ok"
+          hint={`${vendors.filter((v) => v.achEnabled).length} of ${vendors.length} vendors`}
+          icon={<Landmark className="size-4" />}
+        />
+        <Stat
+          label="ACH settlement"
+          value={`${speed.ach.toFixed(1)} days`}
+          tone="ok"
+          hint={`Checks average ${speed.check.toFixed(0)} days`}
+          icon={<Timer className="size-4" />}
+        />
+        <Stat
+          label="Awaiting approval"
+          value={String(awaiting.length)}
+          tone="warn"
+          hint="Two signatures required over $1,000"
+        />
+        <Stat
+          label="Document gaps"
+          value={String(gaps.missingW9.length + gaps.expiringCoi.length)}
+          tone={gaps.missingW9.length ? "danger" : "warn"}
+          hint="Missing W-9s and expiring COIs"
+          icon={<FileWarning className="size-4" />}
+        />
+      </div>
+
+      {gaps.missingW9.length ? (
+        <Callout
+          tone="danger"
+          className="mt-5"
+          icon={<ShieldAlert className="size-4" />}
+          title={`${gaps.missingW9[0].name} has no W-9 on file`}
+          action={
+            <Button variant="secondary" size="sm">
+              Request W-9
+            </Button>
+          }
+        >
+          Paid {money(gaps.missingW9[0].ytdPaidCents)} year to date, past the $600 threshold for a
+          1099-NEC. Without the W-9 the January filing will be wrong.
+        </Callout>
+      ) : null}
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-5">
+        <Card className="lg:col-span-3">
+          <CardHeader
+            title="Vendor list"
+            
+            icon={<Truck className="size-4" />}
+          />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-left">
+              <thead>
+                <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                  <th className="px-5 py-2.5 font-semibold">Vendor</th>
+                  <th className="px-3 py-2.5 font-semibold">Rail</th>
+                  <th className="px-3 py-2.5 font-semibold">Docs</th>
+                  <th className="px-5 py-2.5 text-right font-semibold">Paid YTD</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendors.map((v) => {
+                  const coiDays = v.coiExpires ? daysFromToday(v.coiExpires) : null;
+                  const coiSoon = coiDays !== null && coiDays < 60;
+                  return (
+                    <tr
+                      key={v.id}
+                      className="border-b border-border text-[13px] transition-colors last:border-b-0 hover:bg-surface-2"
+                    >
+                      <td className="px-5 py-3">
+                        <p className="font-medium text-fg">{v.name}</p>
+                        <p className="text-[11px] text-fg-muted">{v.service}</p>
+                      </td>
+                      <td className="px-3 py-3">
+                        {v.achEnabled ? (
+                          <Badge tone="ok">ACH</Badge>
+                        ) : (
+                          <Badge tone="warn">Check</Badge>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {v.w9OnFile ? (
+                            <Badge tone="neutral">W-9</Badge>
+                          ) : (
+                            <Badge tone="danger">
+                              <AlertTriangle className="size-2.5" />
+                              No W-9
+                            </Badge>
+                          )}
+                          {v.coiExpires ? (
+                            <Badge tone={coiSoon ? "warn" : "neutral"}>
+                              COI {coiSoon ? relativeDays(v.coiExpires) : formatDate(v.coiExpires)}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="tnum px-5 py-3 text-right font-semibold text-fg">
+                        {money(v.ytdPaidCents, { cents: false })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader title="Recent payouts" />
+          {payouts.map((p) => (
+            <div key={p.id} className="border-b border-border px-5 py-3.5 last:border-b-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-fg">{p.vendor}</p>
+                  <p className="text-[11px] text-fg-muted">{p.invoiceNumber}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="tnum text-[13px] font-semibold text-fg">
+                    {money(p.amountCents, { cents: false })}
+                  </p>
+                  <Badge tone={payoutTone[p.status]} className="mt-0.5">
+                    {p.status.replace("-", " ")}
+                  </Badge>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-fg-subtle">
+                <span className="font-medium uppercase">{p.method}</span>
+                <span>
+                  {p.status === "paid" ? "landed" : "lands"} {relativeDays(p.expectedDate)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  {p.approvals.length >= p.approvalsRequired ? (
+                    <CheckCircle2 className="size-3 text-ok" />
+                  ) : (
+                    <AlertTriangle className="size-3 text-warn" />
+                  )}
+                  {p.approvals.length}/{p.approvalsRequired} approvals
+                </span>
+              </div>
+              {p.method === "check" ? (
+                <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-[11px] leading-snug text-warn">
+                  Check rail, {daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)} days in
+                  transit. Ask this vendor to enable ACH.
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </Card>
+      </div>
+    </>
+  );
+}

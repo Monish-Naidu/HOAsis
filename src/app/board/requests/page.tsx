@@ -1,0 +1,196 @@
+import Link from "next/link";
+import { AlertTriangle, Camera, Clock, Eye, Gavel, Inbox } from "lucide-react";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  PageHeader,
+  Stat,
+} from "@/components/ui/primitives";
+import { openRequests, requests, requestsOnClock, violations } from "@/lib/data";
+import { formatDate, relativeDays } from "@/lib/utils";
+import type { RequestStatus, Violation } from "@/lib/types";
+
+export const metadata = { title: "Requests" };
+
+const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
+  approved: "ok",
+  denied: "danger",
+  "in-review": "info",
+  "info-needed": "warn",
+  submitted: "neutral",
+  closed: "neutral",
+  draft: "neutral",
+};
+
+const stageMeta: Record<Violation["stage"], { tone: "ok" | "warn" | "danger" | "neutral"; label: string }> =
+  {
+    courtesy: { tone: "neutral", label: "Courtesy notice" },
+    "first-notice": { tone: "warn", label: "First notice" },
+    hearing: { tone: "danger", label: "Hearing set" },
+    fined: { tone: "danger", label: "Fined" },
+    cured: { tone: "ok", label: "Cured" },
+  };
+
+export default function BoardRequests() {
+  const open = openRequests();
+  const clocks = requestsOnClock();
+  const decided = requests.filter((r) => ["approved", "denied", "closed"].includes(r.status));
+  const openViolations = violations.filter((v) => v.stage !== "cured");
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Owner requests & enforcement"
+        title="Requests"
+        
+        action={
+          <Link
+            href="/resident/requests"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-2 px-4 text-[13px] font-medium text-fg hover:bg-surface-2"
+          >
+            <Eye className="size-3.5" />
+            See the resident&apos;s view
+          </Link>
+        }
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Open requests" value={String(open.length)} icon={<Inbox className="size-4" />} />
+        <Stat
+          label="On a legal clock"
+          value={String(clocks.length)}
+          tone="warn"
+          hint={clocks[0] ? `Soonest: ${relativeDays(clocks[0].dueDate!)}` : undefined}
+          icon={<Clock className="size-4" />}
+        />
+        <Stat
+          label="Open violations"
+          value={String(openViolations.length)}
+          icon={<Gavel className="size-4" />}
+        />
+        <Stat label="Decided this month" value={String(decided.length)} tone="ok" />
+      </div>
+
+      {/* Clock queue */}
+      <Card className="mt-5">
+        <CardHeader
+          title="On the clock"
+          
+          icon={<AlertTriangle className="size-4" />}
+        />
+        {clocks.map((r) => (
+          <div
+            key={r.id}
+            className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
+          >
+            <div
+              className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-lg ${
+                r.daysLeft <= 5 ? "bg-warn-soft text-warn" : "bg-surface-3 text-fg-muted"
+              }`}
+            >
+              <span className="tnum text-[15px] font-bold leading-none">{r.daysLeft}</span>
+              <span className="text-[9px] font-semibold uppercase">days</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[13px] font-semibold text-fg">{r.title}</p>
+                <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
+              </div>
+              <p className="mt-0.5 text-[11px] text-fg-muted">
+                {r.reference} · Unit {r.unit} · {r.ownerName}
+              </p>
+              <p className="mt-0.5 text-[11px] text-fg-subtle">{r.dueReason}</p>
+            </div>
+            <div className="flex gap-1.5">
+              <Button variant="primary" size="sm">
+                Respond
+              </Button>
+              <Button variant="ghost" size="sm">
+                Assign
+              </Button>
+            </div>
+          </div>
+        ))}
+      </Card>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        {/* Queue */}
+        <Card>
+          <CardHeader title="Open queue" subtitle={`${open.length} awaiting a decision`} />
+          {open.map((r) => (
+            <div
+              key={r.id}
+              className="flex items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
+            >
+              <Avatar name={r.ownerName} tone="neutral" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium leading-snug text-fg">{r.title}</p>
+                <p className="mt-0.5 text-[11px] text-fg-muted">
+                  {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
+                </p>
+                <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-fg-muted">
+                  {r.summary}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
+                  <span className="text-[11px] text-fg-subtle">
+                    {r.thread.length} updates
+                    {r.attachments.length ? ` · ${r.attachments.length} files` : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </Card>
+
+        {/* Violations */}
+        <Card>
+          <CardHeader
+            title="Violations"
+            
+            icon={<Gavel className="size-4" />}
+          />
+          {violations.map((v) => {
+            const meta = stageMeta[v.stage];
+            return (
+              <div
+                key={v.id}
+                className="flex items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[13px] font-medium text-fg">{v.rule}</p>
+                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-fg-muted">
+                    {v.reference} · Unit {v.unit} · {v.ownerName}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-fg-subtle">
+                    {v.ruleCitation} · opened {formatDate(v.openedDate)}
+                    {v.stage !== "cured" ? ` · next action ${relativeDays(v.nextActionDate)}` : ""}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  {v.fineCents ? (
+                    <p className="tnum text-[13px] font-semibold text-danger">
+                      ${(v.fineCents / 100).toFixed(0)}
+                    </p>
+                  ) : null}
+                  {v.photoCount ? (
+                    <p className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-fg-subtle">
+                      <Camera className="size-3" />
+                      {v.photoCount}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+    </>
+  );
+}
