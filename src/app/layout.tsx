@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   },
   description:
     "Books that reconcile, an app residents use, and compliance handled.",
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

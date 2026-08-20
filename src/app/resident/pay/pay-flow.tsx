@@ -42,6 +42,7 @@ export function PayFlow({
   const [submitted, setSubmitted] = useState(false);
 
   const selected = methods.find((m) => m.id === selectedId)!;
+  const autopayMethod = methods.find((m) => m.isDefault) ?? methods[0];
   const amountCents = useMemo(() => {
     if (amountMode === "balance") return balanceCents;
     const parsed = Math.round(Number(custom.replace(/[^0-9.]/g, "")) * 100);
@@ -246,7 +247,7 @@ export function PayFlow({
                 Autopay {money(duesCents)} on the 1st
               </p>
               <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">
-                From {selected.label} ••{selected.mask}. Cancel any time.
+                From {autopayMethod.label} ••{autopayMethod.mask}. Cancel any time.
               </p>
             </div>
             <button
@@ -256,14 +257,14 @@ export function PayFlow({
               aria-label="Enable autopay"
               onClick={() => setAutopay((v) => !v)}
               className={cn(
-                "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+                "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors",
                 autopay ? "bg-ok" : "bg-surface-3",
               )}
             >
               <span
                 className={cn(
-                  "absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
-                  autopay ? "translate-x-[22px]" : "translate-x-0.5",
+                  "absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
+                  autopay ? "translate-x-5" : "translate-x-0",
                 )}
               />
             </button>
