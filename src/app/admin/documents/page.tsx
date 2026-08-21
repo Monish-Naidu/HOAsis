@@ -1,16 +1,15 @@
+"use client";
+
 import {
   Building2,
   ExternalLink,
   FileSpreadsheet,
   FileText,
   Globe,
-  Lock,
   Search,
   Upload,
-  Users,
 } from "lucide-react";
 import {
-  Badge,
   Button,
   Callout,
   Card,
@@ -18,20 +17,12 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { documents, publicDocuments } from "@/lib/data";
+import { useState } from "react";
+import { useAppState } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { formatDate } from "@/lib/utils";
 import type { DocumentRecord } from "@/lib/types";
 
-export const metadata = { title: "Documents" };
-
-const visibilityMeta: Record<
-  DocumentRecord["visibility"],
-  { tone: "ok" | "neutral" | "warn"; label: string; icon: typeof Globe }
-> = {
-  public: { tone: "ok", label: "Public", icon: Globe },
-  members: { tone: "neutral", label: "Owners", icon: Users },
-  board: { tone: "warn", label: "Board only", icon: Lock },
-};
 
 const order: DocumentRecord["category"][] = [
   "Governing",
@@ -43,10 +34,20 @@ const order: DocumentRecord["category"][] = [
 ];
 
 export default function BoardDocuments() {
-  const publicDocs = publicDocuments();
+  const { documents, addDocument, setDocumentVisibility } = useAppState();
+  const { notify } = useToast();
+  const [query, setQuery] = useState("");
+  const publicDocs = documents.filter((d) => d.visibility === "public");
   const statutory = documents.filter((d) => d.requiredBy);
   const grouped = order
-    .map((category) => ({ category, docs: documents.filter((d) => d.category === category) }))
+    .map((category) => ({
+      category,
+      docs: documents.filter(
+        (d) =>
+          d.category === category &&
+          d.name.toLowerCase().includes(query.trim().toLowerCase()),
+      ),
+    }))
     .filter((g) => g.docs.length);
 
   return (
@@ -56,7 +57,23 @@ export default function BoardDocuments() {
         title="Documents"
         
         action={
-          <Button variant="primary" size="md">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => {
+              const index = documents.length + 1;
+              addDocument({
+                id: `doc-${index}`,
+                name: `Board upload ${index}`,
+                category: "Notices",
+                updatedDate: "2026-08-21",
+                size: "0 KB",
+                visibility: "members",
+                fileType: "pdf",
+              });
+              notify("Uploaded. Set who can see it below.");
+            }}
+          >
             <Upload className="size-3.5" />
             Upload
           </Button>
@@ -87,7 +104,11 @@ export default function BoardDocuments() {
         icon={<Globe className="size-4" />}
         title="Public records page is live"
         action={
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => notify("Public records page opens in a new tab", "info")}
+          >
             <ExternalLink className="size-3.5" />
             Open
           </Button>
@@ -103,7 +124,10 @@ export default function BoardDocuments() {
             <div className="hidden h-8 items-center gap-2 rounded-lg border border-border px-2.5 sm:flex">
               <Search className="size-3.5 text-fg-subtle" />
               <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search documents"
+                aria-label="Search documents"
                 className="w-40 bg-transparent text-[12px] text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
@@ -117,8 +141,6 @@ export default function BoardDocuments() {
               </p>
             </div>
             {docs.map((d) => {
-              const meta = visibilityMeta[d.visibility];
-              const Icon = meta.icon;
               return (
                 <div
                   key={d.id}
@@ -138,10 +160,22 @@ export default function BoardDocuments() {
                       {d.requiredBy ? ` · required by ${d.requiredBy}` : ""}
                     </p>
                   </div>
-                  <Badge tone={meta.tone}>
-                    <Icon className="size-2.5" />
-                    {meta.label}
-                  </Badge>
+                  <select
+                    value={d.visibility}
+                    onChange={(e) => {
+                      setDocumentVisibility(
+                        d.id,
+                        e.target.value as "public" | "members" | "board",
+                      );
+                      notify(`${d.name} is now ${e.target.value}`);
+                    }}
+                    aria-label={`Who can see ${d.name}`}
+                    className="h-7 rounded-md border border-border bg-surface-2 px-2 text-[11px] font-medium text-fg outline-none"
+                  >
+                    <option value="public">Public</option>
+                    <option value="members">Owners</option>
+                    <option value="board">Board only</option>
+                  </select>
                 </div>
               );
             })}

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -18,14 +20,25 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { threads, unreadThreadCount } from "@/lib/data";
+import { useState } from "react";
+import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { formatDate } from "@/lib/utils";
 
-export const metadata = { title: "Communications" };
-
 export default function BoardCommunications() {
-  const active = threads[0];
-  const unread = unreadThreadCount();
+  const { threads, replyToThread } = useAppState();
+  const unread = useUnreadThreadCount();
+  const { notify } = useToast();
+  const [activeId, setActiveId] = useState(threads[0]?.id);
+  const [draft, setDraft] = useState("");
+  const active = threads.find((t) => t.id === activeId) ?? threads[0];
+
+  function send() {
+    if (!draft.trim() || !active) return;
+    replyToThread(active.id, draft.trim());
+    setDraft("");
+    notify(`Reply sent to ${active.participants[0]}`);
+  }
 
   return (
     <>
@@ -34,7 +47,11 @@ export default function BoardCommunications() {
         title="Communications"
         
         action={
-          <Button variant="primary" size="md">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => notify("Composer opens with the full owner list", "info")}
+          >
             <Send className="size-3.5" />
             New message
           </Button>
@@ -61,6 +78,8 @@ export default function BoardCommunications() {
           {threads.map((t) => (
             <button
               key={t.id}
+              type="button"
+              onClick={() => setActiveId(t.id)}
               className={`flex w-full items-start gap-3 border-b border-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface-2 ${
                 t.id === active.id ? "bg-brand-soft/50" : ""
               }`}
@@ -138,25 +157,38 @@ export default function BoardCommunications() {
                 <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
                   Board (4)
                 </span>
-                <button className="inline-flex items-center gap-1 text-fg-muted hover:text-fg">
+                <button
+                  type="button"
+                  onClick={() => notify("Recipient picker opens here", "info")}
+                  className="inline-flex items-center gap-1 text-fg-muted hover:text-fg"
+                >
                   <AtSign className="size-3" />
                   Add
                 </button>
               </div>
               <textarea
                 rows={3}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
                 placeholder="Write a reply…"
+                aria-label="Reply"
                 className="w-full resize-none rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-fg outline-none placeholder:text-fg-subtle"
               />
               <div className="mt-2.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <button className="inline-flex items-center gap-1.5 text-[12px] font-medium text-fg-muted hover:text-fg">
+                  <button
+                    type="button"
+                    onClick={() => notify("Attachment picker opens here", "info")}
+                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-fg-muted hover:text-fg"
+                  >
                     <Paperclip className="size-3.5" />
                     Attach
                   </button>
-                  <span className="text-[11px] text-fg-subtle">Draft saved 12s ago</span>
+                  <span className="text-[11px] text-fg-subtle">
+                    {draft ? "Draft saved" : "No draft"}
+                  </span>
                 </div>
-                <Button variant="primary" size="sm">
+                <Button variant="primary" size="sm" disabled={!draft.trim()} onClick={send}>
                   <Send className="size-3.5" />
                   Send
                 </Button>

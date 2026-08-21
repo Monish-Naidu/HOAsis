@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -27,24 +29,31 @@ import {
   cashPosition,
   complianceSummary,
   delinquency,
-  payoutsAwaitingApproval,
-  reconciliation,
-  requestsOnClock,
   reserveSummary,
 } from "@/lib/data";
+import {
+  useAppState,
+  usePendingApprovals,
+  useReconciliation,
+} from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
+import { daysFromToday } from "@/lib/utils";
 import { formatDate, money, relativeDays, shortMoney } from "@/lib/utils";
-
-export const metadata = { title: "Dashboard" };
 
 export default function BoardDashboard() {
   const cash = cashPosition();
-  const recon = reconciliation();
+  const recon = useReconciliation();
+  const approvals = usePendingApprovals();
+  const { requests, confirmLedgerEntry, dismissLedgerEntry, approvePayout } = useAppState();
+  const { notify } = useToast();
+  const clocks = requests
+    .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
+    .map((r) => ({ ...r, daysLeft: daysFromToday(r.dueDate!) }))
+    .sort((a, b) => a.daysLeft - b.daysLeft);
   const delinq = delinquency();
   const bud = budgetSummary();
   const reserve = reserveSummary();
   const comp = complianceSummary();
-  const clocks = requestsOnClock();
-  const approvals = payoutsAwaitingApproval();
 
   return (
     <>
@@ -115,6 +124,14 @@ export default function BoardDashboard() {
                 </Link>
               }
             />
+            {recon.needsReview.length === 0 ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-[13px] font-medium text-ok">Nothing left to review</p>
+                <p className="mt-1 text-[12px] text-fg-muted">
+                  Every transaction is cleared, so every report agrees.
+                </p>
+              </div>
+            ) : null}
             {recon.needsReview.map((e) => (
               <div
                 key={e.id}
@@ -143,11 +160,30 @@ export default function BoardDashboard() {
                   {money(e.amountCents)}
                 </span>
                 <div className="flex gap-1.5">
-                  <button className="h-7 rounded-md border border-border-2 px-2.5 text-[12px] font-medium text-fg hover:bg-surface-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      confirmLedgerEntry(e.id);
+                      notify(`Confirmed ${e.description}`);
+                    }}
+                    className="h-7 rounded-md border border-border-2 px-2.5 text-[12px] font-medium text-fg hover:bg-surface-2"
+                  >
                     Confirm
                   </button>
-                  <button className="h-7 rounded-md px-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2">
-                    Edit
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dismissLedgerEntry(e.id);
+                      notify(
+                        e.duplicateOfId
+                          ? "Duplicate removed from the ledger"
+                          : "Transaction dismissed",
+                        "warn",
+                      );
+                    }}
+                    className="h-7 rounded-md px-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2"
+                  >
+                    {e.duplicateOfId ? "Remove" : "Dismiss"}
                   </button>
                 </div>
               </div>
@@ -274,6 +310,11 @@ export default function BoardDashboard() {
               
               icon={<RefreshCw className="size-4" />}
             />
+            {approvals.length === 0 ? (
+              <p className="px-5 py-6 text-center text-[13px] text-fg-muted">
+                Nothing waiting on a signature.
+              </p>
+            ) : null}
             {approvals.map((p) => (
               <div key={p.id} className="border-b border-border px-5 py-3 last:border-b-0">
                 <div className="flex items-start justify-between gap-2">
@@ -287,10 +328,21 @@ export default function BoardDashboard() {
                   {p.method === "ach" ? "ACH, lands in 2 days" : "check"}
                 </p>
                 <div className="mt-2 flex gap-1.5">
-                  <button className="h-7 rounded-md bg-brand px-2.5 text-[12px] font-medium text-brand-fg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      approvePayout(p.id);
+                      notify(`Approved ${p.vendor}`);
+                    }}
+                    className="h-7 rounded-md bg-brand px-2.5 text-[12px] font-medium text-brand-fg"
+                  >
                     Approve
                   </button>
-                  <button className="h-7 rounded-md px-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2">
+                  <button
+                    type="button"
+                    onClick={() => notify(`${p.vendor} put on hold`, "warn")}
+                    className="h-7 rounded-md px-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2"
+                  >
                     Hold
                   </button>
                 </div>

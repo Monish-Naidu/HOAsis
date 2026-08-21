@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { themeScript } from "@/components/app/theme";
 import { AppStateProvider } from "@/lib/app-state";
 import { ErrorBoundary } from "@/components/app/error-boundary";
+import { ToastProvider } from "@/components/app/toast";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -36,7 +37,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <ErrorBoundary label="The app">
-          <AppStateProvider>{children}</AppStateProvider>
+          <AppStateProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AppStateProvider>
         </ErrorBoundary>
       </body>
     </html>

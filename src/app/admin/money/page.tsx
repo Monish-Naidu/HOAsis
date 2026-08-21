@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -23,21 +25,21 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
+import { useMemo, useState } from "react";
 import {
   bankAccounts,
   budgetSummary,
   cashPosition,
   insuranceExposure,
   interestSummary,
-  ledgerEntries,
-  reconciliation,
   reserveComponents,
   reserveSummary,
   yieldOpportunity,
 } from "@/lib/data";
+import { useAppState, useReconciliation } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
+import { downloadCsv, toCsv } from "@/lib/core/export";
 import { formatDate, money, shortMoney } from "@/lib/utils";
-
-export const metadata = { title: "Money" };
 
 const savedViews = [
   { name: "Everything, this month", starred: true },
@@ -48,7 +50,38 @@ const savedViews = [
 
 export default function BoardMoney() {
   const cash = cashPosition();
-  const recon = reconciliation();
+  const recon = useReconciliation();
+  const { ledger, confirmLedgerEntry, dismissLedgerEntry } = useAppState();
+  const { notify } = useToast();
+  const [view, setView] = useState("Everything, this month");
+
+  /** Saved views are just named filters over the same ledger. */
+  const rows = useMemo(() => {
+    switch (view) {
+      case "Needs review":
+        return ledger.filter((e) => e.status === "needs-review");
+      case "Reserve activity only":
+        return ledger.filter((e) => e.accountId !== "acct-operating");
+      case "Vendor payments > $1k":
+        return ledger.filter((e) => e.amountCents <= -100_000);
+      default:
+        return ledger;
+    }
+  }, [ledger, view]);
+
+  function exportLedger() {
+    const csv = toCsv(rows, [
+      { header: "Date", value: (e) => e.date },
+      { header: "Description", value: (e) => e.description },
+      { header: "Counterparty", value: (e) => e.counterparty },
+      { header: "Category", value: (e) => e.category },
+      { header: "Account", value: (e) => bankAccounts.find((a) => a.id === e.accountId)?.name },
+      { header: "Amount", value: (e) => (e.amountCents / 100).toFixed(2) },
+      { header: "Status", value: (e) => e.status },
+    ]);
+    downloadCsv(`mehr-gardens-ledger-${view.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, csv);
+    notify(`Exported ${rows.length} transactions`);
+  }
   const reserve = reserveSummary();
   const bud = budgetSummary();
   const interest = interestSummary();
@@ -63,11 +96,23 @@ export default function BoardMoney() {
         
         action={
           <div className="flex gap-2">
-            <Button variant="secondary" size="md">
+            <Button variant="secondary" size="md" onClick={exportLedger}>
               <Download className="size-3.5" />
               Export
             </Button>
-            <Button variant="primary" size="md">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => {
+                const open = recon.needsReview.length;
+                if (open === 0) {
+                  notify("Already reconciled. Every report agrees.");
+                  return;
+                }
+                setView("Needs review");
+                notify(`${open} transactions still need a decision`, "warn");
+              }}
+            >
               Reconcile
             </Button>
           </div>
@@ -164,14 +209,22 @@ export default function BoardMoney() {
       <Card className="mt-5">
         <CardHeader
           title="General ledger"
-          subtitle={`${ledgerEntries.length} transactions · August 2026`}
+          subtitle={`${rows.length} of ${ledger.length} transactions · August 2026`}
           action={
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setView("Needs review")}
+              >
                 <Filter className="size-3.5" />
                 Filters
               </Button>
-              <Button variant="secondary" size="sm">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => notify(`Saved "${view}" to your views`)}
+              >
                 <BookmarkPlus className="size-3.5" />
                 Save view
               </Button>
@@ -181,11 +234,14 @@ export default function BoardMoney() {
 
         {/* Saved views. Filters survive a reload. */}
         <div className="no-scrollbar flex gap-2 overflow-x-auto border-b border-border px-5 py-2.5">
-          {savedViews.map((v, i) => (
+          {savedViews.map((v) => (
             <button
               key={v.name}
+              type="button"
+              onClick={() => setView(v.name)}
+              aria-pressed={view === v.name}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors ${
-                i === 0
+                view === v.name
                   ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
                   : "border-border text-fg-muted hover:bg-surface-2"
               }`}
@@ -209,7 +265,7 @@ export default function BoardMoney() {
               </tr>
             </thead>
             <tbody>
-              {ledgerEntries.map((e) => {
+              {rows.map((e) => {
                 const account = bankAccounts.find((a) => a.id === e.accountId);
                 return (
                   <tr
@@ -253,17 +309,32 @@ export default function BoardMoney() {
                       {money(e.amountCents, { sign: e.amountCents > 0 })}
                     </td>
                     <td className="px-5 py-2.5">
-                      <Badge
-                        tone={
-                          e.status === "cleared"
-                            ? "ok"
-                            : e.status === "pending"
-                              ? "neutral"
-                              : "warn"
-                        }
-                      >
-                        {e.status === "needs-review" ? "review" : e.status}
-                      </Badge>
+                      {e.status === "needs-review" ? (
+                        <span className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              confirmLedgerEntry(e.id);
+                              notify(`Confirmed ${e.description}`);
+                            }}
+                            className="h-7 rounded-md border border-border-2 px-2 text-[11px] font-medium text-fg hover:bg-surface"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              dismissLedgerEntry(e.id);
+                              notify("Removed from the ledger", "warn");
+                            }}
+                            className="h-7 rounded-md px-2 text-[11px] font-medium text-danger hover:bg-danger-soft"
+                          >
+                            Remove
+                          </button>
+                        </span>
+                      ) : (
+                        <Badge tone={e.status === "cleared" ? "ok" : "neutral"}>{e.status}</Badge>
+                      )}
                     </td>
                   </tr>
                 );
@@ -403,6 +474,12 @@ export default function BoardMoney() {
                   variant={o.recommended ? "primary" : "secondary"}
                   size="sm"
                   className="mt-3 w-full"
+                  onClick={() =>
+                    notify(
+                      `Opening ${o.name} needs a recorded board vote. Draft resolution created.`,
+                      "info",
+                    )
+                  }
                 >
                   Open account
                   <ArrowRight className="size-3.5" />

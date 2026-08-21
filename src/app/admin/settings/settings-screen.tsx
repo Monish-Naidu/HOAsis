@@ -136,10 +136,26 @@ export function SettingsScreen() {
               aria-label="Current community photo"
             />
             <div className="mt-2 flex items-center gap-2">
-              <Button variant="secondary" size="sm">
+              <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg hover:bg-surface-2">
                 <Upload className="size-3.5" />
                 Replace photo
-              </Button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    // Object URLs are per tab, so this preview does not survive a
+                    // reload. A real upload puts the file in object storage and
+                    // stores the returned URL instead.
+                    updateSettings({
+                      photoUrl: URL.createObjectURL(file),
+                      photoCredit: file.name,
+                    });
+                  }}
+                />
+              </label>
               {settings.photoCredit ? (
                 <span className="text-[11px] text-fg-subtle">{settings.photoCredit}</span>
               ) : null}

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/primitives";
 import { violations } from "@/lib/data";
 import { bucketRequests, useAppState } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { daysFromToday } from "@/lib/utils";
 import { formatDate, relativeDays } from "@/lib/utils";
 import type { RequestStatus, Violation } from "@/lib/types";
@@ -37,7 +38,8 @@ const stageMeta: Record<Violation["stage"], { tone: "ok" | "warn" | "danger" | "
   };
 
 export default function BoardRequests() {
-  const { requests } = useAppState();
+  const { requests, updateRequestStatus } = useAppState();
+  const { notify } = useToast();
   const { open, decided, history } = bucketRequests(requests);
   const clocks = requests
     .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
@@ -115,11 +117,25 @@ export default function BoardRequests() {
               <p className="mt-0.5 text-[11px] text-fg-subtle">{r.dueReason}</p>
             </div>
             <div className="flex gap-1.5">
-              <Button variant="primary" size="sm">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  updateRequestStatus(r.id, "in-review", "Board picked this up for review.");
+                  notify(`${r.reference} moved to in review`);
+                }}
+              >
                 Respond
               </Button>
-              <Button variant="ghost" size="sm">
-                Assign
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  updateRequestStatus(r.id, "info-needed", "Board asked the owner for more detail.");
+                  notify(`Asked unit ${r.unit} for more detail`, "info");
+                }}
+              >
+                Ask for detail
               </Button>
             </div>
           </div>
@@ -144,11 +160,33 @@ export default function BoardRequests() {
                 <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-fg-muted">
                   {r.summary}
                 </p>
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
                   <span className="text-[11px] text-fg-subtle">
                     {r.thread.length} updates
                     {r.attachments.length ? ` · ${r.attachments.length} files` : ""}
+                  </span>
+                  <span className="ml-auto flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateRequestStatus(r.id, "approved", "Approved by the board.");
+                        notify(`${r.reference} approved`);
+                      }}
+                      className="h-7 rounded-md bg-brand px-2.5 text-[11px] font-medium text-brand-fg"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateRequestStatus(r.id, "denied", "Denied by the board.");
+                        notify(`${r.reference} denied`, "warn");
+                      }}
+                      className="h-7 rounded-md px-2.5 text-[11px] font-medium text-danger hover:bg-danger-soft"
+                    >
+                      Deny
+                    </button>
                   </span>
                 </div>
               </div>

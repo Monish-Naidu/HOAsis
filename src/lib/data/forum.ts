@@ -14,6 +14,9 @@ export const forumPosts: ForumPost[] = [
     title: "Pool closes September 8, spa stays open",
     body: "Resurfacing runs September 8 to 19, weather permitting. The spa and fitness room stay open the whole time. Gate codes are unchanged. Posting here as well as email since not everyone reads the email.",
     at: "2026-08-19",
+    status: "published",
+    moderatedBy: "Arya Mehr",
+    moderatedAt: "2026-08-19",
     likes: 14,
     pinned: true,
     replies: [
@@ -41,6 +44,9 @@ export const forumPosts: ForumPost[] = [
     title: "Anyone have a gutter cleaner they actually like?",
     body: "Ours are overflowing again and the last company never showed up twice. Looking for someone reliable before the fall rain really starts.",
     at: "2026-08-18",
+    status: "published",
+    moderatedBy: "Sofia Bergman",
+    moderatedAt: "2026-08-18",
     likes: 9,
     replies: [
       {
@@ -67,6 +73,9 @@ export const forumPosts: ForumPost[] = [
     title: "Found: grey cat with a blue collar near the mailboxes",
     body: "Very friendly, no tag. Sitting on our porch since last night. He is inside and fed. Message me if he is yours.",
     at: "2026-08-20",
+    status: "published",
+    moderatedBy: "Sofia Bergman",
+    moderatedAt: "2026-08-20",
     likes: 22,
     replies: [
       {
@@ -86,6 +95,9 @@ export const forumPosts: ForumPost[] = [
     title: "Free: two Adirondack chairs, need a light sanding",
     body: "Cedar, solid, just weathered. Curbside at 1428 Mehr Gardens Lane. First come.",
     at: "2026-08-17",
+    status: "published",
+    moderatedBy: "Sofia Bergman",
+    moderatedAt: "2026-08-17",
     likes: 6,
     replies: [],
   },
@@ -97,6 +109,9 @@ export const forumPosts: ForumPost[] = [
     title: "Car doors tried overnight on Alder Ridge",
     body: "Camera caught someone checking handles around 2am Tuesday. Nothing taken from us, nothing broken. Filed with Brier PD. Worth locking up and moving anything visible off the seats.",
     at: "2026-08-16",
+    status: "published",
+    moderatedBy: "Sofia Bergman",
+    moderatedAt: "2026-08-16",
     likes: 31,
     replies: [
       {
@@ -124,6 +139,9 @@ export const forumPosts: ForumPost[] = [
     title: "Who is the neighbour with the enormous dahlias?",
     body: "Corner of Mehr Gardens Lane and the green. They are absurd this year and I would like to know the variety.",
     at: "2026-08-14",
+    status: "published",
+    moderatedBy: "Sofia Bergman",
+    moderatedAt: "2026-08-14",
     likes: 18,
     replies: [
       {
@@ -136,6 +154,20 @@ export const forumPosts: ForumPost[] = [
     ],
   },
 ];
+
+/** Waiting on a moderator, so the queue is not empty on first look. */
+forumPosts.push({
+  id: "fp-pending-1",
+  author: "Tessa Moreau",
+  unit: "50",
+  category: "For sale",
+  status: "pending",
+  title: "Selling a barely used paddleboard, $180",
+  body: "Inflatable, comes with the pump and a fin. Used it twice on Lake Ballinger and decided I am a kayak person. Cash or Venmo.",
+  at: "2026-08-21",
+  likes: 0,
+  replies: [],
+});
 
 export const forumCategories = [
   "General",

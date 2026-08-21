@@ -5,6 +5,7 @@ import {
   Heart,
   MessageSquare,
   MessageSquareText,
+  Check,
   Pin,
   Plus,
   Send,
@@ -12,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { useAppState } from "@/lib/app-state";
+import { useAppState, usePendingPosts, useVisiblePosts } from "@/lib/app-state";
 import { forumCategories } from "@/lib/data";
 import { ROLE_LABEL, type ForumCategory, type ForumPost } from "@/lib/types";
 import { cn, formatDate, pluralize } from "@/lib/utils";
@@ -22,7 +23,11 @@ import { cn, formatDate, pluralize } from "@/lib/utils";
  * board, which is exactly why it is kept apart from requests.
  */
 export function ForumBoard({ moderate }: { moderate?: boolean }) {
-  const { posts, account, addPost, likePost, settings } = useAppState();
+  const { account, addPost, likePost, settings, moderatePost, togglePinned, removePost } =
+    useAppState();
+  const readable = useVisiblePosts();
+  const pending = usePendingPosts();
+  const posts = moderate ? readable.filter((p) => p.status === "published") : readable;
   const [filter, setFilter] = useState<ForumCategory | "All">("All");
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
@@ -56,6 +61,10 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
       unit: account.unit,
       authorRole: account.role === "resident" ? undefined : ROLE_LABEL[account.role],
       category,
+      // Admins publish straight away. Everyone else waits for a moderator.
+      status: account.role === "resident" ? "pending" : "published",
+      moderatedBy: account.role === "resident" ? undefined : account.name,
+      moderatedAt: account.role === "resident" ? undefined : "2026-08-21",
       title: title.trim(),
       body: body.trim(),
       at: "2026-08-21",
@@ -117,7 +126,9 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
           />
           <div className="mt-2 flex items-center justify-between border-t border-border pt-2.5">
             <p className="text-[11px] text-fg-subtle">
-              Posts show your name and unit to other owners.
+              {account?.role === "resident"
+                ? "A board member reviews posts before neighbours see them."
+                : "Board posts publish immediately."}
             </p>
             <Button variant="primary" size="sm" disabled={!title.trim()} onClick={submit}>
               <Send className="size-3.5" />
@@ -125,6 +136,47 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
             </Button>
           </div>
         </Card>
+      ) : null}
+
+      {moderate && pending.length > 0 ? (
+        <section>
+          <SectionTitle>Waiting for review ({pending.length})</SectionTitle>
+          <div className="space-y-3">
+            {pending.map((post) => (
+              <Card key={post.id} className="border-warn/30">
+                <div className="p-4">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <Badge tone="warn">Pending</Badge>
+                    <Badge tone="neutral">{post.category}</Badge>
+                    <span className="text-[11px] text-fg-subtle">
+                      {post.author} · Unit {post.unit} · {formatDate(post.at, "long")}
+                    </span>
+                  </div>
+                  <h3 className="text-[15px] font-semibold leading-snug text-fg">{post.title}</h3>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{post.body}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => moderatePost(post.id, "published")}
+                  >
+                    <Check className="size-3.5" />
+                    Publish
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => moderatePost(post.id, "rejected", "Does not fit the forum rules")}
+                  >
+                    <X className="size-3.5" />
+                    Reject
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1">
@@ -160,6 +212,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
             <Card key={p.id} className={cn(p.pinned && "border-l-2 border-l-navy-700 dark:border-l-navy-300")}>
               <div className="p-4">
                 <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                  {p.status === "pending" ? <Badge tone="warn">Awaiting review</Badge> : null}
                   {p.pinned ? (
                     <Badge tone="brand">
                       <Pin className="size-2.5" />
@@ -212,10 +265,18 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 </button>
                 {moderate ? (
                   <span className="ml-auto flex gap-1">
-                    <button className="rounded-md px-2 py-1 text-[12px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg">
+                    <button
+                      type="button"
+                      onClick={() => togglePinned(p.id)}
+                      className="rounded-md px-2 py-1 text-[12px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+                    >
                       {p.pinned ? "Unpin" : "Pin"}
                     </button>
-                    <button className="rounded-md px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger-soft">
+                    <button
+                      type="button"
+                      onClick={() => removePost(p.id)}
+                      className="rounded-md px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger-soft"
+                    >
                       Remove
                     </button>
                   </span>

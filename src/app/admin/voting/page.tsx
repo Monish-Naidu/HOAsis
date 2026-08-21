@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CalendarDays,
   Radio,
@@ -13,18 +15,24 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { ballots, ballotTally, liveMeeting, upcomingMeetings } from "@/lib/data";
+import { liveMeeting, upcomingMeetings } from "@/lib/data";
+import { useAppState } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
+import { BoardVote } from "@/components/app/board-vote";
 import { formatDate } from "@/lib/utils";
-
-export const metadata = { title: "Voting" };
 
 export default function BoardVoting() {
   const live = liveMeeting();
+  const { ballots, castBoardVote } = useAppState();
+  const { notify } = useToast();
   const open = ballots.filter((b) => b.status === "open");
   const scheduled = ballots.filter((b) => b.status === "scheduled");
   const decided = ballots.filter((b) => b.status === "certified" || b.status === "closed");
   const upcoming = upcomingMeetings().filter((m) => m.status !== "live");
-  const totalCast = open.reduce((t, b) => t + ballotTally(b.id).cast, 0);
+  const totalCast = open.reduce(
+    (total, ballot) => total + ballot.options.reduce((sum, o) => sum + o.votes, 0),
+    0,
+  );
   const nextMeeting = upcoming[0];
 
   return (
@@ -33,7 +41,15 @@ export default function BoardVoting() {
         eyebrow="Governance"
         title="Voting and meetings"
         
-        action={<Button variant="primary" size="md">New ballot</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => notify("Ballot builder opens with the notice requirements", "info")}
+          >
+            New ballot
+          </Button>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -114,7 +130,19 @@ export default function BoardVoting() {
         </h2>
         <div className="grid gap-4 xl:grid-cols-2">
           {open.map((b) => (
-            <BallotCard key={b.id} ballot={b} />
+            <div key={b.id} className="space-y-2">
+              <BallotCard ballot={b} />
+              {b.audience === "board" ? (
+                <BoardVote
+                  ballot={b}
+                  onCast={(optionId) => {
+                    castBoardVote(b.id, optionId);
+                    const option = b.options.find((o) => o.id === optionId);
+                    notify(`Your vote was recorded: ${option?.label}`);
+                  }}
+                />
+              ) : null}
+            </div>
           ))}
         </div>
       </section>

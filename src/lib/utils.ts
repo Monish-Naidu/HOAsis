@@ -74,6 +74,13 @@ export function initials(name: string) {
     .join("");
 }
 
+/** 1st, 2nd, 3rd, 4th. Used wherever a day of the month is shown. */
+export function ordinal(n: number): string {
+  const suffixes = ["th", "st", "nd", "rd"];
+  const remainder = n % 100;
+  return `${n}${suffixes[(remainder - 20) % 10] ?? suffixes[remainder] ?? suffixes[0]}`;
+}
+
 export function pluralize(n: number, one: string, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }

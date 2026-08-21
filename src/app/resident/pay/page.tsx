@@ -1,17 +1,8 @@
 import { PayFlow } from "./pay-flow";
-import { ownerBalanceDue, paymentMethods, association, currentOwner } from "@/lib/data";
+import { association } from "@/lib/data";
 
 export const metadata = { title: "Pay" };
 
 export default function PayPage() {
-  const due = ownerBalanceDue();
-  return (
-    <PayFlow
-      balanceCents={due.balanceCents}
-      nextChargeDate={due.nextChargeDate}
-      methods={paymentMethods}
-      autopayOn={currentOwner.autopay}
-      duesCents={association.duesCents}
-    />
-  );
+  return <PayFlow duesCents={association.duesCents} />;
 }

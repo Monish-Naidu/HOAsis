@@ -2,10 +2,29 @@
 
 import { CheckCircle2, Clock, Lock, Users } from "lucide-react";
 import { Badge, Card, Meter } from "@/components/ui/primitives";
-import { ballotTally } from "@/lib/data";
+
 import { useAppState } from "@/lib/app-state";
 import type { Ballot } from "@/lib/types";
-import { formatDate, relativeDays } from "@/lib/utils";
+import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
+
+/**
+ * Turnout and standing for one ballot, derived from the ballot itself rather
+ * than looked up in a frozen fixture, so a vote cast on this page is reflected
+ * immediately.
+ */
+function tally(ballot: Ballot) {
+  const cast = ballot.options.reduce((total, option) => total + option.votes, 0);
+  const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
+  return {
+    cast,
+    leading,
+    quorumMet: cast >= ballot.quorumRequired,
+    quorumProgress: ballot.quorumRequired ? Math.min(1, cast / ballot.quorumRequired) : 1,
+    share: (votes: number) => (cast ? votes / cast : 0),
+    shareOfEligible: (votes: number) => (ballot.eligible ? votes / ballot.eligible : 0),
+    daysLeft: daysFromToday(ballot.closesDate),
+  };
+}
 
 const statusTone = {
   open: "ok",
@@ -28,7 +47,7 @@ const kindLabel = {
  */
 export function BallotCard({ ballot }: { ballot: Ballot }) {
   const { settings } = useAppState();
-  const t = ballotTally(ballot.id);
+  const t = tally(ballot);
   // Sealed until close, unless the board turned live results on.
   const showResults =
     ballot.status === "certified" ||

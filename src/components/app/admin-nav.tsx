@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Banknote,
+  BookOpen,
   FileText,
   Inbox,
   LayoutDashboard,
@@ -60,6 +61,7 @@ const items: {
     need: "documents",
   },
   { href: "/admin/settings", label: "Settings", icon: Settings, key: "settings", need: "settings" },
+  { href: "/admin/legend", label: "Legend", icon: BookOpen, key: "legend" },
 ];
 
 export function AdminNav({ badges }: { badges: Partial<Record<string, NavBadge>> }) {

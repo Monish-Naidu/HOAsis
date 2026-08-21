@@ -29,6 +29,7 @@ import { threads } from "./messages";
 import { accounts, accountById, CAPABILITY_LABEL, DEFAULT_ACCOUNT_ID, GRANTABLE, isAdmin, NO_CAPABILITIES } from "./accounts";
 import { architecturalForms, communityAmenities, communitySettings } from "./settings";
 import { forumCategories, forumPosts } from "./forum";
+import { paymentInstruments, supportedInstitutions } from "./payments";
 import { ballots, meetings } from "./voting";
 import { boardMembers, currentOwner, owners, CURRENT_OWNER_ID } from "./owners";
 import { requests, violations } from "./requests";
@@ -49,6 +50,8 @@ export {
   GRANTABLE,
   isAdmin,
   NO_CAPABILITIES,
+  paymentInstruments,
+  supportedInstitutions,
   announcements,
   association,
   bankAccounts,

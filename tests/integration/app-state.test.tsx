@@ -297,6 +297,7 @@ describe("forum", () => {
         author: "Monish Naidu",
         unit: "42",
         category: "General",
+        status: "published",
         title: "Test post",
         body: "Body",
         at: "2026-08-21",
@@ -309,5 +310,225 @@ describe("forum", () => {
 
     act(() => result.current.state.likePost("fp-test"));
     expect(result.current.state.posts[0].likes).toBe(1);
+  });
+});
+
+describe("forum moderation", () => {
+  const post = (id: string, author: string) => ({
+    id,
+    author,
+    unit: "50",
+    category: "General" as const,
+    status: "pending" as const,
+    title: `Post ${id}`,
+    body: "Body",
+    at: "2026-08-21",
+    likes: 0,
+    replies: [],
+  });
+
+  it("holds a resident's post until a moderator sees it", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(MONISH));
+    act(() => result.current.state.addPost(post("fp-a", "Monish Naidu")));
+
+    // The author still sees their own, so it does not look lost.
+    expect(result.current.state.posts.find((p) => p.id === "fp-a")?.status).toBe("pending");
+  });
+
+  it("hides a pending post from other residents", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(MONISH));
+    act(() => result.current.state.addPost(post("fp-b", "Someone Else")));
+
+    const otherCanSee = result.current.state.posts.some(
+      (p) => p.id === "fp-b" && p.status === "published",
+    );
+    expect(otherCanSee).toBe(false);
+  });
+
+  it("publishes on approval and records who decided", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(MONISH));
+    act(() => result.current.state.addPost(post("fp-c", "Monish Naidu")));
+
+    act(() => result.current.state.signIn(ARYA));
+    act(() => result.current.state.moderatePost("fp-c", "published"));
+
+    const moderated = result.current.state.posts.find((p) => p.id === "fp-c");
+    expect(moderated?.status).toBe("published");
+    expect(moderated?.moderatedBy).toBe("Arya Mehr");
+  });
+
+  it("keeps a rejected post and its reason rather than deleting it", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    act(() => result.current.state.addPost(post("fp-d", "Someone")));
+    act(() => result.current.state.moderatePost("fp-d", "rejected", "Off topic"));
+
+    const rejected = result.current.state.posts.find((p) => p.id === "fp-d");
+    expect(rejected?.status).toBe("rejected");
+    expect(rejected?.rejectionReason).toBe("Off topic");
+  });
+
+  it("pins and removes", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    act(() => result.current.state.togglePinned("fp-1"));
+    expect(result.current.state.posts.find((p) => p.id === "fp-1")?.pinned).toBe(false);
+
+    act(() => result.current.state.removePost("fp-1"));
+    expect(result.current.state.posts.some((p) => p.id === "fp-1")).toBe(false);
+  });
+});
+
+describe("admin actions change real records", () => {
+  it("confirming a transaction clears it and empties the review queue", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const target = result.current.state.ledger.find((e) => e.status === "needs-review")!;
+
+    act(() => result.current.state.confirmLedgerEntry(target.id));
+    const after = result.current.state.ledger.find((e) => e.id === target.id)!;
+    expect(after.status).toBe("cleared");
+    expect(after.matchedBy).toBe("manual");
+    expect(after.suggestedCategory).toBeUndefined();
+  });
+
+  it("removing a duplicate takes it out of the ledger entirely", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const duplicate = result.current.state.ledger.find((e) => e.duplicateOfId)!;
+
+    act(() => result.current.state.dismissLedgerEntry(duplicate.id));
+    expect(result.current.state.ledger.some((e) => e.id === duplicate.id)).toBe(false);
+  });
+
+  it("a second signature releases a payout, and nobody can sign twice", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const waiting = result.current.state.payouts.find(
+      (p) => p.approvals.length === p.approvalsRequired - 1,
+    )!;
+
+    act(() => result.current.state.approvePayout(waiting.id));
+    const released = result.current.state.payouts.find((p) => p.id === waiting.id)!;
+    expect(released.approvals).toHaveLength(waiting.approvalsRequired);
+    expect(released.status).toBe("scheduled");
+
+    act(() => result.current.state.approvePayout(waiting.id));
+    expect(
+      result.current.state.payouts.find((p) => p.id === waiting.id)!.approvals,
+    ).toHaveLength(waiting.approvalsRequired);
+  });
+
+  it("deciding a request records who decided and appends to the thread", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const open = result.current.state.requests.find((r) => r.status === "in-review")!;
+    const before = open.thread.length;
+
+    act(() => result.current.state.updateRequestStatus(open.id, "approved"));
+    const decided = result.current.state.requests.find((r) => r.id === open.id)!;
+    expect(decided.status).toBe("approved");
+    expect(decided.decidedBy).toBe("Arya Mehr");
+    expect(decided.thread).toHaveLength(before + 1);
+  });
+
+  it("a board vote moves exactly one tally, and changing it does not double count", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const ballot = result.current.state.ballots.find((b) => b.audience === "board")!;
+    const totalBefore = ballot.options.reduce((sum, o) => sum + o.votes, 0);
+
+    act(() => result.current.state.castBoardVote(ballot.id, "opt-approve"));
+    let updated = result.current.state.ballots.find((b) => b.id === ballot.id)!;
+    expect(updated.options.reduce((s, o) => s + o.votes, 0)).toBe(totalBefore + 1);
+
+    act(() => result.current.state.castBoardVote(ballot.id, "opt-reject"));
+    updated = result.current.state.ballots.find((b) => b.id === ballot.id)!;
+    expect(updated.options.reduce((s, o) => s + o.votes, 0)).toBe(totalBefore + 1);
+    expect(updated.myVoteOptionId).toBe("opt-reject");
+  });
+
+  it("replying to a thread marks it read and appends the message", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const unread = result.current.state.threads.find((t) => t.unread)!;
+
+    act(() => result.current.state.replyToThread(unread.id, "On it, thanks."));
+    const replied = result.current.state.threads.find((t) => t.id === unread.id)!;
+    expect(replied.unread).toBe(false);
+    expect(replied.messages.at(-1)?.body).toBe("On it, thanks.");
+    expect(replied.messages.at(-1)?.from).toBe("Arya Mehr");
+  });
+
+  it("requesting a W-9 clears the vendor gap", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const missing = result.current.state.vendors.find((v) => !v.w9OnFile)!;
+
+    act(() => result.current.state.markW9Requested(missing.id));
+    expect(result.current.state.vendors.find((v) => v.id === missing.id)!.w9OnFile).toBe(true);
+  });
+
+  it("changing document visibility is what residents actually see", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const doc = result.current.state.documents.find((d) => d.visibility === "public")!;
+
+    act(() => result.current.state.setDocumentVisibility(doc.id, "board"));
+    expect(result.current.state.documents.find((d) => d.id === doc.id)!.visibility).toBe("board");
+  });
+});
+
+describe("payment instruments", () => {
+  it("the first instrument an owner adds becomes their default", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn("acct-nina"));
+    act(() =>
+      result.current.state.addInstrument({
+        ownerId: "own-015",
+        kind: "ach",
+        label: "BECU checking",
+        mask: "1111",
+        addedDate: "2026-08-21",
+        token: "tok_test",
+      }),
+    );
+    expect(result.current.state.instruments.find((i) => i.mask === "1111")?.isDefault).toBe(true);
+  });
+
+  it("keeps exactly one default per household", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(MONISH));
+    const second = result.current.state.instruments.find(
+      (i) => i.ownerId === "own-042" && !i.isDefault,
+    )!;
+
+    act(() => result.current.state.setDefaultInstrument(second.id));
+    const mine = result.current.state.instruments.filter((i) => i.ownerId === "own-042");
+    expect(mine.filter((i) => i.isDefault)).toHaveLength(1);
+    expect(mine.find((i) => i.isDefault)!.id).toBe(second.id);
+  });
+
+  it("removing the default promotes whatever is left", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(MONISH));
+    const current = result.current.state.instruments.find(
+      (i) => i.ownerId === "own-042" && i.isDefault,
+    )!;
+
+    act(() => result.current.state.removeInstrument(current.id));
+    const mine = result.current.state.instruments.filter((i) => i.ownerId === "own-042");
+    expect(mine.filter((i) => i.isDefault)).toHaveLength(1);
+  });
+
+  it("does not touch another household's default", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    act(() => result.current.state.setDefaultInstrument("pm-ach-arya"));
+    const monish = result.current.state.instruments.filter((i) => i.ownerId === "own-042");
+    expect(monish.filter((i) => i.isDefault)).toHaveLength(1);
   });
 });

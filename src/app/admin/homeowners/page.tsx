@@ -1,5 +1,8 @@
+"use client";
+
 import {
   Building2,
+  Download,
   Mail,
   Repeat,
   Search,
@@ -15,11 +18,12 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
+import { useMemo, useState } from "react";
 import { association, delinquency, owners } from "@/lib/data";
+import { useToast } from "@/components/app/toast";
+import { downloadCsv, toCsv } from "@/lib/core/export";
 import { money, pluralize } from "@/lib/utils";
 import type { Owner } from "@/lib/types";
-
-export const metadata = { title: "Homeowners" };
 
 const standingMeta: Record<Owner["standing"], { tone: "ok" | "warn" | "danger"; label: string }> = {
   current: { tone: "ok", label: "Current" },
@@ -30,6 +34,8 @@ const standingMeta: Record<Owner["standing"], { tone: "ok" | "warn" | "danger"; 
 
 export default function BoardHomeowners() {
   const delinq = delinquency();
+  const { notify } = useToast();
+  const [query, setQuery] = useState("");
   // Anything needing attention first, then the board, then the rest by unit.
   const sorted = [...owners].sort((a, b) => {
     if (a.daysPastDue !== b.daysPastDue) return b.daysPastDue - a.daysPastDue;
@@ -37,7 +43,32 @@ export default function BoardHomeowners() {
     return Number(a.unit) - Number(b.unit);
   });
   const PAGE = 25;
-  const visible = sorted.slice(0, PAGE);
+  const matching = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return sorted;
+    return sorted.filter(
+      (o) =>
+        o.displayName.toLowerCase().includes(needle) ||
+        o.unit === needle ||
+        o.email.toLowerCase().includes(needle),
+    );
+  }, [sorted, query]);
+  const visible = matching.slice(0, PAGE);
+
+  function exportRoster() {
+    const csv = toCsv(matching, [
+      { header: "Unit", value: (o) => o.unit },
+      { header: "Household", value: (o) => o.displayName },
+      { header: "Email", value: (o) => o.email },
+      { header: "Phone", value: (o) => o.phone },
+      { header: "Balance", value: (o) => (o.balanceCents / 100).toFixed(2) },
+      { header: "Days past due", value: (o) => o.daysPastDue },
+      { header: "Standing", value: (o) => o.standing },
+      { header: "Autopay", value: (o) => (o.autopay ? "yes" : "no") },
+    ]);
+    downloadCsv("mehr-gardens-roster.csv", csv);
+    notify(`Exported ${matching.length} households`);
+  }
 
   const buckets = [
     { label: "1–30 days", owners: delinq.past.filter((o) => o.daysPastDue <= 30) },
@@ -60,11 +91,25 @@ export default function BoardHomeowners() {
         
         action={
           <div className="flex gap-2">
-            <Button variant="secondary" size="md">
-              <Mail className="size-3.5" />
-              Message selected
+            <Button variant="secondary" size="md" onClick={exportRoster}>
+              <Download className="size-3.5" />
+              Export roster
             </Button>
-            <Button variant="primary" size="md">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() =>
+                notify(`Composing to ${delinq.past.length} past due households`, "info")
+              }
+            >
+              <Mail className="size-3.5" />
+              Message past due
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => notify("New owners are verified against the roster first", "info")}
+            >
               Add owner
             </Button>
           </div>
@@ -135,11 +180,18 @@ export default function BoardHomeowners() {
               <div className="hidden h-8 items-center gap-2 rounded-lg border border-border px-2.5 sm:flex">
                 <Search className="size-3.5 text-fg-subtle" />
                 <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search owners or units"
+                  aria-label="Search owners or units"
                   className="w-44 bg-transparent text-[12px] text-fg outline-none placeholder:text-fg-subtle"
                 />
               </div>
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => notify("Column chooser opens here", "info")}
+              >
                 <SlidersHorizontal className="size-3.5" />
                 Columns
               </Button>
@@ -220,7 +272,7 @@ export default function BoardHomeowners() {
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
           
           <p className="tnum text-[11px] text-fg-muted">
-            Showing {visible.length} of {owners.length}
+            Showing {visible.length} of {matching.length}
           </p>
         </div>
       </Card>

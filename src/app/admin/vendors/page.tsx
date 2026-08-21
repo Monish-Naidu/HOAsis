@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AlertTriangle,
   CheckCircle2,
@@ -16,10 +18,10 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { payouts, payoutSpeed, payoutsAwaitingApproval, vendorGaps, vendors } from "@/lib/data";
+import { payoutSpeed } from "@/lib/data";
+import { useAppState, usePendingApprovals, useVendorGaps } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
-
-export const metadata = { title: "Vendors" };
 
 const payoutTone = {
   paid: "ok",
@@ -29,9 +31,11 @@ const payoutTone = {
 } as const;
 
 export default function BoardVendors() {
-  const gaps = vendorGaps();
+  const gaps = useVendorGaps();
   const speed = payoutSpeed();
-  const awaiting = payoutsAwaitingApproval();
+  const awaiting = usePendingApprovals();
+  const { vendors, payouts, markW9Requested, approvePayout } = useAppState();
+  const { notify } = useToast();
   const achShare = vendors.filter((v) => v.achEnabled).length / vendors.length;
 
   return (
@@ -40,7 +44,15 @@ export default function BoardVendors() {
         eyebrow="Payables"
         title="Vendors"
         
-        action={<Button variant="primary" size="md">Add vendor</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => notify("Vendor onboarding sends a W-9 and COI request by email", "info")}
+          >
+            Add vendor
+          </Button>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -80,7 +92,14 @@ export default function BoardVendors() {
           icon={<ShieldAlert className="size-4" />}
           title={`${gaps.missingW9[0].name} has no W-9 on file`}
           action={
-            <Button variant="secondary" size="sm">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                markW9Requested(gaps.missingW9[0].id);
+                notify(`W-9 requested from ${gaps.missingW9[0].name}`);
+              }}
+            >
               Request W-9
             </Button>
           }
@@ -173,6 +192,18 @@ export default function BoardVendors() {
                   </Badge>
                 </div>
               </div>
+              {p.approvals.length < p.approvalsRequired ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    approvePayout(p.id);
+                    notify(`Approved ${p.vendor}`);
+                  }}
+                  className="mt-2 h-7 rounded-md bg-brand px-2.5 text-[11px] font-medium text-brand-fg"
+                >
+                  Add my approval
+                </button>
+              ) : null}
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-fg-subtle">
                 <span className="font-medium uppercase">{p.method}</span>
                 <span>

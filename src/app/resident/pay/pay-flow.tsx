@@ -3,65 +3,82 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Building2,
+  Apple,
   Check,
   CheckCircle2,
   CreditCard,
   Info,
   Landmark,
+  Plus,
   Repeat,
   ShieldCheck,
+  Star,
+  Trash2,
+  X,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
-import { useAppState } from "@/lib/app-state";
-import type { PaymentMethod } from "@/lib/types";
-import { cn, formatDate, money } from "@/lib/utils";
+import { Badge, Button, Callout, Card, SectionTitle, Toggle } from "@/components/ui/primitives";
+import { useAppState, useCurrentOwner, useMyInstruments } from "@/lib/app-state";
+import {
+  FEE_SCHEDULE,
+  cheapestInstrument,
+  describeInstrument,
+  feeForAmount,
+  isExpired,
+  type InstrumentKind,
+  type PaymentInstrument,
+} from "@/lib/payments/instruments";
+import { cn, formatDate, money, ordinal, relativeDays, TODAY } from "@/lib/utils";
+import { AddMethod } from "./add-method";
 
-function ordinal(n: number) {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
-}
+const NEXT_CHARGE_DATE = "2026-09-01";
+const REFERENCE = { year: TODAY.getUTCFullYear(), month: TODAY.getUTCMonth() + 1 };
 
-const methodIcon = {
+const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
   ach: Landmark,
   card: CreditCard,
-  "apple-pay": Building2,
-} as const;
+  "apple-pay": Apple,
+};
 
-export function PayFlow({
-  balanceCents,
-  nextChargeDate,
-  methods,
-  autopayOn,
-  duesCents,
-}: {
-  balanceCents: number;
-  nextChargeDate?: string;
-  methods: PaymentMethod[];
-  autopayOn: boolean;
-  duesCents: number;
-}) {
-  const [selectedId, setSelectedId] = useState(methods.find((m) => m.isDefault)?.id ?? methods[0].id);
+export function PayFlow({ duesCents }: { duesCents: number }) {
+  const owner = useCurrentOwner();
+  const instruments = useMyInstruments();
+  const { settings, removeInstrument, setDefaultInstrument } = useAppState();
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [amountMode, setAmountMode] = useState<"balance" | "custom">("balance");
   const [custom, setCustom] = useState("");
-  const { settings } = useAppState();
-  const lateAfterDay = settings.autopayLateAfterDay;
-  const [autopay, setAutopay] = useState(autopayOn);
+  const [autopay, setAutopay] = useState(owner?.autopay ?? false);
   const [autopayDay, setAutopayDay] = useState(1);
-  const [submitted, setSubmitted] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [paid, setPaid] = useState<{ amountCents: number; instrument: PaymentInstrument } | null>(
+    null,
+  );
 
-  const selected = methods.find((m) => m.id === selectedId)!;
-  const autopayMethod = methods.find((m) => m.isDefault) ?? methods[0];
+  const balanceCents = owner?.balanceCents ?? 0;
+
+  // Falls back to the household default, then to whatever exists, so the
+  // screen is never in a state where nothing is selected.
+  const selected =
+    instruments.find((i) => i.id === selectedId) ??
+    instruments.find((i) => i.isDefault) ??
+    instruments[0];
+
   const amountCents = useMemo(() => {
-    if (amountMode === "balance") return balanceCents;
+    if (amountMode === "balance") return balanceCents > 0 ? balanceCents : duesCents;
     const parsed = Math.round(Number(custom.replace(/[^0-9.]/g, "")) * 100);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-  }, [amountMode, custom, balanceCents]);
+  }, [amountMode, custom, balanceCents, duesCents]);
 
-  const feeCents = Math.round(amountCents * (selected.feePercent / 100)) + selected.feeCents;
+  const cheapest = cheapestInstrument(instruments, amountCents);
+  const schedule = selected ? FEE_SCHEDULE[selected.kind] : null;
+  const feeCents = selected ? feeForAmount(selected.kind, amountCents) : 0;
+  const residentPays = schedule?.paidBy === "owner" ? amountCents + feeCents : amountCents;
 
-  if (submitted) {
+  if (!owner) return null;
+
+  /* ------------------------------------------------------------- receipt */
+  if (paid) {
     return (
       <div className="animate-rise space-y-5">
         <Card className="p-6 text-center">
@@ -69,12 +86,13 @@ export function PayFlow({
             <CheckCircle2 className="size-6" />
           </span>
           <h1 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
-          <p className="tnum mt-1 text-[15px] font-semibold text-fg">{money(amountCents)}</p>
+          <p className="tnum mt-1 text-[15px] font-semibold text-fg">{money(paid.amountCents)}</p>
           <p className="mt-2 text-[13px] leading-relaxed text-fg-muted">
-            {selected.label} ••{selected.mask} · clears in 1–2 business days
+            {describeInstrument(paid.instrument)} · clears in{" "}
+            {FEE_SCHEDULE[paid.instrument.kind].settlement.toLowerCase()}
           </p>
           <div className="mt-5 flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setSubmitted(false)}>
+            <Button variant="secondary" className="flex-1" onClick={() => setPaid(null)}>
               Back
             </Button>
             <Link
@@ -94,15 +112,14 @@ export function PayFlow({
     );
   }
 
+  /* ---------------------------------------------------------------- form */
   return (
     <div className="animate-rise space-y-6">
       <div>
         <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
-        {nextChargeDate ? (
-          <p className="mt-1 text-[13px] text-fg-muted">
-            September assessment · due {formatDate(nextChargeDate, "long")}
-          </p>
-        ) : null}
+        <p className="mt-1 text-[13px] text-fg-muted">
+          September assessment · due {formatDate(NEXT_CHARGE_DATE, "long")}
+        </p>
       </div>
 
       {/* Amount */}
@@ -113,6 +130,7 @@ export function PayFlow({
             <button
               type="button"
               onClick={() => setAmountMode("balance")}
+              aria-pressed={amountMode === "balance"}
               className={cn(
                 "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
                 amountMode === "balance"
@@ -120,14 +138,17 @@ export function PayFlow({
                   : "border-border hover:bg-surface-2",
               )}
             >
-              <span className="block text-[11px] font-medium text-fg-muted">Full balance</span>
+              <span className="block text-[11px] font-medium text-fg-muted">
+                {balanceCents > 0 ? "Full balance" : "Next assessment"}
+              </span>
               <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
-                {money(balanceCents)}
+                {money(balanceCents > 0 ? balanceCents : duesCents)}
               </span>
             </button>
             <button
               type="button"
               onClick={() => setAmountMode("custom")}
+              aria-pressed={amountMode === "custom"}
               className={cn(
                 "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
                 amountMode === "custom"
@@ -160,89 +181,161 @@ export function PayFlow({
         </Card>
       </section>
 
-      {/* Method. Every option shows what it actually costs. */}
+      {/* Instruments */}
       <section>
-        <SectionTitle>Pay from</SectionTitle>
-        <Card>
-          {methods.map((m, i) => {
-            const Icon = methodIcon[m.kind];
-            const thisFee = Math.round(amountCents * (m.feePercent / 100)) + m.feeCents;
-            const active = m.id === selectedId;
-            return (
+        <SectionTitle
+          action={
+            instruments.length > 0 ? (
               <button
-                key={m.id}
                 type="button"
-                onClick={() => setSelectedId(m.id)}
-                className={cn(
-                  "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
-                  i > 0 && "border-t border-border",
-                  active ? "bg-brand-soft/60" : "hover:bg-surface-2",
-                )}
+                onClick={() => setManaging((v) => !v)}
+                className="text-[12px] font-medium text-accent"
               >
-                <span
+                {managing ? "Done" : "Manage"}
+              </button>
+            ) : null
+          }
+        >
+          Pay from
+        </SectionTitle>
+
+        {instruments.length === 0 ? (
+          <Card className="p-5 text-center">
+            <p className="text-[13px] font-medium text-fg">No payment method yet</p>
+            <p className="mt-1 text-[12px] text-fg-muted">
+              Connect a bank for the cheapest option, or add a card.
+            </p>
+          </Card>
+        ) : (
+          <Card>
+            {instruments.map((instrument, index) => {
+              const Icon = RAIL_ICON[instrument.kind];
+              const active = selected?.id === instrument.id;
+              const expired = isExpired(instrument, REFERENCE);
+              const instrumentFee = feeForAmount(instrument.kind, amountCents);
+              const instrumentSchedule = FEE_SCHEDULE[instrument.kind];
+              return (
+                <div
+                  key={instrument.id}
                   className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                    active ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
+                    "flex w-full items-center gap-3 px-4 py-3",
+                    index > 0 && "border-t border-border",
+                    active && !managing && "bg-brand-soft/60",
                   )}
                 >
-                  <Icon className="size-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="truncate text-[13px] font-medium text-fg">
-                      {m.label} ••{m.mask}
+                  <button
+                    type="button"
+                    disabled={expired}
+                    onClick={() => setSelectedId(instrument.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-50"
+                  >
+                    <span
+                      className={cn(
+                        "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                        active ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
+                      )}
+                    >
+                      <Icon className="size-4" />
                     </span>
-                    {m.feePercent === 0 ? <Badge tone="ok">Cheapest</Badge> : null}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-fg-muted">
-                    {m.feePercent === 0
-                      ? `Free to you · costs the association ${money(m.feeCents)}`
-                      : `${m.feePercent}% + ${money(m.feeCents)} · ${money(thisFee)} on this payment`}
-                  </span>
-                </span>
-                {active ? <Check className="size-4 shrink-0 text-fg" /> : null}
-              </button>
-            );
-          })}
-        </Card>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-[13px] font-medium text-fg">
+                          {instrument.label} ••{instrument.mask}
+                        </span>
+                        {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
+                        {cheapest?.id === instrument.id && !expired ? (
+                          <Badge tone="ok">Cheapest</Badge>
+                        ) : null}
+                        {expired ? <Badge tone="danger">Expired</Badge> : null}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-fg-muted">
+                        {instrumentSchedule.percent === 0
+                          ? `Free to you · costs the association ${money(instrumentSchedule.flatCents)}`
+                          : `${instrumentSchedule.percent}% + ${money(instrumentSchedule.flatCents)} · ${money(instrumentFee)} on this payment`}
+                      </span>
+                    </span>
+                    {active && !managing ? <Check className="size-4 shrink-0 text-fg" /> : null}
+                  </button>
+
+                  {managing ? (
+                    <span className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        aria-label={`Make ${instrument.label} the default`}
+                        disabled={instrument.isDefault}
+                        onClick={() => setDefaultInstrument(instrument.id)}
+                        className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-2 hover:text-fg disabled:opacity-30"
+                      >
+                        <Star className={cn("size-3.5", instrument.isDefault && "fill-current")} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${instrument.label}`}
+                        onClick={() => removeInstrument(instrument.id)}
+                        className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </Card>
+        )}
+
+        {adding ? (
+          <div className="mt-3 space-y-2">
+            <AddMethod onDone={() => setAdding(false)} />
+            <Button variant="ghost" size="sm" className="w-full" onClick={() => setAdding(false)}>
+              <X className="size-3.5" />
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button variant="secondary" size="md" className="mt-3 w-full" onClick={() => setAdding(true)}>
+            <Plus className="size-3.5" />
+            Add a payment method
+          </Button>
+        )}
       </section>
 
       {/* Total */}
-      <Card className="p-4">
-        <dl className="space-y-1">
-          <div className="flex justify-between text-[13px]">
-            <dt className="text-fg-muted">Assessment</dt>
-            <dd className="tnum font-medium text-fg">{money(amountCents)}</dd>
-          </div>
-          <div className="flex justify-between text-[13px]">
-            <dt className="text-fg-muted">
-              Processing {selected.feePercent === 0 ? "(paid by the association)" : ""}
-            </dt>
-            <dd className="tnum font-medium text-fg">
-              {selected.feePercent === 0 ? money(0) : money(feeCents)}
-            </dd>
-          </div>
-          <div className="mt-2 flex justify-between border-t border-border pt-2 text-[15px]">
-            <dt className="font-semibold text-fg">You pay</dt>
-            <dd className="tnum font-semibold text-fg">
-              {money(selected.feePercent === 0 ? amountCents : amountCents + feeCents)}
-            </dd>
-          </div>
-        </dl>
-        <Button
-          variant="primary"
-          size="lg"
-          className="mt-4 w-full"
-          disabled={amountCents <= 0}
-          onClick={() => setSubmitted(true)}
-        >
-          Pay {money(selected.feePercent === 0 ? amountCents : amountCents + feeCents)}
-        </Button>
-        <p className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-snug text-fg-subtle">
-          <Info className="mt-px size-3 shrink-0" />
-          Processing costs pass through at cost. No markup.
-        </p>
-      </Card>
+      {selected ? (
+        <Card className="p-4">
+          <dl className="space-y-1">
+            <div className="flex justify-between text-[13px]">
+              <dt className="text-fg-muted">Assessment</dt>
+              <dd className="tnum font-medium text-fg">{money(amountCents)}</dd>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <dt className="text-fg-muted">
+                Processing{schedule?.paidBy === "association" ? " (paid by the association)" : ""}
+              </dt>
+              <dd className="tnum font-medium text-fg">
+                {money(schedule?.paidBy === "association" ? 0 : feeCents)}
+              </dd>
+            </div>
+            <div className="mt-2 flex justify-between border-t border-border pt-2 text-[15px]">
+              <dt className="font-semibold text-fg">You pay</dt>
+              <dd className="tnum font-semibold text-fg">{money(residentPays)}</dd>
+            </div>
+          </dl>
+          <Button
+            variant="primary"
+            size="lg"
+            className="mt-4 w-full"
+            disabled={amountCents <= 0 || isExpired(selected, REFERENCE)}
+            onClick={() => setPaid({ amountCents, instrument: selected })}
+          >
+            Pay {money(residentPays)}
+          </Button>
+          <p className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-snug text-fg-subtle">
+            <Info className="mt-px size-3 shrink-0" />
+            Processing costs pass through at cost. No markup.
+          </p>
+        </Card>
+      ) : null}
 
       {/* Autopay */}
       <section id="autopay" className="scroll-mt-20">
@@ -257,28 +350,19 @@ export function PayFlow({
                 Autopay {money(duesCents)} on the {ordinal(autopayDay)}
               </p>
               <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">
-                From {autopayMethod.label} ••{autopayMethod.mask}. Cancel any time.
+                {selected
+                  ? `From ${describeInstrument(selected)}. Cancel any time.`
+                  : "Add a payment method to turn this on."}
               </p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autopay}
-              aria-label="Enable autopay"
-              onClick={() => setAutopay((v) => !v)}
-              className={cn(
-                "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors",
-                autopay ? "bg-ok" : "bg-surface-3",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
-                  autopay ? "translate-x-5" : "translate-x-0",
-                )}
-              />
-            </button>
+            <Toggle
+              checked={autopay}
+              onChange={setAutopay}
+              disabled={!selected}
+              label="Enable autopay"
+            />
           </div>
+
           {autopay ? (
             <>
               <div className="mt-3 border-t border-border pt-3">
@@ -286,32 +370,32 @@ export function PayFlow({
                   Day of the month
                 </p>
                 <div className="grid grid-cols-8 gap-1.5">
-                  {Array.from({ length: lateAfterDay }, (_, i) => i + 1).map((d) => (
+                  {Array.from({ length: settings.autopayLateAfterDay }, (_, i) => i + 1).map((day) => (
                     <button
-                      key={d}
+                      key={day}
                       type="button"
-                      onClick={() => setAutopayDay(d)}
-                      aria-pressed={autopayDay === d}
+                      onClick={() => setAutopayDay(day)}
+                      aria-pressed={autopayDay === day}
                       className={cn(
                         "tnum flex h-8 items-center justify-center rounded-md text-[12px] font-medium transition-colors",
-                        autopayDay === d
+                        autopayDay === day
                           ? "bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950"
-                          : d === lateAfterDay
+                          : day === settings.autopayLateAfterDay
                             ? "border border-warn/40 bg-warn-soft text-warn"
                             : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
                       )}
                     >
-                      {d}
+                      {day}
                     </button>
                   ))}
                 </div>
                 <p className="mt-2 text-[11px] leading-snug text-fg-subtle">
-                  The board set the {ordinal(lateAfterDay)} as the last day before an assessment
-                  is late. Days after that are not selectable.
+                  The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
+                  an assessment is late.
                 </p>
               </div>
               <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[12px] font-medium text-ok">
-                Next autopay: September {autopayDay}, 2026
+                Next autopay: September {autopayDay}, 2026 · {relativeDays(`2026-09-${String(autopayDay).padStart(2, "0")}`)}
               </div>
             </>
           ) : null}
