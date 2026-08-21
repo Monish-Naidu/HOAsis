@@ -74,8 +74,8 @@ const SHOWCASE = [
       "Association funds open to owners, if the board allows",
     ],
     image: "/marketing/product-resident.png",
-    width: 848,
-    height: 1382,
+    width: 764,
+    height: 1162,
     alt: "The resident app showing a balance due, a live board meeting, and open ballots",
     portrait: true,
   },
@@ -115,6 +115,44 @@ const JOBS = [
   "Answer owners without losing the thread",
   "Track every compliance deadline that applies",
 ];
+
+/**
+ * A phone around the resident screenshot.
+ *
+ * The capture is the screen only, with no bezel of its own, so the device is
+ * drawn here in CSS. That keeps it crisp at any size, lets the frame follow
+ * the theme, and means a new screenshot drops straight in without having to
+ * match a baked in border. Deliberately just a bezel: side buttons read as
+ * artefacts at this size rather than as detail.
+ */
+function PhoneFrame({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="relative mx-auto w-[268px] sm:w-[292px]">
+      <div className="relative overflow-hidden rounded-[2.75rem] bg-navy-950 p-[10px] shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
+        <div className="relative overflow-hidden rounded-[2.15rem] bg-bg">
+          <Image
+            src={src}
+            alt={alt}
+            width={764}
+            height={1162}
+            sizes="(max-width: 640px) 268px, 292px"
+            className="h-auto w-full"
+          />
+          {/* Dynamic island. */}
+          <span
+            className="absolute left-1/2 top-2 h-[22px] w-[86px] -translate-x-1/2 rounded-full bg-navy-950"
+            aria-hidden
+          />
+          {/* Home indicator. */}
+          <span
+            className="absolute bottom-1.5 left-1/2 h-[4px] w-[104px] -translate-x-1/2 rounded-full bg-navy-950/25"
+            aria-hidden
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function MarketingHome() {
   const featured = libraryArticles.slice(0, 3);
@@ -222,22 +260,20 @@ export default function MarketingHome() {
             </Reveal>
 
             <Reveal delay={100} className={index % 2 === 1 ? "lg:order-1" : ""}>
-              <div
-                className={
-                  section.portrait
-                    ? "mx-auto max-w-[280px] overflow-hidden rounded-[1.75rem] border border-border shadow-float"
-                    : "overflow-hidden rounded-card border border-border shadow-float"
-                }
-              >
-                <Image
-                  src={section.image}
-                  alt={section.alt}
-                  width={section.width}
-                  height={section.height}
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="h-auto w-full"
-                />
-              </div>
+              {section.portrait ? (
+                <PhoneFrame src={section.image} alt={section.alt} />
+              ) : (
+                <div className="overflow-hidden rounded-card border border-border shadow-float">
+                  <Image
+                    src={section.image}
+                    alt={section.alt}
+                    width={section.width}
+                    height={section.height}
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    className="h-auto w-full"
+                  />
+                </div>
+              )}
             </Reveal>
           </div>
         </section>

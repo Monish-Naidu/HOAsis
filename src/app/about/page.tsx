@@ -20,19 +20,18 @@ const FOUNDERS = [
   {
     name: "Arya Mehr",
     role: "Co-founder",
-    focus: "Community, operations, and anything with a tool in it",
+    focus: "Property management, carpentry, and anything from the studs up",
     photo: "/marketing/founder-arya.jpg",
-    bio: "Arya is a handsome gentleman who is genuinely good with his hands, which in an HOA is worth considerably more than an MBA. He is the one who spots a failing gate latch three weeks before it becomes a work order, owns more clamps than any single human requires, and holds firm opinions about deck stain. Anything involving a contractor, a ladder, or a difficult conversation at a board meeting is his.",
+    bio: "Arya is a property manager, a carpenter, and a handsome gentleman who is genuinely good with his hands. He can fix anything on a home from the studs up, which in this business is worth considerably more than an MBA. His wife Nina makes him a better man, a fact he will volunteer before you have finished asking. Anything involving a tool, a contractor, or a wall that is not where it should be is his.",
   },
   {
     name: "Monish Naidu",
     role: "Co-founder",
     focus: "Product and engineering",
-    photo: null,
-    bio: "Monish writes the software and refuses to let a number appear on screen that he cannot trace back to a transaction. He is the reason the reserve projection names the exact year you run out instead of offering a cheerful percentage and wishing you luck. Owns zero clamps. Reconciles ledgers recreationally, which everyone agrees is a little concerning.",
+    photo: "/marketing/founder-monish.jpg",
+    bio: "Monish is a product manager who used to be a software engineer, which means he writes the spec and then quietly writes the code as well. He refuses to let a number appear on screen that he cannot trace back to a transaction. He also failed out of becoming a pharmacist, a career change everyone involved now regards as a public service. Under Arya's patient mentorship he is learning to chop wood, and is measurably less dangerous with an axe than he was last spring.",
   },
 ];
-
 const BELIEFS = [
   {
     icon: ShieldCheck,
