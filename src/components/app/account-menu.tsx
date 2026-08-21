@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, LogOut, User } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
@@ -84,15 +85,21 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
   );
 }
 
-/** Sends anyone without a session back to the sign in page. */
+/**
+ * Sends anyone without a session back to sign in.
+ *
+ * The redirect runs in an effect rather than during render. Navigating from
+ * inside a render pass is a React anti-pattern and can bounce a user who has
+ * only just signed in.
+ */
 export function RequireSession({ children }: { children: React.ReactNode }) {
   const { account, ready } = useAppState();
   const router = useRouter();
 
-  if (!ready) return null;
-  if (!account) {
-    router.replace("/");
-    return null;
-  }
+  useEffect(() => {
+    if (ready && !account) router.replace("/");
+  }, [ready, account, router]);
+
+  if (!ready || !account) return null;
   return <>{children}</>;
 }

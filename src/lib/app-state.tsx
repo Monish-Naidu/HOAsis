@@ -121,13 +121,18 @@ function writeSession(next: Session) {
   listeners.forEach((l) => l());
 }
 
-/** True only after hydration, so a first paint never redirects a signed in user. */
+const noopSubscribe = () => () => {};
+const alwaysTrue = () => true;
+const alwaysFalse = () => false;
+
+/**
+ * True only after hydration, so a first paint never redirects a signed in user.
+ * The three callbacks are module constants on purpose: an inline arrow here
+ * gives useSyncExternalStore a new subscribe identity on every render, and it
+ * resubscribes each pass.
+ */
 function useHydrated() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+  return useSyncExternalStore(noopSubscribe, alwaysTrue, alwaysFalse);
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
