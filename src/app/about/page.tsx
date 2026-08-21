@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Building2, HeartHandshake, ShieldCheck } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
@@ -7,6 +8,30 @@ export const metadata = {
   title: "About",
   description: "Why HOAsis exists, what we believe about running an association, and who it is for.",
 };
+
+/**
+ * The founders.
+ *
+ * Placeholder copy, written to be replaced. Swap `bio` freely; the layout does
+ * not care how long it runs. A founder without a `photo` falls back to their
+ * initials, so adding the second headshot later is a one line change.
+ */
+const FOUNDERS = [
+  {
+    name: "Arya Mehr",
+    role: "Co-founder",
+    focus: "Community, operations, and anything with a tool in it",
+    photo: "/marketing/founder-arya.jpg",
+    bio: "Arya is a handsome gentleman who is genuinely good with his hands, which in an HOA is worth considerably more than an MBA. He is the one who spots a failing gate latch three weeks before it becomes a work order, owns more clamps than any single human requires, and holds firm opinions about deck stain. Anything involving a contractor, a ladder, or a difficult conversation at a board meeting is his.",
+  },
+  {
+    name: "Monish Naidu",
+    role: "Co-founder",
+    focus: "Product and engineering",
+    photo: null,
+    bio: "Monish writes the software and refuses to let a number appear on screen that he cannot trace back to a transaction. He is the reason the reserve projection names the exact year you run out instead of offering a cheerful percentage and wishing you luck. Owns zero clamps. Reconciles ledgers recreationally, which everyone agrees is a little concerning.",
+  },
+];
 
 const BELIEFS = [
   {
@@ -74,6 +99,53 @@ export default function AboutPage() {
                   </span>
                   <h3 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">{title}</h3>
                   <p className="mt-1.5 text-[14px] leading-relaxed text-fg-muted">{body}</p>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-12">
+          <Reveal>
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+              Who we are
+            </h2>
+            <p className="mt-3 text-[15px] leading-[1.75] text-fg-muted">
+              Two people who between them cover the whole job: one who knows what actually breaks
+              in a community, and one who knows why the books never quite tie out.
+            </p>
+          </Reveal>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {FOUNDERS.map((founder, index) => (
+              <Reveal key={founder.name} delay={index * 90}>
+                <Card className="flex h-full flex-col overflow-hidden">
+                  <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface-3">
+                    {founder.photo ? (
+                      <Image
+                        src={founder.photo}
+                        alt={`${founder.name}, ${founder.role}`}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 320px"
+                        className="object-cover object-top"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center bg-navy-900 text-[48px] font-semibold tracking-[-0.03em] text-navy-50 dark:bg-navy-800">
+                        {founder.name
+                          .split(" ")
+                          .map((part) => part[0])
+                          .join("")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
+                    <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-fg">
+                      {founder.name}
+                    </h3>
+                    <p className="mt-0.5 text-[12px] font-medium text-fg-muted">{founder.role}</p>
+                    <p className="mt-0.5 text-[12px] text-fg-subtle">{founder.focus}</p>
+                    <p className="mt-3 text-[14px] leading-relaxed text-fg-muted">{founder.bio}</p>
+                  </div>
                 </Card>
               </Reveal>
             ))}
