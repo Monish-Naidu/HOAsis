@@ -43,7 +43,7 @@ export default function RouteError({
               Try again
             </Button>
             <Link
-              href="/"
+              href="/signin"
               className="inline-flex h-9 items-center rounded-lg border border-border-2 px-4 text-[13px] font-medium text-fg hover:bg-surface-2"
             >
               Back to sign in

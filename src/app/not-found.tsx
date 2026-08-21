@@ -21,7 +21,7 @@ export default function NotFound() {
             The link may be old, or the record may belong to a different account.
           </p>
           <Link
-            href="/"
+            href="/signin"
             className="mt-5 inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[13px] font-medium text-brand-fg"
           >
             Back to sign in

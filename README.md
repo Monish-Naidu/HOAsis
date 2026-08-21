@@ -12,7 +12,9 @@ Two experiences share one system of record:
   because it's designed at phone width and is meant to become the native app.
 - **`/admin`** is the board workspace: reconciliation, reserve yield,
   delinquencies, vendor ACH, voting and meetings, and a live compliance register.
-- **`/`** is sign in and create account. There is no real authentication: picking a seat
+- **`/`**, `/pricing`, `/about`, and `/library` are the public marketing site. No account
+  needed, and the library is deliberately free with no email gate.
+- **`/signin`** is sign in and create account. There is no real authentication: picking a seat
   selects one of the seeded accounts so you can see the product from that person's chair.
 
 ## Running it
@@ -161,11 +163,11 @@ pre-paint by an inline script so there's no flash on reload.
 
 ## Fixture data
 
-A fictional 88-unit Washington HOA (Mehr Gardens, Brier). Fourteen households are hand-written
+A fictional 88-unit Washington HOA (Mehr Meadows, Brier). Fourteen households are hand-written
 because the prototype tells stories about them; the remaining 76 are generated
 deterministically so roster-wide rates are honest.
 
-**The compliance register is parked.** Mehr Gardens was recorded in 2015, so RCW 64.38 governs
+**The compliance register is parked.** Mehr Meadows was recorded in 2015, so RCW 64.38 governs
 rather than WUCIOA (RCW 64.90), which covers communities created on or after July 1, 2018. The
 entries there are chapter level placeholders: the chapter is right, the deadline math is not
 verified, and the screen says so. Do not deepen them without a legal pass.

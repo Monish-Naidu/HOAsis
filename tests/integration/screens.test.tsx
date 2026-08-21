@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { AppStateProvider, useAppState } = await import("@/lib/app-state");
-const { SignInPanel } = await import("@/app/sign-in-panel");
+const { SignInPanel } = await import("@/app/signin/sign-in-panel");
 const { FundsGate } = await import("@/app/resident/finances/guard");
 const { ErrorBoundary } = await import("@/components/app/error-boundary");
 const { CommunityHero } = await import("@/components/app/community-hero");
@@ -104,7 +104,7 @@ describe("admin settings reach the resident UI", () => {
       </>,
     );
 
-    expect(screen.getByRole("heading", { name: "Mehr Gardens" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Mehr Meadows" })).toBeInTheDocument();
     await user.click(screen.getByText("rename"));
     expect(screen.getByRole("heading", { name: "Cedar Court" })).toBeInTheDocument();
   });

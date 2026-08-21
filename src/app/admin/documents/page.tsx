@@ -154,7 +154,7 @@ export default function BoardDocuments() {
           </Button>
         }
       >
-        mehrgardens.hoasis.app/records · {publicDocs.length} documents, no account needed.
+        mehrmeadows.hoasis.app/records · {publicDocs.length} documents, no account needed.
       </Callout>
 
       <Card className="mt-5">

@@ -203,7 +203,7 @@ describe("admin settings reach the resident side", () => {
     act(() => result.current.state.updateSettings({ displayName: "Temporary" }));
     act(() => result.current.state.resetDemo());
 
-    expect(result.current.state.settings.displayName).toBe("Mehr Gardens");
+    expect(result.current.state.settings.displayName).toBe("Mehr Meadows");
     expect(result.current.state.account?.id).toBe(ARYA);
   });
 });

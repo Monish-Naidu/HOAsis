@@ -142,7 +142,7 @@ export const ledgerEntries: LedgerEntry[] = [
     id: "le-128",
     date: "2026-08-08",
     description: "Late fee assessed, 3 accounts",
-    counterparty: "Mehr Gardens",
+    counterparty: "Mehr Meadows",
     category: "Late fees",
     accountId: "acct-operating",
     amountCents: 7_500,

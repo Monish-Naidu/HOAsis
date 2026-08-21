@@ -79,7 +79,7 @@ export default function BoardMoney() {
       { header: "Amount", value: (e) => (e.amountCents / 100).toFixed(2) },
       { header: "Status", value: (e) => e.status },
     ]);
-    downloadCsv(`mehr-gardens-ledger-${view.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, csv);
+    downloadCsv(`mehr-meadows-ledger-${view.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, csv);
     notify(`Exported ${rows.length} transactions`);
   }
   const reserve = reserveSummary();

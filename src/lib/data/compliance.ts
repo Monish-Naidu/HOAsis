@@ -3,7 +3,7 @@ import type { ComplianceItem } from "@/lib/types";
 /**
  * Placeholder register for a Washington association.
  *
- * Mehr Gardens was recorded in 2015, so the Homeowners' Associations Act
+ * Mehr Meadows was recorded in 2015, so the Homeowners' Associations Act
  * (RCW 64.38) governs rather than WUCIOA (RCW 64.90), which applies to
  * communities created on or after July 1, 2018.
  *
@@ -50,7 +50,7 @@ export const complianceItems: ComplianceItem[] = [
     citation: "RCW 64.38, association records",
     jurisdiction: "Washington",
     summary:
-      "The statute asks for records within a reasonable time. Mehr Gardens's own policy sets 10 business days, so HOAsis tracks the tighter of the two.",
+      "The statute asks for records within a reasonable time. Mehr Meadows's own policy sets 10 business days, so HOAsis tracks the tighter of the two.",
     evidence:
       "Request REQ-2026-114 from Gwen Halloran, unit 26, received August 11. Policy clock expires August 25. Response drafted, awaiting board sign off.",
     status: "due-soon",

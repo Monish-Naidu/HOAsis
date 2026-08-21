@@ -68,7 +68,7 @@ export default function BoardHomeowners() {
       { header: "Standing", value: (o) => o.standing },
       { header: "Autopay", value: (o) => (o.autopay ? "yes" : "no") },
     ]);
-    downloadCsv("mehr-gardens-roster.csv", csv);
+    downloadCsv("mehr-meadows-roster.csv", csv);
     notify(`Exported ${matching.length} households`);
   }
 

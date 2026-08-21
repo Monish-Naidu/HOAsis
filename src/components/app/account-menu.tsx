@@ -75,7 +75,7 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
         title="Sign out"
         onClick={() => {
           signOut();
-          router.push("/");
+          router.push("/signin");
         }}
         className="flex size-8 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg"
       >
@@ -97,7 +97,7 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (ready && !account) router.replace("/");
+    if (ready && !account) router.replace("/signin");
   }, [ready, account, router]);
 
   if (!ready || !account) return null;
