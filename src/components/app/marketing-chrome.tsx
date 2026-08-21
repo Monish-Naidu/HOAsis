@@ -109,7 +109,7 @@ export function MarketingFooter() {
       </div>
       <p className="mx-auto w-full max-w-6xl px-5 pb-8 text-[11px] text-fg-subtle">
         Prototype. Figures shown are fixture data for a fictional Washington association. The
-        library is general information, not legal advice.
+        library is general information, not legal advice. Photography from Unsplash.
       </p>
     </footer>
   );

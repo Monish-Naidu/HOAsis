@@ -532,3 +532,53 @@ describe("payment instruments", () => {
     expect(monish.filter((i) => i.isDefault)).toHaveLength(1);
   });
 });
+
+describe("every admin can use the resident side", () => {
+  const ADMINS = [
+    { id: "acct-arya", role: "president", unit: "7" },
+    { id: "acct-dana", role: "treasurer", unit: "19" },
+    { id: "acct-sofia", role: "secretary", unit: "31" },
+    { id: "acct-ellis", role: "vice-president", unit: "71" },
+  ] as const;
+
+  it.each(ADMINS)("$role can switch to resident without signing out", (admin) => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(admin.id));
+    expect(result.current.state.view).toBe("admin");
+
+    act(() => result.current.state.setView("resident"));
+    expect(result.current.state.view).toBe("resident");
+    expect(result.current.state.account?.id).toBe(admin.id);
+  });
+
+  it.each(ADMINS)("$role sees their own unit on the resident side", (admin) => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(admin.id));
+    act(() => result.current.state.setView("resident"));
+    expect(result.current.owner?.unit).toBe(admin.unit);
+  });
+
+  it.each(ADMINS)("$role keeps their capabilities while in resident view", (admin) => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(admin.id));
+    const before = result.current.state.can("requests");
+    act(() => result.current.state.setView("resident"));
+    expect(result.current.state.can("requests")).toBe(before);
+  });
+
+  it("switching back to admin returns to the same account", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn("acct-dana"));
+    act(() => result.current.state.setView("resident"));
+    act(() => result.current.state.setView("admin"));
+    expect(result.current.state.account?.role).toBe("treasurer");
+    expect(result.current.state.can("finances")).toBe(true);
+  });
+
+  it("a plain resident has no admin view to switch to", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(MONISH));
+    expect(result.current.state.account?.role).toBe("resident");
+    expect(result.current.state.view).toBe("resident");
+  });
+});

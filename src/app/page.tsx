@@ -1,12 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  Banknote,
   BookOpen,
   Check,
-  PiggyBank,
+  MessageSquareText,
   ScaleIcon,
-  Smartphone,
+  ShieldCheck,
   Vote,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
@@ -17,64 +17,100 @@ import { money } from "@/lib/utils";
 export const metadata = {
   title: "HOAsis, community management for self-managed HOAs",
   description:
-    "Everything a management company does, run from your own website. Books that reconcile, an app residents use, and compliance handled.",
+    "Everything a management company does, run from your own website. Books that reconcile, an app residents use, and reserves you can actually plan.",
 };
 
 /**
- * A worked example rather than a slogan.
+ * The cost case, shown as arithmetic rather than a percentage.
  *
- * Management is commonly quoted per door per month. Showing the arithmetic for
- * one plausible association is more persuasive than a percentage, and it is
- * honest about the assumption because the assumption is stated.
+ * A worked example for one plausible association is more persuasive than a
+ * claim, and it is honest because the assumption is printed next to the
+ * answer. Change the assumption and the reader can redo the sum themselves.
  */
 const HOMES = 88;
 const MANAGEMENT_PER_DOOR = 14_00;
 const HOASIS_PER_DOOR = 2_00;
-
 const managementYear = HOMES * MANAGEMENT_PER_DOOR * 12;
 const hoasisYear = HOMES * HOASIS_PER_DOOR * 12;
 const savedYear = managementYear - hoasisYear;
 
-const PILLARS = [
+/** Each value section pairs a claim with the screen that proves it. */
+const SHOWCASE = [
   {
-    icon: Banknote,
-    title: "Books that reconcile",
-    body: "Live bank feeds, duplicate detection, and one balance every report agrees with. Anything that needs a human decision is held out of the reports until it gets one.",
+    eyebrow: "Accounting",
+    title: "You can tell, at a glance, whether the books are right.",
+    body: "Transactions that need a human decision are held out of every report until they get one. Nothing is auto-categorized, duplicates are caught before they reach a statement, and the dashboard says plainly when something is unresolved instead of quietly averaging it in.",
+    points: [
+      "Live bank feeds, not a nightly batch",
+      "Duplicate detection with a one click fix",
+      "One balance every report agrees with",
+    ],
+    image: "/marketing/product-dashboard.png",
+    width: 1568,
+    height: 694,
+    alt: "The board dashboard showing three transactions held out of the reports until reviewed",
   },
   {
-    icon: Smartphone,
-    title: "An app residents use",
-    body: "Pay, look something up, file a request. Dues priced at what the processor charges, quoted before anyone commits.",
+    eyebrow: "Reserves",
+    title: "Know the year the money runs out, while you can still do something.",
+    body: "Every component is replaced in the year its useful life ends, at a cost inflated to that year. Roll it forward and the first negative year is the year a board levies a special assessment. We name it, then solve for the contribution that avoids it.",
+    points: [
+      "Thirty years projected, not a snapshot",
+      "Percent funded against accrued liability",
+      "The exact contribution that fixes it",
+    ],
+    image: "/marketing/product-reserves.png",
+    width: 1470,
+    height: 720,
+    alt: "A thirty year reserve projection with the shortfall years shown in red below the axis",
   },
   {
-    icon: PiggyBank,
-    title: "Reserves you can plan",
-    body: "Thirty years projected forward, with the first year the money runs out named out loud, and the contribution that avoids it solved for you.",
-  },
-  {
-    icon: Vote,
-    title: "Voting people finish",
-    body: "Ballots that hold paragraphs, tallies sealed until close, and a video meeting with dial-in so a vote can happen while everyone is on the line.",
-  },
-  {
-    icon: ScaleIcon,
-    title: "Compliance as a feature",
-    body: "State obligations tracked as dated items with the evidence attached, so the answer to an owner's records request is already assembled.",
-  },
-  {
-    icon: BookOpen,
-    title: "A library, free to anyone",
-    body: "How to run a meeting, read a budget, collect a late assessment. General guidance plus the state specific parts nobody publishes for free.",
+    eyebrow: "Residents",
+    title: "The three things an owner ever does, made quick.",
+    body: "Pay, look something up, file a request. Every payment method quotes what it actually costs before anyone commits, and every payment shows which charges it cleared. The same screens ship as the mobile app.",
+    points: [
+      "Dues at processor cost, no markup",
+      "Requests with a certificate you can show a contractor",
+      "Association funds open to owners, if the board allows",
+    ],
+    image: "/marketing/product-resident.png",
+    width: 848,
+    height: 1382,
+    alt: "The resident app showing a balance due, a live board meeting, and open ballots",
+    portrait: true,
   },
 ];
 
-const DOES = [
+const ALSO = [
+  {
+    icon: Vote,
+    title: "Voting people finish",
+    body: "Ballots that hold paragraphs, tallies sealed until close, and a video meeting with dial-in so the vote happens while everyone is on the line.",
+  },
+  {
+    icon: ScaleIcon,
+    title: "Compliance with the evidence attached",
+    body: "Obligations tracked as dated items with the proof stapled on, so a records request is answered from something already assembled.",
+  },
+  {
+    icon: MessageSquareText,
+    title: "A forum, moderated",
+    body: "Neighbour to neighbour, held for review before it publishes. Anything needing a decision goes to a request instead, where it gets a deadline.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Nobody moves money alone",
+    body: "Two signatures over a threshold, an audit trail on every change, and a President whose access cannot be revoked out from under them.",
+  },
+];
+
+const JOBS = [
   "Collect assessments and chase the late ones",
   "Pay vendors by ACH with two signatures",
   "Keep the books and produce statements",
-  "Hold the records and publish what must be public",
-  "Send notices with a delivery log that proves it",
-  "Run elections and record the result",
+  "Hold records and publish what must be public",
+  "Send notices with a log that proves delivery",
+  "Run elections and certify the result",
   "Log violations through notice, cure, and hearing",
   "Answer owners without losing the thread",
   "Track every compliance deadline that applies",
@@ -88,25 +124,31 @@ export default function MarketingHome() {
       <MarketingHeader />
 
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border">
+      <section className="relative isolate overflow-hidden border-b border-border">
+        <Image
+          src={communitySettings.photoUrl}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="-z-10 object-cover opacity-[0.18] dark:opacity-[0.22]"
+        />
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-[0.12] dark:opacity-[0.16]"
-          style={{ backgroundImage: `url(${communitySettings.photoUrl})` }}
+          className="absolute inset-0 -z-10 bg-gradient-to-b from-bg/50 via-bg/70 to-bg"
           aria-hidden
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bg/40 to-bg" aria-hidden />
-        <div className="relative mx-auto w-full max-w-6xl px-5 py-20 sm:py-28">
+        <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:py-28">
           <Reveal>
             <Badge tone="ok" dot>
               Built for boards that self-manage
             </Badge>
-            <h1 className="mt-5 max-w-3xl text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[58px]">
+            <h1 className="mt-5 max-w-3xl text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[60px]">
               Everything a management company does.
               <span className="block text-fg-muted">Run from your own website.</span>
             </h1>
           </Reveal>
           <Reveal delay={90}>
-            <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-fg-muted">
+            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-fg-muted">
               Volunteer boards do not need a manager to collect dues, keep books that tie out, or
               answer a records request on time. They need software that does not make those things
               harder than they are.
@@ -116,7 +158,7 @@ export default function MarketingHome() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/signin"
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-[14px] font-semibold text-brand-fg transition-transform hover:-translate-y-0.5"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-[14px] font-semibold text-brand-fg shadow-raised transition-transform hover:-translate-y-0.5"
               >
                 See the live demo
                 <ArrowRight className="size-4" />
@@ -133,8 +175,84 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Cost */}
+      {/* Proof band */}
       <section className="border-b border-border bg-surface">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-6 px-5 py-8 sm:grid-cols-4">
+          {[
+            { value: money(savedYear, { cents: false }), label: "Saved a year, 88 homes" },
+            { value: "30 yr", label: "Reserve projection" },
+            { value: "At cost", label: "Payment processing" },
+            { value: "7 days", label: "Phone and chat support" },
+          ].map((stat, index) => (
+            <Reveal key={stat.label} delay={index * 60}>
+              <div>
+                <p className="tnum text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
+                  {stat.value}
+                </p>
+                <p className="mt-1.5 text-[12px] leading-snug text-fg-muted">{stat.label}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Showcase */}
+      {SHOWCASE.map((section, index) => (
+        <section
+          key={section.title}
+          className={`border-b border-border ${index % 2 === 1 ? "bg-surface" : ""}`}
+        >
+          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:py-20 lg:grid-cols-2">
+            <Reveal className={index % 2 === 1 ? "lg:order-2" : ""}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+                {section.eyebrow}
+              </p>
+              <h2 className="mt-3 text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[34px]">
+                {section.title}
+              </h2>
+              <p className="mt-4 text-[15px] leading-relaxed text-fg-muted">{section.body}</p>
+              <ul className="mt-5 space-y-2.5">
+                {section.points.map((point) => (
+                  <li key={point} className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
+                    <span className="text-[14px] leading-snug text-fg">{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+
+            <Reveal delay={100} className={index % 2 === 1 ? "lg:order-1" : ""}>
+              <div
+                className={
+                  section.portrait
+                    ? "mx-auto max-w-[280px] overflow-hidden rounded-[1.75rem] border border-border shadow-float"
+                    : "overflow-hidden rounded-card border border-border shadow-float"
+                }
+              >
+                <Image
+                  src={section.image}
+                  alt={section.alt}
+                  width={section.width}
+                  height={section.height}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="h-auto w-full"
+                />
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      ))}
+
+      {/* Cost */}
+      <section className="relative isolate overflow-hidden border-b border-border">
+        <Image
+          src="/marketing/homes.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="-z-10 object-cover opacity-[0.12] dark:opacity-[0.14]"
+        />
+        <div className="absolute inset-0 -z-10 bg-bg/70" aria-hidden />
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <Reveal>
             <h2 className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[36px]">
@@ -153,51 +271,61 @@ export default function MarketingHome() {
                 label: "Management company",
                 value: money(managementYear, { cents: false }),
                 detail: `${money(MANAGEMENT_PER_DOOR, { cents: false })} per home per month`,
-                tone: "muted" as const,
+                accent: false,
               },
               {
                 label: "HOAsis",
                 value: money(hoasisYear, { cents: false }),
                 detail: `${money(HOASIS_PER_DOOR, { cents: false })} per home per month`,
-                tone: "muted" as const,
+                accent: false,
               },
               {
                 label: "Stays in the community",
                 value: money(savedYear, { cents: false }),
                 detail: "Every year, before anything compounds",
-                tone: "ok" as const,
+                accent: true,
               },
             ].map((item, index) => (
               <Reveal key={item.label} delay={index * 80}>
-                <Card className="h-full p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                <Card
+                  className={`h-full p-5 ${item.accent ? "border-ok/30 bg-ok-soft" : ""}`}
+                >
+                  <p
+                    className={`text-[11px] font-semibold uppercase tracking-[0.08em] ${
+                      item.accent ? "text-ok" : "text-fg-subtle"
+                    }`}
+                  >
                     {item.label}
                   </p>
                   <p
-                    className={`tnum mt-2 text-[32px] font-semibold leading-none tracking-[-0.03em] ${
-                      item.tone === "ok" ? "text-ok" : "text-fg"
+                    className={`tnum mt-2 text-[34px] font-semibold leading-none tracking-[-0.03em] ${
+                      item.accent ? "text-ok" : "text-fg"
                     }`}
                   >
                     {item.value}
                   </p>
-                  <p className="mt-2 text-[12px] text-fg-muted">{item.detail}</p>
+                  <p
+                    className={`mt-2 text-[12px] ${item.accent ? "text-ok opacity-90" : "text-fg-muted"}`}
+                  >
+                    {item.detail}
+                  </p>
                 </Card>
               </Reveal>
             ))}
           </div>
 
           <Reveal delay={240}>
-            <p className="mt-5 text-[13px] leading-relaxed text-fg-muted">
-              Put {money(savedYear, { cents: false })} a year into reserves instead and, at a
-              realistic yield over a decade, it is the difference between replacing a roof on
+            <p className="mt-5 max-w-2xl text-[13px] leading-relaxed text-fg-muted">
+              Put {money(savedYear, { cents: false })} a year into reserves instead and, over a
+              decade at a realistic yield, it is the difference between replacing a roof on
               schedule and levying a special assessment for it.
             </p>
           </Reveal>
         </div>
       </section>
 
-      {/* What it does */}
-      <section className="border-b border-border">
+      {/* The nine jobs */}
+      <section className="border-b border-border bg-surface">
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <Reveal>
             <h2 className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[36px]">
@@ -209,11 +337,11 @@ export default function MarketingHome() {
             </p>
           </Reveal>
           <ul className="mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-            {DOES.map((item, index) => (
-              <Reveal key={item} delay={index * 40}>
+            {JOBS.map((job, index) => (
+              <Reveal key={job} delay={index * 35}>
                 <li className="flex items-start gap-2.5">
                   <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
-                  <span className="text-[14px] leading-snug text-fg">{item}</span>
+                  <span className="text-[14px] leading-snug text-fg">{job}</span>
                 </li>
               </Reveal>
             ))}
@@ -221,17 +349,12 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Pillars */}
-      <section className="border-b border-border bg-surface">
+      {/* And also */}
+      <section className="border-b border-border">
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
-          <Reveal>
-            <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[36px]">
-              What is actually different
-            </h2>
-          </Reveal>
-          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {PILLARS.map(({ icon: Icon, title, body }, index) => (
-              <Reveal key={title} delay={index * 60}>
+          <div className="grid gap-4 md:grid-cols-2">
+            {ALSO.map(({ icon: Icon, title, body }, index) => (
+              <Reveal key={title} delay={index * 70}>
                 <Card className="h-full p-5 transition-transform hover:-translate-y-0.5">
                   <span className="mb-3 inline-flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-fg">
                     <Icon className="size-5" strokeWidth={1.9} />
@@ -245,8 +368,16 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Library teaser */}
-      <section className="border-b border-border">
+      {/* Library */}
+      <section className="relative isolate overflow-hidden border-b border-border">
+        <Image
+          src="/marketing/house.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="-z-10 object-cover opacity-[0.1] dark:opacity-[0.12]"
+        />
+        <div className="absolute inset-0 -z-10 bg-bg/75" aria-hidden />
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <Reveal>
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -255,8 +386,9 @@ export default function MarketingHome() {
                   A library, free to anyone
                 </h2>
                 <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-fg-muted">
-                  No account, no email gate. Most of it is general. The state specific parts are
-                  where the value is, because nobody else publishes those for free.
+                  No account, no email gate, whether or not you ever use the product. Most of it is
+                  general. The state specific parts are where the value is, because nobody else
+                  publishes those for free.
                 </p>
               </div>
               <Link
@@ -292,19 +424,26 @@ export default function MarketingHome() {
       </section>
 
       {/* Close */}
-      <section className="bg-navy-900 text-navy-50 dark:bg-navy-800">
-        <div className="mx-auto w-full max-w-6xl px-5 py-16 text-center sm:py-20">
+      <section className="relative isolate overflow-hidden bg-navy-900 text-navy-50 dark:bg-navy-800">
+        <Image
+          src="/marketing/street.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="-z-10 object-cover opacity-20"
+        />
+        <div className="mx-auto w-full max-w-6xl px-5 py-20 text-center">
           <Reveal>
-            <h2 className="mx-auto max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] sm:text-[36px]">
+            <h2 className="mx-auto max-w-2xl text-[30px] font-semibold leading-tight tracking-[-0.03em] sm:text-[40px]">
               Have a look before you decide anything.
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-navy-200">
-              The demo is a real association with real numbers behind it. Sign in as a board
-              member or as a resident and go anywhere.
+            <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-navy-200">
+              The demo is a real association with real numbers behind it, including a reserve plan
+              that does not quite work. Sign in as a board member or a resident and go anywhere.
             </p>
             <Link
               href="/signin"
-              className="mt-7 inline-flex h-11 items-center gap-2 rounded-lg bg-navy-50 px-5 text-[14px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
+              className="mt-8 inline-flex h-11 items-center gap-2 rounded-lg bg-navy-50 px-6 text-[14px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
             >
               Open the demo
               <ArrowRight className="size-4" />
