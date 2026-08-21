@@ -121,34 +121,42 @@ const JOBS = [
  *
  * The capture is the screen only, with no bezel of its own, so the device is
  * drawn here in CSS. That keeps it crisp at any size, lets the frame follow
- * the theme, and means a new screenshot drops straight in without having to
- * match a baked in border. Deliberately just a bezel: side buttons read as
- * artefacts at this size rather than as detail.
+ * the theme, and means a new screenshot drops straight in without matching a
+ * baked in border.
+ *
+ * The device is cropped short and faded into the page rather than shown whole.
+ * A full phone next to a column of text is taller than everything around it
+ * and drags the eye to the bottom of the section; fading it out keeps the
+ * weight on the screen content, which is the part worth looking at.
  */
 function PhoneFrame({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="relative mx-auto w-[268px] sm:w-[292px]">
-      <div className="relative overflow-hidden rounded-[2.75rem] bg-navy-950 p-[10px] shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
-        <div className="relative overflow-hidden rounded-[2.15rem] bg-bg">
-          <Image
-            src={src}
-            alt={alt}
-            width={764}
-            height={1162}
-            sizes="(max-width: 640px) 268px, 292px"
-            className="h-auto w-full"
-          />
-          {/* Dynamic island. */}
-          <span
-            className="absolute left-1/2 top-2 h-[22px] w-[86px] -translate-x-1/2 rounded-full bg-navy-950"
-            aria-hidden
-          />
-          {/* Home indicator. */}
-          <span
-            className="absolute bottom-1.5 left-1/2 h-[4px] w-[104px] -translate-x-1/2 rounded-full bg-navy-950/25"
-            aria-hidden
-          />
+    <div className="relative mx-auto w-[262px] sm:w-[288px]">
+      <div className="relative h-[380px] overflow-hidden sm:h-[420px]">
+        <div className="rounded-t-[2.75rem] bg-navy-950 px-[10px] pt-[10px] shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
+          <div className="relative overflow-hidden rounded-t-[2.15rem] bg-bg">
+            <Image
+              src={src}
+              alt={alt}
+              width={764}
+              height={1162}
+              priority={false}
+              sizes="(max-width: 640px) 262px, 288px"
+              className="h-auto w-full"
+            />
+            {/* Dynamic island. */}
+            <span
+              className="absolute left-1/2 top-2 h-[22px] w-[86px] -translate-x-1/2 rounded-full bg-navy-950"
+              aria-hidden
+            />
+          </div>
         </div>
+
+        {/* Dissolves the device into the section instead of cutting it flat. */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-bg/80 to-bg"
+          aria-hidden
+        />
       </div>
     </div>
   );
