@@ -1,7 +1,9 @@
+"use client";
+
 import { CheckCircle2, Clock, Lock, Users } from "lucide-react";
 import { Badge, Card, Meter } from "@/components/ui/primitives";
 import { ballotTally } from "@/lib/data";
-import { communitySettings } from "@/lib/data";
+import { useAppState } from "@/lib/app-state";
 import type { Ballot } from "@/lib/types";
 import { formatDate, relativeDays } from "@/lib/utils";
 
@@ -25,12 +27,13 @@ const kindLabel = {
  * place, so nobody has to open each ballot to find out where a vote stands.
  */
 export function BallotCard({ ballot }: { ballot: Ballot }) {
+  const { settings } = useAppState();
   const t = ballotTally(ballot.id);
   // Sealed until close, unless the board turned live results on.
   const showResults =
     ballot.status === "certified" ||
     ballot.status === "closed" ||
-    communitySettings.showLiveVoteResults ||
+    settings.showLiveVoteResults ||
     t.daysLeft < 0;
 
   return (

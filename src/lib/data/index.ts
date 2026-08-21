@@ -33,6 +33,7 @@ import { ballots, meetings } from "./voting";
 import { boardMembers, currentOwner, owners, CURRENT_OWNER_ID } from "./owners";
 import { requests, violations } from "./requests";
 import { daysFromToday } from "@/lib/utils";
+import { NotFoundError } from "@/lib/core/errors";
 
 export {
   accounts,
@@ -75,6 +76,29 @@ export {
   YEAR_ELAPSED,
 };
 export type { BudgetLine };
+
+/* -------------------------------------------------------------------------- */
+/* Indexes                                                                     */
+/*                                                                             */
+/* Built once at module load. Screens look records up by id on every render,   */
+/* and a Map turns those repeated linear scans into constant time.             */
+/* -------------------------------------------------------------------------- */
+
+export const ownersById: ReadonlyMap<string, (typeof owners)[number]> = new Map(
+  owners.map((owner) => [owner.id, owner]),
+);
+
+export const accountsById: ReadonlyMap<string, (typeof accounts)[number]> = new Map(
+  accounts.map((account) => [account.id, account]),
+);
+
+export const requestsByReference: ReadonlyMap<string, (typeof requests)[number]> = new Map(
+  requests.map((request) => [request.reference, request]),
+);
+
+export const ballotsById: ReadonlyMap<string, (typeof ballots)[number]> = new Map(
+  ballots.map((ballot) => [ballot.id, ballot]),
+);
 
 /* -------------------------------------------------------------------------- */
 /* Derived selectors. Computed, never hardcoded, so the numbers can't drift.   */
@@ -240,7 +264,7 @@ export function requestsForOwner(ownerId: string) {
 }
 
 export function requestByReference(reference: string) {
-  return requests.find((r) => r.reference === reference);
+  return requestsByReference.get(reference);
 }
 
 /** Requests with a statutory or bylaw clock, soonest first. */
@@ -436,7 +460,8 @@ export function ballotsForOwners() {
 
 /** Turnout and approval, derived from the option tallies. */
 export function ballotTally(ballotId: string) {
-  const ballot = ballots.find((b) => b.id === ballotId)!;
+  const ballot = ballotsById.get(ballotId);
+  if (!ballot) throw new NotFoundError("no such ballot", { ballotId });
   const cast = ballot.options.reduce((t, o) => t + o.votes, 0);
   const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
   return {

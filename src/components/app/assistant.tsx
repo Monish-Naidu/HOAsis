@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUp, MessageCircle, Sparkles, X } from "lucide-react";
 import { answerQuestion, suggestedQuestions, type Answer } from "@/lib/assistant";
-import { useCurrentOwner, useMyRequests } from "@/lib/app-state";
+import { useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
+import type { AssistantScope } from "@/lib/assistant";
 import type { AssistantContext } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
@@ -31,10 +32,11 @@ export function Assistant({
   const endRef = useRef<HTMLDivElement>(null);
   const owner = useCurrentOwner();
   const myRequests = useMyRequests();
+  const { amenities, settings } = useAppState();
 
   // The snapshot is rendered on the server for one household. Re-point the
   // per-person parts at whoever is actually signed in.
-  const scoped: AssistantContext = owner
+  const scoped: AssistantScope = owner
     ? {
         ...context,
         owner: {
@@ -53,8 +55,16 @@ export function Assistant({
           status: r.status,
           submittedDate: r.submittedDate,
         })),
+        amenities: amenities.map((a) => ({
+          name: a.name,
+          status: a.status,
+          detail: a.detail,
+        })),
+        // The board can hide association balances. The assistant must not be
+        // the hole in that fence.
+        fundsVisible: settings.showFundsToResidents,
       }
-    : context;
+    : { ...context, fundsVisible: settings.showFundsToResidents };
 
   useEffect(() => {
     if (open) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

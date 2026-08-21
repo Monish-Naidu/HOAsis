@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
 import { AdminNav } from "@/components/app/admin-nav";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
-import { CommunityHero } from "@/components/app/community-hero";
+import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import {
@@ -46,13 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Wordmark />
             </Link>
             <span className="hidden h-5 w-px bg-border sm:block" />
-            <button
-              type="button"
-              className="hidden items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-medium text-fg hover:bg-surface-2 sm:inline-flex"
-            >
-              {association.name}
-              <ChevronDown className="size-3.5 text-fg-subtle" />
-            </button>
+            <CommunityName />
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <ViewSwitcher />

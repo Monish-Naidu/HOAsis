@@ -20,9 +20,24 @@ Two experiences share one system of record:
 ```bash
 pnpm install
 pnpm dev        # http://localhost:3000
-pnpm build      # production build, all routes prerender
-pnpm lint
+pnpm test       # vitest, unit and integration
+pnpm build      # production build
+pnpm check      # lint, typecheck, test, build. Run this before pushing.
 ```
+
+## There is no backend
+
+Worth saying plainly, because it shapes everything else. Domain data is TypeScript
+fixtures. Anything the app lets you change is written to `localStorage` through the store
+layer below. That means:
+
+- Admin changes reach the resident side **in the same browser, immediately**.
+- They do **not** reach another person, another device, or another browser profile.
+- Capability checks hide and lock the UI. They do not enforce anything, because there is
+  no server to enforce against.
+
+Making this multi-user is a backend, an auth provider, and moving capability checks to the
+server. The repository layer in `src/lib/data/index.ts` is the seam where that lands.
 
 ## What the product is arguing
 
@@ -67,6 +82,38 @@ calendar or a single hand written banner, whether residents can see association 
 ballot tallies are visible before a ballot closes, the last day of the month autopay can be
 scheduled before an assessment is late, the amenity list that feeds the resident request
 dropdown, and the architectural forms that feed the other one.
+
+## Core layer
+
+`src/lib/core` holds the parts that have nothing to do with HOAs:
+
+- **`errors.ts`** is an abstract `HoasisError` with a stable `code` per subclass, so a
+  boundary can tell deliberate failures from bugs with one `instanceof` and never has to
+  match on a message.
+- **`circuit-breaker.ts`** is a closed / open / half-open breaker with an injectable clock.
+  It guards `localStorage`, which genuinely fails in private mode, on a full quota, and when
+  a browser blocks site data. It is also what an HTTP client should use once there is an API.
+- **`store.ts`** is an abstract `Store<T>` with two subclasses, `MemoryStore` and
+  `PersistedStore`. They differ in exactly one axis, how a value loads and saves, and agree
+  on subscription, snapshot caching, and notification. That is what makes inheritance the
+  right tool here rather than composition.
+- **`guards.ts`** holds runtime type guards. Stored JSON was written by an older build and
+  is not trustworthy.
+
+Corrupt stored data falls back to the seed and does **not** trip the circuit, because that
+is a data fault rather than a storage fault. Repeated write failures do trip it, and every
+store then behaves like a `MemoryStore` until the cooldown elapses.
+
+## Tests
+
+`pnpm test`. Unit tests cover the breaker state machine, both stores including the failure
+paths, money and date formatting, the calendar grid, every derived financial figure, and the
+assistant. Integration tests cover sign in, view switching, the capability matrix including
+the President being unstrippable, every admin setting reaching the resident side, request
+persistence across a remount, and the error boundary containing a failure to its own region.
+
+The stores are module singletons, which is right for the app and hostile to tests, so
+`tests/setup.ts` calls `resetAllStores()` between tests.
 
 ## Architecture
 

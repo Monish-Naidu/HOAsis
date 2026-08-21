@@ -9,15 +9,23 @@ import {
   type ReactNode,
 } from "react";
 import {
-  owners,
+  ownersById,
   ownerCharges,
-  requests,
+  requests as seedRequests,
   accounts as seedAccounts,
   architecturalForms as seedForms,
   communityAmenities as seedAmenities,
   communitySettings as seedSettings,
   forumPosts as seedPosts,
 } from "@/lib/data";
+import { CircuitBreaker } from "@/lib/core/circuit-breaker";
+import { PersistedStore, type Store } from "@/lib/core/store";
+import {
+  isCommunitySettings,
+  isRecordArray,
+  isSession,
+  type StoredSession,
+} from "@/lib/core/guards";
 import type {
   Account,
   HomeRequest,
@@ -66,127 +74,83 @@ interface AppState {
 
 const Ctx = createContext<AppState | null>(null);
 
-const KEY = "hoasis-session";
-
 /* -------------------------------------------------------------------------- */
-/* The session lives in localStorage, which is outside React. Reading it with  */
-/* useSyncExternalStore avoids a setState-in-effect cascade on every mount.    */
+/* Stores                                                                      */
+/*                                                                             */
+/* Everything the demo lets you change lives in one of these. They sit outside */
+/* React and are read through useSyncExternalStore, which keeps the server and */
+/* client markup in agreement and avoids a setState cascade on every mount.    */
 /* -------------------------------------------------------------------------- */
 
-interface Session {
-  accountId: string | null;
-  view: View;
-}
+type Session = StoredSession;
 
-const EMPTY: Session = { accountId: null, view: "resident" };
-
-let listeners: (() => void)[] = [];
-let cached: Session | null = null;
-
-function readSession(): Session {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as Partial<Session>;
-    return {
-      accountId: parsed.accountId ?? null,
-      view: parsed.view === "admin" ? "admin" : "resident",
-    };
-  } catch {
-    return EMPTY;
-  }
-}
-
-function sessionSnapshot(): Session {
-  if (cached === null) cached = readSession();
-  return cached;
-}
-
-function serverSnapshot(): Session {
-  return EMPTY;
-}
-
-function subscribe(cb: () => void) {
-  listeners.push(cb);
-  return () => {
-    listeners = listeners.filter((l) => l !== cb);
-  };
-}
-
-function writeSession(next: Session) {
-  cached = next;
-  try {
-    if (next.accountId) localStorage.setItem(KEY, JSON.stringify(next));
-    else localStorage.removeItem(KEY);
-  } catch {
-    /* storage blocked, the session stays in memory */
-  }
-  listeners.forEach((l) => l());
-}
+const NO_SESSION: Session = { accountId: null, view: "resident" };
 
 /**
- * A tiny localStorage backed store.
- *
- * Everything the demo lets you change lives in one of these, so submitting a
- * request or flipping a setting survives a reload. useSyncExternalStore keeps
- * it hydration safe: the server snapshot is always the seed.
+ * One breaker for every store. A browser that refuses site data should trip
+ * the circuit once, not six times, and all six stores should degrade together.
  */
-function createStore<T>(key: string, seed: T) {
-  let listeners: (() => void)[] = [];
-  let cached: T | null = null;
+const storageBreaker = new CircuitBreaker("localStorage", {
+  failureThreshold: 3,
+  cooldownMs: 30_000,
+});
 
-  const read = (): T => {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? (JSON.parse(raw) as T) : seed;
-    } catch {
-      return seed;
-    }
-  };
+const sessionStore = new PersistedStore<Session>("hoasis-session", NO_SESSION, {
+  breaker: storageBreaker,
+  validate: isSession,
+});
+const accountStore = new PersistedStore<Account[]>("hoasis-accounts", seedAccounts, {
+  breaker: storageBreaker,
+  validate: isRecordArray<Account>(),
+});
+const settingsStore = new PersistedStore<CommunitySettings>("hoasis-settings", seedSettings, {
+  breaker: storageBreaker,
+  validate: isCommunitySettings,
+});
+const amenityStore = new PersistedStore<CommunityAmenity[]>("hoasis-amenities", seedAmenities, {
+  breaker: storageBreaker,
+  validate: isRecordArray<CommunityAmenity>(),
+});
+const formStore = new PersistedStore<ArchitecturalForm[]>("hoasis-forms", seedForms, {
+  breaker: storageBreaker,
+  validate: isRecordArray<ArchitecturalForm>(),
+});
+const postStore = new PersistedStore<ForumPost[]>("hoasis-posts", seedPosts, {
+  breaker: storageBreaker,
+  validate: isRecordArray<ForumPost>(),
+});
+const requestStore = new PersistedStore<HomeRequest[]>("hoasis-requests", seedRequests, {
+  breaker: storageBreaker,
+  validate: isRecordArray<HomeRequest>(),
+});
 
-  return {
-    subscribe(cb: () => void) {
-      listeners.push(cb);
-      return () => {
-        listeners = listeners.filter((l) => l !== cb);
-      };
-    },
-    get(): T {
-      if (cached === null) cached = read();
-      return cached;
-    },
-    server(): T {
-      return seed;
-    },
-    set(next: T) {
-      cached = next;
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch {
-        /* storage blocked, the change stays in memory */
-      }
-      listeners.forEach((l) => l());
-    },
-    reset() {
-      cached = seed;
-      try {
-        localStorage.removeItem(key);
-      } catch {
-        /* nothing to clear */
-      }
-      listeners.forEach((l) => l());
-    },
-  };
+/** Reset together, so "reset demo data" cannot leave half the app rewritten. */
+const stores = [
+  accountStore,
+  settingsStore,
+  amenityStore,
+  formStore,
+  postStore,
+  requestStore,
+] as const;
+
+/**
+ * Clears every store, session included.
+ *
+ * These stores are module singletons, which is right for the app and hostile
+ * to tests: a value cached in one test would otherwise survive into the next
+ * even after localStorage is wiped. The suite calls this between tests. Product
+ * code should use `resetDemo`, which deliberately leaves you signed in.
+ */
+export function resetAllStores(): void {
+  sessionStore.reset();
+  for (const store of stores) store.reset();
 }
 
-const accountStore = createStore("hoasis-accounts", seedAccounts);
-const settingsStore = createStore("hoasis-settings", seedSettings);
-const amenityStore = createStore("hoasis-amenities", seedAmenities);
-const formStore = createStore("hoasis-forms", seedForms);
-const postStore = createStore("hoasis-posts", seedPosts);
-const requestStore = createStore("hoasis-requests", requests);
-
-const stores = [accountStore, settingsStore, amenityStore, formStore, postStore, requestStore];
+/** Reads any Store through React, with the three snapshot callbacks bound once. */
+function useStore<T>(store: Store<T>): T {
+  return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);
+}
 
 const noopSubscribe = () => () => {};
 const alwaysTrue = () => true;
@@ -203,46 +167,33 @@ function useHydrated() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const session = useSyncExternalStore(subscribe, sessionSnapshot, serverSnapshot);
+  const session = useStore(sessionStore);
   const ready = useHydrated();
-  const accountList = useSyncExternalStore(
-    accountStore.subscribe,
-    accountStore.get,
-    accountStore.server,
-  );
-  const settings = useSyncExternalStore(
-    settingsStore.subscribe,
-    settingsStore.get,
-    settingsStore.server,
-  );
-  const amenities = useSyncExternalStore(
-    amenityStore.subscribe,
-    amenityStore.get,
-    amenityStore.server,
-  );
-  const forms = useSyncExternalStore(formStore.subscribe, formStore.get, formStore.server);
-  const posts = useSyncExternalStore(postStore.subscribe, postStore.get, postStore.server);
-  const requestList = useSyncExternalStore(
-    requestStore.subscribe,
-    requestStore.get,
-    requestStore.server,
-  );
+  const accountList = useStore(accountStore);
+  const settings = useStore(settingsStore);
+  const amenities = useStore(amenityStore);
+  const forms = useStore(formStore);
+  const posts = useStore(postStore);
+  const requestList = useStore(requestStore);
 
   const account = useMemo(
-    () => accountList.find((a) => a.id === session.accountId) ?? null,
+    () => accountList.find((candidate) => candidate.id === session.accountId) ?? null,
     [accountList, session.accountId],
   );
 
   const signIn = useCallback((id: string) => {
-    const next = seedAccounts.find((a) => a.id === id);
-    writeSession({ accountId: id, view: next && next.role !== "resident" ? "admin" : "resident" });
+    const next = accountStore.getSnapshot().find((a) => a.id === id);
+    sessionStore.set({
+      accountId: id,
+      view: next && next.role !== "resident" ? "admin" : "resident",
+    });
   }, []);
 
-  const signOut = useCallback(() => writeSession(EMPTY), []);
+  const signOut = useCallback(() => sessionStore.set(NO_SESSION), []);
 
   const setView = useCallback(
-    (v: View) => writeSession({ accountId: session.accountId, view: v }),
-    [session.accountId],
+    (view: View) => sessionStore.update((current) => ({ ...current, view })),
+    [],
   );
 
   const can = useCallback(
@@ -251,7 +202,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const updateSettings = useCallback(
-    (patch: Partial<CommunitySettings>) => settingsStore.set({ ...settingsStore.get(), ...patch }),
+    (patch: Partial<CommunitySettings>) =>
+      settingsStore.update((current) => ({ ...current, ...patch })),
     [],
   );
 
@@ -259,34 +211,39 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const setForms = useCallback((next: ArchitecturalForm[]) => formStore.set(next), []);
 
   const setCapability = useCallback((id: string, capability: Capability, on: boolean) => {
-    accountStore.set(
-      accountStore
-        .get()
-        .map((a) =>
-          a.id === id && a.role !== "president"
-            ? { ...a, capabilities: { ...a.capabilities, [capability]: on } }
-            : a,
-        ),
+    // The President's grid is deliberately immutable. An association that can
+    // strip its President of access has no way back in.
+    accountStore.update((list) =>
+      list.map((a) =>
+        a.id === id && a.role !== "president"
+          ? { ...a, capabilities: { ...a.capabilities, [capability]: on } }
+          : a,
+      ),
     );
   }, []);
 
-  const addPost = useCallback((post: ForumPost) => postStore.set([post, ...postStore.get()]), []);
+  const addPost = useCallback(
+    (post: ForumPost) => postStore.update((all) => [post, ...all]),
+    [],
+  );
 
   const addRequest = useCallback(
-    (request: HomeRequest) => requestStore.set([request, ...requestStore.get()]),
+    (request: HomeRequest) => requestStore.update((all) => [request, ...all]),
     [],
   );
 
   const likePost = useCallback(
     (postId: string) =>
-      postStore.set(
-        postStore.get().map((x) => (x.id === postId ? { ...x, likes: x.likes + 1 } : x)),
+      postStore.update((all) =>
+        all.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)),
       ),
     [],
   );
 
   /** Puts the demo back to its seeded state without signing you out. */
-  const resetDemo = useCallback(() => stores.forEach((s) => s.reset()), []);
+  const resetDemo = useCallback(() => {
+    for (const store of stores) store.reset();
+  }, []);
 
   const value: AppState = {
     account,
@@ -327,10 +284,8 @@ export function useAppState() {
  */
 export function useCurrentOwner(): Owner | null {
   const { account } = useAppState();
-  return useMemo(
-    () => (account ? (owners.find((o) => o.id === account.ownerId) ?? null) : null),
-    [account],
-  );
+  // Map lookup rather than a linear scan over 88 households on every render.
+  return useMemo(() => (account ? (ownersById.get(account.ownerId) ?? null) : null), [account]);
 }
 
 /** Charge history is only seeded for one household; everyone else sees an empty ledger. */

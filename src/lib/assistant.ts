@@ -1,4 +1,7 @@
 import type { AssistantContext } from "@/lib/data";
+
+/** The snapshot plus the one setting the assistant has to honour. */
+export type AssistantScope = AssistantContext & { fundsVisible: boolean };
 import { formatDate, money, relativeDays } from "@/lib/utils";
 
 /**
@@ -20,7 +23,7 @@ interface Intent {
   keywords: string[];
   /** Phrases that should win outright, ahead of keyword scoring. */
   phrases?: string[];
-  answer: (c: AssistantContext) => Answer;
+  answer: (c: AssistantScope) => Answer;
 }
 
 const intents: Intent[] = [
@@ -183,7 +186,14 @@ const intents: Intent[] = [
       "how much does the hoa have",
       "reserve balance",
     ],
-    answer: (c) => ({
+    answer: (c) => {
+      if (!c.fundsVisible) {
+        return {
+          text: "The board has not published association balances. You can ask them to turn that on, or request the records directly.",
+          action: { label: "Start a records request", href: "/resident/requests/new" },
+        };
+      }
+      return {
       text: `The association holds ${money(c.association.operatingCents, { cents: false })} in operating and ${money(
         c.association.reserveCents,
         { cents: false },
@@ -198,7 +208,8 @@ const intents: Intent[] = [
         },
       ],
       action: { label: "Full breakdown", href: "/resident/finances" },
-    }),
+      };
+    },
   },
   {
     id: "dues",
@@ -251,7 +262,7 @@ const STOP = new Set([
   "and", "or", "it", "this", "that", "can", "you", "please", "hoa",
 ]);
 
-export function answerQuestion(question: string, context: AssistantContext): Answer {
+export function answerQuestion(question: string, context: AssistantScope): Answer {
   const q = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
 
   // An exact phrase beats keyword scoring. "late payment" should never be

@@ -1,7 +1,22 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
+
+/** The association name as the admin has it set, for chrome outside the hero. */
+export function CommunityName() {
+  const { settings } = useAppState();
+  return (
+    <button
+      type="button"
+      className="hidden items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-medium text-fg hover:bg-surface-2 sm:inline-flex"
+    >
+      {settings.displayName} Community Association
+      <ChevronDown className="size-3.5 text-fg-subtle" />
+    </button>
+  );
+}
 
 /**
  * The community's own identity, sitting under the HOAsis bar and above
