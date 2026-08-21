@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState, usePendingPosts, useVisiblePosts } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { forumCategories } from "@/lib/data";
 import { ROLE_LABEL, type ForumCategory, type ForumPost } from "@/lib/types";
 import { cn, formatDate, pluralize } from "@/lib/utils";
@@ -25,6 +26,7 @@ import { cn, formatDate, pluralize } from "@/lib/utils";
 export function ForumBoard({ moderate }: { moderate?: boolean }) {
   const { account, addPost, likePost, settings, moderatePost, togglePinned, removePost } =
     useAppState();
+  const { notify } = useToast();
   const readable = useVisiblePosts();
   const pending = usePendingPosts();
   const posts = moderate ? readable.filter((p) => p.status === "published") : readable;
@@ -274,7 +276,10 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removePost(p.id)}
+                      onClick={() => {
+                        const undo = removePost(p.id);
+                        notify(`Removed "${p.title}"`, "warn", { label: "Undo", onClick: undo });
+                      }}
                       className="rounded-md px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger-soft"
                     >
                       Remove

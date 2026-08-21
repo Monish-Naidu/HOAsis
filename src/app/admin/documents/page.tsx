@@ -7,6 +7,7 @@ import {
   FileText,
   Globe,
   Search,
+  Trash2,
   Upload,
 } from "lucide-react";
 import {
@@ -33,8 +34,45 @@ const order: DocumentRecord["category"][] = [
   "Forms",
 ];
 
+/** Bytes to the short form a person reads at a glance. */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const EXTENSION_TO_TYPE: Record<string, DocumentRecord["fileType"]> = {
+  pdf: "pdf",
+  xls: "xlsx",
+  xlsx: "xlsx",
+  doc: "docx",
+  docx: "docx",
+};
+
+/**
+ * Turns a picked file into a record.
+ *
+ * Uploads land as board-only by default: a document nobody has classified yet
+ * should never appear on the public records page by accident.
+ *
+ * The file itself is not stored. A real deployment puts it in object storage
+ * and keeps the returned URL, which is a change to this function alone.
+ */
+function toDocumentRecord(file: File, index: number): DocumentRecord {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return {
+    id: `doc-upload-${index}-${file.name}`,
+    name: file.name.replace(/\.[^.]+$/, ""),
+    category: "Notices",
+    updatedDate: "2026-08-21",
+    size: formatSize(file.size),
+    visibility: "board",
+    fileType: EXTENSION_TO_TYPE[extension] ?? "pdf",
+  };
+}
+
 export default function BoardDocuments() {
-  const { documents, addDocument, setDocumentVisibility } = useAppState();
+  const { documents, addDocument, setDocumentVisibility, removeDocument } = useAppState();
   const { notify } = useToast();
   const [query, setQuery] = useState("");
   const publicDocs = documents.filter((d) => d.visibility === "public");
@@ -57,26 +95,28 @@ export default function BoardDocuments() {
         title="Documents"
         
         action={
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => {
-              const index = documents.length + 1;
-              addDocument({
-                id: `doc-${index}`,
-                name: `Board upload ${index}`,
-                category: "Notices",
-                updatedDate: "2026-08-21",
-                size: "0 KB",
-                visibility: "members",
-                fileType: "pdf",
-              });
-              notify("Uploaded. Set who can see it below.");
-            }}
-          >
+          <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 text-[13px] font-medium text-brand-fg transition-opacity hover:opacity-90">
             <Upload className="size-3.5" />
             Upload
-          </Button>
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx"
+              className="sr-only"
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                if (files.length === 0) return;
+                for (const file of files) addDocument(toDocumentRecord(file, documents.length));
+                notify(
+                  files.length === 1
+                    ? `Uploaded ${files[0].name}. Choose who can see it.`
+                    : `Uploaded ${files.length} files. Choose who can see them.`,
+                );
+                // Allows re-selecting the same file, which otherwise fires nothing.
+                event.target.value = "";
+              }}
+            />
+          </label>
         }
       />
 
@@ -176,6 +216,17 @@ export default function BoardDocuments() {
                     <option value="members">Owners</option>
                     <option value="board">Board only</option>
                   </select>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${d.name}`}
+                    onClick={() => {
+                      const undo = removeDocument(d.id);
+                      notify(`Removed ${d.name}`, "warn", { label: "Undo", onClick: undo });
+                    }}
+                    className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
                 </div>
               );
             })}

@@ -173,12 +173,13 @@ export default function BoardDashboard() {
                   <button
                     type="button"
                     onClick={() => {
-                      dismissLedgerEntry(e.id);
+                      const undo = dismissLedgerEntry(e.id);
                       notify(
                         e.duplicateOfId
                           ? "Duplicate removed from the ledger"
                           : "Transaction dismissed",
                         "warn",
+                        { label: "Undo", onClick: undo },
                       );
                     }}
                     className="h-7 rounded-md px-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2"

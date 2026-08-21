@@ -30,6 +30,7 @@ import { accounts, accountById, CAPABILITY_LABEL, DEFAULT_ACCOUNT_ID, GRANTABLE,
 import { architecturalForms, communityAmenities, communitySettings } from "./settings";
 import { forumCategories, forumPosts } from "./forum";
 import { paymentInstruments, supportedInstitutions } from "./payments";
+import { messageTemplates, renderTemplate, TEMPLATE_TOKENS } from "./templates";
 import { ballots, meetings } from "./voting";
 import { boardMembers, currentOwner, owners, CURRENT_OWNER_ID } from "./owners";
 import { requests, violations } from "./requests";
@@ -50,8 +51,11 @@ export {
   GRANTABLE,
   isAdmin,
   NO_CAPABILITIES,
+  messageTemplates,
   paymentInstruments,
+  renderTemplate,
   supportedInstitutions,
+  TEMPLATE_TOKENS,
   announcements,
   association,
   bankAccounts,

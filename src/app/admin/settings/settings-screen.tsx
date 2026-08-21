@@ -26,6 +26,7 @@ import {
   Toggle,
 } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
 import { ROLE_LABEL, type ArchitecturalForm, type CommunityAmenity } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
@@ -41,9 +42,12 @@ export function SettingsScreen() {
     forms,
     setForms,
     setCapability,
+    removeAmenity,
+    removeForm,
     resetDemo,
     can,
   } = useAppState();
+  const { notify } = useToast();
 
   const [newAmenity, setNewAmenity] = useState("");
   const [newFormLabel, setNewFormLabel] = useState("");
@@ -302,7 +306,10 @@ export function SettingsScreen() {
               <button
                 type="button"
                 aria-label={`Remove ${a.name}`}
-                onClick={() => setAmenities(amenities.filter((x) => x.id !== a.id))}
+                onClick={() => {
+                  const undo = removeAmenity(a.id);
+                  notify(`Removed ${a.name}`, "warn", { label: "Undo", onClick: undo });
+                }}
                 className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
               >
                 <Trash2 className="size-3.5" />
@@ -348,7 +355,10 @@ export function SettingsScreen() {
                 <button
                   type="button"
                   aria-label={`Remove ${f.label}`}
-                  onClick={() => setForms(forms.filter((x) => x.id !== f.id))}
+                  onClick={() => {
+                    const undo = removeForm(f.id);
+                    notify(`Removed ${f.label}`, "warn", { label: "Undo", onClick: undo });
+                  }}
                   className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
                 >
                   <X className="size-3.5" />

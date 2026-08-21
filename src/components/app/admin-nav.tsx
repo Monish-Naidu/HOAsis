@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Banknote,
-  BookOpen,
   FileText,
   Inbox,
   LayoutDashboard,
   MessagesSquare,
+  PiggyBank,
   MessageSquareText,
   ScaleIcon,
   Settings,
@@ -34,6 +34,13 @@ const items: {
 }[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
   { href: "/admin/money", label: "Money", icon: Banknote, key: "money", need: "finances" },
+  {
+    href: "/admin/reserves",
+    label: "Reserves",
+    icon: PiggyBank,
+    key: "reserves",
+    need: "finances",
+  },
   { href: "/admin/homeowners", label: "Homeowners", icon: Users, key: "homeowners" },
   { href: "/admin/requests", label: "Requests", icon: Inbox, key: "requests", need: "requests" },
   { href: "/admin/voting", label: "Voting", icon: Vote, key: "voting", need: "voting" },
@@ -61,7 +68,6 @@ const items: {
     need: "documents",
   },
   { href: "/admin/settings", label: "Settings", icon: Settings, key: "settings", need: "settings" },
-  { href: "/admin/legend", label: "Legend", icon: BookOpen, key: "legend" },
 ];
 
 export function AdminNav({ badges }: { badges: Partial<Record<string, NavBadge>> }) {

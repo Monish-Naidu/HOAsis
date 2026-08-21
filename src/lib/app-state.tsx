@@ -20,6 +20,7 @@ import {
   paymentInstruments as seedInstruments,
   bankAccounts,
   ballots as seedBallots,
+  messageTemplates as seedTemplates,
   documents as seedDocuments,
   ledgerEntries as seedLedger,
   payouts as seedPayouts,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/data";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 import type { Ballot, DocumentRecord, LedgerEntry, MessageThread, Payout, Vendor } from "@/lib/types";
+import type { MessageTemplate } from "@/lib/data/templates";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { daysFromToday, TODAY } from "@/lib/utils";
 import { PersistedStore, type Store } from "@/lib/core/store";
@@ -75,6 +77,7 @@ interface AppState {
   threads: MessageThread[];
   documents: DocumentRecord[];
   ballots: Ballot[];
+  templates: MessageTemplate[];
   signIn: (accountId: string) => void;
   signOut: () => void;
   setView: (v: View) => void;
@@ -82,18 +85,24 @@ interface AppState {
   updateSettings: (patch: Partial<CommunitySettings>) => void;
   setAmenities: (next: CommunityAmenity[]) => void;
   setForms: (next: ArchitecturalForm[]) => void;
+  removeForm: (formId: string) => () => void;
+  removeAmenity: (amenityId: string) => () => void;
+  addVendor: (vendor: Vendor) => void;
+  saveTemplate: (template: MessageTemplate) => void;
+  removeVendor: (vendorId: string) => () => void;
+  removeDocument: (documentId: string) => () => void;
   setCapability: (accountId: string, capability: Capability, on: boolean) => void;
   resetDemo: () => void;
   addPost: (post: ForumPost) => void;
   moderatePost: (postId: string, decision: "published" | "rejected", reason?: string) => void;
   togglePinned: (postId: string) => void;
-  removePost: (postId: string) => void;
+  removePost: (postId: string) => () => void;
   addRequest: (request: HomeRequest) => void;
   addInstrument: (instrument: Omit<PaymentInstrument, "id" | "isDefault">) => PaymentInstrument;
-  removeInstrument: (instrumentId: string) => void;
+  removeInstrument: (instrumentId: string) => () => void;
   setDefaultInstrument: (instrumentId: string) => void;
   confirmLedgerEntry: (entryId: string, category?: LedgerEntry["category"]) => void;
-  dismissLedgerEntry: (entryId: string) => void;
+  dismissLedgerEntry: (entryId: string) => () => void;
   approvePayout: (payoutId: string) => void;
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
@@ -183,6 +192,10 @@ const ballotStore = new PersistedStore<Ballot[]>("hoasis-ballots", seedBallots, 
   breaker: storageBreaker,
   validate: isRecordArray<Ballot>(),
 });
+const templateStore = new PersistedStore<MessageTemplate[]>("hoasis-templates", seedTemplates, {
+  breaker: storageBreaker,
+  validate: isRecordArray<MessageTemplate>(),
+});
 const instrumentStore = new PersistedStore<PaymentInstrument[]>(
   "hoasis-instruments",
   seedInstruments,
@@ -204,6 +217,7 @@ const stores = [
   threadStore,
   documentStore,
   ballotStore,
+  templateStore,
 ] as const;
 
 /**
@@ -217,6 +231,19 @@ const stores = [
 export function resetAllStores(): void {
   sessionStore.reset();
   for (const store of stores) store.reset();
+}
+
+/**
+ * Runs a destructive change and returns a function that puts it back.
+ *
+ * Snapshotting the whole collection is the right trade here: these are small,
+ * and restoring the exact prior array is simpler and safer than trying to
+ * re-insert one record at its old index with its old neighbours.
+ */
+function destructive<T>(store: Store<T>, mutate: (current: T) => T): () => void {
+  const previous = store.getSnapshot();
+  store.update(mutate);
+  return () => store.set(previous);
 }
 
 /** Reads any Store through React, with the three snapshot callbacks bound once. */
@@ -254,6 +281,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const threads = useStore(threadStore);
   const documents = useStore(documentStore);
   const ballots = useStore(ballotStore);
+  const templates = useStore(templateStore);
 
   const account = useMemo(
     () => accountList.find((candidate) => candidate.id === session.accountId) ?? null,
@@ -344,9 +372,45 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const removePost = useCallback((postId: string) => {
-    postStore.update((all) => all.filter((post) => post.id !== postId));
+  const removePost = useCallback(
+    (postId: string) => destructive(postStore, (all) => all.filter((p) => p.id !== postId)),
+    [],
+  );
+
+  const removeForm = useCallback(
+    (formId: string) => destructive(formStore, (all) => all.filter((f) => f.id !== formId)),
+    [],
+  );
+
+  const removeAmenity = useCallback(
+    (amenityId: string) =>
+      destructive(amenityStore, (all) => all.filter((a) => a.id !== amenityId)),
+    [],
+  );
+
+  const saveTemplate = useCallback((template: MessageTemplate) => {
+    templateStore.update((all) =>
+      all.some((t) => t.id === template.id)
+        ? all.map((t) => (t.id === template.id ? template : t))
+        : [...all, template],
+    );
   }, []);
+
+  const addVendor = useCallback(
+    (vendor: Vendor) => vendorStore.update((all) => [vendor, ...all]),
+    [],
+  );
+
+  const removeVendor = useCallback(
+    (vendorId: string) => destructive(vendorStore, (all) => all.filter((v) => v.id !== vendorId)),
+    [],
+  );
+
+  const removeDocument = useCallback(
+    (documentId: string) =>
+      destructive(documentStore, (all) => all.filter((d) => d.id !== documentId)),
+    [],
+  );
 
   const likePost = useCallback(
     (postId: string) =>
@@ -377,17 +441,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   /** Removing the default promotes whatever the owner has left. */
-  const removeInstrument = useCallback((instrumentId: string) => {
-    instrumentStore.update((all) => {
-      const removed = all.find((i) => i.id === instrumentId);
-      const kept = all.filter((i) => i.id !== instrumentId);
-      if (!removed?.isDefault) return kept;
-      const successor = kept.find((i) => i.ownerId === removed.ownerId);
-      return successor
-        ? kept.map((i) => (i.id === successor.id ? { ...i, isDefault: true } : i))
-        : kept;
-    });
-  }, []);
+  const removeInstrument = useCallback(
+    (instrumentId: string) =>
+      destructive(instrumentStore, (all) => {
+        const removed = all.find((i) => i.id === instrumentId);
+        const kept = all.filter((i) => i.id !== instrumentId);
+        if (!removed?.isDefault) return kept;
+        const successor = kept.find((i) => i.ownerId === removed.ownerId);
+        return successor
+          ? kept.map((i) => (i.id === successor.id ? { ...i, isDefault: true } : i))
+          : kept;
+      }),
+    [],
+  );
 
   /** Exactly one default per household, enforced on write rather than hoped for. */
   const setDefaultInstrument = useCallback((instrumentId: string) => {
@@ -425,9 +491,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /** Removes a duplicate. The only ledger action that deletes rather than files. */
-  const dismissLedgerEntry = useCallback((entryId: string) => {
-    ledgerStore.update((all) => all.filter((entry) => entry.id !== entryId));
-  }, []);
+  const dismissLedgerEntry = useCallback(
+    (entryId: string) => destructive(ledgerStore, (all) => all.filter((e) => e.id !== entryId)),
+    [],
+  );
 
   /** Adds the signed in officer's signature, and releases once the threshold is met. */
   const approvePayout = useCallback((payoutId: string) => {
@@ -572,6 +639,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     threads,
     documents,
     ballots,
+    templates,
     signIn,
     signOut,
     setView,
@@ -580,6 +648,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setAmenities,
     setForms,
     setCapability,
+    removeForm,
+    removeAmenity,
+    addVendor,
+    saveTemplate,
+    removeVendor,
+    removeDocument,
     resetDemo,
     addPost,
     moderatePost,

@@ -29,6 +29,7 @@ import {
 } from "@/lib/payments/instruments";
 import { cn, formatDate, money, ordinal, relativeDays, TODAY } from "@/lib/utils";
 import { AddMethod } from "./add-method";
+import { useToast } from "@/components/app/toast";
 
 const NEXT_CHARGE_DATE = "2026-09-01";
 const REFERENCE = { year: TODAY.getUTCFullYear(), month: TODAY.getUTCMonth() + 1 };
@@ -43,6 +44,7 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
   const owner = useCurrentOwner();
   const instruments = useMyInstruments();
   const { settings, removeInstrument, setDefaultInstrument } = useAppState();
+  const { notify } = useToast();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [amountMode, setAmountMode] = useState<"balance" | "custom">("balance");
@@ -271,7 +273,13 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
                       <button
                         type="button"
                         aria-label={`Remove ${instrument.label}`}
-                        onClick={() => removeInstrument(instrument.id)}
+                        onClick={() => {
+                          const undo = removeInstrument(instrument.id);
+                          notify(`Removed ${instrument.label} ••${instrument.mask}`, "warn", {
+                            label: "Undo",
+                            onClick: undo,
+                          });
+                        }}
                         className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
                       >
                         <Trash2 className="size-3.5" />

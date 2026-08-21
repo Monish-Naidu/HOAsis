@@ -15,14 +15,20 @@ import { cn } from "@/lib/utils";
 
 type ToastTone = "ok" | "info" | "warn";
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: number;
   tone: ToastTone;
   message: string;
+  action?: ToastAction;
 }
 
 interface ToastApi {
-  notify: (message: string, tone?: ToastTone) => void;
+  notify: (message: string, tone?: ToastTone, action?: ToastAction) => void;
 }
 
 const Ctx = createContext<ToastApi | null>(null);
@@ -42,11 +48,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const notify = useCallback(
-    (message: string, tone: ToastTone = "ok") => {
+    (message: string, tone: ToastTone = "ok", action?: ToastAction) => {
       const id = nextId.current++;
-      setToasts((current) => [...current, { id, tone, message }]);
-      // Long enough to read a sentence, short enough not to linger.
-      setTimeout(() => dismiss(id), 4000);
+      setToasts((current) => [...current, { id, tone, message, action }]);
+      // Long enough to read a sentence. An undo gets longer, because deciding
+      // you did not mean it takes a moment longer than reading a confirmation.
+      setTimeout(() => dismiss(id), action ? 8000 : 4000);
     },
     [dismiss],
   );
@@ -75,6 +82,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             >
               <Icon className="mt-px size-4 shrink-0" />
               <p className="flex-1 text-[13px] leading-snug">{toast.message}</p>
+              {toast.action ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onClick();
+                    dismiss(toast.id);
+                  }}
+                  className="shrink-0 rounded-md border border-current/30 px-2 py-0.5 text-[12px] font-semibold hover:bg-current/10"
+                >
+                  {toast.action.label}
+                </button>
+              ) : null}
               <button
                 type="button"
                 aria-label="Dismiss"

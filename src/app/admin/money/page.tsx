@@ -324,8 +324,11 @@ export default function BoardMoney() {
                           <button
                             type="button"
                             onClick={() => {
-                              dismissLedgerEntry(e.id);
-                              notify("Removed from the ledger", "warn");
+                              const undo = dismissLedgerEntry(e.id);
+                              notify("Removed from the ledger", "warn", {
+                                label: "Undo",
+                                onClick: undo,
+                              });
                             }}
                             className="h-7 rounded-md px-2 text-[11px] font-medium text-danger hover:bg-danger-soft"
                           >

@@ -21,6 +21,7 @@ import {
 import { useMemo, useState } from "react";
 import { association, delinquency, owners } from "@/lib/data";
 import { useToast } from "@/components/app/toast";
+import { TemplateComposer } from "@/components/app/template-composer";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { money, pluralize } from "@/lib/utils";
 import type { Owner } from "@/lib/types";
@@ -36,6 +37,7 @@ export default function BoardHomeowners() {
   const delinq = delinquency();
   const { notify } = useToast();
   const [query, setQuery] = useState("");
+  const [composing, setComposing] = useState(false);
   // Anything needing attention first, then the board, then the rest by unit.
   const sorted = [...owners].sort((a, b) => {
     if (a.daysPastDue !== b.daysPastDue) return b.daysPastDue - a.daysPastDue;
@@ -98,9 +100,7 @@ export default function BoardHomeowners() {
             <Button
               variant="secondary"
               size="md"
-              onClick={() =>
-                notify(`Composing to ${delinq.past.length} past due households`, "info")
-              }
+              onClick={() => setComposing((v) => !v)}
             >
               <Mail className="size-3.5" />
               Message past due
@@ -142,6 +142,10 @@ export default function BoardHomeowners() {
           hint="Referred to counsel"
         />
       </div>
+
+      {composing ? (
+        <TemplateComposer recipients={delinq.past} onClose={() => setComposing(false)} />
+      ) : null}
 
       {/* Aging */}
       <Card className="mt-5">

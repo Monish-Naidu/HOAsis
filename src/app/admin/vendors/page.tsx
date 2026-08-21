@@ -5,9 +5,12 @@ import {
   CheckCircle2,
   FileWarning,
   Landmark,
+  Plus,
   ShieldAlert,
   Timer,
+  Trash2,
   Truck,
+  X,
 } from "lucide-react";
 import {
   Badge,
@@ -19,6 +22,7 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { payoutSpeed } from "@/lib/data";
+import { useState } from "react";
 import { useAppState, usePendingApprovals, useVendorGaps } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
@@ -34,8 +38,34 @@ export default function BoardVendors() {
   const gaps = useVendorGaps();
   const speed = payoutSpeed();
   const awaiting = usePendingApprovals();
-  const { vendors, payouts, markW9Requested, approvePayout } = useAppState();
+  const { vendors, payouts, markW9Requested, approvePayout, addVendor, removeVendor } =
+    useAppState();
   const { notify } = useToast();
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({
+    name: "",
+    service: "",
+    achEnabled: true,
+    w9OnFile: false,
+  });
+
+  function saveVendor() {
+    if (!draft.name.trim()) return;
+    addVendor({
+      id: `v-${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      name: draft.name.trim(),
+      service: draft.service.trim() || "Services",
+      achEnabled: draft.achEnabled,
+      w9OnFile: draft.w9OnFile,
+      ytdPaidCents: 0,
+      defaultCategory: "Repairs & maintenance",
+    });
+    notify(
+      draft.w9OnFile ? `Added ${draft.name}` : `Added ${draft.name}. W-9 requested by email.`,
+    );
+    setDraft({ name: "", service: "", achEnabled: true, w9OnFile: false });
+    setAdding(false);
+  }
   const achShare = vendors.filter((v) => v.achEnabled).length / vendors.length;
 
   return (
@@ -45,12 +75,9 @@ export default function BoardVendors() {
         title="Vendors"
         
         action={
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => notify("Vendor onboarding sends a W-9 and COI request by email", "info")}
-          >
-            Add vendor
+          <Button variant="primary" size="md" onClick={() => setAdding((v) => !v)}>
+            {adding ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+            {adding ? "Cancel" : "Add vendor"}
           </Button>
         }
       />
@@ -109,6 +136,68 @@ export default function BoardVendors() {
         </Callout>
       ) : null}
 
+      {adding ? (
+        <Card className="mt-5">
+          <CardHeader
+            title="New vendor"
+            subtitle="A vendor without a W-9 cannot be paid $600 in a year without breaking the January filing"
+          />
+          <div className="grid gap-3 px-5 py-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                Name
+              </span>
+              <input
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                placeholder="Cascade Grounds Co."
+                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                Service
+              </span>
+              <input
+                value={draft.service}
+                onChange={(e) => setDraft({ ...draft, service: e.target.value })}
+                placeholder="Grounds and irrigation"
+                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-4 border-t border-border px-5 py-3">
+            <label className="flex items-center gap-2 text-[13px] text-fg">
+              <input
+                type="checkbox"
+                checked={draft.achEnabled}
+                onChange={(e) => setDraft({ ...draft, achEnabled: e.target.checked })}
+                className="size-4 accent-navy-700"
+              />
+              Pays by ACH
+            </label>
+            <label className="flex items-center gap-2 text-[13px] text-fg">
+              <input
+                type="checkbox"
+                checked={draft.w9OnFile}
+                onChange={(e) => setDraft({ ...draft, w9OnFile: e.target.checked })}
+                className="size-4 accent-navy-700"
+              />
+              W-9 already on file
+            </label>
+            <Button
+              variant="primary"
+              size="sm"
+              className="ml-auto"
+              disabled={!draft.name.trim()}
+              onClick={saveVendor}
+            >
+              Save vendor
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
       <div className="mt-5 grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader
@@ -163,8 +252,26 @@ export default function BoardVendors() {
                           ) : null}
                         </div>
                       </td>
-                      <td className="tnum px-5 py-3 text-right font-semibold text-fg">
-                        {money(v.ytdPaidCents, { cents: false })}
+                      <td className="px-5 py-3">
+                        <span className="flex items-center justify-end gap-2">
+                          <span className="tnum font-semibold text-fg">
+                            {money(v.ytdPaidCents, { cents: false })}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${v.name}`}
+                            onClick={() => {
+                              const undo = removeVendor(v.id);
+                              notify(`Removed ${v.name}`, "warn", {
+                                label: "Undo",
+                                onClick: undo,
+                              });
+                            }}
+                            className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </span>
                       </td>
                     </tr>
                   );
