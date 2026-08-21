@@ -418,3 +418,137 @@ export interface Meeting {
   noticeSentDate?: ISODate;
   recordingAvailable?: boolean;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Accounts, roles, capabilities                                               */
+/*                                                                             */
+/* Every account is a resident first. An admin role wraps that: same person,   */
+/* same unit, same dues, plus a set of capabilities. The President holds the   */
+/* one capability that cannot be granted away, which is granting capabilities. */
+/* -------------------------------------------------------------------------- */
+
+export type AdminRole = "president" | "vice-president" | "treasurer" | "secretary";
+export type AccountRole = "resident" | AdminRole;
+
+export const ADMIN_ROLES: AdminRole[] = [
+  "president",
+  "vice-president",
+  "treasurer",
+  "secretary",
+];
+
+export const ROLE_LABEL: Record<AccountRole, string> = {
+  resident: "Resident",
+  president: "President",
+  "vice-president": "Vice President",
+  treasurer: "Treasurer",
+  secretary: "Secretary",
+};
+
+export type Capability =
+  | "finances"
+  | "requests"
+  | "documents"
+  | "communications"
+  | "voting"
+  | "vendors"
+  | "compliance"
+  | "forum"
+  | "settings"
+  | "permissions";
+
+export type Capabilities = Record<Capability, boolean>;
+
+export interface Account {
+  id: ID;
+  ownerId: ID;
+  name: string;
+  email: string;
+  unit: string;
+  role: AccountRole;
+  capabilities: Capabilities;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Community settings, owned by the admins                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface CommunityAmenity {
+  id: ID;
+  name: string;
+  /** Residents can request a reservation for this one. */
+  reservable: boolean;
+  detail: string;
+  status: "open" | "reserved" | "closed";
+  maxHours?: number;
+}
+
+export interface ArchitecturalForm {
+  id: ID;
+  label: string;
+  description: string;
+  fileName: string;
+  size: string;
+  /** Baseline forms ship with HOAsis. Uploaded ones come from the admin. */
+  source: "baseline" | "uploaded";
+  updatedDate: ISODate;
+}
+
+export interface CommunityBanner {
+  enabled: boolean;
+  title: string;
+  detail: string;
+  updatedDate: ISODate;
+}
+
+export interface CommunitySettings {
+  displayName: string;
+  photoUrl: string;
+  photoCredit?: string;
+  /** Some associations run a full calendar. Some just meet quarterly. */
+  homeLayout: "calendar" | "banner";
+  banner: CommunityBanner;
+  /** Whether residents can see association balances and transactions. */
+  showFundsToResidents: boolean;
+  /** Whether ballot tallies are visible before a ballot closes. */
+  showLiveVoteResults: boolean;
+  /** The day of the month after which an assessment is late. */
+  autopayLateAfterDay: number;
+  forumEnabled: boolean;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Forum                                                                       */
+/* -------------------------------------------------------------------------- */
+
+export type ForumCategory =
+  | "General"
+  | "Recommendations"
+  | "For sale"
+  | "Lost and found"
+  | "Safety"
+  | "Events";
+
+export interface ForumReply {
+  id: ID;
+  author: string;
+  unit: string;
+  authorRole?: string;
+  at: ISODate;
+  body: string;
+}
+
+export interface ForumPost {
+  id: ID;
+  author: string;
+  unit: string;
+  /** Board members get a badge so neighbours know when it is official. */
+  authorRole?: string;
+  category: ForumCategory;
+  title: string;
+  body: string;
+  at: ISODate;
+  likes: number;
+  pinned?: boolean;
+  replies: ForumReply[];
+}

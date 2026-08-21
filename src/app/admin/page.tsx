@@ -53,7 +53,7 @@ export default function BoardDashboard() {
         title="Dashboard"
         
         action={
-          <ButtonLink href="/board/money" variant="primary" size="md">
+          <ButtonLink href="/admin/money" variant="primary" size="md">
             Open the books
             <ArrowRight className="size-3.5" />
           </ButtonLink>
@@ -108,7 +108,7 @@ export default function BoardDashboard() {
               icon={<AlertTriangle className="size-4" />}
               action={
                 <Link
-                  href="/board/money"
+                  href="/admin/money"
                   className="text-[12px] font-medium text-accent hover:underline"
                 >
                   Review all
@@ -219,7 +219,7 @@ export default function BoardDashboard() {
             {[...comp.overdue, ...comp.dueSoon].slice(0, 3).map((item) => (
               <Link
                 key={item.id}
-                href="/board/compliance"
+                href="/admin/compliance"
                 className="block border-t border-border px-5 py-3 transition-colors hover:bg-surface-2"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -232,7 +232,7 @@ export default function BoardDashboard() {
               </Link>
             ))}
             <Link
-              href="/board/compliance"
+              href="/admin/compliance"
               className="flex items-center justify-between border-t border-border px-5 py-2.5 text-[12px] font-medium text-accent hover:bg-surface-2"
             >
               Full register
@@ -250,7 +250,7 @@ export default function BoardDashboard() {
             {clocks.map((r) => (
               <Link
                 key={r.id}
-                href="/board/requests"
+                href="/admin/requests"
                 className="block border-b border-border px-5 py-3 last:border-b-0 hover:bg-surface-2"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -372,7 +372,7 @@ function TieOutBanner({
           </p>
         </div>
         <Link
-          href="/board/money"
+          href="/admin/money"
           className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold ${
             tiesOut ? "bg-ok text-white" : "bg-warn text-white"
           }`}

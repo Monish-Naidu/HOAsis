@@ -1,32 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight, Plus } from "lucide-react";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { CURRENT_OWNER_ID, requestsForOwner } from "@/lib/data";
+import { useMyRequests } from "@/lib/app-state";
+import { kindLabel, statusTone } from "@/lib/request-status";
 import { formatDate, relativeDays } from "@/lib/utils";
-import type { RequestStatus } from "@/lib/types";
 
-export const metadata = { title: "Requests" };
 
-export const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
-  approved: "ok",
-  denied: "danger",
-  "in-review": "info",
-  "info-needed": "warn",
-  submitted: "neutral",
-  closed: "neutral",
-  draft: "neutral",
-};
-
-const kindLabel = {
-  architectural: "Architectural",
-  maintenance: "Maintenance",
-  records: "Records",
-  amenity: "Amenity",
-  "violation-appeal": "Appeal",
-} as const;
 
 export default function ResidentRequests() {
-  const mine = requestsForOwner(CURRENT_OWNER_ID);
+  const mine = useMyRequests();
   const open = mine.filter((r) => !["approved", "denied", "closed"].includes(r.status));
   const closed = mine.filter((r) => ["approved", "denied", "closed"].includes(r.status));
 
@@ -82,7 +66,7 @@ function RequestRow({
   request,
   divided,
 }: {
-  request: ReturnType<typeof requestsForOwner>[number];
+  request: ReturnType<typeof useMyRequests>[number];
   divided: boolean;
 }) {
   return (

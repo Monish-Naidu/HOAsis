@@ -93,7 +93,7 @@ export default function BoardDocuments() {
           </Button>
         }
       >
-        cedarhollow.hoasis.app/records · {publicDocs.length} documents, no account needed.
+        mehrgardens.hoasis.app/records · {publicDocs.length} documents, no account needed.
       </Callout>
 
       <Card className="mt-5">

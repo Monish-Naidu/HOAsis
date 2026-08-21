@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ChevronDown, Clock, ShieldCheck, Users } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock, Lock, ShieldCheck, Users } from "lucide-react";
 import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
+import { useAppState } from "@/lib/app-state";
 import type { Ballot } from "@/lib/types";
-import { cn, formatDate, relativeDays } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, relativeDays } from "@/lib/utils";
 
 const kindLabel = {
   election: "Election",
@@ -15,6 +16,7 @@ const kindLabel = {
 } as const;
 
 export function BallotVote({ ballot }: { ballot: Ballot }) {
+  const { settings } = useAppState();
   const [choice, setChoice] = useState<string | null>(ballot.myVoteOptionId ?? null);
   const [submitted, setSubmitted] = useState(Boolean(ballot.myVoteOptionId));
   const [expanded, setExpanded] = useState(false);
@@ -26,7 +28,9 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
   const votesFor = (optionId: string, votes: number) =>
     votes + (justVoted && optionId === choice ? 1 : 0);
   const closed = ballot.status !== "open";
-  const showResults = submitted || closed;
+  // Tallies stay sealed until the ballot closes, unless the board opts in.
+  const resultsUnlocked = closed || daysFromToday(ballot.closesDate) < 0 || settings.showLiveVoteResults;
+  const showResults = resultsUnlocked && (submitted || closed);
   const receipt = ballot.myVoteReceipt ?? "VR-2026-08-1142";
 
   return (
@@ -121,13 +125,24 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
           </div>
 
           {submitted ? (
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-ok-soft px-3 py-2">
-              <ShieldCheck className="mt-px size-3.5 shrink-0 text-ok" />
-              <p className="text-[11px] leading-snug text-ok">
-                Vote recorded. Receipt <span className="font-mono font-semibold">{receipt}</span>.
-                You can change it until the ballot closes.
-              </p>
-            </div>
+            <>
+              <div className="mt-3 flex items-start gap-2 rounded-lg bg-ok-soft px-3 py-2">
+                <ShieldCheck className="mt-px size-3.5 shrink-0 text-ok" />
+                <p className="text-[11px] leading-snug text-ok">
+                  Vote recorded. Receipt <span className="font-mono font-semibold">{receipt}</span>.
+                  You can change it until the ballot closes.
+                </p>
+              </div>
+              {!resultsUnlocked ? (
+                <div className="mt-2 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2">
+                  <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
+                  <p className="text-[11px] leading-snug text-fg-muted">
+                    Results are sealed until the ballot closes on{" "}
+                    {formatDate(ballot.closesDate, "long")}.
+                  </p>
+                </div>
+              ) : null}
+            </>
           ) : (
             <Button
               variant="primary"

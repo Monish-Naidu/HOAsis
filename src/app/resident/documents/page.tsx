@@ -28,7 +28,7 @@ export default function ResidentDocuments() {
         <p className="mt-1 text-[13px] text-fg-muted">{visible.length} documents</p>
       </div>
 
-      <Callout tone="brand" icon={<Globe className="size-4" />} title="cedarhollow.hoasis.app/records" >
+      <Callout tone="brand" icon={<Globe className="size-4" />} title="mehrgardens.hoasis.app/records" >
         Public, no account needed.
       </Callout>
 

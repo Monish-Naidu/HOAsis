@@ -13,8 +13,15 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Badge, Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
+import { useAppState } from "@/lib/app-state";
 import type { PaymentMethod } from "@/lib/types";
 import { cn, formatDate, money } from "@/lib/utils";
+
+function ordinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+}
 
 const methodIcon = {
   ach: Landmark,
@@ -38,7 +45,10 @@ export function PayFlow({
   const [selectedId, setSelectedId] = useState(methods.find((m) => m.isDefault)?.id ?? methods[0].id);
   const [amountMode, setAmountMode] = useState<"balance" | "custom">("balance");
   const [custom, setCustom] = useState("");
+  const { settings } = useAppState();
+  const lateAfterDay = settings.autopayLateAfterDay;
   const [autopay, setAutopay] = useState(autopayOn);
+  const [autopayDay, setAutopayDay] = useState(1);
   const [submitted, setSubmitted] = useState(false);
 
   const selected = methods.find((m) => m.id === selectedId)!;
@@ -244,7 +254,7 @@ export function PayFlow({
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-fg">
-                Autopay {money(duesCents)} on the 1st
+                Autopay {money(duesCents)} on the {ordinal(autopayDay)}
               </p>
               <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">
                 From {autopayMethod.label} ••{autopayMethod.mask}. Cancel any time.
@@ -270,9 +280,40 @@ export function PayFlow({
             </button>
           </div>
           {autopay ? (
-            <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[12px] font-medium text-ok">
-              Next autopay: September 1, 2026
-            </div>
+            <>
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                  Day of the month
+                </p>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {Array.from({ length: lateAfterDay }, (_, i) => i + 1).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setAutopayDay(d)}
+                      aria-pressed={autopayDay === d}
+                      className={cn(
+                        "tnum flex h-8 items-center justify-center rounded-md text-[12px] font-medium transition-colors",
+                        autopayDay === d
+                          ? "bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950"
+                          : d === lateAfterDay
+                            ? "border border-warn/40 bg-warn-soft text-warn"
+                            : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
+                      )}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] leading-snug text-fg-subtle">
+                  The board set the {ordinal(lateAfterDay)} as the last day before an assessment
+                  is late. Days after that are not selectable.
+                </p>
+              </div>
+              <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[12px] font-medium text-ok">
+                Next autopay: September {autopayDay}, 2026
+              </div>
+            </>
           ) : null}
         </Card>
       </section>

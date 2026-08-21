@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FundsGate } from "./guard";
 import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
 import { Badge, Card, Meter, SectionTitle } from "@/components/ui/primitives";
 import {
@@ -22,6 +23,7 @@ export default function ResidentFinances() {
   const urgent = reserve.urgent.slice(0, 4);
 
   return (
+    <FundsGate>
     <div className="animate-rise space-y-6">
       <div>
         <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">
@@ -222,5 +224,6 @@ export default function ResidentFinances() {
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>
     </div>
+    </FundsGate>
   );
 }

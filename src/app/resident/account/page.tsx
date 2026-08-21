@@ -1,12 +1,16 @@
+"use client";
+
 import { ChevronDown, ChevronRight, Download, Info, Landmark, Receipt } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
-import { association, currentOwner, ownerCharges } from "@/lib/data";
+import { association } from "@/lib/data";
+import { useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { formatDate, money } from "@/lib/utils";
 
-export const metadata = { title: "Account" };
-
 export default function ResidentAccount() {
+  const currentOwner = useCurrentOwner();
+  const ownerCharges = useOwnerCharges();
+  if (!currentOwner) return null;
   const totalFees = ownerCharges.reduce((t, c) => t + (c.feeCents ?? 0), 0);
   const paidThisYear = ownerCharges
     .filter((c) => c.kind === "payment")

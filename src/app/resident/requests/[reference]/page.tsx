@@ -11,7 +11,7 @@ import {
 import { Badge, Button, Card, SectionTitle } from "@/components/ui/primitives";
 import { requestByReference, requests } from "@/lib/data";
 import { formatDate, relativeDays } from "@/lib/utils";
-import { statusTone } from "../page";
+import { statusTone } from "@/lib/request-status";
 
 export function generateStaticParams() {
   return requests.map((r) => ({ reference: r.reference }));

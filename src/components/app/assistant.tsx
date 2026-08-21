@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUp, MessageCircle, Sparkles, X } from "lucide-react";
 import { answerQuestion, suggestedQuestions, type Answer } from "@/lib/assistant";
+import { useCurrentOwner, useMyRequests } from "@/lib/app-state";
 import type { AssistantContext } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,32 @@ export function Assistant({
   const [input, setInput] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+  const owner = useCurrentOwner();
+  const myRequests = useMyRequests();
+
+  // The snapshot is rendered on the server for one household. Re-point the
+  // per-person parts at whoever is actually signed in.
+  const scoped: AssistantContext = owner
+    ? {
+        ...context,
+        owner: {
+          ...context.owner,
+          name: owner.members[0],
+          unit: owner.unit,
+          balanceCents: owner.balanceCents,
+          standing: owner.standing,
+          daysPastDue: owner.daysPastDue,
+          autopay: owner.autopay,
+          lastPayment: owner.id === "own-042" ? context.owner.lastPayment : undefined,
+        },
+        requests: myRequests.map((r) => ({
+          reference: r.reference,
+          title: r.title,
+          status: r.status,
+          submittedDate: r.submittedDate,
+        })),
+      }
+    : context;
 
   useEffect(() => {
     if (open) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -36,7 +63,7 @@ export function Assistant({
   function ask(question: string) {
     const q = question.trim();
     if (!q) return;
-    setTurns((t) => [...t, { id: t.length, question: q, answer: answerQuestion(q, context) }]);
+    setTurns((t) => [...t, { id: t.length, question: q, answer: answerQuestion(q, scoped) }]);
     setInput("");
   }
 

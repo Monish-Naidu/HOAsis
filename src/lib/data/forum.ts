@@ -1,0 +1,147 @@
+import type { ForumPost } from "@/lib/types";
+
+/**
+ * Neighbour to neighbour. Deliberately separate from requests and
+ * communications: nothing here creates an obligation for the board.
+ */
+export const forumPosts: ForumPost[] = [
+  {
+    id: "fp-1",
+    author: "Arya Mehr",
+    unit: "7",
+    authorRole: "President",
+    category: "Events",
+    title: "Pool closes September 8, spa stays open",
+    body: "Resurfacing runs September 8 to 19, weather permitting. The spa and fitness room stay open the whole time. Gate codes are unchanged. Posting here as well as email since not everyone reads the email.",
+    at: "2026-08-19",
+    likes: 14,
+    pinned: true,
+    replies: [
+      {
+        id: "fr-1",
+        author: "Owen Brady",
+        unit: "12",
+        at: "2026-08-19",
+        body: "Does that include the kiddie pool? Grandkids are visiting that week.",
+      },
+      {
+        id: "fr-2",
+        author: "Arya Mehr",
+        unit: "7",
+        at: "2026-08-20",
+        body: "It does, unfortunately. Both basins get resurfaced at the same time.",
+      },
+    ],
+  },
+  {
+    id: "fp-2",
+    author: "Nina Sharma",
+    unit: "15",
+    category: "Recommendations",
+    title: "Anyone have a gutter cleaner they actually like?",
+    body: "Ours are overflowing again and the last company never showed up twice. Looking for someone reliable before the fall rain really starts.",
+    at: "2026-08-18",
+    likes: 9,
+    replies: [
+      {
+        id: "fr-3",
+        author: "Tom Barrow",
+        unit: "84",
+        at: "2026-08-18",
+        body: "We use Northsound Exteriors. Two guys, half a day, about $220 for a two story. They text before they come which is more than I can say for the last outfit.",
+      },
+      {
+        id: "fr-4",
+        author: "Mark Iancu",
+        unit: "58",
+        at: "2026-08-19",
+        body: "Second this. They also cleared the downspout drain at the curb without being asked.",
+      },
+    ],
+  },
+  {
+    id: "fp-3",
+    author: "Ibrahim Haddad",
+    unit: "78",
+    category: "Lost and found",
+    title: "Found: grey cat with a blue collar near the mailboxes",
+    body: "Very friendly, no tag. Sitting on our porch since last night. He is inside and fed. Message me if he is yours.",
+    at: "2026-08-20",
+    likes: 22,
+    replies: [
+      {
+        id: "fr-5",
+        author: "Tessa Moreau",
+        unit: "50",
+        at: "2026-08-20",
+        body: "That sounds like Juniper from the Alder Ridge side. I will pass it along.",
+      },
+    ],
+  },
+  {
+    id: "fp-4",
+    author: "Monish Naidu",
+    unit: "42",
+    category: "For sale",
+    title: "Free: two Adirondack chairs, need a light sanding",
+    body: "Cedar, solid, just weathered. Curbside at 1428 Mehr Gardens Lane. First come.",
+    at: "2026-08-17",
+    likes: 6,
+    replies: [],
+  },
+  {
+    id: "fp-5",
+    author: "Mark Iancu",
+    unit: "58",
+    category: "Safety",
+    title: "Car doors tried overnight on Alder Ridge",
+    body: "Camera caught someone checking handles around 2am Tuesday. Nothing taken from us, nothing broken. Filed with Brier PD. Worth locking up and moving anything visible off the seats.",
+    at: "2026-08-16",
+    likes: 31,
+    replies: [
+      {
+        id: "fr-6",
+        author: "Ellis Wright",
+        unit: "71",
+        authorRole: "Vice President",
+        at: "2026-08-16",
+        body: "Thanks for posting. We are getting a quote for two more lights at the Alder Ridge entrance and will bring it to the October meeting.",
+      },
+      {
+        id: "fr-7",
+        author: "Nina Sharma",
+        unit: "15",
+        at: "2026-08-17",
+        body: "Same thing on our street about a month ago. Glad it is being looked at.",
+      },
+    ],
+  },
+  {
+    id: "fp-6",
+    author: "Tom Barrow",
+    unit: "84",
+    category: "General",
+    title: "Who is the neighbour with the enormous dahlias?",
+    body: "Corner of Mehr Gardens Lane and the green. They are absurd this year and I would like to know the variety.",
+    at: "2026-08-14",
+    likes: 18,
+    replies: [
+      {
+        id: "fr-8",
+        author: "Tessa Moreau",
+        unit: "50",
+        at: "2026-08-15",
+        body: "Cafe au Lait, mostly. Happy to split tubers in the spring if anyone wants some.",
+      },
+    ],
+  },
+];
+
+export const forumCategories = [
+  "General",
+  "Recommendations",
+  "For sale",
+  "Lost and found",
+  "Safety",
+  "Events",
+] as const;

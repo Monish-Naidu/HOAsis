@@ -3,14 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeftRight, Bell, Monitor, Smartphone } from "lucide-react";
+import { Bell, Monitor, Smartphone } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { residentTabs } from "@/components/app/resident-nav";
 import { Assistant } from "@/components/app/assistant";
+import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
+import { CommunityHero } from "@/components/app/community-hero";
+import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { AssistantContext } from "@/lib/data";
+import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+function visibleTabs(settings: CommunitySettings) {
+  return residentTabs.filter((t) => !t.visible || t.visible(settings));
+}
 
 /**
  * The resident experience runs two ways from the same screens:
@@ -25,20 +33,20 @@ import { cn } from "@/lib/utils";
 export function ResidentShell({
   children,
   associationName,
-  ownerName,
-  unit,
-  address,
   assistant,
 }: {
   children: React.ReactNode;
   associationName: string;
-  ownerName: string;
-  unit: string;
-  address: string;
   assistant: AssistantContext;
 }) {
   const [phonePreview, setPhonePreview] = useState(false);
   const pathname = usePathname();
+  const { settings } = useAppState();
+  const owner = useCurrentOwner();
+  const tabs = visibleTabs(settings);
+  const ownerName = owner?.members[0] ?? "";
+  const unit = owner?.unit ?? "";
+  const address = owner?.address ?? "";
 
   const topBar = (
     <header className="hidden border-b border-border bg-surface lg:block">
@@ -79,15 +87,9 @@ export function ResidentShell({
               App preview
             </button>
           </div>
-          <Link
-            href="/board"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-2 px-3 text-[13px] font-medium text-fg hover:bg-surface-2"
-          >
-            <ArrowLeftRight className="size-3.5" />
-            Board view
-          </Link>
+          <ViewSwitcher />
           <ThemeToggle />
-          <Avatar name={ownerName} />
+          <AccountMenu compact />
         </div>
       </div>
     </header>
@@ -120,6 +122,7 @@ export function ResidentShell({
   /* ---------------------------------------------------------------- phone */
   if (phonePreview) {
     return (
+      <RequireSession>
       <div className="min-h-dvh bg-bg lg:bg-surface-2">
         {topBar}
         <div className="lg:flex lg:justify-center lg:px-6 lg:py-10">
@@ -134,24 +137,30 @@ export function ResidentShell({
               unit={unit}
               address={address}
             />
-            <main className="no-scrollbar flex-1 overflow-y-auto px-4 pb-6 pt-4">{children}</main>
+            <main className="no-scrollbar flex-1 overflow-y-auto pb-6">
+              <CommunityHero compact />
+              <div className="px-4 pt-4">{children}</div>
+            </main>
             <Assistant context={assistant} variant="inset" />
-            <TabBar pathname={pathname} />
+            <TabBar pathname={pathname} tabs={tabs} />
           </div>
         </div>
         <p className="hidden pb-10 text-center text-[12px] text-fg-subtle lg:block">
           The same screens and tokens carry into the native app.
         </p>
       </div>
+      </RequireSession>
     );
   }
 
   /* -------------------------------------------------------------- website */
   return (
+    <RequireSession>
     <div className="min-h-dvh bg-bg">
       {topBar}
       {appHeader}
-      <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-6 pt-4 lg:px-6 lg:py-8">
+      <CommunityHero subtitle={`Unit ${unit} · ${address}`} />
+      <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-6 pt-6 lg:px-6 lg:py-8">
         <aside className="hidden w-56 shrink-0 lg:block">
           <div className="sticky top-8">
             <div className="rounded-card border border-border bg-surface p-4">
@@ -163,7 +172,7 @@ export function ResidentShell({
               </p>
             </div>
             <nav aria-label="Resident sections" className="mt-4 flex flex-col gap-1">
-              {residentTabs.map(({ href, label, icon: Icon, webLabel }) => {
+              {tabs.map(({ href, label, icon: Icon, webLabel }) => {
                 const active =
                   href === "/resident" ? pathname === href : pathname.startsWith(href);
                 return (
@@ -199,9 +208,10 @@ export function ResidentShell({
       </div>
       <Assistant context={assistant} />
       <div className="lg:hidden">
-        <TabBar pathname={pathname} />
+        <TabBar pathname={pathname} tabs={tabs} />
       </div>
     </div>
+    </RequireSession>
   );
 }
 
@@ -241,7 +251,13 @@ function PhoneHeader({
   );
 }
 
-function TabBar({ pathname }: { pathname: string }) {
+function TabBar({
+  pathname,
+  tabs,
+}: {
+  pathname: string;
+  tabs: typeof residentTabs;
+}) {
   return (
     <nav
       className="sticky bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur-md"
@@ -249,7 +265,7 @@ function TabBar({ pathname }: { pathname: string }) {
       aria-label="Resident sections"
     >
       <ul className="grid grid-cols-6">
-        {residentTabs
+        {tabs
           .filter((t) => !t.webOnly)
           .map(({ href, label, icon: Icon }) => {
           const active = href === "/resident" ? pathname === href : pathname.startsWith(href);

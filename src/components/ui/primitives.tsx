@@ -409,3 +409,66 @@ export function Callout({
     </div>
   );
 }
+
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        checked ? "bg-ok" : "bg-surface-3",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
+          checked ? "translate-x-5" : "translate-x-0",
+        )}
+      />
+    </button>
+  );
+}
+
+export function SettingRow({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: string;
+  description?: string;
+  children?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-start justify-between gap-4 border-b border-border px-5 py-4 last:border-b-0",
+        className,
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-medium text-fg">{title}</p>
+        {description ? (
+          <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">{description}</p>
+        ) : null}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}

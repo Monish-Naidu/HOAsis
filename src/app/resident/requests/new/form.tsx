@@ -6,13 +6,16 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardList,
+  Download,
   FileSearch,
+  FileText,
   Hammer,
   PartyPopper,
   Paperclip,
 } from "lucide-react";
 import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
-import { cn } from "@/lib/utils";
+import { useAppState } from "@/lib/app-state";
+import { cn, formatDate } from "@/lib/utils";
 
 const kinds = [
   {
@@ -46,12 +49,22 @@ const kinds = [
 ] as const;
 
 export function NewRequestForm() {
+  const { amenities, forms } = useAppState();
   const [kind, setKind] = useState<(typeof kinds)[number]["id"] | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [amenityId, setAmenityId] = useState("");
+  const [formId, setFormId] = useState("");
   const [done, setDone] = useState(false);
 
   const chosen = kinds.find((k) => k.id === kind);
+  const reservable = amenities.filter((a) => a.reservable);
+  const selectedForm = forms.find((f) => f.id === formId);
+  const ready =
+    Boolean(kind) &&
+    Boolean(title.trim()) &&
+    (kind !== "amenity" || Boolean(amenityId)) &&
+    (kind !== "architectural" || Boolean(formId));
 
   if (done) {
     return (
@@ -120,6 +133,84 @@ export function NewRequestForm() {
         <Callout tone="info" title={chosen.clock} />
       ) : null}
 
+      {kind === "amenity" ? (
+        <section>
+          <SectionTitle>Which amenity</SectionTitle>
+          <Card className="p-4">
+            <select
+              value={amenityId}
+              onChange={(e) => setAmenityId(e.target.value)}
+              aria-label="Amenity"
+              className="h-10 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[14px] text-fg outline-none"
+            >
+              <option value="">Select an amenity</option>
+              {reservable.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                  {a.maxHours ? ` (up to ${a.maxHours} hours)` : ""}
+                </option>
+              ))}
+            </select>
+            {reservable.length === 0 ? (
+              <p className="mt-2 text-[12px] text-fg-muted">
+                The board has not made any amenities reservable yet.
+              </p>
+            ) : (
+              <p className="mt-2 text-[11px] text-fg-subtle">
+                The board sets which amenities can be reserved and for how long.
+              </p>
+            )}
+          </Card>
+        </section>
+      ) : null}
+
+      {kind === "architectural" ? (
+        <section>
+          <SectionTitle>Which form</SectionTitle>
+          <Card className="p-4">
+            <select
+              value={formId}
+              onChange={(e) => setFormId(e.target.value)}
+              aria-label="Architectural form"
+              className="h-10 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[14px] text-fg outline-none"
+            >
+              <option value="">Select a form</option>
+              {forms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            {selectedForm ? (
+              <div className="mt-3 rounded-lg bg-surface-2 p-3">
+                <div className="flex items-start gap-2">
+                  <FileText className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium text-fg">
+                      {selectedForm.fileName}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-fg-muted">
+                      {selectedForm.description}
+                    </p>
+                    <p className="mt-1 text-[11px] text-fg-subtle">
+                      {selectedForm.size} · updated {formatDate(selectedForm.updatedDate, "long")}
+                      {selectedForm.source === "uploaded" ? " · uploaded by the board" : ""}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-md border border-border-2 px-2 py-1 text-[11px] font-medium text-fg hover:bg-surface"
+                  >
+                    <Download className="mr-1 inline size-3" />
+                    Open
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </Card>
+        </section>
+      ) : null}
+
       <section>
         <SectionTitle>Details</SectionTitle>
         <Card className="divide-y divide-border">
@@ -160,7 +251,7 @@ export function NewRequestForm() {
         variant="primary"
         size="lg"
         className="w-full"
-        disabled={!kind || !title.trim()}
+        disabled={!ready}
         onClick={() => setDone(true)}
       >
         Submit request

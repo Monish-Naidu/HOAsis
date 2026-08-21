@@ -1,6 +1,7 @@
-import { CheckCircle2, Clock, Users } from "lucide-react";
+import { CheckCircle2, Clock, Lock, Users } from "lucide-react";
 import { Badge, Card, Meter } from "@/components/ui/primitives";
 import { ballotTally } from "@/lib/data";
+import { communitySettings } from "@/lib/data";
 import type { Ballot } from "@/lib/types";
 import { formatDate, relativeDays } from "@/lib/utils";
 
@@ -25,7 +26,12 @@ const kindLabel = {
  */
 export function BallotCard({ ballot }: { ballot: Ballot }) {
   const t = ballotTally(ballot.id);
-  const showResults = ballot.liveResultsVisible || ballot.status === "certified";
+  // Sealed until close, unless the board turned live results on.
+  const showResults =
+    ballot.status === "certified" ||
+    ballot.status === "closed" ||
+    communitySettings.showLiveVoteResults ||
+    t.daysLeft < 0;
 
   return (
     <Card className="overflow-hidden">
@@ -60,6 +66,16 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
           <span>{ballot.thresholdLabel}</span>
         </div>
       </div>
+
+      {!showResults && ballot.status === "open" ? (
+        <div className="flex items-start gap-2 border-t border-border px-5 py-3">
+          <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
+          <p className="text-[12px] leading-snug text-fg-muted">
+            Results are sealed until this closes on {formatDate(ballot.closesDate, "long")}.
+            Turnout and quorum stay visible.
+          </p>
+        </div>
+      ) : null}
 
       {showResults && t.cast > 0 ? (
         <div className="space-y-2.5 border-t border-border px-5 py-4">

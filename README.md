@@ -10,9 +10,10 @@ Two experiences share one system of record:
   responsive website with a sidebar (how most owners will sign in) and an app preview inside a
   device frame, switched from the top bar. Below `lg` the two are identical. Rendered inside a device frame on desktop
   because it's designed at phone width and is meant to become the native app.
-- **`/board`** is the treasurer and board workspace: reconciliation, reserve yield,
+- **`/admin`** is the board workspace: reconciliation, reserve yield,
   delinquencies, vendor ACH, voting and meetings, and a live compliance register.
-- **`/`** is the landing page and role picker.
+- **`/`** is sign in and create account. There is no real authentication: picking a seat
+  selects one of the seeded accounts so you can see the product from that person's chair.
 
 ## Running it
 
@@ -45,6 +46,28 @@ the design:
    evidence a board would need to produce if challenged: reserve study cadence, budget
    ratification, records requests, corporate good standing.
 
+## Roles
+
+Every account is a resident first. `president`, `vice-president`, `treasurer`, and `secretary`
+wrap that with a set of capabilities, so an admin can switch to the resident view from the
+header without signing out, and sees their own unit and balance when they do.
+
+The President holds `permissions`, the one capability that cannot be granted away, and their
+own row in the capability matrix is locked. An association that can strip its President of
+access has no way back in.
+
+Capability gating in this prototype is client side: it hides and locks navigation and screens.
+Real enforcement needs a server session.
+
+## Admin owned settings
+
+`/admin/settings` writes to the shared app state, so a change there shows up on the resident
+side immediately. It owns the community name and photo, whether the resident home shows a
+calendar or a single hand written banner, whether residents can see association funds, whether
+ballot tallies are visible before a ballot closes, the last day of the month autopay can be
+scheduled before an assessment is late, the amenity list that feeds the resident request
+dropdown, and the architectural forms that feed the other one.
+
 ## Architecture
 
 ```
@@ -57,6 +80,7 @@ src/
     ui/primitives.tsx     Card, Button, Badge, Stat, Meter, Callout, …
     app/                  shells, nav, theme toggle, logo
   lib/
+    app-state.tsx         session, view switching, admin owned settings
     types.ts              domain model, the contract between UI and data
     tokens.ts             platform-agnostic design tokens (for the RN app)
     utils.ts              money/date formatting, `cn`
@@ -90,11 +114,11 @@ pre-paint by an inline script so there's no flash on reload.
 
 ## Fixture data
 
-A fictional 88-unit Washington HOA (Cedar Hollow, Brier). Fourteen households are hand-written
+A fictional 88-unit Washington HOA (Mehr Gardens, Brier). Fourteen households are hand-written
 because the prototype tells stories about them; the remaining 76 are generated
 deterministically so roster-wide rates are honest.
 
-**The compliance register is parked.** Cedar Hollow was recorded in 2015, so RCW 64.38 governs
+**The compliance register is parked.** Mehr Gardens was recorded in 2015, so RCW 64.38 governs
 rather than WUCIOA (RCW 64.90), which covers communities created on or after July 1, 2018. The
 entries there are chapter level placeholders: the chapter is right, the deadline math is not
 verified, and the screen says so. Do not deepen them without a legal pass.

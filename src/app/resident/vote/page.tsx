@@ -1,6 +1,6 @@
 import { Radio, Vote } from "lucide-react";
 import { MeetingRoom } from "@/components/app/meeting-room";
-import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { ballotsForOwners, liveMeeting, upcomingMeetings } from "@/lib/data";
 import { formatDate } from "@/lib/utils";
 import { BallotVote } from "./ballot-vote";
@@ -11,7 +11,6 @@ export default function ResidentVote() {
   const live = liveMeeting();
   const mine = ballotsForOwners();
   const open = mine.filter((b) => b.status === "open");
-  const upcoming = mine.filter((b) => b.status === "scheduled");
   const past = mine.filter((b) => b.status === "certified" || b.status === "closed");
   const meetings = upcomingMeetings().filter((m) => m.status !== "live");
 
@@ -53,21 +52,6 @@ export default function ResidentVote() {
           
         />
       )}
-
-      {upcoming.length ? (
-        <section>
-          <SectionTitle>Opening soon</SectionTitle>
-          <div className="space-y-3">
-            {upcoming.map((b) => (
-              <Card key={b.id} className="p-4">
-                <Badge tone="neutral">Opens {formatDate(b.opensDate, "long")}</Badge>
-                <h3 className="mt-1.5 text-[14px] font-semibold leading-snug text-fg">{b.title}</h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{b.body[0]}</p>
-              </Card>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <section>
         <SectionTitle>Meetings</SectionTitle>

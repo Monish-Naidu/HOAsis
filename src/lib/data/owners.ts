@@ -11,7 +11,7 @@ export const owners: Owner[] = [
     email: "monish.naidu@example.com",
     phone: "(425) 555-0142",
     unit: "42",
-    address: "1428 Cedar Hollow Lane",
+    address: "1428 Mehr Gardens Lane",
     moveInDate: "2021-06-11",
     balanceCents: 28_500,
     autopay: false,
@@ -25,7 +25,7 @@ export const owners: Owner[] = [
     email: "arya.mehr@example.com",
     phone: "(425) 555-0107",
     unit: "7",
-    address: "1302 Cedar Hollow Lane",
+    address: "1302 Mehr Gardens Lane",
     moveInDate: "2018-02-01",
     balanceCents: 0,
     autopay: true,
@@ -89,7 +89,7 @@ export const owners: Owner[] = [
     email: "nina.sharma@example.com",
     phone: "(425) 555-0115",
     unit: "15",
-    address: "1326 Cedar Hollow Lane",
+    address: "1326 Mehr Gardens Lane",
     moveInDate: "2022-05-09",
     balanceCents: 0,
     autopay: true,
@@ -149,7 +149,7 @@ export const owners: Owner[] = [
     email: "r.calloway@example.com",
     phone: "(425) 555-0155",
     unit: "55",
-    address: "1502 Cedar Hollow Lane",
+    address: "1502 Mehr Gardens Lane",
     moveInDate: "2022-08-30",
     balanceCents: 85_500,
     autopay: false,
@@ -178,7 +178,7 @@ export const owners: Owner[] = [
     email: "owen.brady@example.com",
     phone: "(425) 555-0112",
     unit: "12",
-    address: "1318 Cedar Hollow Lane",
+    address: "1318 Mehr Gardens Lane",
     moveInDate: "2017-05-02",
     balanceCents: 29_400,
     autopay: false,
@@ -192,7 +192,7 @@ export const owners: Owner[] = [
     email: "g.halloran@example.com",
     phone: "(425) 555-0126",
     unit: "26",
-    address: "1372 Cedar Hollow Lane",
+    address: "1372 Mehr Gardens Lane",
     moveInDate: "2016-10-08",
     balanceCents: 342_000,
     autopay: false,
@@ -206,7 +206,7 @@ export const owners: Owner[] = [
     email: "t.moreau@example.com",
     phone: "(425) 555-0150",
     unit: "50",
-    address: "1466 Cedar Hollow Lane",
+    address: "1466 Mehr Gardens Lane",
     moveInDate: "2023-11-05",
     balanceCents: 31_900,
     autopay: false,
@@ -219,7 +219,7 @@ export const owners: Owner[] = [
 /* The rest of the community                                                   */
 /*                                                                             */
 /* The twelve records above are the ones the prototype tells stories about.    */
-/* Cedar Hollow has 88 units, so the remaining households are generated          */
+/* Mehr Gardens has 88 units, so the remaining households are generated          */
 /* deterministically. No randomness, so the roster and every rate derived       */
 /* from it read identically on every machine.                                   */
 /* -------------------------------------------------------------------------- */
@@ -259,7 +259,7 @@ function fillerOwners(): Owner[] {
       email: `${first.toLowerCase()}.${last.toLowerCase()}@example.com`,
       phone: `(425) 555-${String(1000 + unit).slice(1)}`,
       unit: String(unit),
-      address: `${1300 + unit * 4} ${unit % 2 ? "Cedar Hollow Lane" : "Alder Ridge Court"}`,
+      address: `${1300 + unit * 4} ${unit % 2 ? "Mehr Gardens Lane" : "Alder Ridge Court"}`,
       moveInDate: `20${15 + (unit % 11)}-0${(unit % 9) + 1}-${String((unit % 27) + 1).padStart(2, "0")}`,
       balanceCents: 0,
       autopay,

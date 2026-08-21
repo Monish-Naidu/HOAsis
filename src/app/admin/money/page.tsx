@@ -420,7 +420,7 @@ export default function BoardMoney() {
           title="Reserve schedule"
           subtitle={`${Math.round(reserve.percentFunded * 100)}% funded · ${money(reserve.funded, { cents: false })} of ${money(reserve.required, { cents: false })} in replacement obligations`}
           action={
-            <Link href="/board/compliance" className="text-[12px] font-medium text-accent hover:underline">
+            <Link href="/admin/compliance" className="text-[12px] font-medium text-accent hover:underline">
               Why this matters
             </Link>
           }

@@ -26,13 +26,28 @@ import {
   vendors,
 } from "./ledger";
 import { threads } from "./messages";
+import { accounts, accountById, CAPABILITY_LABEL, DEFAULT_ACCOUNT_ID, GRANTABLE, isAdmin, NO_CAPABILITIES } from "./accounts";
+import { architecturalForms, communityAmenities, communitySettings } from "./settings";
+import { forumCategories, forumPosts } from "./forum";
 import { ballots, meetings } from "./voting";
 import { boardMembers, currentOwner, owners, CURRENT_OWNER_ID } from "./owners";
 import { requests, violations } from "./requests";
 import { daysFromToday } from "@/lib/utils";
 
 export {
+  accounts,
+  accountById,
   amenities,
+  architecturalForms,
+  CAPABILITY_LABEL,
+  communityAmenities,
+  communitySettings,
+  DEFAULT_ACCOUNT_ID,
+  forumCategories,
+  forumPosts,
+  GRANTABLE,
+  isAdmin,
+  NO_CAPABILITIES,
   announcements,
   association,
   bankAccounts,
@@ -326,6 +341,64 @@ export function assistantContext() {
 }
 
 export type AssistantContext = ReturnType<typeof assistantContext>;
+
+/** Everything dated that a resident might want on a calendar. */
+export function calendarEntries() {
+  const rows: {
+    id: string;
+    date: string;
+    title: string;
+    detail?: string;
+    kind: "meeting" | "event" | "ballot-opens" | "ballot-closes" | "deadline";
+    href?: string;
+  }[] = [];
+
+  for (const m of meetings) {
+    rows.push({
+      id: `cal-${m.id}`,
+      date: m.date,
+      title: m.title,
+      detail: `${m.time} · ${m.location}`,
+      kind: "meeting",
+      href: "/resident/vote",
+    });
+  }
+  for (const e of events) {
+    // Meetings already come from the meeting records.
+    if (e.kind === "meeting") continue;
+    rows.push({
+      id: `cal-${e.id}`,
+      date: e.date,
+      title: e.title,
+      detail: `${e.time} · ${e.location}`,
+      kind: e.kind === "deadline" ? "deadline" : "event",
+    });
+  }
+  for (const b of ballots) {
+    if (b.audience !== "owners") continue;
+    if (b.status === "scheduled") {
+      rows.push({
+        id: `cal-${b.id}-open`,
+        date: b.opensDate,
+        title: b.title,
+        detail: "Voting opens",
+        kind: "ballot-opens",
+        href: "/resident/vote",
+      });
+    }
+    if (b.status === "open" || b.status === "scheduled") {
+      rows.push({
+        id: `cal-${b.id}-close`,
+        date: b.closesDate,
+        title: b.title,
+        detail: "Last day to vote",
+        kind: "ballot-closes",
+        href: "/resident/vote",
+      });
+    }
+  }
+  return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
+}
 
 export function publicDocuments() {
   return documents.filter((d) => d.visibility === "public");
