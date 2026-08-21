@@ -9,6 +9,7 @@ import {
   Lock,
   Megaphone,
   Plus,
+  RotateCcw,
   ShieldCheck,
   Trash2,
   Upload,
@@ -40,6 +41,7 @@ export function SettingsScreen() {
     forms,
     setForms,
     setCapability,
+    resetDemo,
     can,
   } = useAppState();
 
@@ -99,7 +101,16 @@ export function SettingsScreen() {
 
   return (
     <>
-      <PageHeader eyebrow="Community" title="Settings" />
+      <PageHeader
+        eyebrow="Community"
+        title="Settings"
+        action={
+          <Button variant="secondary" size="md" onClick={resetDemo}>
+            <RotateCcw className="size-3.5" />
+            Reset demo data
+          </Button>
+        }
+      />
 
       <div className="grid gap-5 xl:grid-cols-2">
         {/* Identity */}

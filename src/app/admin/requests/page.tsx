@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { AlertTriangle, Camera, Clock, Eye, Gavel, Inbox } from "lucide-react";
 import {
@@ -9,11 +11,11 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { openRequests, requests, requestsOnClock, violations } from "@/lib/data";
+import { violations } from "@/lib/data";
+import { bucketRequests, useAppState } from "@/lib/app-state";
+import { daysFromToday } from "@/lib/utils";
 import { formatDate, relativeDays } from "@/lib/utils";
 import type { RequestStatus, Violation } from "@/lib/types";
-
-export const metadata = { title: "Requests" };
 
 const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
   approved: "ok",
@@ -35,9 +37,12 @@ const stageMeta: Record<Violation["stage"], { tone: "ok" | "warn" | "danger" | "
   };
 
 export default function BoardRequests() {
-  const open = openRequests();
-  const clocks = requestsOnClock();
-  const decided = requests.filter((r) => ["approved", "denied", "closed"].includes(r.status));
+  const { requests } = useAppState();
+  const { open, decided, history } = bucketRequests(requests);
+  const clocks = requests
+    .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
+    .map((r) => ({ ...r, daysLeft: daysFromToday(r.dueDate!) }))
+    .sort((a, b) => a.daysLeft - b.daysLeft);
   const openViolations = violations.filter((v) => v.stage !== "cured");
 
   return (
@@ -71,7 +76,12 @@ export default function BoardRequests() {
           value={String(openViolations.length)}
           icon={<Gavel className="size-4" />}
         />
-        <Stat label="Decided this month" value={String(decided.length)} tone="ok" />
+        <Stat
+          label="Decided"
+          value={String(decided.length)}
+          tone="ok"
+          hint={history.length ? `${history.length} in history` : undefined}
+        />
       </div>
 
       {/* Clock queue */}

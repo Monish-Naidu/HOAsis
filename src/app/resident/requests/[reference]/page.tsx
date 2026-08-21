@@ -1,5 +1,7 @@
+"use client";
+
+import { use } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -8,25 +10,32 @@ import {
   Mail,
   Paperclip,
 } from "lucide-react";
-import { Badge, Button, Card, SectionTitle } from "@/components/ui/primitives";
-import { requestByReference, requests } from "@/lib/data";
-import { formatDate, relativeDays } from "@/lib/utils";
+import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { useAppState } from "@/lib/app-state";
 import { statusTone } from "@/lib/request-status";
+import { formatDate, relativeDays } from "@/lib/utils";
 
-export function generateStaticParams() {
-  return requests.map((r) => ({ reference: r.reference }));
-}
-
-export default async function RequestDetail({
+export default function RequestDetail({
   params,
 }: {
   params: Promise<{ reference: string }>;
 }) {
-  const { reference } = await params;
-  const request = requestByReference(decodeURIComponent(reference));
-  if (!request) notFound();
+  const { reference } = use(params);
+  const { requests } = useAppState();
+  const request = requests.find((r) => r.reference === decodeURIComponent(reference));
+
+  if (!request) {
+    return (
+      <EmptyState
+        title="Request not found"
+        description="It may have been submitted from a different account."
+      />
+    );
+  }
 
   const approved = request.status === "approved";
+  const openStates = ["draft", "submitted", "in-review", "info-needed"];
+  const isOpen = openStates.includes(request.status);
 
   return (
     <div className="animate-rise space-y-5">
@@ -49,13 +58,14 @@ export default async function RequestDetail({
         <p className="mt-2 text-[13px] leading-relaxed text-fg-muted">{request.summary}</p>
       </div>
 
-      {/* The approval certificate: the thing you hand a contractor or the city. */}
       {approved && request.certificateId ? (
         <Card className="overflow-hidden border-ok/30">
           <div className="bg-ok-soft px-4 py-3">
             <div className="flex items-center gap-2">
               <BadgeCheck className="size-4 shrink-0 text-ok" />
-              <p className="text-[13px] font-semibold text-ok">Approved {formatDate(request.decisionDate!, "long")}</p>
+              <p className="text-[13px] font-semibold text-ok">
+                Approved {formatDate(request.decisionDate!, "long")}
+              </p>
             </div>
           </div>
           <div className="p-4">
@@ -91,8 +101,7 @@ export default async function RequestDetail({
         </Card>
       ) : null}
 
-      {/* Response clock */}
-      {request.dueDate && !["approved", "denied", "closed"].includes(request.status) ? (
+      {request.dueDate && isOpen ? (
         <Card className="p-4">
           <div className="flex items-start gap-3">
             <CalendarClock className="mt-0.5 size-4 shrink-0 text-warn" />
@@ -108,7 +117,6 @@ export default async function RequestDetail({
         </Card>
       ) : null}
 
-      {/* Attachments */}
       {request.attachments.length ? (
         <section>
           <SectionTitle>Attachments</SectionTitle>
@@ -127,7 +135,6 @@ export default async function RequestDetail({
         </section>
       ) : null}
 
-      {/* Thread */}
       <section>
         <SectionTitle>Activity</SectionTitle>
         <ol className="space-y-3">
@@ -157,8 +164,7 @@ export default async function RequestDetail({
         </ol>
       </section>
 
-      {/* Reply */}
-      {!["approved", "denied", "closed"].includes(request.status) ? (
+      {isOpen ? (
         <Card className="p-3">
           <textarea
             rows={3}
@@ -179,8 +185,6 @@ export default async function RequestDetail({
           </div>
         </Card>
       ) : null}
-
-      
     </div>
   );
 }

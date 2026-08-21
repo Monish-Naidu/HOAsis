@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -21,6 +20,7 @@ import {
 } from "@/lib/data";
 import type {
   Account,
+  HomeRequest,
   Owner,
   ArchitecturalForm,
   Capability,
@@ -48,6 +48,7 @@ interface AppState {
   amenities: CommunityAmenity[];
   forms: ArchitecturalForm[];
   posts: ForumPost[];
+  requests: HomeRequest[];
   signIn: (accountId: string) => void;
   signOut: () => void;
   setView: (v: View) => void;
@@ -56,7 +57,9 @@ interface AppState {
   setAmenities: (next: CommunityAmenity[]) => void;
   setForms: (next: ArchitecturalForm[]) => void;
   setCapability: (accountId: string, capability: Capability, on: boolean) => void;
+  resetDemo: () => void;
   addPost: (post: ForumPost) => void;
+  addRequest: (request: HomeRequest) => void;
   likePost: (postId: string) => void;
   ready: boolean;
 }
@@ -121,6 +124,70 @@ function writeSession(next: Session) {
   listeners.forEach((l) => l());
 }
 
+/**
+ * A tiny localStorage backed store.
+ *
+ * Everything the demo lets you change lives in one of these, so submitting a
+ * request or flipping a setting survives a reload. useSyncExternalStore keeps
+ * it hydration safe: the server snapshot is always the seed.
+ */
+function createStore<T>(key: string, seed: T) {
+  let listeners: (() => void)[] = [];
+  let cached: T | null = null;
+
+  const read = (): T => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : seed;
+    } catch {
+      return seed;
+    }
+  };
+
+  return {
+    subscribe(cb: () => void) {
+      listeners.push(cb);
+      return () => {
+        listeners = listeners.filter((l) => l !== cb);
+      };
+    },
+    get(): T {
+      if (cached === null) cached = read();
+      return cached;
+    },
+    server(): T {
+      return seed;
+    },
+    set(next: T) {
+      cached = next;
+      try {
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        /* storage blocked, the change stays in memory */
+      }
+      listeners.forEach((l) => l());
+    },
+    reset() {
+      cached = seed;
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        /* nothing to clear */
+      }
+      listeners.forEach((l) => l());
+    },
+  };
+}
+
+const accountStore = createStore("hoasis-accounts", seedAccounts);
+const settingsStore = createStore("hoasis-settings", seedSettings);
+const amenityStore = createStore("hoasis-amenities", seedAmenities);
+const formStore = createStore("hoasis-forms", seedForms);
+const postStore = createStore("hoasis-posts", seedPosts);
+const requestStore = createStore("hoasis-requests", requests);
+
+const stores = [accountStore, settingsStore, amenityStore, formStore, postStore, requestStore];
+
 const noopSubscribe = () => () => {};
 const alwaysTrue = () => true;
 const alwaysFalse = () => false;
@@ -138,11 +205,28 @@ function useHydrated() {
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const session = useSyncExternalStore(subscribe, sessionSnapshot, serverSnapshot);
   const ready = useHydrated();
-  const [accountList, setAccountList] = useState<Account[]>(seedAccounts);
-  const [settings, setSettings] = useState<CommunitySettings>(seedSettings);
-  const [amenities, setAmenities] = useState<CommunityAmenity[]>(seedAmenities);
-  const [forms, setForms] = useState<ArchitecturalForm[]>(seedForms);
-  const [posts, setPosts] = useState<ForumPost[]>(seedPosts);
+  const accountList = useSyncExternalStore(
+    accountStore.subscribe,
+    accountStore.get,
+    accountStore.server,
+  );
+  const settings = useSyncExternalStore(
+    settingsStore.subscribe,
+    settingsStore.get,
+    settingsStore.server,
+  );
+  const amenities = useSyncExternalStore(
+    amenityStore.subscribe,
+    amenityStore.get,
+    amenityStore.server,
+  );
+  const forms = useSyncExternalStore(formStore.subscribe, formStore.get, formStore.server);
+  const posts = useSyncExternalStore(postStore.subscribe, postStore.get, postStore.server);
+  const requestList = useSyncExternalStore(
+    requestStore.subscribe,
+    requestStore.get,
+    requestStore.server,
+  );
 
   const account = useMemo(
     () => accountList.find((a) => a.id === session.accountId) ?? null,
@@ -166,30 +250,43 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [account],
   );
 
-  const updateSettings = useCallback((patch: Partial<CommunitySettings>) => {
-    setSettings((s) => ({ ...s, ...patch }));
-  }, []);
+  const updateSettings = useCallback(
+    (patch: Partial<CommunitySettings>) => settingsStore.set({ ...settingsStore.get(), ...patch }),
+    [],
+  );
 
-  const setCapability = useCallback(
-    (id: string, capability: Capability, on: boolean) => {
-      setAccountList((list) =>
-        list.map((a) =>
+  const setAmenities = useCallback((next: CommunityAmenity[]) => amenityStore.set(next), []);
+  const setForms = useCallback((next: ArchitecturalForm[]) => formStore.set(next), []);
+
+  const setCapability = useCallback((id: string, capability: Capability, on: boolean) => {
+    accountStore.set(
+      accountStore
+        .get()
+        .map((a) =>
           a.id === id && a.role !== "president"
             ? { ...a, capabilities: { ...a.capabilities, [capability]: on } }
             : a,
         ),
-      );
-    },
+    );
+  }, []);
+
+  const addPost = useCallback((post: ForumPost) => postStore.set([post, ...postStore.get()]), []);
+
+  const addRequest = useCallback(
+    (request: HomeRequest) => requestStore.set([request, ...requestStore.get()]),
     [],
   );
-
-  const addPost = useCallback((post: ForumPost) => setPosts((p) => [post, ...p]), []);
 
   const likePost = useCallback(
     (postId: string) =>
-      setPosts((p) => p.map((x) => (x.id === postId ? { ...x, likes: x.likes + 1 } : x))),
+      postStore.set(
+        postStore.get().map((x) => (x.id === postId ? { ...x, likes: x.likes + 1 } : x)),
+      ),
     [],
   );
+
+  /** Puts the demo back to its seeded state without signing you out. */
+  const resetDemo = useCallback(() => stores.forEach((s) => s.reset()), []);
 
   const value: AppState = {
     account,
@@ -199,6 +296,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     amenities,
     forms,
     posts,
+    requests: requestList,
     signIn,
     signOut,
     setView,
@@ -207,7 +305,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setAmenities,
     setForms,
     setCapability,
+    resetDemo,
     addPost,
+    addRequest,
     likePost,
     ready,
   };
@@ -241,13 +341,26 @@ export function useOwnerCharges() {
 
 export function useMyRequests() {
   const owner = useCurrentOwner();
+  const { requests: all } = useAppState();
   return useMemo(
     () =>
       owner
-        ? requests
+        ? all
             .filter((r) => r.ownerId === owner.id)
             .sort((a, b) => (a.submittedDate < b.submittedDate ? 1 : -1))
         : [],
-    [owner],
+    [owner, all],
   );
+}
+
+/** Open, decided, then history. A request leaves the queue, never the record. */
+export const OPEN_STATUSES = ["draft", "submitted", "in-review", "info-needed"] as const;
+export const DECIDED_STATUSES = ["approved", "denied"] as const;
+
+export function bucketRequests<T extends { status: string }>(rows: T[]) {
+  return {
+    open: rows.filter((r) => (OPEN_STATUSES as readonly string[]).includes(r.status)),
+    decided: rows.filter((r) => (DECIDED_STATUSES as readonly string[]).includes(r.status)),
+    history: rows.filter((r) => r.status === "closed"),
+  };
 }

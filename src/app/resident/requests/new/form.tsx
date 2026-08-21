@@ -14,7 +14,8 @@ import {
   Paperclip,
 } from "lucide-react";
 import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
-import { useAppState } from "@/lib/app-state";
+import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import type { HomeRequest, RequestKind } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
 const kinds = [
@@ -49,7 +50,9 @@ const kinds = [
 ] as const;
 
 export function NewRequestForm() {
-  const { amenities, forms } = useAppState();
+  const { amenities, forms, addRequest, requests: allRequests } = useAppState();
+  const owner = useCurrentOwner();
+  const [reference, setReference] = useState("");
   const [kind, setKind] = useState<(typeof kinds)[number]["id"] | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -58,6 +61,7 @@ export function NewRequestForm() {
   const [done, setDone] = useState(false);
 
   const chosen = kinds.find((k) => k.id === kind);
+  const selectedAmenity = amenities.find((a) => a.id === amenityId);
   const reservable = amenities.filter((a) => a.reservable);
   const selectedForm = forms.find((f) => f.id === formId);
   const ready =
@@ -74,7 +78,7 @@ export function NewRequestForm() {
             <CheckCircle2 className="size-6" />
           </span>
           <h1 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">Request submitted</h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">Reference REQ-2026-123</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">Reference {reference}</p>
           <Link
             href="/resident/requests"
             className="mt-5 flex h-10 items-center justify-center rounded-lg bg-brand text-[13px] font-medium text-brand-fg"
@@ -89,6 +93,56 @@ export function NewRequestForm() {
         ) : null}
       </div>
     );
+  }
+
+  function submit() {
+    if (!owner || !kind) return;
+    const seq = 200 + allRequests.length;
+    const ref = `REQ-2026-${seq}`;
+    const detail =
+      kind === "amenity" && selectedAmenity
+        ? `${selectedAmenity.name}. ${body.trim()}`
+        : kind === "architectural" && selectedForm
+          ? `${selectedForm.label}. ${body.trim()}`
+          : body.trim();
+
+    const request: HomeRequest = {
+      id: `req-${seq}`,
+      reference: ref,
+      kind: kind as RequestKind,
+      title: title.trim(),
+      summary: detail || title.trim(),
+      ownerId: owner.id,
+      ownerName: owner.displayName,
+      unit: owner.unit,
+      status: "submitted",
+      submittedDate: "2026-08-21",
+      attachments:
+        kind === "architectural" && selectedForm
+          ? [{ name: selectedForm.fileName, size: selectedForm.size }]
+          : [],
+      thread: [
+        {
+          id: `rt-${seq}-1`,
+          at: "2026-08-21",
+          actor: owner.members[0],
+          actorRole: "resident",
+          body: detail || title.trim(),
+          kind: "note",
+        },
+        {
+          id: `rt-${seq}-2`,
+          at: "2026-08-21",
+          actor: "HOAsis",
+          actorRole: "system",
+          body: chosen ? chosen.clock : "Routed to the board.",
+          kind: "status",
+        },
+      ],
+    };
+    addRequest(request);
+    setReference(ref);
+    setDone(true);
   }
 
   return (
@@ -252,7 +306,7 @@ export function NewRequestForm() {
         size="lg"
         className="w-full"
         disabled={!ready}
-        onClick={() => setDone(true)}
+        onClick={submit}
       >
         Submit request
       </Button>

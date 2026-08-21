@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { useMyRequests } from "@/lib/app-state";
+import { bucketRequests, useMyRequests } from "@/lib/app-state";
 import { kindLabel, statusTone } from "@/lib/request-status";
 import { formatDate, relativeDays } from "@/lib/utils";
 
@@ -11,8 +11,7 @@ import { formatDate, relativeDays } from "@/lib/utils";
 
 export default function ResidentRequests() {
   const mine = useMyRequests();
-  const open = mine.filter((r) => !["approved", "denied", "closed"].includes(r.status));
-  const closed = mine.filter((r) => ["approved", "denied", "closed"].includes(r.status));
+  const { open, decided, history } = bucketRequests(mine);
 
   return (
     <div className="animate-rise space-y-6">
@@ -41,16 +40,35 @@ export default function ResidentRequests() {
         </section>
       ) : null}
 
-      {closed.length ? (
+      {decided.length ? (
         <section>
           <SectionTitle>Decided</SectionTitle>
           <Card>
-            {closed.map((r, i) => (
+            {decided.map((r, i) => (
               <RequestRow key={r.id} request={r} divided={i > 0} />
             ))}
           </Card>
         </section>
       ) : null}
+
+      {history.length ? (
+        <details className="group">
+          <summary className="mb-3 flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle [&::-webkit-details-marker]:hidden">
+            History ({history.length})
+            <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
+          </summary>
+          <Card>
+            {history.map((r, i) => (
+              <RequestRow key={r.id} request={r} divided={i > 0} />
+            ))}
+          </Card>
+        </details>
+      ) : null}
+
+      <p className="text-[11px] leading-relaxed text-fg-subtle">
+        Requests are association records. They leave the queue when they are decided, but they
+        stay here and on your unit record.
+      </p>
 
       {!mine.length ? (
         <EmptyState
