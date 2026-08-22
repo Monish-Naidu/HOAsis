@@ -20,18 +20,19 @@ const FOUNDERS = [
   {
     name: "Arya Mehr",
     role: "Co-founder",
-    focus: "Property management, carpentry, and anything from the studs up",
+    focus: "Property management and carpentry",
     photo: "/marketing/founder-arya.jpg",
-    bio: "Arya is a property manager, a carpenter, and a handsome gentleman who is genuinely good with his hands. He can fix anything on a home from the studs up, which in this business is worth considerably more than an MBA. His wife Nina makes him a better man, a fact he will volunteer before you have finished asking. Anything involving a tool, a contractor, or a wall that is not where it should be is his.",
+    bio: "A handsome gentleman who is genuinely good with his hands, and can fix a home from the studs up. His wife Nina makes him a better man.",
   },
   {
     name: "Monish Naidu",
     role: "Co-founder",
     focus: "Product and engineering",
     photo: "/marketing/founder-monish.jpg",
-    bio: "Monish is a product manager who used to be a software engineer, which means he writes the spec and then quietly writes the code as well. He refuses to let a number appear on screen that he cannot trace back to a transaction. He also failed out of becoming a pharmacist, a career change everyone involved now regards as a public service. Under Arya's patient mentorship he is learning to chop wood, and is measurably less dangerous with an axe than he was last spring.",
+    bio: "Product manager, former software engineer, failed pharmacist. Learning to chop wood under Arya's mentorship, and measurably less dangerous with an axe than last spring.",
   },
 ];
+
 const BELIEFS = [
   {
     icon: ShieldCheck,
