@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BRAND_LABEL,
   cheapestInstrument,
+  computePaymentCost,
   cvcLengthFor,
   describeInstrument,
   detectBrand,
@@ -158,24 +159,29 @@ describe("bank accounts", () => {
   });
 });
 
-describe("fees", () => {
+describe("processor cost", () => {
+  /** Isolates the processor's share from anything HOAsis adds. */
+  const NO_PLATFORM_FEE = { flatCents: 0, paidBy: "owner" as const, waiveOnAch: false };
+
   it("charges ACH a flat cost with no percentage", () => {
-    expect(feeForAmount("ach", 28_500)).toBe(35);
-    expect(feeForAmount("ach", 500_00)).toBe(35);
+    expect(feeForAmount("ach", 28_500, NO_PLATFORM_FEE)).toBe(35);
+    expect(feeForAmount("ach", 500_00, NO_PLATFORM_FEE)).toBe(35);
   });
 
   it("charges cards a percentage plus a flat cost", () => {
     // 2.9% of $285.00 is $8.265, which rounds to $8.27, plus $0.30.
-    expect(feeForAmount("card", 28_500)).toBe(857);
+    expect(feeForAmount("card", 28_500, NO_PLATFORM_FEE)).toBe(857);
   });
 
   it("prices Apple Pay the same as the card behind it", () => {
-    expect(feeForAmount("apple-pay", 28_500)).toBe(feeForAmount("card", 28_500));
+    expect(feeForAmount("apple-pay", 28_500, NO_PLATFORM_FEE)).toBe(
+      feeForAmount("card", 28_500, NO_PLATFORM_FEE),
+    );
   });
 
   it("returns whole cents, never a fraction", () => {
     for (const amount of [1, 99, 12_345, 999_99]) {
-      expect(Number.isInteger(feeForAmount("card", amount))).toBe(true);
+      expect(Number.isInteger(feeForAmount("card", amount, NO_PLATFORM_FEE))).toBe(true);
     }
   });
 
@@ -184,7 +190,7 @@ describe("fees", () => {
       { kind: "card" } as PaymentInstrument,
       { kind: "ach" } as PaymentInstrument,
     ];
-    expect(cheapestInstrument(instruments, 28_500)?.kind).toBe("ach");
+    expect(cheapestInstrument(instruments, 28_500, NO_PLATFORM_FEE)?.kind).toBe("ach");
   });
 });
 
@@ -214,5 +220,82 @@ describe("display", () => {
 
   it("never calls a bank account expired", () => {
     expect(isExpired({ ...card, kind: "ach" }, { year: 2030, month: 1 })).toBe(false);
+  });
+});
+
+describe("platform fee", () => {
+  const AMOUNT = 285_00;
+  const OWNER_PAYS = { flatCents: 150, paidBy: "owner" as const, waiveOnAch: false };
+  const ASSOCIATION_PAYS = { flatCents: 150, paidBy: "association" as const, waiveOnAch: false };
+
+  it("passes the processor's cost through untouched", () => {
+    const ach = computePaymentCost("ach", AMOUNT, OWNER_PAYS);
+    const card = computePaymentCost("card", AMOUNT, OWNER_PAYS);
+    expect(ach.processorCents).toBe(35);
+    // 2.9% of $285 is $8.265, rounding to $8.27, plus $0.30.
+    expect(card.processorCents).toBe(857);
+  });
+
+  it("adds the fee on top when the owner carries it", () => {
+    const cost = computePaymentCost("ach", AMOUNT, OWNER_PAYS);
+    expect(cost.platformCents).toBe(150);
+    expect(cost.residentPaysCents).toBe(286_50);
+    // The processor still takes its cut out of the deposit either way.
+    expect(cost.associationNetsCents).toBe(284_65);
+  });
+
+  it("takes it out of the deposit when the association carries it", () => {
+    const cost = computePaymentCost("ach", AMOUNT, ASSOCIATION_PAYS);
+    expect(cost.residentPaysCents).toBe(AMOUNT);
+    expect(cost.associationNetsCents).toBe(283_15);
+  });
+
+  it("charges the same flat fee on every rail, unlike a percentage", () => {
+    const ach = computePaymentCost("ach", AMOUNT, OWNER_PAYS);
+    const card = computePaymentCost("card", AMOUNT, OWNER_PAYS);
+    expect(ach.platformCents).toBe(card.platformCents);
+  });
+
+  it("does not scale the fee with the payment, which a percentage would", () => {
+    const small = computePaymentCost("ach", 50_00, OWNER_PAYS);
+    const large = computePaymentCost("ach", 5_000_00, OWNER_PAYS);
+    expect(small.platformCents).toBe(large.platformCents);
+  });
+
+  it("waives it on ACH when the board wants volume on the cheap rail", () => {
+    const policy = { ...OWNER_PAYS, waiveOnAch: true };
+    expect(computePaymentCost("ach", AMOUNT, policy).platformCents).toBe(0);
+    expect(computePaymentCost("card", AMOUNT, policy).platformCents).toBe(150);
+  });
+
+  it("still names ACH the cheapest rail with the fee applied", () => {
+    const instruments = [
+      { kind: "card" } as PaymentInstrument,
+      { kind: "ach" } as PaymentInstrument,
+    ];
+    expect(cheapestInstrument(instruments, AMOUNT, OWNER_PAYS)?.kind).toBe("ach");
+  });
+
+  it("undercuts the incumbent on both rails", () => {
+    // PayHOA: $2.45 flat ACH, and 3.5% + $0.50 on cards.
+    const theirAch = 245;
+    const theirCard = Math.round((AMOUNT * 3.5) / 100) + 50;
+
+    expect(feeForAmount("ach", AMOUNT, OWNER_PAYS)).toBeLessThan(theirAch);
+    expect(feeForAmount("card", AMOUNT, OWNER_PAYS)).toBeLessThan(theirCard);
+  });
+
+  it("charges nothing when the board sets the fee to zero", () => {
+    const free = { flatCents: 0, paidBy: "owner" as const, waiveOnAch: false };
+    const cost = computePaymentCost("ach", AMOUNT, free);
+    expect(cost.platformCents).toBe(0);
+    expect(cost.residentPaysCents).toBe(AMOUNT);
+  });
+
+  it("keeps every figure in whole cents", () => {
+    for (const amount of [1, 99, 12_345, 999_99]) {
+      const cost = computePaymentCost("card", amount, OWNER_PAYS);
+      for (const value of Object.values(cost)) expect(Number.isInteger(value)).toBe(true);
+    }
   });
 });

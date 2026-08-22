@@ -230,6 +230,51 @@ export function SettingsScreen() {
           ) : null}
 
           <SettingRow
+            title="Payment fee"
+            description="Flat HOAsis fee per payment, on top of the processor's cost"
+          >
+            <select
+              value={settings.paymentFeeCents}
+              onChange={(e) => updateSettings({ paymentFeeCents: Number(e.target.value) })}
+              aria-label="Payment fee"
+              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+            >
+              {[0, 50, 100, 150, 200, 250, 300].map((cents) => (
+                <option key={cents} value={cents}>
+                  {cents === 0 ? "No fee" : `$${(cents / 100).toFixed(2)}`}
+                </option>
+              ))}
+            </select>
+          </SettingRow>
+          <SettingRow
+            title="Who pays it"
+            description="Charged to the owner at checkout, or absorbed by the association"
+          >
+            <select
+              value={settings.paymentFeePaidBy}
+              onChange={(e) =>
+                updateSettings({
+                  paymentFeePaidBy: e.target.value as "owner" | "association",
+                })
+              }
+              aria-label="Who pays the fee"
+              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+            >
+              <option value="owner">The owner</option>
+              <option value="association">The association</option>
+            </select>
+          </SettingRow>
+          <SettingRow
+            title="Waive it on bank transfers"
+            description="Pushes owners to the cheapest rail, which lowers what the association pays"
+          >
+            <Toggle
+              checked={settings.paymentFeeWaivedOnAch}
+              onChange={(v) => updateSettings({ paymentFeeWaivedOnAch: v })}
+              label="Waive the fee on ACH"
+            />
+          </SettingRow>
+          <SettingRow
             title="Autopay late day"
             description="The last day of the month a resident can schedule autopay before it is late"
           >

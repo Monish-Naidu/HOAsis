@@ -55,8 +55,25 @@ const INCLUDED = [
   "Phone and chat support, seven days a week",
 ];
 
+const PAYMENTS = [
+  {
+    label: "The processor's cost",
+    detail:
+      "2.9% + 30¢ on cards, 35¢ on bank transfers. Passed straight through. We never touch this.",
+  },
+  {
+    label: "Our fee: $1.50 per payment",
+    detail:
+      "Flat, so it does not grow with the assessment. The board chooses whether the owner pays it at checkout or the association absorbs it, and can waive it on bank transfers entirely.",
+  },
+  {
+    label: "Cheaper than the incumbent, on both rails",
+    detail:
+      "On a $285 assessment that is $1.85 by bank transfer against $2.45, and $10.07 by card against $10.48. Itemised, so you can check the arithmetic.",
+  },
+];
+
 const NOT_INCLUDED = [
-  { label: "Payment processing", detail: "Passed through at our processor's rate. We add nothing." },
   { label: "Postal mail", detail: "Billed at cost when a notice has to go on paper." },
   { label: "Your bank's fees", detail: "Whatever your institution charges, unchanged." },
 ];
@@ -137,13 +154,26 @@ export default function PricingPage() {
           <Reveal delay={90}>
             <Card className="h-full p-6">
               <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
-                What we do not mark up
+                How payments are priced
               </h2>
               <p className="mt-1.5 text-[13px] text-fg-muted">
-                Some costs are real and get passed through. Marking them up is how this category
-                quietly makes its margin, and every dues cycle is a reminder.
+                Itemised on every receipt. The thing boards resent is not a fee, it is a blended
+                rate that hides one inside the processor&apos;s number.
               </p>
               <ul className="mt-4 space-y-3">
+                {PAYMENTS.map((item) => (
+                  <li key={item.label} className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
+                    <span>
+                      <span className="block text-[14px] font-medium text-fg">{item.label}</span>
+                      <span className="block text-[13px] leading-snug text-fg-muted">
+                        {item.detail}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <ul className="mt-4 space-y-3 border-t border-border pt-4">
                 {NOT_INCLUDED.map((item) => (
                   <li key={item.label} className="flex items-start gap-2.5">
                     <Minus className="mt-0.5 size-4 shrink-0 text-fg-subtle" />

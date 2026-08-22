@@ -237,55 +237,107 @@ export function linkBankAccount(
 /* -------------------------------------------------------------------------- */
 
 export interface FeeSchedule {
-  /** Percentage of the amount, as a percent. 2.9 means 2.9%. */
-  percent: number;
-  /** Flat component. */
-  flatCents: Cents;
-  /** Whether the resident or the association absorbs it. */
-  paidBy: "owner" | "association";
+  /** What the processor charges. Passed through unchanged. */
+  processorPercent: number;
+  processorFlatCents: Cents;
   settlement: string;
 }
 
 /**
- * Behaviour that varies by instrument kind.
+ * What each rail costs to run.
  *
- * A lookup table rather than subclasses, because instruments are JSON. Adding
- * a rail means adding a row here and nothing else.
+ * These are the processor's numbers, not ours. They are kept separate from the
+ * platform fee below so both can be shown as separate lines: a resident who can
+ * see which part is the card network and which part is us has no reason to
+ * suspect the difference.
  */
 export const FEE_SCHEDULE: Record<InstrumentKind, FeeSchedule> = {
-  ach: {
-    percent: 0,
-    flatCents: 35,
-    paidBy: "association",
-    settlement: "1 to 2 business days",
-  },
-  card: {
-    percent: 2.9,
-    flatCents: 30,
-    paidBy: "association",
-    settlement: "Same day",
-  },
-  "apple-pay": {
-    percent: 2.9,
-    flatCents: 30,
-    paidBy: "association",
-    settlement: "Same day",
-  },
+  ach: { processorPercent: 0, processorFlatCents: 35, settlement: "1 to 2 business days" },
+  card: { processorPercent: 2.9, processorFlatCents: 30, settlement: "Same day" },
+  "apple-pay": { processorPercent: 2.9, processorFlatCents: 30, settlement: "Same day" },
 };
 
-/** What this instrument costs to move `amountCents`. Always integer cents. */
-export function feeForAmount(kind: InstrumentKind, amountCents: Cents): Cents {
+export interface PlatformFeePolicy {
+  /** Flat fee per payment, in cents. Flat rather than a percentage on purpose. */
+  flatCents: Cents;
+  /** Who the flat fee lands on. */
+  paidBy: "owner" | "association";
+  /** Boards can waive it on the cheap rail to push volume there. */
+  waiveOnAch: boolean;
+}
+
+export const DEFAULT_FEE_POLICY: PlatformFeePolicy = {
+  flatCents: 150,
+  paidBy: "owner",
+  waiveOnAch: false,
+};
+
+export interface PaymentCost {
+  amountCents: Cents;
+  /** What the processor takes. Never ours. */
+  processorCents: Cents;
+  /** What HOAsis takes. */
+  platformCents: Cents;
+  /** What the resident is billed in total. */
+  residentPaysCents: Cents;
+  /** What the association nets after everything. */
+  associationNetsCents: Cents;
+}
+
+/**
+ * Splits a payment into who gets what.
+ *
+ * The processor's cut always comes out of the association's deposit, because
+ * that is how settlement actually works. The platform fee is the only part
+ * that moves: charge it to the owner and it is added on top; charge it to the
+ * association and it comes out of the same deposit.
+ *
+ * Returning all four figures rather than one total is deliberate. A screen that
+ * only knows the total cannot itemise, and an unexplained gap between what an
+ * owner pays and what the association receives is the exact thing boards write
+ * angry reviews about.
+ */
+export function computePaymentCost(
+  kind: InstrumentKind,
+  amountCents: Cents,
+  policy: PlatformFeePolicy = DEFAULT_FEE_POLICY,
+): PaymentCost {
   const schedule = FEE_SCHEDULE[kind];
-  return Math.round((amountCents * schedule.percent) / 100) + schedule.flatCents;
+  const processorCents =
+    Math.round((amountCents * schedule.processorPercent) / 100) + schedule.processorFlatCents;
+
+  const waived = policy.waiveOnAch && kind === "ach";
+  const platformCents = waived ? 0 : policy.flatCents;
+
+  return {
+    amountCents,
+    processorCents,
+    platformCents,
+    residentPaysCents: policy.paidBy === "owner" ? amountCents + platformCents : amountCents,
+    associationNetsCents:
+      amountCents - processorCents - (policy.paidBy === "association" ? platformCents : 0),
+  };
+}
+
+/** Total cost of moving the money, whoever ends up carrying it. */
+export function feeForAmount(
+  kind: InstrumentKind,
+  amountCents: Cents,
+  policy: PlatformFeePolicy = DEFAULT_FEE_POLICY,
+): Cents {
+  const cost = computePaymentCost(kind, amountCents, policy);
+  return cost.processorCents + cost.platformCents;
 }
 
 /** The cheapest way to pay a given amount, which residents deserve to be told. */
 export function cheapestInstrument(
   instruments: PaymentInstrument[],
   amountCents: Cents,
+  policy: PlatformFeePolicy = DEFAULT_FEE_POLICY,
 ): PaymentInstrument | undefined {
   return [...instruments].sort(
-    (a, b) => feeForAmount(a.kind, amountCents) - feeForAmount(b.kind, amountCents),
+    (a, b) =>
+      feeForAmount(a.kind, amountCents, policy) - feeForAmount(b.kind, amountCents, policy),
   )[0];
 }
 

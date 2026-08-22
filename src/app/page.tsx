@@ -69,7 +69,7 @@ const SHOWCASE = [
     title: "The three things an owner ever does, made quick.",
     body: "Pay, look something up, file a request. Every payment method quotes what it actually costs before anyone commits, and every payment shows which charges it cleared. The same screens ship as the mobile app.",
     points: [
-      "Dues at processor cost, no markup",
+      "Processor cost and our $1.50 fee, itemised separately",
       "Requests with a certificate you can show a contractor",
       "Association funds open to owners, if the board allows",
     ],

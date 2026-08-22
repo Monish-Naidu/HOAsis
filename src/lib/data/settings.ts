@@ -19,6 +19,9 @@ export const communitySettings: CommunitySettings = {
   showFundsToResidents: true,
   showLiveVoteResults: false,
   autopayLateAfterDay: 15,
+  paymentFeeCents: 150,
+  paymentFeePaidBy: "owner",
+  paymentFeeWaivedOnAch: false,
   forumEnabled: true,
 };
 

@@ -514,6 +514,12 @@ export interface CommunitySettings {
   showLiveVoteResults: boolean;
   /** The day of the month after which an assessment is late. */
   autopayLateAfterDay: number;
+  /** Flat HOAsis fee per payment, in cents. */
+  paymentFeeCents: number;
+  /** Whether the owner or the association carries that fee. */
+  paymentFeePaidBy: "owner" | "association";
+  /** Waiving it on ACH pushes volume to the cheapest rail. */
+  paymentFeeWaivedOnAch: boolean;
   forumEnabled: boolean;
 }
 

@@ -21,11 +21,12 @@ import { useAppState, useCurrentOwner, useMyInstruments } from "@/lib/app-state"
 import {
   FEE_SCHEDULE,
   cheapestInstrument,
+  computePaymentCost,
   describeInstrument,
-  feeForAmount,
   isExpired,
   type InstrumentKind,
   type PaymentInstrument,
+  type PlatformFeePolicy,
 } from "@/lib/payments/instruments";
 import { cn, formatDate, money, ordinal, relativeDays, TODAY } from "@/lib/utils";
 import { AddMethod } from "./add-method";
@@ -72,10 +73,15 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [amountMode, custom, balanceCents, duesCents]);
 
-  const cheapest = cheapestInstrument(instruments, amountCents);
-  const schedule = selected ? FEE_SCHEDULE[selected.kind] : null;
-  const feeCents = selected ? feeForAmount(selected.kind, amountCents) : 0;
-  const residentPays = schedule?.paidBy === "owner" ? amountCents + feeCents : amountCents;
+  const policy: PlatformFeePolicy = {
+    flatCents: settings.paymentFeeCents,
+    paidBy: settings.paymentFeePaidBy,
+    waiveOnAch: settings.paymentFeeWaivedOnAch,
+  };
+  const cheapest = cheapestInstrument(instruments, amountCents, policy);
+  const cost = selected
+    ? computePaymentCost(selected.kind, amountCents, policy)
+    : null;
 
   if (!owner) return null;
 
@@ -214,8 +220,7 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
               const Icon = RAIL_ICON[instrument.kind];
               const active = selected?.id === instrument.id;
               const expired = isExpired(instrument, REFERENCE);
-              const instrumentFee = feeForAmount(instrument.kind, amountCents);
-              const instrumentSchedule = FEE_SCHEDULE[instrument.kind];
+              const instrumentCost = computePaymentCost(instrument.kind, amountCents, policy);
               return (
                 <div
                   key={instrument.id}
@@ -251,9 +256,13 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
                         {expired ? <Badge tone="danger">Expired</Badge> : null}
                       </span>
                       <span className="mt-0.5 block text-[11px] text-fg-muted">
-                        {instrumentSchedule.percent === 0
-                          ? `Free to you · costs the association ${money(instrumentSchedule.flatCents)}`
-                          : `${instrumentSchedule.percent}% + ${money(instrumentSchedule.flatCents)} · ${money(instrumentFee)} on this payment`}
+                        {policy.paidBy === "owner"
+                          ? instrumentCost.platformCents === 0
+                            ? "No fee to you"
+                            : `${money(instrumentCost.platformCents)} fee · ${money(instrumentCost.residentPaysCents)} total`
+                          : `Free to you · costs the association ${money(
+                              instrumentCost.processorCents + instrumentCost.platformCents,
+                            )}`}
                       </span>
                     </span>
                     {active && !managing ? <Check className="size-4 shrink-0 text-fg" /> : null}
@@ -309,24 +318,29 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
       </section>
 
       {/* Total */}
-      {selected ? (
+      {selected && cost ? (
         <Card className="p-4">
           <dl className="space-y-1">
             <div className="flex justify-between text-[13px]">
               <dt className="text-fg-muted">Assessment</dt>
-              <dd className="tnum font-medium text-fg">{money(amountCents)}</dd>
+              <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
             </div>
-            <div className="flex justify-between text-[13px]">
-              <dt className="text-fg-muted">
-                Processing{schedule?.paidBy === "association" ? " (paid by the association)" : ""}
-              </dt>
-              <dd className="tnum font-medium text-fg">
-                {money(schedule?.paidBy === "association" ? 0 : feeCents)}
-              </dd>
-            </div>
+            {policy.paidBy === "owner" ? (
+              <div className="flex justify-between text-[13px]">
+                <dt className="text-fg-muted">
+                  {cost.platformCents === 0 ? "Payment fee (waived)" : "Payment fee"}
+                </dt>
+                <dd className="tnum font-medium text-fg">{money(cost.platformCents)}</dd>
+              </div>
+            ) : (
+              <div className="flex justify-between text-[13px]">
+                <dt className="text-fg-muted">Processing (paid by the association)</dt>
+                <dd className="tnum font-medium text-fg">{money(0)}</dd>
+              </div>
+            )}
             <div className="mt-2 flex justify-between border-t border-border pt-2 text-[15px]">
               <dt className="font-semibold text-fg">You pay</dt>
-              <dd className="tnum font-semibold text-fg">{money(residentPays)}</dd>
+              <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
             </div>
           </dl>
           <Button
@@ -334,13 +348,17 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
             size="lg"
             className="mt-4 w-full"
             disabled={amountCents <= 0 || isExpired(selected, REFERENCE)}
-            onClick={() => setPaid({ amountCents, instrument: selected })}
+            onClick={() => setPaid({ amountCents: cost.residentPaysCents, instrument: selected })}
           >
-            Pay {money(residentPays)}
+            Pay {money(cost.residentPaysCents)}
           </Button>
           <p className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-snug text-fg-subtle">
             <Info className="mt-px size-3 shrink-0" />
-            Processing costs pass through at cost. No markup.
+            {policy.paidBy === "owner"
+              ? `The card network takes ${money(cost.processorCents)} of this from the association. The ${money(
+                  policy.flatCents,
+                )} fee is ours, and it is the same on every rail.`
+              : `The association absorbs ${money(cost.processorCents + cost.platformCents)} on this payment.`}
           </p>
         </Card>
       ) : null}

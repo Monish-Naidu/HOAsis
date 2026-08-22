@@ -57,6 +57,8 @@ export function isCommunitySettings(value: unknown): value is CommunitySettings 
     typeof value.showFundsToResidents === "boolean" &&
     typeof value.showLiveVoteResults === "boolean" &&
     typeof value.autopayLateAfterDay === "number" &&
+    typeof value.paymentFeeCents === "number" &&
+    (value.paymentFeePaidBy === "owner" || value.paymentFeePaidBy === "association") &&
     typeof value.forumEnabled === "boolean" &&
     isRecord(value.banner)
   );
