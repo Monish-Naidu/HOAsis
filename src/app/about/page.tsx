@@ -20,14 +20,12 @@ const FOUNDERS = [
   {
     name: "Arya Mehr",
     role: "Co-founder",
-    focus: "Property management and carpentry",
     photo: "/marketing/founder-arya.jpg",
     bio: "A handsome gentleman who is genuinely good with his hands, and can fix a home from the studs up. His wife Nina makes him a better man.",
   },
   {
     name: "Monish Naidu",
     role: "Co-founder",
-    focus: "Product and engineering",
     photo: "/marketing/founder-monish.jpg",
     bio: "Product manager, former software engineer, failed pharmacist. Learning to chop wood under Arya's mentorship, and measurably less dangerous with an axe than last spring.",
   },
@@ -143,7 +141,6 @@ export default function AboutPage() {
                       {founder.name}
                     </h3>
                     <p className="mt-0.5 text-[12px] font-medium text-fg-muted">{founder.role}</p>
-                    <p className="mt-0.5 text-[12px] text-fg-subtle">{founder.focus}</p>
                     <p className="mt-3 text-[14px] leading-relaxed text-fg-muted">{founder.bio}</p>
                   </div>
                 </Card>
