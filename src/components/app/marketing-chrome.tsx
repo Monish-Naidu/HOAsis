@@ -50,9 +50,15 @@ export function MarketingHeader() {
           <ThemeToggle className="hidden sm:inline-flex" />
           <Link
             href="/signin"
-            className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[13px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
+            className="hidden h-9 items-center rounded-lg px-3 text-[13px] font-medium text-fg-muted hover:text-fg sm:inline-flex"
           >
             Sign in
+          </Link>
+          <Link
+            href="/start"
+            className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[13px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
+          >
+            Get started
           </Link>
           <button
             type="button"

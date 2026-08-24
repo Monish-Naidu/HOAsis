@@ -54,6 +54,14 @@ export function budgetSummary(c: Community) {
     incomeYtd,
     expenseYtd,
     netYtd: incomeYtd - expenseYtd,
+    /**
+     * Share of budget spent or collected, or undefined when there is no budget
+     * to measure against. A new association has an income line and no expense
+     * lines, and dividing by that zero printed "NaN% of budget".
+     */
+    incomePace: sum(income, "annualCents") > 0 ? incomeYtd / sum(income, "annualCents") : undefined,
+    expensePace:
+      sum(expense, "annualCents") > 0 ? expenseYtd / sum(expense, "annualCents") : undefined,
     netAnnual: sum(income, "annualCents") - sum(expense, "annualCents"),
     yearElapsed: c.yearElapsed,
   };
@@ -215,4 +223,69 @@ export function calendarEntries(c: Community) {
     }
   }
   return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+/**
+ * Owner correspondence, measured from the threads themselves.
+ *
+ * Every figure here used to be a literal on the screen, which meant a brand new
+ * association with five households and no messages was told it had delivered 88
+ * of them. A number nobody can trace is worse than no number.
+ */
+export function communicationsSummary(c: Community) {
+  const threads = c.threads;
+  const messages = threads.flatMap((t) => t.messages);
+  const outbound = messages.filter((m) => m.direction === "outbound");
+
+  // Board reply time: for each inbound message, how long until the next
+  // outbound one in the same thread.
+  const gaps: number[] = [];
+  for (const thread of threads) {
+    const ordered = [...thread.messages].sort((a, b) => (a.at < b.at ? -1 : 1));
+    for (let i = 0; i < ordered.length - 1; i++) {
+      if (ordered[i].direction !== "inbound") continue;
+      const reply = ordered.slice(i + 1).find((m) => m.direction === "outbound");
+      if (!reply) continue;
+      gaps.push(daysBetween(ordered[i].at, reply.at));
+      break;
+    }
+  }
+
+  return {
+    threadCount: threads.length,
+    unread: threads.filter((t) => t.unread).length,
+    sent: outbound.length,
+    /** Households we hold an email for, which is who a notice can actually reach. */
+    reachable: c.owners.filter((o) => o.email.trim().length > 0).length,
+    households: c.owners.length,
+    /** Undefined when nothing has been answered yet, rather than zero. */
+    avgReplyDays: gaps.length
+      ? Math.round((gaps.reduce((t, g) => t + g, 0) / gaps.length) * 10) / 10
+      : undefined,
+  };
+}
+
+function daysBetween(from: string, to: string): number {
+  const ms = new Date(`${to}T12:00:00Z`).getTime() - new Date(`${from}T12:00:00Z`).getTime();
+  return Math.max(0, Math.round(ms / 86_400_000));
+}
+
+/**
+ * The association's own slug, for record URLs and export filenames.
+ *
+ * Derived from the display name rather than the community id, because the id
+ * carries a disambiguating suffix that nobody should see in a filename.
+ */
+export function communitySlug(c: Community): string {
+  return (
+    c.settings.displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "association"
+  );
+}
+
+/** Where an association publishes the records it has to make available. */
+export function publicRecordsUrl(c: Community): string {
+  return `${communitySlug(c).replace(/-/g, "")}.hoasis.app/records`;
 }

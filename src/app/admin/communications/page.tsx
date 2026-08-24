@@ -17,17 +17,20 @@ import {
   Callout,
   Card,
   CardHeader,
+  EmptyState,
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
 import { useState } from "react";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { formatDate } from "@/lib/utils";
+import { formatDate, pluralize } from "@/lib/utils";
+import { communicationsSummary } from "@/lib/metrics";
 
 export default function BoardCommunications() {
-  const { threads, replyToThread } = useAppState();
+  const { community, threads, replyToThread } = useAppState();
   const unread = useUnreadThreadCount();
+  const stats = communicationsSummary(community);
   const { notify } = useToast();
   const [activeId, setActiveId] = useState(threads[0]?.id);
   const [draft, setDraft] = useState("");
@@ -61,16 +64,34 @@ export default function BoardCommunications() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Unread" value={String(unread)} tone="warn" icon={<Inbox className="size-4" />} />
         <Stat
-          label="Delivered this month"
-          value="88"
-          tone="ok"
-          hint="71 opened · 3 bounced"
+          label="Reachable households"
+          value={String(stats.reachable)}
+          tone={stats.reachable === stats.households ? "ok" : "warn"}
+          hint={
+            stats.reachable === stats.households
+              ? "Every household has an email on file"
+              : `${stats.households - stats.reachable} with no email on file`
+          }
           icon={<MailCheck className="size-4" />}
         />
         <Stat label="Open threads" value={String(threads.length)} icon={<Users className="size-4" />} />
-        <Stat label="Avg. board reply" value="1.4 days" tone="ok" hint="Across the last 30 days" />
+        <Stat
+          label="Avg. board reply"
+          value={stats.avgReplyDays === undefined ? "No replies yet" : `${stats.avgReplyDays} days`}
+          tone={stats.avgReplyDays !== undefined && stats.avgReplyDays <= 2 ? "ok" : "neutral"}
+          hint={stats.sent ? `${pluralize(stats.sent, "reply", "replies")} sent` : undefined}
+        />
       </div>
 
+      {!active ? (
+        <Card className="mt-5">
+          <EmptyState
+            icon={<Inbox className="size-5" />}
+            title="No owner messages yet"
+            description="Replies to notices and anything a resident sends the board lands here."
+          />
+        </Card>
+      ) : (
       <div className="mt-5 grid gap-5 lg:grid-cols-5">
         {/* Thread list */}
         <Card className="lg:col-span-2">
@@ -202,6 +223,7 @@ export default function BoardCommunications() {
           </Callout>
         </div>
       </div>
+      )}
     </>
   );
 }

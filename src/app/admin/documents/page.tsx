@@ -19,9 +19,10 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { useState } from "react";
+import { publicRecordsUrl } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { formatDate, todayIsoDate } from "@/lib/utils";
+import { formatDate, pluralize, todayIsoDate } from "@/lib/utils";
 import type { DocumentRecord } from "@/lib/types";
 
 
@@ -72,7 +73,8 @@ function toDocumentRecord(file: File, index: number): DocumentRecord {
 }
 
 export default function BoardDocuments() {
-  const { documents, addDocument, setDocumentVisibility, removeDocument } = useAppState();
+  const { community, documents, addDocument, setDocumentVisibility, removeDocument } =
+    useAppState();
   const { notify } = useToast();
   const [query, setQuery] = useState("");
   const publicDocs = documents.filter((d) => d.visibility === "public");
@@ -154,7 +156,7 @@ export default function BoardDocuments() {
           </Button>
         }
       >
-        mehrmeadows.hoasis.app/records · {publicDocs.length} documents, no account needed.
+        {publicRecordsUrl(community)} · {pluralize(publicDocs.length, "document")}, no account needed.
       </Callout>
 
       <Card className="mt-5">

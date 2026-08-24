@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildOwnerLedger } from "@/lib/data/owner-ledger";
-import { communities } from "@/lib/data/communities";
+import { allCommunities } from "@/lib/data/communities";
 import type { Owner } from "@/lib/types";
+import { buildCommunity, DEFAULT_ROLE_CAPABILITIES } from "@/lib/data/new-community";
 
 const base: Owner = {
   id: "own-001",
@@ -53,7 +54,7 @@ describe("buildOwnerLedger", () => {
   });
 
   it("gives every household in every community a ledger that agrees with the roster", () => {
-    for (const community of communities) {
+    for (const community of allCommunities()) {
       for (const owner of community.owners) {
         const lines = community.ownerCharges[owner.id];
         expect(lines, `${community.id} ${owner.id}`).toBeDefined();
@@ -72,5 +73,84 @@ describe("deep arrears", () => {
     const fees = lines.filter((l) => l.label.includes("late fee"));
     expect(fees).toHaveLength(0);
     expect(lines.filter((l) => l.kind === "charge").length).toBeGreaterThanOrEqual(12);
+  });
+});
+
+describe("a community built through onboarding", () => {
+  const draft = {
+    name: "Cedar Hollow Homeowners Association",
+    city: "Bothell",
+    state: "WA",
+    stateName: "Washington",
+    unitCount: 24,
+    duesCents: 4_500,
+    duesCadence: "monthly" as const,
+    dueDay: 1,
+    lateAfterDay: 15,
+    fiscalYearStart: "01-01",
+    founder: { name: "Dana Whitcomb", email: "dana@example.com", unit: "1" },
+    households: [
+      { name: "Marcus Bell", email: "marcus@example.com", unit: "2" },
+      { name: "Yuki Tanaka", email: "yuki@example.com", unit: "3" },
+    ],
+    board: [
+      {
+        name: "Marcus Bell",
+        email: "marcus@example.com",
+        unit: "2",
+        role: "treasurer" as const,
+        capabilities: DEFAULT_ROLE_CAPABILITIES.treasurer,
+      },
+    ],
+  };
+
+  it("starts empty rather than seeded with sample data", () => {
+    const c = buildCommunity(draft, "2026-08-24");
+    for (const slice of ["ledger", "vendors", "payouts", "requests", "documents", "ballots", "posts", "bankAccounts", "reserveComponents"] as const) {
+      expect(c[slice], slice).toHaveLength(0);
+    }
+  });
+
+  it("makes the founder President with the permissions capability", () => {
+    const c = buildCommunity(draft, "2026-08-24");
+    const president = c.accounts.find((a) => a.role === "president")!;
+    expect(president.name).toBe("Dana Whitcomb");
+    expect(president.capabilities.permissions).toBe(true);
+  });
+
+  it("gives an officer their role's capabilities and nothing more", () => {
+    const c = buildCommunity(draft, "2026-08-24");
+    const treasurer = c.accounts.find((a) => a.role === "treasurer")!;
+    expect(treasurer.capabilities.finances).toBe(true);
+    expect(treasurer.capabilities.permissions).toBe(false);
+    expect(treasurer.capabilities.voting).toBe(false);
+  });
+
+  it("budgets the assessment income it can infer, and nothing it cannot", () => {
+    const c = buildCommunity(draft, "2026-08-24");
+    expect(c.budget).toHaveLength(1);
+    expect(c.budget[0].annualCents).toBe(4_500 * 12 * 24);
+    expect(c.budget[0].ytdActualCents).toBe(0);
+  });
+
+  it("bills on the next occurrence of the due day", () => {
+    expect(buildCommunity(draft, "2026-08-24").nextChargeDate).toBe("2026-09-01");
+    expect(buildCommunity({ ...draft, dueDay: 28 }, "2026-08-24").nextChargeDate).toBe("2026-08-28");
+  });
+
+  it("gives every household an account and an empty ledger", () => {
+    const c = buildCommunity(draft, "2026-08-24");
+    expect(c.owners).toHaveLength(3);
+    expect(c.accounts).toHaveLength(3);
+    for (const owner of c.owners) expect(c.ownerCharges[owner.id]).toEqual([]);
+  });
+
+  it("keeps two associations of the same name apart", () => {
+    const a = buildCommunity(draft, "2026-08-24");
+    const b = buildCommunity(
+      { ...draft, city: "Kirkland", founder: { ...draft.founder, email: "other@example.com" } },
+      "2026-08-24",
+    );
+    expect(a.id).not.toBe(b.id);
   });
 });

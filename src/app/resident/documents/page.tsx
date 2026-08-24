@@ -2,6 +2,7 @@
 
 import { FileSpreadsheet, FileText, Globe, Lock } from "lucide-react";
 import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
+import { publicRecordsUrl } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import type { DocumentRecord } from "@/lib/types";
@@ -16,7 +17,7 @@ const order: DocumentRecord["category"][] = [
 ];
 
 export default function ResidentDocuments() {
-  const { documents } = useAppState();
+  const { community, documents } = useAppState();
   const visible = documents.filter((d) => d.visibility !== "board");
   const grouped = order
     .map((category) => ({ category, docs: visible.filter((d) => d.category === category) }))
@@ -29,7 +30,7 @@ export default function ResidentDocuments() {
         <p className="mt-1 text-[13px] text-fg-muted">{visible.length} documents</p>
       </div>
 
-      <Callout tone="brand" icon={<Globe className="size-4" />} title="mehrmeadows.hoasis.app/records" >
+      <Callout tone="brand" icon={<Globe className="size-4" />} title={publicRecordsUrl(community)} >
         Public, no account needed.
       </Callout>
 

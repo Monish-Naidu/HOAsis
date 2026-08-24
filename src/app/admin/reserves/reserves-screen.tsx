@@ -12,7 +12,7 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { interestSummary } from "@/lib/metrics";
+import { communitySlug, interestSummary } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import {
   defaultAssumptions,
@@ -169,7 +169,7 @@ export function ReservesScreen() {
       { header: "Replaced", value: (y) => y.expenditures.map((e) => e.name).join("; ") },
       { header: "Closing", value: (y) => (y.closingCents / 100).toFixed(2) },
     ]);
-    downloadCsv("mehr-meadows-reserve-projection.csv", csv);
+    downloadCsv(`${communitySlug(community)}-reserve-projection.csv`, csv);
     notify("Exported the 30 year projection");
   }
 

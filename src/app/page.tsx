@@ -202,11 +202,17 @@ export default function MarketingHome() {
           <Reveal delay={170}>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/signin"
+                href="/start"
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-[14px] font-semibold text-brand-fg shadow-raised transition-transform hover:-translate-y-0.5"
               >
-                See the live demo
+                Set up your association
                 <ArrowRight className="size-4" />
+              </Link>
+              <Link
+                href="/signin"
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-border-2 bg-surface px-5 text-[14px] font-semibold text-fg transition-colors hover:bg-surface-2"
+              >
+                See the live demo
               </Link>
               <Link
                 href="/library"
@@ -488,13 +494,21 @@ export default function MarketingHome() {
               The demo is a real association with real numbers behind it, including a reserve plan
               that does not quite work. Sign in as a board member or a resident and go anywhere.
             </p>
-            <Link
-              href="/signin"
-              className="mt-8 inline-flex h-11 items-center gap-2 rounded-lg bg-navy-50 px-6 text-[14px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
-            >
-              Open the demo
-              <ArrowRight className="size-4" />
-            </Link>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/start"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-navy-50 px-6 text-[14px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
+              >
+                Set up your association
+                <ArrowRight className="size-4" />
+              </Link>
+              <Link
+                href="/signin"
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-navy-50/30 px-6 text-[14px] font-semibold text-navy-50 transition-colors hover:bg-navy-50/10"
+              >
+                Open the demo
+              </Link>
+            </div>
           </Reveal>
         </div>
       </section>

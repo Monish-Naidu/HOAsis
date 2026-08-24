@@ -14,6 +14,7 @@ import { documents as mmDocuments } from "./documents";
 import { forumPosts as mmPosts } from "./forum";
 import { ledgerEntries as mmLedger, ownerCharges as mmCharges, payouts as mmPayouts, vendors as mmVendors } from "./ledger";
 import { buildOwnerLedgers } from "./owner-ledger";
+import { createdCommunities } from "./created-communities";
 import { threads as mmThreads } from "./messages";
 import { owners as mmOwners } from "./owners";
 import { paymentInstruments as mmInstruments } from "./payments";
@@ -66,10 +67,26 @@ export const mehrMeadows: Community = {
   }),
 };
 
-export const communities: Community[] = [mehrMeadows, testCommunityOne];
+/** The two that ship with the app. Anything else was built through onboarding. */
+export const seededCommunities: Community[] = [mehrMeadows, testCommunityOne];
 
 export const DEFAULT_COMMUNITY_ID = mehrMeadows.id;
 
+/**
+ * Every association this browser knows about, demos first.
+ *
+ * A function rather than a constant because created communities live in a
+ * store, and a module-level array captured at import time would never see one.
+ */
+export function allCommunities(): Community[] {
+  return [...seededCommunities, ...createdCommunities()];
+}
+
 export function communityById(id: string): Community {
-  return communities.find((c) => c.id === id) ?? mehrMeadows;
+  return allCommunities().find((c) => c.id === id) ?? mehrMeadows;
+}
+
+/** True when this association was built through onboarding, not shipped. */
+export function isCreatedCommunity(id: string): boolean {
+  return !seededCommunities.some((c) => c.id === id);
 }

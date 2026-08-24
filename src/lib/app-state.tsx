@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import {
-  communities,
+  allCommunities,
+  seededCommunities,
   communityById,
   DEFAULT_COMMUNITY_ID,
 } from "@/lib/data/communities";
@@ -17,6 +18,8 @@ import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
 import { PersistedStore, type Store } from "@/lib/core/store";
+import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
+import { buildCommunity, type CommunityDraft } from "@/lib/data/new-community";
 import { isCommunitySettings, isRecordArray, isSession } from "@/lib/core/guards";
 import type {
   Account,
@@ -76,6 +79,8 @@ interface AppState {
   removeDocument: (documentId: string) => () => void;
   setCapability: (accountId: string, capability: Capability, on: boolean) => void;
   resetDemo: () => void;
+  /** Builds an association from onboarding and signs its founder in. */
+  createCommunity: (draft: CommunityDraft) => Community;
 
   addPost: (post: ForumPost) => void;
   /** Returns an undo, because publishing broadcasts and rejecting discards. */
@@ -217,7 +222,7 @@ function resetCommunity(communityId: string): void {
 export function resetAllStores(): void {
   sessionStore.reset();
   communityStore.reset();
-  for (const community of communities) resetCommunity(community.id);
+  for (const community of allCommunities()) resetCommunity(community.id);
 }
 
 /**
@@ -270,6 +275,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const ready = useHydrated();
 
   const communityId = useStore(communityStore);
+  // Created associations live in a store, so the list has to be read rather
+  // than captured at import time.
+  const createdList = useStore(createdCommunitiesStore);
+  const communityList = useMemo(() => [...seededCommunities, ...createdList], [createdList]);
   const community = communityById(communityId);
 
   // Each association's fixture data is written as of its own date, so the
@@ -386,6 +395,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const resetDemo = useCallback(() => resetCommunity(communityId), [communityId]);
+
+  /**
+   * Builds an association from onboarding and signs the founder into it.
+   *
+   * Dated from the real calendar rather than the pinned demo clock, because a
+   * board setting up today should see today. The date is captured once, here,
+   * and stored on the community, so nothing downstream reads a wall clock
+   * during render.
+   */
+  const createCommunity = useCallback((draft: CommunityDraft) => {
+    const asOf = new Date().toISOString().slice(0, 10);
+    const built = buildCommunity(draft, asOf);
+    saveCreatedCommunity(built);
+    // Seed each slice from the new community so its stores exist before any
+    // screen reads them.
+    for (const slice of MUTABLE_SLICES) sliceStore(built.id, slice).set(built[slice]);
+    communityStore.set(built.id);
+    sessionStore.set({ accountId: built.accounts[0].id, view: "admin" });
+    return built;
+  }, []);
 
   /* ----------------------------------------------------------------- forum */
 
@@ -744,7 +773,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const value: AppState = {
     community: liveCommunity,
-    communities: communities.map((c) => ({ id: c.id, label: c.label })),
+    communities: communityList.map((c) => ({ id: c.id, label: c.label })),
     setCommunity,
     account,
     accounts: accountList,
@@ -778,6 +807,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     removeDocument,
     setCapability,
     resetDemo,
+    createCommunity,
     addPost,
     moderatePost,
     togglePinned,

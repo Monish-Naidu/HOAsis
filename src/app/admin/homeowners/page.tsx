@@ -19,7 +19,7 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { useMemo, useState } from "react";
-import { delinquency } from "@/lib/metrics";
+import { communitySlug, delinquency } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { TemplateComposer } from "@/components/app/template-composer";
@@ -72,7 +72,7 @@ export default function BoardHomeowners() {
       { header: "Standing", value: (o) => o.standing },
       { header: "Autopay", value: (o) => (o.autopay ? "yes" : "no") },
     ]);
-    downloadCsv("mehr-meadows-roster.csv", csv);
+    downloadCsv(`${communitySlug(community)}-roster.csv`, csv);
     notify(`Exported ${matching.length} households`);
   }
 

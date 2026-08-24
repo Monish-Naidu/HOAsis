@@ -25,7 +25,7 @@ import { payoutSpeed } from "@/lib/metrics";
 import { useState } from "react";
 import { useAppState, usePendingApprovals, useVendorGaps } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
+import { daysFromToday, formatDate, money, pluralize, relativeDays } from "@/lib/utils";
 
 const payoutTone = {
   paid: "ok",
@@ -66,7 +66,10 @@ export default function BoardVendors() {
     setDraft({ name: "", service: "", achEnabled: true, w9OnFile: false });
     setAdding(false);
   }
-  const achShare = vendors.filter((v) => v.achEnabled).length / vendors.length;
+  const achCount = vendors.filter((v) => v.achEnabled).length;
+  // Undefined rather than zero when there are no vendors, so a board with none
+  // is not told that 0% of them are on ACH.
+  const achShare = vendors.length ? achCount / vendors.length : undefined;
 
   return (
     <>
@@ -85,16 +88,16 @@ export default function BoardVendors() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="ACH enabled"
-          value={`${Math.round(achShare * 100)}%`}
-          tone="ok"
-          hint={`${vendors.filter((v) => v.achEnabled).length} of ${vendors.length} vendors`}
+          value={achShare === undefined ? "None yet" : `${Math.round(achShare * 100)}%`}
+          tone={achShare === undefined ? "neutral" : "ok"}
+          hint={vendors.length ? `${achCount} of ${pluralize(vendors.length, "vendor")}` : "Add a vendor to start paying by bank transfer"}
           icon={<Landmark className="size-4" />}
         />
         <Stat
           label="ACH settlement"
-          value={`${speed.ach.toFixed(1)} days`}
-          tone="ok"
-          hint={`Checks average ${speed.check.toFixed(0)} days`}
+          value={speed.ach > 0 ? `${speed.ach.toFixed(1)} days` : "No payments yet"}
+          tone={speed.ach > 0 ? "ok" : "neutral"}
+          hint={speed.check > 0 ? `Checks average ${speed.check.toFixed(0)} days` : "Nothing paid by check yet"}
           icon={<Timer className="size-4" />}
         />
         <Stat

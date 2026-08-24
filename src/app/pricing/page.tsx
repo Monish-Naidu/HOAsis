@@ -206,13 +206,21 @@ export default function PricingPage() {
             <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-fg-muted">
               The demo is a full association with real numbers behind it. No card, no call.
             </p>
-            <Link
-              href="/signin"
-              className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-brand-fg"
-            >
-              Open the demo
-              <ArrowRight className="size-3.5" />
-            </Link>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/start"
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-brand-fg"
+              >
+                Set up your association
+                <ArrowRight className="size-3.5" />
+              </Link>
+              <Link
+                href="/signin"
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 px-5 text-[13px] font-semibold text-fg hover:bg-surface-2"
+              >
+                Open the demo
+              </Link>
+            </div>
           </div>
         </Reveal>
       </main>

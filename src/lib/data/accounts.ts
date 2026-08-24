@@ -26,7 +26,8 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
   permissions: "Grant capabilities to others",
 };
 
-function caps(on: Capability[], permissions = false): Capabilities {
+/** Builds a capability set, with permissions off unless this is the President. */
+export function caps(on: Capability[], permissions = false): Capabilities {
   const base = Object.fromEntries(
     [...GRANTABLE, "permissions"].map((c) => [c, false]),
   ) as Capabilities;

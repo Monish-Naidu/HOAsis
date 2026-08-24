@@ -33,11 +33,12 @@ import {
   interestSummary,
   reserveSummary,
   yieldOpportunity,
+  communitySlug,
 } from "@/lib/metrics";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { downloadCsv, toCsv } from "@/lib/core/export";
-import { formatDate, money, shortMoney } from "@/lib/utils";
+import { formatDate, money, pluralize, shortMoney } from "@/lib/utils";
 
 const savedViews = [
   { name: "Everything, this month", starred: true },
@@ -79,7 +80,10 @@ export default function BoardMoney() {
       { header: "Amount", value: (e) => (e.amountCents / 100).toFixed(2) },
       { header: "Status", value: (e) => e.status },
     ]);
-    downloadCsv(`mehr-meadows-ledger-${view.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, csv);
+    downloadCsv(
+      `${communitySlug(community)}-ledger-${view.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`,
+      csv,
+    );
     notify(`Exported ${rows.length} transactions`);
   }
   const reserve = reserveSummary(community);
@@ -123,20 +127,32 @@ export default function BoardMoney() {
         <Stat
           label="Total cash"
           value={money(cash.total, { cents: false })}
-          hint="Across 3 accounts"
+          hint={
+            bankAccounts.length
+              ? `Across ${pluralize(bankAccounts.length, "account")}`
+              : "No bank account connected yet"
+          }
           icon={<Landmark className="size-4" />}
         />
         <Stat
           label="Income YTD"
           value={money(bud.incomeYtd, { cents: false })}
           tone="ok"
-          hint={`${Math.round((bud.incomeYtd / bud.incomeAnnual) * 100)}% of budget · ${Math.round(bud.yearElapsed * 100)}% of year`}
+          hint={
+            bud.incomePace === undefined
+              ? `${Math.round(bud.yearElapsed * 100)}% of the year elapsed`
+              : `${Math.round(bud.incomePace * 100)}% of budget · ${Math.round(bud.yearElapsed * 100)}% of year`
+          }
           icon={<ArrowUpRight className="size-4" />}
         />
         <Stat
           label="Expenses YTD"
           value={money(bud.expenseYtd, { cents: false })}
-          hint={`${Math.round((bud.expenseYtd / bud.expenseAnnual) * 100)}% of budget`}
+          hint={
+            bud.expensePace === undefined
+              ? "No expense budget set"
+              : `${Math.round(bud.expensePace * 100)}% of budget`
+          }
           icon={<ArrowDownRight className="size-4" />}
         />
         <Stat
