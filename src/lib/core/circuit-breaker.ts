@@ -84,7 +84,7 @@ export class CircuitBreaker {
 
   /**
    * Runs `operation` and returns `fallback` on any failure, including a refusal
-   * from the open circuit. Use this where degrading is the correct behaviour.
+   * from the open circuit. Use this where degrading is the correct behavior.
    */
   run<T>(operation: () => T, fallback: T): T {
     try {

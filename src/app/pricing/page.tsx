@@ -55,6 +55,14 @@ const INCLUDED = [
   "Phone and chat support, seven days a week",
 ];
 
+/**
+ * PLACEHOLDER: our own fee is not set, so it is a dash like the tiers above it.
+ *
+ * The processor's rates are the published card and ACH costs and stay as they
+ * are, because we pass those through untouched and a board can verify them
+ * against any processor's own page. The comparison against the incumbent is
+ * held back until our number exists, since the whole claim depends on it.
+ */
 const PAYMENTS = [
   {
     label: "The processor's cost",
@@ -62,14 +70,14 @@ const PAYMENTS = [
       "2.9% + 30¢ on cards, 35¢ on bank transfers. Passed straight through. We never touch this.",
   },
   {
-    label: "Our fee: $1.50 per payment",
+    label: "Our fee: $— per payment",
     detail:
       "Flat, so it does not grow with the assessment. The board chooses whether the owner pays it at checkout or the association absorbs it, and can waive it on bank transfers entirely.",
   },
   {
-    label: "Cheaper than the incumbent, on both rails",
+    label: "Shown separately, never blended",
     detail:
-      "On a $285 assessment that is $1.85 by bank transfer against $2.45, and $10.07 by card against $10.48. Itemised, so you can check the arithmetic.",
+      "You see the processor's cost and ours as two lines, so you can check the arithmetic rather than take a single rate on trust.",
   },
 ];
 
@@ -157,7 +165,7 @@ export default function PricingPage() {
                 How payments are priced
               </h2>
               <p className="mt-1.5 text-[13px] text-fg-muted">
-                Itemised on every receipt. The thing boards resent is not a fee, it is a blended
+                Itemized on every receipt. The thing boards resent is not a fee, it is a blended
                 rate that hides one inside the processor&apos;s number.
               </p>
               <ul className="mt-4 space-y-3">

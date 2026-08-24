@@ -402,7 +402,7 @@ Electronic voting does not eliminate proxies. Attach each proxy to the unit that
 
 ## Seal the results until close
 
-Live running totals change behaviour. Publish turnout and quorum during the vote, and the tallies after it closes.
+Live running totals change behavior. Publish turnout and quorum during the vote, and the tallies after it closes.
 
 ## Receipts on both sides
 

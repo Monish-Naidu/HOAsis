@@ -16,7 +16,7 @@ import type { Cents } from "@/lib/types";
  *
  * Instruments are plain serializable records rather than a class hierarchy on
  * purpose: they round trip through JSON in localStorage, and methods do not
- * survive that. Behaviour that differs per kind lives in the strategy table
+ * survive that. Behavior that differs per kind lives in the strategy table
  * below instead.
  */
 
@@ -293,7 +293,7 @@ export interface PaymentCost {
  * association and it comes out of the same deposit.
  *
  * Returning all four figures rather than one total is deliberate. A screen that
- * only knows the total cannot itemise, and an unexplained gap between what an
+ * only knows the total cannot itemize, and an unexplained gap between what an
  * owner pays and what the association receives is the exact thing boards write
  * angry reviews about.
  */

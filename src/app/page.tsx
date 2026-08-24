@@ -12,7 +12,6 @@ import {
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Badge, Card } from "@/components/ui/primitives";
 import { communitySettings, libraryArticles } from "@/lib/data";
-import { money } from "@/lib/utils";
 
 export const metadata = {
   title: "HOAsis, community management for self-managed HOAs",
@@ -21,18 +20,18 @@ export const metadata = {
 };
 
 /**
- * The cost case, shown as arithmetic rather than a percentage.
+ * PLACEHOLDER: the cost case has no numbers yet.
  *
- * A worked example for one plausible association is more persuasive than a
- * claim, and it is honest because the assumption is printed next to the
- * answer. Change the assumption and the reader can redo the sum themselves.
+ * The shape of the argument is right, shown as arithmetic rather than a
+ * percentage so a reader can check it. The figures are not, because we have
+ * not surveyed what management companies in our market actually charge and our
+ * own pricing is not set. A plausible looking number here is one we would have
+ * to walk back in front of the first board that asks where it came from.
+ *
+ * Fill in once the pricing study is done. Search PLACEHOLDER to find every
+ * spot that is waiting on it.
  */
-const HOMES = 88;
-const MANAGEMENT_PER_DOOR = 14_00;
-const HOASIS_PER_DOOR = 2_00;
-const managementYear = HOMES * MANAGEMENT_PER_DOOR * 12;
-const hoasisYear = HOMES * HOASIS_PER_DOOR * 12;
-const savedYear = managementYear - hoasisYear;
+const TBD = "$—";
 
 /** Each value section pairs a claim with the screen that proves it. */
 const SHOWCASE = [
@@ -69,7 +68,7 @@ const SHOWCASE = [
     title: "The three things an owner ever does, made quick.",
     body: "Pay, look something up, file a request. Every payment method quotes what it actually costs before anyone commits, and every payment shows which charges it cleared. The same screens ship as the mobile app.",
     points: [
-      "Processor cost and our $1.50 fee, itemised separately",
+      "Processor cost and our fee, itemized separately",
       "Requests with a certificate you can show a contractor",
       "Association funds open to owners, if the board allows",
     ],
@@ -225,10 +224,13 @@ export default function MarketingHome() {
       <section className="border-b border-border bg-surface">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-6 px-5 py-8 sm:grid-cols-4">
           {[
-            { value: money(savedYear, { cents: false }), label: "Saved a year, 88 homes" },
+            // PLACEHOLDER: no measured outcomes here yet. These four are all
+            // facts about the product that a reader can verify by clicking
+            // around, not results we have surveyed.
             { value: "30 yr", label: "Reserve projection" },
-            { value: "At cost", label: "Payment processing" },
-            { value: "7 days", label: "Phone and chat support" },
+            { value: "2", label: "Approvals before a vendor is paid" },
+            { value: "0", label: "Per seat charges" },
+            { value: "All", label: "Features on every tier" },
           ].map((stat, index) => (
             <Reveal key={stat.label} delay={index * 60}>
               <div>
@@ -303,9 +305,10 @@ export default function MarketingHome() {
               The savings are not a rounding error.
             </h2>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-fg-muted">
-              Full service management is commonly quoted per door per month. Here is the
-              arithmetic for an {HOMES} home association, with the assumption stated so you can
-              argue with it.
+              Full service management is quoted per door per month, and so are we. The
+              arithmetic below is the whole argument. We are running the survey that fills
+              it in, and until it is done these stay as dashes rather than as something
+              plausible we would have to take back.
             </p>
           </Reveal>
 
@@ -313,20 +316,20 @@ export default function MarketingHome() {
             {[
               {
                 label: "Management company",
-                value: money(managementYear, { cents: false }),
-                detail: `${money(MANAGEMENT_PER_DOOR, { cents: false })} per home per month`,
+                value: TBD,
+                detail: "Per home per month, times twelve",
                 accent: false,
               },
               {
                 label: "HOAsis",
-                value: money(hoasisYear, { cents: false }),
-                detail: `${money(HOASIS_PER_DOOR, { cents: false })} per home per month`,
+                value: TBD,
+                detail: "Per home per month, times twelve",
                 accent: false,
               },
               {
                 label: "Stays in the community",
-                value: money(savedYear, { cents: false }),
-                detail: "Every year, before anything compounds",
+                value: TBD,
+                detail: "The difference, every year",
                 accent: true,
               },
             ].map((item, index) => (
@@ -360,9 +363,9 @@ export default function MarketingHome() {
 
           <Reveal delay={240}>
             <p className="mt-5 max-w-2xl text-[13px] leading-relaxed text-fg-muted">
-              Put {money(savedYear, { cents: false })} a year into reserves instead and, over a
-              decade at a realistic yield, it is the difference between replacing a roof on
-              schedule and levying a special assessment for it.
+              Whatever that difference turns out to be, it goes into reserves instead of a
+              management fee. Over a decade at a realistic yield, that is the gap between
+              replacing a roof on schedule and levying a special assessment for it.
             </p>
           </Reveal>
         </div>
