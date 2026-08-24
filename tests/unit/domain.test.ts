@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { daysFromToday, formatDate, money, pluralize, shortMoney, relativeDays, setToday, todayIsoDate } from "@/lib/utils";
 import { monthGrid, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
+import { renderTemplate } from "@/lib/data/templates";
 import {
   budgetSummary,
   cashPosition,
@@ -183,5 +184,19 @@ describe("multi seat elections", () => {
     const seats = 2;
     expect(Math.round(votes / seats)).toBe(65);
     expect(Math.round(votes / seats)).toBeLessThanOrEqual(88);
+  });
+});
+
+describe("message templates", () => {
+  it("fills the subject line, not only the body", () => {
+    const fields = { association: "Mehr Meadows", unit: "55", balance: "$855.00" };
+    expect(renderTemplate("{{association}}: late assessment on unit {{unit}}", fields)).toBe(
+      "Mehr Meadows: late assessment on unit 55",
+    );
+  });
+
+  it("leaves an unknown placeholder visible rather than blanking it", () => {
+    // A silently empty merge field is how a notice goes out saying "balance of ."
+    expect(renderTemplate("owes {{mystery}}", { unit: "7" })).toContain("{{mystery}}");
   });
 });

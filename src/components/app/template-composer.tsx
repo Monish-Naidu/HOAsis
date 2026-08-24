@@ -47,9 +47,14 @@ export function TemplateComposer({
     setEditing(false);
   }
 
-  /** The first recipient, filled in, so the board reads what an owner reads. */
-  const preview = recipients[0]
-    ? renderTemplate(body, {
+  /**
+   * The first recipient's values, so the board reads what an owner reads.
+   *
+   * Subject and body share one substitution map. They drifted apart once, and
+   * the board sent notices whose subject line still said {{unit}}.
+   */
+  const fields = recipients[0]
+    ? {
         owner: recipients[0].displayName,
         unit: recipients[0].unit,
         balance: money(recipients[0].balanceCents),
@@ -57,8 +62,11 @@ export function TemplateComposer({
         association: settings.displayName,
         dues: money(association.duesCents),
         portal_link: `${settings.displayName.toLowerCase().replace(/\s+/g, "")}.hoasis.app/pay`,
-      })
-    : body;
+      }
+    : null;
+
+  const preview = fields ? renderTemplate(body, fields) : body;
+  const subjectPreview = fields ? renderTemplate(subject, fields) : subject;
 
   if (!template) return null;
 
@@ -102,7 +110,7 @@ export function TemplateComposer({
             Subject
           </span>
           <input
-            value={editing ? subject : preview.split("\n")[0] && subject}
+            value={editing ? subject : subjectPreview}
             onChange={(e) => setSubject(e.target.value)}
             readOnly={!editing}
             aria-label="Subject"
