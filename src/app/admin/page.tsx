@@ -35,8 +35,7 @@ import {
   useReconciliation,
 } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { daysFromToday } from "@/lib/utils";
-import { formatDate, money, relativeDays, shortMoney } from "@/lib/utils";
+import { daysFromToday, formatDate, money, pluralize, relativeDays, shortMoney } from "@/lib/utils";
 
 export default function BoardDashboard() {
   const { community } = useAppState();
@@ -77,6 +76,7 @@ export default function BoardDashboard() {
         lastSync={recon.lastSyncMinutes}
         duplicates={recon.duplicates.length}
         stale={recon.staleFeeds.length}
+        connected={community.bankAccounts.length > 0}
       />
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -402,12 +402,15 @@ function TieOutBanner({
   lastSync,
   duplicates,
   stale,
+  connected,
 }: {
   tiesOut: boolean;
   needsReview: number;
   lastSync: number;
   duplicates: number;
   stale: number;
+  /** No bank means no feed, so there is nothing to claim was synced. */
+  connected: boolean;
 }) {
   return (
     <div
@@ -421,16 +424,20 @@ function TieOutBanner({
         </span>
         <div className="min-w-0 flex-1">
           <p className={`text-[14px] font-semibold ${tiesOut ? "text-ok" : "text-warn"}`}>
-            {tiesOut
+            {!connected
+              ? "Connect a bank to start reconciling"
+              : tiesOut
               ? "Books tie out. Every report agrees."
               : `${needsReview} ${needsReview === 1 ? "transaction is" : "transactions are"} holding the books open`}
           </p>
           <p className={`mt-1 text-[13px] leading-relaxed ${tiesOut ? "text-ok" : "text-warn"} opacity-90`}>
-            {tiesOut
-              ? `Bank feed synced ${lastSync} minutes ago.`
-              : `Feed synced ${lastSync} minutes ago.${duplicates > 0 ? ` ${duplicates} looks like a duplicate charge.` : ""}${
-                  stale > 0 ? ` ${stale} account feed is running behind.` : ""
-                }`}
+            {!connected
+              ? "No bank account connected yet, so there is nothing to reconcile."
+              : tiesOut
+                ? `Bank feed synced ${pluralize(lastSync, "minute")} ago.`
+                : `Feed synced ${pluralize(lastSync, "minute")} ago.${duplicates > 0 ? ` ${duplicates} looks like a duplicate charge.` : ""}${
+                    stale > 0 ? ` ${stale} account feed is running behind.` : ""
+                  }`}
           </p>
         </div>
         <Link
