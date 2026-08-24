@@ -29,7 +29,7 @@ import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
 import { ROLE_LABEL, type ArchitecturalForm, type CommunityAmenity } from "@/lib/types";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, todayIsoDate } from "@/lib/utils";
 
 export function SettingsScreen() {
   const {
@@ -97,7 +97,7 @@ export function SettingsScreen() {
       fileName: `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`,
       size: "0 KB",
       source: "uploaded",
-      updatedDate: "2026-08-21",
+      updatedDate: todayIsoDate(),
     };
     setForms([...forms, form]);
     setNewFormLabel("");

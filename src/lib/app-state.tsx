@@ -15,7 +15,7 @@ import {
 } from "@/lib/data/communities";
 import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
-import { daysFromToday, TODAY } from "@/lib/utils";
+import { daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { isCommunitySettings, isRecordArray, isSession } from "@/lib/core/guards";
 import type {
@@ -103,7 +103,6 @@ interface AppState {
 const Ctx = createContext<AppState | null>(null);
 
 /** The demo's pinned "now", used for every timestamp the app writes. */
-const TODAY_ISO = TODAY.toISOString().slice(0, 10);
 
 /* -------------------------------------------------------------------------- */
 /* Stores                                                                      */
@@ -250,6 +249,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const communityId = useStore(communityStore);
   const community = communityById(communityId);
 
+  // Each association's fixture data is written as of its own date, so the
+  // pinned clock follows the community. Set before the slices are read so
+  // every derived figure below this line sees the same "today".
+  setToday(community.asOf);
+
   // One hook per slice, in a fixed order, so the hook count never changes when
   // the community does.
   const settings = useStore(sliceStore(communityId, "settings"));
@@ -379,7 +383,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 ...post,
                 status: decision,
                 moderatedBy: moderator?.name,
-                moderatedAt: TODAY_ISO,
+                moderatedAt: todayIsoDate(),
                 rejectionReason: decision === "rejected" ? reason : undefined,
               }
             : post,
@@ -431,14 +435,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 ...request,
                 status,
                 decisionDate: ["approved", "denied"].includes(status)
-                  ? TODAY_ISO
+                  ? todayIsoDate()
                   : request.decisionDate,
                 decidedBy: ["approved", "denied"].includes(status) ? actor?.name : request.decidedBy,
                 thread: [
                   ...request.thread,
                   {
                     id: `rt-${request.id}-${request.thread.length}`,
-                    at: TODAY_ISO,
+                    at: todayIsoDate(),
                     actor: actor?.name ?? "Board",
                     actorRole: "board" as const,
                     body: note ?? `Status changed to ${status.replace("-", " ")}.`,
@@ -539,7 +543,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         all.map((payout) => {
           if (payout.id !== payoutId) return payout;
           if (payout.approvals.some((a) => a.name === approver.name)) return payout;
-          const approvals = [...payout.approvals, { name: approver.name, at: TODAY_ISO }];
+          const approvals = [...payout.approvals, { name: approver.name, at: todayIsoDate() }];
           return {
             ...payout,
             approvals,
@@ -584,12 +588,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             ? {
                 ...thread,
                 unread: false,
-                updatedDate: TODAY_ISO,
+                updatedDate: todayIsoDate(),
                 messages: [
                   ...thread.messages,
                   {
                     id: `m-${thread.id}-${thread.messages.length}`,
-                    at: TODAY_ISO,
+                    at: todayIsoDate(),
                     from: sender?.name ?? "Board",
                     fromRole: "board" as const,
                     direction: "outbound" as const,
@@ -881,7 +885,7 @@ export function useAssistantContext() {
         name: owner?.members[0] ?? "",
         unit: owner?.unit ?? "",
         balanceCents: owner?.balanceCents ?? 0,
-        nextChargeDate: "2026-09-01" as string | undefined,
+        nextChargeDate: community.nextChargeDate as string | undefined,
         standing: owner?.standing ?? "current",
         daysPastDue: owner?.daysPastDue ?? 0,
         autopay: owner?.autopay ?? false,

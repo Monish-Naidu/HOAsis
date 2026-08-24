@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
-import { formatDate, money, TODAY } from "@/lib/utils";
+import { formatDate, money, today } from "@/lib/utils";
 
 export default function ResidentAccount() {
   const { community } = useAppState();
@@ -15,7 +15,7 @@ export default function ResidentAccount() {
   if (!currentOwner) return null;
   const totalFees = ownerCharges.reduce((t, c) => t + (c.feeCents ?? 0), 0);
   // The year the ledger is actually in, not a constant.
-  const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(TODAY.getUTCFullYear());
+  const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
   const paidThisYear = ownerCharges
     .filter((c) => c.kind === "payment")
     .reduce((t, c) => t + Math.abs(c.amountCents), 0);

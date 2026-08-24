@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysFromToday, formatDate, money, pluralize, shortMoney, TODAY } from "@/lib/utils";
+import { daysFromToday, formatDate, money, pluralize, shortMoney, relativeDays, setToday, todayIsoDate } from "@/lib/utils";
 import { monthGrid, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
 import {
   budgetSummary,
@@ -15,7 +15,7 @@ import {
   owners,
 } from "@/lib/data";
 
-const TODAY_ISO = TODAY.toISOString().slice(0, 10);
+const TODAY_ISO = todayIsoDate();
 
 describe("money formatting", () => {
   it("renders integer cents as currency", () => {
@@ -38,6 +38,14 @@ describe("money formatting", () => {
 describe("dates", () => {
   it("is pinned so the demo reads the same on every machine", () => {
     expect(TODAY_ISO).toBe("2026-08-20");
+  });
+
+  it("follows the community clock when it is repinned", () => {
+    setToday("2027-02-24");
+    expect(daysFromToday("2027-03-01")).toBe(5);
+    expect(relativeDays("2027-02-17")).toBe("7 days ago");
+    setToday(TODAY_ISO);
+    expect(daysFromToday("2026-08-25")).toBe(5);
   });
 
   it("measures distance from the pinned today", () => {

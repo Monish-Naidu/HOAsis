@@ -16,7 +16,7 @@ import {
 import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { HomeRequest, RequestKind } from "@/lib/types";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, todayIsoDate } from "@/lib/utils";
 
 const kinds = [
   {
@@ -116,7 +116,7 @@ export function NewRequestForm() {
       ownerName: owner.displayName,
       unit: owner.unit,
       status: "submitted",
-      submittedDate: "2026-08-21",
+      submittedDate: todayIsoDate(),
       attachments:
         kind === "architectural" && selectedForm
           ? [{ name: selectedForm.fileName, size: selectedForm.size }]
@@ -124,7 +124,7 @@ export function NewRequestForm() {
       thread: [
         {
           id: `rt-${seq}-1`,
-          at: "2026-08-21",
+          at: todayIsoDate(),
           actor: owner.members[0],
           actorRole: "resident",
           body: detail || title.trim(),
@@ -132,7 +132,7 @@ export function NewRequestForm() {
         },
         {
           id: `rt-${seq}-2`,
-          at: "2026-08-21",
+          at: todayIsoDate(),
           actor: "HOAsis",
           actorRole: "system",
           body: chosen ? chosen.clock : "Routed to the board.",

@@ -29,8 +29,33 @@ export function shortMoney(cents: number) {
 
 const DAY = 86_400_000;
 
-/** Fixed "today" so the prototype reads identically on every machine and date. */
-export const TODAY = new Date("2026-08-20T12:00:00Z");
+/**
+ * The prototype runs on a pinned clock rather than the wall clock, so relative
+ * dates read identically on every machine and on every day someone opens it.
+ *
+ * It is pinned per association, not globally, because each one's fixture data
+ * is written as of its own date. Reading Test Community #1's February 2027 books
+ * against a 2026 clock renders an overdue item as "in 133 days" and opens the
+ * calendar on a month with nothing in it.
+ *
+ * `setToday` is called by the app state when the active community resolves.
+ */
+const DEFAULT_TODAY = "2026-08-20";
+let todayIso = DEFAULT_TODAY;
+
+export function setToday(iso: string): void {
+  todayIso = iso;
+}
+
+/** The pinned "now" as a Date. */
+export function today(): Date {
+  return new Date(`${todayIso}T12:00:00Z`);
+}
+
+/** The pinned "now" as a `YYYY-MM-DD` string. */
+export function todayIsoDate(): string {
+  return todayIso;
+}
 
 export function parseDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`);
@@ -53,7 +78,7 @@ export function formatDate(iso: string, style: "short" | "medium" | "long" = "me
 }
 
 export function daysFromToday(iso: string) {
-  return Math.round((parseDate(iso).getTime() - TODAY.getTime()) / DAY);
+  return Math.round((parseDate(iso).getTime() - today().getTime()) / DAY);
 }
 
 export function relativeDays(iso: string) {

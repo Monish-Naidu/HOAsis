@@ -1,6 +1,7 @@
+import { buildOwnerLedgers } from "./owner-ledger";
 import type { Community } from "./community";
 import { GRANTABLE } from "./accounts";
-import type { Capabilities, Capability } from "@/lib/types";
+import type { Capabilities, Capability, Owner } from "@/lib/types";
 
 /**
  * Test Community #1.
@@ -149,51 +150,7 @@ const ledger = [
 
 const openingBalance = ledger.reduce((sum, e) => (e.status === "cleared" ? sum + e.amountCents : sum), 0);
 
-export const testCommunityOne: Community = {
-  id: "test-community-1",
-  label: "Test Community #1",
-  asOf: "2027-02-24",
-  nextChargeDate: "2027-03-01",
-
-  association: {
-    id: "assoc-test-community-1",
-    name: "Test Community #1",
-    shortName: "Test Community #1",
-    state: "WA",
-    stateName: "Washington",
-    unitCount: 5,
-    fiscalYearStart: "January 1",
-    duesCents: DUES,
-    duesCadence: "monthly",
-    addressLine: "Bothell, Washington",
-    managedBy: "self",
-  },
-
-  settings: {
-    displayName: "Test Community #1",
-    photoUrl: "/community/test-community-1.jpg",
-    photoCredit: "Unsplash",
-    // Quarterly meetings and no events. A calendar here would be an empty grid
-    // twelve months a year, which is worse than no calendar.
-    homeLayout: "banner",
-    banner: {
-      enabled: true,
-      title: "Quarterly meeting, March 12 at 6:30 PM",
-      detail: "At the Hendersons'. Agenda: landscaping renewal and the 2027 budget.",
-      updatedDate: "2027-02-20",
-    },
-    showFundsToResidents: true,
-    showLiveVoteResults: false,
-    autopayLateAfterDay: 10,
-    forumEnabled: false,
-    paymentFeeCents: 100,
-    paymentFeePaidBy: "owner",
-    // A $1 fee on a $30 assessment is 3.3%, worse than a card. Waived on the
-    // cheap rail so the default path costs an owner nothing.
-    paymentFeeWaivedOnAch: true,
-  },
-
-  owners: [
+const owners: Owner[] = [
     {
       id: "tc1-own-1",
       displayName: "Priya Venkatesan",
@@ -269,7 +226,53 @@ export const testCommunityOne: Community = {
       standing: "current",
       daysPastDue: 0,
     },
-  ],
+];
+
+export const testCommunityOne: Community = {
+  id: "test-community-1",
+  label: "Test Community #1",
+  asOf: "2027-02-24",
+  nextChargeDate: "2027-03-01",
+
+  association: {
+    id: "assoc-test-community-1",
+    name: "Test Community #1",
+    shortName: "Test Community #1",
+    state: "WA",
+    stateName: "Washington",
+    unitCount: 5,
+    fiscalYearStart: "January 1",
+    duesCents: DUES,
+    duesCadence: "monthly",
+    addressLine: "Bothell, Washington",
+    managedBy: "self",
+  },
+
+  settings: {
+    displayName: "Test Community #1",
+    photoUrl: "/community/test-community-1.jpg",
+    photoCredit: "Unsplash",
+    // Quarterly meetings and no events. A calendar here would be an empty grid
+    // twelve months a year, which is worse than no calendar.
+    homeLayout: "banner",
+    banner: {
+      enabled: true,
+      title: "Quarterly meeting, March 12 at 6:30 PM",
+      detail: "At the Hendersons'. Agenda: landscaping renewal and the 2027 budget.",
+      updatedDate: "2027-02-20",
+    },
+    showFundsToResidents: true,
+    showLiveVoteResults: false,
+    autopayLateAfterDay: 10,
+    forumEnabled: false,
+    paymentFeeCents: 100,
+    paymentFeePaidBy: "owner",
+    // A $1 fee on a $30 assessment is 3.3%, worse than a card. Waived on the
+    // cheap rail so the default path costs an owner nothing.
+    paymentFeeWaivedOnAch: true,
+  },
+
+  owners,
 
   accounts: [
     {
@@ -750,13 +753,17 @@ The {{association}} Board`,
     },
   ],
 
-  ownerCharges: {
-    "tc1-own-4": [
+  ownerCharges: buildOwnerLedgers(owners, {
+    assessmentCents: DUES,
+    nextChargeDate: "2027-03-01",
+    handWritten: {
+      "tc1-own-4": [
       { id: "tc1-ch-3", date: "2027-03-01", label: "March assessment", kind: "charge", amountCents: DUES, balanceAfterCents: DUES },
       { id: "tc1-ch-2", date: "2027-02-02", label: "ACH payment", kind: "payment", amountCents: -DUES, balanceAfterCents: 0, method: "ACH ••4417", feeCents: 35, feePaidBy: "association", appliedTo: [{ chargeId: "tc1-ch-1", label: "February assessment", amountCents: DUES }] },
       { id: "tc1-ch-1", date: "2027-02-01", label: "February assessment", kind: "charge", amountCents: DUES, balanceAfterCents: DUES },
-    ],
-  },
+      ],
+    },
+  }),
 
   ledger,
 };

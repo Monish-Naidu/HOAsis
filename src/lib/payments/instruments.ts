@@ -329,16 +329,71 @@ export function feeForAmount(
   return cost.processorCents + cost.platformCents;
 }
 
-/** The cheapest way to pay a given amount, which residents deserve to be told. */
+/**
+ * What the owner pays out of pocket on top of the assessment.
+ *
+ * Distinct from the total cost of moving the money, because the association
+ * absorbs the processor's cut. This is the number the pay screen prints.
+ */
+export function ownerCostFor(
+  kind: InstrumentKind,
+  amountCents: Cents,
+  policy: PlatformFeePolicy = DEFAULT_FEE_POLICY,
+): Cents {
+  const cost = computePaymentCost(kind, amountCents, policy);
+  return cost.residentPaysCents - amountCents;
+}
+
+/** Who is better off when a cheaper rail is used. */
+export type Beneficiary = "owner" | "association";
+
+export interface CheapestRail {
+  instrument: PaymentInstrument;
+  /**
+   * Whose money this saves. Under a flat fee charged on every rail the owner
+   * pays the same either way and the saving lands entirely on the association,
+   * so the screen has to say so rather than claim the owner is saving.
+   */
+  saves: Beneficiary;
+  savingCents: Cents;
+}
+
+/**
+ * The method that costs strictly less, and who that helps.
+ *
+ * Undefined when nothing wins outright. Ranking is by what the owner pays
+ * first, since that is what the screen shows them, and falls back to total
+ * cost so a rail that saves the association money is still surfaced.
+ */
+export function cheapestRail(
+  instruments: PaymentInstrument[],
+  amountCents: Cents,
+  policy: PlatformFeePolicy = DEFAULT_FEE_POLICY,
+): CheapestRail | undefined {
+  if (instruments.length < 2) return undefined;
+
+  const rank = (measure: (i: PaymentInstrument) => Cents, saves: Beneficiary) => {
+    const sorted = [...instruments].sort((a, b) => measure(a) - measure(b));
+    const best = measure(sorted[0]);
+    const runnerUp = measure(sorted[1]);
+    return best < runnerUp
+      ? { instrument: sorted[0], saves, savingCents: runnerUp - best }
+      : undefined;
+  };
+
+  return (
+    rank((i) => ownerCostFor(i.kind, amountCents, policy), "owner") ??
+    rank((i) => feeForAmount(i.kind, amountCents, policy), "association")
+  );
+}
+
+/** The instrument alone, for callers that do not care who benefits. */
 export function cheapestInstrument(
   instruments: PaymentInstrument[],
   amountCents: Cents,
   policy: PlatformFeePolicy = DEFAULT_FEE_POLICY,
 ): PaymentInstrument | undefined {
-  return [...instruments].sort(
-    (a, b) =>
-      feeForAmount(a.kind, amountCents, policy) - feeForAmount(b.kind, amountCents, policy),
-  )[0];
+  return cheapestRail(instruments, amountCents, policy)?.instrument;
 }
 
 export function describeInstrument(instrument: PaymentInstrument): string {

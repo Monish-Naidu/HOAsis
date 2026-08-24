@@ -12,14 +12,13 @@ import {
   upcomingFrom,
   type CalendarEntry,
 } from "@/lib/calendar";
-import { cn, formatDate, relativeDays, TODAY } from "@/lib/utils";
+import { cn, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
 
-const TODAY_ISO = TODAY.toISOString().slice(0, 10);
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export function CalendarView({
   entries,
-  asOf = TODAY_ISO,
+  asOf = todayIsoDate(),
 }: {
   entries: CalendarEntry[];
   /** The community's own "today", so it does not open on an empty month. */

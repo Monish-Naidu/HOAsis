@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BRAND_LABEL,
   cheapestInstrument,
+  cheapestRail,
   computePaymentCost,
   cvcLengthFor,
   describeInstrument,
@@ -274,6 +275,36 @@ describe("platform fee", () => {
       { kind: "ach" } as PaymentInstrument,
     ];
     expect(cheapestInstrument(instruments, AMOUNT, OWNER_PAYS)?.kind).toBe("ach");
+  });
+
+  it("credits the association, not the owner, when a flat fee hits every rail", () => {
+    // Mehr Meadows' policy: $1.50, owner paid, not waived on ACH. Both rails
+    // cost the owner the same, so a badge claiming the owner saves would
+    // contradict the identical totals printed beside it. The association does
+    // still save the card processing, so the rail is worth surfacing.
+    const flat = { flatCents: 150, paidBy: "owner", waiveOnAch: false } as const;
+    const instruments = [
+      { kind: "ach" } as PaymentInstrument,
+      { kind: "card" } as PaymentInstrument,
+    ];
+    const rail = cheapestRail(instruments, AMOUNT, flat);
+    expect(rail?.instrument.kind).toBe("ach");
+    expect(rail?.saves).toBe("association");
+  });
+
+  it("credits the owner when the fee is waived on the cheap rail", () => {
+    const waived = { flatCents: 100, paidBy: "owner", waiveOnAch: true } as const;
+    const instruments = [
+      { kind: "ach" } as PaymentInstrument,
+      { kind: "card" } as PaymentInstrument,
+    ];
+    const rail = cheapestRail(instruments, AMOUNT, waived);
+    expect(rail?.saves).toBe("owner");
+    expect(rail?.savingCents).toBe(100);
+  });
+
+  it("names nothing cheapest when there is only one method", () => {
+    expect(cheapestInstrument([{ kind: "ach" } as PaymentInstrument], AMOUNT, OWNER_PAYS)).toBeUndefined();
   });
 
   it("undercuts the incumbent on both rails", () => {

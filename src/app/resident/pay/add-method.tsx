@@ -23,10 +23,9 @@ import {
   linkBankAccount,
   tokenizeCard,
 } from "@/lib/payments/instruments";
-import { cn, TODAY } from "@/lib/utils";
+import { cn, today, todayIsoDate } from "@/lib/utils";
 
-const TODAY_ISO = TODAY.toISOString().slice(0, 10);
-const REFERENCE = { year: TODAY.getUTCFullYear(), month: TODAY.getUTCMonth() + 1 };
+const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
 type Rail = "ach" | "card" | "apple-pay";
 
@@ -136,7 +135,7 @@ function LinkBank({ onDone }: { onDone: () => void }) {
               addInstrument(
                 linkBankAccount(
                   { institution: institution.name, accountType: account.type, mask: account.mask },
-                  { ownerId: owner.id, today: TODAY_ISO },
+                  { ownerId: owner.id, today: todayIsoDate() },
                 ),
               );
               onDone();
@@ -189,7 +188,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
           cvc,
           postalCode,
         },
-        { ownerId: owner.id, today: TODAY_ISO, referenceDate: REFERENCE },
+        { ownerId: owner.id, today: todayIsoDate(), referenceDate: REFERENCE },
       );
       addInstrument(instrument);
       // Clear the field immediately. Nothing here should outlive the submit.
@@ -345,8 +344,8 @@ function AddApplePay({ onDone }: { onDone: () => void }) {
             label: "Apple Pay",
             mask: "4402",
             brand: "visa",
-            addedDate: TODAY_ISO,
-            token: `tok_applepay_${TODAY_ISO.replace(/-/g, "")}`,
+            addedDate: todayIsoDate(),
+            token: `tok_applepay_${todayIsoDate().replace(/-/g, "")}`,
           });
           onDone();
         }}

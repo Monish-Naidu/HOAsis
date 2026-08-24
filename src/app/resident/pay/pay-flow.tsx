@@ -20,7 +20,7 @@ import { Badge, Button, Callout, Card, SectionTitle, Toggle } from "@/components
 import { useAppState, useCurrentOwner, useMyInstruments } from "@/lib/app-state";
 import {
   FEE_SCHEDULE,
-  cheapestInstrument,
+  cheapestRail,
   computePaymentCost,
   describeInstrument,
   isExpired,
@@ -28,11 +28,11 @@ import {
   type PaymentInstrument,
   type PlatformFeePolicy,
 } from "@/lib/payments/instruments";
-import { cn, formatDate, money, ordinal, relativeDays, TODAY } from "@/lib/utils";
+import { cn, formatDate, money, ordinal, relativeDays, today } from "@/lib/utils";
 import { AddMethod } from "./add-method";
 import { useToast } from "@/components/app/toast";
 
-const REFERENCE = { year: TODAY.getUTCFullYear(), month: TODAY.getUTCMonth() + 1 };
+const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
 const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
   ach: Landmark,
@@ -79,7 +79,7 @@ export function PayFlow() {
     paidBy: settings.paymentFeePaidBy,
     waiveOnAch: settings.paymentFeeWaivedOnAch,
   };
-  const cheapest = cheapestInstrument(instruments, amountCents, policy);
+  const cheapest = cheapestRail(instruments, amountCents, policy);
   const cost = selected
     ? computePaymentCost(selected.kind, amountCents, policy)
     : null;
@@ -251,8 +251,10 @@ export function PayFlow() {
                           {instrument.label} ••{instrument.mask}
                         </span>
                         {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
-                        {cheapest?.id === instrument.id && !expired ? (
-                          <Badge tone="ok">Cheapest</Badge>
+                        {cheapest?.instrument.id === instrument.id && !expired ? (
+                          <Badge tone="ok">
+                            {cheapest.saves === "owner" ? "Cheapest" : "Saves the HOA"}
+                          </Badge>
                         ) : null}
                         {expired ? <Badge tone="danger">Expired</Badge> : null}
                       </span>

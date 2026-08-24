@@ -23,10 +23,10 @@ import {
 } from "@/lib/reserves";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { useToast } from "@/components/app/toast";
-import { money, shortMoney, TODAY } from "@/lib/utils";
+import { money, shortMoney, today } from "@/lib/utils";
 import { ProjectionChart } from "./projection-chart";
 
-const START_YEAR = TODAY.getUTCFullYear();
+const START_YEAR = today().getUTCFullYear();
 
 export function ReservesScreen() {
   const { notify } = useToast();

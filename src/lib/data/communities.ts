@@ -13,6 +13,7 @@ import { complianceItems as mmCompliance } from "./compliance";
 import { documents as mmDocuments } from "./documents";
 import { forumPosts as mmPosts } from "./forum";
 import { ledgerEntries as mmLedger, ownerCharges as mmCharges, payouts as mmPayouts, vendors as mmVendors } from "./ledger";
+import { buildOwnerLedgers } from "./owner-ledger";
 import { threads as mmThreads } from "./messages";
 import { owners as mmOwners } from "./owners";
 import { paymentInstruments as mmInstruments } from "./payments";
@@ -58,7 +59,11 @@ export const mehrMeadows: Community = {
   amenityStatus: mmAmenityStatus,
   forms: mmForms,
   templates: mmTemplates,
-  ownerCharges: { "own-042": mmCharges },
+  ownerCharges: buildOwnerLedgers(mmOwners, {
+    assessmentCents: 28_500,
+    nextChargeDate: "2026-09-01",
+    handWritten: { "own-042": mmCharges },
+  }),
 };
 
 export const communities: Community[] = [mehrMeadows, testCommunityOne];

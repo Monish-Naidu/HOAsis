@@ -8,7 +8,7 @@ import { useToast } from "@/components/app/toast";
 import { renderTemplate, TEMPLATE_TOKENS } from "@/lib/data";
 import type { MessageTemplate } from "@/lib/data/templates";
 import type { Owner } from "@/lib/types";
-import { cn, money } from "@/lib/utils";
+import { cn, money, todayIsoDate } from "@/lib/utils";
 
 /**
  * Compose to a group from a saved template.
@@ -167,7 +167,7 @@ export function TemplateComposer({
             variant="secondary"
             size="sm"
             onClick={() => {
-              saveTemplate({ ...template, subject, body, updatedDate: "2026-08-21" });
+              saveTemplate({ ...template, subject, body, updatedDate: todayIsoDate() });
               setEditing(false);
               notify(`Saved "${template.name}"`);
             }}

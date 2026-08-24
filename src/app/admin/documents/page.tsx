@@ -21,7 +21,7 @@ import {
 import { useState } from "react";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { formatDate } from "@/lib/utils";
+import { formatDate, todayIsoDate } from "@/lib/utils";
 import type { DocumentRecord } from "@/lib/types";
 
 
@@ -64,7 +64,7 @@ function toDocumentRecord(file: File, index: number): DocumentRecord {
     id: `doc-upload-${index}-${file.name}`,
     name: file.name.replace(/\.[^.]+$/, ""),
     category: "Notices",
-    updatedDate: "2026-08-21",
+    updatedDate: todayIsoDate(),
     size: formatSize(file.size),
     visibility: "board",
     fileType: EXTENSION_TO_TYPE[extension] ?? "pdf",

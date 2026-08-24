@@ -17,7 +17,7 @@ import { useAppState, usePendingPosts, useVisiblePosts } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { forumCategories } from "@/lib/data";
 import { ROLE_LABEL, type ForumCategory, type ForumPost } from "@/lib/types";
-import { cn, formatDate, pluralize } from "@/lib/utils";
+import { cn, formatDate, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
  * Neighbour to neighbour. Nothing posted here creates an obligation for the
@@ -66,10 +66,10 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
       // Admins publish straight away. Everyone else waits for a moderator.
       status: account.role === "resident" ? "pending" : "published",
       moderatedBy: account.role === "resident" ? undefined : account.name,
-      moderatedAt: account.role === "resident" ? undefined : "2026-08-21",
+      moderatedAt: account.role === "resident" ? undefined : todayIsoDate(),
       title: title.trim(),
       body: body.trim(),
-      at: "2026-08-21",
+      at: todayIsoDate(),
       likes: 0,
       replies: [],
     };
