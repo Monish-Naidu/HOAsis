@@ -14,6 +14,12 @@ Two experiences share one system of record:
   delinquencies, vendor ACH, voting and meetings, and a live compliance register.
 - **`/`**, `/pricing`, `/about`, and `/library` are the public marketing site. No account
   needed, and the library is deliberately free with no email gate.
+- **`/start`** is onboarding. Four steps produce a real association: name and location, what
+  each home pays, the roster, and who else sits on the board. It creates a working community
+  with no ledger, no vendors, no documents, and no history, which is what a board's first day
+  actually looks like.
+- **`/join`** redeems an invitation. The link carries a check code over the association and the
+  household, so editing a unit number in the address bar does not open somebody else's balance.
 - **`/signin`** is sign in and create account. There is no real authentication: picking a seat
   selects one of the seeded accounts so you can see the product from that person's chair.
 
@@ -145,8 +151,11 @@ functions, not rewriting screens.
 payout speed, and compliance score all derive from the underlying records, so the figure on
 the dashboard cannot drift from the figure on the detail page.
 
-**Money is integer cents. Dates are `YYYY-MM-DD` strings.** `TODAY` in `src/lib/utils.ts` is
-pinned to 2026-08-20 so relative dates ("in 5 days") read identically on every machine.
+**Money is integer cents. Dates are `YYYY-MM-DD` strings.** The clock is pinned rather than
+read from the wall, so relative dates ("in 5 days") read identically on every machine, and it is
+pinned **per association**: each community carries an `asOf`, and `setToday` follows the active
+one. Reading a community whose books sit in 2027 against a 2026 clock renders an overdue item as
+"in 133 days".
 
 ## Design system
 
@@ -161,6 +170,20 @@ places that must stay in sync:
 Theme has three states (light / dark / system), toggled via `ThemeToggle` and applied
 pre-paint by an inline script so there's no flash on reload.
 
+## Associations
+
+Three can exist at once, and the switcher in the board header moves between them. Switching
+signs you out on purpose: an account belongs to one association, so carrying a session across
+would leave the President of one holding capabilities in another.
+
+- **Mehr Meadows**, 88 units, the rich demo described below.
+- **Test Community #1**, five homes, quarterly meetings, no amenities, no reserve study. It
+  exists to keep the product honest about small associations, and building it is what exposed
+  most of the empty-state bugs.
+- **Anything built through `/start`**, which persists separately from the fixtures in
+  `created-communities.ts`. Keeping invented data and real data apart is what makes "reset the
+  demo" safe to offer.
+
 ## Fixture data
 
 A fictional 88-unit Washington HOA (Mehr Meadows, Brier). Fourteen households are hand-written
@@ -174,8 +197,12 @@ verified, and the screen says so. Do not deepen them without a legal pass.
 
 ## Not built yet
 
-Auth, persistence, real payments, and the native app. Every write action in the UI is inert or
-local component state.
+Auth, a server, real payments, and the native app.
+
+Writes are not inert: they persist to `localStorage` through the store layer, survive a reload,
+and cross between the board and resident sides. What they do not do is cross a browser, a
+device, or a person. Invitations generate a real link but nothing sends it, because email needs
+a server and a provider.
 
 The meeting room is a design surface, not a working call: no WebRTC or call provider is wired
 up, so participant tiles show initials and the camera slot says so out loud. Dropping in Daily,
