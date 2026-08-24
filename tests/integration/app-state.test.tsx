@@ -648,10 +648,10 @@ describe("the community handed to screens", () => {
         id: "ven-probe",
         name: "Probe Services",
         service: "Testing",
+        achEnabled: true,
         w9OnFile: true,
-        paidYtdCents: 0,
-        insuranceExpiry: "2027-01-01",
-        payMethod: "ach",
+        ytdPaidCents: 0,
+        defaultCategory: "Repairs & maintenance",
       });
     });
 

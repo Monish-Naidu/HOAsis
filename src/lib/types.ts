@@ -385,6 +385,12 @@ export interface Ballot {
   closesDate: ISODate;
   /** Eligible voting interests: units for owner votes, seats for board votes. */
   eligible: number;
+  /**
+   * Seats being filled, for an election where each household votes more than
+   * once. Turnout and quorum count households, not votes, so a two seat race
+   * with 129 votes is 65 ballots rather than a turnout of 147 percent.
+   */
+  seats?: number;
   /** Votes needed for the result to count. */
   quorumRequired: number;
   /** Share of votes cast that must approve. */

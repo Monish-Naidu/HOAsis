@@ -191,6 +191,7 @@ export const ballots: Ballot[] = [
     id: "bal-2026-01",
     reference: "BAL-2026-01",
     title: "Election of two directors",
+    seats: 2,
     body: [
       "Two seats open, four candidates. Owners could vote electronically or by paper ballot delivered to the clubhouse before the annual meeting.",
     ],

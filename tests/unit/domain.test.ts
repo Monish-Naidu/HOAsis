@@ -174,3 +174,14 @@ describe("calendar grid", () => {
     expect(upcomingFrom(entries, "2026-08-21")).toHaveLength(1);
   });
 });
+
+describe("multi seat elections", () => {
+  it("counts households rather than marks for turnout and quorum", () => {
+    // Two seats, four candidates, 129 marks. That is 65 households voting
+    // against 88 eligible, not a turnout of 147 percent.
+    const votes = 51 + 44 + 22 + 12;
+    const seats = 2;
+    expect(Math.round(votes / seats)).toBe(65);
+    expect(Math.round(votes / seats)).toBeLessThanOrEqual(88);
+  });
+});

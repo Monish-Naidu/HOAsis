@@ -25,8 +25,9 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
   const choice = ballot.myVoteOptionId ?? pick;
   const [expanded, setExpanded] = useState(false);
 
-  const cast = ballot.options.reduce((t, o) => t + o.votes, 0);
-  const votesFor = (_optionId: string, votes: number) => votes;
+  const votes = ballot.options.reduce((t, o) => t + o.votes, 0);
+  // Households that voted, not marks made. See the note in ballot-card.
+  const cast = Math.round(votes / Math.max(1, ballot.seats ?? 1));
   const closed = ballot.status !== "open";
   // Tallies stay sealed until the ballot closes, unless the board opts in.
   const resultsUnlocked = closed || daysFromToday(ballot.closesDate) < 0 || settings.showLiveVoteResults;
@@ -164,7 +165,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
             {closed ? "Final result" : "Where it stands"}
           </p>
           {ballot.options.map((o) => {
-            const votes = votesFor(o.id, o.votes);
+            const votes = o.votes;
             const share = cast ? votes / cast : 0;
             const mine = o.id === choice;
             return (

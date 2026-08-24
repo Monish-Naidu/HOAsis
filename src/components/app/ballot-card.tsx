@@ -13,15 +13,19 @@ import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
  * immediately.
  */
 function tally(ballot: Ballot) {
-  const cast = ballot.options.reduce((total, option) => total + option.votes, 0);
+  const votes = ballot.options.reduce((total, option) => total + option.votes, 0);
+  // Quorum is a count of households that voted, not of marks they made, so a
+  // multi seat election has to be divided back down before it is compared.
+  const cast = Math.round(votes / Math.max(1, ballot.seats ?? 1));
   const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
   return {
+    votes,
     cast,
     leading,
     quorumMet: cast >= ballot.quorumRequired,
     quorumProgress: ballot.quorumRequired ? Math.min(1, cast / ballot.quorumRequired) : 1,
-    share: (votes: number) => (cast ? votes / cast : 0),
-    shareOfEligible: (votes: number) => (ballot.eligible ? votes / ballot.eligible : 0),
+    share: (optionVotes: number) => (votes ? optionVotes / votes : 0),
+    shareOfEligible: (optionVotes: number) => (ballot.eligible ? optionVotes / ballot.eligible : 0),
     daysLeft: daysFromToday(ballot.closesDate),
   };
 }
