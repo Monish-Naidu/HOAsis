@@ -688,3 +688,49 @@ describe("undo on board decisions", () => {
     expect(result.current.posts.find((p) => p.id === pending.id)!.status).toBe("pending");
   });
 });
+
+describe("the roster", () => {
+  it("adds a household and the account that lets them sign in", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const before = result.current.community.owners.length;
+
+    act(() => {
+      result.current.addOwner({ name: "Rosa Delgado", email: "rosa@example.com", unit: "99" });
+    });
+
+    const owner = result.current.community.owners.find((o) => o.unit === "99")!;
+    expect(result.current.community.owners.length).toBe(before + 1);
+    expect(owner.displayName).toBe("Rosa Delgado");
+
+    const account = result.current.accounts.find((a) => a.ownerId === owner.id)!;
+    expect(account.role).toBe("resident");
+    expect(account.capabilities.finances).toBe(false);
+  });
+
+  it("refuses a unit that is already on the register", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const taken = result.current.community.owners[0].unit;
+    expect(() =>
+      result.current.addOwner({ name: "Someone Else", email: "x@example.com", unit: taken }),
+    ).toThrow(/already on the roster/i);
+  });
+
+  it("removes the household and its account together, and puts both back", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    act(() => {
+      result.current.addOwner({ name: "Temp Household", email: "t@example.com", unit: "98" });
+    });
+    const owner = result.current.community.owners.find((o) => o.unit === "98")!;
+
+    let undo = () => {};
+    act(() => {
+      undo = result.current.removeOwner(owner.id);
+    });
+    expect(result.current.community.owners.some((o) => o.id === owner.id)).toBe(false);
+    expect(result.current.accounts.some((a) => a.ownerId === owner.id)).toBe(false);
+
+    act(() => undo());
+    expect(result.current.community.owners.some((o) => o.id === owner.id)).toBe(true);
+    expect(result.current.accounts.some((a) => a.ownerId === owner.id)).toBe(true);
+  });
+});

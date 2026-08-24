@@ -34,6 +34,7 @@ import {
   usePendingApprovals,
   useReconciliation,
 } from "@/lib/app-state";
+import { SetupChecklist } from "@/components/app/setup-checklist";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday, formatDate, money, pluralize, relativeDays, shortMoney } from "@/lib/utils";
 
@@ -68,6 +69,9 @@ export default function BoardDashboard() {
           </ButtonLink>
         }
       />
+
+      {/* Only shows while something is still missing, then never again. */}
+      <SetupChecklist />
 
       {/* The tie-out banner: the product's central promise, stated up front. */}
       <TieOutBanner

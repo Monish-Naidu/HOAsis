@@ -16,6 +16,8 @@ import {
 } from "@/lib/data/communities";
 import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
+import { ValidationError } from "@/lib/core/errors";
+import { NO_CAPABILITIES } from "@/lib/data/accounts";
 import { daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
@@ -79,6 +81,9 @@ interface AppState {
   removeDocument: (documentId: string) => () => void;
   setCapability: (accountId: string, capability: Capability, on: boolean) => void;
   resetDemo: () => void;
+  /** Adds a household to the register, with the account that lets them sign in. */
+  addOwner: (input: { name: string; email: string; unit: string }) => Owner;
+  removeOwner: (ownerId: string) => () => void;
   /** Builds an association from onboarding and signs its founder in. */
   createCommunity: (draft: CommunityDraft) => Community;
 
@@ -161,6 +166,7 @@ const communityStore = new PersistedStore<string>(
 const MUTABLE_SLICES = [
   "settings",
   "accounts",
+  "owners",
   "amenities",
   "forms",
   "posts",
@@ -290,6 +296,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // the community does.
   const settings = useStore(sliceStore(communityId, "settings"));
   const accountList = useStore(sliceStore(communityId, "accounts"));
+  const ownerList = useStore(sliceStore(communityId, "owners"));
   const amenities = useStore(sliceStore(communityId, "amenities"));
   const forms = useStore(sliceStore(communityId, "forms"));
   const posts = useStore(sliceStore(communityId, "posts"));
@@ -395,6 +402,72 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const resetDemo = useCallback(() => resetCommunity(communityId), [communityId]);
+
+  /**
+   * Adds a household to the roster, with the account that lets them sign in.
+   *
+   * An owner and an account are created together because in an association
+   * they are the same fact: the register says who the members are, and every
+   * member gets access. Splitting them lets the two drift.
+   */
+  const addOwner = useCallback(
+    (input: { name: string; email: string; unit: string }) => {
+      const owners = sliceStore(communityId, "owners");
+      const unit = input.unit.trim();
+      if (owners.getSnapshot().some((o) => o.unit === unit)) {
+        throw new ValidationError(`Unit ${unit} is already on the roster`, { unit });
+      }
+
+      const ownerId = `${communityId}-own-${unit}`;
+      const owner: Owner = {
+        id: ownerId,
+        displayName: input.name.trim(),
+        members: [input.name.trim()],
+        email: input.email.trim(),
+        phone: "",
+        unit,
+        address: `Unit ${unit}`,
+        moveInDate: todayIsoDate(),
+        balanceCents: 0,
+        autopay: false,
+        standing: "current",
+        daysPastDue: 0,
+      };
+
+      owners.update((all) => [...all, owner]);
+      sliceStore(communityId, "accounts").update((all) => [
+        ...all,
+        {
+          id: `${communityId}-acct-${unit}`,
+          ownerId,
+          name: owner.displayName,
+          email: owner.email,
+          unit,
+          role: "resident" as const,
+          capabilities: NO_CAPABILITIES,
+        },
+      ]);
+      return owner;
+    },
+    [communityId],
+  );
+
+  /** Removes a household and its account together, returning one undo for both. */
+  const removeOwner = useCallback(
+    (ownerId: string) => {
+      const undoOwners = destructive(sliceStore(communityId, "owners"), (all) =>
+        all.filter((o) => o.id !== ownerId),
+      );
+      const undoAccounts = destructive(sliceStore(communityId, "accounts"), (all) =>
+        all.filter((a) => a.ownerId !== ownerId),
+      );
+      return () => {
+        undoOwners();
+        undoAccounts();
+      };
+    },
+    [communityId],
+  );
 
   /**
    * Builds an association from onboarding and signs the founder into it.
@@ -739,6 +812,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ...community,
       settings,
       accounts: accountList,
+      owners: ownerList,
       amenities,
       forms,
       posts,
@@ -756,6 +830,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       community,
       settings,
       accountList,
+      ownerList,
       amenities,
       forms,
       posts,
@@ -808,6 +883,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCapability,
     resetDemo,
     createCommunity,
+    addOwner,
+    removeOwner,
     addPost,
     moderatePost,
     togglePinned,
@@ -1077,4 +1154,44 @@ export function bucketRequests<T extends { status: string }>(rows: T[]) {
     decided: rows.filter((r) => (DECIDED_STATUSES as readonly string[]).includes(r.status)),
     history: rows.filter((r) => r.status === "closed"),
   };
+}
+
+/**
+ * Any association by id, including ones built through onboarding.
+ *
+ * Created associations live in a store that only has content after hydration,
+ * so a component resolving one during the first render sees the server
+ * snapshot and finds nothing. Subscribing here means the lookup re-runs once
+ * storage has been read, which is what an invitation link needs.
+ */
+export function useCommunityById(id: string | null | undefined): Community | null {
+  const created = useStore(createdCommunitiesStore);
+  return useMemo(() => {
+    if (!id) return null;
+    const base = [...seededCommunities, ...created].find((c) => c.id === id);
+    return base ? withLiveSlices(base) : null;
+  }, [id, created]);
+}
+
+/**
+ * A community with its stored slices laid over the seed.
+ *
+ * Every association exists in two halves: a seed, which is either a fixture or
+ * the bundle onboarding wrote, and the slice stores that hold everything
+ * changed since. Reading only the seed is how a household added this morning
+ * fails to exist. The provider does the same overlay through hooks so the
+ * active community stays reactive; this is the one-shot version, for reading
+ * an association you are not signed into.
+ */
+export function withLiveSlices(base: Community): Community {
+  const next = { ...base };
+  for (const slice of MUTABLE_SLICES) {
+    (next as Record<string, unknown>)[slice] = sliceStore(base.id, slice).getSnapshot();
+  }
+  return next;
+}
+
+/** True once storage has been read, so a caller can tell missing from not-yet-loaded. */
+export function useStorageReady(): boolean {
+  return useHydrated();
 }

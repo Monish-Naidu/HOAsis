@@ -3,10 +3,12 @@
 import {
   Building2,
   Download,
+  Link2 as LinkIcon,
   Mail,
   Repeat,
   Search,
   SlidersHorizontal,
+  Trash2,
 } from "lucide-react";
 import {
   Avatar,
@@ -21,6 +23,7 @@ import {
 import { useMemo, useState } from "react";
 import { communitySlug, delinquency } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
+import { inviteUrl } from "@/lib/invitations";
 import { useToast } from "@/components/app/toast";
 import { TemplateComposer } from "@/components/app/template-composer";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -35,13 +38,38 @@ const standingMeta: Record<Owner["standing"], { tone: "ok" | "warn" | "danger"; 
 };
 
 export default function BoardHomeowners() {
-  const { community } = useAppState();
+  const { community, addOwner, removeOwner } = useAppState();
   const association = community.association;
   const owners = community.owners;
   const delinq = delinquency(community);
   const { notify } = useToast();
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [entry, setEntry] = useState({ name: "", email: "", unit: "" });
+
+  function saveOwner() {
+    try {
+      const owner = addOwner(entry);
+      setEntry({ name: "", email: "", unit: "" });
+      setAdding(false);
+      const undo = () => removeOwner(owner.id)();
+      notify(`Added ${owner.displayName}, unit ${owner.unit}`, "ok", {
+        label: "Undo",
+        onClick: undo,
+      });
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not add that household", "warn");
+    }
+  }
+
+  function copyInvite(owner: Owner) {
+    const url = inviteUrl(community.id, owner.id, window.location.origin);
+    navigator.clipboard
+      .writeText(url)
+      .then(() => notify(`Invitation link for ${owner.displayName} copied`, "ok"))
+      .catch(() => notify("Could not copy. Select the link and copy it manually.", "warn"));
+  }
   // Anything needing attention first, then the board, then the rest by unit.
   const sorted = [...owners].sort((a, b) => {
     if (a.daysPastDue !== b.daysPastDue) return b.daysPastDue - a.daysPastDue;
@@ -109,12 +137,8 @@ export default function BoardHomeowners() {
               <Mail className="size-3.5" />
               Message past due
             </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => notify("New owners are verified against the roster first", "info")}
-            >
-              Add owner
+            <Button variant="primary" size="md" onClick={() => setAdding((v) => !v)}>
+              {adding ? "Cancel" : "Add household"}
             </Button>
           </div>
         }
@@ -206,8 +230,46 @@ export default function BoardHomeowners() {
             </div>
           }
         />
+        {adding ? (
+          <div className="grid gap-3 border-b border-border px-5 py-4 sm:grid-cols-[1fr_1fr_6rem_auto]">
+            <input
+              value={entry.name}
+              onChange={(e) => setEntry({ ...entry, name: e.target.value })}
+              placeholder="Household name"
+              aria-label="Household name"
+              onKeyDown={(e) => e.key === "Enter" && saveOwner()}
+              className={rosterInput}
+            />
+            <input
+              type="email"
+              value={entry.email}
+              onChange={(e) => setEntry({ ...entry, email: e.target.value })}
+              placeholder="Email"
+              aria-label="Household email"
+              onKeyDown={(e) => e.key === "Enter" && saveOwner()}
+              className={rosterInput}
+            />
+            <input
+              value={entry.unit}
+              onChange={(e) => setEntry({ ...entry, unit: e.target.value })}
+              placeholder="Unit"
+              aria-label="Unit"
+              onKeyDown={(e) => e.key === "Enter" && saveOwner()}
+              className={rosterInput}
+            />
+            <Button
+              variant="primary"
+              size="md"
+              onClick={saveOwner}
+              disabled={!entry.name.trim() || !entry.unit.trim()}
+            >
+              Save
+            </Button>
+          </div>
+        ) : null}
+
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left">
+          <table className="w-full min-w-[900px] text-left">
             <thead>
               <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
                 <th className="px-5 py-2.5 font-semibold">Household</th>
@@ -215,7 +277,8 @@ export default function BoardHomeowners() {
                 <th className="px-3 py-2.5 font-semibold">Contact</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Balance</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Days late</th>
-                <th className="px-5 py-2.5 font-semibold">Standing</th>
+                <th className="px-3 py-2.5 font-semibold">Standing</th>
+                <th className="px-5 py-2.5 text-right font-semibold">Invite</th>
               </tr>
             </thead>
             <tbody>
@@ -268,8 +331,35 @@ export default function BoardHomeowners() {
                     <td className="tnum px-3 py-3 text-right text-fg-muted">
                       {o.daysPastDue}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-3 py-3">
                       <Badge tone={meta.tone}>{meta.label}</Badge>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => copyInvite(o)}
+                          aria-label={`Copy the invitation link for ${o.displayName}`}
+                          title="Copy invitation link"
+                          className="rounded-md border border-border-2 px-2 py-1 text-[11px] font-medium text-fg hover:bg-surface-2"
+                        >
+                          <LinkIcon className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const undo = removeOwner(o.id);
+                            notify(`Removed ${o.displayName}`, "warn", {
+                              label: "Undo",
+                              onClick: undo,
+                            });
+                          }}
+                          aria-label={`Remove ${o.displayName} from the roster`}
+                          className="rounded-md p-1 text-fg-subtle hover:bg-surface-2 hover:text-danger"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 );
@@ -287,3 +377,6 @@ export default function BoardHomeowners() {
     </>
   );
 }
+
+const rosterInput =
+  "h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[13px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
