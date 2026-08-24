@@ -20,7 +20,7 @@ import { formatDate, relativeDays } from "@/lib/utils";
 
 
 export default function ResidentHome() {
-  const { community } = useAppState();
+  const { community, settings } = useAppState();
   const announcements = community.announcements;
   const live = community.meetings.find((m) => m.status === "live");
   const toVote = community.ballots.filter(
@@ -84,12 +84,15 @@ export default function ResidentHome() {
           label="Documents"
           hint="CC&Rs, budget, minutes"
         />
-        <QuickAction
-          href="/resident/finances"
-          icon={<Landmark className="size-[18px]" />}
-          label="Association funds"
-          hint="Balances, interest, transactions"
-        />
+        {/* Hidden with the section itself, so the shortcut is never a dead end. */}
+        {settings.showFundsToResidents ? (
+          <QuickAction
+            href="/resident/finances"
+            icon={<Landmark className="size-[18px]" />}
+            label="Association funds"
+            hint="Balances, interest, transactions"
+          />
+        ) : null}
       </div>
 
       <MyOpenRequests />

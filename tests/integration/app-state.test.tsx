@@ -658,3 +658,33 @@ describe("the community handed to screens", () => {
     expect(result.current.community.vendors.length).toBe(before + 1);
   });
 });
+
+describe("undo on board decisions", () => {
+  it("puts a confirmed transaction back", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const entry = result.current.ledger.find((e) => e.status === "needs-review")!;
+
+    let undo = () => {};
+    act(() => {
+      undo = result.current.confirmLedgerEntry(entry.id);
+    });
+    expect(result.current.ledger.find((e) => e.id === entry.id)!.status).toBe("cleared");
+
+    act(() => undo());
+    expect(result.current.ledger.find((e) => e.id === entry.id)!.status).toBe("needs-review");
+  });
+
+  it("puts a published post back to pending", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const pending = result.current.posts.find((p) => p.status === "pending")!;
+
+    let undo = () => {};
+    act(() => {
+      undo = result.current.moderatePost(pending.id, "published");
+    });
+    expect(result.current.posts.find((p) => p.id === pending.id)!.status).toBe("published");
+
+    act(() => undo());
+    expect(result.current.posts.find((p) => p.id === pending.id)!.status).toBe("pending");
+  });
+});

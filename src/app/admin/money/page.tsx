@@ -314,8 +314,11 @@ export default function BoardMoney() {
                           <button
                             type="button"
                             onClick={() => {
-                              confirmLedgerEntry(e.id);
-                              notify(`Confirmed ${e.description}`);
+                              const undo = confirmLedgerEntry(e.id);
+                              notify(`Confirmed ${e.description}`, "ok", {
+                                label: "Undo",
+                                onClick: undo,
+                              });
                             }}
                             className="h-7 rounded-md border border-border-2 px-2 text-[11px] font-medium text-fg hover:bg-surface"
                           >

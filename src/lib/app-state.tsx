@@ -90,7 +90,11 @@ interface AppState {
   addInstrument: (instrument: Omit<PaymentInstrument, "id" | "isDefault">) => PaymentInstrument;
   removeInstrument: (instrumentId: string) => () => void;
   setDefaultInstrument: (instrumentId: string) => void;
-  confirmLedgerEntry: (entryId: string, category?: Community["ledger"][number]["category"]) => void;
+  /** Returns an undo: confirming moves a transaction into every report. */
+  confirmLedgerEntry: (
+    entryId: string,
+    category?: Community["ledger"][number]["category"],
+  ) => () => void;
   dismissLedgerEntry: (entryId: string) => () => void;
   approvePayout: (payoutId: string) => void;
   markW9Requested: (vendorId: string) => void;
@@ -527,7 +531,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const confirmLedgerEntry = useCallback(
     (entryId: string, category?: Community["ledger"][number]["category"]) =>
-      sliceStore(communityId, "ledger").update((all) =>
+      destructive(sliceStore(communityId, "ledger"), (all) =>
         all.map((entry) =>
           entry.id === entryId
             ? {
