@@ -5,7 +5,7 @@ import { Send, Users, Wand2 } from "lucide-react";
 import { Badge, Button, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { association, renderTemplate, TEMPLATE_TOKENS } from "@/lib/data";
+import { renderTemplate, TEMPLATE_TOKENS } from "@/lib/data";
 import type { MessageTemplate } from "@/lib/data/templates";
 import type { Owner } from "@/lib/types";
 import { cn, money } from "@/lib/utils";
@@ -27,7 +27,8 @@ export function TemplateComposer({
   onClose: () => void;
   defaultTrigger?: MessageTemplate["trigger"];
 }) {
-  const { templates, saveTemplate, settings } = useAppState();
+  const { templates, saveTemplate, settings, community } = useAppState();
+  const association = community.association;
   const { notify } = useToast();
   const [templateId, setTemplateId] = useState(
     templates.find((t) => t.trigger === defaultTrigger)?.id ?? templates[0]?.id,

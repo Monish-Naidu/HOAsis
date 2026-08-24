@@ -15,25 +15,28 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { liveMeeting, upcomingMeetings } from "@/lib/data";
+
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { BoardVote } from "@/components/app/board-vote";
 import { formatDate } from "@/lib/utils";
 
 export default function BoardVoting() {
-  const live = liveMeeting();
-  const { ballots, castBoardVote } = useAppState();
+  const { community, ballots, castBoardVote } = useAppState();
+  const live = community.meetings.find((m) => m.status === "live");
+  const upcoming = [...community.meetings]
+    .filter((m) => m.status !== "ended")
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
   const { notify } = useToast();
   const open = ballots.filter((b) => b.status === "open");
   const scheduled = ballots.filter((b) => b.status === "scheduled");
   const decided = ballots.filter((b) => b.status === "certified" || b.status === "closed");
-  const upcoming = upcomingMeetings().filter((m) => m.status !== "live");
+  const scheduledMeetings = upcoming.filter((m) => m.status !== "live");
   const totalCast = open.reduce(
     (total, ballot) => total + ballot.options.reduce((sum, o) => sum + o.votes, 0),
     0,
   );
-  const nextMeeting = upcoming[0];
+  const nextMeeting = scheduledMeetings[0];
 
   return (
     <>
@@ -154,7 +157,7 @@ export default function BoardVoting() {
             
             icon={<CalendarDays className="size-4" />}
           />
-          {upcomingMeetings().map((m) => (
+          {upcoming.map((m) => (
             <div
               key={m.id}
               className="flex items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"

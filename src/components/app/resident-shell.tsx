@@ -12,7 +12,6 @@ import { Assistant } from "@/components/app/assistant";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero } from "@/components/app/community-hero";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
-import type { AssistantContext } from "@/lib/data";
 import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -30,19 +29,12 @@ function visibleTabs(settings: CommunitySettings) {
  *
  * Below `lg` there is no difference. The bottom tab bar takes over.
  */
-export function ResidentShell({
-  children,
-  associationName,
-  assistant,
-}: {
-  children: React.ReactNode;
-  associationName: string;
-  assistant: AssistantContext;
-}) {
+export function ResidentShell({ children }: { children: React.ReactNode }) {
   const [phonePreview, setPhonePreview] = useState(false);
   const pathname = usePathname();
   const { settings } = useAppState();
   const owner = useCurrentOwner();
+  const associationName = settings.displayName;
   const tabs = visibleTabs(settings);
   const ownerName = owner?.members[0] ?? "";
   const unit = owner?.unit ?? "";
@@ -141,7 +133,7 @@ export function ResidentShell({
               <CommunityHero compact />
               <div className="px-4 pt-4">{children}</div>
             </main>
-            <Assistant context={assistant} variant="inset" />
+            <Assistant variant="inset" />
             <TabBar pathname={pathname} tabs={tabs} />
           </div>
         </div>
@@ -206,7 +198,7 @@ export function ResidentShell({
         </aside>
         <main className="min-w-0 flex-1 lg:max-w-2xl">{children}</main>
       </div>
-      <Assistant context={assistant} />
+      <Assistant />
       <div className="lg:hidden">
         <TabBar pathname={pathname} tabs={tabs} />
       </div>

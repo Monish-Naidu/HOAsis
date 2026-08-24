@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Building2, Info, User } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-interface Seat {
-  id: string;
-  name: string;
-  unit: string;
-  role: string;
-  isAdmin: boolean;
-}
-
-export function SignInPanel({ seats }: { seats: Seat[] }) {
+export function SignInPanel() {
   const router = useRouter();
-  const { signIn, accounts } = useAppState();
+  const { signIn, accounts, communities, community, setCommunity } = useAppState();
+
+  // Seats come from whichever association is selected, so the front door
+  // always offers the right people.
+  const seats = accounts.map((a) => ({
+    id: a.id,
+    name: a.name,
+    unit: a.unit,
+    role: ROLE_LABEL[a.role],
+    isAdmin: a.role !== "resident",
+  }));
   const [mode, setMode] = useState<"sign-in" | "create">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -98,6 +101,28 @@ export function SignInPanel({ seats }: { seats: Seat[] }) {
           )}
         </form>
       </Card>
+
+      {communities.length > 1 ? (
+        <div className="flex gap-1.5" role="radiogroup" aria-label="Association">
+          {communities.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              role="radio"
+              aria-checked={option.id === community.id}
+              onClick={() => setCommunity(option.id)}
+              className={cn(
+                "flex-1 rounded-lg border px-3 py-2 text-[12px] font-medium transition-colors",
+                option.id === community.id
+                  ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
+                  : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <Card className="overflow-hidden">
         <div className="flex items-start gap-2 border-b border-border px-4 py-2.5">

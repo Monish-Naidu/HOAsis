@@ -5,16 +5,14 @@ import { CalendarDays, CalendarOff, ChevronRight, Megaphone } from "lucide-react
 import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { kindLabel, kindTone, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
-import { formatDate, relativeDays, TODAY } from "@/lib/utils";
-
-const TODAY_ISO = TODAY.toISOString().slice(0, 10);
+import { formatDate, relativeDays } from "@/lib/utils";
 
 /**
  * Not every association runs a calendar. Some just meet quarterly, so the
  * admin can swap the whole block for a single banner they edit by hand.
  */
 export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
-  const { settings } = useAppState();
+  const { settings, community } = useAppState();
 
   if (settings.homeLayout === "banner") {
     if (!settings.banner.enabled) return null;
@@ -35,7 +33,7 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
     );
   }
 
-  const next = upcomingFrom(entries, TODAY_ISO, 3);
+  const next = upcomingFrom(entries, community.asOf, 3);
 
   return (
     <section>

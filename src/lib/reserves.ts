@@ -221,15 +221,22 @@ export function requiredMonthlyContribution(
 export function percentFunded(
   components: ReserveComponent[],
   balanceCents: Cents,
-): { accruedLiabilityCents: Cents; percent: number } {
+): { accruedLiabilityCents: Cents; percent: number; measurable: boolean } {
   const accruedLiabilityCents = components.reduce((sum, component) => {
     const usedYears = component.usefulLifeYears - component.remainingLifeYears;
     const share = Math.max(0, Math.min(1, usedYears / component.usefulLifeYears));
     return sum + Math.round(component.replacementCostCents * share);
   }, 0);
+
+  // An association with no components has not been measured. Reporting 100%
+  // would tell a board with nothing saved that it is fully funded, which is
+  // the single most dangerous thing this screen could say.
+  const measurable = components.length > 0;
+
   return {
     accruedLiabilityCents,
-    percent: accruedLiabilityCents === 0 ? 1 : balanceCents / accruedLiabilityCents,
+    percent: !measurable || accruedLiabilityCents === 0 ? 0 : balanceCents / accruedLiabilityCents,
+    measurable,
   };
 }
 

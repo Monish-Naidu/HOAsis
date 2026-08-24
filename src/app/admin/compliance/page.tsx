@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -19,11 +21,10 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { association, complianceItems, complianceSummary } from "@/lib/data";
+import { complianceSummary } from "@/lib/metrics";
+import { useAppState } from "@/lib/app-state";
 import { formatDate, relativeDays } from "@/lib/utils";
 import type { ComplianceStatus } from "@/lib/types";
-
-export const metadata = { title: "Compliance" };
 
 const statusMeta: Record<
   ComplianceStatus,
@@ -37,7 +38,10 @@ const statusMeta: Record<
 
 
 export default function BoardCompliance() {
-  const comp = complianceSummary();
+  const { community } = useAppState();
+  const association = community.association;
+  const complianceItems = community.complianceItems;
+  const comp = complianceSummary(community);
   const ordered = [
     ...comp.overdue,
     ...comp.dueSoon,

@@ -27,15 +27,13 @@ import {
 } from "@/components/ui/primitives";
 import { useMemo, useState } from "react";
 import {
-  bankAccounts,
   budgetSummary,
   cashPosition,
   insuranceExposure,
   interestSummary,
-  reserveComponents,
   reserveSummary,
   yieldOpportunity,
-} from "@/lib/data";
+} from "@/lib/metrics";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -49,9 +47,11 @@ const savedViews = [
 ];
 
 export default function BoardMoney() {
-  const cash = cashPosition();
+  const { community, ledger, confirmLedgerEntry, dismissLedgerEntry } = useAppState();
+  const bankAccounts = community.bankAccounts;
+  const reserveComponents = community.reserveComponents;
+  const cash = cashPosition(community);
   const recon = useReconciliation();
-  const { ledger, confirmLedgerEntry, dismissLedgerEntry } = useAppState();
   const { notify } = useToast();
   const [view, setView] = useState("Everything, this month");
 
@@ -82,11 +82,11 @@ export default function BoardMoney() {
     downloadCsv(`mehr-meadows-ledger-${view.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, csv);
     notify(`Exported ${rows.length} transactions`);
   }
-  const reserve = reserveSummary();
-  const bud = budgetSummary();
-  const interest = interestSummary();
-  const exposure = insuranceExposure();
-  const opportunity = yieldOpportunity();
+  const reserve = reserveSummary(community);
+  const bud = budgetSummary(community);
+  const interest = interestSummary(community);
+  const exposure = insuranceExposure(community);
+  const opportunity = yieldOpportunity(community);
 
   return (
     <>
@@ -423,6 +423,15 @@ export default function BoardMoney() {
           </div>
         ) : null}
 
+        {!opportunity.recommended || opportunity.movable === 0 ? (
+          <div className="border-t border-border px-5 py-6 text-center">
+            <p className="text-[13px] font-medium text-fg">No reserve account yet</p>
+            <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-fg-muted">
+              Every dollar of reserve is sitting in the operating account earning nothing. Opening
+              a separate insured savings account is the one change that costs owners nothing.
+            </p>
+          </div>
+        ) : (
         <div className="border-t border-border px-5 py-4">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
@@ -490,15 +499,19 @@ export default function BoardMoney() {
               </div>
             ))}
           </div>
-          
         </div>
+        )}
       </Card>
 
       {/* Reserves */}
       <Card className="mt-5">
         <CardHeader
           title="Reserve schedule"
-          subtitle={`${Math.round(reserve.percentFunded * 100)}% funded · ${money(reserve.funded, { cents: false })} of ${money(reserve.required, { cents: false })} in replacement obligations`}
+          subtitle={
+            reserve.hasStudy
+              ? `${Math.round(reserve.percentFunded * 100)}% funded · ${money(reserve.funded, { cents: false })} of ${money(reserve.required, { cents: false })} in replacement obligations`
+              : "No study on file, so there is nothing to measure against yet"
+          }
           action={
             <Link href="/admin/compliance" className="text-[12px] font-medium text-accent hover:underline">
               Why this matters
@@ -517,6 +530,18 @@ export default function BoardMoney() {
               </tr>
             </thead>
             <tbody>
+              {reserveComponents.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-center">
+                    <p className="text-[13px] font-medium text-fg">No reserve study on file</p>
+                    <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-fg-muted">
+                      Washington expects one, and without it there is no way to know what the
+                      association should be saving. A study for a small community is usually a
+                      few hundred dollars.
+                    </p>
+                  </td>
+                </tr>
+              ) : null}
               {reserveComponents.map((c) => {
                 const pct = c.fundedCents / c.replacementCostCents;
                 const urgent = c.remainingLifeYears <= 2;

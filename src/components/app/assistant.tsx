@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUp, MessageCircle, Sparkles, X } from "lucide-react";
 import { answerQuestion, suggestedQuestions, type Answer } from "@/lib/assistant";
-import { useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
-import type { AssistantScope } from "@/lib/assistant";
-import type { AssistantContext } from "@/lib/data";
+import { useAssistantContext } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
 interface Turn {
@@ -19,56 +17,12 @@ interface Turn {
  * Corner assistant. Answers from the context snapshot only, so it cannot
  * state a number that is not in the data.
  */
-export function Assistant({
-  context,
-  variant = "fixed",
-}: {
-  context: AssistantContext;
-  variant?: "fixed" | "inset";
-}) {
+export function Assistant({ variant = "fixed" }: { variant?: "fixed" | "inset" }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
-  const owner = useCurrentOwner();
-  const myRequests = useMyRequests();
-  const { amenities, settings } = useAppState();
-
-  // The snapshot is rendered on the server for one household. Re-point the
-  // per-person parts at whoever is actually signed in.
-  const scoped: AssistantScope = owner
-    ? {
-        ...context,
-        owner: {
-          ...context.owner,
-          name: owner.members[0],
-          unit: owner.unit,
-          balanceCents: owner.balanceCents,
-          standing: owner.standing,
-          daysPastDue: owner.daysPastDue,
-          autopay: owner.autopay,
-          lastPayment: owner.id === "own-042" ? context.owner.lastPayment : undefined,
-        },
-        requests: myRequests.map((r) => ({
-          reference: r.reference,
-          title: r.title,
-          status: r.status,
-          submittedDate: r.submittedDate,
-        })),
-        amenities: amenities.map((a) => ({
-          name: a.name,
-          status: a.status,
-          detail: a.detail,
-        })),
-        // The board can hide association balances. The assistant must not be
-        // the hole in that fence.
-        fundsVisible: settings.showFundsToResidents,
-      }
-    : { ...context, fundsVisible: settings.showFundsToResidents };
-
-  useEffect(() => {
-    if (open) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns, open]);
+  const scoped = useAssistantContext();
 
   function ask(question: string) {
     const q = question.trim();

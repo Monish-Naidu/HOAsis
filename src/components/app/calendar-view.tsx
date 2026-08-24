@@ -17,14 +17,22 @@ import { cn, formatDate, relativeDays, TODAY } from "@/lib/utils";
 const TODAY_ISO = TODAY.toISOString().slice(0, 10);
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
-export function CalendarView({ entries }: { entries: CalendarEntry[] }) {
-  const [year, setYear] = useState(TODAY.getUTCFullYear());
-  const [month, setMonth] = useState(TODAY.getUTCMonth());
-  const [selected, setSelected] = useState<string | null>(TODAY_ISO);
+export function CalendarView({
+  entries,
+  asOf = TODAY_ISO,
+}: {
+  entries: CalendarEntry[];
+  /** The community's own "today", so it does not open on an empty month. */
+  asOf?: string;
+}) {
+  const today = new Date(`${asOf}T12:00:00Z`);
+  const [year, setYear] = useState(today.getUTCFullYear());
+  const [month, setMonth] = useState(today.getUTCMonth());
+  const [selected, setSelected] = useState<string | null>(asOf);
 
-  const cells = monthGrid(year, month, entries, TODAY_ISO);
+  const cells = monthGrid(year, month, entries, asOf);
   const selectedEntries = selected ? entries.filter((e) => e.date === selected) : [];
-  const upcoming = upcomingFrom(entries, TODAY_ISO, 5);
+  const upcoming = upcomingFrom(entries, asOf, 5);
 
   function shift(delta: number) {
     const d = new Date(Date.UTC(year, month + delta, 1));

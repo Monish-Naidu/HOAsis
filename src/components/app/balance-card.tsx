@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/primitives";
-import { useCurrentOwner } from "@/lib/app-state";
-import { association } from "@/lib/data";
-import { formatDate, money, relativeDays } from "@/lib/utils";
+import { useAppState, useCurrentOwner } from "@/lib/app-state";
 
-const NEXT_CHARGE_DATE = "2026-09-01";
+import { formatDate, money, relativeDays } from "@/lib/utils";
 
 /** Reads the signed in account's own balance, whoever that is. */
 export function BalanceCard() {
+  const { community } = useAppState();
   const owner = useCurrentOwner();
   if (!owner) return null;
+  const association = community.association;
+  const nextCharge = community.nextChargeDate;
 
   const past = owner.daysPastDue > 0;
   const amount = owner.balanceCents > 0 ? owner.balanceCents : association.duesCents;
@@ -30,9 +31,9 @@ export function BalanceCard() {
           {past
             ? `${owner.daysPastDue} days past due`
             : owner.balanceCents === 0
-              ? `Nothing outstanding. Next assessment ${formatDate(NEXT_CHARGE_DATE, "long")}.`
-              : `September assessment, due ${formatDate(NEXT_CHARGE_DATE, "long")} · ${relativeDays(
-                  NEXT_CHARGE_DATE,
+              ? `Nothing outstanding. Next assessment ${formatDate(nextCharge, "long")}.`
+              : `Next assessment, due ${formatDate(nextCharge, "long")} · ${relativeDays(
+                  nextCharge,
                 )}`}
         </p>
         <div className="mt-4 flex gap-2">

@@ -1,18 +1,21 @@
+"use client";
+
 import { Radio, Vote } from "lucide-react";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { ballotsForOwners, liveMeeting, upcomingMeetings } from "@/lib/data";
+import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import { BallotVote } from "./ballot-vote";
 
-export const metadata = { title: "Vote" };
-
 export default function ResidentVote() {
-  const live = liveMeeting();
-  const mine = ballotsForOwners();
+  const { community } = useAppState();
+  const live = community.meetings.find((m) => m.status === "live");
+  const mine = community.ballots.filter((b) => b.audience === "owners");
   const open = mine.filter((b) => b.status === "open");
   const past = mine.filter((b) => b.status === "certified" || b.status === "closed");
-  const meetings = upcomingMeetings().filter((m) => m.status !== "live");
+  const meetings = [...community.meetings]
+    .filter((m) => m.status !== "ended" && m.status !== "live")
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
 
   return (
     <div className="animate-rise space-y-6">

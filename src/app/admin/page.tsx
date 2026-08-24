@@ -23,14 +23,12 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import {
-  association,
-  bankAccounts,
   budgetSummary,
   cashPosition,
   complianceSummary,
   delinquency,
   reserveSummary,
-} from "@/lib/data";
+} from "@/lib/metrics";
 import {
   useAppState,
   usePendingApprovals,
@@ -41,7 +39,10 @@ import { daysFromToday } from "@/lib/utils";
 import { formatDate, money, relativeDays, shortMoney } from "@/lib/utils";
 
 export default function BoardDashboard() {
-  const cash = cashPosition();
+  const { community } = useAppState();
+  const association = community.association;
+  const bankAccounts = community.bankAccounts;
+  const cash = cashPosition(community);
   const recon = useReconciliation();
   const approvals = usePendingApprovals();
   const { requests, confirmLedgerEntry, dismissLedgerEntry, approvePayout } = useAppState();
@@ -50,10 +51,10 @@ export default function BoardDashboard() {
     .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
     .map((r) => ({ ...r, daysLeft: daysFromToday(r.dueDate!) }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
-  const delinq = delinquency();
-  const bud = budgetSummary();
-  const reserve = reserveSummary();
-  const comp = complianceSummary();
+  const delinq = delinquency(community);
+  const bud = budgetSummary(community);
+  const reserve = reserveSummary(community);
+  const comp = complianceSummary(community);
 
   return (
     <>
@@ -88,7 +89,12 @@ export default function BoardDashboard() {
         <Stat
           label="Reserves"
           value={money(cash.reserve, { cents: false })}
-          hint={`${Math.round(reserve.percentFunded * 100)}% funded against the study`}
+          tone={reserve.hasStudy ? "neutral" : "warn"}
+          hint={
+            reserve.hasStudy
+              ? `${Math.round(reserve.percentFunded * 100)}% funded against the study`
+              : "No reserve study, so this is unmeasured"
+          }
           icon={<PiggyBank className="size-4" />}
         />
         <Stat
@@ -414,7 +420,7 @@ function TieOutBanner({
           <p className={`text-[14px] font-semibold ${tiesOut ? "text-ok" : "text-warn"}`}>
             {tiesOut
               ? "Books tie out. Every report agrees."
-              : `${needsReview} transactions are holding the books open`}
+              : `${needsReview} ${needsReview === 1 ? "transaction is" : "transactions are"} holding the books open`}
           </p>
           <p className={`mt-1 text-[13px] leading-relaxed ${tiesOut ? "text-ok" : "text-warn"} opacity-90`}>
             {tiesOut

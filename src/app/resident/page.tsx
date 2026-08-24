@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ChevronRight,
@@ -9,7 +11,8 @@ import {
   Vote,
 } from "lucide-react";
 import { Card, SectionTitle } from "@/components/ui/primitives";
-import { announcements, ballotsAwaitingMyVote, calendarEntries, liveMeeting } from "@/lib/data";
+import { calendarEntries } from "@/lib/metrics";
+import { useAppState } from "@/lib/app-state";
 import { HomeSchedule } from "@/components/app/home-schedule";
 import { BalanceCard } from "@/components/app/balance-card";
 import { MyOpenRequests } from "@/components/app/my-open-requests";
@@ -17,10 +20,14 @@ import { formatDate, relativeDays } from "@/lib/utils";
 
 
 export default function ResidentHome() {
+  const { community } = useAppState();
+  const announcements = community.announcements;
+  const live = community.meetings.find((m) => m.status === "live");
+  const toVote = community.ballots.filter(
+    (b) => b.audience === "owners" && b.status === "open" && !b.myVoteOptionId,
+  );
   const pinned = announcements.find((a) => a.pinned);
   const rest = announcements.filter((a) => !a.pinned).slice(0, 2);
-  const live = liveMeeting();
-  const toVote = ballotsAwaitingMyVote();
 
   return (
     <div className="animate-rise space-y-6">
@@ -131,7 +138,7 @@ export default function ResidentHome() {
         </div>
       </section>
 
-      <HomeSchedule entries={calendarEntries()} />
+      <HomeSchedule entries={calendarEntries(community)} />
     </div>
   );
 }

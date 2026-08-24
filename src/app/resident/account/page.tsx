@@ -3,15 +3,19 @@
 import { ChevronDown, ChevronRight, Download, Info, Landmark, Receipt } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
-import { association } from "@/lib/data";
-import { useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
-import { formatDate, money } from "@/lib/utils";
+
+import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
+import { formatDate, money, TODAY } from "@/lib/utils";
 
 export default function ResidentAccount() {
+  const { community } = useAppState();
+  const association = community.association;
   const currentOwner = useCurrentOwner();
   const ownerCharges = useOwnerCharges();
   if (!currentOwner) return null;
   const totalFees = ownerCharges.reduce((t, c) => t + (c.feeCents ?? 0), 0);
+  // The year the ledger is actually in, not a constant.
+  const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(TODAY.getUTCFullYear());
   const paidThisYear = ownerCharges
     .filter((c) => c.kind === "payment")
     .reduce((t, c) => t + Math.abs(c.amountCents), 0);
@@ -33,13 +37,28 @@ export default function ResidentAccount() {
           <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-fg">
             {money(currentOwner.balanceCents)}
           </p>
-          <Badge tone="ok" className="mt-2">
-            In good standing
+          <Badge
+            tone={
+              currentOwner.standing === "current"
+                ? "ok"
+                : currentOwner.standing === "collections"
+                  ? "danger"
+                  : "warn"
+            }
+            className="mt-2"
+          >
+            {currentOwner.standing === "current"
+              ? "In good standing"
+              : currentOwner.standing === "grace"
+                ? `In grace, ${currentOwner.daysPastDue} days`
+                : currentOwner.standing === "late"
+                  ? `Late, ${currentOwner.daysPastDue} days`
+                  : "In collections"}
           </Badge>
         </Card>
         <Card className="p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-            Paid in 2026
+            Paid in {paidYear}
           </p>
           <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-fg">
             {money(paidThisYear, { cents: false })}

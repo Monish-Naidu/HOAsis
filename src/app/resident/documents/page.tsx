@@ -1,10 +1,10 @@
+"use client";
+
 import { FileSpreadsheet, FileText, Globe, Lock } from "lucide-react";
 import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
-import { documents } from "@/lib/data";
+import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import type { DocumentRecord } from "@/lib/types";
-
-export const metadata = { title: "Documents" };
 
 const order: DocumentRecord["category"][] = [
   "Governing",
@@ -16,6 +16,7 @@ const order: DocumentRecord["category"][] = [
 ];
 
 export default function ResidentDocuments() {
+  const { documents } = useAppState();
   const visible = documents.filter((d) => d.visibility !== "board");
   const grouped = order
     .map((category) => ({ category, docs: visible.filter((d) => d.category === category) }))

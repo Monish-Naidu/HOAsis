@@ -262,7 +262,14 @@ export interface ComplianceItem {
 export interface DocumentRecord {
   id: ID;
   name: string;
-  category: "Governing" | "Financial" | "Meetings" | "Insurance" | "Notices" | "Forms";
+  category:
+    | "Governing"
+    | "Plans"
+    | "Financial"
+    | "Meetings"
+    | "Insurance"
+    | "Notices"
+    | "Forms";
   updatedDate: ISODate;
   size: string;
   /** Public = reachable with no login, which is what FL 720/718 actually requires. */

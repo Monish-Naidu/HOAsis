@@ -16,7 +16,14 @@ import {
   Users,
   Vote,
 } from "lucide-react";
-import { useAppState } from "@/lib/app-state";
+import {
+  useAppState,
+  usePendingApprovals,
+  useReconciliation,
+  useUnreadThreadCount,
+  useVendorGaps,
+} from "@/lib/app-state";
+import { complianceSummary, delinquency } from "@/lib/metrics";
 import type { Capability } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -70,9 +77,48 @@ const items: {
   { href: "/admin/settings", label: "Settings", icon: Settings, key: "settings", need: "settings" },
 ];
 
-export function AdminNav({ badges }: { badges: Partial<Record<string, NavBadge>> }) {
+/**
+ * Counts live next to each section.
+ *
+ * Computed here rather than passed down from the layout, because the layout is
+ * a server component and these numbers change as the board works. A badge that
+ * only updates on a full reload is worse than no badge.
+ */
+export function AdminNav() {
   const pathname = usePathname();
-  const { can } = useAppState();
+  const { can, community, requests } = useAppState();
+  const recon = useReconciliation();
+  const gaps = useVendorGaps();
+  const approvals = usePendingApprovals();
+  const unread = useUnreadThreadCount();
+  const comp = complianceSummary(community);
+  const delinq = delinquency(community);
+
+  const badges: Partial<Record<string, NavBadge>> = {
+    money: { count: recon.needsReview.length, tone: "warn" },
+    reserves: {
+      count: community.reserveComponents.length === 0 ? 1 : 0,
+      tone: "warn",
+    },
+    requests: {
+      count: requests.filter(
+        (r) => !["approved", "denied", "closed"].includes(r.status),
+      ).length,
+      tone: "neutral",
+    },
+    voting: { count: community.ballots.filter((b) => b.status === "open").length, tone: "neutral" },
+    compliance: {
+      count: comp.overdue.length + comp.dueSoon.length,
+      tone: comp.overdue.length ? "danger" : "warn",
+    },
+    communications: { count: unread, tone: "neutral" },
+    homeowners: { count: delinq.past.length, tone: "warn" },
+    vendors: {
+      count: gaps.missingW9.length + gaps.expiringCoi.length + approvals.length,
+      tone: "warn",
+    },
+  };
+
   const visible = items.filter((i) => !i.need || can(i.need));
 
   return (

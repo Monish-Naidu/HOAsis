@@ -12,7 +12,8 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { interestSummary, reserveComponents } from "@/lib/data";
+import { interestSummary } from "@/lib/metrics";
+import { useAppState } from "@/lib/app-state";
 import {
   defaultAssumptions,
   fundingBand,
@@ -29,9 +30,24 @@ const START_YEAR = TODAY.getUTCFullYear();
 
 export function ReservesScreen() {
   const { notify } = useToast();
-  const interest = interestSummary();
+  const { community } = useAppState();
+  const reserveComponents = community.reserveComponents;
+  const interest = interestSummary(community);
 
-  const [monthlyContribution, setMonthlyContribution] = useState(6_120_00 / 100);
+  // Seeded from what this association currently transfers, not a constant. A
+  // five home community being shown Mehr Meadows' $6,120 default is nonsense.
+  const seededContribution = useMemo(() => {
+    const transfer = community.budget.find((b) => b.category === "Reserve transfer");
+    if (transfer) return Math.round(transfer.annualCents / 12) / 100;
+    const income = community.budget
+      .filter((b) => b.kind === "income")
+      .reduce((t, b) => t + b.annualCents, 0);
+    const expense = community.budget
+      .filter((b) => b.kind === "expense")
+      .reduce((t, b) => t + b.annualCents, 0);
+    return Math.max(0, Math.round((income - expense) / 12) / 100);
+  }, [community]);
+  const [monthlyContribution, setMonthlyContribution] = useState(seededContribution);
   const [apy, setApy] = useState(interest.blendedApy);
   const [inflation, setInflation] = useState(3);
   const [growth, setGrowth] = useState(3);
@@ -51,17 +67,97 @@ export function ReservesScreen() {
 
   const projection = useMemo(
     () => projectReserves(reserveComponents, assumptions, START_YEAR),
-    [assumptions],
+    [reserveComponents, assumptions],
   );
 
   const required = useMemo(
     () => requiredMonthlyContribution(reserveComponents, assumptions, START_YEAR),
-    [assumptions],
+    [reserveComponents, assumptions],
   );
 
   const funding = percentFunded(reserveComponents, interest.balance);
   const band = fundingBand(funding.percent);
   const shortfall = projection.firstShortfallYear;
+
+  if (!funding.measurable) {
+    return (
+      <>
+        <PageHeader eyebrow="Reserves" title="Funding plan" />
+        <Callout
+          tone="warn"
+          icon={<AlertTriangle className="size-4" />}
+          title="No reserve study, so none of this can be measured"
+        >
+          Percent funded compares what you have saved against what you should have saved by now.
+          Without a study there is no second number, so the honest answer is that nobody knows.
+        </Callout>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <Stat
+            label="Reserve cash"
+            value={money(interest.balance, { cents: false })}
+            tone={interest.balance === 0 ? "warn" : "neutral"}
+            hint={
+              interest.balance === 0
+                ? "Nothing set aside for a shared repair"
+                : `Across ${interest.reserveAccounts.length} accounts`
+            }
+            icon={<PiggyBank className="size-4" />}
+          />
+          <Stat
+            label="Set aside each month"
+            value={money(Math.round(seededContribution * 100), { cents: false })}
+            tone={seededContribution === 0 ? "warn" : "neutral"}
+            hint="From the adopted budget"
+          />
+          <Stat
+            label="Components tracked"
+            value="0"
+            tone="warn"
+            hint="Roofs, paving, fencing, shared drainage"
+          />
+        </div>
+
+        <Card className="mt-5">
+          <CardHeader
+            title="What to do about it"
+            subtitle="Three steps, in order, none of which need a vote to start"
+          />
+          <ol className="px-5 py-4">
+            {[
+              {
+                title: "Get a quote for a reserve study",
+                body: "For a community this size it is usually a few hundred dollars, and it is the input everything else needs.",
+              },
+              {
+                title: "Open a separate reserve account",
+                body: "Reserve money in the operating account gets spent. Separating it is free and takes an afternoon.",
+              },
+              {
+                title: "Start transferring something, even if it is small",
+                body: "A number picked from a study beats a number picked from a surplus, but any transfer beats none.",
+              },
+            ].map((step, index) => (
+              <li key={step.title} className="flex gap-3 border-b border-border py-3 last:border-b-0">
+                <span className="tnum flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[12px] font-semibold text-brand-soft-fg">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-medium text-fg">{step.title}</span>
+                  <span className="mt-0.5 block text-[12px] leading-relaxed text-fg-muted">
+                    {step.body}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="border-t border-border px-5 py-3 text-[11px] leading-relaxed text-fg-subtle">
+            The projection below returns as soon as there is a component schedule to project.
+          </p>
+        </Card>
+      </>
+    );
+  }
 
   function exportProjection() {
     const csv = toCsv(projection.years, [

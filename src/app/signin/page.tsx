@@ -4,20 +4,12 @@ import { SignInPanel } from "./sign-in-panel";
 import { CommunityBackdrop, CommunityMasthead } from "./community-identity";
 import { Wordmark } from "@/components/app/logo";
 import { ThemeToggle } from "@/components/app/theme";
-import { accounts, association } from "@/lib/data";
-import { ROLE_LABEL } from "@/lib/types";
+
+
 
 export const metadata = { title: "Sign in" };
 
 export default function AuthLanding() {
-  const seats = accounts.map((a) => ({
-    id: a.id,
-    name: a.name,
-    unit: a.unit,
-    role: ROLE_LABEL[a.role],
-    isAdmin: a.role !== "resident",
-  }));
-
   return (
     <div className="relative flex min-h-dvh flex-col bg-bg">
       <CommunityBackdrop />
@@ -44,10 +36,8 @@ export default function AuthLanding() {
 
       <main className="relative flex flex-1 items-center justify-center px-5 pb-16">
         <div className="w-full max-w-sm">
-          <CommunityMasthead
-            location={`${association.addressLine} · ${association.unitCount} homes`}
-          />
-          <SignInPanel seats={seats} />
+          <CommunityMasthead />
+          <SignInPanel />
         </div>
       </main>
     </div>

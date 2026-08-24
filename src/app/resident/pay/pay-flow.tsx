@@ -32,7 +32,6 @@ import { cn, formatDate, money, ordinal, relativeDays, TODAY } from "@/lib/utils
 import { AddMethod } from "./add-method";
 import { useToast } from "@/components/app/toast";
 
-const NEXT_CHARGE_DATE = "2026-09-01";
 const REFERENCE = { year: TODAY.getUTCFullYear(), month: TODAY.getUTCMonth() + 1 };
 
 const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
@@ -41,10 +40,12 @@ const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
   "apple-pay": Apple,
 };
 
-export function PayFlow({ duesCents }: { duesCents: number }) {
+export function PayFlow() {
   const owner = useCurrentOwner();
   const instruments = useMyInstruments();
-  const { settings, removeInstrument, setDefaultInstrument } = useAppState();
+  const { settings, community, removeInstrument, setDefaultInstrument } = useAppState();
+  const duesCents = community.association.duesCents;
+  const nextCharge = community.nextChargeDate;
   const { notify } = useToast();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -126,7 +127,7 @@ export function PayFlow({ duesCents }: { duesCents: number }) {
       <div>
         <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
         <p className="mt-1 text-[13px] text-fg-muted">
-          September assessment · due {formatDate(NEXT_CHARGE_DATE, "long")}
+          Next assessment · due {formatDate(nextCharge, "long")}
         </p>
       </div>
 

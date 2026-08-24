@@ -21,7 +21,7 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { payoutSpeed } from "@/lib/data";
+import { payoutSpeed } from "@/lib/metrics";
 import { useState } from "react";
 import { useAppState, usePendingApprovals, useVendorGaps } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -36,10 +36,10 @@ const payoutTone = {
 
 export default function BoardVendors() {
   const gaps = useVendorGaps();
-  const speed = payoutSpeed();
   const awaiting = usePendingApprovals();
-  const { vendors, payouts, markW9Requested, approvePayout, addVendor, removeVendor } =
+  const { community, vendors, payouts, markW9Requested, approvePayout, addVendor, removeVendor } =
     useAppState();
+  const speed = payoutSpeed(community);
   const { notify } = useToast();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({

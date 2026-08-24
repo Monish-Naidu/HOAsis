@@ -192,3 +192,33 @@ describe("fundingBand", () => {
     expect(fundingBand(0.299).tone).toBe("danger");
   });
 });
+
+describe("an association with no reserve study", () => {
+  const NONE: ReserveComponent[] = [];
+
+  it("is reported as unmeasured, never as fully funded", () => {
+    const { percent, measurable } = percentFunded(NONE, 0);
+    // Reporting 100% here would tell a board with nothing saved that it is
+    // fine, which is the most dangerous thing this screen could say.
+    expect(measurable).toBe(false);
+    expect(percent).toBe(0);
+  });
+
+  it("stays unmeasured even if the association happens to hold cash", () => {
+    expect(percentFunded(NONE, 500_000_00).measurable).toBe(false);
+  });
+
+  it("becomes measurable as soon as one component exists", () => {
+    expect(percentFunded(SIMPLE, 0).measurable).toBe(true);
+  });
+
+  it("projects no shortfall, because there is nothing scheduled to spend", () => {
+    const projection = projectReserves(NONE, FLAT, START);
+    expect(projection.firstShortfallYear).toBeNull();
+    expect(projection.totalExpendituresCents).toBe(0);
+  });
+
+  it("still returns a full projection rather than an empty one", () => {
+    expect(projectReserves(NONE, FLAT, START).years).toHaveLength(FLAT.years);
+  });
+});

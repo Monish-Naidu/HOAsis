@@ -23,10 +23,6 @@ function wrap(ui: ReactNode) {
   return render(<AppStateProvider>{ui}</AppStateProvider>);
 }
 
-const SEATS = [
-  { id: "acct-arya", name: "Arya Mehr", unit: "7", role: "President", isAdmin: true },
-  { id: "acct-monish", name: "Monish Naidu", unit: "42", role: "Resident", isAdmin: false },
-];
 
 /** Drives settings from inside the provider, the way the settings screen does. */
 function AdminControls() {
@@ -43,7 +39,7 @@ function AdminControls() {
 describe("sign in", () => {
   it("sends an admin to the admin view and a resident to the resident view", async () => {
     const user = userEvent.setup();
-    wrap(<SignInPanel seats={SEATS} />);
+    wrap(<SignInPanel />);
 
     await user.click(screen.getByRole("button", { name: /Arya Mehr/ }));
     expect(push).toHaveBeenCalledWith("/admin");
@@ -55,7 +51,7 @@ describe("sign in", () => {
 
   it("offers create account without pretending to verify anything", async () => {
     const user = userEvent.setup();
-    wrap(<SignInPanel seats={SEATS} />);
+    wrap(<SignInPanel />);
 
     await user.click(screen.getByRole("button", { name: "Create account" }));
     expect(screen.getByLabelText(/Full name/i)).toBeInTheDocument();
@@ -64,7 +60,7 @@ describe("sign in", () => {
 
   it("matches a typed email to a seeded account", async () => {
     const user = userEvent.setup();
-    wrap(<SignInPanel seats={SEATS} />);
+    wrap(<SignInPanel />);
 
     await user.type(screen.getByLabelText(/Email/i), "arya.mehr@example.com");
     // "Sign in" names both the tab and the submit button; take the submit.

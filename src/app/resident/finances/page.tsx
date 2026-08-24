@@ -1,25 +1,21 @@
+"use client";
+
 import Link from "next/link";
 import { FundsGate } from "./guard";
 import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
 import { Badge, Card, Meter, SectionTitle } from "@/components/ui/primitives";
-import {
-  bankAccounts,
-  budgetSummary,
-  cashPosition,
-  interestSummary,
-  ledgerEntries,
-  reserveSummary,
-} from "@/lib/data";
+import { budgetSummary, cashPosition, interestSummary, reserveSummary } from "@/lib/metrics";
+import { useAppState } from "@/lib/app-state";
 import { formatDate, money, shortMoney } from "@/lib/utils";
 
-export const metadata = { title: "Association funds" };
-
 export default function ResidentFinances() {
-  const cash = cashPosition();
-  const interest = interestSummary();
-  const reserve = reserveSummary();
-  const bud = budgetSummary();
-  const recent = ledgerEntries.filter((e) => e.status !== "needs-review").slice(0, 12);
+  const { community, ledger } = useAppState();
+  const bankAccounts = community.bankAccounts;
+  const cash = cashPosition(community);
+  const interest = interestSummary(community);
+  const reserve = reserveSummary(community);
+  const bud = budgetSummary(community);
+  const recent = ledger.filter((e) => e.status !== "needs-review").slice(0, 12);
   const urgent = reserve.urgent.slice(0, 4);
 
   return (
@@ -142,7 +138,7 @@ export default function ResidentFinances() {
         <SectionTitle
           action={
             <span className="tnum text-[12px] text-fg-muted">
-              {Math.round(reserve.percentFunded * 100)}% funded
+              {reserve.hasStudy ? `${Math.round(reserve.percentFunded * 100)}% funded` : "No study"}
             </span>
           }
         >

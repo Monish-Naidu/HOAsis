@@ -19,7 +19,8 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { useMemo, useState } from "react";
-import { association, delinquency, owners } from "@/lib/data";
+import { delinquency } from "@/lib/metrics";
+import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { TemplateComposer } from "@/components/app/template-composer";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -34,7 +35,10 @@ const standingMeta: Record<Owner["standing"], { tone: "ok" | "warn" | "danger"; 
 };
 
 export default function BoardHomeowners() {
-  const delinq = delinquency();
+  const { community } = useAppState();
+  const association = community.association;
+  const owners = community.owners;
+  const delinq = delinquency(community);
   const { notify } = useToast();
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
