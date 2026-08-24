@@ -316,7 +316,7 @@ export function SettingsScreen() {
               label="Show live vote results"
             />
           </SettingRow>
-          <SettingRow title="Forum" description="Neighbour to neighbour posts">
+          <SettingRow title="Forum" description="Neighbor to neighbor posts">
             <Toggle
               checked={settings.forumEnabled}
               onChange={(v) => updateSettings({ forumEnabled: v })}

@@ -156,7 +156,7 @@ export default function AboutPage() {
             </h2>
             <div className="mt-4 space-y-4 text-[15px] leading-[1.75] text-fg-muted">
               <p>
-                Self-managed associations, roughly 20 to 400 homes, where a handful of neighbours
+                Self-managed associations, roughly 20 to 400 homes, where a handful of neighbors
                 run the whole thing. Single family, townhome, or condo. If you have a professional
                 manager and are happy, we are not trying to change your mind.
               </p>

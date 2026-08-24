@@ -20,7 +20,7 @@ import { ROLE_LABEL, type ForumCategory, type ForumPost } from "@/lib/types";
 import { cn, formatDate, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
- * Neighbour to neighbour. Nothing posted here creates an obligation for the
+ * Neighbor to neighbor. Nothing posted here creates an obligation for the
  * board, which is exactly why it is kept apart from requests.
  */
 export function ForumBoard({ moderate }: { moderate?: boolean }) {
@@ -85,7 +85,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
         <div>
           <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Forum</h1>
           <p className="mt-1 text-[13px] text-fg-muted">
-            {pluralize(posts.length, "post")} from your neighbours
+            {pluralize(posts.length, "post")} from your neighbors
           </p>
         </div>
         <Button variant="primary" size="md" onClick={() => setComposing((v) => !v)}>
@@ -129,7 +129,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
           <div className="mt-2 flex items-center justify-between border-t border-border pt-2.5">
             <p className="text-[11px] text-fg-subtle">
               {account?.role === "resident"
-                ? "A board member reviews posts before neighbours see them."
+                ? "A board member reviews posts before neighbors see them."
                 : "Board posts publish immediately."}
             </p>
             <Button variant="primary" size="sm" disabled={!title.trim()} onClick={submit}>
@@ -161,7 +161,10 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => moderatePost(post.id, "published")}
+                    onClick={() => {
+                      const undo = moderatePost(post.id, "published");
+                      notify(`Published "${post.title}"`, "ok", { label: "Undo", onClick: undo });
+                    }}
                   >
                     <Check className="size-3.5" />
                     Publish
@@ -169,7 +172,14 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => moderatePost(post.id, "rejected", "Does not fit the forum rules")}
+                    onClick={() => {
+                      const undo = moderatePost(
+                        post.id,
+                        "rejected",
+                        "Does not fit the forum rules",
+                      );
+                      notify(`Rejected "${post.title}"`, "warn", { label: "Undo", onClick: undo });
+                    }}
                   >
                     <X className="size-3.5" />
                     Reject

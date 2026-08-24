@@ -22,7 +22,7 @@ import { BoardVote } from "@/components/app/board-vote";
 import { formatDate } from "@/lib/utils";
 
 export default function BoardVoting() {
-  const { community, ballots, castBoardVote } = useAppState();
+  const { community, ballots, castVote } = useAppState();
   const live = community.meetings.find((m) => m.status === "live");
   const upcoming = [...community.meetings]
     .filter((m) => m.status !== "ended")
@@ -139,7 +139,7 @@ export default function BoardVoting() {
                 <BoardVote
                   ballot={b}
                   onCast={(optionId) => {
-                    castBoardVote(b.id, optionId);
+                    castVote(b.id, optionId);
                     const option = b.options.find((o) => o.id === optionId);
                     notify(`Your vote was recorded: ${option?.label}`);
                   }}

@@ -123,11 +123,11 @@ It is also the only lever that raises nobody's assessment. Reserve cash sitting 
     topic: "Money",
     readMinutes: 6,
     publishedDate: "2026-05-19",
-    body: `Collections is the hardest part of a volunteer board, because the delinquent owner is also the neighbour whose dog you feed. The way through is to make the process impersonal and consistent, so nobody is choosing to come after anybody.
+    body: `Collections is the hardest part of a volunteer board, because the delinquent owner is also the neighbor whose dog you feed. The way through is to make the process impersonal and consistent, so nobody is choosing to come after anybody.
 
 ## Write the policy before you need it
 
-Adopt a written collection policy at a meeting, in advance, applying to everyone. Grace period, late fee, when a reminder goes out, when it escalates, when it goes to counsel. Once it is policy, no individual is making a decision about their neighbour.
+Adopt a written collection policy at a meeting, in advance, applying to everyone. Grace period, late fee, when a reminder goes out, when it escalates, when it goes to counsel. Once it is policy, no individual is making a decision about their neighbor.
 
 ## Use templates
 
@@ -135,7 +135,7 @@ Draft the letters once, calmly, and reuse them. Wording written in the moment is
 
 ## Lead with the payment plan
 
-Most delinquencies are cash flow, not defiance. Offer the plan in the first contact rather than the third. A board that gets $300 a month for six months has solved the problem. A board that stands on principle for six months has a lien, a lawyer, and a neighbour who no longer speaks to them.
+Most delinquencies are cash flow, not defiance. Offer the plan in the first contact rather than the third. A board that gets $300 a month for six months has solved the problem. A board that stands on principle for six months has a lien, a lawyer, and a neighbor who no longer speaks to them.
 
 ## Be careful once counsel is involved
 

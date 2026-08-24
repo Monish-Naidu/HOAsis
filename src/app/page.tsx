@@ -95,7 +95,7 @@ const ALSO = [
   {
     icon: MessageSquareText,
     title: "A forum, moderated",
-    body: "Neighbour to neighbour, held for review before it publishes. Anything needing a decision goes to a request instead, where it gets a deadline.",
+    body: "Neighbor to neighbor, held for review before it publishes. Anything needing a decision goes to a request instead, where it gets a deadline.",
   },
   {
     icon: ShieldCheck,

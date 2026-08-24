@@ -441,11 +441,11 @@ describe("admin actions change real records", () => {
     const ballot = result.current.state.ballots.find((b) => b.audience === "board")!;
     const totalBefore = ballot.options.reduce((sum, o) => sum + o.votes, 0);
 
-    act(() => result.current.state.castBoardVote(ballot.id, "opt-approve"));
+    act(() => result.current.state.castVote(ballot.id, "opt-approve"));
     let updated = result.current.state.ballots.find((b) => b.id === ballot.id)!;
     expect(updated.options.reduce((s, o) => s + o.votes, 0)).toBe(totalBefore + 1);
 
-    act(() => result.current.state.castBoardVote(ballot.id, "opt-reject"));
+    act(() => result.current.state.castVote(ballot.id, "opt-reject"));
     updated = result.current.state.ballots.find((b) => b.id === ballot.id)!;
     expect(updated.options.reduce((s, o) => s + o.votes, 0)).toBe(totalBefore + 1);
     expect(updated.myVoteOptionId).toBe("opt-reject");
@@ -580,5 +580,81 @@ describe("every admin can use the resident side", () => {
     act(() => result.current.state.signIn(MONISH));
     expect(result.current.state.account?.role).toBe("resident");
     expect(result.current.state.view).toBe("resident");
+  });
+});
+
+describe("resident voting", () => {
+  it("persists a vote, its receipt, and the tally", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const ballot = result.current.ballots.find((b) => b.status === "open")!;
+    const option = ballot.options[0];
+    const before = option.votes;
+
+    let receipt = "";
+    act(() => {
+      receipt = result.current.castVote(ballot.id, option.id);
+    });
+
+    const after = result.current.ballots.find((b) => b.id === ballot.id)!;
+    expect(after.myVoteOptionId).toBe(option.id);
+    expect(after.myVoteReceipt).toBe(receipt);
+    expect(receipt).toMatch(/^VR-\d{4}-\d{2}-\d{4}$/);
+    expect(after.options.find((o) => o.id === option.id)!.votes).toBe(before + 1);
+  });
+
+  it("moves the vote rather than adding a second, and keeps the receipt", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const ballot = result.current.ballots.find((b) => b.status === "open" && b.options.length > 1)!;
+    const [first, second] = ballot.options;
+    const total = ballot.options.reduce((t, o) => t + o.votes, 0);
+
+    let receipt = "";
+    act(() => {
+      receipt = result.current.castVote(ballot.id, first.id);
+    });
+    act(() => {
+      result.current.castVote(ballot.id, second.id);
+    });
+
+    const after = result.current.ballots.find((b) => b.id === ballot.id)!;
+    expect(after.myVoteOptionId).toBe(second.id);
+    expect(after.myVoteReceipt).toBe(receipt);
+    expect(after.options.reduce((t, o) => t + o.votes, 0)).toBe(total + 1);
+  });
+});
+
+describe("the community handed to screens", () => {
+  it("carries live slices, not the seed fixtures", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const ballot = result.current.ballots.find((b) => b.status === "open")!;
+
+    act(() => {
+      result.current.castVote(ballot.id, ballot.options[0].id);
+    });
+
+    // Screens and the pure selectors in metrics.ts both read off `community`,
+    // so it has to reflect the change the store just took.
+    expect(
+      result.current.community.ballots.find((b) => b.id === ballot.id)!.myVoteOptionId,
+    ).toBe(ballot.options[0].id);
+  });
+
+  it("reflects an added vendor", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const before = result.current.community.vendors.length;
+
+    act(() => {
+      result.current.addVendor({
+        id: "ven-probe",
+        name: "Probe Services",
+        service: "Testing",
+        w9OnFile: true,
+        paidYtdCents: 0,
+        insuranceExpiry: "2027-01-01",
+        payMethod: "ach",
+      });
+    });
+
+    expect(result.current.community.vendors.length).toBe(before + 1);
   });
 });

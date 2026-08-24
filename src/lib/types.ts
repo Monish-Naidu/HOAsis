@@ -555,14 +555,14 @@ export type PostStatus = "pending" | "published" | "rejected";
 
 export interface ForumPost {
   id: ID;
-  /** Every post is reviewed before neighbours see it. */
+  /** Every post is reviewed before neighbors see it. */
   status: PostStatus;
   moderatedBy?: string;
   moderatedAt?: ISODate;
   rejectionReason?: string;
   author: string;
   unit: string;
-  /** Board members get a badge so neighbours know when it is official. */
+  /** Board members get a badge so neighbors know when it is official. */
   authorRole?: string;
   category: ForumCategory;
   title: string;

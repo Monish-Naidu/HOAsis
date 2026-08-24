@@ -1,7 +1,7 @@
 import type { ForumPost } from "@/lib/types";
 
 /**
- * Neighbour to neighbour. Deliberately separate from requests and
+ * Neighbor to neighbor. Deliberately separate from requests and
  * communications: nothing here creates an obligation for the board.
  */
 export const forumPosts: ForumPost[] = [
@@ -136,7 +136,7 @@ export const forumPosts: ForumPost[] = [
     author: "Tom Barrow",
     unit: "84",
     category: "General",
-    title: "Who is the neighbour with the enormous dahlias?",
+    title: "Who is the neighbor with the enormous dahlias?",
     body: "Corner of Mehr Meadows Lane and the green. They are absurd this year and I would like to know the variety.",
     at: "2026-08-14",
     status: "published",

@@ -78,7 +78,12 @@ interface AppState {
   resetDemo: () => void;
 
   addPost: (post: ForumPost) => void;
-  moderatePost: (postId: string, decision: "published" | "rejected", reason?: string) => void;
+  /** Returns an undo, because publishing broadcasts and rejecting discards. */
+  moderatePost: (
+    postId: string,
+    decision: "published" | "rejected",
+    reason?: string,
+  ) => () => void;
   togglePinned: (postId: string) => void;
   removePost: (postId: string) => () => void;
   addRequest: (request: HomeRequest) => void;
@@ -95,7 +100,8 @@ interface AppState {
     documentId: string,
     visibility: Community["documents"][number]["visibility"],
   ) => void;
-  castBoardVote: (ballotId: string, optionId: string) => void;
+  /** Records a vote and returns the receipt the voter is shown. */
+  castVote: (ballotId: string, optionId: string) => string;
   updateRequestStatus: (requestId: string, status: HomeRequest["status"], note?: string) => void;
   likePost: (postId: string) => void;
 }
@@ -215,12 +221,25 @@ export function resetAllStores(): void {
  *
  * Snapshotting the whole collection is the right trade here: these are small,
  * and restoring the exact prior array is simpler and safer than re-inserting
- * one record at its old index with its old neighbours.
+ * one record at its old index with its old neighbors.
  */
 function destructive<T>(store: Store<T>, mutate: (current: T) => T): () => void {
   const previous = store.getSnapshot();
   store.update(mutate);
   return () => store.set(previous);
+}
+
+/**
+ * A stable receipt code for one vote.
+ *
+ * Derived from the ballot and choice rather than a random number so the same
+ * vote always yields the same code. A receipt exists so an owner can confirm
+ * their vote was counted without the secretary revealing how anyone voted.
+ */
+function voteReceipt(ballotId: string, optionId: string): string {
+  let hash = 7;
+  for (const ch of `${ballotId}:${optionId}`) hash = (hash * 31 + ch.charCodeAt(0)) % 10_000;
+  return `VR-${todayIsoDate().slice(0, 7)}-${String(hash).padStart(4, "0")}`;
 }
 
 /** Reads any Store through React, with the three snapshot callbacks bound once. */
@@ -376,7 +395,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const moderator = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
-      sliceStore(communityId, "posts").update((all) =>
+      return destructive(sliceStore(communityId, "posts"), (all) =>
         all.map((post) =>
           post.id === postId
             ? {
@@ -631,18 +650,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
-  const castBoardVote = useCallback(
-    (ballotId: string, optionId: string) =>
-      sliceStore(communityId, "ballots").update((all) =>
+  const castVote = useCallback(
+    (ballotId: string, optionId: string) => {
+      const store = sliceStore(communityId, "ballots");
+      const existing = store.getSnapshot().find((b) => b.id === ballotId);
+      const receipt = existing?.myVoteReceipt ?? voteReceipt(ballotId, optionId);
+
+      store.update((all) =>
         all.map((ballot) => {
           if (ballot.id !== ballotId) return ballot;
           const previous = ballot.myVoteOptionId;
           if (previous === optionId) return ballot;
-          // One vote per director. Changing your mind replaces it rather than
-          // adding a second.
+          // One vote per household. Changing your mind replaces it rather than
+          // adding a second, and keeps the original receipt so the number a
+          // voter wrote down still resolves.
           return {
             ...ballot,
             myVoteOptionId: optionId,
+            myVoteReceipt: receipt,
             options: ballot.options.map((option) => {
               if (option.id === optionId) return { ...option, votes: option.votes + 1 };
               if (option.id === previous)
@@ -651,7 +676,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             }),
           };
         }),
-      ),
+      );
+
+      return receipt;
+    },
     [communityId],
   );
 
@@ -665,8 +693,53 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  /**
+   * The community every screen sees, with the live slices laid over the seed.
+   *
+   * Without this overlay `community.ballots` is the fixture while `ballots` is
+   * the store, and the two disagree the moment anyone changes anything. It also
+   * keeps the pure selectors in metrics.ts honest, since they take a community
+   * and read vendors, payouts and ballots straight off it.
+   */
+  const liveCommunity = useMemo<Community>(
+    () => ({
+      ...community,
+      settings,
+      accounts: accountList,
+      amenities,
+      forms,
+      posts,
+      requests: requestList,
+      instruments,
+      ledger,
+      payouts,
+      vendors,
+      threads,
+      documents,
+      ballots,
+      templates,
+    }),
+    [
+      community,
+      settings,
+      accountList,
+      amenities,
+      forms,
+      posts,
+      requestList,
+      instruments,
+      ledger,
+      payouts,
+      vendors,
+      threads,
+      documents,
+      ballots,
+      templates,
+    ],
+  );
+
   const value: AppState = {
-    community,
+    community: liveCommunity,
     communities: communities.map((c) => ({ id: c.id, label: c.label })),
     setCommunity,
     account,
@@ -716,7 +789,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     replyToThread,
     addDocument,
     setDocumentVisibility,
-    castBoardVote,
+    castVote,
     updateRequestStatus,
     likePost,
   };

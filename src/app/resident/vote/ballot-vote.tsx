@@ -16,22 +16,22 @@ const kindLabel = {
 } as const;
 
 export function BallotVote({ ballot }: { ballot: Ballot }) {
-  const { settings } = useAppState();
-  const [choice, setChoice] = useState<string | null>(ballot.myVoteOptionId ?? null);
-  const [submitted, setSubmitted] = useState(Boolean(ballot.myVoteOptionId));
+  const { settings, castVote } = useAppState();
+  // The stored ballot is the source of truth. Local state holds only the
+  // selection before it is cast, so a vote survives a reload and reaches the
+  // secretary's tally rather than living in this component.
+  const submitted = Boolean(ballot.myVoteOptionId);
+  const [pick, setPick] = useState<string | null>(null);
+  const choice = ballot.myVoteOptionId ?? pick;
   const [expanded, setExpanded] = useState(false);
 
-  const baseCast = ballot.options.reduce((t, o) => t + o.votes, 0);
-  /** Fixtures hold the tally before this resident voted, so add their vote here. */
-  const justVoted = submitted && !ballot.myVoteOptionId;
-  const cast = baseCast + (justVoted ? 1 : 0);
-  const votesFor = (optionId: string, votes: number) =>
-    votes + (justVoted && optionId === choice ? 1 : 0);
+  const cast = ballot.options.reduce((t, o) => t + o.votes, 0);
+  const votesFor = (_optionId: string, votes: number) => votes;
   const closed = ballot.status !== "open";
   // Tallies stay sealed until the ballot closes, unless the board opts in.
   const resultsUnlocked = closed || daysFromToday(ballot.closesDate) < 0 || settings.showLiveVoteResults;
   const showResults = resultsUnlocked && (submitted || closed);
-  const receipt = ballot.myVoteReceipt ?? "VR-2026-08-1142";
+  const receipt = ballot.myVoteReceipt;
 
   return (
     <Card className="overflow-hidden">
@@ -95,7 +95,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                 key={o.id}
                 type="button"
                 disabled={submitted}
-                onClick={() => setChoice(o.id)}
+                onClick={() => setPick(o.id)}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
                   choice === o.id
@@ -149,7 +149,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
               size="md"
               className="mt-3 w-full"
               disabled={!choice}
-              onClick={() => setSubmitted(true)}
+              onClick={() => choice && castVote(ballot.id, choice)}
             >
               Cast my vote
             </Button>
