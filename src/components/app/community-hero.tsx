@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Check, ChevronDown } from "lucide-react";
+import { Building2, Camera, Check, ChevronDown, Plus } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/app/toast";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { refreshRemote } from "@/lib/data/remote-store";
 
 /**
  * The association name, and the switcher between associations.
@@ -140,6 +143,117 @@ export function CommunityHero({
         </h1>
         {line ? <p className="mt-0.5 text-[13px] text-white/85 sm:text-[15px]">{line}</p> : null}
       </div>
+
+      <CoverPhotoButton />
     </section>
+  );
+}
+
+/**
+ * Changing the cover photograph.
+ *
+ * Sits on the photograph rather than in Settings, because that is where
+ * somebody is standing when they decide they do not like it. Only shown to
+ * whoever can change settings; everybody else sees a picture.
+ */
+function CoverPhotoButton() {
+  const { community, can, isRemote, updateSettings } = useAppState();
+  const { notify } = useToast();
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+
+  if (!can("settings")) return null;
+
+  async function choose(file: File) {
+    if (!file.type.startsWith("image/")) {
+      notify("That is not an image", "warn");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      notify("Images need to be under 8 MB", "warn");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      if (!isRemote) {
+        // A demo has nowhere to upload to, so the picture lives in this
+        // browser for as long as the demo does.
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        updateSettings({ photoUrl: dataUrl });
+        notify("Cover photo updated", "ok");
+        return;
+      }
+
+      const supabase = supabaseBrowser();
+      const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      // The association id is the first path segment, which is what the
+      // storage policy checks against.
+      const path = `${community.id}/cover-${Date.now()}.${extension}`;
+
+      const { error } = await supabase.storage
+        .from("community")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw new Error(error.message);
+
+      const { data } = supabase.storage.from("community").getPublicUrl(path);
+      const { error: saveError } = await supabase
+        .from("associations")
+        .update({ photo_url: data.publicUrl })
+        .eq("id", community.id);
+      if (saveError) throw new Error(saveError.message);
+
+      await refreshRemote();
+      notify("Cover photo updated", "ok");
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "Could not upload that image",
+        "warn",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void choose(file);
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        disabled={busy}
+        aria-label={
+          community.settings.photoUrl ? "Change the cover photo" : "Add a cover photo"
+        }
+        title={community.settings.photoUrl ? "Change the cover photo" : "Add a cover photo"}
+        className="absolute right-4 top-4 z-10 flex size-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65 disabled:opacity-60 sm:right-6"
+      >
+        {busy ? (
+          <span
+            className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+            aria-hidden
+          />
+        ) : community.settings.photoUrl ? (
+          <Camera className="size-4" />
+        ) : (
+          <Plus className="size-4" />
+        )}
+      </button>
+    </>
   );
 }

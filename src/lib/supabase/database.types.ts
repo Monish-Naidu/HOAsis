@@ -87,11 +87,17 @@ export type Database = {
           ein: string | null
           fiscal_year_start: string
           id: string
+          insurance_carrier: string | null
+          insurance_expires_on: string | null
+          insurance_policy_no: string | null
           late_after_day: number
           name: string
           payment_fee_cents: number
           payment_fee_paid_by: string
           payment_fee_waived_on_ach: boolean
+          photo_credit: string | null
+          photo_url: string | null
+          setup_completed_at: string | null
           software_fee_cents_per_home: number
           state: string
           stripe_account_id: string | null
@@ -105,11 +111,17 @@ export type Database = {
           ein?: string | null
           fiscal_year_start?: string
           id?: string
+          insurance_carrier?: string | null
+          insurance_expires_on?: string | null
+          insurance_policy_no?: string | null
           late_after_day?: number
           name: string
           payment_fee_cents?: number
           payment_fee_paid_by?: string
           payment_fee_waived_on_ach?: boolean
+          photo_credit?: string | null
+          photo_url?: string | null
+          setup_completed_at?: string | null
           software_fee_cents_per_home?: number
           state: string
           stripe_account_id?: string | null
@@ -123,11 +135,17 @@ export type Database = {
           ein?: string | null
           fiscal_year_start?: string
           id?: string
+          insurance_carrier?: string | null
+          insurance_expires_on?: string | null
+          insurance_policy_no?: string | null
           late_after_day?: number
           name?: string
           payment_fee_cents?: number
           payment_fee_paid_by?: string
           payment_fee_waived_on_ach?: boolean
+          photo_credit?: string | null
+          photo_url?: string | null
+          setup_completed_at?: string | null
           software_fee_cents_per_home?: number
           state?: string
           stripe_account_id?: string | null
@@ -372,6 +390,100 @@ export type Database = {
             columns: ["association_id"]
             isOneToOne: false
             referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_log: {
+        Row: {
+          association_id: string
+          category: Database["public"]["Enums"]["email_category"]
+          error: string | null
+          id: string
+          profile_id: string | null
+          provider_id: string | null
+          sent_at: string
+          subject: string
+          to_email: string
+          unit_id: string | null
+        }
+        Insert: {
+          association_id: string
+          category: Database["public"]["Enums"]["email_category"]
+          error?: string | null
+          id?: string
+          profile_id?: string | null
+          provider_id?: string | null
+          sent_at?: string
+          subject: string
+          to_email: string
+          unit_id?: string | null
+        }
+        Update: {
+          association_id?: string
+          category?: Database["public"]["Enums"]["email_category"]
+          error?: string | null
+          id?: string
+          profile_id?: string | null
+          provider_id?: string | null
+          sent_at?: string
+          subject?: string
+          to_email?: string
+          unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "email_log_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_optouts: {
+        Row: {
+          category: Database["public"]["Enums"]["email_category"]
+          opted_out_at: string
+          profile_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["email_category"]
+          opted_out_at?: string
+          profile_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["email_category"]
+          opted_out_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_optouts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -826,6 +938,45 @@ export type Database = {
           },
         ]
       }
+      setup_dismissals: {
+        Row: {
+          association_id: string
+          dismissed_at: string
+          dismissed_by: string | null
+          note: string | null
+          task_key: string
+        }
+        Insert: {
+          association_id: string
+          dismissed_at?: string
+          dismissed_by?: string | null
+          note?: string | null
+          task_key: string
+        }
+        Update: {
+          association_id?: string
+          dismissed_at?: string
+          dismissed_by?: string | null
+          note?: string | null
+          task_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setup_dismissals_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setup_dismissals_dismissed_by_fkey"
+            columns: ["dismissed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           address: string
@@ -1048,6 +1199,21 @@ export type Database = {
         }
         Returns: string
       }
+      email_recipients: {
+        Args: {
+          p_association_id: string
+          p_category: Database["public"]["Enums"]["email_category"]
+          p_only_past_due?: boolean
+        }
+        Returns: {
+          balance_cents: number
+          email: string
+          full_name: string
+          profile_id: string
+          unit_id: string
+          unit_label: string
+        }[]
+      }
       has_capability: {
         Args: {
           needed: Database["public"]["Enums"]["capability"]
@@ -1056,6 +1222,10 @@ export type Database = {
         Returns: boolean
       }
       is_member_of: { Args: { target: string }; Returns: boolean }
+      is_statutory: {
+        Args: { c: Database["public"]["Enums"]["email_category"] }
+        Returns: boolean
+      }
       issue_assessment: {
         Args: { p_association_id: string; p_due_on: string; p_label: string }
         Returns: number
@@ -1106,6 +1276,13 @@ export type Database = {
       charge_kind: "charge" | "payment" | "credit"
       doc_visibility: "public" | "owners" | "board"
       dues_cadence: "monthly" | "quarterly" | "annually"
+      email_category:
+        | "assessment"
+        | "delinquency"
+        | "meeting"
+        | "ballot"
+        | "community"
+        | "newsletter"
       payment_rail: "ach" | "card" | "apple-pay" | "google-pay"
       payment_state: "pending" | "settled" | "failed" | "refunded"
       post_status: "pending" | "published" | "rejected"
@@ -1270,6 +1447,14 @@ export const Constants = {
       charge_kind: ["charge", "payment", "credit"],
       doc_visibility: ["public", "owners", "board"],
       dues_cadence: ["monthly", "quarterly", "annually"],
+      email_category: [
+        "assessment",
+        "delinquency",
+        "meeting",
+        "ballot",
+        "community",
+        "newsletter",
+      ],
       payment_rail: ["ach", "card", "apple-pay", "google-pay"],
       payment_state: ["pending", "settled", "failed", "refunded"],
       post_status: ["pending", "published", "rejected"],

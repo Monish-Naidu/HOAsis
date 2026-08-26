@@ -210,11 +210,14 @@ export async function loadCommunity(
       duesCadence: a.dues_cadence,
       addressLine: `${a.city}, ${a.state}`,
       managedBy: "self",
+      insuranceCarrier: a.insurance_carrier ?? undefined,
+      insurancePolicyNo: a.insurance_policy_no ?? undefined,
+      insuranceExpiresOn: a.insurance_expires_on ?? undefined,
     },
 
     settings: {
       displayName: a.name,
-      photoUrl: "",
+      photoUrl: a.photo_url ?? "",
       homeLayout: "calendar",
       banner: { enabled: false, title: "", detail: "", updatedDate: today },
       showFundsToResidents: true,

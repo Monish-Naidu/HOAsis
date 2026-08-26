@@ -32,12 +32,18 @@ import {
   usePendingApprovals,
   useReconciliation,
 } from "@/lib/app-state";
-import { SetupChecklist } from "@/components/app/setup-checklist";
+import { SetupHub, SetupSummary } from "@/components/app/setup-hub";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday, formatDate, money, pluralize } from "@/lib/utils";
 
 export default function BoardDashboard() {
   const { community } = useAppState();
+  // Something to run: money has moved, or somebody has asked for something.
+  const running =
+    community.ledger.length > 0 ||
+    community.requests.length > 0 ||
+    community.ballots.length > 0 ||
+    community.payouts.length > 0;
   const association = community.association;
   const cash = cashPosition(community);
   const recon = useReconciliation();
@@ -66,9 +72,14 @@ export default function BoardDashboard() {
         }
       />
 
-      {/* Only shows while something is still missing, then never again. */}
-      <SetupChecklist />
+      {/* An association with no transactions, no requests and no ballots has
+          nothing to run, so a dashboard of four zeroes and two empty cards
+          tells them nothing and looks broken. Until there is something to
+          operate, this page is setup. */}
+      {running ? <SetupSummary /> : <SetupHub />}
 
+      {running ? (
+        <>
       {/* The tie-out banner: the product's central promise, stated up front. */}
       <TieOutBanner
         tiesOut={recon.tiesOut}
@@ -282,6 +293,8 @@ export default function BoardDashboard() {
           </Card>
         </div>
       </div>
+        </>
+      ) : null}
     </>
   );
 }
@@ -324,7 +337,12 @@ function TieOutBanner({
             {!connected
               ? "No bank account connected yet, so there is nothing to reconcile."
               : tiesOut
-                ? `Bank feed synced ${pluralize(lastSync, "minute")} ago.`
+                ? lastSync > 0
+                  ? `Bank feed synced ${pluralize(lastSync, "minute")} ago.`
+                  : // A typed in account has no feed to sync. Saying it synced
+                    // is the sort of small lie that costs trust when somebody
+                    // checks.
+                    "Nothing has come through the account yet."
                 : `Feed synced ${pluralize(lastSync, "minute")} ago.${duplicates > 0 ? ` ${duplicates} looks like a duplicate charge.` : ""}${
                     stale > 0 ? ` ${stale} account feed is running behind.` : ""
                   }`}

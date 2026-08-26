@@ -25,6 +25,7 @@ import {
   useRemote,
   setRemoteAssociation,
   loadRemote,
+  refreshRemote,
   remoteSnapshot,
 } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -108,6 +109,10 @@ interface AppState {
   /** Connects an account the association can receive dues into. */
   /** Appoints a household to an office, or returns them to being a resident. */
   setAccountRole: (accountId: string, role: AccountRole) => void;
+  /** Setup tasks this association has said do not apply to them. */
+  dismissedSetupTasks: Set<string>;
+  dismissSetupTask: (key: string) => void;
+  restoreSetupTask: (key: string) => void;
   addBankAccount: (account: BankAccount) => void;
   /** Records a payment on the statement, the balance, the books, and the bank. */
   recordPayment: (input: {
@@ -303,6 +308,27 @@ function voteReceipt(ballotId: string, optionId: string): string {
   return `VR-${todayIsoDate().slice(0, 7)}-${String(hash).padStart(4, "0")}`;
 }
 
+/**
+ * Setup tasks a demo association has skipped.
+ *
+ * Separate from the slice registry because it is not part of a community's
+ * data, it is a note about how far through setup somebody got.
+ */
+const dismissRegistry = new Map<string, PersistedStore<string[]>>();
+
+function dismissStore(communityId: string): PersistedStore<string[]> {
+  const key = `hoasis:${communityId}:setup-skipped`;
+  const existing = dismissRegistry.get(key);
+  if (existing) return existing;
+  const store = new PersistedStore<string[]>(key, [], {
+    breaker: storageBreaker,
+    validate: (v): v is string[] =>
+      Array.isArray(v) && v.every((x) => typeof x === "string"),
+  });
+  dismissRegistry.set(key, store);
+  return store;
+}
+
 /** Reads any Store through React, with the three snapshot callbacks bound once. */
 function useStore<T>(store: Store<T>): T {
   return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);
@@ -346,6 +372,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const ownerList = useStore(sliceStore(communityId, "owners"));
   const bankAccountList = useStore(sliceStore(communityId, "bankAccounts"));
   const budgetLines = useStore(sliceStore(communityId, "budget"));
+  // Demo associations keep their skipped setup tasks here. Real ones keep them
+  // in the database, loaded alongside the community.
+  const localDismissals = useStore(dismissStore(communityId));
   const ownerChargeMap = useStore(sliceStore(communityId, "ownerCharges"));
   const amenities = useStore(sliceStore(communityId, "amenities"));
   const forms = useStore(sliceStore(communityId, "forms"));
@@ -535,6 +564,53 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       );
     },
     [communityId],
+  );
+
+  /**
+   * Setup tasks a board has declared do not apply to them.
+   *
+   * Kept in the database for a real association and in a local store for a
+   * demo, because a checklist that forgets what you told it is worse than one
+   * that never asked.
+   */
+  const dismissedSetupTasks = useMemo(
+    () => new Set(remote.community ? remote.dismissals : localDismissals),
+    [remote.community, remote.dismissals, localDismissals],
+  );
+
+  const dismissSetupTask = useCallback(
+    (key: string) => {
+      if (!remote.community) {
+        dismissStore(communityId).update((all) =>
+          all.includes(key) ? all : [...all, key],
+        );
+        return;
+      }
+      void supabaseBrowser()
+        .from("setup_dismissals")
+        .upsert(
+          { association_id: remote.community.id, task_key: key },
+          { onConflict: "association_id,task_key" },
+        )
+        .then(() => refreshRemote());
+    },
+    [remote.community, communityId],
+  );
+
+  const restoreSetupTask = useCallback(
+    (key: string) => {
+      if (!remote.community) {
+        dismissStore(communityId).update((all) => all.filter((k) => k !== key));
+        return;
+      }
+      void supabaseBrowser()
+        .from("setup_dismissals")
+        .delete()
+        .eq("association_id", remote.community.id)
+        .eq("task_key", key)
+        .then(() => refreshRemote());
+    },
+    [remote.community, communityId],
   );
 
   /* ----------------------------------------------------------------- money */
@@ -1186,6 +1262,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addOwner,
     removeOwner,
     setAccountRole,
+    dismissedSetupTasks,
+    dismissSetupTask,
+    restoreSetupTask,
     addBankAccount,
     recordPayment,
     addPost,

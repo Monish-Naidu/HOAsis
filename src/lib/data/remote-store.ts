@@ -28,6 +28,8 @@ export interface RemoteState {
   community: Community | null;
   /** The signed in person's own profile id, which is their account id here. */
   profileId: string | null;
+  /** Setup tasks this association has declared do not apply to them. */
+  dismissals: string[];
   message?: string;
 }
 
@@ -37,6 +39,7 @@ const SIGNED_OUT: RemoteState = {
   activeId: null,
   community: null,
   profileId: null,
+  dismissals: [],
 };
 
 let state: RemoteState = SIGNED_OUT;
@@ -62,6 +65,18 @@ export function remoteSnapshot(): RemoteState {
 
 export function useRemote(): RemoteState {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+/** Which setup tasks this association has skipped. */
+async function loadDismissals(
+  supabase: ReturnType<typeof supabaseBrowser>,
+  associationId: string,
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("setup_dismissals")
+    .select("task_key")
+    .eq("association_id", associationId);
+  return (data ?? []).map((row) => row.task_key as string);
 }
 
 /** Which association to open, remembered so a reload lands where you left. */
@@ -113,9 +128,12 @@ export async function loadRemote(profileId: string | null): Promise<void> {
     const preferred = remembered();
     const activeId =
       associations.find((a) => a.id === preferred)?.id ?? associations[0].id;
-    const community = await loadCommunity(supabase, activeId);
+    const [community, dismissals] = await Promise.all([
+      loadCommunity(supabase, activeId),
+      loadDismissals(supabase, activeId),
+    ]);
     remember(activeId);
-    set({ status: "ready", associations, activeId, community, message: undefined });
+    set({ status: "ready", associations, activeId, community, dismissals, message: undefined });
   } catch (error) {
     set({
       status: "error",
@@ -129,9 +147,13 @@ export async function setRemoteAssociation(id: string): Promise<void> {
   if (!hasSupabase) return;
   set({ status: "loading" });
   try {
-    const community = await loadCommunity(supabaseBrowser(), id);
+    const client = supabaseBrowser();
+    const [community, dismissals] = await Promise.all([
+      loadCommunity(client, id),
+      loadDismissals(client, id),
+    ]);
     remember(id);
-    set({ status: "ready", activeId: id, community, message: undefined });
+    set({ status: "ready", activeId: id, community, dismissals, message: undefined });
   } catch (error) {
     set({
       status: "error",
@@ -144,8 +166,12 @@ export async function setRemoteAssociation(id: string): Promise<void> {
 export async function refreshRemote(): Promise<void> {
   if (!hasSupabase || !state.activeId) return;
   try {
-    const community = await loadCommunity(supabaseBrowser(), state.activeId);
-    set({ community, status: "ready" });
+    const client = supabaseBrowser();
+    const [community, dismissals] = await Promise.all([
+      loadCommunity(client, state.activeId),
+      loadDismissals(client, state.activeId),
+    ]);
+    set({ community, dismissals, status: "ready" });
   } catch {
     // Leave the last good copy on screen rather than blanking it. The write
     // that prompted this either landed or reported its own failure.

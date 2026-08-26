@@ -30,6 +30,10 @@ export interface Association {
   duesCadence: "monthly" | "quarterly" | "annually";
   addressLine: string;
   managedBy: "self" | "professional";
+  /** Disclosed on the annual budget report in most states. */
+  insuranceCarrier?: string;
+  insurancePolicyNo?: string;
+  insuranceExpiresOn?: ISODate;
 }
 
 /* -------------------------------------------------------------------------- */
