@@ -7,10 +7,13 @@ export function Logo({ className, size = 28 }: { className?: string; size?: numb
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center rounded-[9px] bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950",
+        "inline-flex shrink-0 items-center justify-center bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950",
         className,
       )}
-      style={{ width: size, height: size }}
+      // Corner radius scales with the mark rather than sitting at a fixed 9px.
+      // A radius tuned for 28px reads as a rounded square at 40 and as a
+      // circle at 18, and the mark stops looking like the same mark.
+      style={{ width: size, height: size, borderRadius: size * 0.28 }}
       aria-hidden
     >
       <svg
@@ -31,13 +34,25 @@ export function Logo({ className, size = 28 }: { className?: string; size?: numb
   );
 }
 
+/**
+ * The mark and the name.
+ *
+ * Type is set at 0.58 of the mark and tracked in as it grows. Letter spacing
+ * that looks right on a 16px word looks loose at 24px, which is the single
+ * most common reason a scaled up wordmark reads as amateur.
+ */
 export function Wordmark({ className, size = 28 }: { className?: string; size?: number }) {
+  const fontSize = size * 0.58;
   return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
+    <span className={cn("inline-flex items-center", className)} style={{ gap: size * 0.26 }}>
       <Logo size={size} />
       <span
-        className="font-semibold tracking-[-0.02em] text-fg"
-        style={{ fontSize: size * 0.54 }}
+        className="font-semibold text-fg"
+        style={{
+          fontSize,
+          letterSpacing: `${-0.014 - Math.min(size, 48) * 0.0004}em`,
+          lineHeight: 1,
+        }}
       >
         HOAsis
       </span>

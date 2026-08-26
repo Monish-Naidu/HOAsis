@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -21,9 +21,13 @@ export function MarketingHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-3.5">
-        <Link href="/" aria-label="HOAsis home">
-          <Wordmark size={32} />
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-3">
+        <Link
+          href="/"
+          aria-label="HOAsis home"
+          className="transition-transform duration-200 ease-out hover:scale-[1.02] active:scale-[0.99]"
+        >
+          <Wordmark size={40} />
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -95,7 +99,7 @@ export function MarketingFooter() {
     <footer className="border-t border-border">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8">
         <div>
-          <Wordmark size={28} />
+          <Wordmark size={34} />
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-fg-muted">
             Community management for self-managed associations. Books that reconcile, an app
             residents use, and compliance handled.
@@ -121,7 +125,19 @@ export function MarketingFooter() {
   );
 }
 
-/** Fades a section in the first time it scrolls into view. */
+/**
+ * Fades a section in the first time it scrolls into view.
+ *
+ * It used to animate on mount, which meant every section below the fold had
+ * already finished before the reader got there. The whole page arrived at once
+ * and then sat still. An observer is the difference between a page that
+ * animates and a page that responds.
+ *
+ * The ref callback attaches the observer, so nothing sets state from inside an
+ * effect body. It disconnects after the first crossing, because a section that
+ * re-animates every time it scrolls past is a novelty the second time and an
+ * irritation the fifth.
+ */
 export function Reveal({
   children,
   className,
@@ -131,10 +147,31 @@ export function Reveal({
   className?: string;
   delay?: number;
 }) {
+  const attach = useCallback((node: HTMLDivElement | null) => {
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    // Already in view on load, which is everything above the fold. Show it
+    // without waiting for a scroll that may never come.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.setAttribute("data-shown", "true");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      // Fires a little before the element reaches the bottom edge, so it is
+      // settling as it arrives rather than starting once it is already there.
+      { rootMargin: "0px 0px -12% 0px", threshold: 0.05 },
+    );
+    observer.observe(node);
+  }, []);
+
   return (
     <div
-      className={cn("animate-rise", className)}
-      style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
+      ref={attach}
+      className={cn("reveal", className)}
+      style={{ "--reveal-delay": `${delay}ms` } as React.CSSProperties}
     >
       {children}
     </div>

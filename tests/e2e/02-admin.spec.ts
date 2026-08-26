@@ -193,3 +193,65 @@ test.describe("board actions", () => {
     expect(forum).toBeTruthy();
   });
 });
+
+test.describe("shared costs", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "admin" });
+  });
+
+  test("what the community pays is shown next to who it pays", async ({ page }) => {
+    await page.goto("/admin/shared-costs");
+    await page.waitForLoadState("networkidle");
+    const health = await expectHealthy(page, "shared costs");
+
+    // The provider's name is the part no competitor shows an owner, so it is
+    // the part worth asserting rather than the total.
+    expect(health.text, "no provider is named").toContain("Cascade Water District");
+    expect(health.text, "no per home figure").toMatch(/\$\d/);
+  });
+
+  test("the history opens and reports a real bill", async ({ page }) => {
+    await page.goto("/admin/shared-costs");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "History" }).first().click();
+    await page.waitForTimeout(400);
+    const health = await expectHealthy(page, "shared cost history");
+    expect(health.text, "the chart legend never rendered").toContain("Peak");
+  });
+
+  test("a resident sees their own share and who the association pays", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.resident, view: "resident" });
+    await page.goto("/resident/finances");
+    await page.waitForLoadState("networkidle");
+    const health = await inspect(page);
+
+    expect(health.crashed, "the resident funds page crashed").toBe(false);
+    expect(health.text, "the owner is not told who the association pays").toContain(
+      "Cascade Water District",
+    );
+    expect(health.text, "the owner is not shown their share").toContain("your share");
+  });
+
+  test("an association that bills one flat due is never shown the tab", async ({ page }) => {
+    // Test Community One has no shared costs and no assessments. Offering it an
+    // empty tab every day is how a simple product stops feeling simple.
+    await seedSession(page, {
+      seat: SEATS.president,
+      view: "admin",
+      community: "test-community-1",
+    });
+    await page.goto("/admin");
+    await page.waitForLoadState("networkidle");
+
+    const tabs = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('aside a[href^="/admin"]')).map((a) =>
+        (a.textContent ?? "").trim().split("\n")[0],
+      ),
+    );
+    expect(
+      tabs.some((t) => t.startsWith("Shared costs")),
+      "an association with nothing shared was offered the tab anyway",
+    ).toBe(false);
+  });
+});

@@ -180,6 +180,7 @@ export const ADMIN_TABS = [
   "Dashboard",
   "Money",
   "Reserves",
+  "Shared costs",
   "Homeowners",
   "Requests",
   "Voting",

@@ -11,6 +11,7 @@ import {
 } from "@/lib/app-state";
 import { ADMIN_ROUTES } from "@/lib/admin-routes";
 import { complianceSummary, delinquency } from "@/lib/metrics";
+import { TabPill } from "@/components/app/tab-pill";
 import { cn } from "@/lib/utils";
 
 export interface NavBadge {
@@ -69,8 +70,17 @@ export function AdminNav() {
       (!i.need || i.need.some((c) => can(c))) && (!i.present || i.present(community)),
   );
 
+  const activeRoute = visible.find(({ href }) =>
+    href === "/admin" ? pathname === href : pathname.startsWith(href),
+  );
+
   return (
-    <nav aria-label="Admin sections" className="flex gap-1 lg:flex-col">
+    <nav aria-label="Admin sections">
+      <TabPill
+        activeKey={activeRoute?.key ?? ""}
+        className="flex gap-1 lg:flex-col"
+        pillClassName="bg-brand-soft"
+      >
       {visible.map(({ href, label, icon: Icon, key }) => {
         const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
         const badge = badges[key];
@@ -78,11 +88,14 @@ export function AdminNav() {
           <Link
             key={href}
             href={href}
+            data-tab-key={key}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
+              // The selected background is the travelling pill behind the row,
+              // not a class on the link, so it slides rather than cuts.
+              "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
               active
-                ? "bg-brand-soft text-brand-soft-fg"
+                ? "text-brand-soft-fg"
                 : "text-fg-muted hover:bg-surface-2 hover:text-fg",
             )}
           >
@@ -103,6 +116,7 @@ export function AdminNav() {
           </Link>
         );
       })}
+      </TabPill>
     </nav>
   );
 }

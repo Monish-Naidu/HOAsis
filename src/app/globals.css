@@ -181,8 +181,69 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
+/* ---------------------------------------------------------------------------
+   Motion.
+   
+   Two easings and three durations, used everywhere. Apple's interfaces feel
+   the way they do partly because almost nothing eases linearly and almost
+   nothing uses the same curve on the way in as on the way out: things enter
+   fast and settle slowly, which reads as weight rather than as animation.
+   
+   `--ease-out-soft` is that settle. `--ease-spring` overshoots very slightly
+   and is only for things that snap into a position, like the pill behind a
+   selected tab.
+--------------------------------------------------------------------------- */
+:root {
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
+  --dur-fast: 180ms;
+  --dur-base: 320ms;
+  --dur-slow: 640ms;
+}
+
 @keyframes hoasis-rise {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
 }
-.animate-rise { animation: hoasis-rise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-rise { animation: hoasis-rise var(--dur-base) var(--ease-out-soft) both; }
+
+/* The scroll reveal. Held at the start position until the observer marks the
+   element visible, so content below the fold actually animates when the reader
+   arrives rather than finishing before they get there. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity var(--dur-slow) var(--ease-out-soft),
+    transform var(--dur-slow) var(--ease-out-soft);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* The sliding indicator behind a selected tab. Position is set inline from
+   the active link's box, so it travels rather than cutting. */
+.tab-pill {
+  transition:
+    transform var(--dur-base) var(--ease-spring),
+    width var(--dur-base) var(--ease-spring),
+    opacity var(--dur-fast) linear;
+}
+
+/* Somebody who has asked their operating system for less motion gets the end
+   state immediately, not a slower version of the same movement. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .reveal,
+  .tab-pill {
+    animation: none !important;
+    transition: none !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}

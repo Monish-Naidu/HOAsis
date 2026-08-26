@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { residentTabs } from "@/components/app/resident-nav";
+import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero } from "@/components/app/community-hero";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -161,27 +162,37 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                 {address}
               </p>
             </div>
-            <nav aria-label="Resident sections" className="mt-4 flex flex-col gap-1">
-              {tabs.map(({ href, label, icon: Icon, webLabel }) => {
-                const active =
-                  href === "/resident" ? pathname === href : pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
-                      active
-                        ? "bg-brand-soft text-brand-soft-fg"
-                        : "text-fg-muted hover:bg-surface-2 hover:text-fg",
-                    )}
-                  >
-                    <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-                    {webLabel ?? label}
-                  </Link>
-                );
-              })}
+            <nav aria-label="Resident sections" className="mt-4">
+              <TabPill
+                activeKey={
+                  tabs.find((t) =>
+                    t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
+                  )?.href ?? ""
+                }
+                className="flex flex-col gap-1"
+              >
+                {tabs.map(({ href, label, icon: Icon, webLabel }) => {
+                  const active =
+                    href === "/resident" ? pathname === href : pathname.startsWith(href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      data-tab-key={href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "relative z-10 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
+                        active
+                          ? "text-brand-soft-fg"
+                          : "text-fg-muted hover:bg-surface-2 hover:text-fg",
+                      )}
+                    >
+                      <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                      {webLabel ?? label}
+                    </Link>
+                  );
+                })}
+              </TabPill>
             </nav>
             <div className="mt-4 rounded-card border border-border bg-surface p-3">
               <p className="text-[13px] font-semibold text-fg-muted">
@@ -282,7 +293,13 @@ function TabBar({
                   active ? "text-fg" : "text-fg-subtle hover:text-fg-muted",
                 )}
               >
-                <Icon className="size-[19px]" strokeWidth={active ? 2.3 : 1.8} />
+                <Icon
+                  className={cn(
+                    "size-[19px] transition-transform duration-200 ease-out",
+                    active ? "scale-110" : "scale-100",
+                  )}
+                  strokeWidth={active ? 2.3 : 1.8}
+                />
                 <span className={cn("text-[12px]", active ? "font-semibold" : "font-medium")}>
                   {label}
                 </span>
