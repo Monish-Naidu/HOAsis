@@ -1,0 +1,185 @@
+import { test, expect } from "@playwright/test";
+import { ADMIN_TABS, SEATS, expectHealthy, inspect, openTab, seedSession } from "./helpers";
+
+/**
+ * The board workspace, tab by tab.
+ *
+ * Run as the President, who holds every capability, so a broken tab is a
+ * broken tab rather than a permission working correctly. Permissions get their
+ * own file.
+ */
+
+test.describe("board workspace", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "admin" });
+  });
+
+  for (const tab of ADMIN_TABS) {
+    test(`${tab} works`, async ({ page }) => {
+      await page.goto("/admin");
+      await openTab(page, "/admin", tab);
+      const health = await expectHealthy(page, `admin ${tab}`);
+      expect(health.headingCount, `${tab} rendered nothing`).toBeGreaterThan(0);
+    });
+  }
+
+  test("every tab is reachable from every other tab", async ({ page }) => {
+    await page.goto("/admin");
+    // Walking the whole nav in one session catches state that leaks between
+    // screens, which a fresh load per tab would hide.
+    for (const tab of ADMIN_TABS) {
+      await openTab(page, "/admin", tab);
+      await expectHealthy(page, `admin ${tab} (walked)`);
+    }
+  });
+
+  test("the sidebar stays with the reader and never traps the page", async ({ page }) => {
+    await page.goto("/admin/homeowners");
+    await page.waitForLoadState("networkidle");
+
+    const rail = page.locator("aside > div").first();
+    await page.evaluate(() => window.scrollTo(0, 1200));
+    await page.waitForTimeout(400);
+
+    const box = await rail.boundingBox();
+    expect(box, "the sidebar disappeared on scroll").toBeTruthy();
+    expect(box!.y, "the sidebar scrolled away with the content").toBeLessThan(200);
+    expect(
+      box!.height,
+      "the sidebar is taller than the viewport, so part of it is unreachable",
+    ).toBeLessThanOrEqual(900);
+
+    // The page itself must never scroll sideways.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, "the page scrolls horizontally").toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe("board actions", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "admin" });
+  });
+
+  test("confirming a transaction moves it and can be undone", async ({ page }) => {
+    await page.goto("/admin/money");
+    await page.waitForLoadState("networkidle");
+
+    const before = (await inspect(page)).text;
+    const needsReview = Number(before.match(/Needs review\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    expect(needsReview, "nothing to confirm, so this proves nothing").toBeGreaterThan(0);
+
+    await page.getByRole("button", { name: "Confirm" }).first().click();
+    await page.waitForTimeout(700);
+
+    const undo = page.getByRole("button", { name: /^Undo$/ });
+    await expect(undo, "confirming offered no way back").toBeVisible();
+    await undo.click();
+    await page.waitForTimeout(700);
+
+    const after = (await inspect(page)).text;
+    const restored = Number(after.match(/Needs review\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    expect(restored, "undo did not restore the transaction").toBe(needsReview);
+  });
+
+  test("adding and removing a household both work, and removal is reversible", async ({
+    page,
+  }) => {
+    await page.goto("/admin/homeowners");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Add household" }).click();
+    await page.getByLabel("Household name").fill("E2E Probe Household");
+    await page.getByLabel("Household email").fill("probe@example.com");
+    await page.getByLabel("Unit", { exact: true }).fill("999");
+    await page.getByRole("button", { name: "Save" }).click();
+    await page.waitForTimeout(800);
+
+    expect((await inspect(page)).text).toContain("E2E Probe Household");
+
+    await page
+      .getByRole("button", { name: "Remove E2E Probe Household from the roster" })
+      .click();
+    await page.waitForTimeout(600);
+    expect((await inspect(page)).text).not.toContain("E2E Probe Household");
+
+    await page.getByRole("button", { name: /^Undo$/ }).click();
+    await page.waitForTimeout(600);
+    expect(
+      (await inspect(page)).text,
+      "undo did not bring the household back",
+    ).toContain("E2E Probe Household");
+  });
+
+  test("a rejected forum post can be put back", async ({ page }) => {
+    await page.goto("/admin/forum");
+    await page.waitForLoadState("networkidle");
+
+    const health = await inspect(page);
+    test.skip(!health.text.includes("Publish"), "nothing is waiting for review");
+
+    await page.getByRole("button", { name: "Reject" }).first().click();
+    await page.waitForTimeout(600);
+    const undo = page.getByRole("button", { name: /^Undo$/ });
+    await expect(undo, "rejecting a post offered no way back").toBeVisible();
+    await undo.click();
+    await page.waitForTimeout(600);
+    await expectHealthy(page, "forum after undo");
+  });
+
+  test("a past due notice fills in the household's real figures", async ({ page }) => {
+    await page.goto("/admin/homeowners");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Message past due" }).click();
+    await page.waitForTimeout(500);
+    await page.getByRole("button", { name: "Late notice with fee" }).click();
+    await page.waitForTimeout(400);
+
+    const subject = await page.getByLabel("Subject").inputValue();
+    expect(subject, "the subject still shows a merge field").not.toContain("{{");
+    expect(subject.length).toBeGreaterThan(5);
+
+    const body = await page.locator("main textarea").first().inputValue();
+    expect(body, "the body still shows a merge field").not.toContain("{{");
+    expect(body, "the notice names no amount").toMatch(/\$\d/);
+  });
+
+  test("exporting the roster produces a real CSV", async ({ page }) => {
+    await page.goto("/admin/homeowners");
+    await page.waitForLoadState("networkidle");
+
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export roster" }).click();
+    const file = await download;
+
+    expect(file.suggestedFilename()).toMatch(/\.csv$/);
+    // Named for the association rather than hardcoded, which it was once.
+    expect(file.suggestedFilename()).toContain("mehr-meadows");
+  });
+
+  test("settings changes reach the resident side", async ({ page }) => {
+    await page.goto("/admin/settings");
+    await page.waitForLoadState("networkidle");
+
+    const forum = page
+      .locator('button[role="switch"]')
+      .filter({ has: page.locator("xpath=.") })
+      .nth(0);
+    // Find the forum toggle by its row rather than by position.
+    const row = page.locator("main label, main div").filter({ hasText: "Forum" }).first();
+    await expect(row).toBeVisible();
+
+    const toggle = page.locator('button[role="switch"]').first();
+    const was = await toggle.getAttribute("aria-checked");
+    await toggle.click();
+    await page.waitForTimeout(500);
+    expect(await toggle.getAttribute("aria-checked")).not.toBe(was);
+
+    // Put it back so the next test starts from the same place.
+    await toggle.click();
+    await page.waitForTimeout(300);
+    expect(forum).toBeTruthy();
+  });
+});

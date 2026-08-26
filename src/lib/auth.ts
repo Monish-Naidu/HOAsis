@@ -131,6 +131,38 @@ export async function signInWithPassword(
   return error ? { ok: false, message: readable(error.message) } : { ok: true };
 }
 
+/**
+ * Starts a password reset.
+ *
+ * Deliberately reports success whether or not the address has an account.
+ * Telling a stranger "no account with that email" turns the form into a way to
+ * discover who lives in an association, which is precisely the sort of thing
+ * an HOA should not leak.
+ */
+export async function requestPasswordReset(email: string): Promise<AuthResult> {
+  if (!hasSupabase) {
+    return { ok: true, message: "The demo has no accounts to reset." };
+  }
+  const client = supabaseBrowser();
+  const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset`,
+  });
+  if (error && !/rate limit/i.test(error.message)) {
+    return { ok: false, message: readable(error.message) };
+  }
+  return {
+    ok: true,
+    message: "If there is an account for that address, a reset link is on its way.",
+  };
+}
+
+/** Sets a new password for somebody who arrived through a reset link. */
+export async function setNewPassword(password: string): Promise<AuthResult> {
+  const client = supabaseBrowser();
+  const { error } = await client.auth.updateUser({ password });
+  return error ? { ok: false, message: readable(error.message) } : { ok: true };
+}
+
 export async function signOutOfSupabase(): Promise<void> {
   if (!hasSupabase) return;
   await supabaseBrowser().auth.signOut();

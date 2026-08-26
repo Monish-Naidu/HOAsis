@@ -1,0 +1,222 @@
+import { expect, type Page } from "@playwright/test";
+
+/**
+ * Shared machinery for the end to end suite.
+ *
+ * Two ideas run through all of it.
+ *
+ * Sessions are seeded before the first paint rather than clicked through, so a
+ * test about the Vendors tab is not also a test of the sign in form. The one
+ * suite that does test sign in does it by clicking.
+ *
+ * And "does the page work" is asserted mechanically rather than by eyeballing
+ * a screenshot: no error boundary, no NaN, no dead button, no unlabeled
+ * control. A page that renders is not the same as a page that works, and the
+ * difference is where the bugs were.
+ */
+
+export const SEATS = {
+  president: "acct-arya",
+  treasurer: "acct-sofia",
+  secretary: "acct-ellis",
+  vicePresident: "acct-dana",
+  resident: "acct-monish",
+  otherResident: "acct-nina",
+} as const;
+
+export type SeatName = keyof typeof SEATS;
+
+/** Puts a demo session in place before the app boots. */
+export async function seedSession(
+  page: Page,
+  options: {
+    seat?: string;
+    view?: "admin" | "resident";
+    community?: string;
+    residentMode?: "website" | "app";
+    theme?: "light" | "dark";
+  } = {},
+) {
+  const {
+    seat = SEATS.president,
+    view = "admin",
+    community = "mehr-meadows",
+    residentMode,
+    theme = "light",
+  } = options;
+
+  await page.addInitScript(
+    ({ seat, view, community, residentMode, theme }) => {
+      localStorage.setItem("hoasis-session", JSON.stringify({ accountId: seat, view }));
+      localStorage.setItem("hoasis-community", JSON.stringify(community));
+      localStorage.setItem("hoasis-theme", JSON.stringify(theme));
+      if (residentMode) {
+        localStorage.setItem("hoasis-resident-mode", JSON.stringify(residentMode));
+      }
+      // Any real session would take precedence over the demo, so clear it.
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("sb-")) localStorage.removeItem(key);
+      }
+    },
+    { seat, view, community, residentMode, theme },
+  );
+}
+
+/** Starts from a clean slate, so one test's writes never reach the next. */
+export async function clearState(page: Page) {
+  await page.addInitScript(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("hoasis") || key.startsWith("sb-")) localStorage.removeItem(key);
+    }
+  });
+}
+
+/**
+ * Waits until React has attached its handlers.
+ *
+ * Every page here is server rendered, so the buttons exist in the HTML a beat
+ * before they do anything. Inspecting in that window reports every control as
+ * dead, which is true and useless: it is a race in the test rather than a bug
+ * in the app. Learned this the hard way.
+ */
+export async function waitForHydration(page: Page) {
+  await page.waitForLoadState("networkidle");
+  await page
+    .waitForFunction(
+      () => {
+        const target =
+          document.querySelector("main button") ?? document.querySelector("main a");
+        if (!target) return true; // A page with no controls is hydrated enough.
+        return Object.keys(target).some((k) => k.startsWith("__reactProps$"));
+      },
+      undefined,
+      { timeout: 10_000 },
+    )
+    .catch(() => {
+      // A page that never hydrates is a real failure, but the assertions below
+      // describe it better than a timeout does.
+    });
+}
+
+export interface PageHealth {
+  crashed: boolean;
+  badValues: string[];
+  deadButtons: string[];
+  unlabeled: number;
+  headingCount: number;
+  text: string;
+}
+
+/**
+ * What "this page works" means, checked in the browser.
+ *
+ * A dead button is one React has no handler for and which is not a submit or a
+ * label proxy. Those were a real category of bug here, not a hypothetical.
+ */
+export async function inspect(page: Page): Promise<PageHealth> {
+  await waitForHydration(page);
+  return page.evaluate(() => {
+    const body = document.body.innerText;
+    const crashed =
+      body.includes("This page did not load") || body.includes("The app failed");
+
+    const main = document.querySelector("main");
+    const text = main?.innerText ?? body;
+
+    const badValues: string[] = [];
+    const bad = text.match(/.{0,40}(NaN|Infinity|\[object |Invalid Date|undefined).{0,30}/);
+    if (bad) badValues.push(bad[0].replace(/\n+/g, " ").trim());
+    const singular = text.match(
+      /\b1 (transactions|requests|ballots|accounts|documents|homes|posts|meetings|charges|units|owners|vendors|items|emails|replies|minutes|households|payments)\b/,
+    );
+    if (singular) badValues.push(`grammar: "${singular[0]}"`);
+    const negative = text.match(/in -\d+ days/);
+    if (negative) badValues.push(`negative relative date: "${negative[0]}"`);
+
+    const deadButtons: string[] = [];
+    let unlabeled = 0;
+    for (const el of Array.from(main?.querySelectorAll("button") ?? [])) {
+      const name =
+        (el.textContent ?? "").trim() ||
+        el.getAttribute("aria-label") ||
+        el.getAttribute("title") ||
+        "";
+      if (!name) unlabeled++;
+
+      const key = Object.keys(el).find((k) => k.startsWith("__reactProps$"));
+      const props = key ? (el as unknown as Record<string, { onClick?: unknown; onChange?: unknown }>)[key] : null;
+      const wired =
+        Boolean(props?.onClick) ||
+        Boolean(props?.onChange) ||
+        (el as HTMLButtonElement).type === "submit" ||
+        Boolean(el.closest("label"));
+      if (!wired) deadButtons.push(name.slice(0, 40) || "(unnamed)");
+    }
+
+    return {
+      crashed,
+      badValues,
+      deadButtons,
+      unlabeled,
+      headingCount: main?.querySelectorAll("h1, h2, h3").length ?? 0,
+      text,
+    };
+  });
+}
+
+/** Asserts a page is healthy, naming what failed rather than just failing. */
+export async function expectHealthy(page: Page, label: string) {
+  const health = await inspect(page);
+  expect(health.crashed, `${label}: the page crashed into the error boundary`).toBe(false);
+  expect(health.badValues, `${label}: bad values on screen`).toEqual([]);
+  expect(health.deadButtons, `${label}: buttons with no handler`).toEqual([]);
+  expect(health.unlabeled, `${label}: buttons a screen reader cannot name`).toBe(0);
+  return health;
+}
+
+/** The admin tabs, as a board member sees them. */
+export const ADMIN_TABS = [
+  "Dashboard",
+  "Money",
+  "Reserves",
+  "Homeowners",
+  "Requests",
+  "Voting",
+  "Compliance",
+  "Communications",
+  "Forum",
+  "Vendors",
+  "Documents",
+  "Settings",
+] as const;
+
+export const RESIDENT_TABS = [
+  "Home",
+  "Pay dues",
+  "Vote and meetings",
+  "Requests",
+  "Forum",
+  "Account",
+  "Calendar",
+  "Documents",
+  "Association funds",
+] as const;
+
+/**
+ * Clicks a nav item by its visible label.
+ *
+ * The nav is rendered twice, as a sidebar above the large breakpoint and as a
+ * horizontal strip below it. Both are in the DOM at all times and one is
+ * hidden by CSS, so taking the first match lands on an element that cannot be
+ * clicked and waits out the timeout. Visibility is the filter that matters.
+ */
+export async function openTab(page: Page, prefix: string, label: string) {
+  const link = page
+    .locator(`a[href^="${prefix}"]`)
+    .filter({ hasText: new RegExp(`^${label}`) })
+    .locator("visible=true")
+    .first();
+  await link.click();
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(250);
+}

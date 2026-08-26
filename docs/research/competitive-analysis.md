@@ -6,9 +6,10 @@ Written 26 August 2026. Sources at the bottom; every figure is linked.
 
 ## Read this part first
 
-**Our pricing is four to six times our competitors' at any normal association size, and nobody has told us because we have no customers yet.**
+**We were priced four to six times our competitors at any normal association
+size. Found on 26 August, fixed the same day, before a single customer saw it.**
 
-We charge $4 per home per month. Both direct competitors charge a flat monthly
+We charged $4 per home per month. Both direct competitors charge a flat monthly
 rate per size band, and the bands are not expensive.
 
 | Homes | EasyHOA | PayHOA | HOAsis at $4/home | We cost |
@@ -19,36 +20,38 @@ rate per size band, and the bands are not expensive.
 | 150 | $99 | ~$124 | **$600** | 6.1× |
 | 250 | custom | custom | **$1,000** | — |
 
-Mehr Meadows, our own demo association, is 88 homes. On our pricing that board
-pays **$352 a month**. EasyHOA would charge them **$89**. We are asking a
-volunteer board to pay $3,156 more a year for software, and the entire pitch is
-that we save them money.
+Mehr Meadows, our own demo association, is 88 homes. On the old pricing that
+board would have paid **$352 a month** against EasyHOA's **$89**: $3,156 more a
+year for software, while the entire pitch is that we save boards money.
 
 The per-door instinct came from management companies, who genuinely charge
 $10–$20 per door per month. But we are not competing with management companies
 for this buyer. A board evaluating us has already decided to self-manage; they
 are comparing us to EasyHOA's $89, not to a manager's $1,200.
 
-**Recommendation:** move to flat tiers before the first customer. Suggested:
+**Decided and shipped, 26 August.** We moved to flat bands:
 
-| Band | Price | Sits against |
-| --- | ---: | --- |
-| Up to 25 homes | $39 | EasyHOA $49, PayHOA $54 |
-| 26–75 homes | $69 | EasyHOA $69–89 |
-| 76–150 homes | $109 | EasyHOA $89–99 |
-| 151–400 homes | $179 | both "custom" |
-| 400+ | custom | — |
+| Band | HOAsis | EasyHOA | PayHOA |
+| --- | ---: | ---: | ---: |
+| Up to 25 homes | **$39** | $49 | $54 |
+| 26–75 homes | **$69** | $69–89 | ~$74–99 |
+| 76–150 homes | **$109** | $89–99 | ~$99–124 |
+| 151–400 homes | **$179** | custom | custom |
+| 400+ | custom | custom | custom |
 
-That undercuts at the small end, where the buyer is most price-sensitive and
-where self-management is most common, and takes a premium in the middle where
-we have features neither of them has. Revenue per customer is lower than $4 a
-door but the deals actually close.
+Cheapest at the small end, where self-management is most common and the buyer
+is most price-sensitive. A premium in the middle, where the reserve model
+earns it. Revenue per customer is lower than $4 a door, but the deals close.
 
-**The payment fee, by contrast, is already right.** PayHOA charges **$2.45 per
+**The payment fee, by contrast, was already right.** PayHOA charges **$2.45 per
 ACH** and **3.50% + $0.50** on cards. We charge **$2.00 per ACH** and pass card
 processing through at Stripe's actual **2.9% + $0.30**. On a $285 assessment
-paid by card, PayHOA takes $10.48 and we take $8.57. That is a real, provable
-advantage and it should be on the pricing page as a comparison table.
+paid by card, PayHOA takes $10.48 and we take $8.57.
+
+**This is now a table on /pricing**, including the row where we lose: at 88
+homes our software costs $1,308 a year against their $1,068. Showing the
+unflattering number alongside the flattering ones is the entire reason anybody
+will believe the flattering ones.
 
 ---
 
@@ -80,7 +83,8 @@ above. Flat, not per unit.
 
 **Both price for the buyer they actually have.** A volunteer treasurer with a
 $40,000 annual budget can approve $69 a month without a board vote. That is the
-single most important thing either of them does, and we are currently failing it.
+single most important thing either of them does, and it is why the pricing
+change above mattered more than any feature on this list.
 
 **PayHOA's breadth is real.** Violations, requests, documents, broadcast email
 and SMS, owner portals. Reviewers consistently call it easy to set up and say
@@ -146,8 +150,8 @@ They charge 3.50% + $0.50 on a card while Stripe charges them 2.9% + $0.30. The
 markup is real and it is not disclosed on the receipt.
 
 **We itemize processor cost and our fee as two separate lines.** That was built
-deliberately. It is a direct answer to a named complaint about the market
-leader, and we are not saying it anywhere.
+deliberately, and it is a direct answer to a named complaint about the market
+leader. As of today it is also on the pricing page, next to theirs.
 
 ### 4. Board turnover destroys institutional knowledge
 
@@ -216,8 +220,7 @@ Things that are built, tested, and not replicable in a sprint.
 
 ### Before the first customer
 
-1. **Change the pricing to flat tiers.** Nothing else on this list matters if
-   the price is 4× at 100 homes.
+1. ~~**Change the pricing to flat tiers.**~~ Done 26 August.
 2. **Wire up Stripe.** Bank, card, Apple Pay, Google Pay. Needs a Stripe
    account, a real domain, and Connect onboarding. This is the last thing
    standing between the product and being real.
@@ -225,8 +228,10 @@ Things that are built, tested, and not replicable in a sprint.
    links simultaneously.
 4. **Put the reserve model on the front page.** It is our best asset and it is
    currently the second showcase panel.
-5. **Add the fee comparison table to /pricing.** $8.57 against $10.48 on a $285
-   card payment, with both broken out.
+5. ~~**Add the fee comparison table to /pricing.**~~ Done 26 August, including
+   the row where we lose.
+6. **Build resale certificates.** The best adjacent revenue line we have and
+   mostly a report over data we already hold.
 
 ### First ninety days
 
@@ -243,6 +248,103 @@ Things that are built, tested, and not replicable in a sprint.
 11. Community website generated from association data.
 12. Finish the compliance register with a legal pass, starting with Washington.
 13. Reserve study import from a professional study PDF.
+
+---
+
+## How else we make money
+
+Subscription alone is a thin business at $39–179 a month. The research on this
+category points at several adjacent lines, and they are not equally good.
+
+### 1. Resale and estoppel certificates — the strongest by far
+
+When a home in an association sells, the board must produce a resale package:
+current balance, pending violations, governing documents, reserve status,
+insurance. Title companies and buyers **pay $200–500 for this**, it is legally
+required in most states, and it lands on a volunteer treasurer at the worst
+possible moment. Industry reporting describes resale document processing as
+raising a manager's revenue **up to 50% without changing their pricing**.
+
+**We can generate the entire package from data we already hold.** Balance,
+charge history, documents, reserve percent funded, insurance record. That is a
+button, not a product.
+
+Suggested: **$175 per certificate**, association keeps $75, we keep $100. The
+board earns money for work they were doing free, and it is billed to the buyer
+rather than to the association. At an average 5% annual turnover, a 100 home
+association generates five certificates a year: $500 to us, $375 to them.
+Roughly a third of the subscription again, from customers we already have.
+
+### 2. Treasury on reserves
+
+Reserves are the largest pile of money an association holds and it usually sits
+in a checking account earning nothing. We already model blended yield, interest
+earned, and what moving the balance would be worth, and 74% of associations are
+underfunded, so the interest is not trivial to them.
+
+Partner with a bank or a cash-management provider offering an association
+money-market account, and take a referral fee or a share of the spread.
+Mehr Meadows holds $562,860 in reserves. At even 3% that is $16,885 a year the
+board is currently leaving on the table, and a 25 basis point share is $1,400 a
+year to us from one association.
+
+**This is the one where our interests and theirs point the same way**, which is
+the test any of these should pass.
+
+### 3. Reserve study referral
+
+We are the only product in the category that tells a board they need a study
+and shows what happens without one. Studies cost $2,000–5,000. A referral fee
+of 10% is $200–500 per referral, and the recommendation is credible because it
+comes from a model rather than an ad.
+
+### 4. Insurance
+
+Associations must carry property and liability cover, and the annual budget
+report has to disclose it. We already record carrier, policy number and renewal
+date, so we know when every customer's policy expires. A quote comparison at
+renewal is genuinely useful and commissions in this line are large.
+
+Handle carefully: the moment we take a commission, our renewal reminder stops
+being neutral advice. Disclose it plainly or do not do it.
+
+### 5. Special assessment financing
+
+When reserves fall short, boards levy a special assessment and owners struggle
+to pay it in one go. Lenders finance these. We are the only party who can see
+the shortfall coming years ahead.
+
+Genuine tension: we make money when reserves fail, while the product exists to
+prevent that. **I would not build this**, or would only offer it after a board
+has already voted the assessment.
+
+### What to avoid
+
+**Marking up card processing.** PayHOA charges 3.50% + 50¢ over Stripe's 2.9% +
+30¢ and gets called "high and confusing" in public reviews for it. That markup
+buys perhaps $2 a payment and costs the trust our whole pitch rests on.
+
+**Advertising to residents.** Some platforms sell local business placements. It
+is small money and it makes an association's private portal feel like a
+free product, which is the opposite of what a board is paying for.
+
+**Charging for exports or records.** Owners have a statutory right to most of
+this. Charging for it would be ugly and possibly unlawful.
+
+### Rough picture, 100 homes
+
+| Line | Annual | Confidence |
+| --- | ---: | --- |
+| Subscription ($109/mo) | $1,308 | Certain |
+| Payment fees (100 homes × 12 × $2, mostly ACH) | ~$1,980 | High |
+| Resale certificates (5 sales) | $500 | Medium |
+| Treasury share on reserves | $500–1,500 | Speculative |
+| Reserve study referral | $0–400 | Speculative |
+| **Total** | **$4,300–5,700** | — |
+
+Payments are already the larger half of the business, which is worth
+internalising: **we are a payments company with an HOA product attached**, and
+the subscription mostly exists to make the payments happen.
 
 ---
 

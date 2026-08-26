@@ -257,13 +257,17 @@ export default function MarketingHome() {
       <section className="border-b border-border bg-surface">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-6 px-5 py-8 sm:grid-cols-4">
           {[
-            // PLACEHOLDER: no measured outcomes here yet. These four are all
-            // facts about the product that a reader can verify by clicking
-            // around, not results we have surveyed.
-            { value: "30 yr", label: "Reserve projection" },
-            { value: "2", label: "Approvals before a vendor is paid" },
-            { value: "0", label: "Per seat charges" },
-            { value: "All", label: "Features on every tier" },
+            // Facts a board can act on, not trivia about our internals. The
+            // first names the problem nobody else solves, the second and third
+            // are prices anyone can check against a competitor's own page.
+            {
+              value: "74%",
+              label: "of US associations are underfunded on reserves",
+              note: "Association Reserves, 100,000+ studies",
+            },
+            { value: "30 yr", label: "We show you the year the money runs out" },
+            { value: "0.8%", label: "Bank payments, capped. Cards at cost, never marked up" },
+            { value: "All", label: "Every feature on every plan. No add-ons" },
           ].map((stat, index) => (
             <Reveal key={stat.label} delay={index * 60}>
               <div>
@@ -271,6 +275,9 @@ export default function MarketingHome() {
                   {stat.value}
                 </p>
                 <p className="mt-1.5 text-[13px] leading-snug text-fg-muted">{stat.label}</p>
+                {"note" in stat && stat.note ? (
+                  <p className="mt-1 text-[12px] leading-snug text-fg-subtle">{stat.note}</p>
+                ) : null}
               </div>
             </Reveal>
           ))}

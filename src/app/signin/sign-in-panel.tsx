@@ -7,7 +7,7 @@ import { Button, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { signInWithPassword, signUp } from "@/lib/auth";
+import { requestPasswordReset, signInWithPassword, signUp } from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 
@@ -175,7 +175,27 @@ export function SignInPanel() {
           </Button>
           {mode === "sign-in" ? (
             <p className="text-center text-[13px] text-fg-muted">
-              <button type="button" className="hover:text-fg">
+              <button
+                type="button"
+                className="hover:text-fg"
+                disabled={busy}
+                onClick={async () => {
+                  if (!email.trim()) {
+                    setNotice({
+                      tone: "danger",
+                      text: "Type your email address first, then press this again.",
+                    });
+                    return;
+                  }
+                  setBusy(true);
+                  const result = await requestPasswordReset(email);
+                  setBusy(false);
+                  setNotice({
+                    tone: result.ok ? "ok" : "danger",
+                    text: result.message ?? "Check your email.",
+                  });
+                }}
+              >
                 Forgot your password?
               </button>
             </p>

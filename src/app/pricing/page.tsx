@@ -11,18 +11,72 @@ export const metadata = {
 /**
  * Pricing.
  *
- * One rate, every size, every feature. Three tiers were a placeholder for a
- * decision that had not been made; now that it has, a single number is both
- * the truth and easier to argue with, which is the point of publishing it.
+ * Flat bands rather than a per door rate, because that is how this market
+ * prices and a board comparing us to a competitor is comparing one monthly
+ * number to another. Per door came from management companies, who charge $10
+ * to $20 a door; a board looking at us has already left one of those.
+ *
+ * Deliberately cheapest at the small end, where self management is most
+ * common and the buyer is most price sensitive, and a premium in the middle
+ * where the reserve model earns it.
  */
 const TIERS = [
   {
-    name: "Every association",
-    homes: "Five homes or five hundred",
-    price: "$4",
-    unit: "per home, per month",
-    note: "No tiers, no feature gating, no minimum. A 20 home board pays $80 a month.",
+    name: "Small",
+    homes: "Up to 25 homes",
+    price: "$39",
+    unit: "per month",
+    note: "Cheaper than anyone else at this size. Same product as the largest plan.",
+    highlight: false,
+  },
+  {
+    name: "Standard",
+    homes: "26 to 75 homes",
+    price: "$69",
+    unit: "per month",
+    note: "The most common size for a self-managed association.",
     highlight: true,
+  },
+  {
+    name: "Large",
+    homes: "76 to 150 homes",
+    price: "$109",
+    unit: "per month",
+    note: "Where reserve planning starts to carry real money.",
+    highlight: false,
+  },
+  {
+    name: "Very large",
+    homes: "151 to 400 homes",
+    price: "$179",
+    unit: "per month",
+    note: "Above 400 homes, talk to us and we will quote it.",
+    highlight: false,
+  },
+];
+
+/**
+ * What a payment actually costs, next to the incumbent.
+ *
+ * Published because it is checkable. PayHOA's own help pages state $2.45 per
+ * ACH and 3.50% plus 50 cents on cards, and Stripe publishes 2.9% plus 30
+ * cents. A board can verify every figure in this table without asking us.
+ */
+const COMPARISON = [
+  {
+    scenario: "A $285 assessment, paid by bank transfer",
+    ours: "$2.35",
+    theirs: "$2.45",
+  },
+  {
+    scenario: "A $285 assessment, paid by card",
+    ours: "$8.57",
+    theirs: "$10.48",
+  },
+  {
+    scenario: "88 homes, software for a year",
+    ours: "$1,308",
+    theirs: "$1,068",
   },
 ];
 
@@ -83,7 +137,7 @@ export default function PricingPage() {
           </header>
         </Reveal>
 
-        <div className="mt-8 grid gap-4">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {TIERS.map((tier, index) => (
             <Reveal key={tier.name} delay={index * 80}>
               <Card
@@ -167,6 +221,48 @@ export default function PricingPage() {
             </Card>
           </Reveal>
         </div>
+
+        <Reveal delay={130}>
+          <div className="mt-6 overflow-hidden rounded-card border border-border bg-surface">
+            <div className="border-b border-border px-6 py-4">
+              <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+                Next to PayHOA
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+                Their figures come from their own published pages. Check ours the same way.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left">
+                <thead>
+                  <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
+                    <th className="px-6 py-2.5 font-semibold" />
+                    <th className="px-4 py-2.5 text-right font-semibold">HOAsis</th>
+                    <th className="px-6 py-2.5 text-right font-semibold">PayHOA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARISON.map((row) => (
+                    <tr key={row.scenario} className="border-b border-border last:border-b-0">
+                      <td className="px-6 py-3 text-[15px] text-fg">{row.scenario}</td>
+                      <td className="tnum px-4 py-3 text-right text-[15px] font-semibold text-ok">
+                        {row.ours}
+                      </td>
+                      <td className="tnum px-6 py-3 text-right text-[15px] text-fg-muted">
+                        {row.theirs}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="border-t border-border px-6 py-3 text-[13px] leading-relaxed text-fg-subtle">
+              We are a little more for the software at 88 homes and meaningfully less on every
+              payment, so a community collecting monthly comes out ahead. We would rather show
+              you both numbers than only the flattering one.
+            </p>
+          </div>
+        </Reveal>
 
         <Reveal delay={160}>
           <div className="mt-10 rounded-card border border-border bg-surface p-6 text-center">
