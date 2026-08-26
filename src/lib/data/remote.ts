@@ -80,7 +80,11 @@ export async function loadCommunity(
   // One round trip per table rather than a nested select, because the shapes
   // are flat and a failure is easier to attribute when it is not buried in a
   // join. Fired together, so the latency is one trip's worth.
-  const [association, units, memberships, charges, banks, ledger, balances] = await Promise.all([
+  const [
+    association, units, memberships, charges, banks, ledger, balances,
+    requests, documents, meetings, ballots, ballotOptions, tallies, myVotes,
+    posts, vendors, amenities,
+  ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
     supabase.from("memberships").select("*").eq("association_id", associationId).is("ends_on", null),
@@ -88,6 +92,16 @@ export async function loadCommunity(
     supabase.from("bank_accounts").select("*").eq("association_id", associationId),
     supabase.from("ledger_entries").select("*").eq("association_id", associationId).order("occurred_on", { ascending: false }),
     supabase.from("unit_balances").select("*").eq("association_id", associationId),
+    supabase.from("requests").select("*").eq("association_id", associationId).order("submitted_on", { ascending: false }),
+    supabase.from("documents").select("*").eq("association_id", associationId).order("updated_on", { ascending: false }),
+    supabase.from("meetings").select("*").eq("association_id", associationId).order("held_on"),
+    supabase.from("ballots").select("*").eq("association_id", associationId).order("closes_on"),
+    supabase.from("ballot_options").select("*").order("position"),
+    supabase.from("ballot_tallies").select("*"),
+    supabase.from("votes").select("*"),
+    supabase.from("posts").select("*").eq("association_id", associationId).order("created_at", { ascending: false }),
+    supabase.from("vendors").select("*").eq("association_id", associationId),
+    supabase.from("amenities").select("*").eq("association_id", associationId),
   ]);
 
   if (association.error || !association.data) {
@@ -258,23 +272,132 @@ export async function loadCommunity(
     ],
     yearElapsed: Number(today.slice(5, 7)) / 12,
 
-    // Nothing below has a table yet. Empty is the truth for a new association
-    // and stays the truth until the schema grows to cover it.
+    // A reserve study is commissioned, not generated, so an association that
+    // has not paid for one has no components and the screens say so.
     reserveComponents: [],
     savingsOffers: [],
-    vendors: [],
     payouts: [],
-    requests: [],
     violations: [],
-    documents: [],
     complianceItems: [],
-    meetings: [],
-    ballots: [],
     threads: [],
     announcements: [],
-    posts: [],
-    amenities: [],
-    amenityStatus: [],
+
+    vendors: (vendors.data ?? []).map((v) => ({
+      id: v.id,
+      name: v.name,
+      service: v.service,
+      achEnabled: v.ach_enabled,
+      w9OnFile: v.w9_on_file,
+      coiExpires: v.coi_expires_on ?? undefined,
+      ytdPaidCents: 0,
+      defaultCategory: v.default_category as Community["vendors"][number]["defaultCategory"],
+    })),
+
+    requests: (requests.data ?? []).map((r) => ({
+      id: r.id,
+      reference: r.reference,
+      ownerId: r.unit_id,
+      ownerName: holderByUnit.get(r.unit_id)?.full_name ?? "",
+      unit: unitRows.find((u) => u.id === r.unit_id)?.label ?? "",
+      kind: r.kind,
+      title: r.title,
+      summary: r.body,
+      status: r.status,
+      submittedDate: r.submitted_on,
+      attachments: [],
+      thread: [],
+    })),
+
+    documents: (documents.data ?? []).map((d) => ({
+      id: d.id,
+      name: d.name,
+      category: d.category as Community["documents"][number]["category"],
+      visibility: d.visibility,
+      fileName: d.name,
+      fileType: "pdf" as const,
+      size: d.size_label,
+      updatedDate: d.updated_on,
+    })),
+
+    meetings: (meetings.data ?? []).map((m) => ({
+      id: m.id,
+      title: m.title,
+      date: m.held_on,
+      time: m.held_at,
+      location: m.location,
+      dialIn: m.dial_in ?? "",
+      passcode: m.passcode ?? "",
+      status: m.status as Community["meetings"][number]["status"],
+      kind: "board" as const,
+      agenda: [],
+      ballotIds: [],
+      attendees: [],
+    })),
+
+    ballots: (ballots.data ?? []).map((b) => {
+      const mine = (myVotes.data ?? []).find((v) => v.ballot_id === b.id);
+      return {
+        id: b.id,
+        reference: b.id.slice(0, 8).toUpperCase(),
+        title: b.title,
+        body: b.body,
+        kind: b.kind as Community["ballots"][number]["kind"],
+        audience: "owners" as const,
+        status: b.status,
+        opensDate: b.opens_on,
+        closesDate: b.closes_on,
+        eligible: unitRows.length,
+        seats: b.seats,
+        quorumRequired: b.quorum_required,
+        thresholdLabel: b.threshold_label,
+        options: (ballotOptions.data ?? [])
+          .filter((o) => o.ballot_id === b.id)
+          .map((o) => ({
+            id: o.id,
+            label: o.label,
+            detail: o.detail ?? undefined,
+            // Counted by the database, so no two screens can disagree.
+            votes:
+              (tallies.data ?? []).find((t) => t.option_id === o.id)?.votes ?? 0,
+          })),
+        myVoteOptionId: mine?.option_id ?? undefined,
+        myVoteReceipt: mine?.receipt ?? undefined,
+        liveResultsVisible: false,
+      };
+    }),
+
+    posts: (posts.data ?? []).map((p) => ({
+      id: p.id,
+      author: p.author_name,
+      authorRole: "resident" as const,
+      unit: "",
+      category: p.category as Community["posts"][number]["category"],
+      title: p.title,
+      body: p.body,
+      status: p.status,
+      moderatedBy: p.moderated_by ?? undefined,
+      moderatedAt: p.moderated_at?.slice(0, 10),
+      at: p.created_at.slice(0, 10),
+      postedDate: p.created_at.slice(0, 10),
+      pinned: p.pinned,
+      likes: p.likes,
+      replies: [],
+    })),
+
+    amenities: (amenities.data ?? []).map((a) => ({
+      id: a.id,
+      name: a.name,
+      detail: a.detail,
+      reservable: a.reservable,
+      status: a.status as Community["amenities"][number]["status"],
+      maxHours: a.max_hours ?? undefined,
+    })),
+    amenityStatus: (amenities.data ?? []).map((a) => ({
+      id: a.id,
+      name: a.name,
+      status: a.status as Community["amenityStatus"][number]["status"],
+      detail: a.detail,
+    })),
     forms: architecturalForms.map((f) => ({ ...f, updatedDate: today })),
     templates: messageTemplates.map((t) => ({ ...t, updatedDate: today })),
     ownerCharges,
