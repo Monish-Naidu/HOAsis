@@ -164,6 +164,8 @@ interface AppState {
    */
   /** Association level facts a board edits: insurance, name, dues. */
   updateAssociation: (patch: Partial<Community["association"]>) => void;
+  addBallot: (ballot: Community["ballots"][number]) => void;
+  addMeeting: (meeting: Community["meetings"][number]) => void;
   addBudgetLine: (line: Community["budget"][number]) => void;
   addReserveComponent: (component: Community["reserveComponents"][number]) => void;
   addSharedCost: (cost: Community["sharedCosts"][number]) => void;
@@ -248,6 +250,9 @@ const MUTABLE_SLICES = [
   // worse than no plan.
   "association",
   "reserveComponents",
+  // A board could not create a ballot or schedule a meeting, so for a new
+  // association the voting page was four permanent zeroes.
+  "meetings",
 ] as const;
 
 type MutableSlice = (typeof MUTABLE_SLICES)[number];
@@ -411,6 +416,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const threads = useStore(sliceStore(communityId, "threads"));
   const documents = useStore(sliceStore(communityId, "documents"));
   const associationRow = useStore(sliceStore(communityId, "association"));
+  const meetingList = useStore(sliceStore(communityId, "meetings"));
   const reserveComponentList = useStore(sliceStore(communityId, "reserveComponents"));
   const sharedCosts = useStore(sliceStore(communityId, "sharedCosts"));
   const sharedCostBills = useStore(sliceStore(communityId, "sharedCostBills"));
@@ -1138,6 +1144,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  const addBallot = useCallback(
+    (ballot: Community["ballots"][number]) =>
+      sliceStore(communityId, "ballots").update((all) => [ballot, ...all]),
+    [communityId],
+  );
+
+  const addMeeting = useCallback(
+    (meeting: Community["meetings"][number]) =>
+      sliceStore(communityId, "meetings").update((all) =>
+        [...all, meeting].sort((a, b) => a.date.localeCompare(b.date)),
+      ),
+    [communityId],
+  );
+
   const addBudgetLine = useCallback(
     (line: Community["budget"][number]) =>
       sliceStore(communityId, "budget").update((all) => [...all, line]),
@@ -1265,6 +1285,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ballots,
       templates,
       association: associationRow,
+      meetings: meetingList,
       reserveComponents: reserveComponentList,
       sharedCosts,
       sharedCostBills,
@@ -1290,6 +1311,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ballots,
       templates,
       associationRow,
+      meetingList,
       reserveComponentList,
       sharedCosts,
       sharedCostBills,
@@ -1369,6 +1391,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     replyToThread,
     addDocument,
     updateAssociation,
+    addBallot,
+    addMeeting,
     addBudgetLine,
     addReserveComponent,
     addSharedCost,

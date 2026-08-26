@@ -5,7 +5,9 @@ import {
   Radio,
   Vote,
 } from "lucide-react";
+import { useState } from "react";
 import { BallotCard } from "@/components/app/ballot-card";
+import { NewBallot } from "@/components/app/new-ballot";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import {
   Badge,
@@ -22,6 +24,7 @@ import { BoardVote } from "@/components/app/board-vote";
 import { formatDate } from "@/lib/utils";
 
 export default function BoardVoting() {
+  const [creating, setCreating] = useState(false);
   const { community, ballots, castVote } = useAppState();
   const live = community.meetings.find((m) => m.status === "live");
   const upcoming = [...community.meetings]
@@ -45,15 +48,13 @@ export default function BoardVoting() {
         title="Voting and meetings"
         
         action={
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => notify("Ballot builder opens with the notice requirements", "info")}
-          >
-            New ballot
+          <Button variant="primary" size="md" onClick={() => setCreating((v) => !v)}>
+            {creating ? "Cancel" : "New ballot"}
           </Button>
         }
       />
+
+      {creating ? <NewBallot onClose={() => setCreating(false)} /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Open ballots" value={String(open.length)} icon={<Vote className="size-4" />} />

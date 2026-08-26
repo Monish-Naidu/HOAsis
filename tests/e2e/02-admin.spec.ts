@@ -386,3 +386,54 @@ test.describe("money is one place", () => {
     expect(health.text, "reserves leaked to a resident").not.toMatch(/\$[\d,]{3,}/);
   });
 });
+
+test.describe("a board can actually run a vote", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "admin" });
+  });
+
+  test("the new ballot button opens a builder, not a toast", async ({ page }) => {
+    await page.goto("/admin/voting");
+    await page.waitForLoadState("networkidle");
+
+    const before = (await inspect(page)).text;
+    const openBefore = Number(before.match(/Open ballots\s*\n?\s*(\d+)/)?.[1] ?? "0");
+
+    await page.getByRole("button", { name: "New ballot" }).click();
+    await page.waitForTimeout(400);
+
+    await page.getByLabel("Ballot title").fill("Replace the pool fence");
+    await page.getByLabel("Ballot detail").fill("The current fence fails inspection.");
+    await page.waitForTimeout(300);
+
+    // The three things that decide whether a result survives a challenge are
+    // stated back before the button is pressed.
+    const preview = await inspect(page);
+    expect(preview.text, "the notice and quorum are not stated").toMatch(
+      /homes must vote for the result to count/,
+    );
+
+    await page.getByRole("button", { name: "Open the ballot" }).click();
+    await page.waitForTimeout(700);
+
+    const after = await expectHealthy(page, "voting after opening a ballot");
+    const openAfter = Number(after.text.match(/Open ballots\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    expect(openAfter, "the count did not move, so the ballot never opened").toBe(openBefore + 1);
+    expect(after.text).toContain("Replace the pool fence");
+  });
+
+  test("a ballot needs at least two choices before it can open", async ({ page }) => {
+    await page.goto("/admin/voting");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "New ballot" }).click();
+    await page.waitForTimeout(400);
+
+    const open = page.getByRole("button", { name: "Open the ballot" });
+    await expect(open, "an untitled ballot could be opened").toBeDisabled();
+
+    await page.getByLabel("Ballot title").fill("A question");
+    await page.getByLabel("Choice 2").fill("");
+    await page.waitForTimeout(300);
+    await expect(open, "a ballot with one choice could be opened").toBeDisabled();
+  });
+});
