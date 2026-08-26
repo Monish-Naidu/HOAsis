@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Transient output from scripts/setup-supabase.sh
+.supabase-project.json
