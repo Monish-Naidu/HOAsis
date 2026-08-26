@@ -10,6 +10,19 @@ import { cn } from "@/lib/utils";
 import { signInWithPassword, signUp } from "@/lib/auth";
 import { hasSupabase } from "@/lib/supabase/env";
 
+/**
+ * A shared board account, for anyone evaluating the product.
+ *
+ * Publishing a password is only safe because row level security decides what
+ * it can reach, and that has been tested from the other side: this account
+ * cannot read a charge, a unit, or a balance belonging to any other
+ * association. The worst somebody can do with it is edit the demo.
+ */
+const DEMO = {
+  email: "dana@willowcreek.test",
+  password: "WillowCreek2026!",
+};
+
 export function SignInPanel() {
   const router = useRouter();
   const { signIn, accounts, communities, community, setCommunity } = useAppState();
@@ -149,6 +162,39 @@ export function SignInPanel() {
           )}
         </form>
       </Card>
+
+      {hasSupabase ? (
+        <Card className="p-4">
+          <p className="text-[12px] font-semibold text-fg">Try a real association</p>
+          <p className="mt-1 text-[11px] leading-snug text-fg-muted">
+            A demo board, stored in the database rather than in this browser. It can only
+            reach its own association, which is enforced by the database rather than by
+            this screen.
+          </p>
+          <dl className="mt-3 space-y-1 font-mono text-[11px] text-fg-muted">
+            <div className="flex gap-2">
+              <dt className="w-16 shrink-0 text-fg-subtle">email</dt>
+              <dd className="min-w-0 truncate text-fg">{DEMO.email}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="w-16 shrink-0 text-fg-subtle">password</dt>
+              <dd className="min-w-0 truncate text-fg">{DEMO.password}</dd>
+            </div>
+          </dl>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-3 w-full"
+            onClick={() => {
+              setMode("sign-in");
+              setEmail(DEMO.email);
+              setPassword(DEMO.password);
+            }}
+          >
+            Fill these in
+          </Button>
+        </Card>
+      ) : null}
 
       {communities.length > 1 ? (
         <div className="flex gap-1.5" role="radiogroup" aria-label="Association">

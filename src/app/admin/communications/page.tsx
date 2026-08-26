@@ -26,6 +26,7 @@ import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { formatDate, pluralize } from "@/lib/utils";
 import { communicationsSummary } from "@/lib/metrics";
+import { DuesMailer } from "@/components/app/dues-mailer";
 
 export default function BoardCommunications() {
   const { community, threads, replyToThread } = useAppState();
@@ -82,6 +83,8 @@ export default function BoardCommunications() {
           hint={stats.sent ? `${pluralize(stats.sent, "reply", "replies")} sent` : undefined}
         />
       </div>
+
+      <DuesMailer />
 
       {!active ? (
         <Card className="mt-5">
