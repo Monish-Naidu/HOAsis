@@ -25,6 +25,7 @@ import {
   SettingRow,
   Toggle,
 } from "@/components/ui/primitives";
+import { DangerZone } from "@/components/app/danger-zone";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
@@ -488,6 +489,7 @@ export function SettingsScreen() {
           </p>
         </Card>
       </div>
-    </>
+          <DangerZone />
+</>
   );
 }

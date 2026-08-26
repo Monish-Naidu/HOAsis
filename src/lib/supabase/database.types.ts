@@ -79,8 +79,12 @@ export type Database = {
       }
       associations: {
         Row: {
+          cancel_reason: string | null
+          canceled_at: string | null
           city: string
           created_at: string
+          deleted_at: string | null
+          deletion_requested_by: string | null
           due_day: number
           dues_cadence: Database["public"]["Enums"]["dues_cadence"]
           dues_cents: number
@@ -101,10 +105,15 @@ export type Database = {
           software_fee_cents_per_home: number
           state: string
           stripe_account_id: string | null
+          subscription_status: string
         }
         Insert: {
+          cancel_reason?: string | null
+          canceled_at?: string | null
           city: string
           created_at?: string
+          deleted_at?: string | null
+          deletion_requested_by?: string | null
           due_day?: number
           dues_cadence?: Database["public"]["Enums"]["dues_cadence"]
           dues_cents: number
@@ -125,10 +134,15 @@ export type Database = {
           software_fee_cents_per_home?: number
           state: string
           stripe_account_id?: string | null
+          subscription_status?: string
         }
         Update: {
+          cancel_reason?: string | null
+          canceled_at?: string | null
           city?: string
           created_at?: string
+          deleted_at?: string | null
+          deletion_requested_by?: string | null
           due_day?: number
           dues_cadence?: Database["public"]["Enums"]["dues_cadence"]
           dues_cents?: number
@@ -149,8 +163,17 @@ export type Database = {
           software_fee_cents_per_home?: number
           state?: string
           stripe_account_id?: string | null
+          subscription_status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "associations_deletion_requested_by_fkey"
+            columns: ["deletion_requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ballot_options: {
         Row: {
@@ -1181,6 +1204,14 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_association_deletion: {
+        Args: { p_association_id: string }
+        Returns: undefined
+      }
+      cancel_subscription: {
+        Args: { p_association_id: string; p_reason?: string }
+        Returns: undefined
+      }
       cast_vote: {
         Args: { p_ballot_id: string; p_option_id: string }
         Returns: string
@@ -1230,6 +1261,10 @@ export type Database = {
         Args: { p_association_id: string; p_due_on: string; p_label: string }
         Returns: number
       }
+      leave_association: {
+        Args: { p_association_id: string }
+        Returns: undefined
+      }
       my_associations: {
         Args: never
         Returns: {
@@ -1251,6 +1286,18 @@ export type Database = {
           p_unit_id: string
         }
         Returns: string
+      }
+      request_association_deletion: {
+        Args: { p_association_id: string; p_typed_name: string }
+        Returns: string
+      }
+      resume_subscription: {
+        Args: { p_association_id: string }
+        Returns: undefined
+      }
+      transfer_presidency: {
+        Args: { p_to_profile: string }
+        Returns: undefined
       }
     }
     Enums: {

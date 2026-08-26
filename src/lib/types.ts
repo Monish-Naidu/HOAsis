@@ -34,6 +34,8 @@ export interface Association {
   insuranceCarrier?: string;
   insurancePolicyNo?: string;
   insuranceExpiresOn?: ISODate;
+  /** active, past_due or canceled. Cancelling stops billing and nothing else. */
+  subscriptionStatus?: "active" | "past_due" | "canceled";
 }
 
 /* -------------------------------------------------------------------------- */

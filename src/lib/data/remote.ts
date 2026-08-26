@@ -213,6 +213,10 @@ export async function loadCommunity(
       insuranceCarrier: a.insurance_carrier ?? undefined,
       insurancePolicyNo: a.insurance_policy_no ?? undefined,
       insuranceExpiresOn: a.insurance_expires_on ?? undefined,
+      subscriptionStatus: (a.subscription_status ?? "active") as
+        | "active"
+        | "past_due"
+        | "canceled",
     },
 
     settings: {
