@@ -73,7 +73,7 @@ test.describe("board actions", () => {
     await page.getByRole("button", { name: "Confirm" }).first().click();
     await page.waitForTimeout(700);
 
-    const undo = page.getByRole("button", { name: /^Undo$/ });
+    const undo = page.getByRole("button", { name: /^Undo$/ }).last();
     await expect(undo, "confirming offered no way back").toBeVisible();
     await undo.click();
     await page.waitForTimeout(700);
@@ -96,7 +96,15 @@ test.describe("board actions", () => {
     await page.getByRole("button", { name: "Save" }).click();
     await page.waitForTimeout(800);
 
-    expect((await inspect(page)).text).toContain("E2E Probe Household");
+    // The roster pages at 25 and sorts by unit, so a new unit 999 lands
+    // several pages down. Search rather than scroll.
+    const search = page.getByPlaceholder(/Search owners/i);
+    await search.fill("E2E Probe");
+    await page.waitForTimeout(500);
+    expect(
+      (await inspect(page)).text,
+      "the household was not added",
+    ).toContain("E2E Probe Household");
 
     await page
       .getByRole("button", { name: "Remove E2E Probe Household from the roster" })
@@ -104,8 +112,10 @@ test.describe("board actions", () => {
     await page.waitForTimeout(600);
     expect((await inspect(page)).text).not.toContain("E2E Probe Household");
 
-    await page.getByRole("button", { name: /^Undo$/ }).click();
-    await page.waitForTimeout(600);
+    await page.getByRole("button", { name: /^Undo$/ }).last().click();
+    await page.waitForTimeout(700);
+    await search.fill("E2E Probe");
+    await page.waitForTimeout(400);
     expect(
       (await inspect(page)).text,
       "undo did not bring the household back",
@@ -121,7 +131,7 @@ test.describe("board actions", () => {
 
     await page.getByRole("button", { name: "Reject" }).first().click();
     await page.waitForTimeout(600);
-    const undo = page.getByRole("button", { name: /^Undo$/ });
+    const undo = page.getByRole("button", { name: /^Undo$/ }).last();
     await expect(undo, "rejecting a post offered no way back").toBeVisible();
     await undo.click();
     await page.waitForTimeout(600);

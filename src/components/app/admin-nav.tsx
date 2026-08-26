@@ -3,28 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Banknote,
-  FileText,
-  Inbox,
-  LayoutDashboard,
-  MessagesSquare,
-  PiggyBank,
-  MessageSquareText,
-  ScaleIcon,
-  Settings,
-  Truck,
-  Users,
-  Vote,
-} from "lucide-react";
-import {
   useAppState,
   usePendingApprovals,
   useReconciliation,
   useUnreadThreadCount,
   useVendorGaps,
 } from "@/lib/app-state";
+import { ADMIN_ROUTES } from "@/lib/admin-routes";
 import { complianceSummary, delinquency } from "@/lib/metrics";
-import type { Capability } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export interface NavBadge {
@@ -32,50 +18,7 @@ export interface NavBadge {
   tone: "danger" | "warn" | "neutral";
 }
 
-const items: {
-  href: string;
-  label: string;
-  icon: typeof Banknote;
-  key: string;
-  need?: Capability;
-}[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
-  { href: "/admin/money", label: "Money", icon: Banknote, key: "money", need: "finances" },
-  {
-    href: "/admin/reserves",
-    label: "Reserves",
-    icon: PiggyBank,
-    key: "reserves",
-    need: "finances",
-  },
-  { href: "/admin/homeowners", label: "Homeowners", icon: Users, key: "homeowners" },
-  { href: "/admin/requests", label: "Requests", icon: Inbox, key: "requests", need: "requests" },
-  { href: "/admin/voting", label: "Voting", icon: Vote, key: "voting", need: "voting" },
-  {
-    href: "/admin/compliance",
-    label: "Compliance",
-    icon: ScaleIcon,
-    key: "compliance",
-    need: "compliance",
-  },
-  {
-    href: "/admin/communications",
-    label: "Communications",
-    icon: MessagesSquare,
-    key: "communications",
-    need: "communications",
-  },
-  { href: "/admin/forum", label: "Forum", icon: MessageSquareText, key: "forum", need: "forum" },
-  { href: "/admin/vendors", label: "Vendors", icon: Truck, key: "vendors", need: "vendors" },
-  {
-    href: "/admin/documents",
-    label: "Documents",
-    icon: FileText,
-    key: "documents",
-    need: "documents",
-  },
-  { href: "/admin/settings", label: "Settings", icon: Settings, key: "settings", need: "settings" },
-];
+const items = ADMIN_ROUTES;
 
 /**
  * Counts live next to each section.
@@ -120,7 +63,8 @@ export function AdminNav() {
     },
   };
 
-  const visible = items.filter((i) => !i.need || can(i.need));
+  // Any one of the listed capabilities opens the tab.
+  const visible = items.filter((i) => !i.need || i.need.some((c) => can(c)));
 
   return (
     <nav aria-label="Admin sections" className="flex gap-1 lg:flex-col">

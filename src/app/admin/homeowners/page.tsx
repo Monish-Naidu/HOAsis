@@ -4,6 +4,7 @@ import {
   Building2,
   Download,
   Link2 as LinkIcon,
+  Lock,
   Mail,
   Repeat,
   Search,
@@ -14,6 +15,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Callout,
   Card,
   CardHeader,
   Meter,
@@ -38,7 +40,7 @@ const standingMeta: Record<Owner["standing"], { tone: "ok" | "warn" | "danger"; 
 };
 
 export default function BoardHomeowners() {
-  const { community, addOwner, removeOwner } = useAppState();
+  const { community, addOwner, removeOwner, can } = useAppState();
   const association = community.association;
   const owners = community.owners;
   const delinq = delinquency(community);
@@ -47,6 +49,8 @@ export default function BoardHomeowners() {
   const [composing, setComposing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [entry, setEntry] = useState({ name: "", email: "", unit: "" });
+
+  const maySeeRoster = can("finances") || can("communications");
 
   function saveOwner() {
     try {
@@ -116,6 +120,31 @@ export default function BoardHomeowners() {
     },
     { label: "90+ days", owners: delinq.past.filter((o) => o.daysPastDue > 90) },
   ];
+
+  if (!maySeeRoster) {
+
+    return (
+
+      <Callout
+
+        tone="warn"
+
+        icon={<Lock className="size-4" />}
+
+        title="You cannot see the homeowner register"
+
+      >
+
+        It carries every household&apos;s balance and contact details, so it needs the money
+
+        or communications capability. The President grants those.
+
+      </Callout>
+
+    );
+
+  }
+
 
   return (
     <>

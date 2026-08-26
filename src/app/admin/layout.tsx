@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/app/admin-nav";
+import { RequireCapability } from "@/components/app/require-capability";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { ThemeToggle } from "@/components/app/theme";
@@ -51,7 +52,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
           </aside>
-          <main className="min-w-0 flex-1">{children}</main>
+          <main className="min-w-0 flex-1">
+            <RequireCapability>{children}</RequireCapability>
+          </main>
         </div>
       </div>
     </RequireSession>

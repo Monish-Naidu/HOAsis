@@ -15,11 +15,12 @@ import { expect, type Page } from "@playwright/test";
  * difference is where the bugs were.
  */
 
+/** Seats as the fixtures actually define them, checked against accounts.ts. */
 export const SEATS = {
   president: "acct-arya",
-  treasurer: "acct-sofia",
-  secretary: "acct-ellis",
-  vicePresident: "acct-dana",
+  treasurer: "acct-dana",
+  secretary: "acct-sofia",
+  vicePresident: "acct-ellis",
   resident: "acct-monish",
   otherResident: "acct-nina",
 } as const;
