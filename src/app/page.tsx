@@ -74,7 +74,7 @@ const HERO_OUTLOOK = (() => {
   return {
     year: projection.years.at(-1)?.year ?? startYear,
     headline: "Funded this far ahead",
-    detail: "Every roof and road paid for, no special assessment",
+    detail: "No special assessment planned",
   };
 })();
 
@@ -286,15 +286,17 @@ export default function MarketingHome() {
               {/* The demo association's real reserve outlook, floated over the
                   corner, so the hero shows the product working rather than
                   only describing it. */}
-              <figcaption className="absolute -bottom-6 -left-4 flex items-center gap-4 rounded-2xl border border-border bg-surface/95 px-5 py-3.5 shadow-float backdrop-blur-md sm:-left-8">
-                <span className="text-[34px] font-semibold leading-none tracking-tight text-fg tabular-nums">
+              <figcaption className="absolute -bottom-6 -left-4 flex max-w-[21rem] items-center gap-3.5 rounded-2xl border border-border bg-surface/95 px-4 py-3 shadow-float backdrop-blur-md sm:-left-8">
+                <span className="tnum shrink-0 text-[32px] font-semibold leading-none tracking-[-0.03em] text-fg">
                   {HERO_OUTLOOK.year}
                 </span>
-                <span className="border-l border-border pl-4">
+                <span className="min-w-0 border-l border-border pl-3.5">
                   <span className="block text-[15px] font-semibold text-fg">
                     {HERO_OUTLOOK.headline}
                   </span>
-                  <span className="block text-[13px] text-fg-muted">{HERO_OUTLOOK.detail}</span>
+                  <span className="block text-[13px] leading-snug text-fg-muted">
+                  {HERO_OUTLOOK.detail}
+                </span>
                 </span>
               </figcaption>
             </figure>
@@ -315,7 +317,10 @@ export default function MarketingHome() {
               note: "Association Reserves, 100,000+ studies",
             },
             { value: "30 yr", label: "We show you the year the money runs out" },
-            { value: "0.8%", label: "Bank payments, capped. Cards at cost, never marked up" },
+            {
+              value: money(PAYMENT_COSTS.achCents),
+              label: "Every bank payment, flat. Cards at cost, never marked up",
+            },
             { value: "All", label: "Every feature on every plan. No add-ons" },
           ].map((stat, index) => (
             <Reveal key={stat.label} delay={index * 60}>
@@ -464,8 +469,8 @@ export default function MarketingHome() {
               ))}
             </div>
             <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-fg-muted">
-              We do not mark up card fees, so the difference between the two columns stays in
-              the association. Put it in reserves and over a decade it is the gap between
+              We do not mark up card fees, so what a manager would have taken stays in the
+              association instead. Put it in reserves and over a decade it is the gap between
               replacing a roof on schedule and levying a special assessment for it.
             </p>
           </Reveal>
