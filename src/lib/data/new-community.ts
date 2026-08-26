@@ -242,6 +242,11 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     requests: [],
     violations: [],
     documents: [],
+    // A new association has uploaded nothing yet, so there is no text to
+    // read. The bylaw screens point at the file list instead of pretending
+    // to a document that does not exist.
+    bylaws: [],
+    bylawAmendments: [],
     complianceItems: [],
 
     meetings: [],

@@ -406,6 +406,8 @@ export const testCommunityOne: Community = {
   // No reserve study yet. This is the finding, not an omission.
   reserveComponents: [],
   savingsOffers: [],
+  bylaws: [],
+  bylawAmendments: [],
   sharedCosts: [],
   sharedCostBills: [],
   specialAssessments: [],

@@ -1,19 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
-import { money, today } from "@/lib/utils";
+import { money } from "@/lib/utils";
 import {
   ArrowRight,
   Check,
   MessageSquareText,
   ScaleIcon,
   ShieldCheck,
+  Users,
   Vote,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Badge, Card } from "@/components/ui/primitives";
-import { budget, interestSummary, libraryArticles, owners, reserveComponents } from "@/lib/data";
+import { libraryArticles } from "@/lib/data";
 import { MANAGEMENT_RANGE_PER_HOME, PAYMENT_COSTS, tierFor } from "@/lib/pricing";
-import { defaultAssumptions, projectReserves, requiredMonthlyContribution } from "@/lib/reserves";
 
 export const metadata = {
   title: "HOAsis, community management for self-managed HOAs",
@@ -37,46 +37,7 @@ const MANAGED_YEAR = {
   high: MANAGEMENT_RANGE_PER_HOME.high * EXAMPLE_HOMES * 12,
 };
 
-/**
- * The number floated over the hero photograph.
- *
- * It is computed from the demo association's own reserve study by the same
- * functions the board screen uses, so the claim on the front page cannot drift
- * from what the product actually says. A board can check it in the live demo.
- *
- * We lead with the year rather than a percentage because the year is the part
- * that changes behaviour. Nobody calls a meeting over "68% funded".
- */
-const HERO_OUTLOOK = (() => {
-  const startYear = today().getUTCFullYear();
-  const interest = interestSummary();
-  const transfer = budget.find((b) => b.category === "Reserve transfer");
-  const monthlyContributionCents = transfer ? Math.round(transfer.annualCents / 12) : 0;
-  const assumptions = defaultAssumptions({
-    openingBalanceCents: interest.balance,
-    monthlyContributionCents,
-    apyPercent: interest.blendedApy,
-  });
-  const projection = projectReserves(reserveComponents, assumptions, startYear);
 
-  if (projection.firstShortfallYear !== null) {
-    const required = requiredMonthlyContribution(reserveComponents, assumptions, startYear);
-    const perHome = Math.round(
-      Math.max(0, required - monthlyContributionCents) / Math.max(1, owners.length),
-    );
-    return {
-      year: projection.firstShortfallYear,
-      headline: "The year this HOA runs short",
-      detail: `Fixed today for ${money(perHome)} a home a month`,
-    };
-  }
-
-  return {
-    year: projection.years.at(-1)?.year ?? startYear,
-    headline: "Funded this far ahead",
-    detail: "No special assessment planned",
-  };
-})();
 
 /** Each value section pairs a claim with the screen that proves it. */
 const SHOWCASE = [
@@ -283,20 +244,21 @@ export default function MarketingHome() {
                   className="object-cover"
                 />
               </div>
-              {/* The demo association's real reserve outlook, floated over the
-                  corner, so the hero shows the product working rather than
-                  only describing it. */}
-              <figcaption className="absolute -bottom-6 -left-4 flex max-w-[21rem] items-center gap-3.5 rounded-2xl border border-border bg-surface/95 px-4 py-3 shadow-float backdrop-blur-md sm:-left-8">
-                <span className="tnum shrink-0 text-[32px] font-semibold leading-none tracking-[-0.03em] text-fg">
-                  {HERO_OUTLOOK.year}
+              {/* Not a statistic. A board looking at this is three volunteers
+                  who took the job because the alternative was a management
+                  company, and the thing worth saying to them is that the
+                  product expects exactly that and nothing more. */}
+              <figcaption className="absolute -bottom-6 -left-4 flex max-w-[20rem] items-center gap-3.5 rounded-2xl border border-border bg-surface/95 px-4 py-3.5 shadow-float backdrop-blur-md sm:-left-8">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-fg">
+                  <Users className="size-5" strokeWidth={2} />
                 </span>
-                <span className="min-w-0 border-l border-border pl-3.5">
+                <span className="min-w-0">
                   <span className="block text-[15px] font-semibold text-fg">
-                    {HERO_OUTLOOK.headline}
+                    Made for volunteer boards
                   </span>
                   <span className="block text-[13px] leading-snug text-fg-muted">
-                  {HERO_OUTLOOK.detail}
-                </span>
+                    A neighbor with a day job, not a property manager
+                  </span>
                 </span>
               </figcaption>
             </figure>

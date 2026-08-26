@@ -1,7 +1,10 @@
 "use client";
 
 import {
+  AlertTriangle,
+  BookOpen,
   Building2,
+  ChevronRight,
   ExternalLink,
   FileSpreadsheet,
   FileText,
@@ -11,15 +14,16 @@ import {
   Upload,
 } from "lucide-react";
 import {
+  Badge,
   Button,
   Callout,
   Card,
   CardHeader,
   PageHeader,
-  Stat,
 } from "@/components/ui/primitives";
 import { useState } from "react";
-import { publicRecordsUrl } from "@/lib/metrics";
+import Link from "next/link";
+import { publicRecordsUrl, recordsGaps } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { formatDate, pluralize, todayIsoDate } from "@/lib/utils";
@@ -78,7 +82,8 @@ export default function BoardDocuments() {
   const { notify } = useToast();
   const [query, setQuery] = useState("");
   const publicDocs = documents.filter((d) => d.visibility === "public");
-  const statutory = documents.filter((d) => d.requiredBy);
+  const gaps = recordsGaps({ ...community, documents });
+  const openAmendments = community.bylawAmendments.filter((a) => a.stage === "open").length;
   const grouped = order
     .map((category) => ({
       category,
@@ -122,23 +127,71 @@ export default function BoardDocuments() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Documents" value={String(documents.length)} icon={<FileText className="size-4" />} />
-        <Stat
-          label="Published publicly"
-          value={String(publicDocs.length)}
-          tone="ok"
-          hint="No login required"
-          icon={<Globe className="size-4" />}
-        />
-        <Stat
-          label="Statutorily required"
-          value={String(statutory.length)}
-          hint="Tied to a citation in the register"
+      {/* Four counts used to sit here. "Documents 17" is a row count, and a
+          board cannot do anything with a row count. What they can act on is
+          the gap between what they hold and what they are expected to hold,
+          so that is what the top of the page is now. */}
+      <Card className="mb-5">
+        <CardHeader
           icon={<Building2 className="size-4" />}
+          title={
+            gaps.complete
+              ? "Every record a board is expected to hold is on file"
+              : `${gaps.missing.length} of ${gaps.total} expected records are not on file`
+          }
+          subtitle={
+            gaps.complete
+              ? "Nothing outstanding. An owner or a buyer's lender can be answered the same day."
+              : "These are the ones an owner may inspect and a buyer's lender asks for by name."
+          }
+          action={
+            <span className="tnum text-[15px] font-semibold text-fg">
+              {gaps.onFileCount} / {gaps.total}
+            </span>
+          }
         />
-        <Stat label="Board only" value={String(documents.filter((d) => d.visibility === "board").length)} hint="Contracts, collections work product" />
-      </div>
+        {gaps.missing.length > 0 ? (
+          <div className="divide-y divide-border">
+            {gaps.missing.map((record) => (
+              <div key={record.key} className="flex items-start gap-3 px-5 py-3">
+                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-warn-soft text-warn">
+                  <AlertTriangle className="size-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-fg">{record.label}</p>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+                    {record.why}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </Card>
+
+      {community.bylaws.length > 0 ? (
+        <Link
+          href="/admin/documents/bylaws"
+          className="mb-5 flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
+            <BookOpen className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-fg">
+              Bylaws, readable and amendable
+            </span>
+            <span className="block text-[13px] leading-snug text-fg-muted">
+              {community.bylaws.length} articles owners can search in plain words.
+              {openAmendments > 0
+                ? ` ${openAmendments} change${openAmendments === 1 ? "" : "s"} on the ballot.`
+                : " Start an amendment here."}
+            </span>
+          </span>
+          {openAmendments > 0 ? <Badge tone="warn">On the ballot</Badge> : null}
+          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+        </Link>
+      ) : null}
 
       <Callout
         tone="ok"

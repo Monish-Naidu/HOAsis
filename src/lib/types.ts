@@ -217,6 +217,8 @@ export interface HomeRequest {
   decidedBy?: string;
   attachments: { name: string; size: string }[];
   thread: RequestThreadEvent[];
+  /** The form the owner filled in, when the request started from one. */
+  submission?: FormSubmission;
   /** Approved requests produce a shareable, verifiable certificate. */
   certificateId?: string;
 }
@@ -502,6 +504,27 @@ export interface CommunityAmenity {
   maxHours?: number;
 }
 
+/**
+ * One question on a form.
+ *
+ * Deliberately a small set of kinds. A form builder that can express anything
+ * produces forms nobody finishes, and every architectural request in this
+ * category asks the same eight or nine things.
+ */
+export interface FormField {
+  id: ID;
+  label: string;
+  kind: "text" | "long" | "number" | "date" | "choice" | "checkbox" | "file";
+  required?: boolean;
+  /** Shown under the field. This is where the rule that drives the question goes. */
+  help?: string;
+  /** For "choice". */
+  options?: string[];
+  placeholder?: string;
+  /** Units printed after a number, like "feet" or "square feet". */
+  suffix?: string;
+}
+
 export interface ArchitecturalForm {
   id: ID;
   label: string;
@@ -511,6 +534,44 @@ export interface ArchitecturalForm {
   /** Baseline forms ship with HOAsis. Uploaded ones come from the admin. */
   source: "baseline" | "uploaded";
   updatedDate: ISODate;
+  /**
+   * The questions, when the form can be filled in here.
+   *
+   * A form with no fields is a PDF to print, sign by hand, and scan, which is
+   * what every association does today and what roughly half of applications
+   * die in the middle of. Filling it in on the page is the whole improvement.
+   */
+  fields?: FormField[];
+  /** The article this form exists to satisfy, quoted back to the applicant. */
+  governedBy?: string;
+  /** Days the association has to decide, from the same article. */
+  decisionDays?: number;
+}
+
+/**
+ * A signature captured on the page.
+ *
+ * Both the drawn image and the typed name are kept, along with when and from
+ * where. An association challenged on an approval needs to show that a person
+ * agreed to something at a moment in time, and a canvas by itself does not
+ * establish that.
+ */
+export interface FormSignature {
+  /** Data URL of the drawn mark, when the signer drew one. */
+  drawn?: string;
+  /** The typed legal name, which is what makes it enforceable in most states. */
+  typedName: string;
+  signedAt: string;
+  /** What the signer agreed to, stored with the signature rather than referenced. */
+  statement: string;
+}
+
+/** A completed form, ready to become a request. */
+export interface FormSubmission {
+  formId: ID;
+  formLabel: string;
+  answers: { fieldId: ID; label: string; value: string }[];
+  signature: FormSignature;
 }
 
 export interface CommunityBanner {
@@ -668,4 +729,78 @@ export interface SpecialAssessment {
   /** Collected so far, across every home. */
   collectedCents: Cents;
   status: "proposed" | "active" | "complete";
+}
+
+/* -------------------------------------------------------------------------- */
+/* Bylaws, as something a person can actually read.                           */
+/* -------------------------------------------------------------------------- */
+
+export type BylawTopic =
+  | "governance"
+  | "money"
+  | "meetings"
+  | "property"
+  | "enforcement"
+  | "records";
+
+/**
+ * One article of the governing documents.
+ *
+ * Both the real text and a plain reading of it are stored, deliberately. The
+ * legal language is what governs and cannot be paraphrased away; the plain
+ * reading is what makes anybody look at it. A product that shows only the
+ * summary is misleading, and one that shows only the deed language is the PDF
+ * nobody opens.
+ */
+export interface BylawArticle {
+  id: ID;
+  /** "Article VII", "Section 4.2". Printed as written in the document. */
+  number: string;
+  title: string;
+  topic: BylawTopic;
+  /** The governing text, verbatim. Paragraphs. */
+  text: string[];
+  /** What it means, in the words a neighbor would use. */
+  plain: string;
+  /** Who it actually constrains. Owners skip half of a bylaw set. */
+  affects: "owners" | "board" | "both";
+  /** When this article was last changed, and by which vote. */
+  amendedOn?: ISODate;
+  amendmentBallotId?: ID;
+}
+
+export type AmendmentKind = "amend" | "add" | "remove";
+export type AmendmentStage = "draft" | "open" | "passed" | "failed" | "withdrawn";
+
+/**
+ * A proposed change to one article.
+ *
+ * Kept next to the article rather than as free text on a ballot, so an owner
+ * voting on it sees exactly what the words become. Boards routinely put "shall
+ * we amend Article VII" on a ballot with the actual change in an attachment
+ * nobody opens, and then wonder why the vote is challenged.
+ */
+export interface BylawAmendment {
+  id: ID;
+  kind: AmendmentKind;
+  /** The article being changed. Absent when adding a new one. */
+  articleId?: ID;
+  /** Where a new article would sit, or the number of the one being changed. */
+  number: string;
+  title: string;
+  /** The proposed text. Empty for a removal. */
+  text: string[];
+  plain: string;
+  topic: BylawTopic;
+  /** Who the change would constrain, so an owner can tell if it reaches them. */
+  affects: "owners" | "board" | "both";
+  /** Why the board or the petitioning owners want it. */
+  rationale: string;
+  proposedBy: string;
+  proposedOn: ISODate;
+  stage: AmendmentStage;
+  /** The ballot carrying it, once it opens. */
+  ballotId?: ID;
+  /** What share of owners must approve, from the association's own documents. */
+  thresholdLabel: string;
 }

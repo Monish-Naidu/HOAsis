@@ -77,6 +77,19 @@ export function formatDate(iso: string, style: "short" | "medium" | "long" = "me
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+/**
+ * A date a number of days after another, as a plain YYYY-MM-DD string.
+ *
+ * Response deadlines are counted in days from a submission, and doing that with
+ * `new Date()` arithmetic in a component reintroduces the drift the pinned
+ * clock exists to prevent.
+ */
+export function addDays(iso: string, days: number): string {
+  const d = parseDate(iso);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function daysFromToday(iso: string) {
   return Math.round((parseDate(iso).getTime() - today().getTime()) / DAY);
 }

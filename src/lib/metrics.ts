@@ -388,3 +388,96 @@ export function assessmentProgress(c: Community) {
     outstandingCents: rows.reduce((t, r) => t + r.remainingCents, 0),
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Records: what is on file, and what is not.                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The records an association is expected to hold, whatever state it is in.
+ *
+ * Every state's records statute is worded differently and most enumerate more
+ * than this. These are the ones that appear on essentially every list, that a
+ * buyer's lender asks for by name, and that an owner is entitled to inspect.
+ * Anything state specific belongs in the compliance register, which cites its
+ * own statute; this is the floor.
+ */
+const EXPECTED_RECORDS = [
+  {
+    key: "declaration",
+    label: "Declaration or CC&Rs",
+    match: /declaration|cc&r|covenant/i,
+    why: "The recorded document that creates the association. Every closing needs it.",
+  },
+  {
+    key: "bylaws",
+    label: "Bylaws",
+    match: /bylaw/i,
+    why: "How the association governs itself. An owner disputing a fine will ask for this first.",
+  },
+  {
+    key: "articles",
+    label: "Articles of Incorporation",
+    match: /articles of incorporation/i,
+    why: "Proof the association exists as a corporation. A bank asks for it to open an account.",
+  },
+  {
+    key: "rules",
+    label: "Rules and Regulations",
+    match: /rules|regulation/i,
+    why: "A fine for breaking a rule that is not written down does not survive a challenge.",
+  },
+  {
+    key: "budget",
+    label: "Current adopted budget",
+    match: /budget/i,
+    why: "Owners are entitled to it, and most states require it be delivered before the year starts.",
+  },
+  {
+    key: "financials",
+    label: "Most recent financial statements",
+    match: /financial statement|balance sheet|income statement/i,
+    why: "The annual figures owners can inspect. Lenders ask for the last two years.",
+  },
+  {
+    key: "reserve",
+    label: "Reserve study",
+    match: /reserve stud/i,
+    why: "Several states require one, and a buyer's lender uses it to judge the association.",
+  },
+  {
+    key: "insurance",
+    label: "Insurance certificate",
+    match: /insurance|certificate of coverage|policy/i,
+    why: "Owners need it for their own HO-6 policy, and it is requested at every closing.",
+  },
+  {
+    key: "minutes",
+    label: "Meeting minutes",
+    match: /minutes/i,
+    why: "The record of what the board decided. Usually the most requested document there is.",
+  },
+] as const;
+
+/**
+ * Which expected records are on file, and which are not.
+ *
+ * The old summary counted documents, which told a board nothing they could act
+ * on. What a board can act on is the gap, so the gap is what this returns.
+ */
+export function recordsGaps(c: Community) {
+  const names = c.documents.map((d) => d.name);
+  const rows = EXPECTED_RECORDS.map((record) => ({
+    ...record,
+    onFile: names.some((name) => record.match.test(name)),
+  }));
+  const missing = rows.filter((r) => !r.onFile);
+  return {
+    rows,
+    missing,
+    onFileCount: rows.length - missing.length,
+    total: rows.length,
+    /** Nothing missing, which is worth saying plainly rather than not saying. */
+    complete: missing.length === 0,
+  };
+}

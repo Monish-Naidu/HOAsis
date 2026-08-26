@@ -283,6 +283,10 @@ export async function loadCommunity(
     // has not paid for one has no components and the screens say so.
     reserveComponents: [],
     savingsOffers: [],
+    // Text of the governing documents is not stored server side yet, so the
+    // reader falls back to the uploaded file list.
+    bylaws: [],
+    bylawAmendments: [],
     sharedCosts: [],
     sharedCostBills: [],
     specialAssessments: [],

@@ -1,5 +1,7 @@
 import type {
   Account,
+  BylawAmendment,
+  BylawArticle,
   Amenity,
   Announcement,
   ArchitecturalForm,
@@ -87,6 +89,13 @@ export interface Community {
   requests: HomeRequest[];
   violations: Violation[];
   documents: DocumentRecord[];
+  /**
+   * The governing documents as text, so they can be read and searched rather
+   * than only downloaded. Empty for an association that has only uploaded a
+   * scan, which every screen handles by pointing at the file instead.
+   */
+  bylaws: BylawArticle[];
+  bylawAmendments: BylawAmendment[];
   complianceItems: ComplianceItem[];
 
   meetings: Meeting[];
