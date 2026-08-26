@@ -23,6 +23,8 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { useMemo, useState } from "react";
+import { CollectionsLadder } from "@/components/app/collections-ladder";
+import { collectionsLadder, DEFAULT_COLLECTION_POLICY } from "@/lib/collections";
 import { communitySlug, delinquency } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { inviteUrl } from "@/lib/invitations";
@@ -81,6 +83,10 @@ export default function BoardHomeowners() {
     return Number(a.unit) - Number(b.unit);
   });
   const PAGE = 25;
+  const [shown, setShown] = useState(PAGE);
+  // The count the stat card should carry: not how much is owed, but how many
+  // households the policy says to write to today.
+  const ladderDueNow = collectionsLadder(community, DEFAULT_COLLECTION_POLICY).dueNow.length;
   const matching = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return sorted;
@@ -91,7 +97,10 @@ export default function BoardHomeowners() {
         o.email.toLowerCase().includes(needle),
     );
   }, [sorted, query]);
-  const visible = matching.slice(0, PAGE);
+  // The roster stopped at twenty-five with nothing to press. An 88 home
+  // association could not reach unit 30, and search was the only way past it,
+  // which is not obvious and does not help you read the whole list.
+  const visible = matching.slice(0, shown);
 
   function exportRoster() {
     const csv = toCsv(matching, [
@@ -183,8 +192,14 @@ export default function BoardHomeowners() {
         <Stat
           label="Total past due"
           value={money(delinq.totalCents, { cents: false })}
-          tone="warn"
-          hint={pluralize(delinq.past.length, "account")}
+          tone={delinq.past.length ? "warn" : "ok"}
+          hint={
+            ladderDueNow > 0
+              ? `${ladderDueNow} ${ladderDueNow === 1 ? "household needs" : "households need"} a notice today`
+              : delinq.past.length
+                ? `${pluralize(delinq.past.length, "account")}, none owed a notice today`
+                : "Nobody is behind"
+          }
         />
         <Stat
           label="Paying automatically"
@@ -206,6 +221,8 @@ export default function BoardHomeowners() {
 
       {/* Aging */}
       <Card className="mt-5">
+      <CollectionsLadder />
+
         <CardHeader title="Delinquency aging" />
         <div className="grid gap-5 px-5 py-4 sm:grid-cols-4">
           {buckets.map((b) => {
@@ -397,10 +414,23 @@ export default function BoardHomeowners() {
           </table>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-          
           <p className="tnum text-[13px] text-fg-muted">
             Showing {visible.length} of {matching.length}
           </p>
+          {visible.length < matching.length ? (
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShown((n) => n + PAGE)}>
+                Show {Math.min(PAGE, matching.length - visible.length)} more
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShown(matching.length)}>
+                Show all {matching.length}
+              </Button>
+            </div>
+          ) : matching.length > PAGE ? (
+            <Button variant="ghost" size="sm" onClick={() => setShown(PAGE)}>
+              Show fewer
+            </Button>
+          ) : null}
         </div>
       </Card>
     </>
