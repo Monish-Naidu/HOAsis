@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  BookOpen,
   Check,
   MessageSquareText,
   ScaleIcon,
@@ -11,7 +10,7 @@ import {
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Badge, Card } from "@/components/ui/primitives";
-import { communitySettings, libraryArticles } from "@/lib/data";
+import { libraryArticles } from "@/lib/data";
 
 export const metadata = {
   title: "HOAsis, community management for self-managed HOAs",
@@ -170,58 +169,88 @@ export default function MarketingHome() {
 
       {/* Hero */}
       <section className="relative isolate overflow-hidden border-b border-border">
-        <Image
-          src={communitySettings.photoUrl}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="-z-10 object-cover opacity-[0.18] dark:opacity-[0.22]"
-        />
+        {/* A soft wash of brand color behind everything, so the section reads as
+            designed rather than as a photo with text dropped on it. */}
         <div
-          className="absolute inset-0 -z-10 bg-gradient-to-b from-bg/50 via-bg/70 to-bg"
+          className="absolute inset-0 -z-20 bg-[radial-gradient(120%_90%_at_15%_0%,var(--brand-soft)_0%,transparent_55%)]"
           aria-hidden
         />
-        <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:py-28">
-          <Reveal>
-            <Badge tone="ok" dot>
-              Built for boards that self-manage
-            </Badge>
-            <h1 className="mt-5 max-w-3xl text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[60px]">
-              Everything a management company does.
-              <span className="block text-fg-muted">Run from your own website.</span>
-            </h1>
-          </Reveal>
-          <Reveal delay={90}>
-            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-fg-muted">
-              Volunteer boards do not need a manager to collect dues, keep books that tie out, or
-              answer a records request on time. They need software that does not make those things
-              harder than they are.
-            </p>
-          </Reveal>
-          <Reveal delay={170}>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/start"
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-[14px] font-semibold text-brand-fg shadow-raised transition-transform hover:-translate-y-0.5"
-              >
-                Set up your association
-                <ArrowRight className="size-4" />
-              </Link>
-              <Link
-                href="/signin"
-                className="inline-flex h-11 items-center gap-2 rounded-lg border border-border-2 bg-surface px-5 text-[14px] font-semibold text-fg transition-colors hover:bg-surface-2"
-              >
-                See the live demo
-              </Link>
-              <Link
-                href="/library"
-                className="inline-flex h-11 items-center gap-2 rounded-lg border border-border-2 bg-surface px-5 text-[14px] font-semibold text-fg transition-colors hover:bg-surface-2"
-              >
-                <BookOpen className="size-4" />
-                Free library
-              </Link>
-            </div>
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-14 px-5 pb-20 pt-14 sm:pb-24 sm:pt-20 lg:grid-cols-[1fr_1fr] lg:gap-16">
+          <div>
+            <Reveal>
+              <Badge tone="ok" dot>
+                Built for boards that self-manage
+              </Badge>
+              <h1 className="mt-5 text-balance text-[38px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[46px]">
+                Run your HOA without{" "}
+                <span className="bg-gradient-to-br from-navy-700 to-accent bg-clip-text text-transparent dark:from-navy-200 dark:to-accent">
+                  a management company.
+                </span>
+              </h1>
+            </Reveal>
+            <Reveal delay={90}>
+              <p className="mt-6 max-w-lg text-[17px] leading-relaxed text-fg-muted">
+                Collect dues, keep books that tie out, and answer a records request on time.
+                Everything a manager does, run by the people who actually live there.
+              </p>
+            </Reveal>
+            <Reveal delay={170}>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/start"
+                  className="group inline-flex h-12 items-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-semibold text-brand-fg shadow-raised transition-all hover:-translate-y-0.5 hover:shadow-float"
+                >
+                  Set up your association
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+                <Link
+                  href="/signin"
+                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-border-2 bg-surface px-6 text-[15px] font-semibold text-fg transition-colors hover:bg-surface-2"
+                >
+                  See the live demo
+                </Link>
+              </div>
+            </Reveal>
+            <Reveal delay={240}>
+              <p className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-fg-subtle">
+                {["No card to start", "Set up in minutes", "Cancel whenever"].map((item) => (
+                  <span key={item} className="inline-flex items-center gap-1.5">
+                    <Check className="size-3.5 text-ok" strokeWidth={2.6} />
+                    {item}
+                  </span>
+                ))}
+              </p>
+            </Reveal>
+          </div>
+
+          {/* The photograph earns its place by being visible, rather than being
+              flattened to a texture behind the words. */}
+          <Reveal delay={120}>
+            <figure className="relative">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border border-border shadow-float">
+                <Image
+                  src="/marketing/porch.jpg"
+                  alt="A shingled house with a wraparound porch on a well kept lawn"
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 520px"
+                  className="object-cover"
+                />
+              </div>
+              {/* One real number from the demo, floated over the corner, so the
+                  hero shows the product rather than only describing it. */}
+              <figcaption className="absolute -bottom-5 -left-4 flex items-center gap-3 rounded-2xl border border-border bg-surface/95 px-4 py-3 shadow-float backdrop-blur-md sm:-left-8">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
+                  <Check className="size-4" strokeWidth={2.6} />
+                </span>
+                <span>
+                  <span className="block text-[13px] font-semibold text-fg">Books tie out</span>
+                  <span className="block text-[11px] text-fg-muted">
+                    Every report agrees, every month
+                  </span>
+                </span>
+              </figcaption>
+            </figure>
           </Reveal>
         </div>
       </section>
@@ -476,16 +505,65 @@ export default function MarketingHome() {
         </div>
       </section>
 
+      {/* A moment of quiet between the argument and the ask. */}
+      <section className="relative isolate overflow-hidden border-b border-border">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
+          <Reveal>
+            <div className="relative aspect-[5/4] overflow-hidden rounded-[1.75rem] border border-border shadow-float">
+              <Image
+                src="/marketing/dusk.jpg"
+                alt="A house at dusk with its windows lit"
+                fill
+                sizes="(max-width: 1024px) 100vw, 520px"
+                className="object-cover"
+              />
+            </div>
+          </Reveal>
+          <Reveal delay={90}>
+            <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[36px]">
+              Board work should not eat your evenings.
+            </h2>
+            <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-fg-muted">
+              Most of what a volunteer board does is chasing: a balance nobody can find, a vote
+              nobody finished, a document somebody swears was emailed. That work does not need
+              more hours. It needs one place where the numbers already agree.
+            </p>
+            <ul className="mt-6 flex flex-col gap-3">
+              {[
+                ["Dues collect themselves", "Owners pay from their phone, and it lands in the books categorized."],
+                ["Votes that finish", "Ballots, quorum, and a receipt each owner can check."],
+                ["Answers on file", "Records, minutes, and budgets where owners can find them."],
+              ].map(([title, body]) => (
+                <li key={title} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
+                    <Check className="size-3" strokeWidth={3} />
+                  </span>
+                  <span>
+                    <span className="block text-[14px] font-semibold text-fg">{title}</span>
+                    <span className="block text-[13px] leading-relaxed text-fg-muted">{body}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+      </section>
+
       {/* Close */}
       <section className="relative isolate overflow-hidden bg-navy-900 text-navy-50 dark:bg-navy-800">
         <Image
-          src="/marketing/street.jpg"
+          src="/marketing/lane.jpg"
           alt=""
           fill
           sizes="100vw"
-          className="-z-10 object-cover opacity-20"
+          className="-z-20 object-cover"
         />
-        <div className="mx-auto w-full max-w-6xl px-5 py-20 text-center">
+        {/* Scrim, so the type stays legible over any part of the photograph. */}
+        <div
+          className="absolute inset-0 -z-10 bg-gradient-to-b from-navy-950/85 via-navy-950/75 to-navy-950/90"
+          aria-hidden
+        />
+        <div className="mx-auto w-full max-w-6xl px-5 py-24 text-center">
           <Reveal>
             <h2 className="mx-auto max-w-2xl text-[30px] font-semibold leading-tight tracking-[-0.03em] sm:text-[40px]">
               Have a look before you decide anything.
