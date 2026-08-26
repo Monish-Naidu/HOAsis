@@ -9,9 +9,14 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm lint && tsc --noEmit && vitest run && next build"
+    "check": "pnpm lint && tsc --noEmit && vitest run && next build",
+    "db:link": "supabase link --project-ref",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --linked > src/lib/supabase/database.types.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.33.0",
     "next": "16.3.1",
@@ -31,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "jsdom": "^30.0.1",
+    "supabase": "^2.115.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"
