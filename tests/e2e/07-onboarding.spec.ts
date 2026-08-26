@@ -367,3 +367,68 @@ test.describe("porting an existing association", () => {
     expect(health.text, "there is nothing to import").not.toContain("Import the roster");
   });
 });
+
+test.describe("what kind of homes changes the plan", () => {
+  test("a condominium is asked about the building it owns", async ({ page }) => {
+    await onboard(page, {
+      name: "Tower Condominiums",
+      state: "Washington",
+      dues: "420",
+      property: "Condominiums",
+      origin: "Brand new",
+    });
+    await page.goto("/admin/setup");
+    const health = await expectHealthy(page, "condo plan");
+
+    // Several states added inspection duties after Surfside.
+    expect(health.text, "a condo is not asked about structural inspection").toContain(
+      "structural inspection",
+    );
+    // The association insures the building; owners need an HO-6.
+    expect(health.text, "the condo insurance split is not explained").toContain("HO-6");
+    expect(health.text, "the maintenance line is not addressed").toContain("who fixes what");
+  });
+
+  test("townhomes are asked about shared roofs and party walls", async ({ page }) => {
+    await onboard(page, {
+      name: "Rowhouse Commons",
+      state: "Washington",
+      dues: "280",
+      property: "Townhomes",
+      origin: "Brand new",
+    });
+    await page.goto("/admin/setup");
+    const health = await expectHealthy(page, "townhome plan");
+
+    expect(health.text).toContain("who fixes what");
+    expect(health.text, "the party wall problem is not named").toMatch(
+      /party wall|shared roof/i,
+    );
+    // A townhome association does not own a building the way a condo does.
+    expect(health.text, "townhomes were asked about milestone inspections").not.toContain(
+      "structural inspection",
+    );
+  });
+
+  test("detached homes are asked about neither", async ({ page }) => {
+    await onboard(page, {
+      name: "Open Lots HOA",
+      state: "Washington",
+      dues: "95",
+      property: "Detached homes",
+      origin: "Brand new",
+    });
+    await page.goto("/admin/setup");
+    const health = await expectHealthy(page, "detached plan");
+
+    // No shared wall, no shared roof, so the question never arises.
+    expect(health.text, "detached homes were asked who fixes a shared roof").not.toContain(
+      "who fixes what",
+    );
+    expect(health.text).not.toContain("structural inspection");
+    // And the insurance line says what is actually true for them.
+    expect(health.text, "the detached insurance position is not stated").toContain(
+      "Owners insure their own homes",
+    );
+  });
+});

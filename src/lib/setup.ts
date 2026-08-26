@@ -125,6 +125,33 @@ export const SETUP_TASKS: SetupTask[] = [
     dismissLabel: "We do not have one yet",
   },
   {
+    // Attached homes only. The single most common townhome and condominium
+    // dispute is not a rule, it is who pays when a shared roof leaks, and it
+    // is decided by a document most boards have never written down.
+    key: "maintenance-matrix",
+    tier: "recommended",
+    label: "Write down who fixes what",
+    detail: "Roof, siding, windows, decks, the line where the association stops.",
+    why: "In attached housing almost every expensive argument is the same argument: an owner and a board each believing the other is responsible for a shared component. Your declaration usually answers it in language nobody reads. Writing it out once, as a plain list, is the cheapest dispute prevention there is.",
+    href: "/admin/documents",
+    done: (c) => c.documents.some((d) => /maintenance|responsibilit/i.test(d.name)),
+    optional: true,
+    dismissLabel: "Our declaration is already clear",
+  },
+  {
+    // Condominiums only. Several states added inspection duties after the
+    // Surfside collapse, and the deadlines are real.
+    key: "structural",
+    tier: "recommended",
+    label: "Check whether you owe a structural inspection",
+    detail: "Several states now require one on a schedule, with a funded reserve behind it.",
+    why: "After Surfside a number of states introduced milestone inspections and structural reserve requirements for condominium buildings, with hard deadlines and, in some, a bar on waiving the reserves that pay for the findings. The rules differ by state and by building age and height, so the first step is finding out whether yours is covered.",
+    href: "/library",
+    done: (c) => c.documents.some((d) => /structural|milestone|inspection/i.test(d.name)),
+    optional: true,
+    dismissLabel: "Checked, it does not apply to us",
+  },
+  {
     key: "vendors",
     tier: "complete",
     label: "Add your vendors",

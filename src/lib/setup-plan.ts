@@ -127,6 +127,16 @@ function applies(task: SetupTask, p: AssociationProfile): boolean {
       // and plenty of those associations genuinely have no reserve obligation.
       return p.propertyType !== "single-family" || RESERVE_STUDY_STATES.has(p.stateName);
 
+    case "maintenance-matrix":
+      // Detached homes have no shared wall and no shared roof, so the question
+      // this answers does not arise.
+      return p.propertyType === "townhomes" || p.propertyType === "condos";
+
+    case "structural":
+      // A condominium association owns the building. A planned community
+      // owning an entry monument and some parkland does not.
+      return p.propertyType === "condos";
+
     case "insurance":
       return true;
 
@@ -144,9 +154,39 @@ function applies(task: SetupTask, p: AssociationProfile): boolean {
 function because(task: SetupTask, p: AssociationProfile): string | undefined {
   switch (task.key) {
     case "reserves":
+      if (p.propertyType === "condos") {
+        return `The association owns the building, so the whole of it is your obligation. ${
+          RESERVE_STUDY_STATES.has(p.stateName)
+            ? `${p.stateName} requires a study for many associations, and a lender will not finance a unit in a project it cannot assess.`
+            : "A lender will not finance a unit in a project it cannot assess."
+        }`;
+      }
+      if (p.propertyType === "townhomes") {
+        return "Shared roofs and shared walls are the association's, and they are the expensive ones. This is the difference between a plan and a surprise bill.";
+      }
       return RESERVE_STUDY_STATES.has(p.stateName)
         ? `${p.stateName} requires a reserve study for many associations, and a buyer's lender asks for it.`
-        : "Not required where you are, but it is what decides whether a roof arrives as a plan or as a surprise bill.";
+        : "Roads, the entry and any pool are yours to replace. Nothing else is, which usually makes this a short list.";
+
+    case "insurance":
+      // The single most misunderstood thing in the category. What the
+      // association's policy covers is entirely different in each of these,
+      // and an owner buying the wrong policy finds out during a claim.
+      if (p.propertyType === "condos") {
+        return "The association insures the building. Owners need their own HO-6 for the interior, and most do not know that until a claim.";
+      }
+      if (p.propertyType === "townhomes") {
+        return "Whether the master policy reaches the roof and the siding depends on your declaration. Owners need to be told which, in writing.";
+      }
+      return "Common areas, the board itself, and a fidelity bond over whoever touches the money. Owners insure their own homes.";
+
+    case "maintenance-matrix":
+      return p.propertyType === "condos"
+        ? "In a condominium the line usually runs at the unfinished surface of the walls. Saying so plainly saves the argument."
+        : "Shared roofs and party walls are where this bites. An owner and a board each assuming the other pays is the most expensive misunderstanding in townhome housing.";
+
+    case "structural":
+      return `Rules differ by state, building age and height. Your ${p.stateName} page has the current position.`;
 
     case "vendors":
       return p.origin === "leaving-manager"
@@ -194,6 +234,8 @@ const PHASE_OF: Record<string, PlanPhaseId> = {
   budget: "obligations",
   insurance: "obligations",
   reserves: "obligations",
+  "maintenance-matrix": "obligations",
+  structural: "obligations",
   board: "everything-else",
   vendors: "everything-else",
   amenities: "everything-else",
