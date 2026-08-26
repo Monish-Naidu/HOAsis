@@ -16,12 +16,12 @@ cd "$(dirname "$0")/.."
 # access token from the environment instead. Loading it from .env.local keeps
 # the token in a gitignored file rather than in shell history or a transcript.
 if [ -f .env.local ]; then
-  while IFS='=' read -r key value; do
-    case "$key" in
-      ''|\#*) continue ;;
-      SUPABASE_ACCESS_TOKEN) export SUPABASE_ACCESS_TOKEN="$value" ;;
-    esac
-  done < .env.local
+  # Split on the first "=" only. A token can contain one, and losing the tail
+  # produces a credential that looks present and silently fails to authorize.
+  token_line="$(grep -m1 '^SUPABASE_ACCESS_TOKEN=' .env.local || true)"
+  if [ -n "$token_line" ]; then
+    export SUPABASE_ACCESS_TOKEN="${token_line#SUPABASE_ACCESS_TOKEN=}"
+  fi
 fi
 
 if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
@@ -44,9 +44,12 @@ fi
 echo "==> Organizations"
 npx supabase orgs list
 
+# The CLI wraps results in an object on some commands and returns a bare list
+# on others, so unwrap defensively rather than assuming either shape.
 ORG_ID="$(npx supabase orgs list --output json | python3 -c '
-import json,sys
-rows = json.load(sys.stdin)
+import json, sys
+data = json.load(sys.stdin)
+rows = data.get("organizations", []) if isinstance(data, dict) else data
 print(rows[0]["id"] if rows else "")
 ')"
 
@@ -72,7 +75,10 @@ npx supabase projects create "$NAME" \
 
 REF="$(python3 -c '
 import json
-print(json.load(open(".supabase-project.json"))["id"])
+data = json.load(open(".supabase-project.json"))
+if isinstance(data, dict) and "project" in data:
+    data = data["project"]
+print(data["id"])
 ')"
 
 echo "==> Project ref: $REF"
@@ -96,12 +102,13 @@ python3 - "$REF" "$DB_PASSWORD" <<'PY'
 import json, sys, subprocess, pathlib
 
 ref, db_password = sys.argv[1], sys.argv[2]
-keys = json.loads(
+raw = json.loads(
     subprocess.run(
         ["npx", "supabase", "projects", "api-keys", "--project-ref", ref, "--output", "json"],
         capture_output=True, text=True, check=True,
     ).stdout
 )
+keys = raw.get("api_keys", raw.get("keys", [])) if isinstance(raw, dict) else raw
 by_name = {k.get("name"): k.get("api_key") for k in keys}
 anon = by_name.get("anon") or by_name.get("publishable")
 service = by_name.get("service_role") or by_name.get("secret")

@@ -1,0 +1,338 @@
+/**
+ * Proves the row level security policies actually hold.
+ *
+ * The whole argument for moving off localStorage is that access stops being a
+ * thing the client politely declines to do and becomes a thing the database
+ * refuses. That claim is worth nothing until someone tries to break it, so
+ * this signs in as real users and attempts the reads that must fail.
+ *
+ * Run against a development project. It creates data and deletes it after.
+ */
+
+import { createClient } from "@supabase/supabase-js";
+import { readFileSync } from "node:fs";
+
+/* ------------------------------------------------------------------ setup */
+
+const env = Object.fromEntries(
+  readFileSync(new URL("../.env.local", import.meta.url), "utf8")
+    .split("\n")
+    .filter((line) => line && !line.startsWith("#"))
+    .map((line) => {
+      const at = line.indexOf("=");
+      return [line.slice(0, at), line.slice(at + 1)];
+    }),
+);
+
+const URL_ = env.NEXT_PUBLIC_SUPABASE_URL;
+const ANON = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SERVICE = env.SUPABASE_SERVICE_ROLE_KEY;
+
+const admin = createClient(URL_, SERVICE, { auth: { persistSession: false } });
+
+const PASSWORD = "verify-rls-" + Math.random().toString(36).slice(2);
+const stamp = Date.now();
+const email = (who) => `rls-${who}-${stamp}@example.com`;
+
+let failures = 0;
+const results = [];
+
+function check(name, passed, detail = "") {
+  results.push({ name, passed, detail });
+  if (!passed) failures++;
+}
+
+/** A client acting as a signed in person, subject to every policy. */
+async function clientFor(address) {
+  const client = createClient(URL_, ANON, { auth: { persistSession: false } });
+  const { error } = await client.auth.signInWithPassword({
+    email: address,
+    password: PASSWORD,
+  });
+  if (error) throw new Error(`sign in failed for ${address}: ${error.message}`);
+  return client;
+}
+
+async function makeUser(who) {
+  const address = email(who);
+  const { data, error } = await admin.auth.admin.createUser({
+    email: address,
+    password: PASSWORD,
+    email_confirm: true,
+  });
+  if (error) throw new Error(`create user ${who}: ${error.message}`);
+  await admin.from("profiles").insert({
+    id: data.user.id,
+    full_name: who,
+    email: address,
+  });
+  return { id: data.user.id, email: address };
+}
+
+const created = { users: [], associations: [] };
+
+async function seed() {
+  // Two associations, so cross-tenant leakage has somewhere to leak to.
+  const [alpha, beta] = await Promise.all(
+    ["Alpha Ridge", "Beta Hollow"].map(async (name) => {
+      const { data, error } = await admin
+        .from("associations")
+        .insert({ name, city: "Bothell", state: "WA", dues_cents: 6000 })
+        .select()
+        .single();
+      if (error) throw new Error(`association ${name}: ${error.message}`);
+      created.associations.push(data.id);
+      return data;
+    }),
+  );
+
+  const unit = async (associationId, label) => {
+    const { data, error } = await admin
+      .from("units")
+      .insert({ association_id: associationId, label })
+      .select()
+      .single();
+    if (error) throw new Error(`unit ${label}: ${error.message}`);
+    return data;
+  };
+
+  const alphaUnit1 = await unit(alpha.id, "1");
+  const alphaUnit2 = await unit(alpha.id, "2");
+  const betaUnit1 = await unit(beta.id, "1");
+
+  const [resident, neighbor, treasurer, outsider] = await Promise.all([
+    makeUser("resident"),
+    makeUser("neighbor"),
+    makeUser("treasurer"),
+    makeUser("outsider"),
+  ]);
+  created.users.push(resident.id, neighbor.id, treasurer.id, outsider.id);
+
+  const member = async (associationId, unitId, profile, role, capabilities) => {
+    const { error } = await admin.from("memberships").insert({
+      association_id: associationId,
+      unit_id: unitId,
+      profile_id: profile.id,
+      full_name: role,
+      role,
+      capabilities,
+    });
+    if (error) throw new Error(`membership ${role}: ${error.message}`);
+  };
+
+  await member(alpha.id, alphaUnit1.id, resident, "resident", []);
+  await member(alpha.id, alphaUnit2.id, neighbor, "resident", []);
+  await member(alpha.id, alphaUnit2.id, treasurer, "treasurer", ["finances"]);
+  await member(beta.id, betaUnit1.id, outsider, "president", ["finances", "permissions"]);
+
+  // A charge on each home, so "can I see my neighbor's balance" is answerable.
+  // Dated relative to the database's own clock rather than a fixed day, so the
+  // suite does not quietly start failing when the calendar moves past it.
+  const day = (offset) => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() + offset);
+    return d.toISOString().slice(0, 10);
+  };
+  const past = day(-7);
+  const future = day(30);
+
+  for (const [associationId, unitId, label] of [
+    [alpha.id, alphaUnit1.id, "Alpha unit 1 assessment"],
+    [alpha.id, alphaUnit2.id, "Alpha unit 2 assessment"],
+    [beta.id, betaUnit1.id, "Beta unit 1 assessment"],
+  ]) {
+    const { error } = await admin.from("charges").insert({
+      association_id: associationId,
+      unit_id: unitId,
+      kind: "charge",
+      label,
+      amount_cents: 6000,
+      due_on: past,
+    });
+    if (error) throw new Error(`charge ${label}: ${error.message}`);
+  }
+
+  // Billed but not yet owed. It must not appear in a balance.
+  await admin.from("charges").insert({
+    association_id: alpha.id,
+    unit_id: alphaUnit1.id,
+    kind: "charge",
+    label: "Alpha unit 1 next assessment",
+    amount_cents: 6000,
+    due_on: future,
+  });
+
+  await admin.from("bank_accounts").insert({
+    association_id: alpha.id,
+    kind: "operating",
+    institution: "Alpha Credit Union",
+    mask: "1234",
+  });
+
+  return { alpha, beta, resident, neighbor, treasurer, outsider, alphaUnit1, alphaUnit2 };
+}
+
+/* ------------------------------------------------------------------ tests */
+
+async function run() {
+  const s = await seed();
+
+  const asResident = await clientFor(s.resident.email);
+  const asTreasurer = await clientFor(s.treasurer.email);
+  const asOutsider = await clientFor(s.outsider.email);
+
+  // A resident sees their own home's charges, and only those.
+  {
+    const { data } = await asResident.from("charges").select("label");
+    const labels = (data ?? []).map((r) => r.label);
+    check(
+      "resident sees their own charge",
+      labels.includes("Alpha unit 1 assessment"),
+      labels.join(", "),
+    );
+    check(
+      "resident cannot see a neighbor's charge",
+      !labels.includes("Alpha unit 2 assessment"),
+      labels.join(", "),
+    );
+  }
+
+  // Cross tenant. This is the one that matters most.
+  {
+    const { data } = await asOutsider.from("charges").select("label");
+    const labels = (data ?? []).map((r) => r.label);
+    check(
+      "another association's president sees none of our charges",
+      !labels.some((l) => l.startsWith("Alpha")),
+      labels.join(", "),
+    );
+
+    const { data: units } = await asOutsider.from("units").select("label, association_id");
+    check(
+      "another association's president sees none of our units",
+      !(units ?? []).some((u) => u.association_id === s.alpha.id),
+      String((units ?? []).length),
+    );
+  }
+
+  // Capability gating, rather than mere membership.
+  {
+    const { data: residentSees } = await asResident.from("bank_accounts").select("institution");
+    check(
+      "a resident cannot read bank details",
+      (residentSees ?? []).length === 0,
+      String((residentSees ?? []).length),
+    );
+
+    const { data: treasurerSees } = await asTreasurer.from("bank_accounts").select("institution");
+    check(
+      "a treasurer with finances can read bank details",
+      (treasurerSees ?? []).length === 1,
+      String((treasurerSees ?? []).length),
+    );
+
+    const { data: allCharges } = await asTreasurer.from("charges").select("label");
+    check(
+      "a treasurer sees every charge in their association",
+      (allCharges ?? []).filter((c) => c.label.startsWith("Alpha")).length === 3,
+      String((allCharges ?? []).length),
+    );
+  }
+
+  // Writes a browser has no business making.
+  {
+    const { error } = await asResident.from("payments").insert({
+      association_id: s.alpha.id,
+      unit_id: s.alphaUnit1.id,
+      amount_cents: 1,
+      rail: "ach",
+    });
+    check("a resident cannot insert a payment", Boolean(error), error?.code ?? "no error");
+
+    const { error: chargeError } = await asResident.from("charges").insert({
+      association_id: s.alpha.id,
+      unit_id: s.alphaUnit1.id,
+      kind: "charge",
+      label: "self-issued credit",
+      amount_cents: -100_00,
+      due_on: "2026-09-01",
+    });
+    check(
+      "a resident cannot write themselves a credit",
+      Boolean(chargeError),
+      chargeError?.code ?? "no error",
+    );
+
+    const { error: roleError } = await asResident
+      .from("memberships")
+      .update({ capabilities: ["finances", "permissions"] })
+      .eq("profile_id", s.resident.id);
+    const { data: after } = await admin
+      .from("memberships")
+      .select("capabilities")
+      .eq("profile_id", s.resident.id)
+      .single();
+    check(
+      "a resident cannot grant themselves capabilities",
+      (after?.capabilities ?? []).length === 0,
+      roleError?.code ?? JSON.stringify(after?.capabilities),
+    );
+  }
+
+  // The derived balance view has to respect the same boundary as the table.
+  {
+    const { data } = await asResident.from("unit_balances").select("unit_id, balance_cents");
+    const rows = data ?? [];
+    const mine = rows.find((r) => r.unit_id === s.alphaUnit1.id);
+    const neighbor = rows.find((r) => r.unit_id === s.alphaUnit2.id);
+    check(
+      "the balance view reports my own balance",
+      mine?.balance_cents === 6000,
+      String(mine?.balance_cents),
+    );
+    check(
+      "a charge not yet due is not counted as owed",
+      mine?.balance_cents === 6000,
+      `${mine?.balance_cents} with a future charge also on the unit`,
+    );
+    // A row reporting zero would be worse than no row: it is a wrong number
+    // rather than a visible gap.
+    check(
+      "the balance view returns no row for a neighbor, not a zero",
+      neighbor === undefined,
+      neighbor ? `leaked ${neighbor.balance_cents}` : "absent",
+    );
+
+    const { data: treasurerRows } = await asTreasurer
+      .from("unit_balances")
+      .select("unit_id, balance_cents");
+    check(
+      "a treasurer sees every home's balance",
+      (treasurerRows ?? []).length === 2,
+      String((treasurerRows ?? []).length),
+    );
+  }
+}
+
+async function cleanup() {
+  for (const id of created.associations) {
+    await admin.from("associations").delete().eq("id", id);
+  }
+  for (const id of created.users) {
+    await admin.auth.admin.deleteUser(id).catch(() => {});
+  }
+}
+
+try {
+  await run();
+} catch (error) {
+  check("suite ran to completion", false, error.message);
+} finally {
+  await cleanup();
+}
+
+for (const r of results) {
+  console.log(`${r.passed ? "  ok  " : "FAIL  "}${r.name}${r.detail ? `  (${r.detail})` : ""}`);
+}
+console.log(`\n${results.length - failures}/${results.length} passed`);
+process.exit(failures ? 1 : 0);
