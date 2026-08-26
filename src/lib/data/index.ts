@@ -35,6 +35,7 @@ import {
   articleBySlug,
   articlesForState,
   libraryArticles,
+  LIBRARY_REDIRECTS,
   LIBRARY_TOPICS,
   STATES,
 } from "./library";
@@ -61,6 +62,7 @@ export {
   articleBySlug,
   articlesForState,
   libraryArticles,
+  LIBRARY_REDIRECTS,
   LIBRARY_TOPICS,
   messageTemplates,
   paymentInstruments,
