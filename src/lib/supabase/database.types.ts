@@ -89,6 +89,10 @@ export type Database = {
           id: string
           late_after_day: number
           name: string
+          payment_fee_cents: number
+          payment_fee_paid_by: string
+          payment_fee_waived_on_ach: boolean
+          software_fee_cents_per_home: number
           state: string
           stripe_account_id: string | null
         }
@@ -103,6 +107,10 @@ export type Database = {
           id?: string
           late_after_day?: number
           name: string
+          payment_fee_cents?: number
+          payment_fee_paid_by?: string
+          payment_fee_waived_on_ach?: boolean
+          software_fee_cents_per_home?: number
           state: string
           stripe_account_id?: string | null
         }
@@ -117,6 +125,10 @@ export type Database = {
           id?: string
           late_after_day?: number
           name?: string
+          payment_fee_cents?: number
+          payment_fee_paid_by?: string
+          payment_fee_waived_on_ach?: boolean
+          software_fee_cents_per_home?: number
           state?: string
           stripe_account_id?: string | null
         }

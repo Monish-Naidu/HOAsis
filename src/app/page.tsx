@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { money } from "@/lib/utils";
 import {
   ArrowRight,
   Check,
@@ -19,18 +20,15 @@ export const metadata = {
 };
 
 /**
- * PLACEHOLDER: the cost case has no numbers yet.
+ * The cost case, as arithmetic rather than a percentage.
  *
- * The shape of the argument is right, shown as arithmetic rather than a
- * percentage so a reader can check it. The figures are not, because we have
- * not surveyed what management companies in our market actually charge and our
- * own pricing is not set. A plausible looking number here is one we would have
- * to walk back in front of the first board that asks where it came from.
- *
- * Fill in once the pricing study is done. Search PLACEHOLDER to find every
- * spot that is waiting on it.
+ * Our own number is settled at $4 a home a month. What a management company
+ * charges is not ours to state, so the comparison stays a blank the reader
+ * fills in from their own contract, which is more persuasive than a figure we
+ * surveyed and they can argue with.
  */
-const TBD = "$—";
+const OUR_PRICE_PER_HOME = 4_00;
+const EXAMPLE_HOMES = 88;
 
 /** Each value section pairs a claim with the screen that proves it. */
 const SHOWCASE = [
@@ -340,10 +338,9 @@ export default function MarketingHome() {
               The savings are not a rounding error.
             </h2>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-fg-muted">
-              Full service management is quoted per door per month, and so are we. The
-              arithmetic below is the whole argument. We are running the survey that fills
-              it in, and until it is done these stay as dashes rather than as something
-              plausible we would have to take back.
+              Full service management is quoted per door per month, and so are we. Ours is
+              four dollars. Put yours next to it, multiply both by your homes and by twelve,
+              and the gap is what stops leaving the community every year.
             </p>
           </Reveal>
 
@@ -351,20 +348,20 @@ export default function MarketingHome() {
             {[
               {
                 label: "Management company",
-                value: TBD,
-                detail: "Per home per month, times twelve",
+                value: "your rate",
+                detail: "Per home per month, off your own contract",
                 accent: false,
               },
               {
                 label: "HOAsis",
-                value: TBD,
-                detail: "Per home per month, times twelve",
+                value: "$4",
+                detail: `Per home per month. ${EXAMPLE_HOMES} homes is ${money(OUR_PRICE_PER_HOME * EXAMPLE_HOMES * 12, { cents: false })} a year`,
                 accent: false,
               },
               {
                 label: "Stays in the community",
-                value: TBD,
-                detail: "The difference, every year",
+                value: "the difference",
+                detail: "Every year, before anything compounds",
                 accent: true,
               },
             ].map((item, index) => (

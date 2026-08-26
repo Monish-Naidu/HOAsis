@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Check, Info, Minus } from "lucide-react";
+import { ArrowRight, Check, Minus } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { Badge, Callout, Card } from "@/components/ui/primitives";
+import { Badge, Card } from "@/components/ui/primitives";
 
 export const metadata = {
   title: "Pricing",
@@ -11,35 +11,18 @@ export const metadata = {
 /**
  * Pricing.
  *
- * The numbers are placeholders and say so. The structure is not: no feature
- * gating between tiers, and payment processing passed through at cost. Both
- * are deliberate positions against how this category usually prices, so they
- * are stated even while the figures are still being worked out.
+ * One rate, every size, every feature. Three tiers were a placeholder for a
+ * decision that had not been made; now that it has, a single number is both
+ * the truth and easier to argue with, which is the point of publishing it.
  */
 const TIERS = [
   {
-    name: "Small",
-    homes: "Up to 40 homes",
-    price: "$—",
-    unit: "per month",
-    note: "Flat, not per door, so a small board is not punished for being small.",
-    highlight: false,
-  },
-  {
-    name: "Standard",
-    homes: "41 to 250 homes",
-    price: "$—",
+    name: "Every association",
+    homes: "Five homes or five hundred",
+    price: "$4",
     unit: "per home, per month",
-    note: "The common case. Everything included, no add-ons.",
+    note: "No tiers, no feature gating, no minimum. A 20 home board pays $80 a month.",
     highlight: true,
-  },
-  {
-    name: "Large",
-    homes: "251 homes and up",
-    price: "$—",
-    unit: "per home, per month",
-    note: "Rate steps down as the community grows.",
-    highlight: false,
   },
 ];
 
@@ -56,12 +39,9 @@ const INCLUDED = [
 ];
 
 /**
- * PLACEHOLDER: our own fee is not set, so it is a dash like the tiers above it.
- *
  * The processor's rates are the published card and ACH costs and stay as they
  * are, because we pass those through untouched and a board can verify them
- * against any processor's own page. The comparison against the incumbent is
- * held back until our number exists, since the whole claim depends on it.
+ * against any processor's own page.
  */
 const PAYMENTS = [
   {
@@ -70,9 +50,9 @@ const PAYMENTS = [
       "2.9% + 30¢ on cards, 35¢ on bank transfers. Passed straight through. We never touch this.",
   },
   {
-    label: "Our fee: $— per payment",
+    label: "Our fee: $2.00 per payment",
     detail:
-      "Flat, so it does not grow with the assessment. The board chooses whether the owner pays it at checkout or the association absorbs it, and can waive it on bank transfers entirely.",
+      "Flat, so it does not grow with the assessment. The board chooses whether the owner pays it at checkout or the association absorbs it.",
   },
   {
     label: "Shown separately, never blended",
@@ -103,17 +83,7 @@ export default function PricingPage() {
           </header>
         </Reveal>
 
-        <Callout
-          tone="info"
-          className="mt-8"
-          icon={<Info className="size-4" />}
-          title="The figures are still being set"
-        >
-          The structure below is settled. The numbers are not, so they are shown as dashes rather
-          than as something plausible we would have to walk back.
-        </Callout>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-4">
           {TIERS.map((tier, index) => (
             <Reveal key={tier.name} delay={index * 80}>
               <Card

@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, LogOut, User } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
+import { useAuth } from "@/lib/auth";
+import { useRemote } from "@/lib/data/remote-store";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -94,12 +97,44 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
  */
 export function RequireSession({ children }: { children: React.ReactNode }) {
   const { account, ready } = useAppState();
+  const auth = useAuth();
+  const remote = useRemote();
   const router = useRouter();
 
-  useEffect(() => {
-    if (ready && !account) router.replace("/signin");
-  }, [ready, account, router]);
+  // A real session takes a moment to resolve into an association, and
+  // redirecting during that window bounces somebody who is signed in straight
+  // back to the front door.
+  const settling = auth.loading || remote.status === "loading";
+  const signedIn = Boolean(account) || remote.status === "empty";
 
-  if (!ready || !account) return null;
+  useEffect(() => {
+    if (ready && !settling && !signedIn) router.replace("/signin");
+  }, [ready, settling, signedIn, router]);
+
+  if (!ready || settling) return null;
+
+  // Signed in, belonging to nothing. Founding an association is the only
+  // sensible next move, so say that rather than showing empty screens.
+  if (!account && remote.status === "empty") {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 text-center">
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">
+          You are not in an association yet
+        </h1>
+        <p className="mt-2 text-[14px] leading-relaxed text-fg-muted">
+          Set one up, or ask your board to add your household and invite you with the email you
+          signed up with.
+        </p>
+        <Link
+          href="/start"
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-[14px] font-semibold text-brand-fg"
+        >
+          Set up your association
+        </Link>
+      </div>
+    );
+  }
+
+  if (!account) return null;
   return <>{children}</>;
 }

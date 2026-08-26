@@ -7,6 +7,8 @@ import { Button, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { signInWithPassword, signUp } from "@/lib/auth";
+import { hasSupabase } from "@/lib/supabase/env";
 
 export function SignInPanel() {
   const router = useRouter();
@@ -25,7 +27,8 @@ export function SignInPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [unit, setUnit] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "danger" | "ok"; text: string } | null>(null);
 
   function enter(accountId: string) {
     signIn(accountId);
@@ -33,12 +36,43 @@ export function SignInPanel() {
     router.push(account && account.role !== "resident" ? "/admin" : "/resident");
   }
 
-  function submit(e: React.FormEvent) {
+  /**
+   * The real front door, when a project is configured.
+   *
+   * Without one this form has nothing to talk to, so it falls back to picking
+   * the demo seat whose email was typed. That keeps the prototype clickable
+   * for anyone evaluating it, and is honest about which it is doing because
+   * the seat list below is visible either way.
+   */
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const match = accounts.find(
-      (a) => a.email.toLowerCase() === email.trim().toLowerCase(),
-    );
-    enter(match?.id ?? seats.find((s) => !s.isAdmin)!.id);
+    setNotice(null);
+
+    if (!hasSupabase) {
+      const match = accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
+      enter(match?.id ?? seats.find((s) => !s.isAdmin)!.id);
+      return;
+    }
+
+    setBusy(true);
+    const result =
+      mode === "sign-in"
+        ? await signInWithPassword(email, password)
+        : await signUp(email, password, name);
+    setBusy(false);
+
+    if (!result.ok) {
+      setNotice({ tone: "danger", text: result.message ?? "That did not work." });
+      return;
+    }
+    if (result.message) {
+      setNotice({ tone: "ok", text: result.message });
+      return;
+    }
+    // Where they land depends on what they belong to, which the app learns as
+    // soon as the session settles. Sending them to the resident side is the
+    // safe default; a board member switches with one control in the header.
+    router.push(mode === "create" ? "/start" : "/resident");
   }
 
   return (
@@ -64,10 +98,7 @@ export function SignInPanel() {
 
         <form onSubmit={submit} className="space-y-3 p-5">
           {mode === "create" ? (
-            <>
-              <Field label="Full name" value={name} onChange={setName} placeholder="Jane Doe" />
-              <Field label="Unit number" value={unit} onChange={setUnit} placeholder="42" />
-            </>
+            <Field label="Full name" value={name} onChange={setName} placeholder="Jane Doe" />
           ) : null}
           <Field
             label="Email"
@@ -83,8 +114,25 @@ export function SignInPanel() {
             placeholder="••••••••"
             type="password"
           />
-          <Button variant="primary" size="lg" className="w-full" type="submit">
-            {mode === "sign-in" ? "Sign in" : "Create account"}
+          {notice ? (
+            <p
+              className={cn(
+                "rounded-lg px-3 py-2 text-[12px] leading-snug",
+                notice.tone === "danger" ? "bg-danger-soft text-danger" : "bg-ok-soft text-ok",
+              )}
+              role="status"
+            >
+              {notice.text}
+            </p>
+          ) : null}
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
+            type="submit"
+            disabled={busy || !email.trim() || (hasSupabase && !password)}
+          >
+            {busy ? "One moment" : mode === "sign-in" ? "Sign in" : "Create account"}
             <ArrowRight className="size-4" />
           </Button>
           {mode === "sign-in" ? (
@@ -95,8 +143,8 @@ export function SignInPanel() {
             </p>
           ) : (
             <p className="text-center text-[11px] leading-snug text-fg-subtle">
-              New accounts are verified against the owner roster before they can see
-              association records.
+              If your board has already added your household, signing up with the email they
+              used puts you straight into your association.
             </p>
           )}
         </form>

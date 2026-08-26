@@ -21,6 +21,19 @@ import { caps, DEFAULT_ROLE_CAPABILITIES, NO_CAPABILITIES } from "@/lib/data/acc
 import { daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
+import {
+  useRemote,
+  setRemoteAssociation,
+  loadRemote,
+  remoteSnapshot,
+} from "@/lib/data/remote-store";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { signOutOfSupabase } from "@/lib/auth";
+
+/** The signed in person's id, read straight from the remote store snapshot. */
+function sessionUserId(): string | null {
+  return remoteSnapshot().profileId;
+}
 import { buildCommunity, type CommunityDraft } from "@/lib/data/new-community";
 import {
   isBudgetLines,
@@ -108,6 +121,10 @@ interface AppState {
   }) => void;
   /** Builds an association from onboarding and signs its founder in. */
   createCommunity: (draft: CommunityDraft) => Community;
+  /** Founds one in Postgres, for a signed in person. */
+  createRemoteAssociation: (draft: CommunityDraft) => Promise<string>;
+  /** True when a real association is on screen rather than a demo. */
+  isRemote: boolean;
 
   addPost: (post: ForumPost) => void;
   /** Returns an undo, because publishing broadcasts and rejecting discards. */
@@ -309,6 +326,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const session = useStore(sessionStore);
   const ready = useHydrated();
 
+  const remote = useRemote();
   const communityId = useStore(communityStore);
   // Created associations live in a store, so the list has to be read rather
   // than captured at import time.
@@ -342,10 +360,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const ballots = useStore(sliceStore(communityId, "ballots"));
   const templates = useStore(sliceStore(communityId, "templates"));
 
-  const account = useMemo(
-    () => accountList.find((candidate) => candidate.id === session.accountId) ?? null,
-    [accountList, session.accountId],
-  );
+  const account = useMemo(() => {
+    if (remote.community) {
+      // Their account id is their profile id, so there is no seat to pick and
+      // no way to be looking at somebody else's.
+      return remote.community.accounts.find((a) => a.id === remote.profileId) ?? null;
+    }
+    return accountList.find((candidate) => candidate.id === session.accountId) ?? null;
+  }, [remote.community, remote.profileId, accountList, session.accountId]);
 
   /* --------------------------------------------------------------- session */
 
@@ -362,7 +384,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
-  const signOut = useCallback(() => sessionStore.set(NO_SESSION), []);
+  const signOut = useCallback(() => {
+    sessionStore.set(NO_SESSION);
+    // Clearing the demo seat is not signing out if there is a real session
+    // behind it, so end that too rather than leaving somebody logged in on a
+    // page that says they are not.
+    void signOutOfSupabase();
+  }, []);
 
   const setView = useCallback(
     (view: View) => sessionStore.update((current) => ({ ...current, view })),
@@ -376,10 +404,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * leave a President of one association holding capabilities in another. The
    * safe move is to make the person sign in again on the other side.
    */
-  const setCommunity = useCallback((nextId: string) => {
-    sessionStore.set(NO_SESSION);
-    communityStore.set(nextId);
-  }, []);
+  const setCommunity = useCallback(
+    (nextId: string) => {
+      // A real member holding two associations switches between them without
+      // signing out, because the database knows which they belong to. Demo
+      // seats still sign out, since picking a seat is how you choose a person.
+      if (remote.associations.some((a) => a.id === nextId)) {
+        void setRemoteAssociation(nextId);
+        return;
+      }
+      sessionStore.set(NO_SESSION);
+      communityStore.set(nextId);
+    },
+    [remote.associations],
+  );
 
   const can = useCallback(
     (c: Capability) => Boolean(account && account.capabilities[c]),
@@ -434,6 +472,45 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const resetDemo = useCallback(() => resetCommunity(communityId), [communityId]);
+
+  /**
+   * Founds an association for a signed in person, in Postgres.
+   *
+   * Distinct from `createCommunity`, which builds one in this browser for
+   * somebody evaluating the product. Keeping them apart is deliberate: a demo
+   * must never write to the database, and a real association must never be
+   * something one browser knows about.
+   */
+  const createRemoteAssociation = useCallback(async (draft: CommunityDraft) => {
+    const supabase = supabaseBrowser();
+    const { data, error } = await supabase.rpc("create_association", {
+      p_name: draft.name,
+      p_city: draft.city,
+      p_state: draft.state,
+      p_dues_cents: draft.duesCents,
+      p_dues_cadence: draft.duesCadence,
+      p_due_day: draft.dueDay,
+      p_founder_name: draft.founder.name,
+      p_founder_unit: draft.founder.unit,
+      p_households: draft.households,
+    });
+    if (error) throw new Error(error.message);
+
+    const associationId = data as string;
+
+    // The bank the founder connected during setup, if they got that far.
+    if (draft.bankAccount) {
+      await supabase.from("bank_accounts").insert({
+        association_id: associationId,
+        kind: "operating",
+        institution: draft.bankAccount.institution,
+        mask: draft.bankAccount.mask,
+      });
+    }
+
+    await loadRemote(sessionUserId());
+    return associationId;
+  }, []);
 
   /**
    * Appoints a household to an office, or returns them to being a resident.
@@ -1056,27 +1133,38 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  // A signed in person looking at a real association sees Postgres. Everyone
+  // else sees the demo. The two never blend: `remote.community` is either the
+  // whole world or none of it.
+  const community_ = remote.community ?? liveCommunity;
+
   const value: AppState = {
-    community: liveCommunity,
-    communities: communityList.map((c) => ({ id: c.id, label: c.label })),
+    community: community_,
+    communities: remote.community
+      ? remote.associations.map((a) => ({ id: a.id, label: a.name }))
+      : communityList.map((c) => ({ id: c.id, label: c.label })),
     setCommunity,
     account,
-    accounts: accountList,
+    // Every slice is read off the active community rather than off the local
+    // stores directly, so remote and demo cannot disagree about which world
+    // a screen is in. In demo mode community_ is the local overlay, so this
+    // is the same data by a shorter route.
+    accounts: community_.accounts,
     view: session.view,
     ready,
-    settings,
-    amenities,
-    forms,
-    posts,
-    requests: requestList,
-    instruments,
-    ledger,
-    payouts,
-    vendors,
-    threads,
-    documents,
-    ballots,
-    templates,
+    settings: community_.settings,
+    amenities: community_.amenities,
+    forms: community_.forms,
+    posts: community_.posts,
+    requests: community_.requests,
+    instruments: community_.instruments,
+    ledger: community_.ledger,
+    payouts: community_.payouts,
+    vendors: community_.vendors,
+    threads: community_.threads,
+    documents: community_.documents,
+    ballots: community_.ballots,
+    templates: community_.templates,
     signIn,
     signOut,
     setView,
@@ -1093,6 +1181,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCapability,
     resetDemo,
     createCommunity,
+    createRemoteAssociation,
+    isRemote: Boolean(remote.community),
     addOwner,
     removeOwner,
     setAccountRole,

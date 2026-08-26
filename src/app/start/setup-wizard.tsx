@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Users } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { useAuth } from "@/lib/auth";
 import { STATES } from "@/lib/data/library";
 import {
   emptyDraft,
@@ -43,18 +44,39 @@ const CADENCES = [
 ] as const;
 
 export function SetupWizard() {
-  const { createCommunity } = useAppState();
+  const { createCommunity, createRemoteAssociation } = useAppState();
+  const auth = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<CommunityDraft>(emptyDraft);
   const [done, setDone] = useState<{ id: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const patch = (next: Partial<CommunityDraft>) => setDraft((d) => ({ ...d, ...next }));
   const complete = useMemo(() => stepComplete(draft), [draft]);
 
-  function finish(withDraft: CommunityDraft) {
-    const built = createCommunity(withDraft);
-    setDone({ id: built.id });
+  /**
+   * A signed in person founds a real association. Anyone else builds one in
+   * their own browser, which is what makes the product explorable without an
+   * account and keeps evaluation data out of the database.
+   */
+  async function finish(withDraft: CommunityDraft) {
+    setFailure(null);
+    if (!auth.user) {
+      setDone({ id: createCommunity(withDraft).id });
+      return;
+    }
+    setBusy(true);
+    try {
+      setDone({ id: await createRemoteAssociation(withDraft) });
+    } catch (error) {
+      setFailure(
+        error instanceof Error ? error.message : "Could not create the association",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (done) return <FinishedPanel draft={draft} onOpen={() => router.push("/admin")} />;
@@ -102,6 +124,12 @@ export function SetupWizard() {
         ) : null}
       </div>
 
+      {failure ? (
+        <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-[12px] text-danger" role="status">
+          {failure}
+        </p>
+      ) : null}
+
       <div className="mt-8 flex items-center justify-between gap-3">
         <Button
           variant="ghost"
@@ -119,13 +147,13 @@ export function SetupWizard() {
               // Connecting a bank is the point of this screen, but refusing to
               // let a board finish without one strands anybody whose treasurer
               // holds the account details. The checklist asks again.
-              <Button variant="ghost" size="md" onClick={() => finish(draft)}>
+              <Button variant="ghost" size="md" onClick={() => void finish(draft)} disabled={busy}>
                 Skip for now
               </Button>
             ) : null}
-            <Button variant="primary" size="md" onClick={() => finish(draft)}>
+            <Button variant="primary" size="md" onClick={() => void finish(draft)} disabled={busy}>
               <Check className="size-4" />
-              Create the association
+              {busy ? "Creating" : "Create the association"}
             </Button>
           </div>
         ) : (

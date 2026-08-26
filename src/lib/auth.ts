@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
+import { loadRemote } from "@/lib/data/remote-store";
 
 /**
  * The signed in person, as an external store.
@@ -33,8 +34,14 @@ let started = false;
 function publish(next: AuthState) {
   // Identity is what React diffs on, so only replace it on a real change.
   if (next.user?.id === snapshot.user?.id && next.loading === snapshot.loading) return;
+  const changedPerson = next.user?.id !== snapshot.user?.id;
   snapshot = next;
   for (const listener of listeners) listener();
+
+  // Loading the association is driven from here rather than from an effect in
+  // a component, so it happens once per sign in rather than once per mount of
+  // whatever happened to be on screen.
+  if (changedPerson) void loadRemote(next.user?.id ?? null);
 }
 
 /** Starts the subscription once, on first use, and never on the server. */
