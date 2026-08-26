@@ -1,5 +1,13 @@
 import { test, expect } from "@playwright/test";
-import { ADMIN_TABS, SEATS, expectHealthy, inspect, openTab, seedSession } from "./helpers";
+import {
+  ADMIN_TABS,
+  SEATS,
+  TC1_SEATS,
+  expectHealthy,
+  inspect,
+  openTab,
+  seedSession,
+} from "./helpers";
 
 /**
  * The board workspace, tab by tab.
@@ -237,7 +245,7 @@ test.describe("shared costs", () => {
     // Test Community One has no shared costs and no assessments. Offering it an
     // empty tab every day is how a simple product stops feeling simple.
     await seedSession(page, {
-      seat: SEATS.president,
+      seat: TC1_SEATS.president,
       view: "admin",
       community: "test-community-1",
     });
@@ -253,5 +261,75 @@ test.describe("shared costs", () => {
       tabs.some((t) => t.startsWith("Shared costs")),
       "an association with nothing shared was offered the tab anyway",
     ).toBe(false);
+  });
+});
+
+test.describe("turning a layer on", () => {
+  test("an association with nothing shared can add one and post a bill", async ({ page }) => {
+    // Test Community One bills a single flat due, which is the state every new
+    // association starts in. Getting from there to a working utility pass
+    // through is the path that matters.
+    await seedSession(page, {
+      seat: TC1_SEATS.president,
+      view: "admin",
+      community: "test-community-1",
+    });
+    await page.goto("/admin/shared-costs");
+    await page.waitForLoadState("networkidle");
+
+    const before = await inspect(page);
+    expect(before.text, "an empty association was shown a table").toContain("Nothing shared yet");
+
+    await page.getByRole("button", { name: "Add a shared cost" }).click();
+    await page.waitForTimeout(400);
+
+    await page.getByLabel(/What owners will see on their statement/).fill("Water and sewer");
+    await page.getByLabel(/Who the association pays/).fill("Kirkland Public Utilities");
+    await page.getByLabel(/By people living there/).check();
+    await page.getByRole("button", { name: "Add it" }).click();
+    await page.waitForTimeout(600);
+
+    const added = await inspect(page);
+    expect(added.text, "the provider was not recorded").toContain("Kirkland Public Utilities");
+
+    await page.getByRole("button", { name: "Post a bill" }).first().click();
+    await page.waitForTimeout(400);
+    await page.getByLabel(/What the provider charged/).fill("420");
+    await page.waitForTimeout(400);
+
+    // The split is shown before it is saved. A board that cannot see what each
+    // home will be charged will not use this twice.
+    const preview = await inspect(page);
+    expect(preview.text, "the split was not previewed").toMatch(/across \d+ homes is/);
+
+    await page.getByRole("button", { name: "Post it" }).click();
+    await page.waitForTimeout(700);
+
+    const posted = await inspect(page);
+    expect(posted.crashed, "posting a bill crashed").toBe(false);
+    expect(posted.text, "the posted bill did not reach the summary").toContain("$420.00");
+  });
+
+  test("removing a shared cost takes its bills with it", async ({ page }) => {
+    await seedSession(page, {
+      seat: TC1_SEATS.president,
+      view: "admin",
+      community: "test-community-1",
+    });
+    await page.goto("/admin/shared-costs");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Add a shared cost" }).click();
+    await page.waitForTimeout(300);
+    await page.getByLabel(/What owners will see on their statement/).fill("Trash");
+    await page.getByRole("button", { name: "Add it" }).click();
+    await page.waitForTimeout(500);
+
+    await page.getByRole("button", { name: /Stop passing on Trash/ }).click();
+    await page.waitForTimeout(600);
+
+    const health = await inspect(page);
+    expect(health.crashed, "removing a shared cost crashed").toBe(false);
+    expect(health.text, "the removed cost is still listed").not.toContain("Trash and recycling");
   });
 });

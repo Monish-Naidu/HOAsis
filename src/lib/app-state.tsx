@@ -154,6 +154,16 @@ interface AppState {
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
   addDocument: (document: Community["documents"][number]) => void;
+  /**
+   * Switching the shared cost layer on, and recording a provider bill.
+   *
+   * Both live here rather than in the screen because an owner's statement and
+   * the board's trend read the same rows. A screen that kept its own copy would
+   * be the exact drift this product argues against.
+   */
+  addSharedCost: (cost: Community["sharedCosts"][number]) => void;
+  removeSharedCost: (costId: string) => void;
+  postSharedCostBill: (bill: Community["sharedCostBills"][number]) => void;
   setDocumentVisibility: (
     documentId: string,
     visibility: Community["documents"][number]["visibility"],
@@ -226,6 +236,8 @@ const MUTABLE_SLICES = [
   "documents",
   "ballots",
   "templates",
+  "sharedCosts",
+  "sharedCostBills",
 ] as const;
 
 type MutableSlice = (typeof MUTABLE_SLICES)[number];
@@ -386,6 +398,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const vendors = useStore(sliceStore(communityId, "vendors"));
   const threads = useStore(sliceStore(communityId, "threads"));
   const documents = useStore(sliceStore(communityId, "documents"));
+  const sharedCosts = useStore(sliceStore(communityId, "sharedCosts"));
+  const sharedCostBills = useStore(sliceStore(communityId, "sharedCostBills"));
   const ballots = useStore(sliceStore(communityId, "ballots"));
   const templates = useStore(sliceStore(communityId, "templates"));
 
@@ -1097,6 +1111,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  const addSharedCost = useCallback(
+    (cost: Community["sharedCosts"][number]) =>
+      sliceStore(communityId, "sharedCosts").update((all) => [...all, cost]),
+    [communityId],
+  );
+
+  const removeSharedCost = useCallback(
+    (costId: string) => {
+      sliceStore(communityId, "sharedCosts").update((all) =>
+        all.filter((cost) => cost.id !== costId),
+      );
+      // The bills go with it. Leaving them would keep the cost in every total
+      // while it no longer appears in any list, which is worse than losing it.
+      sliceStore(communityId, "sharedCostBills").update((all) =>
+        all.filter((bill) => bill.sharedCostId !== costId),
+      );
+    },
+    [communityId],
+  );
+
+  const postSharedCostBill = useCallback(
+    (bill: Community["sharedCostBills"][number]) =>
+      sliceStore(communityId, "sharedCostBills").update((all) => [...all, bill]),
+    [communityId],
+  );
+
   const setDocumentVisibility = useCallback(
     (documentId: string, visibility: Community["documents"][number]["visibility"]) =>
       sliceStore(communityId, "documents").update((all) =>
@@ -1185,6 +1225,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       documents,
       ballots,
       templates,
+      sharedCosts,
+      sharedCostBills,
     }),
     [
       community,
@@ -1206,6 +1248,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       documents,
       ballots,
       templates,
+      sharedCosts,
+      sharedCostBills,
     ],
   );
 
@@ -1281,6 +1325,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     markW9Requested,
     replyToThread,
     addDocument,
+    addSharedCost,
+    removeSharedCost,
+    postSharedCostBill,
     setDocumentVisibility,
     castVote,
     updateRequestStatus,

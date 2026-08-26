@@ -16,6 +16,19 @@ import { expect, type Page } from "@playwright/test";
  */
 
 /** Seats as the fixtures actually define them, checked against accounts.ts. */
+/**
+ * Seats, by community.
+ *
+ * An account id only exists inside its own association, so seeding Mehr
+ * Meadows' President against another community produces no session at all and
+ * the app falls back to the sign in page. A test that then asserts "the tab is
+ * absent" passes for the wrong reason, which is exactly what happened once.
+ */
+export const TC1_SEATS = {
+  president: "tc1-acct-priya",
+  treasurer: "tc1-acct-grant",
+} as const;
+
 export const SEATS = {
   president: "acct-arya",
   treasurer: "acct-dana",
