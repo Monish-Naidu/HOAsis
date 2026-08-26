@@ -508,8 +508,8 @@ export default function MarketingHome() {
           <Reveal>
             <div className="relative aspect-[5/4] overflow-hidden rounded-[1.75rem] border border-border shadow-float">
               <Image
-                src="/marketing/dusk.jpg"
-                alt="A house at dusk with its windows lit"
+                src="/marketing/evening.jpg"
+                alt="Townhomes at dusk with their windows lit"
                 fill
                 sizes="(max-width: 1024px) 100vw, 520px"
                 className="object-cover"
