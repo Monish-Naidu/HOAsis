@@ -20,6 +20,12 @@ export const association: Association = {
   duesCadence: "monthly",
   addressLine: "Brier, Washington",
   managedBy: "self",
+  // An association of this age carries a master policy. Leaving it off left
+  // the demo permanently one task short of set up, which put a "finish setting
+  // up" banner on a dashboard meant to show a running association.
+  insuranceCarrier: "Farmers Insurance",
+  insurancePolicyNo: "WA-CA-4471982",
+  insuranceExpiresOn: "2027-04-30",
 };
 
 export const bankAccounts: BankAccount[] = [

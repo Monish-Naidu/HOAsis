@@ -57,8 +57,8 @@ const SHOWCASE = [
       "One balance, and every report shows it",
     ],
     image: "/marketing/product-dashboard.png",
-    width: 2800,
-    height: 1240,
+    width: 2360,
+    height: 1320,
     alt: "The board dashboard, with three transactions waiting to be reviewed",
   },
   {
@@ -71,8 +71,8 @@ const SHOWCASE = [
       "The exact monthly amount that fixes it",
     ],
     image: "/marketing/product-reserves.png",
-    width: 2800,
-    height: 1280,
+    width: 2360,
+    height: 1360,
     alt: "A thirty year reserve plan, with sliders for savings, yield and inflation",
   },
   {
@@ -307,41 +307,57 @@ export default function MarketingHome() {
       </section>
 
       {/* Showcase */}
+      {/* Copy in two columns, then the screenshot at full container width.
+          It used to be a 50/50 split, which meant a dense board dashboard was
+          rendered at about 560px: technically present, and unreadable. A
+          screenshot nobody can read is worse than no screenshot, because it
+          says the product is cluttered. */}
       {SHOWCASE.map((section, index) => (
         <section
           key={section.title}
           className={`border-b border-border ${index % 2 === 1 ? "bg-surface" : ""}`}
         >
-          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:py-20 lg:grid-cols-2">
-            <Reveal className={index % 2 === 1 ? "lg:order-2" : ""}>
-              <p className="text-[13px] font-semibold text-fg-muted">
-                {section.eyebrow}
-              </p>
-              <h2 className="mt-3 text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[34px]">
-                {section.title}
-              </h2>
-              <p className="mt-4 text-[17px] leading-relaxed text-fg-muted">{section.body}</p>
-              <ul className="mt-5 space-y-2.5">
-                {section.points.map((point) => (
-                  <li key={point} className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
-                    <span className="text-[15px] leading-snug text-fg">{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
+          <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:py-24">
+            <div className="grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <Reveal>
+                <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                  {section.eyebrow}
+                </p>
+                <h2 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-fg sm:text-[44px]">
+                  {section.title}
+                </h2>
+              </Reveal>
 
-            <Reveal delay={100} className={index % 2 === 1 ? "lg:order-1" : ""}>
+              <Reveal delay={80}>
+                {/* Held near 62 characters, which is where a line stops
+                    needing a second pass to read. */}
+                <p className="max-w-[62ch] text-[18px] leading-[1.65] text-fg-muted">
+                  {section.body}
+                </p>
+                <ul className="mt-6 space-y-3">
+                  {section.points.map((point) => (
+                    <li key={point} className="flex items-start gap-3">
+                      <Check className="mt-1 size-4 shrink-0 text-ok" strokeWidth={2.4} />
+                      <span className="text-[17px] leading-snug text-fg">{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Reveal>
+            </div>
+
+            <Reveal delay={160} className="mt-12">
               {section.portrait ? (
-                <PhoneFrame src={section.image} alt={section.alt} />
+                <div className="flex justify-center">
+                  <PhoneFrame src={section.image} alt={section.alt} />
+                </div>
               ) : (
-                <div className="overflow-hidden rounded-card border border-border shadow-float">
+                <div className="overflow-hidden rounded-[1.25rem] border border-border shadow-float">
                   <Image
                     src={section.image}
                     alt={section.alt}
                     width={section.width}
                     height={section.height}
-                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    sizes="(max-width: 1152px) 100vw, 1112px"
                     className="h-auto w-full"
                   />
                 </div>

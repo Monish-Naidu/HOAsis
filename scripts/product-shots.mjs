@@ -4,6 +4,12 @@
  * Taken from the running app rather than drawn, so the page cannot show
  * something the product does not do. Re-run after a design change; the old
  * shots are the ones that quietly start lying.
+ *
+ * Capture width matters more than it looks. These are displayed at about
+ * 1112px, so a 1400px capture is downscaled to 79% and 15px body text lands
+ * near 12px, which is where a screenshot stops being readable and starts
+ * saying "this product is cluttered". Capturing near the display width keeps
+ * the type close to its native size.
  */
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
@@ -17,29 +23,29 @@ const SHOTS = [
     file: "product-dashboard.png",
     path: "/admin",
     seat: { accountId: "acct-arya", view: "admin" },
-    width: 1400,
+    width: 1180,
     height: 900,
     // Skip the community banner so the frame is the working area.
     clipFrom: "main",
-    clipHeight: 620,
+    clipHeight: 660,
   },
   {
     file: "product-money.png",
     path: "/admin/money",
     seat: { accountId: "acct-arya", view: "admin" },
-    width: 1400,
+    width: 1180,
     height: 950,
     clipFrom: "main",
-    clipHeight: 640,
+    clipHeight: 680,
   },
   {
     file: "product-reserves.png",
     path: "/admin/reserves",
     seat: { accountId: "acct-arya", view: "admin" },
-    width: 1400,
+    width: 1180,
     height: 950,
     clipFrom: "main",
-    clipHeight: 640,
+    clipHeight: 680,
   },
   {
     file: "product-resident.png",
@@ -66,6 +72,16 @@ for (const shot of SHOTS) {
   await page.addInitScript(
     ({ seat, mode }) => {
       localStorage.setItem("hoasis-session", JSON.stringify(seat));
+      // The setup checklist is onboarding scaffolding. A marketing shot should
+      // show the product doing its job, not a new customer's to-do list, so
+      // every task is marked skipped before the page renders.
+      localStorage.setItem(
+        "hoasis:mehr-meadows:setup-skipped",
+        JSON.stringify([
+          "roster", "bank", "invites", "documents", "budget", "board",
+          "insurance", "reserves", "vendors", "amenities", "photo",
+        ]),
+      );
       localStorage.setItem("hoasis-community", JSON.stringify("mehr-meadows"));
       localStorage.setItem("hoasis-theme", JSON.stringify("light"));
       if (mode) localStorage.setItem("hoasis-resident-mode", JSON.stringify(mode));
