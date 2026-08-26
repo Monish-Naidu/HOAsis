@@ -734,3 +734,105 @@ describe("the roster", () => {
     expect(result.current.accounts.some((a) => a.ownerId === owner.id)).toBe(true);
   });
 });
+
+describe("taking a payment", () => {
+  it("writes the statement, the balance, the books, the budget, and the bank together", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners.find((o) => o.balanceCents > 0)!;
+    const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
+    const bankBefore = operating.balanceCents;
+    const ledgerBefore = result.current.ledger.length;
+    const incomeBefore = result.current.community.budget
+      .filter((b) => b.kind === "income")
+      .reduce((t, b) => t + b.ytdActualCents, 0);
+
+    act(() => {
+      result.current.recordPayment({
+        ownerId: owner.id,
+        amountCents: owner.balanceCents,
+        processorCents: 35,
+        platformCents: 0,
+        platformPaidBy: "association",
+        method: "BECU checking ••2288",
+        kind: "ach",
+      });
+    });
+
+    const after = result.current.community;
+    // The household's own statement.
+    const statement = after.ownerCharges[owner.id];
+    expect(statement[0].kind).toBe("payment");
+    expect(statement[0].amountCents).toBe(-owner.balanceCents);
+    // Their balance.
+    expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(0);
+    // The association's books, net of what the processor takes.
+    expect(result.current.ledger.length).toBe(ledgerBefore + 1);
+    expect(result.current.ledger[0].amountCents).toBe(owner.balanceCents - 35);
+    // Budget performance.
+    const incomeAfter = after.budget
+      .filter((b) => b.kind === "income")
+      .reduce((t, b) => t + b.ytdActualCents, 0);
+    expect(incomeAfter).toBe(incomeBefore + owner.balanceCents);
+    // And the bank the board reconciles against.
+    expect(after.bankAccounts.find((a) => a.id === operating.id)!.balanceCents).toBe(
+      bankBefore + owner.balanceCents - 35,
+    );
+  });
+
+  it("applies money to the oldest open charge first", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners.find(
+      (o) => (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge"),
+    )!;
+    // The oldest charge that still owes something, which is not the same as
+    // the oldest charge: earlier ones have already been paid off.
+    const lines = result.current.community.ownerCharges[owner.id];
+    const coveredBy = new Map<string, number>();
+    for (const line of lines) {
+      for (const applied of line.appliedTo ?? []) {
+        coveredBy.set(applied.chargeId, (coveredBy.get(applied.chargeId) ?? 0) + applied.amountCents);
+      }
+    }
+    const oldest = [...lines]
+      .reverse()
+      .find((c) => c.kind === "charge" && c.amountCents - (coveredBy.get(c.id) ?? 0) > 0)!;
+
+    act(() => {
+      result.current.recordPayment({
+        ownerId: owner.id,
+        amountCents: oldest.amountCents,
+        processorCents: 35,
+        platformCents: 0,
+        platformPaidBy: "association",
+        method: "BECU checking ••2288",
+        kind: "ach",
+      });
+    });
+
+    const applied = result.current.community.ownerCharges[owner.id][0].appliedTo ?? [];
+    expect(applied[0]?.chargeId).toBe(oldest.id);
+  });
+
+  it("carries the association's own fee out of the deposit when it absorbs it", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners[0];
+    const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
+    const before = operating.balanceCents;
+
+    act(() => {
+      result.current.recordPayment({
+        ownerId: owner.id,
+        amountCents: 10_000,
+        processorCents: 35,
+        platformCents: 150,
+        platformPaidBy: "association",
+        method: "BECU checking ••2288",
+        kind: "ach",
+      });
+    });
+
+    expect(
+      result.current.community.bankAccounts.find((a) => a.id === operating.id)!.balanceCents,
+    ).toBe(before + 10_000 - 35 - 150);
+  });
+});

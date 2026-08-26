@@ -26,18 +26,18 @@ interface Task {
 
 const TASKS: Task[] = [
   {
-    id: "roster",
-    label: "Add the rest of the households",
-    detail: "Every home on the register gets a balance, a login, and a vote.",
-    href: "/admin/homeowners",
-    done: (c) => c.owners.length >= c.association.unitCount,
-  },
-  {
     id: "bank",
     label: "Connect the operating account",
-    detail: "Nothing reconciles until there is a feed to reconcile against.",
+    detail: "Dues have nowhere to land until you do. Everything else can wait; this cannot.",
     href: "/admin/money",
-    done: (c) => c.bankAccounts.length > 0,
+    done: (c) => c.bankAccounts.some((a) => a.kind === "operating"),
+  },
+  {
+    id: "invites",
+    label: "Invite your neighbors",
+    detail: "A household with no email address has no way to reach their balance.",
+    href: "/admin/homeowners",
+    done: (c) => c.owners.every((o) => o.email.trim().length > 0),
   },
   {
     id: "budget",

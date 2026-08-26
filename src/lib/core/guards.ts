@@ -63,3 +63,26 @@ export function isCommunitySettings(value: unknown): value is CommunitySettings 
     isRecord(value.banner)
   );
 }
+
+/**
+ * Charge history, keyed by owner.
+ *
+ * A record of arrays rather than an array, so it cannot go through the same
+ * guard as every other slice.
+ */
+export function isChargeLedger(value: unknown): value is Record<string, { id: string }[]> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (lines) => Array.isArray(lines) && lines.every((line) => hasId(line)),
+    )
+  );
+}
+
+/** Budget lines are keyed by category rather than by id. */
+export function isBudgetLines(value: unknown): value is { category: string }[] {
+  return (
+    Array.isArray(value) &&
+    value.every((line) => isRecord(line) && typeof line.category === "string")
+  );
+}

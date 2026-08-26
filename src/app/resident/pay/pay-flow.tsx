@@ -43,7 +43,8 @@ const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
 export function PayFlow() {
   const owner = useCurrentOwner();
   const instruments = useMyInstruments();
-  const { settings, community, removeInstrument, setDefaultInstrument } = useAppState();
+  const { settings, community, removeInstrument, setDefaultInstrument, recordPayment } =
+    useAppState();
   const duesCents = community.association.duesCents;
   const nextCharge = community.nextChargeDate;
   const { notify } = useToast();
@@ -351,7 +352,21 @@ export function PayFlow() {
             size="lg"
             className="mt-4 w-full"
             disabled={amountCents <= 0 || isExpired(selected, REFERENCE)}
-            onClick={() => setPaid({ amountCents: cost.residentPaysCents, instrument: selected })}
+            onClick={() => {
+              // The receipt and the books are written from the same click, so
+              // a resident can never be shown a payment the association has no
+              // record of.
+              recordPayment({
+                ownerId: owner.id,
+                amountCents,
+                processorCents: cost.processorCents,
+                platformCents: cost.platformCents,
+                platformPaidBy: policy.paidBy,
+                method: `${selected.label} ••${selected.mask}`,
+                kind: selected.kind,
+              });
+              setPaid({ amountCents: cost.residentPaysCents, instrument: selected });
+            }}
           >
             Pay {money(cost.residentPaysCents)}
           </Button>

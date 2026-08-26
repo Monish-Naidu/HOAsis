@@ -152,9 +152,9 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       {topBar}
       {appHeader}
       <CommunityHero subtitle={`Unit ${unit} · ${address}`} />
-      <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-6 pt-6 lg:px-6 lg:py-8">
+      <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
         <aside className="hidden w-56 shrink-0 lg:block">
-          <div className="sticky top-8">
+          <div className="no-scrollbar sticky top-8 max-h-[calc(100dvh-4rem)] overflow-y-auto">
             <div className="rounded-card border border-border bg-surface p-4">
               <p className="text-[13px] font-semibold text-fg">{associationName}</p>
               <p className="mt-0.5 text-[11px] leading-snug text-fg-muted">
@@ -200,7 +200,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       </div>
       <Assistant />
       <div className="lg:hidden">
-        <TabBar pathname={pathname} tabs={tabs} />
+        <TabBar pathname={pathname} tabs={tabs} pinned />
       </div>
     </div>
     </RequireSession>
@@ -246,13 +246,27 @@ function PhoneHeader({
 function TabBar({
   pathname,
   tabs,
+  pinned = false,
 }: {
   pathname: string;
   tabs: typeof residentTabs;
+  /**
+   * Pinned to the viewport rather than the flow.
+   *
+   * Inside the phone frame the bar is the last row of a fixed height column,
+   * so it sits still on its own. On a real page it is the last element in the
+   * document, where `sticky bottom-0` has nothing left to scroll past and the
+   * bar simply rides away with the content. Fixed is what keeps it under the
+   * reader's thumb, which is the whole point of a tab bar.
+   */
+  pinned?: boolean;
 }) {
   return (
     <nav
-      className="sticky bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur-md"
+      className={cn(
+        "z-30 border-t border-border bg-surface/95 backdrop-blur-md",
+        pinned ? "fixed inset-x-0 bottom-0" : "sticky bottom-0",
+      )}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Resident sections"
     >

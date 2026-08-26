@@ -1,8 +1,19 @@
-import type { Account, Owner, Capability, Cents, ISODate } from "@/lib/types";
+import type { Account, BankAccount, Owner, Cents, ISODate } from "@/lib/types";
 import type { Community } from "./community";
 import { caps, GRANTABLE, NO_CAPABILITIES } from "./accounts";
+
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
+
+/**
+ * Defaults nobody is asked about during setup.
+ *
+ * A calendar fiscal year and a ten day grace period are what most associations
+ * run, and both are one control away in Settings. Asking about them up front
+ * buys nothing and costs a screen.
+ */
+const FISCAL_YEAR_START = "01-01";
+const DEFAULT_LATE_AFTER_DAY = 10;
 
 /**
  * Building an association from what a board can answer in five minutes.
@@ -16,27 +27,30 @@ import { messageTemplates } from "./templates";
  * for every association we ever sign.
  */
 
-/** What onboarding collects. Everything else is derived or starts empty. */
+/**
+ * What onboarding collects.
+ *
+ * Deliberately short. An association needs four things before it can take a
+ * dollar: who it is, what each home owes, which homes there are, and where the
+ * money lands. Everything else, including who else sits on the board, can be
+ * done afterwards by someone who is already logged in and collecting.
+ */
 export interface CommunityDraft {
   name: string;
   city: string;
   /** Two letter code. Drives which library guidance applies. */
   state: string;
   stateName: string;
-  unitCount: number;
   duesCents: Cents;
   duesCadence: "monthly" | "quarterly" | "annually";
   /** Day of the month an assessment is billed. */
   dueDay: number;
-  /** The last day of the month it can be paid before it is late. */
-  lateAfterDay: number;
-  fiscalYearStart: string;
   /** The person setting this up. They become President. */
   founder: { name: string; email: string; unit: string };
   /** Households the founder entered, not counting their own. */
   households: DraftHousehold[];
-  /** Board members invited during setup, not counting the founder. */
-  board: DraftBoardMember[];
+  /** Where dues land. Optional only because a board can connect it later. */
+  bankAccount?: BankAccount;
 }
 
 export interface DraftHousehold {
@@ -44,21 +58,6 @@ export interface DraftHousehold {
   email: string;
   unit: string;
 }
-
-export interface DraftBoardMember {
-  name: string;
-  email: string;
-  unit: string;
-  role: "vice-president" | "treasurer" | "secretary";
-  capabilities: Capability[];
-}
-
-/** Capabilities each office gets by default. The board can change any of it later. */
-export const DEFAULT_ROLE_CAPABILITIES: Record<DraftBoardMember["role"], Capability[]> = {
-  "vice-president": ["requests", "documents", "communications", "voting", "forum"],
-  treasurer: ["finances", "vendors", "documents"],
-  secretary: ["documents", "communications", "voting", "compliance", "forum"],
-};
 
 /** A URL-safe id from a name, with a suffix so two "Oak Ridge"s do not collide. */
 function slugify(value: string, suffix: string): string {
@@ -99,7 +98,12 @@ function yearElapsedFrom(fiscalYearStart: string, asOf: ISODate): number {
 /** Annualized assessment income, which is the only budget line we can infer. */
 function annualDues(draft: CommunityDraft): Cents {
   const perYear = draft.duesCadence === "monthly" ? 12 : draft.duesCadence === "quarterly" ? 4 : 1;
-  return draft.duesCents * perYear * draft.unitCount;
+  return draft.duesCents * perYear * unitCount(draft);
+}
+
+/** Homes in the association: the roster, including the founder's own. */
+export function unitCount(draft: CommunityDraft): number {
+  return draft.households.length + 1;
 }
 
 /**
@@ -132,8 +136,6 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     boardRole: "President",
   };
 
-  const boardByUnit = new Map(draft.board.map((member) => [member.unit, member]));
-
   const otherOwners: Owner[] = draft.households.map((household) => ({
     id: ownerId(household.unit),
     displayName: household.name,
@@ -147,9 +149,6 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     autopay: false,
     standing: "current",
     daysPastDue: 0,
-    boardRole: boardByUnit.get(household.unit)
-      ? titleCase(boardByUnit.get(household.unit)!.role)
-      : undefined,
   }));
 
   const owners = [founderOwner, ...otherOwners];
@@ -166,18 +165,15 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     capabilities: caps([...GRANTABLE], true),
   };
 
-  const otherAccounts: Account[] = otherOwners.map((owner) => {
-    const member = boardByUnit.get(owner.unit);
-    return {
-      id: accountId(owner.unit),
-      ownerId: owner.id,
-      name: owner.displayName,
-      email: owner.email,
-      unit: owner.unit,
-      role: member ? member.role : "resident",
-      capabilities: member ? caps(member.capabilities) : NO_CAPABILITIES,
-    };
-  });
+  const otherAccounts: Account[] = otherOwners.map((owner) => ({
+    id: accountId(owner.unit),
+    ownerId: owner.id,
+    name: owner.displayName,
+    email: owner.email,
+    unit: owner.unit,
+    role: "resident" as const,
+    capabilities: NO_CAPABILITIES,
+  }));
 
   return {
     id,
@@ -191,8 +187,8 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       shortName: draft.name.split(/\s+/).slice(0, 2).join(" "),
       state: draft.state,
       stateName: draft.stateName,
-      unitCount: draft.unitCount,
-      fiscalYearStart: draft.fiscalYearStart,
+      unitCount: unitCount(draft),
+      fiscalYearStart: FISCAL_YEAR_START,
       duesCents: draft.duesCents,
       duesCadence: draft.duesCadence,
       addressLine: `${draft.city}, ${draft.stateName}`,
@@ -206,7 +202,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       banner: { enabled: false, title: "", detail: "", updatedDate: asOf },
       showFundsToResidents: true,
       showLiveVoteResults: false,
-      autopayLateAfterDay: draft.lateAfterDay,
+      autopayLateAfterDay: DEFAULT_LATE_AFTER_DAY,
       // No fee until pricing is settled. A board should never discover a charge
       // we had not told them about.
       paymentFeeCents: 0,
@@ -220,7 +216,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     instruments: [],
 
     // Nothing financial exists until they connect a bank and record something.
-    bankAccounts: [],
+    bankAccounts: draft.bankAccount ? [draft.bankAccount] : [],
     ledger: [],
     budget: [
       {
@@ -230,7 +226,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
         kind: "income",
       },
     ],
-    yearElapsed: yearElapsedFrom(draft.fiscalYearStart, asOf),
+    yearElapsed: yearElapsedFrom(FISCAL_YEAR_START, asOf),
     reserveComponents: [],
     savingsOffers: [],
 
@@ -259,13 +255,6 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
   };
 }
 
-function titleCase(role: string): string {
-  return role
-    .split("-")
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 /** An empty draft, so the wizard has something coherent to start from. */
 export function emptyDraft(): CommunityDraft {
   return {
@@ -273,14 +262,10 @@ export function emptyDraft(): CommunityDraft {
     city: "",
     state: "",
     stateName: "",
-    unitCount: 0,
     duesCents: 0,
     duesCadence: "monthly",
     dueDay: 1,
-    lateAfterDay: 10,
-    fiscalYearStart: "01-01",
     founder: { name: "", email: "", unit: "" },
     households: [],
-    board: [],
   };
 }

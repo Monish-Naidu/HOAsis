@@ -2,33 +2,39 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2 } from "lucide-react";
-import { Badge, Button, Card } from "@/components/ui/primitives";
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Users } from "lucide-react";
+import { Button, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { STATES } from "@/lib/data/library";
 import {
-  DEFAULT_ROLE_CAPABILITIES,
   emptyDraft,
+  unitCount,
   type CommunityDraft,
-  type DraftBoardMember,
   type DraftHousehold,
 } from "@/lib/data/new-community";
+import { BankStep } from "./bank-step";
 import { cn, money } from "@/lib/utils";
 
 /**
  * Setting up an association.
  *
- * Four steps, in the order a board can actually answer them: who you are, what
- * you charge, who lives here, and who else runs it. Nothing here is optional
- * theatre. Every field either appears on a screen straight afterwards or
- * changes how money is calculated.
+ * Three questions, because an association needs exactly three things before it
+ * can take a dollar: who it is and what a home owes, which homes there are, and
+ * where the money lands. Officers, documents, budgets, reserves and amenities
+ * are all real, and every one of them can wait until somebody is logged in and
+ * already collecting.
  *
- * The roster step is the one that matters. An association's membership register
- * already exists before anyone signs up, so onboarding is about getting that
- * list in rather than waiting for residents to find us.
+ * The roster step is the one that has to be fast. A board arrives holding a
+ * spreadsheet or an email chain, so it accepts a pasted list as readily as it
+ * accepts typing, and the roster is the unit count rather than a second number
+ * that has to agree with it.
  */
 
-const STEPS = ["Association", "Assessments", "Households", "Board"] as const;
+const STEPS = [
+  { id: "association", label: "Association", blurb: "Who you are and what a home pays" },
+  { id: "homes", label: "Homes", blurb: "Who lives here" },
+  { id: "bank", label: "Bank", blurb: "Where dues land" },
+] as const;
 
 const CADENCES = [
   { id: "monthly", label: "Monthly" },
@@ -36,49 +42,37 @@ const CADENCES = [
   { id: "annually", label: "Annually" },
 ] as const;
 
-const ROLES = [
-  { id: "vice-president", label: "Vice President" },
-  { id: "treasurer", label: "Treasurer" },
-  { id: "secretary", label: "Secretary" },
-] as const;
-
 export function SetupWizard() {
   const { createCommunity } = useAppState();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<CommunityDraft>(emptyDraft);
-  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState<{ id: string } | null>(null);
 
   const patch = (next: Partial<CommunityDraft>) => setDraft((d) => ({ ...d, ...next }));
-
   const complete = useMemo(() => stepComplete(draft), [draft]);
-  const canAdvance = complete[step];
-  const onLastStep = step === STEPS.length - 1;
 
-  function finish() {
-    setSubmitting(true);
-    createCommunity(draft);
-    router.push("/admin");
+  function finish(withDraft: CommunityDraft) {
+    const built = createCommunity(withDraft);
+    setDone({ id: built.id });
   }
 
+  if (done) return <FinishedPanel draft={draft} onOpen={() => router.push("/admin")} />;
+
   return (
-    <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:py-14">
-      <ol className="flex items-center gap-1.5" aria-label="Setup progress">
-        {STEPS.map((label, index) => (
-          <li key={label} className="flex flex-1 items-center gap-1.5">
+    <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
+      <ol className="flex items-stretch gap-2" aria-label="Setup progress">
+        {STEPS.map((s, index) => (
+          <li key={s.id} className="flex-1">
             <button
               type="button"
-              // Going back is always allowed. Going forward is not, because a
-              // later step reads answers from an earlier one.
               disabled={index > step && !complete.slice(0, index).every(Boolean)}
               onClick={() => setStep(index)}
-              className={cn(
-                "flex w-full flex-col gap-1.5 rounded-lg py-1 text-left transition-opacity disabled:cursor-not-allowed disabled:opacity-40",
-              )}
+              className="flex w-full flex-col gap-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span
                 className={cn(
-                  "h-1 w-full rounded-full",
+                  "h-1 w-full rounded-full transition-colors",
                   index <= step ? "bg-brand" : "bg-border-2",
                 )}
               />
@@ -88,18 +82,24 @@ export function SetupWizard() {
                   index === step ? "text-fg" : "text-fg-subtle",
                 )}
               >
-                {label}
+                {s.label}
               </span>
             </button>
           </li>
         ))}
       </ol>
 
-      <div className="mt-7">
-        {STEPS[step] === "Association" ? <AssociationStep draft={draft} patch={patch} /> : null}
-        {STEPS[step] === "Assessments" ? <AssessmentStep draft={draft} patch={patch} /> : null}
-        {STEPS[step] === "Households" ? <HouseholdStep draft={draft} patch={patch} /> : null}
-        {STEPS[step] === "Board" ? <BoardStep draft={draft} patch={patch} /> : null}
+      <div className="mt-8">
+        {step === 0 ? <AssociationStep draft={draft} patch={patch} /> : null}
+        {step === 1 ? <HomesStep draft={draft} patch={patch} /> : null}
+        {step === 2 ? (
+          <BankStep
+            associationName={draft.name}
+            account={draft.bankAccount}
+            onConnect={(bankAccount) => patch({ bankAccount })}
+            onClear={() => patch({ bankAccount: undefined })}
+          />
+        ) : null}
       </div>
 
       <div className="mt-8 flex items-center justify-between gap-3">
@@ -113,17 +113,27 @@ export function SetupWizard() {
           Back
         </Button>
 
-        {onLastStep ? (
-          <Button variant="primary" size="md" onClick={finish} disabled={!canAdvance || submitting}>
-            <Check className="size-4" />
-            {submitting ? "Setting up" : "Create the association"}
-          </Button>
+        {step === STEPS.length - 1 ? (
+          <div className="flex items-center gap-2">
+            {!draft.bankAccount ? (
+              // Connecting a bank is the point of this screen, but refusing to
+              // let a board finish without one strands anybody whose treasurer
+              // holds the account details. The checklist asks again.
+              <Button variant="ghost" size="md" onClick={() => finish(draft)}>
+                Skip for now
+              </Button>
+            ) : null}
+            <Button variant="primary" size="md" onClick={() => finish(draft)}>
+              <Check className="size-4" />
+              Create the association
+            </Button>
+          </div>
         ) : (
           <Button
             variant="primary"
             size="md"
             onClick={() => setStep((s) => s + 1)}
-            disabled={!canAdvance}
+            disabled={!complete[step]}
           >
             Continue
             <ArrowRight className="size-4" />
@@ -135,7 +145,7 @@ export function SetupWizard() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Steps                                                                      */
+/* Step 1: the association                                                    */
 /* -------------------------------------------------------------------------- */
 
 interface StepProps {
@@ -145,16 +155,14 @@ interface StepProps {
 
 function AssociationStep({ draft, patch }: StepProps) {
   return (
-    <Section
-      title="What is the association called?"
-      detail="This is the name residents see when they sign in."
-    >
+    <Section title="Your association" detail="The name residents see, and what each home pays.">
       <Field label="Association name">
         <input
           value={draft.name}
           onChange={(e) => patch({ name: e.target.value })}
           placeholder="Oak Ridge Homeowners Association"
-          className={inputClass}
+          className={input}
+          autoFocus
         />
       </Field>
 
@@ -164,17 +172,17 @@ function AssociationStep({ draft, patch }: StepProps) {
             value={draft.city}
             onChange={(e) => patch({ city: e.target.value })}
             placeholder="Brier"
-            className={inputClass}
+            className={input}
           />
         </Field>
-        <Field label="State" hint="Sets which statutory guidance applies.">
+        <Field label="State">
           <select
             value={draft.state}
             onChange={(e) => {
               const found = STATES.find((s) => s.code === e.target.value);
               patch({ state: e.target.value, stateName: found?.name ?? "" });
             }}
-            className={inputClass}
+            className={input}
           >
             <option value="">Select a state</option>
             {STATES.map((s) => (
@@ -186,62 +194,10 @@ function AssociationStep({ draft, patch }: StepProps) {
         </Field>
       </div>
 
-      <Field label="Homes in the association" hint="Used for quorum and collection rates.">
-        <input
-          type="number"
-          min={1}
-          value={draft.unitCount || ""}
-          onChange={(e) => patch({ unitCount: Number(e.target.value) })}
-          placeholder="24"
-          className={inputClass}
-        />
-      </Field>
-
       <hr className="border-border" />
 
-      <Field label="Your name" hint="You become President and hold every capability.">
-        <input
-          value={draft.founder.name}
-          onChange={(e) => patch({ founder: { ...draft.founder, name: e.target.value } })}
-          placeholder="Priya Venkatesan"
-          className={inputClass}
-        />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Your email">
-          <input
-            type="email"
-            value={draft.founder.email}
-            onChange={(e) => patch({ founder: { ...draft.founder, email: e.target.value } })}
-            placeholder="you@example.com"
-            className={inputClass}
-          />
-        </Field>
-        <Field label="Your unit">
-          <input
-            value={draft.founder.unit}
-            onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
-            placeholder="1"
-            className={inputClass}
-          />
-        </Field>
-      </div>
-    </Section>
-  );
-}
-
-function AssessmentStep({ draft, patch }: StepProps) {
-  const perYear = draft.duesCadence === "monthly" ? 12 : draft.duesCadence === "quarterly" ? 4 : 1;
-  const annual = draft.duesCents * perYear * (draft.unitCount || 0);
-
-  return (
-    <Section
-      title="What does each home pay?"
-      detail="This drives every balance, statement, and delinquency report."
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Assessment per home">
+      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
+        <Field label="Each home pays">
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-fg-subtle">
               $
@@ -252,16 +208,18 @@ function AssessmentStep({ draft, patch }: StepProps) {
               step="0.01"
               value={draft.duesCents ? draft.duesCents / 100 : ""}
               onChange={(e) => patch({ duesCents: Math.round(Number(e.target.value) * 100) })}
-              placeholder="30.00"
-              className={cn(inputClass, "pl-7")}
+              placeholder="45.00"
+              className={cn(input, "pl-7")}
             />
           </div>
         </Field>
         <Field label="How often">
           <select
             value={draft.duesCadence}
-            onChange={(e) => patch({ duesCadence: e.target.value as CommunityDraft["duesCadence"] })}
-            className={inputClass}
+            onChange={(e) =>
+              patch({ duesCadence: e.target.value as CommunityDraft["duesCadence"] })
+            }
+            className={input}
           >
             {CADENCES.map((c) => (
               <option key={c.id} value={c.id}>
@@ -270,27 +228,11 @@ function AssessmentStep({ draft, patch }: StepProps) {
             ))}
           </select>
         </Field>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Billed on day">
+        <Field label="Due on">
           <select
             value={draft.dueDay}
             onChange={(e) => patch({ dueDay: Number(e.target.value) })}
-            className={inputClass}
-          >
-            {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={d}>
-                {ordinal(d)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Late after day" hint="The last day autopay can be scheduled.">
-          <select
-            value={draft.lateAfterDay}
-            onChange={(e) => patch({ lateAfterDay: Number(e.target.value) })}
-            className={inputClass}
+            className={input}
           >
             {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
               <option key={d} value={d}>
@@ -300,33 +242,24 @@ function AssessmentStep({ draft, patch }: StepProps) {
           </select>
         </Field>
       </div>
-
-      {annual > 0 ? (
-        <Card className="bg-surface-2 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-            Annual assessment income
-          </p>
-          <p className="tnum mt-1 text-[26px] font-semibold leading-none tracking-[-0.02em] text-fg">
-            {money(annual, { cents: false })}
-          </p>
-          <p className="mt-1.5 text-[12px] text-fg-muted">
-            {draft.unitCount} homes at {money(draft.duesCents)} {draft.duesCadence}. This becomes
-            your first budget line.
-          </p>
-        </Card>
-      ) : null}
     </Section>
   );
 }
 
-function HouseholdStep({ draft, patch }: StepProps) {
+/* -------------------------------------------------------------------------- */
+/* Step 2: the roster                                                         */
+/* -------------------------------------------------------------------------- */
+
+function HomesStep({ draft, patch }: StepProps) {
   const [entry, setEntry] = useState<DraftHousehold>({ name: "", email: "", unit: "" });
-  const ready = entry.name.trim() && entry.unit.trim();
-  const taken = new Set([draft.founder.unit, ...draft.households.map((h) => h.unit)]);
-  const remaining = Math.max(0, draft.unitCount - 1 - draft.households.length);
+  const [bulk, setBulk] = useState("");
+  const [pasting, setPasting] = useState(false);
+
+  const taken = new Set([draft.founder.unit.trim(), ...draft.households.map((h) => h.unit)]);
+  const canAdd = entry.name.trim() && entry.unit.trim() && !taken.has(entry.unit.trim());
 
   function add() {
-    if (!ready || taken.has(entry.unit.trim())) return;
+    if (!canAdd) return;
     patch({
       households: [
         ...draft.households,
@@ -336,161 +269,242 @@ function HouseholdStep({ draft, patch }: StepProps) {
     setEntry({ name: "", email: "", unit: "" });
   }
 
+  function importPasted() {
+    const parsed = parseRoster(bulk).filter((h) => !taken.has(h.unit));
+    if (!parsed.length) return;
+    patch({ households: [...draft.households, ...parsed] });
+    setBulk("");
+    setPasting(false);
+  }
+
+  const preview = pasting ? parseRoster(bulk) : [];
+
   return (
     <Section
       title="Who lives here?"
-      detail="Your own household is already counted. Add the rest, or add them later from the Homeowners tab."
+      detail="Start with your own home. Every household gets a balance, a login, and a vote."
     >
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_5rem]">
-        <input
-          value={entry.name}
-          onChange={(e) => setEntry({ ...entry, name: e.target.value })}
-          placeholder="Household name"
-          aria-label="Household name"
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          className={inputClass}
-        />
-        <input
-          type="email"
-          value={entry.email}
-          onChange={(e) => setEntry({ ...entry, email: e.target.value })}
-          placeholder="Email for the invite"
-          aria-label="Household email"
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          className={inputClass}
-        />
-        <input
-          value={entry.unit}
-          onChange={(e) => setEntry({ ...entry, unit: e.target.value })}
-          placeholder="Unit"
-          aria-label="Unit"
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          className={inputClass}
-        />
+      <div className="rounded-card border border-border bg-surface-2 p-4">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          You
+        </p>
+        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_5.5rem]">
+          <input
+            value={draft.founder.name}
+            onChange={(e) => patch({ founder: { ...draft.founder, name: e.target.value } })}
+            placeholder="Your name"
+            aria-label="Your name"
+            className={input}
+          />
+          <input
+            type="email"
+            value={draft.founder.email}
+            onChange={(e) => patch({ founder: { ...draft.founder, email: e.target.value } })}
+            placeholder="Your email"
+            aria-label="Your email"
+            className={input}
+          />
+          <input
+            value={draft.founder.unit}
+            onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
+            placeholder="Unit"
+            aria-label="Your unit"
+            className={input}
+          />
+        </div>
+        <p className="mt-2 text-[11px] text-fg-subtle">
+          You become President and can appoint the rest of the board later.
+        </p>
       </div>
 
-      {entry.unit.trim() && taken.has(entry.unit.trim()) ? (
-        <p className="text-[12px] text-danger">Unit {entry.unit.trim()} is already on the roster.</p>
-      ) : null}
-
-      <Button variant="secondary" size="sm" onClick={add} disabled={!ready}>
-        <Plus className="size-3.5" />
-        Add household
-      </Button>
-
-      <RosterList
-        rows={[
-          { name: `${draft.founder.name || "You"}`, unit: draft.founder.unit, note: "President" },
-          ...draft.households.map((h) => ({ name: h.name, unit: h.unit, note: h.email })),
-        ]}
-        onRemove={(index) =>
-          index === 0
-            ? undefined
-            : patch({ households: draft.households.filter((_, i) => i !== index - 1) })
-        }
-      />
-
-      {draft.unitCount > 0 ? (
-        <p className="text-[12px] text-fg-muted">
-          {remaining > 0
-            ? `${remaining} more to reach ${draft.unitCount}. You can finish setup without them.`
-            : "Every home on the roster."}
-        </p>
-      ) : null}
-    </Section>
-  );
-}
-
-function BoardStep({ draft, patch }: StepProps) {
-  const candidates = draft.households.filter(
-    (h) => !draft.board.some((b) => b.unit === h.unit),
-  );
-
-  function addRole(household: DraftHousehold, role: DraftBoardMember["role"]) {
-    patch({
-      board: [
-        ...draft.board,
-        {
-          ...household,
-          role,
-          capabilities: DEFAULT_ROLE_CAPABILITIES[role],
-        },
-      ],
-    });
-  }
-
-  return (
-    <Section
-      title="Who else runs the association?"
-      detail="Give an office to anyone on the roster. You can change what each one can do afterwards."
-    >
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between rounded-lg border border-border bg-surface-2 px-3.5 py-2.5">
-          <span className="min-w-0">
-            <span className="block truncate text-[13px] font-medium text-fg">
-              {draft.founder.name || "You"}
-            </span>
-            <span className="text-[11px] text-fg-subtle">Unit {draft.founder.unit}</span>
-          </span>
-          <Badge tone="brand">President</Badge>
-        </div>
-
-        {draft.board.map((member) => (
-          <div
-            key={member.unit}
-            className="flex items-center justify-between rounded-lg border border-border px-3.5 py-2.5"
+      {pasting ? (
+        <div className="flex flex-col gap-3">
+          <Field
+            label="Paste your roster"
+            hint="One household per line: name, email, unit. Commas or tabs both work."
           >
-            <span className="min-w-0">
-              <span className="block truncate text-[13px] font-medium text-fg">{member.name}</span>
-              <span className="text-[11px] text-fg-subtle">Unit {member.unit}</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <Badge tone="neutral">{ROLES.find((r) => r.id === member.role)?.label}</Badge>
+            <textarea
+              value={bulk}
+              onChange={(e) => setBulk(e.target.value)}
+              rows={7}
+              autoFocus
+              placeholder={"Marcus Bell, marcus@example.com, 2\nYuki Tanaka, yuki@example.com, 3"}
+              className={cn(input, "h-auto py-2 font-mono text-[12px] leading-relaxed")}
+            />
+          </Field>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="primary" size="sm" onClick={importPasted} disabled={!preview.length}>
+              Add {preview.length ? pluralHomes(preview.length) : "households"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setPasting(false)}>
+              Cancel
+            </Button>
+            {bulk.trim() && !preview.length ? (
+              <span className="text-[12px] text-warn">
+                No lines read as a household yet. Each needs a name and a unit.
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_5.5rem]">
+            <input
+              value={entry.name}
+              onChange={(e) => setEntry({ ...entry, name: e.target.value })}
+              placeholder="Household name"
+              aria-label="Household name"
+              onKeyDown={(e) => e.key === "Enter" && add()}
+              className={input}
+            />
+            <input
+              type="email"
+              value={entry.email}
+              onChange={(e) => setEntry({ ...entry, email: e.target.value })}
+              placeholder="Email"
+              aria-label="Household email"
+              onKeyDown={(e) => e.key === "Enter" && add()}
+              className={input}
+            />
+            <input
+              value={entry.unit}
+              onChange={(e) => setEntry({ ...entry, unit: e.target.value })}
+              placeholder="Unit"
+              aria-label="Household unit"
+              onKeyDown={(e) => e.key === "Enter" && add()}
+              className={input}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={add} disabled={!canAdd}>
+              <Plus className="size-3.5" />
+              Add household
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setPasting(true)}>
+              Paste a list instead
+            </Button>
+            {entry.unit.trim() && taken.has(entry.unit.trim()) ? (
+              <span className="text-[12px] text-danger">
+                Unit {entry.unit.trim()} is already on the roster.
+              </span>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {draft.households.length ? (
+        <Card className="divide-y divide-border overflow-hidden">
+          {draft.households.map((h, index) => (
+            <div key={h.unit} className="flex items-center gap-3 px-3.5 py-2.5">
+              <span className="w-14 shrink-0 text-[11px] font-medium text-fg-subtle">
+                Unit {h.unit}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium text-fg">{h.name}</span>
+                {h.email ? (
+                  <span className="block truncate text-[11px] text-fg-subtle">{h.email}</span>
+                ) : (
+                  <span className="block text-[11px] text-warn">No email, so no invitation</span>
+                )}
+              </span>
               <button
                 type="button"
-                aria-label={`Remove ${member.name} from the board`}
-                onClick={() => patch({ board: draft.board.filter((b) => b.unit !== member.unit) })}
+                aria-label={`Remove ${h.name}`}
+                onClick={() =>
+                  patch({ households: draft.households.filter((_, i) => i !== index) })
+                }
                 className="rounded-md p-1 text-fg-subtle hover:bg-surface-2 hover:text-danger"
               >
                 <Trash2 className="size-3.5" />
               </button>
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {candidates.length ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border-2 p-3.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-            Add an officer
-          </p>
-          {candidates.map((household) => (
-            <div key={household.unit} className="flex flex-wrap items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-[13px] text-fg">
-                {household.name}
-                <span className="text-fg-subtle"> · Unit {household.unit}</span>
-              </span>
-              {ROLES.map((role) => (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() => addRole(household, role.id)}
-                  className="rounded-md border border-border-2 px-2 py-1 text-[11px] font-medium text-fg hover:bg-surface-2"
-                >
-                  {role.label}
-                </button>
-              ))}
             </div>
           ))}
-        </div>
-      ) : (
-        <p className="text-[12px] text-fg-muted">
-          {draft.households.length
-            ? "Everyone on the roster already holds an office."
-            : "Add households first, or skip this and appoint officers later."}
-        </p>
-      )}
+        </Card>
+      ) : null}
+
+      <p className="flex items-center gap-2 text-[12px] text-fg-muted">
+        <Users className="size-3.5 shrink-0" />
+        {pluralHomes(unitCount(draft))} on the roster
+        {draft.duesCents > 0 ? (
+          <>
+            {" · "}
+            {money(draft.duesCents * unitCount(draft), { cents: false })} per {cadenceNoun(draft)}
+          </>
+        ) : null}
+      </p>
     </Section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Finished                                                                   */
+/* -------------------------------------------------------------------------- */
+
+function FinishedPanel({ draft, onOpen }: { draft: CommunityDraft; onOpen: () => void }) {
+  const homes = unitCount(draft);
+  return (
+    <div className="animate-rise mx-auto w-full max-w-xl px-5 py-14">
+      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
+        <Check className="size-6" strokeWidth={2.5} />
+      </span>
+      <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-fg">
+        {draft.name} is ready to collect.
+      </h1>
+      <p className="mt-2 text-[14px] leading-relaxed text-fg-muted">
+        {pluralHomes(homes)} on the register, {money(draft.duesCents)} {draft.duesCadence} each.
+      </p>
+
+      <Card className="mt-6 divide-y divide-border overflow-hidden">
+        <Done label={`${pluralHomes(homes)} added`} detail="Each has a balance and a login" />
+        <Done
+          label={`${money(draft.duesCents)} ${draft.duesCadence} assessment`}
+          detail={`Billed on the ${ordinal(draft.dueDay)}`}
+        />
+        {draft.bankAccount ? (
+          <Done
+            label={`${draft.bankAccount.institution} ••${draft.bankAccount.mask} connected`}
+            detail="Dues land here"
+          />
+        ) : (
+          <div className="flex items-start gap-3 px-4 py-3">
+            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-warn" />
+            <span className="min-w-0">
+              <span className="block text-[13px] font-medium text-fg">No bank connected yet</span>
+              <span className="block text-[12px] text-fg-muted">
+                Dues have nowhere to land until you add one. It is the first item on your dashboard.
+              </span>
+            </span>
+          </div>
+        )}
+      </Card>
+
+      <Card className="mt-4 p-4">
+        <p className="text-[13px] font-semibold text-fg">Next: invite your neighbors</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">
+          Every household has an invitation link on the Homeowners tab. Copy it and send it
+          however you already reach people.
+        </p>
+      </Card>
+
+      <Button variant="primary" size="lg" className="mt-6 w-full" onClick={onOpen}>
+        Open {draft.name}
+        <ArrowRight className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
+function Done({ label, detail }: { label: string; detail: string }) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3">
+      <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
+        <Check className="size-2.5" strokeWidth={3} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[13px] font-medium text-fg">{label}</span>
+        <span className="block text-[12px] text-fg-muted">{detail}</span>
+      </span>
+    </div>
   );
 }
 
@@ -498,10 +512,10 @@ function BoardStep({ draft, patch }: StepProps) {
 /* Pieces                                                                     */
 /* -------------------------------------------------------------------------- */
 
-const inputClass =
+const input =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[14px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
 
-function Section({
+export function Section({
   title,
   detail,
   children,
@@ -513,8 +527,10 @@ function Section({
   return (
     <div className="animate-rise flex flex-col gap-5">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">{title}</h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{detail}</p>
+        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.028em] text-fg">
+          {title}
+        </h1>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{detail}</p>
       </div>
       {children}
     </div>
@@ -539,69 +555,81 @@ function Field({
   );
 }
 
-function RosterList({
-  rows,
-  onRemove,
-}: {
-  rows: { name: string; unit: string; note?: string }[];
-  onRemove: (index: number) => void;
-}) {
-  if (!rows.length) return null;
-  return (
-    <Card className="divide-y divide-border overflow-hidden">
-      {rows.map((row, index) => (
-        <div key={`${row.unit}-${index}`} className="flex items-center gap-3 px-3.5 py-2.5">
-          <span className="w-12 shrink-0 text-[11px] font-medium text-fg-subtle">
-            Unit {row.unit}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-medium text-fg">
-              {row.name || "Unnamed household"}
-            </span>
-            {row.note ? (
-              <span className="block truncate text-[11px] text-fg-subtle">{row.note}</span>
-            ) : null}
-          </span>
-          {index > 0 ? (
-            <button
-              type="button"
-              aria-label={`Remove ${row.name}`}
-              onClick={() => onRemove(index)}
-              className="rounded-md p-1 text-fg-subtle hover:bg-surface-2 hover:text-danger"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
-      ))}
-    </Card>
-  );
-}
+/* -------------------------------------------------------------------------- */
+/* Parsing and validation                                                     */
+/* -------------------------------------------------------------------------- */
 
-/* -------------------------------------------------------------------------- */
-/* Validation                                                                 */
-/* -------------------------------------------------------------------------- */
+/**
+ * Reads a pasted roster.
+ *
+ * Boards arrive with a spreadsheet column, an email chain, or a list someone
+ * typed in Notes, so this takes commas or tabs, tolerates a header row, and
+ * finds the email wherever it sits rather than demanding a fixed column order.
+ * Anything it cannot read is dropped rather than guessed at, and the count it
+ * reports is what will actually be added.
+ */
+export function parseRoster(text: string): DraftHousehold[] {
+  const seen = new Set<string>();
+  const rows: DraftHousehold[] = [];
+
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    const cells = line.split(/\t|,|;/).map((c) => c.trim()).filter(Boolean);
+    if (cells.length < 2) continue;
+
+    // A header row names columns rather than a household.
+    if (/^(name|household|owner)$/i.test(cells[0])) continue;
+
+    const email = cells.find((c) => c.includes("@")) ?? "";
+    const rest = cells.filter((c) => c !== email);
+    // The unit is the shortest remaining cell that is mostly digits, which is
+    // what a unit is and a name never is.
+    const unit =
+      [...rest].reverse().find((c) => /^[a-z]?\d+[a-z]?$/i.test(c)) ?? rest[rest.length - 1];
+    const name = rest.filter((c) => c !== unit).join(" ").trim();
+
+    if (!name || !unit || seen.has(unit)) continue;
+    seen.add(unit);
+    rows.push({ name, email, unit });
+  }
+
+  return rows;
+}
 
 /** Which steps hold enough to move past. Index matches STEPS. */
 function stepComplete(draft: CommunityDraft): boolean[] {
   return [
+    Boolean(draft.name.trim() && draft.city.trim() && draft.state && draft.duesCents > 0),
     Boolean(
-      draft.name.trim() &&
-        draft.city.trim() &&
-        draft.state &&
-        draft.unitCount > 0 &&
-        draft.founder.name.trim() &&
-        draft.founder.email.trim() &&
-        draft.founder.unit.trim(),
+      draft.founder.name.trim() && draft.founder.email.trim() && draft.founder.unit.trim(),
     ),
-    draft.duesCents > 0,
-    // A one home association is legal, if unusual, so an empty roster is fine.
-    true,
+    // A board can finish without a bank, and is asked again on the dashboard.
     true,
   ];
 }
 
-function ordinal(n: number): string {
-  const suffix = n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th";
+function pluralHomes(n: number): string {
+  return `${n} ${n === 1 ? "home" : "homes"}`;
+}
+
+function cadenceNoun(draft: CommunityDraft): string {
+  return draft.duesCadence === "monthly"
+    ? "month"
+    : draft.duesCadence === "quarterly"
+      ? "quarter"
+      : "year";
+}
+
+export function ordinal(n: number): string {
+  const suffix =
+    n % 10 === 1 && n !== 11
+      ? "st"
+      : n % 10 === 2 && n !== 12
+        ? "nd"
+        : n % 10 === 3 && n !== 13
+          ? "rd"
+          : "th";
   return `${n}${suffix}`;
 }

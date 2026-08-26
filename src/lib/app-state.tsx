@@ -17,18 +17,26 @@ import {
 import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
-import { NO_CAPABILITIES } from "@/lib/data/accounts";
+import { caps, DEFAULT_ROLE_CAPABILITIES, NO_CAPABILITIES } from "@/lib/data/accounts";
 import { daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
 import { buildCommunity, type CommunityDraft } from "@/lib/data/new-community";
-import { isCommunitySettings, isRecordArray, isSession } from "@/lib/core/guards";
+import {
+  isBudgetLines,
+  isChargeLedger,
+  isCommunitySettings,
+  isRecordArray,
+  isSession,
+} from "@/lib/core/guards";
 import type {
   Account,
   Capability,
   ForumPost,
   HomeRequest,
   Owner,
+  BankAccount,
+  AccountRole,
 } from "@/lib/types";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 
@@ -84,6 +92,20 @@ interface AppState {
   /** Adds a household to the register, with the account that lets them sign in. */
   addOwner: (input: { name: string; email: string; unit: string }) => Owner;
   removeOwner: (ownerId: string) => () => void;
+  /** Connects an account the association can receive dues into. */
+  /** Appoints a household to an office, or returns them to being a resident. */
+  setAccountRole: (accountId: string, role: AccountRole) => void;
+  addBankAccount: (account: BankAccount) => void;
+  /** Records a payment on the statement, the balance, the books, and the bank. */
+  recordPayment: (input: {
+    ownerId: string;
+    amountCents: number;
+    processorCents: number;
+    platformCents: number;
+    platformPaidBy: "owner" | "association";
+    method: string;
+    kind: "ach" | "card" | "apple-pay";
+  }) => void;
   /** Builds an association from onboarding and signs its founder in. */
   createCommunity: (draft: CommunityDraft) => Community;
 
@@ -167,6 +189,9 @@ const MUTABLE_SLICES = [
   "settings",
   "accounts",
   "owners",
+  "bankAccounts",
+  "ownerCharges",
+  "budget",
   "amenities",
   "forms",
   "posts",
@@ -207,7 +232,11 @@ function sliceStore<K extends MutableSlice>(
     validate:
       slice === "settings"
         ? (isCommunitySettings as (v: unknown) => v is Community[K])
-        : (isRecordArray<{ id: string }>() as unknown as (v: unknown) => v is Community[K]),
+        : slice === "ownerCharges"
+          ? (isChargeLedger as (v: unknown) => v is Community[K])
+          : slice === "budget"
+            ? (isBudgetLines as (v: unknown) => v is Community[K])
+          : (isRecordArray<{ id: string }>() as unknown as (v: unknown) => v is Community[K]),
   });
   registry.set(key, store as unknown as PersistedStore<never>);
   return store;
@@ -297,6 +326,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const settings = useStore(sliceStore(communityId, "settings"));
   const accountList = useStore(sliceStore(communityId, "accounts"));
   const ownerList = useStore(sliceStore(communityId, "owners"));
+  const bankAccountList = useStore(sliceStore(communityId, "bankAccounts"));
+  const budgetLines = useStore(sliceStore(communityId, "budget"));
+  const ownerChargeMap = useStore(sliceStore(communityId, "ownerCharges"));
   const amenities = useStore(sliceStore(communityId, "amenities"));
   const forms = useStore(sliceStore(communityId, "forms"));
   const posts = useStore(sliceStore(communityId, "posts"));
@@ -402,6 +434,178 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const resetDemo = useCallback(() => resetCommunity(communityId), [communityId]);
+
+  /**
+   * Appoints a household to an office, or returns them to being a resident.
+   *
+   * Capabilities reset to that office's defaults, because carrying the old
+   * ones over is how a former treasurer keeps the books open. The President's
+   * own row is left alone: an association that can demote its President has no
+   * way back in.
+   */
+  const setAccountRole = useCallback(
+    (accountId: string, role: AccountRole) => {
+      sliceStore(communityId, "accounts").update((all) =>
+        all.map((account) =>
+          account.id === accountId && account.role !== "president"
+            ? {
+                ...account,
+                role,
+                capabilities: caps(DEFAULT_ROLE_CAPABILITIES[role] ?? []),
+              }
+            : account,
+        ),
+      );
+    },
+    [communityId],
+  );
+
+  /* ----------------------------------------------------------------- money */
+
+  /** Connects an account the association can receive dues into. */
+  const addBankAccount = useCallback(
+    (account: BankAccount) => {
+      sliceStore(communityId, "bankAccounts").update((all) => [
+        ...all.filter((a) => a.id !== account.id),
+        account,
+      ]);
+    },
+    [communityId],
+  );
+
+  /**
+   * Records a payment everywhere it has to appear.
+   *
+   * This is the seam the whole product turns on. A payment is not one fact, it
+   * is four: the household's statement, the household's balance, the
+   * association's books, and the bank balance the board reconciles against.
+   * Writing one and not the others is exactly the drift this product exists to
+   * argue against, so they are written together or not at all.
+   *
+   * Money is applied to the oldest open charge first, which is the convention
+   * every collection policy assumes and the one owners are told about.
+   */
+  const recordPayment = useCallback(
+    (input: {
+      ownerId: string;
+      amountCents: number;
+      /** What the processor takes out of the deposit. */
+      processorCents: number;
+      /** Our fee, and who carried it. */
+      platformCents: number;
+      platformPaidBy: "owner" | "association";
+      method: string;
+      kind: "ach" | "card" | "apple-pay";
+    }) => {
+      const date = todayIsoDate();
+      const charges = sliceStore(communityId, "ownerCharges");
+      const existing = charges.getSnapshot()[input.ownerId] ?? [];
+
+      // What each charge still owes, after everything already applied to it.
+      const paidAgainst = new Map<string, number>();
+      for (const line of existing) {
+        for (const applied of line.appliedTo ?? []) {
+          paidAgainst.set(
+            applied.chargeId,
+            (paidAgainst.get(applied.chargeId) ?? 0) + applied.amountCents,
+          );
+        }
+      }
+
+      // Oldest first. The stored ledger is newest first, so walk it backwards.
+      let remaining = input.amountCents;
+      const appliedTo: { chargeId: string; label: string; amountCents: number }[] = [];
+      for (const line of [...existing].reverse()) {
+        if (remaining <= 0) break;
+        if (line.kind !== "charge") continue;
+        const open = line.amountCents - (paidAgainst.get(line.id) ?? 0);
+        if (open <= 0) continue;
+        const take = Math.min(open, remaining);
+        appliedTo.push({ chargeId: line.id, label: line.label, amountCents: take });
+        remaining -= take;
+      }
+
+      const owners = sliceStore(communityId, "owners");
+      const owner = owners.getSnapshot().find((o) => o.id === input.ownerId);
+      const balanceAfter = Math.max(0, (owner?.balanceCents ?? 0) - input.amountCents);
+
+      charges.update((all) => ({
+        ...all,
+        [input.ownerId]: [
+          {
+            id: `pay-${date}-${input.ownerId}-${existing.length + 1}`,
+            date,
+            label: input.kind === "ach" ? "Bank payment" : `Card payment, ${input.method}`,
+            kind: "payment" as const,
+            amountCents: -input.amountCents,
+            balanceAfterCents: balanceAfter,
+            method: input.method,
+            feeCents: input.processorCents,
+            feePaidBy: "association" as const,
+            // An early payment covers nothing yet, and saying so beats
+            // inventing a charge for it to have paid.
+            ...(appliedTo.length ? { appliedTo } : {}),
+          },
+          ...all[input.ownerId] ?? [],
+        ],
+      }));
+
+      owners.update((all) =>
+        all.map((o) =>
+          o.id === input.ownerId
+            ? { ...o, balanceCents: balanceAfter, daysPastDue: 0, standing: "current" as const }
+            : o,
+        ),
+      );
+
+      // The association keeps the assessment; the processor takes its cut out
+      // of the deposit, and our fee only if the association agreed to carry it.
+      const absorbed =
+        input.processorCents + (input.platformPaidBy === "association" ? input.platformCents : 0);
+      const operating = sliceStore(communityId, "bankAccounts")
+        .getSnapshot()
+        .find((a) => a.kind === "operating");
+
+      sliceStore(communityId, "ledger").update((all) => [
+        {
+          id: `led-${date}-${input.ownerId}-${all.length + 1}`,
+          date,
+          description: `Assessment payment, unit ${owner?.unit ?? "?"}`,
+          counterparty: owner?.displayName ?? "Owner",
+          category: "Assessments" as const,
+          accountId: operating?.id ?? "unassigned",
+          amountCents: input.amountCents - absorbed,
+          status: "cleared" as const,
+          matchedBy: "auto" as const,
+          ownerId: input.ownerId,
+        },
+        ...all,
+      ]);
+
+      // Income against budget is what tells a board whether collections are on
+      // pace. Moving cash without moving this is how a dashboard ends up
+      // reporting a full bank account and nothing collected.
+      sliceStore(communityId, "budget").update((all) =>
+        all.map((line) =>
+          line.kind === "income" && line.category === "Assessments"
+            ? { ...line, ytdActualCents: line.ytdActualCents + input.amountCents }
+            : line,
+        ),
+      );
+
+      if (operating) {
+        sliceStore(communityId, "bankAccounts").update((all) =>
+          all.map((a) =>
+            a.id === operating.id
+              ? { ...a, balanceCents: a.balanceCents + input.amountCents - absorbed }
+              : a,
+          ),
+        );
+      }
+    },
+    [communityId],
+  );
+
 
   /**
    * Adds a household to the roster, with the account that lets them sign in.
@@ -813,6 +1017,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       settings,
       accounts: accountList,
       owners: ownerList,
+      bankAccounts: bankAccountList,
+      ownerCharges: ownerChargeMap,
+      budget: budgetLines,
       amenities,
       forms,
       posts,
@@ -831,6 +1038,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       settings,
       accountList,
       ownerList,
+      bankAccountList,
+      ownerChargeMap,
+      budgetLines,
       amenities,
       forms,
       posts,
@@ -885,6 +1095,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     createCommunity,
     addOwner,
     removeOwner,
+    setAccountRole,
+    addBankAccount,
+    recordPayment,
     addPost,
     moderatePost,
     togglePinned,

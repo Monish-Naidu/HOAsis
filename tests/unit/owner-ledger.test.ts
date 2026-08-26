@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildOwnerLedger } from "@/lib/data/owner-ledger";
 import { allCommunities } from "@/lib/data/communities";
 import type { Owner } from "@/lib/types";
-import { buildCommunity, DEFAULT_ROLE_CAPABILITIES } from "@/lib/data/new-community";
+import { buildCommunity } from "@/lib/data/new-community";
 
 const base: Owner = {
   id: "own-001",
@@ -82,25 +82,13 @@ describe("a community built through onboarding", () => {
     city: "Bothell",
     state: "WA",
     stateName: "Washington",
-    unitCount: 24,
     duesCents: 4_500,
     duesCadence: "monthly" as const,
     dueDay: 1,
-    lateAfterDay: 15,
-    fiscalYearStart: "01-01",
     founder: { name: "Dana Whitcomb", email: "dana@example.com", unit: "1" },
     households: [
       { name: "Marcus Bell", email: "marcus@example.com", unit: "2" },
       { name: "Yuki Tanaka", email: "yuki@example.com", unit: "3" },
-    ],
-    board: [
-      {
-        name: "Marcus Bell",
-        email: "marcus@example.com",
-        unit: "2",
-        role: "treasurer" as const,
-        capabilities: DEFAULT_ROLE_CAPABILITIES.treasurer,
-      },
     ],
   };
 
@@ -118,18 +106,25 @@ describe("a community built through onboarding", () => {
     expect(president.capabilities.permissions).toBe(true);
   });
 
-  it("gives an officer their role's capabilities and nothing more", () => {
+  it("makes everyone else a resident, since officers are appointed later", () => {
     const c = buildCommunity(draft, "2026-08-24");
-    const treasurer = c.accounts.find((a) => a.role === "treasurer")!;
-    expect(treasurer.capabilities.finances).toBe(true);
-    expect(treasurer.capabilities.permissions).toBe(false);
-    expect(treasurer.capabilities.voting).toBe(false);
+    const others = c.accounts.filter((a) => a.role !== "president");
+    expect(others).toHaveLength(2);
+    expect(others.every((a) => a.role === "resident")).toBe(true);
+    expect(others.every((a) => a.capabilities.finances === false)).toBe(true);
+  });
+
+  it("counts the roster as the association's homes", () => {
+    // One number, not two that have to agree.
+    const c = buildCommunity(draft, "2026-08-24");
+    expect(c.association.unitCount).toBe(3);
+    expect(c.owners).toHaveLength(3);
   });
 
   it("budgets the assessment income it can infer, and nothing it cannot", () => {
     const c = buildCommunity(draft, "2026-08-24");
     expect(c.budget).toHaveLength(1);
-    expect(c.budget[0].annualCents).toBe(4_500 * 12 * 24);
+    expect(c.budget[0].annualCents).toBe(4_500 * 12 * 3);
     expect(c.budget[0].ytdActualCents).toBe(0);
   });
 

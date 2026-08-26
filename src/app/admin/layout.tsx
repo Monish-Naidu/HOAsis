@@ -36,7 +36,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="mx-auto flex w-full max-w-[1400px] gap-8 px-4 py-6 lg:px-6 lg:py-8">
           <aside className="hidden w-52 shrink-0 lg:block">
-            <div className="sticky top-24">
+            {/* Travels with the reader, and scrolls itself if the viewport is
+                shorter than the nav rather than being cut off. */}
+            <div className="no-scrollbar sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto pb-4">
               <AdminNav />
               <div className="mt-6 rounded-card border border-border bg-surface p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">

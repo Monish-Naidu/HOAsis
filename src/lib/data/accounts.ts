@@ -39,6 +39,20 @@ export function caps(on: Capability[], permissions = false): Capabilities {
 export const NO_CAPABILITIES = caps([]);
 
 /**
+ * What each office can do before anyone adjusts it.
+ *
+ * Boards change every year, so these are a starting point rather than a rule.
+ * The President can widen or narrow any of them, except their own.
+ */
+export const DEFAULT_ROLE_CAPABILITIES: Record<string, Capability[]> = {
+  president: [...GRANTABLE],
+  "vice-president": ["requests", "documents", "communications", "voting", "forum"],
+  treasurer: ["finances", "vendors", "documents"],
+  secretary: ["documents", "communications", "voting", "compliance", "forum"],
+  resident: [],
+};
+
+/**
  * Seeded accounts. Everyone here owns a unit, so everyone can use the resident
  * side; the admin role is a wrapper on top of that, not a separate identity.
  */

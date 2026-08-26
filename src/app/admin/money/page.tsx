@@ -7,6 +7,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookmarkPlus,
+  Plus,
   Copy,
   Download,
   Filter,
@@ -35,6 +36,7 @@ import {
   yieldOpportunity,
   communitySlug,
 } from "@/lib/metrics";
+import { BankConnect } from "@/components/app/bank-connect";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -48,7 +50,15 @@ const savedViews = [
 ];
 
 export default function BoardMoney() {
-  const { community, ledger, confirmLedgerEntry, dismissLedgerEntry } = useAppState();
+  const { community, ledger, confirmLedgerEntry, dismissLedgerEntry, addBankAccount } =
+    useAppState();
+  const [connecting, setConnecting] = useState(false);
+  // The association's own present, not a month baked into the markup.
+  const monthLabel = new Date(`${community.asOf}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
   const bankAccounts = community.bankAccounts;
   const reserveComponents = community.reserveComponents;
   const cash = cashPosition(community);
@@ -84,7 +94,7 @@ export default function BoardMoney() {
       `${communitySlug(community)}-ledger-${view.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`,
       csv,
     );
-    notify(`Exported ${rows.length} transactions`);
+    notify(`Exported ${pluralize(rows.length, "transaction")}`);
   }
   const reserve = reserveSummary(community);
   const bud = budgetSummary(community);
@@ -114,7 +124,7 @@ export default function BoardMoney() {
                   return;
                 }
                 setView("Needs review");
-                notify(`${open} transactions still need a decision`, "warn");
+                notify(`${pluralize(open, "transaction")} still ${open === 1 ? "needs" : "need"} a decision`, "warn");
               }}
             >
               Reconcile
@@ -164,8 +174,50 @@ export default function BoardMoney() {
         />
       </div>
 
+      {/* Connecting an account is the one thing that blocks collecting, so it
+          sits above the accounts rather than behind a menu. */}
+      {connecting || !bankAccounts.length ? (
+        <Card className="mt-5 p-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold tracking-[-0.015em] text-fg">
+                {bankAccounts.length ? "Connect another account" : "Connect your operating account"}
+              </h2>
+              <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">
+                {bankAccounts.length
+                  ? "Reserves belong in their own account, separate from operating."
+                  : "Dues have nowhere to land until an account in the association's name is connected."}
+              </p>
+            </div>
+            {bankAccounts.length ? (
+              <Button variant="ghost" size="sm" onClick={() => setConnecting(false)}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
+          <BankConnect
+            kind={bankAccounts.some((a) => a.kind === "operating") ? "reserve" : "operating"}
+            onConnect={(account) => {
+              addBankAccount(account);
+              setConnecting(false);
+              notify(`${account.institution} ••${account.mask} connected`, "ok");
+            }}
+          />
+        </Card>
+      ) : null}
+
       {/* Accounts */}
       <div className="mt-5 grid gap-4 md:grid-cols-3">
+        {bankAccounts.length && !connecting ? (
+          <button
+            type="button"
+            onClick={() => setConnecting(true)}
+            className="flex min-h-[7rem] flex-col items-center justify-center gap-1.5 rounded-card border border-dashed border-border-2 p-4 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          >
+            <Plus className="size-4" />
+            <span className="text-[12px] font-medium">Connect an account</span>
+          </button>
+        ) : null}
         {bankAccounts.map((a) => (
           <Card key={a.id} className="p-4">
             <div className="flex items-start justify-between">
@@ -225,7 +277,7 @@ export default function BoardMoney() {
       <Card className="mt-5">
         <CardHeader
           title="General ledger"
-          subtitle={`${rows.length} of ${ledger.length} transactions · August 2026`}
+          subtitle={`${rows.length} of ${pluralize(ledger.length, "transaction")} · ${monthLabel}`}
           action={
             <div className="flex items-center gap-2">
               <Button
