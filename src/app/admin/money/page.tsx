@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownRight,
-  ArrowRight,
   ArrowUpRight,
   BookmarkPlus,
   Plus,
@@ -33,7 +32,6 @@ import {
   insuranceExposure,
   interestSummary,
   reserveSummary,
-  yieldOpportunity,
   communitySlug,
 } from "@/lib/metrics";
 import { BankConnect } from "@/components/app/bank-connect";
@@ -100,7 +98,9 @@ export default function BoardMoney() {
   const bud = budgetSummary(community);
   const interest = interestSummary(community);
   const exposure = insuranceExposure(community);
-  const opportunity = yieldOpportunity(community);
+  // Reserve cash sits in savings, separate from operating. Nothing here shops
+  // for a better rate, deliberately.
+  const reserveAccounts = community.bankAccounts.filter((a) => a.kind !== "operating");
 
   return (
     <>
@@ -429,7 +429,7 @@ export default function BoardMoney() {
       {/* Reserve cash: what it holds, what it earns, where it could earn more. */}
       <Card className="mt-5">
         <CardHeader
-          title="Reserve cash and yield"
+          title="Reserve cash"
           
           icon={<PiggyBank className="size-4" />}
         />
@@ -442,7 +442,7 @@ export default function BoardMoney() {
               {money(interest.balance, { cents: false })}
             </p>
             <p className="mt-1 text-[13px] text-fg-muted">
-              Across {interest.reserveAccounts.length} accounts
+              Across {pluralize(interest.reserveAccounts.length, "account")}
             </p>
           </div>
           <div>
@@ -494,84 +494,22 @@ export default function BoardMoney() {
           </div>
         ) : null}
 
-        {!opportunity.recommended || opportunity.movable === 0 ? (
+        {/* A shelf of savings products used to sit here, with a recommended
+            one and an "Open account" button. Reserve money belongs in one
+            insured, liquid savings account, and shopping rates is not a job a
+            volunteer treasurer should be nudged into by their books. What is
+            left is the only version of this that matters: is the reserve
+            actually separate from operating money. */}
+        {reserveAccounts.length === 0 ? (
           <div className="border-t border-border px-5 py-6 text-center">
             <p className="text-[15px] font-medium text-fg">No reserve account yet</p>
             <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-fg-muted">
-              Every dollar of reserve is sitting in the operating account earning nothing. Opening
-              a separate insured savings account is the one change that costs owners nothing.
+              Every dollar of reserve is sitting in the operating account, where it earns
+              nothing and is one mistake away from paying a landscaping invoice. Opening a
+              separate insured savings account is the one change that costs owners nothing.
             </p>
           </div>
-        ) : (
-        <div className="border-t border-border px-5 py-4">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-[13px] font-semibold text-fg-muted">
-              Where the savings balance could sit
-            </p>
-            <p className="text-[13px] text-fg-muted">
-              Moving {money(opportunity.movable, { cents: false })} from{" "}
-              {opportunity.current?.apy.toFixed(2)}% to {opportunity.recommended.apy.toFixed(2)}%
-              earns{" "}
-              <span className="tnum font-semibold text-ok">
-                {money(opportunity.gainAnnual, { cents: false })}
-              </span>{" "}
-              more a year.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {opportunity.offers.map((o) => (
-              <div
-                key={o.id}
-                className={`rounded-card border p-4 ${
-                  o.recommended
-                    ? "border-navy-700 bg-brand-soft dark:border-navy-300"
-                    : "border-border bg-surface-2"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-[15px] font-semibold text-fg">{o.name}</p>
-                    <p className="truncate text-[13px] text-fg-muted">{o.institution}</p>
-                  </div>
-                  {o.recommended ? <Badge tone="ok">Best fit</Badge> : null}
-                </div>
-                <p className="tnum mt-2.5 text-[24px] font-semibold leading-none tracking-[-0.03em] text-fg">
-                  {o.apy.toFixed(2)}%
-                  <span className="ml-1 text-[13px] font-medium text-fg-muted">APY</span>
-                </p>
-                <dl className="mt-3 space-y-1.5 border-t border-border pt-2.5 text-[13px]">
-                  <div>
-                    <dt className="text-fg-subtle">Access</dt>
-                    <dd className="text-fg-muted">{o.liquidity}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-fg-subtle">Coverage</dt>
-                    <dd className="text-fg-muted">{o.insuranceNote}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-fg-subtle">Minimum</dt>
-                    <dd className="tnum text-fg-muted">{money(o.minimumCents, { cents: false })}</dd>
-                  </div>
-                </dl>
-                <Button
-                  variant={o.recommended ? "primary" : "secondary"}
-                  size="sm"
-                  className="mt-3 w-full"
-                  onClick={() =>
-                    notify(
-                      `Opening ${o.name} needs a recorded board vote. Draft resolution created.`,
-                      "info",
-                    )
-                  }
-                >
-                  Open account
-                  <ArrowRight className="size-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-        )}
+        ) : null}
       </Card>
 
       {/* Reserves */}

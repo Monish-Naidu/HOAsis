@@ -98,7 +98,15 @@ export function interestSummary(c: Community) {
   };
 }
 
-/** Balance sitting above deposit insurance at a single institution. */
+/**
+ * Balance sitting above deposit insurance at a single institution.
+ *
+ * This matters more now that reserve cash lives in one savings account rather
+ * than being spread across a CD and a sweep. A single account holding several
+ * hundred thousand dollars is the normal shape for a funded association, and
+ * the coverage limit is per depositor per bank, so the excess is genuinely at
+ * risk rather than a technicality.
+ */
 export function insuranceExposure(c: Community) {
   const byInstitution = new Map<string, { balance: number; limit: number }>();
   for (const a of c.bankAccounts) {
@@ -115,18 +123,6 @@ export function insuranceExposure(c: Community) {
   return { rows, totalUninsured: rows.reduce((t, r) => t + r.uninsured, 0) };
 }
 
-export function yieldOpportunity(c: Community) {
-  const { balance, blendedApy } = interestSummary(c);
-  const recommended = c.savingsOffers.find((o) => o.recommended) ?? c.savingsOffers[0];
-  const current = c.bankAccounts.find((a) => a.kind === "reserve");
-  const movable = c.bankAccounts
-    .filter((a) => a.kind === "reserve")
-    .reduce((t, a) => t + a.balanceCents, 0);
-  const gainAnnual = recommended
-    ? Math.round((movable * (recommended.apy - (current?.apy ?? 0))) / 100)
-    : 0;
-  return { balance, blendedApy, recommended, offers: c.savingsOffers, movable, gainAnnual, current };
-}
 
 export function complianceSummary(c: Community) {
   const overdue = c.complianceItems.filter((x) => x.status === "overdue");

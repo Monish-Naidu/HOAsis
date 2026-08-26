@@ -23,7 +23,7 @@ import {
 } from "@/lib/reserves";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { useToast } from "@/components/app/toast";
-import { money, shortMoney, today } from "@/lib/utils";
+import { money, pluralize, shortMoney, today } from "@/lib/utils";
 import { ProjectionChart } from "./projection-chart";
 
 const START_YEAR = today().getUTCFullYear();
@@ -100,7 +100,7 @@ export function ReservesScreen() {
             hint={
               interest.balance === 0
                 ? "Nothing set aside for a shared repair"
-                : `Across ${interest.reserveAccounts.length} accounts`
+                : `Across ${pluralize(interest.reserveAccounts.length, "account")}`
             }
             icon={<PiggyBank className="size-4" />}
           />
@@ -190,7 +190,7 @@ export function ReservesScreen() {
         <Stat
           label="Reserve cash"
           value={money(interest.balance, { cents: false })}
-          hint={`Across ${interest.reserveAccounts.length} accounts`}
+          hint={`Across ${pluralize(interest.reserveAccounts.length, "account")}`}
           icon={<PiggyBank className="size-4" />}
         />
         <Stat
@@ -203,7 +203,7 @@ export function ReservesScreen() {
           label="Interest earned YTD"
           value={money(interest.earnedYtd, { cents: false })}
           tone="ok"
-          hint={`${interest.blendedApy.toFixed(2)}% blended`}
+          hint={`${interest.blendedApy.toFixed(2)}% on reserve savings`}
           icon={<TrendingUp className="size-4" />}
         />
         <Stat
@@ -270,7 +270,7 @@ export function ReservesScreen() {
               format={(v) => money(Math.round(v * 100), { cents: false })}
             />
             <Slider
-              label="Blended yield"
+              label="Savings rate"
               value={apy}
               min={0}
               max={6}

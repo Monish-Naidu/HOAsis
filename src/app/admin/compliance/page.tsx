@@ -17,13 +17,15 @@ import {
   Callout,
   Card,
   CardHeader,
+  EmptyState,
   Meter,
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { complianceSummary } from "@/lib/metrics";
+import { complianceSummary, interestSummary } from "@/lib/metrics";
+import { percentFunded } from "@/lib/reserves";
 import { useAppState } from "@/lib/app-state";
-import { formatDate, relativeDays } from "@/lib/utils";
+import { formatDate, relativeDays, shortMoney } from "@/lib/utils";
 import type { ComplianceStatus } from "@/lib/types";
 
 const statusMeta: Record<
@@ -39,6 +41,33 @@ const statusMeta: Record<
 
 export default function BoardCompliance() {
   const { community } = useAppState();
+
+  /**
+   * The reserve schedule, read from this association's own documents.
+   *
+   * Dates come from the reserve study document the board actually uploaded,
+   * so an association that has never commissioned one shows nothing rather
+   * than inheriting somebody else's consultant and funding level.
+   */
+  const funding = percentFunded(community.reserveComponents, interestSummary(community).balance);
+  const study = community.documents.find((d) => /reserve stud/i.test(d.name));
+  const reserveDates = [
+    {
+      label: "Last full study",
+      value: study ? formatDate(study.updatedDate, "medium") : "Not on file",
+      note: study ? study.name.replace(/^Reserve Study,?\s*/i, "") || "On file" : "Nothing uploaded",
+    },
+    {
+      label: "Components tracked",
+      value: String(community.reserveComponents.length),
+      note: "Roofs, paving, pumps and the rest",
+    },
+    {
+      label: "Reserve cash",
+      value: shortMoney(interestSummary(community).balance),
+      note: "Across every reserve account",
+    },
+  ];
   const association = community.association;
   const complianceItems = community.complianceItems;
   const comp = complianceSummary(community);
@@ -183,31 +212,46 @@ export default function BoardCompliance() {
         </div>
 
         <div className="space-y-5">
+          {/* Was a hardcoded schedule naming Mehr Meadows' reserve consultant
+              and its 41 percent funding, which every association saw as its
+              own. An association with no study should be told that plainly,
+              because it is the finding rather than an empty panel. */}
           <Card>
             <CardHeader
               title="How often a reserve study is due"
-              
               icon={<GraduationCap className="size-4" />}
             />
-            <div className="space-y-3 px-5 py-4">
-              {[
-                { label: "Last full study", value: "March 2025", note: "Cardinal Reserve Advisors" },
-                { label: "Last annual update", value: "March 2026", note: "Deck findings folded in" },
-                { label: "Next update due", value: "October 2026", note: "With the 2027 budget" },
-              ].map((r) => (
-                <div key={r.label} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-medium text-fg">{r.label}</p>
-                    <p className="text-[13px] text-fg-muted">{r.note}</p>
-                  </div>
-                  <p className="tnum shrink-0 text-[13px] font-medium text-fg">{r.value}</p>
+            {funding.measurable ? (
+              <>
+                <div className="space-y-3 px-5 py-4">
+                  {reserveDates.map((r) => (
+                    <div key={r.label} className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-medium text-fg">{r.label}</p>
+                        <p className="text-[13px] text-fg-muted">{r.note}</p>
+                      </div>
+                      <p className="tnum shrink-0 text-[13px] font-medium text-fg">{r.value}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="border-t border-border px-5 py-4">
-              <Meter value={0.41} tone="warn" aria-label="Reserves 41 percent funded" />
-              <p className="mt-2 text-[13px] text-fg-muted">41 percent funded against the study.</p>
-            </div>
+                <div className="border-t border-border px-5 py-4">
+                  <Meter
+                    value={funding.percent}
+                    tone={funding.percent >= 0.7 ? "ok" : funding.percent >= 0.3 ? "warn" : "danger"}
+                    aria-label={`Reserves ${Math.round(funding.percent * 100)} percent funded`}
+                  />
+                  <p className="mt-2 text-[13px] text-fg-muted">
+                    {Math.round(funding.percent * 100)} percent funded against the study.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <EmptyState
+                icon={<GraduationCap className="size-6" />}
+                title="No reserve study on file"
+                description="Percent funded compares what you have saved against what you should have saved by now. Without a study there is no second number, so nobody knows."
+              />
+            )}
           </Card>
 
           <Callout

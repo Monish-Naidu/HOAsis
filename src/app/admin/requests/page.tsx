@@ -11,7 +11,6 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { violations } from "@/lib/data";
 import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday } from "@/lib/utils";
@@ -38,13 +37,16 @@ const stageMeta: Record<Violation["stage"], { tone: "ok" | "warn" | "danger" | "
   };
 
 export default function BoardRequests() {
-  const { requests, updateRequestStatus } = useAppState();
+  const { community, requests, updateRequestStatus } = useAppState();
   const { notify } = useToast();
   const { open, decided, history } = bucketRequests(requests);
   const clocks = requests
     .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
     .map((r) => ({ ...r, daysLeft: daysFromToday(r.dueDate!) }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
+  // Was the Mehr Meadows fixture, imported directly, so a brand new
+  // association saw four violations against households it has never had.
+  const violations = community.violations;
   const openViolations = violations.filter((v) => v.stage !== "cured");
 
   return (

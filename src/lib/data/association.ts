@@ -40,74 +40,34 @@ export const bankAccounts: BankAccount[] = [
   },
   {
     id: "acct-reserve",
-    name: "Reserve",
+    name: "Reserve savings",
     institution: "BECU",
     mask: "7702",
     kind: "reserve",
-    balanceCents: 41_286_000,
+    // Everything the association has set aside, in one insured, liquid
+    // account. Splitting reserves across a CD and a sweep buys a little yield
+    // and costs a volunteer treasurer a great deal of attention, and the money
+    // has to be reachable the week a roof fails.
+    balanceCents: 56_286_000,
     syncedMinutesAgo: 4,
     status: "live",
     reconciledThroughDate: "2026-07-31",
     unreconciledCount: 0,
-    apy: 1.2,
-    interestYtdCents: 330_288,
+    apy: 4.15,
+    interestYtdCents: 1_401_000,
     insuredLimitCents: 25_000_000,
-  },
-  {
-    id: "acct-cd",
-    name: "Reserve CD (12 mo)",
-    institution: "Coastal Community Bank",
-    mask: "1180",
-    kind: "cd",
-    balanceCents: 15_000_000,
-    syncedMinutesAgo: 1_440,
-    status: "delayed",
-    reconciledThroughDate: "2026-07-31",
-    unreconciledCount: 0,
-    apy: 4.25,
-    interestYtdCents: 425_000,
-    insuredLimitCents: 25_000_000,
-    maturityDate: "2027-02-01",
   },
 ];
 
 /**
- * Where reserve cash could go instead. Rates are quoted as APY so the board is
- * comparing the same number across products.
+ * Kept as an empty list because the Community bundle still carries the field.
+ *
+ * Reserve cash belongs in one insured, liquid savings account. Shopping rates
+ * across sweeps, treasuries and certificates is not a job to nudge a volunteer
+ * treasurer into from inside their own books, and every dollar in a twelve
+ * month certificate is a dollar unavailable the week a roof fails.
  */
-export const savingsOffers: SavingsOffer[] = [
-  {
-    id: "offer-sweep",
-    name: "Insured cash sweep",
-    institution: "HOAsis Reserve, via partner network",
-    apy: 4.6,
-    kind: "sweep",
-    liquidity: "Same day, no penalty",
-    insuranceNote: "Spread across member banks so the full balance stays inside coverage limits",
-    minimumCents: 2_500_000,
-    recommended: true,
-  },
-  {
-    id: "offer-hysa",
-    name: "High yield savings",
-    institution: "BECU",
-    apy: 3.85,
-    kind: "savings",
-    liquidity: "Same day, 6 withdrawals per month",
-    insuranceNote: "NCUA insured to $250,000 at this institution only",
-    minimumCents: 1_000_000,
-  },
-  {
-    id: "offer-treasury",
-    name: "Treasury ladder, 3 to 12 month",
-    institution: "Coastal Community Bank",
-    apy: 4.35,
-    kind: "treasury",
-    liquidity: "Rungs mature quarterly",
-    insuranceNote: "Backed by the US Treasury rather than deposit insurance",
-    minimumCents: 5_000_000,
-  },
-];
+export const savingsOffers: SavingsOffer[] = [];
 
 export const announcements: Announcement[] = [
   {

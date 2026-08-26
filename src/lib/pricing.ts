@@ -2,61 +2,29 @@
  * What HOAsis charges, in one place.
  *
  * The pricing page and the front page both quote a figure, and they drifted
- * once already: the front page was still selling a per door rate months after
- * pricing moved to flat bands, which put our own price three times higher than
- * it actually is. Both now read this.
+ * once already: the front page went on selling a per door rate months after
+ * pricing had moved to flat bands, which put our published price at three
+ * times the real one. Both read this now, so a change lands in both.
  *
- * Flat bands rather than per door because that is how this market prices, and
- * because a board comparing two products is comparing one monthly number to
- * another. Per door is a management company convention, and a board looking at
- * us has already decided to leave one of those.
+ * Priced per home per month. It is the convention a board already understands,
+ * because it is how the management company they are leaving quotes, so the
+ * comparison needs no arithmetic from them.
  */
 
-export interface PricingTier {
-  name: string;
-  /** Inclusive upper bound. The last band is open ended above `maxHomes`. */
-  maxHomes: number;
-  monthlyCents: number;
-  homes: string;
-  note: string;
-  highlight?: boolean;
+/** Per home, per month. */
+export const PRICE_PER_HOME_CENTS = 4_00;
+
+/** Per payment, whatever rail it arrives on. */
+export const PRICE_PER_TRANSACTION_CENTS = 2_00;
+
+/** The whole software bill for an association of this size, monthly. */
+export function monthlyFor(homes: number): number {
+  return PRICE_PER_HOME_CENTS * Math.max(0, homes);
 }
 
-export const PRICING_TIERS: PricingTier[] = [
-  {
-    name: "Small",
-    maxHomes: 25,
-    monthlyCents: 39_00,
-    homes: "Up to 25 homes",
-    note: "Cheaper than anyone else at this size. Same product as the largest plan.",
-  },
-  {
-    name: "Standard",
-    maxHomes: 75,
-    monthlyCents: 69_00,
-    homes: "26 to 75 homes",
-    note: "The most common size for a self-managed association.",
-    highlight: true,
-  },
-  {
-    name: "Large",
-    maxHomes: 150,
-    monthlyCents: 109_00,
-    homes: "76 to 150 homes",
-    note: "Where reserve planning starts to carry real money.",
-  },
-  {
-    name: "Very large",
-    maxHomes: 400,
-    monthlyCents: 179_00,
-    homes: "151 to 400 homes",
-    note: "Above 400 homes, talk to us and we will quote it.",
-  },
-];
-
-/** The band an association of this size falls into. */
-export function tierFor(homes: number): PricingTier {
-  return PRICING_TIERS.find((t) => homes <= t.maxHomes) ?? PRICING_TIERS[PRICING_TIERS.length - 1];
+/** And annually, which is the number a board budgets against. */
+export function annualFor(homes: number): number {
+  return monthlyFor(homes) * 12;
 }
 
 /**
@@ -70,14 +38,14 @@ export function tierFor(homes: number): PricingTier {
 export const MANAGEMENT_RANGE_PER_HOME = { low: 10_00, high: 20_00 };
 
 /**
- * Payment costs, published because they are checkable.
+ * Worked examples, at sizes that actually exist.
  *
- * PayHOA's own help pages state $2.45 per bank payment and 3.50% plus 50 cents
- * on cards. Stripe publishes 2.9% plus 30 cents. A board can verify all of
- * this without asking us, which is the point of printing it.
+ * Shown as a table rather than as tiers because there are no tiers: one rate
+ * multiplied by the homes. A board finds their own row and stops reading.
  */
-export const PAYMENT_COSTS = {
-  achCents: 2_35,
-  cardPercent: 2.9,
-  cardFixedCents: 30,
-};
+export const PRICE_EXAMPLES = [
+  { homes: 12, note: "A duplex row or a small court" },
+  { homes: 40, note: "A single street" },
+  { homes: 88, note: "About the median self-managed association", highlight: true },
+  { homes: 250, note: "A large development" },
+];

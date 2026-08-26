@@ -197,7 +197,7 @@ const intents: Intent[] = [
       text: `The association holds ${money(c.association.operatingCents, { cents: false })} in operating and ${money(
         c.association.reserveCents,
         { cents: false },
-      )} in reserves, earning ${c.association.blendedApy.toFixed(2)}% blended.`,
+      )} in reserves, earning ${c.association.blendedApy.toFixed(2)}%.`,
       facts: [
         { label: "Operating", value: money(c.association.operatingCents, { cents: false }) },
         { label: "Reserves", value: money(c.association.reserveCents, { cents: false }) },

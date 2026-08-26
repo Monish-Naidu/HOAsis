@@ -2,7 +2,14 @@ import Link from "next/link";
 import { ArrowRight, Check, Minus } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Badge, Card } from "@/components/ui/primitives";
-import { PRICING_TIERS } from "@/lib/pricing";
+import {
+  annualFor,
+  MANAGEMENT_RANGE_PER_HOME,
+  monthlyFor,
+  PRICE_EXAMPLES,
+  PRICE_PER_HOME_CENTS,
+  PRICE_PER_TRANSACTION_CENTS,
+} from "@/lib/pricing";
 import { money } from "@/lib/utils";
 
 export const metadata = {
@@ -11,10 +18,10 @@ export const metadata = {
 };
 
 /**
- * Pricing reads the shared tier table so the front page and this page cannot
- * quote different numbers, which they did once.
+ * Pricing reads the shared module so the front page and this page cannot quote
+ * different numbers, which they did once.
  */
-const TIERS = PRICING_TIERS;
+const TIERS = PRICE_EXAMPLES;
 
 /**
  * What a payment actually costs, next to the incumbent.
@@ -23,21 +30,44 @@ const TIERS = PRICING_TIERS;
  * ACH and 3.50% plus 50 cents on cards, and Stripe publishes 2.9% plus 30
  * cents. A board can verify every figure in this table without asking us.
  */
+/**
+ * The comparison we actually win.
+ *
+ * This table used to sit us against other HOA software on annual cost. At four
+ * dollars a home that is a comparison we lose: an 88 home association pays us
+ * more than a per-association competitor charges. Publishing it would be a
+ * self-inflicted wound and, worse, an argument for the wrong thing.
+ *
+ * The board reading this page is deciding whether to keep paying a management
+ * company, not which spreadsheet to buy, and against a management company the
+ * arithmetic is not close. So the rows compare per home per month, which is the
+ * unit their existing contract is already quoted in.
+ *
+ * Computed rather than written, so it cannot drift from the rate above.
+ */
+const COMPARISON_HOMES = 88;
 const COMPARISON = [
   {
-    scenario: "A $285 assessment, paid by bank transfer",
-    ours: "$2.35",
-    theirs: "$2.45",
+    scenario: "Per home, per month",
+    ours: money(PRICE_PER_HOME_CENTS),
+    theirs: `${money(MANAGEMENT_RANGE_PER_HOME.low, { cents: false })} to ${money(
+      MANAGEMENT_RANGE_PER_HOME.high,
+      { cents: false },
+    )}`,
   },
   {
-    scenario: "A $285 assessment, paid by card",
-    ours: "$8.57",
-    theirs: "$10.48",
+    scenario: `${COMPARISON_HOMES} homes, one month`,
+    ours: money(monthlyFor(COMPARISON_HOMES), { cents: false }),
+    theirs: `${money(MANAGEMENT_RANGE_PER_HOME.low * COMPARISON_HOMES, {
+      cents: false,
+    })} to ${money(MANAGEMENT_RANGE_PER_HOME.high * COMPARISON_HOMES, { cents: false })}`,
   },
   {
-    scenario: "88 homes, software for a year",
-    ours: "$1,308",
-    theirs: "$1,068",
+    scenario: `${COMPARISON_HOMES} homes, one year`,
+    ours: money(annualFor(COMPARISON_HOMES), { cents: false }),
+    theirs: `${money(MANAGEMENT_RANGE_PER_HOME.low * COMPARISON_HOMES * 12, {
+      cents: false,
+    })} to ${money(MANAGEMENT_RANGE_PER_HOME.high * COMPARISON_HOMES * 12, { cents: false })}`,
   },
 ];
 
@@ -65,7 +95,7 @@ const PAYMENTS = [
       "2.9% + 30¢ on cards, 35¢ on bank transfers. Passed straight through. We never touch this.",
   },
   {
-    label: "Our fee: $2.00 per payment",
+    label: `Our fee: ${money(PRICE_PER_TRANSACTION_CENTS)} per payment`,
     detail:
       "Flat, so it does not grow with the assessment. The board chooses whether the owner pays it at checkout or the association absorbs it.",
   },
@@ -98,39 +128,61 @@ export default function PricingPage() {
           </header>
         </Reveal>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {TIERS.map((tier, index) => (
-            <Reveal key={tier.name} delay={index * 80}>
-              <Card
-                className={`h-full p-6 ${
-                  tier.highlight ? "border-navy-700 shadow-raised dark:border-navy-300" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-[15px] font-semibold text-fg">{tier.name}</p>
-                  {tier.highlight ? <Badge tone="brand">Most common</Badge> : null}
+        <Reveal delay={60}>
+          <Card className="mt-8 overflow-hidden">
+            <div className="border-b border-border px-6 py-6 text-center">
+              <p className="tnum text-[56px] font-semibold leading-none tracking-[-0.04em] text-fg">
+                {money(PRICE_PER_HOME_CENTS)}
+              </p>
+              <p className="mt-2 text-[17px] text-fg-muted">
+                per home, per month. Every feature, unlimited residents.
+              </p>
+              <p className="mt-1 text-[15px] text-fg-muted">
+                Plus {money(PRICE_PER_TRANSACTION_CENTS)} per payment, whichever way it arrives.
+              </p>
+            </div>
+            {/* No tiers to compare, so the table is worked examples. A board
+                finds the row nearest their own size and stops reading. */}
+            <div className="divide-y divide-border">
+              {TIERS.map((example) => (
+                <div
+                  key={example.homes}
+                  className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-6 py-4 ${
+                    example.highlight ? "bg-surface-2" : ""
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold text-fg">
+                      {example.homes} homes
+                      {example.highlight ? (
+                        <Badge tone="brand" className="ml-2">
+                          Typical
+                        </Badge>
+                      ) : null}
+                    </p>
+                    <p className="text-[13px] text-fg-muted">{example.note}</p>
+                  </div>
+                  <p className="tnum shrink-0 text-[17px] font-semibold text-fg">
+                    {money(monthlyFor(example.homes), { cents: false })}
+                    <span className="text-[13px] font-normal text-fg-muted"> a month</span>
+                    <span className="ml-2 text-[13px] font-normal text-fg-subtle">
+                      {money(annualFor(example.homes), { cents: false })} a year
+                    </span>
+                  </p>
                 </div>
-                <p className="mt-1 text-[13px] text-fg-muted">{tier.homes}</p>
-                <p className="tnum mt-5 text-[40px] font-semibold leading-none tracking-[-0.035em] text-fg">
-                  {money(tier.monthlyCents, { cents: false })}
-                </p>
-                <p className="mt-1.5 text-[13px] text-fg-muted">per month</p>
-                <p className="mt-4 border-t border-border pt-4 text-[15px] leading-relaxed text-fg-muted">
-                  {tier.note}
-                </p>
-              </Card>
-            </Reveal>
-          ))}
-        </div>
+              ))}
+            </div>
+          </Card>
+        </Reveal>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-2">
           <Reveal>
             <Card className="h-full p-6">
               <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
-                Included on every tier
+                Included, always
               </h2>
               <p className="mt-1.5 text-[15px] text-fg-muted">
-                A 25 home association gets the same product as a 300 home one. Gating features by
+A 12 home association gets the same product as a 300 home one. Gating features by
                 size punishes exactly the boards with the least help.
               </p>
               <ul className="mt-4 space-y-2.5">
@@ -187,10 +239,11 @@ export default function PricingPage() {
           <div className="mt-6 overflow-hidden rounded-card border border-border bg-surface">
             <div className="border-b border-border px-6 py-4">
               <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
-                Next to PayHOA
+                Next to a management company
               </h2>
               <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-                Their figures come from their own published pages. Check ours the same way.
+                The range is what full service management is published at, per door. Check it
+                against the contract you already have.
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -199,7 +252,7 @@ export default function PricingPage() {
                   <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                     <th className="px-6 py-2.5 font-semibold" />
                     <th className="px-4 py-2.5 text-right font-semibold">HOAsis</th>
-                    <th className="px-6 py-2.5 text-right font-semibold">PayHOA</th>
+                    <th className="px-6 py-2.5 text-right font-semibold">Management company</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -218,9 +271,9 @@ export default function PricingPage() {
               </table>
             </div>
             <p className="border-t border-border px-6 py-3 text-[13px] leading-relaxed text-fg-subtle">
-              We are a little more for the software at 88 homes and meaningfully less on every
-              payment, so a community collecting monthly comes out ahead. We would rather show
-              you both numbers than only the flattering one.
+              Other self-service HOA software bills per association rather than per home, so at
+              a large enough community some of it costs less than we do. It also does not do
+              reserves. We would rather you knew that than found out later.
             </p>
           </div>
         </Reveal>

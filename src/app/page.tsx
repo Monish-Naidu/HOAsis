@@ -13,7 +13,13 @@ import {
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Badge, Card } from "@/components/ui/primitives";
 import { libraryArticles } from "@/lib/data";
-import { MANAGEMENT_RANGE_PER_HOME, PAYMENT_COSTS, tierFor } from "@/lib/pricing";
+import {
+  annualFor,
+  MANAGEMENT_RANGE_PER_HOME,
+  monthlyFor,
+  PRICE_PER_HOME_CENTS,
+  PRICE_PER_TRANSACTION_CENTS,
+} from "@/lib/pricing";
 
 export const metadata = {
   title: "HOAsis, community management for self-managed HOAs",
@@ -30,8 +36,8 @@ export const metadata = {
  * an association of 88 homes, which is close to the median self-managed size.
  */
 const EXAMPLE_HOMES = 88;
-const EXAMPLE_TIER = tierFor(EXAMPLE_HOMES);
-const OUR_YEAR = EXAMPLE_TIER.monthlyCents * 12;
+const OUR_MONTH = monthlyFor(EXAMPLE_HOMES);
+const OUR_YEAR = annualFor(EXAMPLE_HOMES);
 const MANAGED_YEAR = {
   low: MANAGEMENT_RANGE_PER_HOME.low * EXAMPLE_HOMES * 12,
   high: MANAGEMENT_RANGE_PER_HOME.high * EXAMPLE_HOMES * 12,
@@ -280,8 +286,8 @@ export default function MarketingHome() {
             },
             { value: "30 yr", label: "We show you the year the money runs out" },
             {
-              value: money(PAYMENT_COSTS.achCents),
-              label: "Every bank payment, flat. Cards at cost, never marked up",
+              value: money(PRICE_PER_TRANSACTION_CENTS),
+              label: "Every payment, flat. Never a percentage of the assessment",
             },
             { value: "All", label: "Every feature on every plan. No add-ons" },
           ].map((stat, index) => (
@@ -371,14 +377,14 @@ export default function MarketingHome() {
             {[
               {
                 label: "HOAsis",
-                value: `${money(EXAMPLE_TIER.monthlyCents, { cents: false })}/mo`,
-                detail: `${money(OUR_YEAR, { cents: false })} a year. Every feature, unlimited residents.`,
+                value: `${money(PRICE_PER_HOME_CENTS)}`,
+                detail: `Per home, per month. Every feature, unlimited residents.`,
                 accent: true,
               },
               {
-                label: "Works out to",
-                value: `${money(Math.round(EXAMPLE_TIER.monthlyCents / EXAMPLE_HOMES))}`,
-                detail: "Per home, per month. It falls as the association grows.",
+                label: `At ${EXAMPLE_HOMES} homes`,
+                value: `${money(OUR_MONTH, { cents: false })}/mo`,
+                detail: `${money(OUR_YEAR, { cents: false })} a year, plus ${money(PRICE_PER_TRANSACTION_CENTS)} a payment.`,
                 accent: false,
               },
               {
@@ -419,8 +425,8 @@ export default function MarketingHome() {
           <Reveal delay={240}>
             <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-[15px] text-fg-muted">
               {[
-                `Bank payments ${money(PAYMENT_COSTS.achCents)}, flat`,
-                `Cards at cost, ${PAYMENT_COSTS.cardPercent}% + ${PAYMENT_COSTS.cardFixedCents}\u00A2`,
+                `${money(PRICE_PER_TRANSACTION_CENTS)} a payment, any rail`,
+                "No percentage of what an owner pays",
                 "No setup fee, no per feature pricing",
                 "Cancel whenever, export everything",
               ].map((line) => (

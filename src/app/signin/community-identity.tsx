@@ -4,25 +4,55 @@ import { useAppState } from "@/lib/app-state";
 
 /**
  * Sign in is server rendered, but the community name and photo are admin
- * owned and live in client state. These two read that state so renaming the
+ * owned and live in client state. These read that state so renaming the
  * community in settings shows up on the front door too.
  */
 
-export function CommunityBackdrop() {
-  const { settings } = useAppState();
+/**
+ * The photograph, at full strength, on its own half of the page.
+ *
+ * It used to be a backdrop behind the form at 14% opacity, which is not a
+ * photograph, it is a smudge: too faint to recognise a place and too busy to
+ * be a clean ground. Giving it a column lets it be the thing it is, and lets
+ * the form sit on a plain surface where a form belongs.
+ *
+ * Hidden below the large breakpoint, where there is no width to spend.
+ */
+export function CommunityPanel() {
+  const { settings, community } = useAppState();
   return (
-    <div
-      className="pointer-events-none absolute inset-x-0 top-0 h-[45dvh] bg-cover bg-center opacity-[0.14] dark:opacity-[0.18]"
-      style={{ backgroundImage: `url(${settings.photoUrl})` }}
-      aria-hidden
-    />
+    <aside className="relative hidden overflow-hidden lg:block">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${settings.photoUrl})` }}
+        aria-hidden
+      />
+      {/* Dark at the foot, clear at the head, so the type has contrast without
+          flattening the whole image. */}
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/35 to-navy-950/10"
+        aria-hidden
+      />
+      <div className="relative flex h-full flex-col justify-end p-10 xl:p-14">
+        <h1 className="text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-white xl:text-[52px]">
+          {settings.displayName}
+        </h1>
+        <p className="mt-3 text-[17px] text-white/75">
+          {community.association.addressLine} · {community.association.unitCount} homes
+        </p>
+        {settings.photoCredit ? (
+          <p className="mt-8 text-[13px] text-white/45">Photo, {settings.photoCredit}</p>
+        ) : null}
+      </div>
+    </aside>
   );
 }
 
+/** The same identity, stacked above the form, for phones and tablets. */
 export function CommunityMasthead() {
   const { settings, community } = useAppState();
   return (
-    <div className="mb-7 text-center">
+    <div className="mb-7 lg:hidden">
       <h1 className="text-[28px] font-semibold tracking-[-0.03em] text-fg">
         {settings.displayName}
       </h1>
