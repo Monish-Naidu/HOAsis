@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppState } from "@/lib/app-state";
+import { pluralize } from "@/lib/utils";
 
 /**
  * Sign in is server rendered, but the community name and photo are admin
@@ -41,7 +42,7 @@ export function CommunityPanel() {
           {settings.displayName}
         </h1>
         <p className="mt-3 text-[17px] text-white/75">
-          {community.association.addressLine} · {community.association.unitCount} homes
+          {community.association.addressLine} · {pluralize(community.association.unitCount, "home")}
         </p>
         {settings.photoCredit ? (
           <p className="mt-8 text-[13px] text-white/45">Photo, {settings.photoCredit}</p>
@@ -60,7 +61,7 @@ export function CommunityMasthead() {
         {settings.displayName}
       </h1>
       <p className="mt-1 text-[15px] text-fg-muted">
-        {community.association.addressLine} · {community.association.unitCount} homes
+        {community.association.addressLine} · {pluralize(community.association.unitCount, "home")}
       </p>
     </div>
   );

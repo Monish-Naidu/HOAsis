@@ -2,6 +2,7 @@
 
 import { PageHeader } from "@/components/ui/primitives";
 import { SetupPlan } from "@/components/app/setup-plan";
+import { PortingCard } from "@/components/app/porting-card";
 import { useAppState } from "@/lib/app-state";
 
 export default function SetupPage() {
@@ -15,6 +16,7 @@ export default function SetupPage() {
       />
       <div className="mt-5">
         <SetupPlan />
+        <PortingCard />
       </div>
     </>
   );

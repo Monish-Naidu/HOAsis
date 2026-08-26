@@ -288,6 +288,12 @@ export async function loadCommunity(
     // Reservations are not stored server side yet, so the picker offers every
     // slot rather than pretending a free hour is taken.
     amenityBookings: [],
+    profile: {
+      propertyType: a.property_type ?? undefined,
+      origin: a.origin ?? undefined,
+      collects: a.collects ?? [],
+      sharedSpaces: a.shared_spaces ?? [],
+    },
     bylaws: [],
     bylawAmendments: [],
     sharedCosts: [],

@@ -536,6 +536,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       p_founder_name: draft.founder.name,
       p_founder_unit: draft.founder.unit,
       p_households: draft.households,
+      // The three answers, kept. They were being asked and then discarded on
+      // this path, so a real board got the generic plan, which is the one
+      // outcome the questions exist to prevent.
+      p_property_type: draft.propertyType ?? null,
+      p_origin: draft.origin ?? null,
+      p_collects: draft.collects,
+      p_shared_spaces: draft.sharedSpaces,
     });
     if (error) throw new Error(error.message);
 

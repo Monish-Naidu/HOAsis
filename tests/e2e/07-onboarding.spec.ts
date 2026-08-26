@@ -285,3 +285,85 @@ test.describe("the dashboard", () => {
     );
   });
 });
+
+test.describe("porting an existing association", () => {
+  test("a board leaving a manager is told to demand records before cancelling", async ({
+    page,
+  }) => {
+    await onboard(page, {
+      name: "Handover HOA",
+      state: "Washington",
+      dues: "300",
+      property: "Condominiums",
+      origin: "Leaving a management company",
+    });
+
+    const health = await inspect(page);
+    expect(health.text, "no porting plan for a board leaving a manager").toContain(
+      "Get your records back",
+    );
+    // The order is the whole argument, so it is stated rather than implied.
+    expect(health.text).toContain("before you give notice");
+    expect(health.text, "the reason for the order is missing").toMatch(
+      /partial box|still the client/,
+    );
+  });
+
+  test("the records demand letter is written, not a template with blanks", async ({ page }) => {
+    await onboard(page, {
+      name: "Letter Test HOA",
+      state: "Washington",
+      dues: "300",
+      property: "Condominiums",
+      origin: "Leaving a management company",
+    });
+
+    await page.getByRole("button", { name: "Write the letter" }).click();
+    await page.waitForTimeout(500);
+
+    const health = await inspect(page);
+    expect(health.text, "the letter never rendered").toContain("Demand for association records");
+    // Filled in from the association, not left for the board to complete.
+    expect(health.text, "the association is not named in the letter").toContain("Letter Test HOA");
+    expect(health.text, "the records list is missing").toContain("general ledger");
+    expect(health.text, "it reads as a termination notice").toContain(
+      "not notice of termination",
+    );
+  });
+
+  test("a self managing board is told to gather, not to demand", async ({ page }) => {
+    await onboard(page, {
+      name: "Spreadsheet HOA",
+      state: "Washington",
+      dues: "150",
+      property: "Detached homes",
+      origin: "Already running it ourselves",
+    });
+
+    const health = await inspect(page);
+    expect(health.text).toContain("Bring your records in");
+    expect(health.text, "an opening balance is the thing that unblocks them").toContain(
+      "opening balance",
+    );
+    expect(health.text, "a self managing board has no manager to demand from").not.toContain(
+      "Get your records back",
+    );
+  });
+
+  test("a brand new association is told to get constituted, not to import", async ({ page }) => {
+    await onboard(page, {
+      name: "Greenfield HOA",
+      state: "Washington",
+      dues: "120",
+      property: "Detached homes",
+      origin: "Brand new",
+    });
+
+    const health = await inspect(page);
+    expect(health.text).toContain("Make it official");
+    expect(health.text, "the EIN is the thing that unblocks a bank account").toContain(
+      "Employer Identification Number",
+    );
+    expect(health.text, "there is nothing to import").not.toContain("Import the roster");
+  });
+});

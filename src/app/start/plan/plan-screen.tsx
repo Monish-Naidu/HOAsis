@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, PartyPopper } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";
 import { SetupPlan } from "@/components/app/setup-plan";
+import { PortingCard } from "@/components/app/porting-card";
 import { useAppState } from "@/lib/app-state";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 
@@ -57,6 +58,8 @@ export function PlanScreen() {
       </header>
 
       <SetupPlan />
+
+      <PortingCard />
 
       {/* The way out, stated plainly and always available. A plan that has to
           be finished before the product opens is a plan people abandon. */}

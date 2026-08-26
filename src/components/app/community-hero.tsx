@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Camera, Check, ChevronDown, Plus } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
-import { cn } from "@/lib/utils";
+import { cn, pluralize } from "@/lib/utils";
 import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { refreshRemote } from "@/lib/data/remote-store";
@@ -110,7 +110,7 @@ export function CommunityHero({
   const line =
     subtitle ??
     (withLocation
-      ? `${community.association.addressLine} · ${community.association.unitCount} homes`
+      ? `${community.association.addressLine} · ${pluralize(community.association.unitCount, "home")}`
       : undefined);
 
   return (
