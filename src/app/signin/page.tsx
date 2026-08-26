@@ -20,7 +20,7 @@ export const metadata = { title: "Sign in" };
  */
 export default function AuthLanding() {
   return (
-    <div className="grid min-h-dvh bg-bg lg:grid-cols-[1.05fr_1fr] xl:grid-cols-[1.15fr_1fr]">
+    <div className="grid min-h-dvh items-start bg-bg lg:grid-cols-[1.05fr_1fr] xl:grid-cols-[1.15fr_1fr]">
       <CommunityPanel />
 
       <div className="flex min-h-dvh flex-col lg:min-h-0">

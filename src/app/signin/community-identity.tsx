@@ -21,7 +21,10 @@ import { useAppState } from "@/lib/app-state";
 export function CommunityPanel() {
   const { settings, community } = useAppState();
   return (
-    <aside className="relative hidden overflow-hidden lg:block">
+    // Pinned to the viewport rather than stretched by the grid. The form column
+    // scrolls well past one screen, and a stretched aside puts the community
+    // name at the bottom of that scroll height, which is nowhere anyone looks.
+    <aside className="relative hidden overflow-hidden lg:sticky lg:top-0 lg:block lg:h-dvh">
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${settings.photoUrl})` }}
