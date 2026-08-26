@@ -35,6 +35,40 @@ const DEFAULT_LATE_AFTER_DAY = 10;
  * money lands. Everything else, including who else sits on the board, can be
  * done afterwards by someone who is already logged in and collecting.
  */
+/**
+ * What kind of homes these are.
+ *
+ * The single most useful thing to know and the one thing we never asked. It
+ * decides whether shared utilities are even plausible, whether the association
+ * carries a master policy over the structures or only over common areas, and
+ * whether a reserve study is a statutory duty rather than good practice.
+ */
+export type PropertyType = "single-family" | "townhomes" | "condos";
+
+/**
+ * Where the board is coming from.
+ *
+ * A brand new association has nothing to bring. One that has been self managing
+ * has books and documents somewhere. One leaving a management company has all
+ * of it, held by somebody else, and their first real task is getting it back.
+ * These are three different first weeks.
+ */
+export type AssociationOrigin = "new" | "self-managed" | "leaving-manager";
+
+/** Anything the association bills beyond a flat due. */
+export type ExtraCollection = "special-assessment" | "utilities";
+
+/** Shared spaces, which drive both reservations and reserve components. */
+export type SharedSpace = "pool" | "clubhouse" | "gym" | "playground" | "gate" | "elevator";
+
+/** The persisted form of the three onboarding answers. */
+export interface AssociationProfileAnswers {
+  propertyType?: PropertyType;
+  origin?: AssociationOrigin;
+  collects: ExtraCollection[];
+  sharedSpaces: SharedSpace[];
+}
+
 export interface CommunityDraft {
   name: string;
   city: string;
@@ -51,6 +85,19 @@ export interface CommunityDraft {
   households: DraftHousehold[];
   /** Where dues land. Optional only because a board can connect it later. */
   bankAccount?: BankAccount;
+
+  /**
+   * Three facts about the association's situation, used to build its plan.
+   *
+   * Deliberately questions of fact rather than of preference. Asking a new
+   * board "do you want to set up vendors" makes them model a consequence they
+   * have no basis to model; asking whether a manager currently pays the
+   * landscaper is something they simply know. We derive the rest.
+   */
+  propertyType?: PropertyType;
+  origin?: AssociationOrigin;
+  collects: ExtraCollection[];
+  sharedSpaces: SharedSpace[];
 }
 
 export interface DraftHousehold {
@@ -181,6 +228,14 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     asOf,
     nextChargeDate: nextDueDate(asOf, draft.dueDay),
 
+    // Carried through so the plan can be rebuilt later without asking again.
+    profile: {
+      propertyType: draft.propertyType,
+      origin: draft.origin,
+      collects: draft.collects,
+      sharedSpaces: draft.sharedSpaces,
+    },
+
     association: {
       id,
       name: draft.name,
@@ -278,5 +333,7 @@ export function emptyDraft(): CommunityDraft {
     dueDay: 1,
     founder: { name: "", email: "", unit: "" },
     households: [],
+    collects: [],
+    sharedSpaces: [],
   };
 }

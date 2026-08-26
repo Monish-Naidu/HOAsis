@@ -240,18 +240,6 @@ export function insuranceExposure() {
   return { rows, totalUninsured: rows.reduce((t, r) => t + r.uninsured, 0) };
 }
 
-/** What the board would gain by moving reserve savings to a better rate. */
-export function yieldOpportunity() {
-  const { balance, blendedApy } = interestSummary();
-  const best = [...savingsOffers].sort((a, b) => b.apy - a.apy)[0];
-  const recommended = savingsOffers.find((o) => o.recommended) ?? best;
-  const movable = bankAccounts
-    .filter((a) => a.kind === "reserve")
-    .reduce((t, a) => t + a.balanceCents, 0);
-  const current = bankAccounts.find((a) => a.kind === "reserve");
-  const gainAnnual = Math.round((movable * (recommended.apy - (current?.apy ?? 0))) / 100);
-  return { balance, blendedApy, recommended, offers: savingsOffers, movable, gainAnnual, current };
-}
 
 export function complianceSummary() {
   const overdue = complianceItems.filter((c) => c.status === "overdue");

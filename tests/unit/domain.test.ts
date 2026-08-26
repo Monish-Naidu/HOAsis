@@ -11,7 +11,8 @@ import {
   interestSummary,
   ownersById,
   reserveSummary,
-  yieldOpportunity,
+  bankAccounts,
+  savingsOffers,
   association,
   owners,
 } from "@/lib/data";
@@ -98,30 +99,45 @@ describe("association arithmetic", () => {
     expect(reserve.funded).toBeLessThanOrEqual(reserve.required);
   });
 
-  it("blends reserve yield by balance, not by a simple average", () => {
-    const { blendedApy, balance, projectedAnnual } = interestSummary();
-    expect(blendedApy).toBeGreaterThan(0);
-    // A simple average of 1.20 and 4.25 would be 2.725. Weighting by the much
-    // larger savings balance has to pull it well below that.
-    expect(blendedApy).toBeLessThan(2.725);
+  it("reports the rate on reserve savings", () => {
+    // There is nothing to blend any more. Reserve cash sits in one insured
+    // savings account, so the "blended" figure is simply that account's rate,
+    // and the projection is the balance times it. The previous version of this
+    // test asserted a weighted average across a certificate and a savings
+    // account, which was a shape the product deliberately stopped having.
+    const { balance, blendedApy, projectedAnnual } = interestSummary();
+    const reserve = bankAccounts.filter((a) => a.kind !== "operating");
+
+    expect(reserve, "reserve cash is meant to sit in one account").toHaveLength(1);
+    expect(balance).toBe(reserve[0].balanceCents);
+    expect(blendedApy).toBeCloseTo(reserve[0].apy, 5);
     expect(projectedAnnual).toBe(Math.round((balance * blendedApy) / 100));
   });
 
-  it("flags only the balance above the insured limit at a single institution", () => {
-    const exposure = insuranceExposure();
-    for (const row of exposure.rows) {
-      expect(row.uninsured).toBe(Math.max(0, row.balance - row.limit));
-    }
-    expect(exposure.totalUninsured).toBeGreaterThan(0);
+  it("counts deposit insurance exposure per institution, not per account", () => {
+    // The limit is per depositor per bank, so opening a second account at the
+    // same bank does not double the coverage. This matters more now that all
+    // reserve cash sits in one savings account: a funded association is
+    // routinely several hundred thousand dollars over the line.
+    const { rows, totalUninsured } = insuranceExposure();
+    const becu = rows.find((r) => r.institution === "BECU");
+
+    expect(becu, "the seeded accounts are both at BECU").toBeTruthy();
+    expect(becu!.balance, "balances at one bank are combined").toBe(
+      bankAccounts
+        .filter((a) => a.institution === "BECU")
+        .reduce((t, a) => t + a.balanceCents, 0),
+    );
+    expect(becu!.uninsured).toBe(Math.max(0, becu!.balance - becu!.limit));
+    expect(becu!.uninsured, "a funded association is over the limit").toBeGreaterThan(0);
+    expect(totalUninsured).toBe(rows.reduce((t, r) => t + r.uninsured, 0));
   });
 
-  it("prices the yield opportunity off the movable savings balance", () => {
-    const opportunity = yieldOpportunity();
-    const expected = Math.round(
-      (opportunity.movable * (opportunity.recommended.apy - opportunity.current!.apy)) / 100,
-    );
-    expect(opportunity.gainAnnual).toBe(expected);
-    expect(opportunity.gainAnnual).toBeGreaterThan(0);
+  it("offers nothing to shop for, on purpose", () => {
+    // Shopping rates is not a job to nudge a volunteer treasurer into from
+    // inside their own books, and a dollar in a twelve month certificate is
+    // unavailable the week a roof fails.
+    expect(savingsOffers).toHaveLength(0);
   });
 
   it("reports budget pace against the elapsed year", () => {

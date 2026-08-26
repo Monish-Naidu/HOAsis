@@ -90,6 +90,8 @@ describe("a community built through onboarding", () => {
       { name: "Marcus Bell", email: "marcus@example.com", unit: "2" },
       { name: "Yuki Tanaka", email: "yuki@example.com", unit: "3" },
     ],
+    collects: [],
+    sharedSpaces: [],
   };
 
   it("starts empty rather than seeded with sample data", () => {

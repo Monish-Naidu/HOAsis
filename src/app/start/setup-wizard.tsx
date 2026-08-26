@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Upload, Users } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
@@ -14,6 +14,7 @@ import {
   type DraftHousehold,
 } from "@/lib/data/new-community";
 import { BankStep } from "./bank-step";
+import { SituationStep } from "./situation-step";
 import { cn, money } from "@/lib/utils";
 
 /**
@@ -31,8 +32,17 @@ import { cn, money } from "@/lib/utils";
  * that has to agree with it.
  */
 
+/**
+ * Cheap questions first, the long one third, the highest friction one last.
+ *
+ * "Situation" sits before "Homes" because it takes twenty seconds and it
+ * changes what the rest of setup contains. Typing a roster is the longest
+ * step, and connecting a bank is the one people leave to fetch a statement
+ * for, so it stays at the end where leaving does the least damage.
+ */
 const STEPS = [
   { id: "association", label: "Association", blurb: "Who you are and what a home pays" },
+  { id: "situation", label: "Your place", blurb: "What kind of community this is" },
   { id: "homes", label: "Homes", blurb: "Who lives here" },
   { id: "bank", label: "Bank", blurb: "Where dues land" },
 ] as const;
@@ -113,8 +123,9 @@ export function SetupWizard() {
 
       <div className="mt-8">
         {step === 0 ? <AssociationStep draft={draft} patch={patch} /> : null}
-        {step === 1 ? <HomesStep draft={draft} patch={patch} /> : null}
-        {step === 2 ? (
+        {step === 1 ? <SituationStep draft={draft} patch={patch} /> : null}
+        {step === 2 ? <HomesStep draft={draft} patch={patch} /> : null}
+        {step === 3 ? (
           <BankStep
             associationName={draft.name}
             account={draft.bankAccount}
@@ -349,7 +360,7 @@ function HomesStep({ draft, patch }: StepProps) {
         <div className="flex flex-col gap-3">
           <Field
             label="Paste your roster"
-            hint="One household per line: name, email, unit. Commas or tabs both work."
+            hint="One household per line: name, email, unit. Any order, and a header row is fine."
           >
             <textarea
               value={bulk}
@@ -360,6 +371,23 @@ function HomesStep({ draft, patch }: StepProps) {
               className={cn(input, "h-auto py-2 font-mono text-[13px] leading-relaxed")}
             />
           </Field>
+          {/* A board leaving a manager has a file, not a clipboard. Making
+              them open it, select all and paste is three steps we can remove. */}
+          <label className="inline-flex h-9 w-fit cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2">
+            <Upload className="size-4" />
+            Choose a CSV instead
+            <input
+              type="file"
+              accept=".csv,.tsv,.txt,text/csv,text/plain"
+              className="sr-only"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                setBulk(await file.text());
+              }}
+            />
+          </label>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="primary" size="sm" onClick={importPasted} disabled={!preview.length}>
               Add {preview.length ? pluralHomes(preview.length) : "households"}
@@ -596,6 +624,55 @@ function Field({
  * Anything it cannot read is dropped rather than guessed at, and the count it
  * reports is what will actually be added.
  */
+/**
+ * Splits one line into cells, respecting quotes.
+ *
+ * A roster exported from anywhere real contains at least one "Smith, John",
+ * and splitting that on the comma produces a household called Smith living in
+ * unit John. Quoted fields are the difference between an import that works on
+ * the file a board actually has and one that works on a file we made up.
+ */
+function splitCells(line: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      // A doubled quote inside a quoted field is a literal quote.
+      if (quoted && line[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+    if (!quoted && (ch === "," || ch === "\t" || ch === ";")) {
+      cells.push(cell.trim());
+      cell = "";
+      continue;
+    }
+    cell += ch;
+  }
+  cells.push(cell.trim());
+  return cells.filter(Boolean);
+}
+
+/** Words that mean this row names columns rather than a person. */
+const HEADER_WORDS =
+  /^(name|household|owner|owners?[ _-]?name|unit|unit[ _-]?#|lot|address|email|e-?mail|phone|resident|member)$/i;
+
+/**
+ * Turns a pasted or uploaded roster into households.
+ *
+ * Deliberately forgiving about column order, separators and headers, because
+ * the file a board has came out of whatever their manager used and will not
+ * match any format we specify. What it will reliably contain is a name, a
+ * number that is the unit, and sometimes an email, so those are found by shape
+ * rather than by position.
+ */
 export function parseRoster(text: string): DraftHousehold[] {
   const seen = new Set<string>();
   const rows: DraftHousehold[] = [];
@@ -604,18 +681,21 @@ export function parseRoster(text: string): DraftHousehold[] {
     const line = raw.trim();
     if (!line) continue;
 
-    const cells = line.split(/\t|,|;/).map((c) => c.trim()).filter(Boolean);
+    const cells = splitCells(line);
     if (cells.length < 2) continue;
 
-    // A header row names columns rather than a household.
-    if (/^(name|household|owner)$/i.test(cells[0])) continue;
+    // A header names columns. Checking every cell rather than only the first
+    // catches "Unit, Owner, Email", which starts with a word we would
+    // otherwise mistake for data.
+    if (cells.filter((c) => HEADER_WORDS.test(c)).length >= 2) continue;
 
-    const email = cells.find((c) => c.includes("@")) ?? "";
+    const email = cells.find((c) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c)) ?? "";
     const rest = cells.filter((c) => c !== email);
-    // The unit is the shortest remaining cell that is mostly digits, which is
-    // what a unit is and a name never is.
+    // The unit is the last cell that looks like a unit number, which is what a
+    // unit is and a name never is.
     const unit =
-      [...rest].reverse().find((c) => /^[a-z]?\d+[a-z]?$/i.test(c)) ?? rest[rest.length - 1];
+      [...rest].reverse().find((c) => /^[a-z]?[-#]?\d+[a-z]?$/i.test(c)) ??
+      rest[rest.length - 1];
     const name = rest.filter((c) => c !== unit).join(" ").trim();
 
     if (!name || !unit || seen.has(unit)) continue;
@@ -630,10 +710,13 @@ export function parseRoster(text: string): DraftHousehold[] {
 function stepComplete(draft: CommunityDraft): boolean[] {
   return [
     Boolean(draft.name.trim() && draft.city.trim() && draft.state && draft.duesCents > 0),
+    // Both single-answer questions. The two multi-selects are legitimately
+    // empty for plenty of associations, so they are not required.
+    Boolean(draft.propertyType && draft.origin),
     Boolean(
       draft.founder.name.trim() && draft.founder.email.trim() && draft.founder.unit.trim(),
     ),
-    // A board can finish without a bank, and is asked again on the dashboard.
+    // A board can finish without a bank, and is asked again on the plan.
     true,
   ];
 }

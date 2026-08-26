@@ -79,6 +79,15 @@ export interface Community {
    * whole contract: adding a capability must not add a screen to associations
    * that did not ask for it.
    */
+  /**
+   * The three answers onboarding collected, kept so the plan can be rebuilt.
+   *
+   * Absent for the shipped demo associations, which predate the questions. The
+   * plan falls back to showing everything when it is missing, which is the old
+   * behaviour and the right default for an association we know nothing about.
+   */
+  profile?: import("./new-community").AssociationProfileAnswers;
+
   sharedCosts: SharedCost[];
   sharedCostBills: SharedCostBill[];
   specialAssessments: SpecialAssessment[];

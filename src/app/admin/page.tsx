@@ -32,7 +32,7 @@ import {
   usePendingApprovals,
   useReconciliation,
 } from "@/lib/app-state";
-import { SetupHub, SetupSummary } from "@/components/app/setup-hub";
+import { SetupPlan, SetupPlanSummary } from "@/components/app/setup-plan";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday, formatDate, money, pluralize } from "@/lib/utils";
 
@@ -76,7 +76,7 @@ export default function BoardDashboard() {
           nothing to run, so a dashboard of four zeroes and two empty cards
           tells them nothing and looks broken. Until there is something to
           operate, this page is setup. */}
-      {running ? <SetupSummary /> : <SetupHub />}
+      {running ? <SetupPlanSummary /> : <SetupPlan />}
 
       {running ? (
         <>

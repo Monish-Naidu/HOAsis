@@ -1,7 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/ui/primitives";
-import { SetupHub } from "@/components/app/setup-hub";
+import { SetupPlan } from "@/components/app/setup-plan";
 import { useAppState } from "@/lib/app-state";
 
 export default function SetupPage() {
@@ -11,9 +11,10 @@ export default function SetupPage() {
       <PageHeader
         eyebrow="Getting started"
         title={`Set up ${community.settings.displayName}`}
+        description="Built from what you told us about the association, so nothing here is a step you have to decline."
       />
       <div className="mt-5">
-        <SetupHub />
+        <SetupPlan />
       </div>
     </>
   );
