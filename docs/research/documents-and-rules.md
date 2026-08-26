@@ -18,14 +18,18 @@ and 4 are product decisions and are written for us.
 
 ## 1. Executive summary: the five things that matter
 
-**1. The declaration is the only document recorded against the land, and that is the whole
-difference.** The declaration is filed in the county real property records. Recording gives
-constructive notice to every later buyer (Cal. Civ. Code § 1213), and the covenants in it are
-enforceable equitable servitudes that "inure to the benefit of and bind all owners of separate
-interests in the development" (Cal. Civ. Code § 5975(a)). Nobody signs it. It binds anyway,
-because it attached to the dirt before the buyer arrived. Articles, bylaws, and rules are
-corporate housekeeping by comparison. Every product decision about documents follows from
-this one split.
+**1. The declaration runs with the land, and that is the whole difference.** It is filed in the
+county real property records. Recording gives constructive notice to every later buyer (Cal.
+Civ. Code § 1213), and the covenants in it are enforceable equitable servitudes that "inure to
+the benefit of and bind all owners of separate interests in the development" (Cal. Civ. Code
+§ 5975(a)). Nobody signs it. It binds anyway, because it attached to the dirt before the buyer
+arrived. Articles, bylaws, and rules are corporate governance by comparison; they bind you
+because you became a member of a corporation, not because of what you bought. Every product
+decision about documents follows from this one split. One wrinkle worth carrying: Texas requires
+*every* dedicatory instrument, bylaws and rules included, to be filed in the county real property
+records, and says an instrument "has no effect until the instrument is filed" (Tex. Prop. Code
+§§ 202.001, 202.006). So "was this recorded, and when, and under what instrument number" is a
+field we need on more than just the declaration.
 
 **2. The safe template line is the amendment line.** Anything the board can adopt on its own,
 being rules, policies, procedures, committee charters, and letter templates, is safe to ship.
@@ -55,15 +59,19 @@ Then propose candidate restrictions as *drafts* that a human board member confir
 Most boards have never had their restrictions in a list. Building that list is the product.
 Deciding who broke one is not.
 
-**5. The resale certificate is already the onboarding spec, and it already has a violations
-field.** California requires the seller to hand the buyer "a copy or a summary of any notice
-previously sent to the owner" about an unresolved violation (Cal. Civ. Code § 4525(a)), and
-Texas requires the resale certificate to state violations of the restrictions or bylaws
-(Tex. Prop. Code § 207.003). A new owner can inherit an open violation and usually has no idea.
-A product that knows the human-adjudicated open items per address can fill that field
-correctly, generate the packet in the ten day window the statute allows (Cal. Civ. Code
-§ 4530(a)(1); Tex. Prop. Code § 207.003), and tell the new owner on day one what came with the
-house. That is the opposite of auto-detection: it reports facts a human already decided.
+**5. The resale certificate is already the onboarding spec, it already has a violations field,
+and it is on a clock.** Three states, three different acts, same requirement: California makes
+the seller hand the buyer "a copy or a summary of any notice previously sent to the owner" about
+an unresolved violation (Cal. Civ. Code § 4525(a)); Texas requires violations of the restrictions
+or bylaws in the certificate (Tex. Prop. Code § 207.003); Virginia requires a statement regarding
+violations of the governing documents or rules (Va. Code § 55.1-2310(A)). A new owner can inherit
+an open violation and usually has no idea. Meanwhile the association is on a deadline to produce
+the packet, being 10 days in California, 10 business days in Texas, 14 days in Virginia, and in
+Virginia a purchaser who never receives it "may cancel the contract at any time prior to
+settlement" (Va. Code § 55.1-2312). A product that holds the documents, the balance, and the
+human-adjudicated open items per address can generate that packet on demand and tell the new
+owner on day one what came with the house. That is the opposite of auto-detection: it reports
+facts a human already decided.
 
 ---
 
@@ -432,7 +440,47 @@ definition of an instrument whose legal effect must be carefully determined.
 
 ### What competitors do
 
-<!-- COMPETITORS -->
+Caveat first: these are marketing pages, and marketing pages are shallow. Absence of a feature
+on a features page is weak evidence of absence in the product. What follows is what the pages
+actually say, not what the products actually contain.
+
+**PayHOA.** The features page lists document management as "Store and share folders and
+documents." Storage, not templates. Violations are listed with the line "Effortlessly enforce
+CC&Rs," which is workflow language, not detection language. No template library and no AI over
+governing documents appears on the page.
+
+**AppFolio Community Associations.** The page names "Realm-X AI" and describes AI as being used
+"to help process invoices to save time and increase productivity." Invoices, not governing
+documents. No CC&R, bylaw, or rule templates named.
+
+**Condo Control.** The most interesting one. Its features page lists a file library, violation
+tracking, and an "AI manager assistant" under communication tools, with a "coming soon" AI
+inbox for voice, text, and email. It also runs a **Document Shop**, and the catalog is
+revealing: Ontario status certificates, meeting minutes, US estoppel certificates, Alberta
+estoppel certificates, demand letters, financial documents, resale and disclosure packages,
+British Columbia Form B packages, and unit-specific and administrative forms. Communities
+"configure document catalogs, prices, availability and delivery options." **No CC&R,
+declaration, or bylaw templates appear in the catalog.** No disclaimer text appears on the page.
+
+**Vantaca.** Markets "HOAi Fleet," described as "An AI workforce that does the work, proactively,
+at scale," plus a "Knowledge Assistant." The homepage does not detail what the Knowledge
+Assistant reads, and does not detail violation automation or a template library.
+
+**Buildium and TownSq.** Both candidate URLs returned 404 and neither was verified. See section 7.
+
+**The synthesis.** Three patterns hold across everything that could be checked.
+
+1. **Nobody ships declaration text.** Not one vendor page examined offers a CC&R, declaration,
+   or bylaw template. The one vendor running an actual document store sells certificates and
+   letters instead. That is the same line CAI drew, arrived at independently by the market.
+2. **The document money is on the resale and estoppel side, not the drafting side.** Condo
+   Control built a priced storefront for exactly that. This agrees with the conclusion already
+   in `competitive-analysis.md`, which identifies resale and estoppel certificates as the
+   strongest adjacent revenue line for us.
+3. **Violation features are workflow, not detection.** "Enforce CC&Rs" means track a case a human
+   opened. Nothing found claims to decide that a violation occurred by reading the documents.
+   The AI announcements in this category, at the time of writing, point at invoices, inboxes, and
+   manager assistants, not at covenant interpretation.
 
 ---
 
@@ -704,11 +752,66 @@ summary of any requirements for association approval of a physical change to pro
 
 Item ten there is the one new owners most need and least often see.
 
-<!-- ONBOARDING_STATES -->
+**Virginia, and this is the best version of the list.** Virginia repealed its old Property
+Owners' Association Act disclosure packet sections in 2023 and replaced them with a consolidated
+Resale Disclosure Act. Under Va. Code § 55.1-2309 the seller obtains the resale certificate from
+the association, and the association must deliver it "within 14 days after a written request by
+a seller or seller's agent."
+
+Va. Code § 55.1-2310(A) then lists 30 required items. The financial ones are what you would
+expect: assessments and payment schedule, unpaid amounts, other fees, special assessments,
+approved capital expenditures for this year and next, reserve amounts and what they are
+designated for, the most recent balance sheet and income and expense statement, the current
+operating budget, the current reserve study, unsatisfied judgments and pending legal actions,
+and insurance coverage.
+
+The interesting half is the restrictions. The Virginia legislature specifically requires the
+certificate to state restrictions on:
+
+- displaying the United States flag
+- solar energy collection devices
+- political, for sale, and other signs
+- parking and vehicles
+- home-based businesses
+- renting the unit
+- occupancy based on age or other factors
+- selling the unit
+
+Plus a **statement regarding violations of the governing documents or rules**, a statement of
+uncured governmental violations affecting the property, board meeting minutes from the last six
+months, the most recent association meeting minutes, pending sales or encumbrances of common
+elements, known secondary mortgage market project approvals, and certification that the
+association filed its annual report with the Common Interest Community Board.
+
+And Virginia gives the buyer a way out. Under Va. Code § 55.1-2312, "Cancellation of contract by
+purchaser," the default is three days: three days from ratification if the certificate came
+before ratification, or three days from receipt if it came after, unless the parties agreed to a
+different period in the contract. **If the certificate is never delivered, the purchaser "may
+cancel the contract at any time prior to settlement."** A late or missing resale certificate can
+kill a sale, and the association is the one who was supposed to produce it.
 
 ### What new owners get fined for
 
-<!-- ONBOARDING_VIOLATIONS -->
+There is no survey data in this research pass. What there is, and it is arguably better, is three
+legislatures independently deciding which restrictions a buyer must be warned about. Those lists
+are a proxy for what people get caught by, because that is why the disclosure requirements exist.
+
+Virginia's § 55.1-2310(A) enumeration is the most specific: **flags, solar devices, signs,
+parking and vehicles, home-based businesses, rentals, occupancy limits.** California adds
+**age-related occupancy restrictions** and a **rental or leasing prohibition** statement as
+mandatory disclosure items (Cal. Civ. Code § 4525(a)). Texas adds **right of first refusal and
+transfer restrictions** and **whether the restrictions allow foreclosure** (Tex. Prop. Code
+§ 207.003).
+
+The one that no statute frames as a restriction but that dominates the practical experience is
+**architectural approval**. California makes the association describe its approval requirements
+in the annual policy statement every year (Cal. Civ. Code § 5310(a)), which is a strong hint that
+owners do not know. The failure mode is not that an owner picks a banned paint color; it is that
+they did not know approval was required before starting, and by the time anyone notices, the work
+is done and the remedy is to undo it.
+
+Section 7 records that no survey data on violation frequency was verified. If we want a number to
+put in front of a board, that is a gap worth filling before we publish anything on this.
 
 The structural reason is worth stating even where survey data is thin. The documents are delivered
 at closing, in a stack, in the same week as the loan documents and the inspection report and the
@@ -720,7 +823,45 @@ come from.
 
 ### Welcome packet best practice
 
-<!-- ONBOARDING_PACKET -->
+CAI's own guidance could not be reached; caionline.org returned 403 on every page attempted. So
+rather than repeat management-company blog advice, the recommendation below is assembled from
+the three statutory lists above, which have the advantage of being what legislatures decided a
+buyer actually needs.
+
+A defensible welcome packet is five things, in this order.
+
+**1. Money, as of a date.** Current regular assessment and payment schedule, when it is due,
+where it goes, the balance on this address today, any approved special assessment or fee change
+not yet due, and any amount inherited from the seller. Every one of the three statutes requires
+this in some form (Cal. Civ. Code § 4525(a); Tex. Prop. Code § 207.003; Va. Code § 55.1-2310(A)).
+
+**2. What you inherited.** Any open, unresolved violation on this address. California requires
+the seller to pass along "a copy or a summary of any notice previously sent to the owner pursuant
+to Section 5855" (Cal. Civ. Code § 4525(a)). Texas requires violations of the restrictions or
+bylaws in the certificate (Tex. Prop. Code § 207.003). Virginia requires a "statement regarding
+violations of governing documents or rules" (Va. Code § 55.1-2310(A)). Three states, three
+different acts, same requirement. Owners still get surprised by this.
+
+**3. The short list of restrictions that actually catch people.** Not the declaration. A one page
+list, in plain language, of the things Virginia's legislature thought worth enumerating: flags,
+solar, signs, parking and vehicles, home businesses, rentals, pets, occupancy. Each item linked
+to the section it comes from, so the owner can check us.
+
+**4. The approval reflex.** One sentence, early and loud: exterior changes need written approval
+before the work starts. Then the form, the committee's deadline, and what happens if they say no.
+California requires the procedure to be "fair, reasonable, and expeditious," decisions to be in
+writing, denials to state reasons and describe reconsideration, and the association to notify
+members of the requirements annually (Cal. Civ. Code § 4765, § 5310(a)).
+
+**5. How to reach a human and how decisions get made.** Who receives official communications, how
+to get notices at a second address, where general notices are posted, how to get minutes, the
+dispute resolution path, and the fine schedule. California's annual policy statement (Cal. Civ.
+Code § 5310(a)) is a literal specification for this and is worth following even outside
+California.
+
+The full governing documents go in the packet too, because they have to. But they are the
+appendix, not the packet. A packet that leads with a 60 page recorded declaration is a packet
+nobody opened.
 
 ### What HOAsis should actually do with this
 
@@ -728,10 +869,17 @@ The statutes above are a feature spec, and three things fall out of them.
 
 **One: the disclosure packet is a generated artifact, not a filing cabinet.** California gives the
 association 10 days (§ 4530(a)(1)); Texas gives 10 business days and requires the certificate to
-be no more than 60 days old (§ 207.003). Both packets are assembled from data the product already
-holds: the documents, the assessment balance, approved but not yet due changes, and open
-violations. Generating it on demand, dated and complete, is straightforward and is the highest
-value thing we can do with the documents we already store.
+be no more than 60 days old (§ 207.003); Virginia gives 14 days (§ 55.1-2309). All three packets
+are assembled from data the product already holds: the documents, the assessment balance, approved
+but not yet due changes, and open violations. Generating it on demand, dated and complete, is
+straightforward and is the highest value thing we can do with the documents we already store.
+`competitive-analysis.md` already reached the same conclusion from the revenue side.
+
+The deadline has teeth, which strengthens the case. In Virginia a purchaser who never gets the
+certificate can cancel any time before settlement (§ 55.1-2312), and the default cancellation
+window once they do get it is three days. A volunteer treasurer missing a 14 day window can
+collapse a neighbor's sale. That is a real, dated, ownable job, and it is the kind of deadline a
+product is good at and a person is bad at.
 
 **Two: open violations transfer, and nobody tells the buyer.** California requires the seller to
 pass along any unresolved § 5855 violation notice (§ 4525(a)); Texas requires violations of the
@@ -871,9 +1019,40 @@ All fetched 2026-08-26.
 - https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=legaldocml , OASIS LegalDocML /
   Akoma Ntoso, XML standard for legislative, judicial, and contract documents, OASIS Standard 2018
 
-<!-- COMPETITOR_SOURCES -->
+### Competitor pages
 
-<!-- ONBOARDING_SOURCES -->
+- https://www.payhoa.com/features , PayHOA features: "Store and share folders and documents";
+  Violations described as "Effortlessly enforce CC&Rs"; no template library or governing-document
+  AI on the page
+- https://www.appfolio.com/community-associations , AppFolio Community Associations: names
+  "Realm-X AI" and describes AI applied to invoice processing; no governing-document templates or
+  document AI on the page
+- https://www.condocontrol.com/features/ , Condo Control features: file library, violation
+  tracking, "AI manager assistant," and a coming-soon AI manager inbox
+- https://www.condocontrol.com/document-shop/ , Condo Control Document Shop catalog: Ontario
+  status certificates, meeting minutes, US estoppel certificates, Alberta estoppel certificates,
+  demand letters, financial documents, resale and disclosure packages, BC Form B packages,
+  unit-specific and administrative forms. No CC&R, declaration, or bylaw templates
+- https://www.vantaca.com/ , Vantaca: "HOAi Fleet" AI workforce and a "Knowledge Assistant"
+
+### Virginia resale disclosure
+
+- https://law.lis.virginia.gov/vacode/title55.1/chapter18/section55.1-1990/ , confirms
+  Va. Code §§ 55.1-1990 through 55.1-1995 were repealed by Acts 2023 cc. 387, 388, effective
+  July 1, 2023
+- https://law.lis.virginia.gov/vacode/title55.1/chapter21/section55.1-2309/ , Va. Code
+  § 55.1-2309, seller obtains the resale certificate from the association, association delivers
+  within 14 days of written request
+- https://law.lis.virginia.gov/vacode/title55.1/chapter21/section55.1-2310/ , Va. Code
+  § 55.1-2310(A), 30 required resale certificate items including flags, solar devices, signs,
+  parking and vehicles, home-based businesses, rentals, occupancy restrictions, and a statement
+  regarding violations of the governing documents or rules
+- https://law.lis.virginia.gov/vacode/title55.1/chapter21/section55.1-2311/ , Va. Code
+  § 55.1-2311, updated resale certificate and financial update (confirmed it does not carry the
+  cancellation right)
+- https://law.lis.virginia.gov/vacode/title55.1/chapter21/section55.1-2312/ , Va. Code
+  § 55.1-2312, cancellation of contract by purchaser, three day default, cancellation any time
+  prior to settlement if the certificate is never delivered
 
 ---
 
@@ -912,7 +1091,33 @@ All fetched 2026-08-26.
   LII.
 - uniformlaws.org's community page did not surface UCIOA text.
 
+**Competitor research is incomplete.**
+
+- Buildium (buildium.com/association-management-software/) and TownSq (townsq.io/features) both
+  returned 404 on the URLs tried, and the WebSearch budget was gone by then, so neither was
+  verified at all. Enumerate, HOA Express, Neighborium, and Frontsteps were not reached either.
+- Everything in the competitor subsection comes from public marketing pages. Marketing pages are
+  shallow, and **absence of a feature on a features page is weak evidence of absence in the
+  product**. The claim "nobody ships CC&R templates" is well supported by the Condo Control
+  Document Shop catalog, which is an actual product catalog rather than a feature blurb, but it
+  is not proven for vendors whose pages were not read.
+- Whether any vendor offers violation-*letter* templates specifically could not be confirmed.
+  PayHOA's page says "Effortlessly enforce CC&Rs" and does not say what that includes.
+- No HOA-specific document AI or CC&R parsing startup was identified. That is a **failure to find,
+  not a finding of absence**; the searches that would have surfaced them could not be run.
+
 **Not researched or not established.**
+
+- Florida's POA membership disclosure (Fla. Stat. § 720.401), the condominium resale disclosure
+  (§ 718.503), Colorado's disclosure requirements, Arizona's A.R.S. § 33-1806, and UCIOA § 4-109
+  were all in scope and none were read. Only California, Texas, and Virginia buyer disclosure was
+  verified.
+- No survey data on HOA violation frequency was obtained. The "what new owners get fined for"
+  subsection is inferred from what three legislatures require to be disclosed, which is a
+  reasonable proxy but is not the same as evidence about what boards actually fine people for.
+- CAI's Homeowner Satisfaction Survey and any data on how many owners read their governing
+  documents were not obtained. caionline.org returned 403.
+- CAI's own recommended welcome packet contents were not obtained, for the same reason.
 
 - Whether courts have squarely held that an HOA or condominium association is a covered "housing
   provider" under the Fair Housing Act. The statutory language reaches "any person" discriminating

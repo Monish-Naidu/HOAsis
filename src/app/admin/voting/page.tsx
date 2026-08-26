@@ -48,9 +48,13 @@ export default function BoardVoting() {
         title="Voting and meetings"
         
         action={
-          <Button variant="primary" size="md" onClick={() => setCreating((v) => !v)}>
-            {creating ? "Cancel" : "New ballot"}
-          </Button>
+          // The form carries its own Cancel, so offering a second one up here
+          // just puts two of them on screen saying the same thing.
+          creating ? undefined : (
+            <Button variant="primary" size="md" onClick={() => setCreating(true)}>
+              New ballot
+            </Button>
+          )
         }
       />
 

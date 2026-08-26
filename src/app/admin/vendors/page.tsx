@@ -11,7 +11,6 @@ import {
   Timer,
   Trash2,
   Truck,
-  X,
 } from "lucide-react";
 import {
   Badge,
@@ -76,21 +75,25 @@ export default function BoardVendors() {
         title="Vendors"
         
         action={
-          <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="md"
-            disabled={vendors.length === 0}
-            onClick={() => setRecording((v) => !v)}
-          >
-            <Receipt className="size-3.5" />
-            {recording ? "Cancel" : "Record a payment"}
-          </Button>
-          <Button variant="primary" size="md" onClick={() => setAdding((v) => !v)}>
-            {adding ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
-            {adding ? "Cancel" : "Add vendor"}
-          </Button>
-          </div>
+          // Each form carries its own Cancel, so the header offers the two
+          // ways in and gets out of the way once one is open.
+          recording || adding ? undefined : (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="md"
+                disabled={vendors.length === 0}
+                onClick={() => setRecording(true)}
+              >
+                <Receipt className="size-3.5" />
+                Record a payment
+              </Button>
+              <Button variant="primary" size="md" onClick={() => setAdding(true)}>
+                <Plus className="size-3.5" />
+                Add vendor
+              </Button>
+            </div>
+          )
         }
       />
 
