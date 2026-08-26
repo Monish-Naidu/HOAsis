@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/primitives";
 
 export const metadata = {
   title: "About",
-  description: "Why HOAsis exists, what we believe about running an association, and who it is for.",
+  description:
+    "A volunteer board carries a professional's liability with none of the training. This is what we built for that, and what we believe about running an association.",
 };
 
 /**
@@ -56,28 +57,28 @@ export default function AboutPage() {
       <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <Reveal>
           <h1 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[48px]">
-            Built for the person who did not want the job.
+            Nobody trains you for this.
           </h1>
         </Reveal>
 
         <Reveal delay={80}>
           <div className="mt-6 space-y-4 text-[17px] leading-[1.75] text-fg-muted">
             <p>
-              Roughly two in five American community associations manage themselves. That work
-              falls to volunteers who did not run for office so much as fail to leave the room
-              fast enough, and who are now personally responsible for a few hundred thousand
-              dollars of other people&apos;s money.
+              A board is usually three or four neighbors with day jobs. Between them they are
+              responsible for a few hundred thousand dollars, a set of roofs that will need
+              replacing, and a stack of legal deadlines nobody mentioned at the meeting where
+              they volunteered.
             </p>
             <p>
-              The software built for them mostly assumes a professional manager sits in the
-              middle. It expects someone who knows what accrual accounting is, who has run an
-              election before, and who reads statutes for a living. Volunteers have none of that
-              and the same liability.
+              Most software for this assumes a professional manager sits in the middle. It
+              expects someone who knows what accrual accounting is, who has run an election
+              before, and who reads statutes for a living. A volunteer board has none of that
+              and exactly the same liability.
             </p>
             <p>
-              HOAsis is the other assumption. It assumes the person using it is competent,
-              busy, unpaid, and slightly afraid of getting something wrong. So it shows its work,
-              refuses to guess on their behalf, and names the deadline before it passes.
+              HOAsis assumes the other thing. It assumes you are careful, busy, unpaid, and
+              slightly afraid of getting something wrong. So it shows its work, refuses to guess
+              on your behalf, and names the deadline before it passes.
             </p>
           </div>
         </Reveal>

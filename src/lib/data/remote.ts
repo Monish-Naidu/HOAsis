@@ -285,6 +285,9 @@ export async function loadCommunity(
     savingsOffers: [],
     // Text of the governing documents is not stored server side yet, so the
     // reader falls back to the uploaded file list.
+    // Reservations are not stored server side yet, so the picker offers every
+    // slot rather than pretending a free hour is taken.
+    amenityBookings: [],
     bylaws: [],
     bylawAmendments: [],
     sharedCosts: [],

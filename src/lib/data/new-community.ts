@@ -311,6 +311,8 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     posts: [],
 
     amenities: [],
+
+    amenityBookings: [],
     amenityStatus: [],
     // Baseline forms ship with the product, so the architectural request
     // dropdown is useful before the board has uploaded anything of their own.

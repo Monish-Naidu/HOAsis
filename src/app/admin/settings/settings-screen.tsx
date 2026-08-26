@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/primitives";
 import { DangerZone } from "@/components/app/danger-zone";
 import { useAppState } from "@/lib/app-state";
+import { AmenityRules } from "@/components/app/amenity-rules";
 import { useToast } from "@/components/app/toast";
 import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
 import { ROLE_LABEL, type ArchitecturalForm, type CommunityAmenity } from "@/lib/types";
@@ -335,13 +336,19 @@ export function SettingsScreen() {
           {amenities.map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex items-start gap-3 border-b border-border px-5 py-3 last:border-b-0"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
                 <p className="truncate text-[13px] text-fg-muted">{a.detail}</p>
+                {a.reservable ? (
+                  <AmenityRules
+                    amenity={a}
+                    onChange={(rules) => patchAmenity(a.id, { rules })}
+                  />
+                ) : null}
               </div>
-              <label className="flex shrink-0 items-center gap-1.5 text-[13px] text-fg-muted">
+              <label className="mt-0.5 flex shrink-0 items-center gap-1.5 text-[13px] text-fg-muted">
                 Reservable
                 <Toggle
                   checked={a.reservable}
@@ -356,7 +363,7 @@ export function SettingsScreen() {
                   const undo = removeAmenity(a.id);
                   notify(`Removed ${a.name}`, "warn", { label: "Undo", onClick: undo });
                 }}
-                className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
               >
                 <Trash2 className="size-3.5" />
               </button>

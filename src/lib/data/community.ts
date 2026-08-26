@@ -1,5 +1,6 @@
 import type {
   Account,
+  AmenityBooking,
   BylawAmendment,
   BylawArticle,
   Amenity,
@@ -114,6 +115,8 @@ export interface Community {
   posts: ForumPost[];
 
   amenities: CommunityAmenity[];
+  /** Held and confirmed reservations, so the picker can grey out what is gone. */
+  amenityBookings: AmenityBooking[];
   /** The legacy display list on the resident home. */
   amenityStatus: Amenity[];
   forms: ArchitecturalForm[];

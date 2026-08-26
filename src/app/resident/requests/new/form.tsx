@@ -14,6 +14,8 @@ import {
   Paperclip,
 } from "lucide-react";
 import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
+import { SlotPicker } from "@/components/app/slot-picker";
+import { formatMinute } from "@/lib/bookings";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { HomeRequest, RequestKind } from "@/lib/types";
 import { cn, formatDate, todayIsoDate } from "@/lib/utils";
@@ -50,7 +52,7 @@ const kinds = [
 ] as const;
 
 export function NewRequestForm() {
-  const { amenities, forms, addRequest, requests: allRequests } = useAppState();
+  const { amenities, forms, addRequest, community, requests: allRequests } = useAppState();
   const owner = useCurrentOwner();
   const [reference, setReference] = useState("");
   const [kind, setKind] = useState<(typeof kinds)[number]["id"] | null>(null);
@@ -62,6 +64,11 @@ export function NewRequestForm() {
 
   const chosen = kinds.find((k) => k.id === kind);
   const selectedAmenity = amenities.find((a) => a.id === amenityId);
+  const [slot, setSlot] = useState<{
+    date: string;
+    startMinute: number;
+    endMinute: number;
+  } | null>(null);
   const reservable = amenities.filter((a) => a.reservable);
   const selectedForm = forms.find((f) => f.id === formId);
   const ready =
@@ -101,7 +108,11 @@ export function NewRequestForm() {
     const ref = `REQ-2026-${seq}`;
     const detail =
       kind === "amenity" && selectedAmenity
-        ? `${selectedAmenity.name}. ${body.trim()}`
+        ? `${selectedAmenity.name}${
+            slot
+              ? `, ${formatDate(slot.date, "medium")} at ${formatMinute(slot.startMinute)}`
+              : ""
+          }. ${body.trim()}`
         : kind === "architectural" && selectedForm
           ? `${selectedForm.label}. ${body.trim()}`
           : body.trim();
@@ -201,7 +212,6 @@ export function NewRequestForm() {
               {reservable.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
-                  {a.maxHours ? ` (up to ${a.maxHours} hours)` : ""}
                 </option>
               ))}
             </select>
@@ -209,9 +219,21 @@ export function NewRequestForm() {
               <p className="mt-2 text-[13px] text-fg-muted">
                 The board has not made any amenities reservable yet.
               </p>
+            ) : selectedAmenity ? (
+              // The rules are applied rather than described, so a resident
+              // never picks a time they are not allowed to have.
+              <div className="mt-3">
+                <SlotPicker
+                  amenity={selectedAmenity}
+                  bookings={community.amenityBookings}
+                  unit={owner?.unit ?? ""}
+                  value={slot}
+                  onChange={setSlot}
+                />
+              </div>
             ) : (
               <p className="mt-2 text-[13px] text-fg-subtle">
-                The board sets which amenities can be reserved and for how long.
+                Pick one and we will show you what times are free.
               </p>
             )}
           </Card>

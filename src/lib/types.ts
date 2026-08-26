@@ -494,6 +494,34 @@ export interface Account {
 /* Community settings, owned by the admins                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The rules a board sets on a bookable space.
+ *
+ * Every association ends up writing these on a laminated sign by the door, and
+ * then enforcing them by argument. Stating them as numbers means the booking
+ * screen can simply not offer a slot that breaks one, which is a great deal
+ * kinder than letting somebody book and then telling them they cannot.
+ *
+ * All optional. A space with no rules can be booked at any hour for as long as
+ * anybody likes, which is genuinely how some picnic shelters work.
+ */
+export interface BookingRules {
+  /** Earliest and latest hour of the day, 0 to 23. */
+  opensHour?: number;
+  closesHour?: number;
+  /** Length of one bookable block, in minutes. */
+  slotMinutes?: number;
+  /** Longest single booking, in hours. */
+  maxHours?: number;
+  /** How many bookings one home may hold in a day and in a week. */
+  maxPerDay?: number;
+  maxPerWeek?: number;
+  /** How far ahead a home may book. */
+  advanceDays?: number;
+  /** Whether the board approves each one, or the slot is simply taken. */
+  needsApproval?: boolean;
+}
+
 export interface CommunityAmenity {
   id: ID;
   name: string;
@@ -501,7 +529,23 @@ export interface CommunityAmenity {
   reservable: boolean;
   detail: string;
   status: "open" | "reserved" | "closed";
+  /** Kept for the older screens. `rules.maxHours` is the one that governs. */
   maxHours?: number;
+  rules?: BookingRules;
+}
+
+/** One held slot, so the booking screen can grey out what is gone. */
+export interface AmenityBooking {
+  id: ID;
+  amenityId: ID;
+  /** YYYY-MM-DD. */
+  date: ISODate;
+  /** Minutes from midnight, so arithmetic never touches a timezone. */
+  startMinute: number;
+  endMinute: number;
+  unit: string;
+  ownerName: string;
+  status: "held" | "confirmed" | "declined";
 }
 
 /**

@@ -167,3 +167,60 @@ test.describe("resident experience", () => {
     ).toBeLessThan(3);
   });
 });
+
+test.describe("booking an amenity", () => {
+  test("a resident is offered only the slots the board allows", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.resident, view: "resident" });
+    await page.goto("/resident/requests/new");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: /Amenity|Reserve/i }).first().click();
+    await page.waitForTimeout(400);
+    await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
+    await page.waitForTimeout(500);
+
+    const health = await inspect(page);
+    expect(health.crashed, "the slot picker crashed").toBe(false);
+    // The rules are stated in words a resident can read, not as fields.
+    expect(health.text, "the rules are not stated").toMatch(/at a time|once a day|ahead/);
+    // And real times are offered.
+    expect(health.text).toMatch(/\d+ (AM|PM)/);
+  });
+
+  test("a slot somebody else holds cannot be taken", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.resident, view: "resident" });
+    await page.goto("/resident/requests/new");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: /Amenity|Reserve/i }).first().click();
+    await page.waitForTimeout(400);
+    await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
+    await page.waitForTimeout(500);
+
+    // Every offered time is a button; a taken one is disabled rather than
+    // absent, so the resident can see it exists and pick another day.
+    const disabled = await page.locator("button[disabled]").count();
+    expect(disabled, "nothing was ever unavailable, so the rules do nothing").toBeGreaterThan(0);
+  });
+});
+
+test.describe("the board sets the rules", () => {
+  test("booking rules are readable without opening anything", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await page.goto("/admin/settings");
+    await page.waitForLoadState("networkidle");
+
+    const health = await inspect(page);
+    expect(health.crashed).toBe(false);
+    // A board should be able to check what they set at a glance.
+    expect(health.text, "the rules are hidden behind a panel").toMatch(
+      /at a time|once a day|days ahead/,
+    );
+
+    await page.getByRole("button", { name: "Booking rules" }).first().click();
+    await page.waitForTimeout(400);
+    const opened = await inspect(page);
+    expect(opened.text, "the controls never appeared").toContain("How long is one booking");
+    expect(opened.text, "the per home cap is missing").toContain("Bookings per home, per day");
+  });
+});

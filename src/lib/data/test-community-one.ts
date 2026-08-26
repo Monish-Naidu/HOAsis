@@ -717,6 +717,7 @@ export const testCommunityOne: Community = {
 
   // No shared amenities.
   amenities: [],
+  amenityBookings: [],
   amenityStatus: [],
 
   forms: [

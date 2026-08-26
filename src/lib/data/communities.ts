@@ -33,6 +33,7 @@ import {
   sharedCosts as mmSharedCosts,
   specialAssessments as mmAssessments,
 } from "./shared-costs";
+import { amenityBookings as mmBookings } from "./bookings";
 import { messageTemplates as mmTemplates } from "./templates";
 import { ballots as mmBallots, meetings as mmMeetings } from "./voting";
 import { testCommunityOne } from "./test-community-one";
@@ -71,6 +72,7 @@ export const mehrMeadows: Community = {
   announcements: mmAnnouncements,
   posts: mmPosts,
   amenities: mmAmenities,
+  amenityBookings: mmBookings,
   amenityStatus: mmAmenityStatus,
   forms: mmForms,
   templates: mmTemplates,
