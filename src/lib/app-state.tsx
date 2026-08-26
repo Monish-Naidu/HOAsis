@@ -164,6 +164,15 @@ interface AppState {
    */
   /** Association level facts a board edits: insurance, name, dues. */
   updateAssociation: (patch: Partial<Community["association"]>) => void;
+  /**
+   * Records a payment to a vendor.
+   *
+   * Plenty of boards will keep paying their landscaper from their own bank for
+   * a while, and a product that only knows about payments it made itself shows
+   * them books that are wrong. So a payment can be entered after the fact,
+   * with the date it actually left.
+   */
+  addPayout: (payout: Community["payouts"][number]) => void;
   addBallot: (ballot: Community["ballots"][number]) => void;
   addMeeting: (meeting: Community["meetings"][number]) => void;
   addBudgetLine: (line: Community["budget"][number]) => void;
@@ -1144,6 +1153,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  const addPayout = useCallback(
+    (payout: Community["payouts"][number]) =>
+      sliceStore(communityId, "payouts").update((all) =>
+        [payout, ...all].sort((a, b) => b.issuedDate.localeCompare(a.issuedDate)),
+      ),
+    [communityId],
+  );
+
   const addBallot = useCallback(
     (ballot: Community["ballots"][number]) =>
       sliceStore(communityId, "ballots").update((all) => [ballot, ...all]),
@@ -1391,6 +1408,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     replyToThread,
     addDocument,
     updateAssociation,
+    addPayout,
     addBallot,
     addMeeting,
     addBudgetLine,

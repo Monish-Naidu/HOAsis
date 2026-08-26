@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   FileWarning,
   Landmark,
+  Receipt,
   Plus,
   ShieldAlert,
   Timer,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/primitives";
 import { useState } from "react";
 import { useAppState, usePendingApprovals, useVendorGaps } from "@/lib/app-state";
+import { RecordPayment } from "@/components/app/record-payment";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 
@@ -40,6 +42,7 @@ export default function BoardVendors() {
     useAppState();
   const { notify } = useToast();
   const [adding, setAdding] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [draft, setDraft] = useState({
     name: "",
     service: "",
@@ -73,12 +76,26 @@ export default function BoardVendors() {
         title="Vendors"
         
         action={
+          <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="md"
+            disabled={vendors.length === 0}
+            onClick={() => setRecording((v) => !v)}
+          >
+            <Receipt className="size-3.5" />
+            {recording ? "Cancel" : "Record a payment"}
+          </Button>
           <Button variant="primary" size="md" onClick={() => setAdding((v) => !v)}>
             {adding ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
             {adding ? "Cancel" : "Add vendor"}
           </Button>
+          </div>
         }
       />
+
+      {recording ? <RecordPayment onClose={() => setRecording(false)} /> : null}
+
 
       {/* Four counts sat here and two were trivia. "Bank payment lands in 1.8
           days" is a backward looking average of payments already made, which

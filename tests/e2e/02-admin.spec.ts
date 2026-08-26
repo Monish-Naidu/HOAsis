@@ -437,3 +437,54 @@ test.describe("a board can actually run a vote", () => {
     await expect(open, "a ballot with one choice could be opened").toBeDisabled();
   });
 });
+
+test.describe("vendors", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "admin" });
+  });
+
+  test("every control on the page does something", async ({ page }) => {
+    await page.goto("/admin/vendors");
+    const health = await expectHealthy(page, "vendors");
+    // expectHealthy already fails on a button a screen reader cannot name or
+    // that does nothing, so this asserts the page is whole.
+    expect(health.headingCount).toBeGreaterThan(0);
+    expect(health.deadButtons, "a control on this page does nothing").toEqual([]);
+  });
+
+  test("a payment already made from the board's own bank can be recorded", async ({ page }) => {
+    await page.goto("/admin/vendors");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Record a payment" }).click();
+    await page.waitForTimeout(400);
+
+    await page.getByLabel("Amount paid").fill("1380");
+    // Their date, not today's. A payment entered in April for a February
+    // invoice belongs in February, or the books are wrong.
+    await page.getByLabel("Date paid").fill("2026-02-14");
+    await page.getByLabel("Payment method").selectOption("check");
+    await page.getByLabel("Reference").fill("1042");
+    await page.waitForTimeout(300);
+
+    await page.getByRole("button", { name: "Record it" }).click();
+    await page.waitForTimeout(700);
+
+    const health = await expectHealthy(page, "vendors after recording a payment");
+    expect(health.text, "the recorded payment never appeared").toContain("1042");
+  });
+
+  test("routing a payment through us queues it for approval instead", async ({ page }) => {
+    await page.goto("/admin/vendors");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Record a payment" }).click();
+    await page.waitForTimeout(400);
+
+    await page.getByLabel("Amount paid").fill("500");
+    await page.getByText("Send this payment through HOAsis").click();
+    await page.waitForTimeout(300);
+
+    // Money that has already gone needs no approval; money that has not, does.
+    await expect(page.getByRole("button", { name: "Queue the payment" })).toBeVisible();
+  });
+});
