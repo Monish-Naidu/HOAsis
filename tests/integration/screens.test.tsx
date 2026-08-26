@@ -49,13 +49,17 @@ describe("sign in", () => {
     expect(push).toHaveBeenCalledWith("/resident");
   });
 
-  it("offers create account without pretending to verify anything", async () => {
+  it("does not let somebody choose their own unit at signup", async () => {
     const user = userEvent.setup();
     wrap(<SignInPanel />);
 
     await user.click(screen.getByRole("button", { name: "Create account" }));
     expect(screen.getByLabelText(/Full name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Unit number/i)).toBeInTheDocument();
+
+    // A home is assigned by the association's register and claimed through an
+    // invitation. A unit field here would let anyone type their way into a
+    // neighbor's balance, which is the one thing signup must not allow.
+    expect(screen.queryByLabelText(/Unit number/i)).not.toBeInTheDocument();
   });
 
   it("matches a typed email to a seeded account", async () => {
