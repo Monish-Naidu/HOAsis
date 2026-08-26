@@ -65,7 +65,7 @@ const tabs: { key: TabKey; label: string; points: string[] }[] = [
     label: "Vendors",
     points: [
       "ACH by default, checks as the exception",
-      "Two signatures over a threshold",
+      "A second signature on payments that need one",
       "W-9 and insurance tracked with the vendor",
     ],
   },

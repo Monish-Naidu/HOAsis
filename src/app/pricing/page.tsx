@@ -80,7 +80,7 @@ const INCLUDED = [
   "Documents and the public records page",
   "Compliance register for your state",
   "Community forum with moderation",
-  "Phone and chat support, seven days a week",
+  "Email support, from the people who built it",
 ];
 
 /**

@@ -1,4 +1,4 @@
-import type { CommunitySettings } from "@/lib/types";
+import type { Association, CommunitySettings } from "@/lib/types";
 
 /**
  * Runtime type guards for anything that crosses a trust boundary.
@@ -84,5 +84,25 @@ export function isBudgetLines(value: unknown): value is { category: string }[] {
   return (
     Array.isArray(value) &&
     value.every((line) => isRecord(line) && typeof line.category === "string")
+  );
+}
+
+/**
+ * The association record.
+ *
+ * Needed because the persisted slice validator otherwise falls through to
+ * "an array of records with ids", and an association is a single object. It
+ * failed that check on every read, so the store silently discarded whatever
+ * had been saved and handed back the seed. Recording insurance appeared to
+ * work, survived a reload in storage, and was invisible to every screen.
+ */
+export function isAssociation(value: unknown): value is Association {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.state === "string" &&
+    typeof value.duesCents === "number" &&
+    typeof value.unitCount === "number"
   );
 }

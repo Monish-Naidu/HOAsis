@@ -369,7 +369,6 @@ export function assistantContext() {
     })),
     documentCount: documents.filter((d) => d.visibility !== "board").length,
     amenities: amenities.map((a) => ({ name: a.name, status: a.status, detail: a.detail })),
-    support: { phone: "(888) 555-0199", hours: "7am to 11pm, every day" },
   };
 }
 

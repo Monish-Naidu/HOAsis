@@ -80,7 +80,14 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
 
   // Step 4, bank. Skipping is a supported path.
   await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(900);
+  // Signed out, the wizard now asks for an account rather than silently
+  // building a browser only copy. Exploring is the labelled way past it.
+  const explore = page.getByRole("button", { name: "Look around first" });
+  if (await explore.isVisible().catch(() => false)) {
+    await explore.click();
+    await page.waitForTimeout(900);
+  }
   await page.getByRole("button", { name: /See what is next/ }).click();
   await page.waitForTimeout(900);
 }
@@ -430,5 +437,64 @@ test.describe("what kind of homes changes the plan", () => {
     expect(health.text, "the detached insurance position is not stated").toContain(
       "Owners insure their own homes",
     );
+  });
+});
+
+test.describe("get started and signing up are the same flow", () => {
+  test("finishing without an account asks for one instead of quietly building a copy", async ({
+    page,
+  }) => {
+    await clearOnce(page);
+    await waitForHydration(page);
+
+    await page.getByLabel(/Association name/i).fill("Account Gate HOA");
+    await page.getByLabel(/City/i).fill("Bothell");
+    await page.getByLabel(/State/i).selectOption({ label: "Washington" });
+    await page.getByLabel(/Each home pays/i).fill("120");
+    await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.waitForTimeout(300);
+    await page.getByRole("button", { name: /Detached homes/ }).click();
+    await page.getByRole("button", { name: /Brand new/ }).click();
+    await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.waitForTimeout(300);
+    await page.getByLabel("Your name").fill("Pat Founder");
+    await page.getByLabel("Your email").fill("pat@example.com");
+    await page.getByLabel("Your unit").fill("1");
+    await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.waitForTimeout(300);
+    await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
+    await page.waitForTimeout(700);
+
+    const health = await inspect(page);
+    // It used to build the association silently, and a board reasonably
+    // believed they had set it up. They had not: it lived in one browser.
+    expect(health.text, "no account was ever asked for").toContain("Last thing: an account");
+    // Carried from the founder they already typed, so nobody enters it twice.
+    // Read from the field rather than the text, since an input's value is not
+    // part of innerText.
+    await expect(
+      page.getByLabel(/Your email/i),
+      "the email was not carried forward",
+    ).toHaveValue("pat@example.com");
+    // Looking around is still allowed, and now says what it is.
+    expect(health.text, "exploring is not offered as a real choice").toContain(
+      "Look around first",
+    );
+    expect(health.text, "the browser only copy is not explained").toContain(
+      "builds a copy in this browser only",
+    );
+  });
+
+  test("looking around still works, and still reaches the plan", async ({ page }) => {
+    await onboard(page, {
+      name: "Explore Only HOA",
+      state: "Washington",
+      dues: "110",
+      property: "Detached homes",
+      origin: "Brand new",
+    });
+    expect(page.url()).toContain("/start/plan");
+    const health = await inspect(page);
+    expect(health.text).toContain("Explore Only HOA is live");
   });
 });

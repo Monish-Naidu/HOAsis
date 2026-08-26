@@ -21,11 +21,10 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { payoutSpeed } from "@/lib/metrics";
 import { useState } from "react";
 import { useAppState, usePendingApprovals, useVendorGaps } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { daysFromToday, formatDate, money, pluralize, relativeDays } from "@/lib/utils";
+import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 
 const payoutTone = {
   paid: "ok",
@@ -37,9 +36,8 @@ const payoutTone = {
 export default function BoardVendors() {
   const gaps = useVendorGaps();
   const awaiting = usePendingApprovals();
-  const { community, vendors, payouts, markW9Requested, approvePayout, addVendor, removeVendor } =
+  const { vendors, payouts, markW9Requested, approvePayout, addVendor, removeVendor } =
     useAppState();
-  const speed = payoutSpeed(community);
   const { notify } = useToast();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({
@@ -66,10 +64,8 @@ export default function BoardVendors() {
     setDraft({ name: "", service: "", achEnabled: true, w9OnFile: false });
     setAdding(false);
   }
-  const achCount = vendors.filter((v) => v.achEnabled).length;
   // Undefined rather than zero when there are no vendors, so a board with none
   // is not told that 0% of them are on ACH.
-  const achShare = vendors.length ? achCount / vendors.length : undefined;
 
   return (
     <>
@@ -84,33 +80,45 @@ export default function BoardVendors() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Four counts sat here and two were trivia. "Bank payment lands in 1.8
+          days" is a backward looking average of payments already made, which
+          tells a board nothing they can act on, and the signature card claimed
+          "two signatures required over $1,000", a policy this association had
+          never set anywhere. Stating a rule nobody chose is worse than saying
+          nothing. What is left is the three things that are somebody's job. */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <Stat
-          label="Can be paid by bank"
-          value={achShare === undefined ? "None yet" : `${Math.round(achShare * 100)}%`}
-          tone={achShare === undefined ? "neutral" : "ok"}
-          hint={vendors.length ? `${achCount} of ${pluralize(vendors.length, "vendor")}` : "Add a vendor to start paying by bank transfer"}
-          icon={<Landmark className="size-4" />}
-        />
-        <Stat
-          label="Bank payment lands in"
-          value={speed.ach > 0 ? `${speed.ach.toFixed(1)} days` : "No payments yet"}
-          tone={speed.ach > 0 ? "ok" : "neutral"}
-          hint={speed.check > 0 ? `Checks average ${speed.check.toFixed(0)} days` : "Nothing paid by check yet"}
+          label="Waiting on you"
+          value={String(awaiting.length)}
+          tone={awaiting.length ? "warn" : "ok"}
+          hint={
+            awaiting.length
+              ? "Payments a board member has to approve before they go"
+              : "Nothing needs approving"
+          }
           icon={<Timer className="size-4" />}
         />
         <Stat
-          label="Waiting on a signature"
-          value={String(awaiting.length)}
-          tone="warn"
-          hint="Two signatures required over $1,000"
+          label="Missing a W-9"
+          value={String(gaps.missingW9.length)}
+          tone={gaps.missingW9.length ? "danger" : "ok"}
+          hint={
+            gaps.missingW9.length
+              ? "Pay one more than $600 in a year and the IRS wants a 1099 in January"
+              : "Every vendor has one on file"
+          }
+          icon={<FileWarning className="size-4" />}
         />
         <Stat
-          label="Document gaps"
-          value={String(gaps.missingW9.length + gaps.expiringCoi.length)}
-          tone={gaps.missingW9.length ? "danger" : "warn"}
-          hint="Missing W-9s and expiring COIs"
-          icon={<FileWarning className="size-4" />}
+          label="Insurance expiring"
+          value={String(gaps.expiringCoi.length)}
+          tone={gaps.expiringCoi.length ? "warn" : "ok"}
+          hint={
+            gaps.expiringCoi.length
+              ? "Within 60 days. An uninsured vendor on your property is your problem"
+              : "No certificate lapses in the next 60 days"
+          }
+          icon={<Landmark className="size-4" />}
         />
       </div>
 

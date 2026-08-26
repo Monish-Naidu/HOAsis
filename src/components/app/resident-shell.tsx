@@ -195,13 +195,19 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               </TabPill>
             </nav>
             <div className="mt-4 rounded-card border border-border bg-surface p-3">
-              <p className="text-[13px] font-semibold text-fg-muted">
-                Need a person
-              </p>
+              {/* A support line that does not exist. An owner would have
+                  called it. Their board is the right answer to almost every
+                  question an owner has here, and it is the true one. */}
+              <p className="text-[13px] font-semibold text-fg-muted">Need a person</p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
-                Phone and chat, 7am to 11pm, every day.
+                Your board answers requests here, and you can see where yours stands.
               </p>
-              <p className="mt-2 text-[15px] font-semibold text-fg">(888) 555-0199</p>
+              <Link
+                href="/resident/requests"
+                className="mt-2 inline-block text-[15px] font-semibold text-brand hover:underline"
+              >
+                Open a request
+              </Link>
             </div>
           </div>
         </aside>

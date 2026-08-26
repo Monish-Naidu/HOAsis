@@ -13,6 +13,7 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { MoneyTabs } from "@/components/app/money-tabs";
+import { AddReserveComponent } from "@/components/app/add-reserve-component";
 import { communitySlug, interestSummary } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import {
@@ -85,6 +86,7 @@ export function ReservesScreen() {
       <>
         <MoneyTabs />
         <PageHeader eyebrow="Reserves" title="Funding plan" />
+        <AddReserveComponent />
         <Callout
           tone="warn"
           icon={<AlertTriangle className="size-4" />}

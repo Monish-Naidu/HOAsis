@@ -39,6 +39,7 @@ import { buildCommunity, type CommunityDraft } from "@/lib/data/new-community";
 import {
   isBudgetLines,
   isChargeLedger,
+  isAssociation,
   isCommunitySettings,
   isRecordArray,
   isSession,
@@ -161,6 +162,10 @@ interface AppState {
    * the board's trend read the same rows. A screen that kept its own copy would
    * be the exact drift this product argues against.
    */
+  /** Association level facts a board edits: insurance, name, dues. */
+  updateAssociation: (patch: Partial<Community["association"]>) => void;
+  addBudgetLine: (line: Community["budget"][number]) => void;
+  addReserveComponent: (component: Community["reserveComponents"][number]) => void;
   addSharedCost: (cost: Community["sharedCosts"][number]) => void;
   removeSharedCost: (costId: string) => void;
   postSharedCostBill: (bill: Community["sharedCostBills"][number]) => void;
@@ -238,6 +243,11 @@ const MUTABLE_SLICES = [
   "templates",
   "sharedCosts",
   "sharedCostBills",
+  // Both were read-only, which meant four tasks on the setup plan pointed at
+  // screens that could not complete them. A plan that cannot be finished is
+  // worse than no plan.
+  "association",
+  "reserveComponents",
 ] as const;
 
 type MutableSlice = (typeof MUTABLE_SLICES)[number];
@@ -264,7 +274,9 @@ function sliceStore<K extends MutableSlice>(
   const store = new PersistedStore(key, seed, {
     breaker: storageBreaker,
     validate:
-      slice === "settings"
+      slice === "association"
+        ? (isAssociation as (v: unknown) => v is Community[K])
+        : slice === "settings"
         ? (isCommunitySettings as (v: unknown) => v is Community[K])
         : slice === "ownerCharges"
           ? (isChargeLedger as (v: unknown) => v is Community[K])
@@ -398,6 +410,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const vendors = useStore(sliceStore(communityId, "vendors"));
   const threads = useStore(sliceStore(communityId, "threads"));
   const documents = useStore(sliceStore(communityId, "documents"));
+  const associationRow = useStore(sliceStore(communityId, "association"));
+  const reserveComponentList = useStore(sliceStore(communityId, "reserveComponents"));
   const sharedCosts = useStore(sliceStore(communityId, "sharedCosts"));
   const sharedCostBills = useStore(sliceStore(communityId, "sharedCostBills"));
   const ballots = useStore(sliceStore(communityId, "ballots"));
@@ -1118,6 +1132,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  const updateAssociation = useCallback(
+    (patch: Partial<Community["association"]>) =>
+      sliceStore(communityId, "association").update((current) => ({ ...current, ...patch })),
+    [communityId],
+  );
+
+  const addBudgetLine = useCallback(
+    (line: Community["budget"][number]) =>
+      sliceStore(communityId, "budget").update((all) => [...all, line]),
+    [communityId],
+  );
+
+  const addReserveComponent = useCallback(
+    (component: Community["reserveComponents"][number]) =>
+      sliceStore(communityId, "reserveComponents").update((all) => [...all, component]),
+    [communityId],
+  );
+
   const addSharedCost = useCallback(
     (cost: Community["sharedCosts"][number]) =>
       sliceStore(communityId, "sharedCosts").update((all) => [...all, cost]),
@@ -1232,6 +1264,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       documents,
       ballots,
       templates,
+      association: associationRow,
+      reserveComponents: reserveComponentList,
       sharedCosts,
       sharedCostBills,
     }),
@@ -1255,6 +1289,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       documents,
       ballots,
       templates,
+      associationRow,
+      reserveComponentList,
       sharedCosts,
       sharedCostBills,
     ],
@@ -1332,6 +1368,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     markW9Requested,
     replyToThread,
     addDocument,
+    updateAssociation,
+    addBudgetLine,
+    addReserveComponent,
     addSharedCost,
     removeSharedCost,
     postSharedCostBill,
@@ -1559,7 +1598,6 @@ export function useAssistantContext() {
         })),
       documentCount: documents.filter((d) => d.visibility !== "board").length,
       amenities: amenities.map((a) => ({ name: a.name, status: a.status, detail: a.detail })),
-      support: { phone: "(888) 555-0199", hours: "7am to 11pm, every day" },
       fundsVisible: settings.showFundsToResidents,
     };
   }, [community, settings, requests, documents, amenities, owner, charges]);

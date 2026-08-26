@@ -23,6 +23,7 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { MoneyTabs } from "@/components/app/money-tabs";
+import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { useMemo, useState } from "react";
 import {
   budgetSummary,
@@ -284,6 +285,7 @@ export default function BoardMoney() {
       </div>
 
       {/* Ledger */}
+      <div className="mt-5"><AddBudgetLine /></div>
       <Card className="mt-5">
         <CardHeader
           title="Every transaction"

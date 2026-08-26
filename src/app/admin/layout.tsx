@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/app/admin-nav";
 import { RequireCapability } from "@/components/app/require-capability";
+import { SetupReturnBar } from "@/components/app/setup-return-bar";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { ThemeToggle } from "@/components/app/theme";
@@ -41,18 +42,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 shorter than the nav rather than being cut off. */}
             <div className="no-scrollbar sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto pb-4">
               <AdminNav />
+              {/* A phone number and "7am to 11pm, every day" sat here. Neither
+                  was true, and a support commitment nobody can honour is the
+                  worst kind of copy to ship: it is believed. The library is
+                  real, free, and the thing most questions are actually about. */}
               <div className="mt-6 rounded-card border border-border bg-surface p-3">
-                <p className="text-[13px] font-semibold text-fg-muted">
-                  Support
-                </p>
+                <p className="text-[13px] font-semibold text-fg-muted">Stuck on something</p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
-                  Phone and chat, 7am to 11pm, every day.
+                  The library covers what your state requires, in plain words.
                 </p>
-                <p className="mt-2 text-[15px] font-semibold text-fg">(888) 555-0199</p>
+                <Link
+                  href="/library"
+                  className="mt-2 inline-block text-[15px] font-semibold text-brand hover:underline"
+                >
+                  Open the library
+                </Link>
               </div>
             </div>
           </aside>
           <main className="min-w-0 flex-1">
+            <SetupReturnBar />
             <RequireCapability>{children}</RequireCapability>
           </main>
         </div>

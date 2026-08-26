@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Upload, Users } from "lucide-react";
-import { Button, Card } from "@/components/ui/primitives";
+import { Button, Callout, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
 import { STATES } from "@/lib/data/library";
@@ -15,6 +15,12 @@ import {
 } from "@/lib/data/new-community";
 import { BankStep } from "./bank-step";
 import { SituationStep } from "./situation-step";
+import { AccountStep } from "./account-step";
+import {
+  clearPendingDraft,
+  pendingDraftStore,
+  restoreDraft,
+} from "@/lib/pending-draft";
 import { cn, money } from "@/lib/utils";
 
 /**
@@ -47,6 +53,14 @@ const STEPS = [
   { id: "bank", label: "Bank", blurb: "Where dues land" },
 ] as const;
 
+/**
+ * Whether the last screen asks for an account.
+ *
+ * Somebody already signed in has one. Everybody else used to reach the end,
+ * press a button, and get an association that existed in their browser and
+ * nowhere else, with nothing on screen to suggest otherwise.
+ */
+
 const CADENCES = [
   { id: "monthly", label: "Monthly" },
   { id: "quarterly", label: "Quarterly" },
@@ -59,9 +73,22 @@ export function SetupWizard() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<CommunityDraft>(emptyDraft);
+  // Setup finished before they had an account, held through the round trip
+  // to their email. Offered back rather than resumed silently, because
+  // quietly restoring somebody's half-finished work is its own surprise.
+  const pending = useSyncExternalStore(
+    (fn) => pendingDraftStore.subscribe(fn),
+    () => pendingDraftStore.getSnapshot(),
+    () => null,
+  );
+  const [resumeDismissed, setResumeDismissed] = useState(false);
+
   const [done, setDone] = useState<{ id: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const [askingForAccount, setAskingForAccount] = useState(false);
+
+  const canResume = Boolean(auth.user) && Boolean(pending) && !resumeDismissed && step === 0;
 
   const patch = (next: Partial<CommunityDraft>) => setDraft((d) => ({ ...d, ...next }));
   const complete = useMemo(() => stepComplete(draft), [draft]);
@@ -74,7 +101,9 @@ export function SetupWizard() {
   async function finish(withDraft: CommunityDraft) {
     setFailure(null);
     if (!auth.user) {
-      setDone({ id: createCommunity(withDraft).id });
+      // Not an account yet. Ask, rather than quietly building a copy that
+      // only this browser will ever see.
+      setAskingForAccount(true);
       return;
     }
     setBusy(true);
@@ -93,6 +122,24 @@ export function SetupWizard() {
   // empty workspace has to work out what to do next; one that lands on a plan
   // is told, in the order that gets money moving first.
   if (done) return <FinishedPanel draft={draft} onOpen={() => router.push("/start/plan")} />;
+
+  if (askingForAccount) {
+    return (
+      <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
+        <AccountStep
+          draft={draft}
+          onExplore={() => {
+            setAskingForAccount(false);
+            setDone({ id: createCommunity(draft).id });
+          }}
+          onSignedIn={() => {
+            setAskingForAccount(false);
+            void finish(draft);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
@@ -123,6 +170,42 @@ export function SetupWizard() {
           </li>
         ))}
       </ol>
+
+      {canResume && pending ? (
+        <Callout
+          tone="ok"
+          className="mt-6"
+          icon={<Check className="size-4" />}
+          title={`Pick up where you left off with ${pending.draft.name || "your association"}`}
+          action={
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setDraft(restoreDraft(pending));
+                  clearPendingDraft();
+                  setStep(STEPS.length - 1);
+                }}
+              >
+                Restore it
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearPendingDraft();
+                  setResumeDismissed(true);
+                }}
+              >
+                Start over
+              </Button>
+            </div>
+          }
+        >
+          Everything you entered before confirming your email is still here, including{" "}
+          {pending.draft.households.length + 1} homes.
+        </Callout>
+      ) : null}
 
       <div className="mt-8">
         {step === 0 ? <AssociationStep draft={draft} patch={patch} /> : null}

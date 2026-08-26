@@ -249,8 +249,12 @@ const intents: Intent[] = [
     id: "support",
     keywords: ["call", "phone", "contact", "support", "person", "someone", "reach"],
     phrases: ["talk to someone", "who do i call", "contact the board"],
-    answer: (c) => ({
-      text: `Support is on the phone and in chat ${c.support.hours} at ${c.support.phone}. For anything the board decides, a request creates a record and a deadline, which email does not.`,
+    answer: () => ({
+      // There is no phone line, and inventing one meant an owner would have
+      // dialled it. Their board is the honest answer to almost everything an
+      // owner asks here, and a request creates a record and a deadline that
+      // email does not.
+      text: `Your board handles this. Opening a request puts it on the record with a deadline, and you can see where it stands, which an email to somebody's inbox cannot do.`,
       action: { label: "Start a request", href: "/resident/requests/new" },
     }),
   },

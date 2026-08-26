@@ -30,7 +30,12 @@ import { useAppState } from "@/lib/app-state";
 import { AmenityRules } from "@/components/app/amenity-rules";
 import { useToast } from "@/components/app/toast";
 import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
-import { ROLE_LABEL, type ArchitecturalForm, type CommunityAmenity } from "@/lib/types";
+import {
+  ROLE_LABEL,
+  type AccountRole,
+  type ArchitecturalForm,
+  type CommunityAmenity,
+} from "@/lib/types";
 import { cn, formatDate, todayIsoDate } from "@/lib/utils";
 
 export function SettingsScreen() {
@@ -44,6 +49,9 @@ export function SettingsScreen() {
     forms,
     setForms,
     setCapability,
+    setAccountRole,
+    updateAssociation,
+    community,
     removeAmenity,
     removeForm,
     resetDemo,
@@ -325,6 +333,86 @@ export function SettingsScreen() {
               label="Enable the forum"
             />
           </SettingRow>
+        </Card>
+
+        {/* Insurance. The setup plan sends a board here and there was nothing
+            to fill in, so the task could never be completed. */}
+        <Card>
+          <CardHeader
+            title="Insurance"
+            subtitle="Recorded so the renewal date is a deadline you are told about, not one you discover"
+          />
+          <div className="grid gap-4 px-5 py-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="text-[13px] font-semibold text-fg-muted">Carrier</span>
+              <input
+                value={community.association.insuranceCarrier ?? ""}
+                onChange={(e) => updateAssociation({ insuranceCarrier: e.target.value })}
+                placeholder="Farmers Insurance"
+                aria-label="Insurance carrier"
+                className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[13px] font-semibold text-fg-muted">Policy number</span>
+              <input
+                value={community.association.insurancePolicyNo ?? ""}
+                onChange={(e) => updateAssociation({ insurancePolicyNo: e.target.value })}
+                placeholder="WA-CA-4471982"
+                aria-label="Policy number"
+                className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[13px] font-semibold text-fg-muted">Renews on</span>
+              <input
+                type="date"
+                value={community.association.insuranceExpiresOn ?? ""}
+                onChange={(e) => updateAssociation({ insuranceExpiresOn: e.target.value })}
+                aria-label="Renewal date"
+                className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+              />
+            </label>
+          </div>
+        </Card>
+
+        {/* Appointing officers. The capability grid below only ever listed
+            people who were already officers, so a board of one had no way to
+            add a second. */}
+        <Card>
+          <CardHeader
+            title="Who is on the board"
+            subtitle="Give a neighbour an office and they get that office's access"
+          />
+          <div className="divide-y divide-border">
+            {accounts.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 px-5 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
+                  <p className="truncate text-[13px] text-fg-muted">Unit {a.unit}</p>
+                </div>
+                <select
+                  value={a.role}
+                  disabled={!isPresident || a.role === "president"}
+                  onChange={(e) => setAccountRole(a.id, e.target.value as AccountRole)}
+                  aria-label={`${a.name}'s role`}
+                  className="h-9 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand disabled:opacity-50"
+                >
+                  {(["resident", "treasurer", "secretary", "vice-president", "president"] as const)
+                    .filter((r) => r !== "president" || a.role === "president")
+                    .map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABEL[r]}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
+            The President is set apart on purpose. Handing over that office is its own step,
+            because an association with no President has no way to grant access back.
+          </p>
         </Card>
 
         {/* Amenities */}

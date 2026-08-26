@@ -111,7 +111,7 @@ const ALSO = [
   {
     icon: ShieldCheck,
     title: "Nobody moves money alone",
-    body: "Two signatures over a threshold, an audit trail on every change, and a President whose access cannot be revoked out from under them.",
+    body: "A second signature on payments that need one, an audit trail on every change, and a President whose access cannot be revoked out from under them.",
   },
 ];
 
