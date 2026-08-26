@@ -12,8 +12,32 @@ REGION="${2:-us-west-1}"
 
 cd "$(dirname "$0")/.."
 
+# The CLI cannot run its browser login without a TTY, so it reads a personal
+# access token from the environment instead. Loading it from .env.local keeps
+# the token in a gitignored file rather than in shell history or a transcript.
+if [ -f .env.local ]; then
+  while IFS='=' read -r key value; do
+    case "$key" in
+      ''|\#*) continue ;;
+      SUPABASE_ACCESS_TOKEN) export SUPABASE_ACCESS_TOKEN="$value" ;;
+    esac
+  done < .env.local
+fi
+
+if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+  cat >&2 <<'MSG'
+No SUPABASE_ACCESS_TOKEN found.
+
+  1. Create one at https://supabase.com/dashboard/account/tokens
+  2. Add it to .env.local as:  SUPABASE_ACCESS_TOKEN=sbp_...
+
+.env.local is gitignored, so the token stays on this machine.
+MSG
+  exit 1
+fi
+
 if ! npx supabase projects list --output json >/dev/null 2>&1; then
-  echo "Not logged in. Run:  npx supabase login" >&2
+  echo "That access token was rejected. Check it has not expired." >&2
   exit 1
 fi
 
