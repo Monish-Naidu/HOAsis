@@ -20,7 +20,7 @@ export default function ResidentVote() {
   return (
     <div className="animate-rise space-y-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Vote</h1>
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Vote</h1>
         
       </div>
 
@@ -29,8 +29,8 @@ export default function ResidentVote() {
           <div className="flex items-center gap-2 bg-ok-soft px-4 py-2.5">
             <Radio className="size-3.5 shrink-0 text-ok" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-ok">{live.title}</p>
-              <p className="text-[11px] text-ok opacity-90">
+              <p className="truncate text-[15px] font-semibold text-ok">{live.title}</p>
+              <p className="text-[13px] text-ok opacity-90">
                 Live now · {live.attendees.length} joined
               </p>
             </div>
@@ -64,11 +64,11 @@ export default function ResidentVote() {
               key={m.id}
               className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
             >
-              <p className="text-[13px] font-medium text-fg">{m.title}</p>
-              <p className="mt-0.5 text-[11px] text-fg-muted">
+              <p className="text-[15px] font-medium text-fg">{m.title}</p>
+              <p className="mt-0.5 text-[13px] text-fg-muted">
                 {formatDate(m.date, "long")} at {m.time} · {m.location}
               </p>
-              <p className="mt-1 text-[11px] text-fg-subtle">
+              <p className="mt-1 text-[13px] text-fg-subtle">
                 Dial in {m.dialIn} · passcode {m.passcode}
               </p>
             </div>

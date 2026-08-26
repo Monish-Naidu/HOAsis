@@ -6,9 +6,11 @@ without attribution. Credited anyway, because the photographers did the work.
 
 | File | Source |
 | --- | --- |
-| `porch.jpg` | unsplash.com/photos/1570129477492-45c003edd2be |
+| `neighborhood.jpg` | unsplash.com/photos/1592595896551-12b371d546d5 |
+| `aerial.jpg` | unsplash.com/photos/1524813686514-a57563d77965 |
 | `dusk.jpg` | unsplash.com/photos/1568605114967-8130f3a36994 |
-| `lane.jpg` | unsplash.com/photos/1449844908441-8829872d2607 |
 
-`product-*.png` are screenshots of this application.
+`product-*.png` are screenshots of this application, captured by
+`scripts/product-shots.mjs`. Re-run it after a design change; an old shot is
+the thing that quietly starts advertising a screen that no longer exists.
 `founder-*.jpg` are supplied by the founders.

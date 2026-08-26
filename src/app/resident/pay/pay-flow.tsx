@@ -95,9 +95,9 @@ export function PayFlow() {
           <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
             <CheckCircle2 className="size-6" />
           </span>
-          <h1 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
-          <p className="tnum mt-1 text-[15px] font-semibold text-fg">{money(paid.amountCents)}</p>
-          <p className="mt-2 text-[13px] leading-relaxed text-fg-muted">
+          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
+          <p className="tnum mt-1 text-[17px] font-semibold text-fg">{money(paid.amountCents)}</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
             {describeInstrument(paid.instrument)} · clears in{" "}
             {FEE_SCHEDULE[paid.instrument.kind].settlement.toLowerCase()}
           </p>
@@ -107,7 +107,7 @@ export function PayFlow() {
             </Button>
             <Link
               href="/resident/account"
-              className="flex h-9 flex-1 items-center justify-center rounded-lg bg-brand text-[13px] font-medium text-brand-fg"
+              className="flex h-9 flex-1 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
             >
               View account
             </Link>
@@ -126,8 +126,8 @@ export function PayFlow() {
   return (
     <div className="animate-rise space-y-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
-        <p className="mt-1 text-[13px] text-fg-muted">
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
+        <p className="mt-1 text-[15px] text-fg-muted">
           Next assessment · due {formatDate(nextCharge, "long")}
         </p>
       </div>
@@ -148,7 +148,7 @@ export function PayFlow() {
                   : "border-border hover:bg-surface-2",
               )}
             >
-              <span className="block text-[11px] font-medium text-fg-muted">
+              <span className="block text-[13px] font-medium text-fg-muted">
                 {balanceCents > 0 ? "Full balance" : "Next assessment"}
               </span>
               <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
@@ -166,7 +166,7 @@ export function PayFlow() {
                   : "border-border hover:bg-surface-2",
               )}
             >
-              <span className="block text-[11px] font-medium text-fg-muted">Other amount</span>
+              <span className="block text-[13px] font-medium text-fg-muted">Other amount</span>
               <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
                 {amountMode === "custom" && amountCents ? money(amountCents) : "$0.00"}
               </span>
@@ -176,14 +176,14 @@ export function PayFlow() {
             <label className="mt-3 block">
               <span className="sr-only">Payment amount</span>
               <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
-                <span className="text-[15px] text-fg-muted">$</span>
+                <span className="text-[17px] text-fg-muted">$</span>
                 <input
                   autoFocus
                   inputMode="decimal"
                   value={custom}
                   onChange={(e) => setCustom(e.target.value)}
                   placeholder="0.00"
-                  className="tnum w-full bg-transparent text-[15px] font-medium text-fg outline-none placeholder:text-fg-subtle"
+                  className="tnum w-full bg-transparent text-[17px] font-medium text-fg outline-none placeholder:text-fg-subtle"
                 />
               </div>
             </label>
@@ -199,7 +199,7 @@ export function PayFlow() {
               <button
                 type="button"
                 onClick={() => setManaging((v) => !v)}
-                className="text-[12px] font-medium text-accent"
+                className="text-[13px] font-medium text-accent"
               >
                 {managing ? "Done" : "Manage"}
               </button>
@@ -211,9 +211,9 @@ export function PayFlow() {
 
         {instruments.length === 0 ? (
           <Card className="p-5 text-center">
-            <p className="text-[13px] font-medium text-fg">No payment method yet</p>
-            <p className="mt-1 text-[12px] text-fg-muted">
-              Connect a bank for the cheapest option, or add a card.
+            <p className="text-[15px] font-medium text-fg">No payment method yet</p>
+            <p className="mt-1 text-[13px] text-fg-muted">
+              A bank transfer costs less than a card.
             </p>
           </Card>
         ) : (
@@ -248,7 +248,7 @@ export function PayFlow() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="truncate text-[13px] font-medium text-fg">
+                        <span className="truncate text-[15px] font-medium text-fg">
                           {instrument.label} ••{instrument.mask}
                         </span>
                         {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
@@ -259,7 +259,7 @@ export function PayFlow() {
                         ) : null}
                         {expired ? <Badge tone="danger">Expired</Badge> : null}
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-fg-muted">
+                      <span className="mt-0.5 block text-[13px] text-fg-muted">
                         {policy.paidBy === "owner"
                           ? instrumentCost.platformCents === 0
                             ? "No fee to you"
@@ -325,24 +325,24 @@ export function PayFlow() {
       {selected && cost ? (
         <Card className="p-4">
           <dl className="space-y-1">
-            <div className="flex justify-between text-[13px]">
+            <div className="flex justify-between text-[15px]">
               <dt className="text-fg-muted">Assessment</dt>
               <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
             </div>
             {policy.paidBy === "owner" ? (
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-[15px]">
                 <dt className="text-fg-muted">
                   {cost.platformCents === 0 ? "Payment fee (waived)" : "Payment fee"}
                 </dt>
                 <dd className="tnum font-medium text-fg">{money(cost.platformCents)}</dd>
               </div>
             ) : (
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-[15px]">
                 <dt className="text-fg-muted">Processing (paid by the association)</dt>
                 <dd className="tnum font-medium text-fg">{money(0)}</dd>
               </div>
             )}
-            <div className="mt-2 flex justify-between border-t border-border pt-2 text-[15px]">
+            <div className="mt-2 flex justify-between border-t border-border pt-2 text-[17px]">
               <dt className="font-semibold text-fg">You pay</dt>
               <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
             </div>
@@ -370,7 +370,7 @@ export function PayFlow() {
           >
             Pay {money(cost.residentPaysCents)}
           </Button>
-          <p className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-snug text-fg-subtle">
+          <p className="mt-2.5 flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
             <Info className="mt-px size-3 shrink-0" />
             {policy.paidBy === "owner"
               ? `The card network takes ${money(cost.processorCents)} of this from the association. The ${money(
@@ -390,10 +390,10 @@ export function PayFlow() {
               <Repeat className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-fg">
+              <p className="text-[15px] font-semibold text-fg">
                 Autopay {money(duesCents)} on the {ordinal(autopayDay)}
               </p>
-              <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">
+              <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
                 {selected
                   ? `From ${describeInstrument(selected)}. Cancel any time.`
                   : "Add a payment method to turn this on."}
@@ -410,7 +410,7 @@ export function PayFlow() {
           {autopay ? (
             <>
               <div className="mt-3 border-t border-border pt-3">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                <p className="mb-2 text-[13px] font-semibold text-fg-muted">
                   Day of the month
                 </p>
                 <div className="grid grid-cols-8 gap-1.5">
@@ -421,7 +421,7 @@ export function PayFlow() {
                       onClick={() => setAutopayDay(day)}
                       aria-pressed={autopayDay === day}
                       className={cn(
-                        "tnum flex h-8 items-center justify-center rounded-md text-[12px] font-medium transition-colors",
+                        "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
                         autopayDay === day
                           ? "bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950"
                           : day === settings.autopayLateAfterDay
@@ -433,12 +433,12 @@ export function PayFlow() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[11px] leading-snug text-fg-subtle">
+                <p className="mt-2 text-[13px] leading-snug text-fg-subtle">
                   The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
                   an assessment is late.
                 </p>
               </div>
-              <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[12px] font-medium text-ok">
+              <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">
                 Next autopay: September {autopayDay}, 2026 · {relativeDays(`2026-09-${String(autopayDay).padStart(2, "0")}`)}
               </div>
             </>

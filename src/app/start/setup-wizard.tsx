@@ -100,7 +100,7 @@ export function SetupWizard() {
               />
               <span
                 className={cn(
-                  "text-[11px] font-medium",
+                  "text-[13px] font-medium",
                   index === step ? "text-fg" : "text-fg-subtle",
                 )}
               >
@@ -125,7 +125,7 @@ export function SetupWizard() {
       </div>
 
       {failure ? (
-        <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-[12px] text-danger" role="status">
+        <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger" role="status">
           {failure}
         </p>
       ) : null}
@@ -227,7 +227,7 @@ function AssociationStep({ draft, patch }: StepProps) {
       <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
         <Field label="Each home pays">
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-fg-subtle">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
               $
             </span>
             <input
@@ -313,7 +313,7 @@ function HomesStep({ draft, patch }: StepProps) {
       detail="Start with your own home. Every household gets a balance, a login, and a vote."
     >
       <div className="rounded-card border border-border bg-surface-2 p-4">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+        <p className="mb-3 text-[13px] font-semibold text-fg-muted">
           You
         </p>
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_5.5rem]">
@@ -340,7 +340,7 @@ function HomesStep({ draft, patch }: StepProps) {
             className={input}
           />
         </div>
-        <p className="mt-2 text-[11px] text-fg-subtle">
+        <p className="mt-2 text-[13px] text-fg-subtle">
           You become President and can appoint the rest of the board later.
         </p>
       </div>
@@ -357,7 +357,7 @@ function HomesStep({ draft, patch }: StepProps) {
               rows={7}
               autoFocus
               placeholder={"Marcus Bell, marcus@example.com, 2\nYuki Tanaka, yuki@example.com, 3"}
-              className={cn(input, "h-auto py-2 font-mono text-[12px] leading-relaxed")}
+              className={cn(input, "h-auto py-2 font-mono text-[13px] leading-relaxed")}
             />
           </Field>
           <div className="flex flex-wrap items-center gap-2">
@@ -368,7 +368,7 @@ function HomesStep({ draft, patch }: StepProps) {
               Cancel
             </Button>
             {bulk.trim() && !preview.length ? (
-              <span className="text-[12px] text-warn">
+              <span className="text-[13px] text-warn">
                 No lines read as a household yet. Each needs a name and a unit.
               </span>
             ) : null}
@@ -412,7 +412,7 @@ function HomesStep({ draft, patch }: StepProps) {
               Paste a list instead
             </Button>
             {entry.unit.trim() && taken.has(entry.unit.trim()) ? (
-              <span className="text-[12px] text-danger">
+              <span className="text-[13px] text-danger">
                 Unit {entry.unit.trim()} is already on the roster.
               </span>
             ) : null}
@@ -424,15 +424,15 @@ function HomesStep({ draft, patch }: StepProps) {
         <Card className="divide-y divide-border overflow-hidden">
           {draft.households.map((h, index) => (
             <div key={h.unit} className="flex items-center gap-3 px-3.5 py-2.5">
-              <span className="w-14 shrink-0 text-[11px] font-medium text-fg-subtle">
+              <span className="w-14 shrink-0 text-[13px] font-medium text-fg-subtle">
                 Unit {h.unit}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-medium text-fg">{h.name}</span>
+                <span className="block truncate text-[15px] font-medium text-fg">{h.name}</span>
                 {h.email ? (
-                  <span className="block truncate text-[11px] text-fg-subtle">{h.email}</span>
+                  <span className="block truncate text-[13px] text-fg-subtle">{h.email}</span>
                 ) : (
-                  <span className="block text-[11px] text-warn">No email, so no invitation</span>
+                  <span className="block text-[13px] text-warn">No email, so no invitation</span>
                 )}
               </span>
               <button
@@ -450,7 +450,7 @@ function HomesStep({ draft, patch }: StepProps) {
         </Card>
       ) : null}
 
-      <p className="flex items-center gap-2 text-[12px] text-fg-muted">
+      <p className="flex items-center gap-2 text-[13px] text-fg-muted">
         <Users className="size-3.5 shrink-0" />
         {pluralHomes(unitCount(draft))} on the roster
         {draft.duesCents > 0 ? (
@@ -475,10 +475,10 @@ function FinishedPanel({ draft, onOpen }: { draft: CommunityDraft; onOpen: () =>
       <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
         <Check className="size-6" strokeWidth={2.5} />
       </span>
-      <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-fg">
+      <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg">
         {draft.name} is ready to collect.
       </h1>
-      <p className="mt-2 text-[14px] leading-relaxed text-fg-muted">
+      <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
         {pluralHomes(homes)} on the register, {money(draft.duesCents)} {draft.duesCadence} each.
       </p>
 
@@ -497,8 +497,8 @@ function FinishedPanel({ draft, onOpen }: { draft: CommunityDraft; onOpen: () =>
           <div className="flex items-start gap-3 px-4 py-3">
             <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-warn" />
             <span className="min-w-0">
-              <span className="block text-[13px] font-medium text-fg">No bank connected yet</span>
-              <span className="block text-[12px] text-fg-muted">
+              <span className="block text-[15px] font-medium text-fg">No bank connected yet</span>
+              <span className="block text-[13px] text-fg-muted">
                 Dues have nowhere to land until you add one. It is the first item on your dashboard.
               </span>
             </span>
@@ -507,8 +507,8 @@ function FinishedPanel({ draft, onOpen }: { draft: CommunityDraft; onOpen: () =>
       </Card>
 
       <Card className="mt-4 p-4">
-        <p className="text-[13px] font-semibold text-fg">Next: invite your neighbors</p>
-        <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">
+        <p className="text-[15px] font-semibold text-fg">Next: invite your neighbors</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
           Every household has an invitation link on the Homeowners tab. Copy it and send it
           however you already reach people.
         </p>
@@ -529,8 +529,8 @@ function Done({ label, detail }: { label: string; detail: string }) {
         <Check className="size-2.5" strokeWidth={3} />
       </span>
       <span className="min-w-0">
-        <span className="block text-[13px] font-medium text-fg">{label}</span>
-        <span className="block text-[12px] text-fg-muted">{detail}</span>
+        <span className="block text-[15px] font-medium text-fg">{label}</span>
+        <span className="block text-[13px] text-fg-muted">{detail}</span>
       </span>
     </div>
   );
@@ -541,7 +541,7 @@ function Done({ label, detail }: { label: string; detail: string }) {
 /* -------------------------------------------------------------------------- */
 
 const input =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[14px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
 
 export function Section({
   title,
@@ -558,7 +558,7 @@ export function Section({
         <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.028em] text-fg">
           {title}
         </h1>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{detail}</p>
+        <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{detail}</p>
       </div>
       {children}
     </div>
@@ -576,9 +576,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] font-medium text-fg">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-medium text-fg">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-[11px] text-fg-subtle">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-[13px] text-fg-subtle">{hint}</span> : null}
     </label>
   );
 }

@@ -64,18 +64,18 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
       <div className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={statusTone[ballot.status]}>{ballot.status}</Badge>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-fg-subtle">
+          <span className="text-[12px] font-semibold text-fg-subtle">
             {kindLabel[ballot.kind]} · {ballot.audience === "board" ? "Board vote" : "Owner vote"}
           </span>
-          <span className="text-[11px] text-fg-subtle">{ballot.reference}</span>
+          <span className="text-[13px] text-fg-subtle">{ballot.reference}</span>
         </div>
-        <h3 className="mt-1.5 text-[15px] font-semibold leading-snug tracking-[-0.015em] text-fg">
+        <h3 className="mt-1.5 text-[17px] font-semibold leading-snug tracking-[-0.015em] text-fg">
           {ballot.title}
         </h3>
-        <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-fg-muted">
+        <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
           {ballot.body[0]}
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-fg-subtle">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-fg-subtle">
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3" />
             {ballot.status === "scheduled"
@@ -96,7 +96,7 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
       {!showResults && ballot.status === "open" ? (
         <div className="flex items-start gap-2 border-t border-border px-5 py-3">
           <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
-          <p className="text-[12px] leading-snug text-fg-muted">
+          <p className="text-[13px] leading-snug text-fg-muted">
             Results are sealed until this closes on {formatDate(ballot.closesDate, "long")}.
             Turnout and quorum stay visible.
           </p>
@@ -111,16 +111,16 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
             return (
               <div key={o.id}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-fg">
+                  <span className="flex min-w-0 items-center gap-1.5 text-[15px] text-fg">
                     <span className="truncate">{o.label}</span>
                     {o.detail ? (
-                      <span className="shrink-0 text-[11px] text-fg-subtle">{o.detail}</span>
+                      <span className="shrink-0 text-[13px] text-fg-subtle">{o.detail}</span>
                     ) : null}
                     {winning && ballot.status === "certified" ? (
                       <CheckCircle2 className="size-3 shrink-0 text-ok" />
                     ) : null}
                   </span>
-                  <span className="tnum shrink-0 text-[12px] font-medium text-fg-muted">
+                  <span className="tnum shrink-0 text-[13px] font-medium text-fg-muted">
                     {o.votes} · {Math.round(share * 100)}%
                   </span>
                 </div>
@@ -138,10 +138,10 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
       {ballot.quorumRequired > 0 ? (
         <div className="border-t border-border px-5 py-3">
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+            <span className="text-[13px] font-semibold text-fg-muted">
               Quorum
             </span>
-            <span className="tnum text-[12px] font-medium text-fg-muted">
+            <span className="tnum text-[13px] font-medium text-fg-muted">
               {t.cast} of {ballot.quorumRequired} needed
             </span>
           </div>
@@ -151,7 +151,7 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
             aria-label={`Quorum ${Math.round(t.quorumProgress * 100)} percent`}
           />
           {ballot.kind === "amendment" ? (
-            <p className="mt-2 text-[11px] leading-snug text-fg-muted">
+            <p className="mt-2 text-[13px] leading-snug text-fg-muted">
               {Math.round(t.shareOfEligible(ballot.options[0].votes) * 100)}% of all{" "}
               {ballot.eligible} interests. A unit that does not vote counts against it.
             </p>
@@ -160,7 +160,7 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
       ) : null}
 
       {ballot.certifiedDate ? (
-        <div className="border-t border-border bg-surface-2 px-5 py-2.5 text-[11px] text-fg-muted">
+        <div className="border-t border-border bg-surface-2 px-5 py-2.5 text-[13px] text-fg-muted">
           Certified {formatDate(ballot.certifiedDate, "long")} by {ballot.certifiedBy}
         </div>
       ) : null}

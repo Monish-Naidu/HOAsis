@@ -91,7 +91,7 @@ export default function BoardCommunications() {
           <EmptyState
             icon={<Inbox className="size-5" />}
             title="No owner messages yet"
-            description="Replies to notices and anything a resident sends the board lands here."
+            description="Anything a resident sends the board arrives here."
           />
         </Card>
       ) : (
@@ -112,7 +112,7 @@ export default function BoardCommunications() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p
-                    className={`min-w-0 flex-1 truncate text-[13px] ${
+                    className={`min-w-0 flex-1 truncate text-[15px] ${
                       t.unread ? "font-semibold text-fg" : "font-medium text-fg-muted"
                     }`}
                   >
@@ -120,13 +120,13 @@ export default function BoardCommunications() {
                   </p>
                   {t.unread ? <span className="size-1.5 shrink-0 rounded-full bg-accent" /> : null}
                 </div>
-                <p className="mt-0.5 truncate text-[11px] text-fg-muted">
+                <p className="mt-0.5 truncate text-[13px] text-fg-muted">
                   {t.participants.join(", ")}
                   {t.unit ? ` · Unit ${t.unit}` : ""}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <Badge tone="neutral">{t.tag}</Badge>
-                  <span className="text-[11px] text-fg-subtle">{formatDate(t.updatedDate)}</span>
+                  <span className="text-[13px] text-fg-subtle">{formatDate(t.updatedDate)}</span>
                 </div>
               </div>
             </button>
@@ -159,12 +159,12 @@ export default function BoardCommunications() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-[13px] font-semibold text-fg">{m.from}</span>
-                      <span className="text-[11px] text-fg-subtle">
+                      <span className="text-[15px] font-semibold text-fg">{m.from}</span>
+                      <span className="text-[13px] text-fg-subtle">
                         {formatDate(m.at, "long")} · {m.channel}
                       </span>
                     </div>
-                    <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{m.body}</p>
+                    <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">{m.body}</p>
                   </div>
                 </div>
               ))}
@@ -172,7 +172,7 @@ export default function BoardCommunications() {
 
             {/* Composer */}
             <div className="border-t border-border p-4">
-              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[12px]">
+              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[13px]">
                 <span className="text-fg-subtle">To</span>
                 <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
                   {active.participants[0]}
@@ -196,19 +196,19 @@ export default function BoardCommunications() {
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Write a reply…"
                 aria-label="Reply"
-                className="w-full resize-none rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] text-fg outline-none placeholder:text-fg-subtle"
+                className="w-full resize-none rounded-lg border border-border bg-surface-2 px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
               />
               <div className="mt-2.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => notify("Attachment picker opens here", "info")}
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-fg-muted hover:text-fg"
+                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
                   >
                     <Paperclip className="size-3.5" />
                     Attach
                   </button>
-                  <span className="text-[11px] text-fg-subtle">
+                  <span className="text-[13px] text-fg-subtle">
                     {draft ? "Draft saved" : "No draft"}
                   </span>
                 </div>

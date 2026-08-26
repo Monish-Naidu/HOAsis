@@ -23,10 +23,10 @@ export function CommunityMasthead() {
   const { settings, community } = useAppState();
   return (
     <div className="mb-7 text-center">
-      <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-fg">
+      <h1 className="text-[28px] font-semibold tracking-[-0.03em] text-fg">
         {settings.displayName}
       </h1>
-      <p className="mt-1 text-[13px] text-fg-muted">
+      <p className="mt-1 text-[15px] text-fg-muted">
         {community.association.addressLine} · {community.association.unitCount} homes
       </p>
     </div>

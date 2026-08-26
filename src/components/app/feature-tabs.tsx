@@ -84,7 +84,7 @@ const tabs: { key: TabKey; label: string; points: string[] }[] = [
     points: [
       "Obligations with a date, an owner, and evidence",
       "Records and response clocks that escalate early",
-      "Reserve study cadence tied to the budget",
+      "A reserve study on a schedule, tied to the budget",
     ],
   },
 ];
@@ -104,7 +104,7 @@ export function FeatureTabs({ stats }: { stats: Record<string, TabStat[]> }) {
             onClick={() => setActive(t.key)}
             aria-pressed={active === t.key}
             className={cn(
-              "shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition-colors",
+              "shrink-0 rounded-full px-4 py-2 text-[15px] font-medium transition-colors",
               active === t.key
                 ? "bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950"
                 : "border border-border bg-surface text-fg-muted hover:text-fg",
@@ -124,7 +124,7 @@ export function FeatureTabs({ stats }: { stats: Record<string, TabStat[]> }) {
             {current.points.map((p) => (
               <li key={p} className="flex items-start gap-2.5">
                 <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
-                <span className="text-[14px] leading-snug text-fg">{p}</span>
+                <span className="text-[15px] leading-snug text-fg">{p}</span>
               </li>
             ))}
           </ul>
@@ -132,10 +132,10 @@ export function FeatureTabs({ stats }: { stats: Record<string, TabStat[]> }) {
         <dl className="grid grid-cols-2 gap-4 border-t border-border pt-5 md:col-span-2 md:grid-cols-1 md:border-l md:border-t-0 md:pl-6 md:pt-0">
           {(stats[active] ?? []).map((s) => (
             <div key={s.label}>
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+              <dt className="text-[13px] font-semibold text-fg-muted">
                 {s.label}
               </dt>
-              <dd className="tnum mt-1 text-[22px] font-semibold leading-none tracking-[-0.03em] text-fg">
+              <dd className="tnum mt-1 text-[24px] font-semibold leading-none tracking-[-0.03em] text-fg">
                 {s.value}
               </dd>
             </div>

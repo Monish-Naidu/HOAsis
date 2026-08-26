@@ -33,7 +33,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <Link
           href="/library"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
+          className="inline-flex items-center gap-1.5 text-[15px] font-medium text-fg-muted hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           Library
@@ -48,11 +48,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </Badge>
             ))}
           </div>
-          <h1 className="mt-3 text-[32px] font-semibold leading-[1.12] tracking-[-0.035em] text-fg sm:text-[40px]">
+          <h1 className="mt-3 text-[34px] font-semibold leading-[1.12] tracking-[-0.035em] text-fg sm:text-[40px]">
             {article.title}
           </h1>
-          <p className="mt-3 text-[16px] leading-relaxed text-fg-muted">{article.summary}</p>
-          <p className="mt-4 text-[12px] text-fg-subtle">
+          <p className="mt-3 text-[17px] leading-relaxed text-fg-muted">{article.summary}</p>
+          <p className="mt-4 text-[13px] text-fg-subtle">
             {formatDate(article.publishedDate, "long")} · {article.readMinutes} minute read
           </p>
         </header>
@@ -67,7 +67,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 {block.replace("## ", "")}
               </h2>
             ) : (
-              <p key={index} className="mt-4 text-[15px] leading-[1.75] text-fg-muted">
+              <p key={index} className="mt-4 text-[17px] leading-[1.75] text-fg-muted">
                 {block}
               </p>
             ),
@@ -83,7 +83,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         {related.length ? (
           <section className="mt-12 border-t border-border pt-8">
-            <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+            <h2 className="text-[13px] font-semibold text-fg-muted">
               More on {article.topic.toLowerCase()}
             </h2>
             <div className="mt-4 space-y-3">
@@ -93,8 +93,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   href={`/library/${other.slug}`}
                   className="block rounded-card border border-border bg-surface p-4 transition-colors hover:bg-surface-2"
                 >
-                  <p className="text-[14px] font-medium text-fg">{other.title}</p>
-                  <p className="mt-1 text-[13px] text-fg-muted">{other.summary}</p>
+                  <p className="text-[15px] font-medium text-fg">{other.title}</p>
+                  <p className="mt-1 text-[15px] text-fg-muted">{other.summary}</p>
                 </Link>
               ))}
             </div>

@@ -73,10 +73,10 @@ export default function PricingPage() {
       <main className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16">
         <Reveal>
           <header className="max-w-2xl">
-            <h1 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[44px]">
+            <h1 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[48px]">
               Priced so the savings are obvious.
             </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-fg-muted">
+            <p className="mt-4 text-[17px] leading-relaxed text-fg-muted">
               One number, every feature, no per-seat charges and no upsell for the thing you
               actually needed.
             </p>
@@ -92,15 +92,15 @@ export default function PricingPage() {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-[13px] font-semibold text-fg">{tier.name}</p>
+                  <p className="text-[15px] font-semibold text-fg">{tier.name}</p>
                   {tier.highlight ? <Badge tone="brand">Most common</Badge> : null}
                 </div>
-                <p className="mt-1 text-[12px] text-fg-muted">{tier.homes}</p>
+                <p className="mt-1 text-[13px] text-fg-muted">{tier.homes}</p>
                 <p className="tnum mt-5 text-[40px] font-semibold leading-none tracking-[-0.035em] text-fg">
                   {tier.price}
                 </p>
-                <p className="mt-1.5 text-[12px] text-fg-muted">{tier.unit}</p>
-                <p className="mt-4 border-t border-border pt-4 text-[13px] leading-relaxed text-fg-muted">
+                <p className="mt-1.5 text-[13px] text-fg-muted">{tier.unit}</p>
+                <p className="mt-4 border-t border-border pt-4 text-[15px] leading-relaxed text-fg-muted">
                   {tier.note}
                 </p>
               </Card>
@@ -111,10 +111,10 @@ export default function PricingPage() {
         <div className="mt-10 grid gap-5 lg:grid-cols-2">
           <Reveal>
             <Card className="h-full p-6">
-              <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
+              <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
                 Included on every tier
               </h2>
-              <p className="mt-1.5 text-[13px] text-fg-muted">
+              <p className="mt-1.5 text-[15px] text-fg-muted">
                 A 25 home association gets the same product as a 300 home one. Gating features by
                 size punishes exactly the boards with the least help.
               </p>
@@ -122,7 +122,7 @@ export default function PricingPage() {
                 {INCLUDED.map((item) => (
                   <li key={item} className="flex items-start gap-2.5">
                     <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
-                    <span className="text-[14px] leading-snug text-fg">{item}</span>
+                    <span className="text-[15px] leading-snug text-fg">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -131,10 +131,10 @@ export default function PricingPage() {
 
           <Reveal delay={90}>
             <Card className="h-full p-6">
-              <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
+              <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
                 How payments are priced
               </h2>
-              <p className="mt-1.5 text-[13px] text-fg-muted">
+              <p className="mt-1.5 text-[15px] text-fg-muted">
                 Itemized on every receipt. The thing boards resent is not a fee, it is a blended
                 rate that hides one inside the processor&apos;s number.
               </p>
@@ -143,8 +143,8 @@ export default function PricingPage() {
                   <li key={item.label} className="flex items-start gap-2.5">
                     <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
                     <span>
-                      <span className="block text-[14px] font-medium text-fg">{item.label}</span>
-                      <span className="block text-[13px] leading-snug text-fg-muted">
+                      <span className="block text-[15px] font-medium text-fg">{item.label}</span>
+                      <span className="block text-[15px] leading-snug text-fg-muted">
                         {item.detail}
                       </span>
                     </span>
@@ -156,8 +156,8 @@ export default function PricingPage() {
                   <li key={item.label} className="flex items-start gap-2.5">
                     <Minus className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
                     <span>
-                      <span className="block text-[14px] font-medium text-fg">{item.label}</span>
-                      <span className="block text-[13px] leading-snug text-fg-muted">
+                      <span className="block text-[15px] font-medium text-fg">{item.label}</span>
+                      <span className="block text-[15px] leading-snug text-fg-muted">
                         {item.detail}
                       </span>
                     </span>
@@ -173,20 +173,20 @@ export default function PricingPage() {
             <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
               Try it before anyone quotes you anything.
             </h2>
-            <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-fg-muted">
+            <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-fg-muted">
               The demo is a full association with real numbers behind it. No card, no call.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href="/start"
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-brand-fg"
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[15px] font-semibold text-brand-fg"
               >
                 Set up your association
                 <ArrowRight className="size-3.5" />
               </Link>
               <Link
                 href="/signin"
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 px-5 text-[13px] font-semibold text-fg hover:bg-surface-2"
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 px-5 text-[15px] font-semibold text-fg hover:bg-surface-2"
               >
                 Open the demo
               </Link>

@@ -35,16 +35,16 @@ export function JoinPanel() {
   if (!invitation || !community || !owner || !account) {
     return (
       <Card className="p-6">
-        <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-fg">
+        <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
           This invitation is not valid
         </h1>
-        <p className="mt-2 text-[13px] leading-relaxed text-fg-muted">
+        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
           The link may have been mistyped or the household may no longer be on the register. Ask
           your board to send it again.
         </p>
         <Link
           href="/signin"
-          className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 px-4 text-[13px] font-semibold text-fg hover:bg-surface-2"
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 px-4 text-[15px] font-semibold text-fg hover:bg-surface-2"
         >
           Go to sign in
         </Link>
@@ -61,13 +61,13 @@ export function JoinPanel() {
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-border px-6 py-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+        <p className="text-[13px] font-semibold text-fg-muted">
           You have been invited to
         </p>
         <h1 className="mt-1 text-[20px] font-semibold leading-tight tracking-[-0.02em] text-fg">
           {community.settings.displayName}
         </h1>
-        <p className="mt-1 text-[13px] text-fg-muted">{community.association.addressLine}</p>
+        <p className="mt-1 text-[15px] text-fg-muted">{community.association.addressLine}</p>
       </div>
 
       <div className="space-y-3 px-6 py-5">
@@ -83,7 +83,7 @@ export function JoinPanel() {
           <ArrowRight className="size-4" />
         </Button>
 
-        <p className="flex items-start gap-2 pt-1 text-[11px] leading-snug text-fg-subtle">
+        <p className="flex items-start gap-2 pt-1 text-[13px] leading-snug text-fg-subtle">
           <ShieldCheck className="mt-px size-3.5 shrink-0" />
           This link was issued for your unit. Your board sees your balance and your requests;
           neighbors do not.
@@ -96,8 +96,8 @@ export function JoinPanel() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="text-[12px] text-fg-muted">{label}</span>
-      <span className="text-[13px] font-medium text-fg">{value}</span>
+      <span className="text-[13px] text-fg-muted">{label}</span>
+      <span className="text-[15px] font-medium text-fg">{value}</span>
     </div>
   );
 }

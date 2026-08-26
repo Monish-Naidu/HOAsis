@@ -21,9 +21,9 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
         <div className="flex items-start gap-3 p-4">
           <Megaphone className="mt-0.5 size-4 shrink-0 text-navy-300" />
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-semibold leading-snug">{settings.banner.title}</p>
+            <p className="text-[15px] font-semibold leading-snug">{settings.banner.title}</p>
             {settings.banner.detail ? (
-              <p className="mt-1 text-[12px] leading-relaxed text-navy-200">
+              <p className="mt-1 text-[13px] leading-relaxed text-navy-200">
                 {settings.banner.detail}
               </p>
             ) : null}
@@ -39,7 +39,7 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
     <section>
       <SectionTitle
         action={
-          <Link href="/resident/calendar" className="text-[12px] font-medium text-accent">
+          <Link href="/resident/calendar" className="text-[13px] font-medium text-accent">
             Full calendar
           </Link>
         }
@@ -58,16 +58,16 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
                 }`}
               >
                 <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
-                  <span className="text-[9px] font-semibold uppercase tracking-wide text-fg-subtle">
+                  <span className="text-[12px] font-semibold uppercase tracking-wide text-fg-subtle">
                     {formatDate(e.date).split(" ")[0]}
                   </span>
-                  <span className="tnum text-[14px] font-semibold leading-none text-fg">
+                  <span className="tnum text-[15px] font-semibold leading-none text-fg">
                     {formatDate(e.date).split(" ")[1]}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium text-fg">{e.title}</p>
-                  <p className="truncate text-[11px] text-fg-muted">
+                  <p className="truncate text-[15px] font-medium text-fg">{e.title}</p>
+                  <p className="truncate text-[13px] text-fg-muted">
                     {relativeDays(e.date)}
                     {e.detail ? ` · ${e.detail}` : ""}
                   </p>
@@ -77,7 +77,7 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
             ))}
             <Link
               href="/resident/calendar"
-              className="flex items-center gap-2 border-t border-border px-4 py-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+              className="flex items-center gap-2 border-t border-border px-4 py-2.5 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
             >
               <CalendarDays className="size-3.5" />
               Open the calendar
@@ -87,8 +87,8 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
         ) : (
           <div className="flex flex-col items-center px-6 py-8 text-center">
             <CalendarOff className="mb-2 size-5 text-fg-subtle" />
-            <p className="text-[13px] font-medium text-fg">Nothing scheduled</p>
-            <p className="mt-1 text-[12px] text-fg-muted">
+            <p className="text-[15px] font-medium text-fg">Nothing scheduled</p>
+            <p className="mt-1 text-[13px] text-fg-muted">
               The board posts meetings and events here as they are set.
             </p>
           </div>

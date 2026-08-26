@@ -180,10 +180,10 @@ export default function BoardMoney() {
         <Card className="mt-5 p-5">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-[15px] font-semibold tracking-[-0.015em] text-fg">
+              <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
                 {bankAccounts.length ? "Connect another account" : "Connect your operating account"}
               </h2>
-              <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">
+              <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
                 {bankAccounts.length
                   ? "Reserves belong in their own account, separate from operating."
                   : "Dues have nowhere to land until an account in the association's name is connected."}
@@ -215,15 +215,15 @@ export default function BoardMoney() {
             className="flex min-h-[7rem] flex-col items-center justify-center gap-1.5 rounded-card border border-dashed border-border-2 p-4 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
           >
             <Plus className="size-4" />
-            <span className="text-[12px] font-medium">Connect an account</span>
+            <span className="text-[13px] font-medium">Connect an account</span>
           </button>
         ) : null}
         {bankAccounts.map((a) => (
           <Card key={a.id} className="p-4">
             <div className="flex items-start justify-between">
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-fg">{a.name}</p>
-                <p className="truncate text-[11px] text-fg-muted">
+                <p className="truncate text-[15px] font-semibold text-fg">{a.name}</p>
+                <p className="truncate text-[13px] text-fg-muted">
                   {a.institution} ••{a.mask}
                 </p>
               </div>
@@ -231,17 +231,17 @@ export default function BoardMoney() {
                 {a.status}
               </Badge>
             </div>
-            <p className="tnum mt-3 text-[22px] font-semibold leading-none tracking-[-0.03em] text-fg">
+            <p className="tnum mt-3 text-[24px] font-semibold leading-none tracking-[-0.03em] text-fg">
               {money(a.balanceCents)}
             </p>
             <dl className="mt-3 space-y-1 border-t border-border pt-2.5">
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[13px]">
                 <dt className="text-fg-muted">Reconciled through</dt>
                 <dd className="tnum font-medium text-fg">
                   {formatDate(a.reconciledThroughDate, "long")}
                 </dd>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[13px]">
                 <dt className="text-fg-muted">Unreconciled</dt>
                 <dd
                   className={`tnum font-medium ${a.unreconciledCount ? "text-warn" : "text-ok"}`}
@@ -249,18 +249,18 @@ export default function BoardMoney() {
                   {a.unreconciledCount}
                 </dd>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[13px]">
                 <dt className="text-fg-muted">Yield</dt>
                 <dd className="tnum font-medium text-fg">
                   {a.apy.toFixed(2)}% APY
                   {a.maturityDate ? `, matures ${formatDate(a.maturityDate)}` : ""}
                 </dd>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[13px]">
                 <dt className="text-fg-muted">Interest YTD</dt>
                 <dd className="tnum font-medium text-ok">{money(a.interestYtdCents)}</dd>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[13px]">
                 <dt className="text-fg-muted">Feed</dt>
                 <dd className="font-medium text-fg">
                   {a.status === "live"
@@ -308,7 +308,7 @@ export default function BoardMoney() {
               type="button"
               onClick={() => setView(v.name)}
               aria-pressed={view === v.name}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors ${
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors ${
                 view === v.name
                   ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
                   : "border-border text-fg-muted hover:bg-surface-2"
@@ -323,7 +323,7 @@ export default function BoardMoney() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left">
             <thead>
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                 <th className="px-5 py-2.5 font-semibold">Date</th>
                 <th className="px-3 py-2.5 font-semibold">Description</th>
                 <th className="px-3 py-2.5 font-semibold">Category</th>
@@ -338,7 +338,7 @@ export default function BoardMoney() {
                 return (
                   <tr
                     key={e.id}
-                    className={`border-b border-border text-[13px] transition-colors last:border-b-0 hover:bg-surface-2 ${
+                    className={`border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2 ${
                       e.status === "needs-review" ? "bg-warn-soft/40" : ""
                     }`}
                   >
@@ -355,18 +355,18 @@ export default function BoardMoney() {
                           </Badge>
                         ) : null}
                       </div>
-                      <span className="text-[11px] text-fg-subtle">{e.counterparty}</span>
+                      <span className="text-[13px] text-fg-subtle">{e.counterparty}</span>
                     </td>
                     <td className="px-3 py-2.5">
                       {e.status === "needs-review" && e.suggestedCategory ? (
-                        <span className="text-[12px] italic text-fg-muted">
+                        <span className="text-[13px] italic text-fg-muted">
                           {e.suggestedCategory}?
                         </span>
                       ) : (
-                        <span className="text-[12px] text-fg-muted">{e.category}</span>
+                        <span className="text-[13px] text-fg-muted">{e.category}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-[12px] text-fg-muted">
+                    <td className="px-3 py-2.5 text-[13px] text-fg-muted">
                       {account?.name} ••{account?.mask}
                     </td>
                     <td
@@ -388,7 +388,7 @@ export default function BoardMoney() {
                                 onClick: undo,
                               });
                             }}
-                            className="h-7 rounded-md border border-border-2 px-2 text-[11px] font-medium text-fg hover:bg-surface"
+                            className="h-7 rounded-md border border-border-2 px-2 text-[13px] font-medium text-fg hover:bg-surface"
                           >
                             Confirm
                           </button>
@@ -401,7 +401,7 @@ export default function BoardMoney() {
                                 onClick: undo,
                               });
                             }}
-                            className="h-7 rounded-md px-2 text-[11px] font-medium text-danger hover:bg-danger-soft"
+                            className="h-7 rounded-md px-2 text-[13px] font-medium text-danger hover:bg-danger-soft"
                           >
                             Remove
                           </button>
@@ -416,7 +416,7 @@ export default function BoardMoney() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-[12px] text-fg-muted">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-[13px] text-fg-muted">
           <span>
             {recon.cleared.length} cleared · {recon.pending.length} pending ·{" "}
             <span className="font-medium text-warn">{recon.needsReview.length} need review</span>
@@ -435,42 +435,42 @@ export default function BoardMoney() {
         />
         <div className="grid gap-5 px-5 py-4 sm:grid-cols-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+            <p className="text-[13px] font-semibold text-fg-muted">
               Reserve balance
             </p>
-            <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-fg">
+            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
               {money(interest.balance, { cents: false })}
             </p>
-            <p className="mt-1 text-[11px] text-fg-muted">
+            <p className="mt-1 text-[13px] text-fg-muted">
               Across {interest.reserveAccounts.length} accounts
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+            <p className="text-[13px] font-semibold text-fg-muted">
               Blended yield
             </p>
-            <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-fg">
+            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
               {interest.blendedApy.toFixed(2)}%
             </p>
-            <p className="mt-1 text-[11px] text-fg-muted">Weighted by balance</p>
+            <p className="mt-1 text-[13px] text-fg-muted">Weighted by balance</p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+            <p className="text-[13px] font-semibold text-fg-muted">
               Interest earned YTD
             </p>
-            <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-ok">
+            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-ok">
               {money(interest.earnedYtd, { cents: false })}
             </p>
-            <p className="mt-1 text-[11px] text-fg-muted">Posted and reconciled</p>
+            <p className="mt-1 text-[13px] text-fg-muted">Posted and reconciled</p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+            <p className="text-[13px] font-semibold text-fg-muted">
               Projected, full year
             </p>
-            <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-fg">
+            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
               {money(interest.projectedAnnual, { cents: false })}
             </p>
-            <p className="mt-1 text-[11px] text-fg-muted">At today&apos;s rates</p>
+            <p className="mt-1 text-[13px] text-fg-muted">At today&apos;s rates</p>
           </div>
         </div>
 
@@ -496,8 +496,8 @@ export default function BoardMoney() {
 
         {!opportunity.recommended || opportunity.movable === 0 ? (
           <div className="border-t border-border px-5 py-6 text-center">
-            <p className="text-[13px] font-medium text-fg">No reserve account yet</p>
-            <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-fg-muted">
+            <p className="text-[15px] font-medium text-fg">No reserve account yet</p>
+            <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-fg-muted">
               Every dollar of reserve is sitting in the operating account earning nothing. Opening
               a separate insured savings account is the one change that costs owners nothing.
             </p>
@@ -505,10 +505,10 @@ export default function BoardMoney() {
         ) : (
         <div className="border-t border-border px-5 py-4">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+            <p className="text-[13px] font-semibold text-fg-muted">
               Where the savings balance could sit
             </p>
-            <p className="text-[12px] text-fg-muted">
+            <p className="text-[13px] text-fg-muted">
               Moving {money(opportunity.movable, { cents: false })} from{" "}
               {opportunity.current?.apy.toFixed(2)}% to {opportunity.recommended.apy.toFixed(2)}%
               earns{" "}
@@ -530,16 +530,16 @@ export default function BoardMoney() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-fg">{o.name}</p>
-                    <p className="truncate text-[11px] text-fg-muted">{o.institution}</p>
+                    <p className="truncate text-[15px] font-semibold text-fg">{o.name}</p>
+                    <p className="truncate text-[13px] text-fg-muted">{o.institution}</p>
                   </div>
                   {o.recommended ? <Badge tone="ok">Best fit</Badge> : null}
                 </div>
                 <p className="tnum mt-2.5 text-[24px] font-semibold leading-none tracking-[-0.03em] text-fg">
                   {o.apy.toFixed(2)}%
-                  <span className="ml-1 text-[11px] font-medium text-fg-muted">APY</span>
+                  <span className="ml-1 text-[13px] font-medium text-fg-muted">APY</span>
                 </p>
-                <dl className="mt-3 space-y-1.5 border-t border-border pt-2.5 text-[11px]">
+                <dl className="mt-3 space-y-1.5 border-t border-border pt-2.5 text-[13px]">
                   <div>
                     <dt className="text-fg-subtle">Access</dt>
                     <dd className="text-fg-muted">{o.liquidity}</dd>
@@ -584,7 +584,7 @@ export default function BoardMoney() {
               : "No study on file, so there is nothing to measure against yet"
           }
           action={
-            <Link href="/admin/compliance" className="text-[12px] font-medium text-accent hover:underline">
+            <Link href="/admin/compliance" className="text-[13px] font-medium text-accent hover:underline">
               Why this matters
             </Link>
           }
@@ -592,7 +592,7 @@ export default function BoardMoney() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-left">
             <thead>
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                 <th className="px-5 py-2.5 font-semibold">Component</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Remaining life</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Replacement</th>
@@ -604,8 +604,8 @@ export default function BoardMoney() {
               {reserveComponents.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-6 text-center">
-                    <p className="text-[13px] font-medium text-fg">No reserve study on file</p>
-                    <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-fg-muted">
+                    <p className="text-[15px] font-medium text-fg">No reserve study on file</p>
+                    <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-fg-muted">
                       Washington expects one, and without it there is no way to know what the
                       association should be saving. A study for a small community is usually a
                       few hundred dollars.
@@ -617,13 +617,13 @@ export default function BoardMoney() {
                 const pct = c.fundedCents / c.replacementCostCents;
                 const urgent = c.remainingLifeYears <= 2;
                 return (
-                  <tr key={c.id} className="border-b border-border text-[13px] last:border-b-0">
+                  <tr key={c.id} className="border-b border-border text-[15px] last:border-b-0">
                     <td className="px-5 py-3">
                       <p className="font-medium text-fg">{c.name}</p>
                       {c.note ? (
-                        <p className="mt-0.5 text-[11px] text-fg-muted">{c.note}</p>
+                        <p className="mt-0.5 text-[13px] text-fg-muted">{c.note}</p>
                       ) : c.lastInspection ? (
-                        <p className="mt-0.5 text-[11px] text-fg-subtle">
+                        <p className="mt-0.5 text-[13px] text-fg-subtle">
                           Last inspected {formatDate(c.lastInspection, "long")}
                         </p>
                       ) : null}
@@ -645,7 +645,7 @@ export default function BoardMoney() {
                         tone={pct >= 0.8 ? "ok" : urgent ? "warn" : "brand"}
                         aria-label={`${c.name} ${Math.round(pct * 100)}% funded`}
                       />
-                      <span className="tnum mt-1 block text-[11px] text-fg-subtle">
+                      <span className="tnum mt-1 block text-[13px] text-fg-subtle">
                         {Math.round(pct * 100)}%
                       </span>
                     </td>

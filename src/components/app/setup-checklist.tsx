@@ -75,10 +75,10 @@ export function SetupChecklist() {
   return (
     <Card className="mb-5 overflow-hidden">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-5 py-3.5">
-        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-fg">
+        <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-fg">
           Finish setting up {community.settings.displayName}
         </h2>
-        <span className="tnum text-[11px] text-fg-subtle">
+        <span className="tnum text-[13px] text-fg-subtle">
           {done} of {state.length} done
         </span>
       </div>
@@ -91,7 +91,7 @@ export function SetupChecklist() {
                 <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
                   <Check className="size-2.5" strokeWidth={3} />
                 </span>
-                <span className="min-w-0 flex-1 text-[13px] text-fg-subtle line-through">
+                <span className="min-w-0 flex-1 text-[15px] text-fg-subtle line-through">
                   {task.label}
                 </span>
               </div>
@@ -102,8 +102,8 @@ export function SetupChecklist() {
               >
                 <span className="mt-0.5 size-4 shrink-0 rounded-full border-2 border-border-2" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-medium text-fg">{task.label}</span>
-                  <span className="mt-0.5 block text-[12px] leading-snug text-fg-muted">
+                  <span className="block text-[15px] font-medium text-fg">{task.label}</span>
+                  <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">
                     {task.detail}
                   </span>
                 </span>

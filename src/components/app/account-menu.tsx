@@ -44,7 +44,7 @@ export function ViewSwitcher({ className }: { className?: string }) {
           aria-checked={view === v}
           onClick={() => go(v)}
           className={cn(
-            "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-colors",
+            "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
             view === v ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
           )}
         >
@@ -66,8 +66,8 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
       <Avatar name={account.name} />
       {!compact ? (
         <div className="hidden leading-tight lg:block">
-          <p className="text-[13px] font-medium text-fg">{account.name}</p>
-          <p className="text-[11px] text-fg-muted">
+          <p className="text-[15px] font-medium text-fg">{account.name}</p>
+          <p className="text-[13px] text-fg-muted">
             {ROLE_LABEL[account.role]} · Unit {account.unit}
           </p>
         </div>
@@ -118,16 +118,16 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
   if (!account && remote.status === "empty") {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 text-center">
-        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">
+        <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-fg">
           You are not in an association yet
         </h1>
-        <p className="mt-2 text-[14px] leading-relaxed text-fg-muted">
+        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
           Set one up, or ask your board to add your household and invite you with the email you
           signed up with.
         </p>
         <Link
           href="/start"
-          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-[14px] font-semibold text-brand-fg"
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-semibold text-brand-fg"
         >
           Set up your association
         </Link>

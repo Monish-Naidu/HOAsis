@@ -184,13 +184,13 @@ export default function BoardHomeowners() {
             const share = delinq.totalCents ? total / delinq.totalCents : 0;
             return (
               <div key={b.label}>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                <p className="text-[13px] font-semibold text-fg-muted">
                   {b.label}
                 </p>
-                <p className="tnum mt-1.5 text-[19px] font-semibold leading-none text-fg">
+                <p className="tnum mt-1.5 text-[20px] font-semibold leading-none text-fg">
                   {money(total, { cents: false })}
                 </p>
-                <p className="mt-1 text-[11px] text-fg-muted">{pluralize(b.owners.length, "account")}</p>
+                <p className="mt-1 text-[13px] text-fg-muted">{pluralize(b.owners.length, "account")}</p>
                 <Meter
                   className="mt-2"
                   value={share}
@@ -216,7 +216,7 @@ export default function BoardHomeowners() {
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search owners or units"
                   aria-label="Search owners or units"
-                  className="w-44 bg-transparent text-[12px] text-fg outline-none placeholder:text-fg-subtle"
+                  className="w-44 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
                 />
               </div>
               <Button
@@ -271,7 +271,7 @@ export default function BoardHomeowners() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left">
             <thead>
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                 <th className="px-5 py-2.5 font-semibold">Household</th>
                 <th className="px-3 py-2.5 font-semibold">Unit</th>
                 <th className="px-3 py-2.5 font-semibold">Contact</th>
@@ -287,7 +287,7 @@ export default function BoardHomeowners() {
                 return (
                   <tr
                     key={o.id}
-                    className="border-b border-border text-[13px] transition-colors last:border-b-0 hover:bg-surface-2"
+                    className="border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2"
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
@@ -309,7 +309,7 @@ export default function BoardHomeowners() {
                             ) : null}
                           </div>
                           {o.members.length > 1 ? (
-                            <span className="text-[11px] text-fg-subtle">
+                            <span className="text-[13px] text-fg-subtle">
                               {o.members.join(" · ")}
                             </span>
                           ) : null}
@@ -318,8 +318,8 @@ export default function BoardHomeowners() {
                     </td>
                     <td className="tnum px-3 py-3 text-fg-muted">{o.unit}</td>
                     <td className="px-3 py-3">
-                      <p className="truncate text-[12px] text-fg-muted">{o.email}</p>
-                      <p className="tnum text-[11px] text-fg-subtle">{o.phone}</p>
+                      <p className="truncate text-[13px] text-fg-muted">{o.email}</p>
+                      <p className="tnum text-[13px] text-fg-subtle">{o.phone}</p>
                     </td>
                     <td
                       className={`tnum px-3 py-3 text-right font-semibold ${
@@ -341,7 +341,7 @@ export default function BoardHomeowners() {
                           onClick={() => copyInvite(o)}
                           aria-label={`Copy the invitation link for ${o.displayName}`}
                           title="Copy invitation link"
-                          className="rounded-md border border-border-2 px-2 py-1 text-[11px] font-medium text-fg hover:bg-surface-2"
+                          className="rounded-md border border-border-2 px-2 py-1 text-[13px] font-medium text-fg hover:bg-surface-2"
                         >
                           <LinkIcon className="size-3.5" />
                         </button>
@@ -369,7 +369,7 @@ export default function BoardHomeowners() {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
           
-          <p className="tnum text-[11px] text-fg-muted">
+          <p className="tnum text-[13px] text-fg-muted">
             Showing {visible.length} of {matching.length}
           </p>
         </div>
@@ -379,4 +379,4 @@ export default function BoardHomeowners() {
 }
 
 const rosterInput =
-  "h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[13px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
+  "h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";

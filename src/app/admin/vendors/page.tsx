@@ -143,34 +143,34 @@ export default function BoardVendors() {
         <Card className="mt-5">
           <CardHeader
             title="New vendor"
-            subtitle="A vendor without a W-9 cannot be paid $600 in a year without breaking the January filing"
+            subtitle="Over $600 a year, the IRS needs a W-9 from them in January"
           />
           <div className="grid gap-3 px-5 py-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
                 Name
               </span>
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 placeholder="Cascade Grounds Co."
-                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
                 Service
               </span>
               <input
                 value={draft.service}
                 onChange={(e) => setDraft({ ...draft, service: e.target.value })}
                 placeholder="Grounds and irrigation"
-                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
               />
             </label>
           </div>
           <div className="flex flex-wrap gap-4 border-t border-border px-5 py-3">
-            <label className="flex items-center gap-2 text-[13px] text-fg">
+            <label className="flex items-center gap-2 text-[15px] text-fg">
               <input
                 type="checkbox"
                 checked={draft.achEnabled}
@@ -179,7 +179,7 @@ export default function BoardVendors() {
               />
               Pays by ACH
             </label>
-            <label className="flex items-center gap-2 text-[13px] text-fg">
+            <label className="flex items-center gap-2 text-[15px] text-fg">
               <input
                 type="checkbox"
                 checked={draft.w9OnFile}
@@ -211,7 +211,7 @@ export default function BoardVendors() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-left">
               <thead>
-                <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                   <th className="px-5 py-2.5 font-semibold">Vendor</th>
                   <th className="px-3 py-2.5 font-semibold">Rail</th>
                   <th className="px-3 py-2.5 font-semibold">Docs</th>
@@ -225,11 +225,11 @@ export default function BoardVendors() {
                   return (
                     <tr
                       key={v.id}
-                      className="border-b border-border text-[13px] transition-colors last:border-b-0 hover:bg-surface-2"
+                      className="border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2"
                     >
                       <td className="px-5 py-3">
                         <p className="font-medium text-fg">{v.name}</p>
-                        <p className="text-[11px] text-fg-muted">{v.service}</p>
+                        <p className="text-[13px] text-fg-muted">{v.service}</p>
                       </td>
                       <td className="px-3 py-3">
                         {v.achEnabled ? (
@@ -290,11 +290,11 @@ export default function BoardVendors() {
             <div key={p.id} className="border-b border-border px-5 py-3.5 last:border-b-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium text-fg">{p.vendor}</p>
-                  <p className="text-[11px] text-fg-muted">{p.invoiceNumber}</p>
+                  <p className="truncate text-[15px] font-medium text-fg">{p.vendor}</p>
+                  <p className="text-[13px] text-fg-muted">{p.invoiceNumber}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="tnum text-[13px] font-semibold text-fg">
+                  <p className="tnum text-[15px] font-semibold text-fg">
                     {money(p.amountCents, { cents: false })}
                   </p>
                   <Badge tone={payoutTone[p.status]} className="mt-0.5">
@@ -309,12 +309,12 @@ export default function BoardVendors() {
                     approvePayout(p.id);
                     notify(`Approved ${p.vendor}`);
                   }}
-                  className="mt-2 h-7 rounded-md bg-brand px-2.5 text-[11px] font-medium text-brand-fg"
+                  className="mt-2 h-7 rounded-md bg-brand px-2.5 text-[13px] font-medium text-brand-fg"
                 >
                   Add my approval
                 </button>
               ) : null}
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-fg-subtle">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
                 <span className="font-medium uppercase">{p.method}</span>
                 <span>
                   {p.status === "paid" ? "landed" : "lands"} {relativeDays(p.expectedDate)}
@@ -329,7 +329,7 @@ export default function BoardVendors() {
                 </span>
               </div>
               {p.method === "check" ? (
-                <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-[11px] leading-snug text-warn">
+                <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-[13px] leading-snug text-warn">
                   Check rail, {daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)} days in
                   transit. Ask this vendor to enable ACH.
                 </p>

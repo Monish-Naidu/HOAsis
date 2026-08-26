@@ -125,12 +125,12 @@ export function SettingsScreen() {
               value={settings.displayName}
               onChange={(e) => updateSettings({ displayName: e.target.value })}
               aria-label="Community name"
-              className="h-9 w-48 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              className="h-9 w-48 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             />
           </SettingRow>
           <div className="border-b border-border px-5 py-4">
-            <p className="text-[13px] font-medium text-fg">Community photo</p>
-            <p className="mt-0.5 text-[12px] text-fg-muted">
+            <p className="text-[15px] font-medium text-fg">Community photo</p>
+            <p className="mt-0.5 text-[13px] text-fg-muted">
               Sits behind the community name on every screen.
             </p>
             <div
@@ -140,7 +140,7 @@ export function SettingsScreen() {
               aria-label="Current community photo"
             />
             <div className="mt-2 flex items-center gap-2">
-              <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg hover:bg-surface-2">
+              <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[15px] font-medium text-fg hover:bg-surface-2">
                 <Upload className="size-3.5" />
                 Replace photo
                 <input
@@ -161,7 +161,7 @@ export function SettingsScreen() {
                 />
               </label>
               {settings.photoCredit ? (
-                <span className="text-[11px] text-fg-subtle">{settings.photoCredit}</span>
+                <span className="text-[13px] text-fg-subtle">{settings.photoCredit}</span>
               ) : null}
             </div>
           </div>
@@ -171,8 +171,8 @@ export function SettingsScreen() {
         <Card>
           <CardHeader title="Resident home" icon={<CalendarDays className="size-4" />} />
           <div className="border-b border-border px-5 py-4">
-            <p className="text-[13px] font-medium text-fg">Layout</p>
-            <p className="mt-0.5 text-[12px] text-fg-muted">
+            <p className="text-[15px] font-medium text-fg">Layout</p>
+            <p className="mt-0.5 text-[13px] text-fg-muted">
               A full calendar, or one banner you edit by hand.
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -193,11 +193,11 @@ export function SettingsScreen() {
                       : "border-border hover:bg-surface-2",
                   )}
                 >
-                  <span className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+                  <span className="flex items-center gap-1.5 text-[15px] font-semibold text-fg">
                     {o.label}
                     {settings.homeLayout === o.v ? <Check className="size-3.5" /> : null}
                   </span>
-                  <span className="mt-0.5 block text-[11px] text-fg-muted">{o.hint}</span>
+                  <span className="mt-0.5 block text-[13px] text-fg-muted">{o.hint}</span>
                 </button>
               ))}
             </div>
@@ -205,7 +205,7 @@ export function SettingsScreen() {
 
           {settings.homeLayout === "banner" ? (
             <div className="border-b border-border px-5 py-4">
-              <p className="mb-2 flex items-center gap-1.5 text-[13px] font-medium text-fg">
+              <p className="mb-2 flex items-center gap-1.5 text-[15px] font-medium text-fg">
                 <Megaphone className="size-3.5" />
                 Banner text
               </p>
@@ -215,7 +215,7 @@ export function SettingsScreen() {
                   updateSettings({ banner: { ...settings.banner, title: e.target.value } })
                 }
                 aria-label="Banner title"
-                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] font-medium text-fg outline-none"
+                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] font-medium text-fg outline-none"
               />
               <textarea
                 rows={2}
@@ -224,7 +224,7 @@ export function SettingsScreen() {
                   updateSettings({ banner: { ...settings.banner, detail: e.target.value } })
                 }
                 aria-label="Banner detail"
-                className="mt-2 w-full resize-none rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-[12px] text-fg outline-none"
+                className="mt-2 w-full resize-none rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-[13px] text-fg outline-none"
               />
             </div>
           ) : null}
@@ -237,7 +237,7 @@ export function SettingsScreen() {
               value={settings.paymentFeeCents}
               onChange={(e) => updateSettings({ paymentFeeCents: Number(e.target.value) })}
               aria-label="Payment fee"
-              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               {[0, 50, 100, 150, 200, 250, 300].map((cents) => (
                 <option key={cents} value={cents}>
@@ -248,7 +248,7 @@ export function SettingsScreen() {
           </SettingRow>
           <SettingRow
             title="Who pays it"
-            description="Charged to the owner at checkout, or absorbed by the association"
+            description="The owner pays it, or the association does"
           >
             <select
               value={settings.paymentFeePaidBy}
@@ -258,7 +258,7 @@ export function SettingsScreen() {
                 })
               }
               aria-label="Who pays the fee"
-              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               <option value="owner">The owner</option>
               <option value="association">The association</option>
@@ -266,7 +266,7 @@ export function SettingsScreen() {
           </SettingRow>
           <SettingRow
             title="Waive it on bank transfers"
-            description="Pushes owners to the cheapest rail, which lowers what the association pays"
+            description="Bank transfers cost the association less than cards"
           >
             <Toggle
               checked={settings.paymentFeeWaivedOnAch}
@@ -276,13 +276,13 @@ export function SettingsScreen() {
           </SettingRow>
           <SettingRow
             title="Autopay late day"
-            description="The last day of the month a resident can schedule autopay before it is late"
+            description="Autopay cannot be set later than this day"
           >
             <select
               value={settings.autopayLateAfterDay}
               onChange={(e) => updateSettings({ autopayLateAfterDay: Number(e.target.value) })}
               aria-label="Autopay late day"
-              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                 <option key={d} value={d}>
@@ -337,10 +337,10 @@ export function SettingsScreen() {
               className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium text-fg">{a.name}</p>
-                <p className="truncate text-[11px] text-fg-muted">{a.detail}</p>
+                <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
+                <p className="truncate text-[13px] text-fg-muted">{a.detail}</p>
               </div>
-              <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-fg-muted">
+              <label className="flex shrink-0 items-center gap-1.5 text-[13px] text-fg-muted">
                 Reservable
                 <Toggle
                   checked={a.reservable}
@@ -367,7 +367,7 @@ export function SettingsScreen() {
               onChange={(e) => setNewAmenity(e.target.value)}
               placeholder="Add an amenity"
               aria-label="New amenity name"
-              className="h-9 flex-1 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              className="h-9 flex-1 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             />
             <Button variant="primary" size="sm" onClick={addAmenity} disabled={!newAmenity.trim()}>
               <Plus className="size-3.5" />
@@ -380,7 +380,7 @@ export function SettingsScreen() {
         <Card className="xl:col-span-2">
           <CardHeader
             title="Architectural forms"
-            subtitle="Baseline forms ship with HOAsis. Upload your own and the label is what residents pick from."
+            subtitle="Upload your own forms. The label is what residents see."
             icon={<FileText className="size-4" />}
           />
           <div className="grid gap-px bg-border sm:grid-cols-2">
@@ -389,11 +389,11 @@ export function SettingsScreen() {
                 <FileText className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[13px] font-medium text-fg">{f.label}</p>
+                    <p className="text-[15px] font-medium text-fg">{f.label}</p>
                     <Badge tone={f.source === "baseline" ? "neutral" : "brand"}>{f.source}</Badge>
                   </div>
-                  <p className="mt-0.5 truncate text-[11px] text-fg-muted">{f.fileName}</p>
-                  <p className="text-[11px] text-fg-subtle">
+                  <p className="mt-0.5 truncate text-[13px] text-fg-muted">{f.fileName}</p>
+                  <p className="text-[13px] text-fg-subtle">
                     {f.size} · updated {formatDate(f.updatedDate, "long")}
                   </p>
                 </div>
@@ -417,7 +417,7 @@ export function SettingsScreen() {
               onChange={(e) => setNewFormLabel(e.target.value)}
               placeholder="Label residents will see, for example Paint color request"
               aria-label="New form label"
-              className="h-9 flex-1 rounded-lg border border-border bg-surface-2 px-2.5 text-[13px] text-fg outline-none"
+              className="h-9 flex-1 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             />
             <Button variant="primary" size="sm" onClick={addForm} disabled={!newFormLabel.trim()}>
               <Upload className="size-3.5" />
@@ -447,7 +447,7 @@ export function SettingsScreen() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left">
               <thead>
-                <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                   <th className="px-5 py-2.5 font-semibold">Admin</th>
                   {GRANTABLE.map((c) => (
                     <th key={c} className="px-2 py-2.5 text-center font-semibold">
@@ -462,8 +462,8 @@ export function SettingsScreen() {
                   .map((a) => (
                     <tr key={a.id} className="border-b border-border last:border-b-0">
                       <td className="px-5 py-3">
-                        <p className="text-[13px] font-medium text-fg">{a.name}</p>
-                        <p className="text-[11px] text-fg-muted">{ROLE_LABEL[a.role]}</p>
+                        <p className="text-[15px] font-medium text-fg">{a.name}</p>
+                        <p className="text-[13px] text-fg-muted">{ROLE_LABEL[a.role]}</p>
                       </td>
                       {GRANTABLE.map((c) => (
                         <td key={c} className="px-2 py-3 text-center">
@@ -482,7 +482,7 @@ export function SettingsScreen() {
               </tbody>
             </table>
           </div>
-          <p className="border-t border-border px-5 py-3 text-[11px] leading-relaxed text-fg-subtle">
+          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
             The President&apos;s own row is locked on purpose. An association that can strip its
             President of access has no way back in.
           </p>

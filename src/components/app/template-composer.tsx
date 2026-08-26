@@ -91,7 +91,7 @@ export function TemplateComposer({
             onClick={() => select(t.id)}
             aria-pressed={t.id === templateId}
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
+              "shrink-0 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors",
               t.id === templateId
                 ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
                 : "border-border text-fg-muted hover:bg-surface-2",
@@ -103,10 +103,10 @@ export function TemplateComposer({
       </div>
 
       <div className="px-5 py-4">
-        <p className="text-[12px] text-fg-muted">{template.description}</p>
+        <p className="text-[13px] text-fg-muted">{template.description}</p>
 
         <label className="mt-3 block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
             Subject
           </span>
           <input
@@ -115,19 +115,19 @@ export function TemplateComposer({
             readOnly={!editing}
             aria-label="Subject"
             className={cn(
-              "h-9 w-full rounded-lg border border-border px-2.5 text-[13px] text-fg outline-none",
+              "h-9 w-full rounded-lg border border-border px-2.5 text-[15px] text-fg outline-none",
               editing ? "bg-surface-2" : "bg-surface",
             )}
           />
         </label>
 
         <label className="mt-3 block">
-          <span className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <span className="mb-1 flex items-center justify-between text-[13px] font-semibold text-fg-muted">
             {editing ? "Template" : "Preview for the first recipient"}
             <button
               type="button"
               onClick={() => setEditing((v) => !v)}
-              className="text-[11px] font-medium normal-case tracking-normal text-accent"
+              className="text-[13px] font-medium normal-case tracking-normal text-accent"
             >
               {editing ? "Show preview" : "Edit template"}
             </button>
@@ -139,7 +139,7 @@ export function TemplateComposer({
             readOnly={!editing}
             aria-label={editing ? "Template body" : "Preview"}
             className={cn(
-              "w-full resize-none rounded-lg border border-border px-3 py-2 font-mono text-[12px] leading-relaxed text-fg outline-none",
+              "w-full resize-none rounded-lg border border-border px-3 py-2 font-mono text-[13px] leading-relaxed text-fg outline-none",
               editing ? "bg-surface-2" : "bg-surface",
             )}
           />
@@ -147,7 +147,7 @@ export function TemplateComposer({
 
         {editing ? (
           <div className="mt-3">
-            <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+            <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
               <Wand2 className="size-3" />
               Tokens
             </p>
@@ -158,7 +158,7 @@ export function TemplateComposer({
                   type="button"
                   title={t.meaning}
                   onClick={() => setBody((current) => `${current}${t.token}`)}
-                  className="rounded-md border border-border px-2 py-0.5 font-mono text-[11px] text-fg-muted hover:bg-surface-2 hover:text-fg"
+                  className="rounded-md border border-border px-2 py-0.5 font-mono text-[13px] text-fg-muted hover:bg-surface-2 hover:text-fg"
                 >
                   {t.token}
                 </button>

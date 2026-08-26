@@ -14,15 +14,15 @@ export default function NotFound() {
           <span className="mb-3 inline-flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-fg">
             <Compass className="size-5" />
           </span>
-          <h1 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
+          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
             There is nothing here
           </h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
+          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
             The link may be old, or the record may belong to a different account.
           </p>
           <Link
             href="/signin"
-            className="mt-5 inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[13px] font-medium text-brand-fg"
+            className="mt-5 inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg"
           >
             Back to sign in
           </Link>

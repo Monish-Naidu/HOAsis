@@ -97,7 +97,7 @@ export default function BoardDocuments() {
         title="Documents"
         
         action={
-          <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 text-[13px] font-medium text-brand-fg transition-opacity hover:opacity-90">
+          <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90">
             <Upload className="size-3.5" />
             Upload
             <input
@@ -170,7 +170,7 @@ export default function BoardDocuments() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search documents"
                 aria-label="Search documents"
-                className="w-40 bg-transparent text-[12px] text-fg outline-none placeholder:text-fg-subtle"
+                className="w-40 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
           }
@@ -178,7 +178,7 @@ export default function BoardDocuments() {
         {grouped.map(({ category, docs }) => (
           <div key={category}>
             <div className="border-b border-border bg-surface-2 px-5 py-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+              <p className="text-[13px] font-semibold text-fg-muted">
                 {category}
               </p>
             </div>
@@ -196,8 +196,8 @@ export default function BoardDocuments() {
                     )}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-fg">{d.name}</p>
-                    <p className="truncate text-[11px] text-fg-muted">
+                    <p className="truncate text-[15px] font-medium text-fg">{d.name}</p>
+                    <p className="truncate text-[13px] text-fg-muted">
                       Updated {formatDate(d.updatedDate, "long")} · {d.size}
                       {d.requiredBy ? ` · required by ${d.requiredBy}` : ""}
                     </p>
@@ -212,7 +212,7 @@ export default function BoardDocuments() {
                       notify(`${d.name} is now ${e.target.value}`);
                     }}
                     aria-label={`Who can see ${d.name}`}
-                    className="h-7 rounded-md border border-border bg-surface-2 px-2 text-[11px] font-medium text-fg outline-none"
+                    className="h-7 rounded-md border border-border bg-surface-2 px-2 text-[13px] font-medium text-fg outline-none"
                   >
                     <option value="public">Public</option>
                     <option value="members">Owners</option>

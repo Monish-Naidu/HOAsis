@@ -12,7 +12,7 @@ export function FundsGate({ children }: { children: React.ReactNode }) {
       <EmptyState
         icon={<Lock className="size-5" />}
         title="Association funds are not published"
-        description="The board has this switched off. Ask them to turn it on in community settings, or request the records directly."
+        description="Your board has this switched off. Ask them to turn it on."
       />
     );
   }

@@ -14,10 +14,10 @@ export default function LibraryPage() {
       <MarketingHeader />
       <main className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16">
         <header className="mb-8">
-          <h1 className="max-w-3xl text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[44px]">
+          <h1 className="max-w-3xl text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[48px]">
             Everything we know about running an HOA, free.
           </h1>
-          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-fg-muted">
+          <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-fg-muted">
             No account, no email gate. Most of this applies wherever you are. The state specific
             pieces are marked, because that is the part boards most often get wrong and least
             often find written down.

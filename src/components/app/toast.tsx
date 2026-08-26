@@ -81,7 +81,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               )}
             >
               <Icon className="mt-px size-4 shrink-0" />
-              <p className="flex-1 text-[13px] leading-snug">{toast.message}</p>
+              <p className="flex-1 text-[15px] leading-snug">{toast.message}</p>
               {toast.action ? (
                 <button
                   type="button"
@@ -89,7 +89,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                     toast.action?.onClick();
                     dismiss(toast.id);
                   }}
-                  className="shrink-0 rounded-md border border-current/30 px-2 py-0.5 text-[12px] font-semibold hover:bg-current/10"
+                  className="shrink-0 rounded-md border border-current/30 px-2 py-0.5 text-[13px] font-semibold hover:bg-current/10"
                 >
                   {toast.action.label}
                 </button>

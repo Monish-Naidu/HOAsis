@@ -80,8 +80,8 @@ export default function BoardVoting() {
               Live
             </Badge>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-semibold text-ok">{live.title}</p>
-              <p className="text-[12px] text-ok opacity-90">
+              <p className="truncate text-[15px] font-semibold text-ok">{live.title}</p>
+              <p className="text-[13px] text-ok opacity-90">
                 {live.time} · {live.attendees.length} joined · notice sent{" "}
                 {formatDate(live.noticeSentDate!, "long")}
               </p>
@@ -91,12 +91,12 @@ export default function BoardVoting() {
             <div className="lg:col-span-3">
               <MeetingRoom meeting={live} />
               <div className="border-t border-border px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                <p className="text-[13px] font-semibold text-fg-muted">
                   In the room
                 </p>
                 <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
                   {live.attendees.map((a) => (
-                    <li key={a.name} className="flex items-center gap-2 text-[12px] text-fg-muted">
+                    <li key={a.name} className="flex items-center gap-2 text-[13px] text-fg-muted">
                       <span className="size-1.5 shrink-0 rounded-full bg-ok" />
                       <span className="truncate">{a.name}</span>
                       <span className="ml-auto shrink-0 text-fg-subtle">
@@ -108,18 +108,18 @@ export default function BoardVoting() {
               </div>
             </div>
             <div className="border-t border-border px-5 py-4 lg:col-span-2 lg:border-l lg:border-t-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+              <p className="text-[13px] font-semibold text-fg-muted">
                 Agenda
               </p>
               <ol className="mt-2 space-y-1.5">
                 {live.agenda.map((item, i) => (
-                  <li key={item} className="flex gap-2 text-[13px] text-fg-muted">
+                  <li key={item} className="flex gap-2 text-[15px] text-fg-muted">
                     <span className="tnum shrink-0 text-fg-subtle">{i + 1}.</span>
                     <span>{item}</span>
                   </li>
                 ))}
               </ol>
-              <p className="mt-4 rounded-lg bg-surface-2 px-3 py-2 text-[11px] leading-snug text-fg-muted">
+              <p className="mt-4 rounded-lg bg-surface-2 px-3 py-2 text-[13px] leading-snug text-fg-muted">
                 Item 3 is the open board ballot below. Directors can vote without leaving the call.
               </p>
             </div>
@@ -128,7 +128,7 @@ export default function BoardVoting() {
       ) : null}
 
       <section className="mt-5">
-        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+        <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">
           Open ballots
         </h2>
         <div className="grid gap-4 xl:grid-cols-2">
@@ -163,26 +163,26 @@ export default function BoardVoting() {
               className="flex items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
             >
               <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
-                <span className="text-[9px] font-semibold uppercase text-fg-subtle">
+                <span className="text-[12px] font-semibold uppercase text-fg-subtle">
                   {formatDate(m.date).split(" ")[0]}
                 </span>
-                <span className="tnum text-[14px] font-semibold leading-none text-fg">
+                <span className="tnum text-[15px] font-semibold leading-none text-fg">
                   {formatDate(m.date).split(" ")[1]}
                 </span>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[13px] font-medium text-fg">{m.title}</p>
+                  <p className="text-[15px] font-medium text-fg">{m.title}</p>
                   {m.status === "live" ? (
                     <Badge tone="ok" dot>
                       Live
                     </Badge>
                   ) : null}
                 </div>
-                <p className="mt-0.5 text-[11px] text-fg-muted">
+                <p className="mt-0.5 text-[13px] text-fg-muted">
                   {m.time} · {m.location}
                 </p>
-                <p className="mt-0.5 text-[11px] text-fg-subtle">
+                <p className="mt-0.5 text-[13px] text-fg-subtle">
                   {m.noticeSentDate
                     ? `Notice sent ${formatDate(m.noticeSentDate, "long")}`
                     : "Notice not sent"}

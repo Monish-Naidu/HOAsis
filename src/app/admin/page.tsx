@@ -128,7 +128,7 @@ export default function BoardDashboard() {
               action={
                 <Link
                   href="/admin/money"
-                  className="text-[12px] font-medium text-accent hover:underline"
+                  className="text-[13px] font-medium text-accent hover:underline"
                 >
                   Review all
                 </Link>
@@ -136,8 +136,8 @@ export default function BoardDashboard() {
             />
             {recon.needsReview.length === 0 ? (
               <div className="px-5 py-8 text-center">
-                <p className="text-[13px] font-medium text-ok">Nothing left to review</p>
-                <p className="mt-1 text-[12px] text-fg-muted">
+                <p className="text-[15px] font-medium text-ok">Nothing left to review</p>
+                <p className="mt-1 text-[13px] text-fg-muted">
                   Every transaction is cleared, so every report agrees.
                 </p>
               </div>
@@ -149,7 +149,7 @@ export default function BoardDashboard() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-[13px] font-medium text-fg">{e.description}</p>
+                    <p className="truncate text-[15px] font-medium text-fg">{e.description}</p>
                     {e.duplicateOfId ? (
                       <Badge tone="danger">
                         <Copy className="size-2.5" />
@@ -157,7 +157,7 @@ export default function BoardDashboard() {
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="mt-0.5 text-[11px] text-fg-muted">
+                  <p className="mt-0.5 text-[13px] text-fg-muted">
                     {formatDate(e.date)} · {e.counterparty}
                     {e.suggestionConfidence
                       ? ` · suggested "${e.suggestedCategory ?? "uncategorized"}" at ${Math.round(
@@ -166,7 +166,7 @@ export default function BoardDashboard() {
                       : ""}
                   </p>
                 </div>
-                <span className="tnum text-[13px] font-semibold text-fg">
+                <span className="tnum text-[15px] font-semibold text-fg">
                   {money(e.amountCents)}
                 </span>
                 <div className="flex gap-1.5">
@@ -179,7 +179,7 @@ export default function BoardDashboard() {
                         onClick: undo,
                       });
                     }}
-                    className="h-7 rounded-md border border-border-2 px-2.5 text-[12px] font-medium text-fg hover:bg-surface-2"
+                    className="h-7 rounded-md border border-border-2 px-2.5 text-[13px] font-medium text-fg hover:bg-surface-2"
                   >
                     Confirm
                   </button>
@@ -195,7 +195,7 @@ export default function BoardDashboard() {
                         { label: "Undo", onClick: undo },
                       );
                     }}
-                    className="h-7 rounded-md px-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2"
+                    className="h-7 rounded-md px-2.5 text-[13px] font-medium text-fg-muted hover:bg-surface-2"
                   >
                     {e.duplicateOfId ? "Remove" : "Dismiss"}
                   </button>
@@ -221,12 +221,12 @@ export default function BoardDashboard() {
                 className="block border-b border-border px-5 py-3 last:border-b-0 hover:bg-surface-2"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg">
+                  <p className="min-w-0 flex-1 truncate text-[15px] font-medium text-fg">
                     {r.title}
                   </p>
                   <Badge tone={r.daysLeft <= 5 ? "warn" : "neutral"}>{r.daysLeft}d</Badge>
                 </div>
-                <p className="mt-0.5 truncate text-[11px] text-fg-muted">
+                <p className="mt-0.5 truncate text-[13px] text-fg-muted">
                   {r.unit ? `Unit ${r.unit} · ` : ""}
                   {r.dueReason}
                 </p>
@@ -242,19 +242,19 @@ export default function BoardDashboard() {
               icon={<RefreshCw className="size-4" />}
             />
             {approvals.length === 0 ? (
-              <p className="px-5 py-6 text-center text-[13px] text-fg-muted">
+              <p className="px-5 py-6 text-center text-[15px] text-fg-muted">
                 Nothing waiting on a signature.
               </p>
             ) : null}
             {approvals.map((p) => (
               <div key={p.id} className="border-b border-border px-5 py-3 last:border-b-0">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="truncate text-[13px] font-medium text-fg">{p.vendor}</p>
-                  <span className="tnum shrink-0 text-[13px] font-semibold text-fg">
+                  <p className="truncate text-[15px] font-medium text-fg">{p.vendor}</p>
+                  <span className="tnum shrink-0 text-[15px] font-semibold text-fg">
                     {money(p.amountCents, { cents: false })}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[11px] text-fg-muted">
+                <p className="mt-0.5 text-[13px] text-fg-muted">
                   {p.invoiceNumber} · {p.approvals.length} of {p.approvalsRequired} approvals ·{" "}
                   {p.method === "ach" ? "ACH, lands in 2 days" : "check"}
                 </p>
@@ -265,14 +265,14 @@ export default function BoardDashboard() {
                       approvePayout(p.id);
                       notify(`Approved ${p.vendor}`);
                     }}
-                    className="h-7 rounded-md bg-brand px-2.5 text-[12px] font-medium text-brand-fg"
+                    className="h-7 rounded-md bg-brand px-2.5 text-[13px] font-medium text-brand-fg"
                   >
                     Approve
                   </button>
                   <button
                     type="button"
                     onClick={() => notify(`${p.vendor} put on hold`, "warn")}
-                    className="h-7 rounded-md px-2.5 text-[12px] font-medium text-fg-muted hover:bg-surface-2"
+                    className="h-7 rounded-md px-2.5 text-[13px] font-medium text-fg-muted hover:bg-surface-2"
                   >
                     Hold
                   </button>
@@ -313,14 +313,14 @@ function TieOutBanner({
           {tiesOut ? <CheckCircle2 className="size-5" /> : <AlertTriangle className="size-5" />}
         </span>
         <div className="min-w-0 flex-1">
-          <p className={`text-[14px] font-semibold ${tiesOut ? "text-ok" : "text-warn"}`}>
+          <p className={`text-[15px] font-semibold ${tiesOut ? "text-ok" : "text-warn"}`}>
             {!connected
               ? "Connect a bank to start reconciling"
               : tiesOut
-              ? "Books tie out. Every report agrees."
+              ? "Every number matches. Nothing is waiting on you."
               : `${needsReview} ${needsReview === 1 ? "transaction is" : "transactions are"} holding the books open`}
           </p>
-          <p className={`mt-1 text-[13px] leading-relaxed ${tiesOut ? "text-ok" : "text-warn"} opacity-90`}>
+          <p className={`mt-1 text-[15px] leading-relaxed ${tiesOut ? "text-ok" : "text-warn"} opacity-90`}>
             {!connected
               ? "No bank account connected yet, so there is nothing to reconcile."
               : tiesOut
@@ -332,7 +332,7 @@ function TieOutBanner({
         </div>
         <Link
           href="/admin/money"
-          className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold ${
+          className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold ${
             tiesOut ? "bg-ok text-white" : "bg-warn text-white"
           }`}
         >

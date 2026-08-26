@@ -116,12 +116,12 @@ export default function BoardCompliance() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[14px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+                        <p className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
                           {item.title}
                         </p>
                         <Badge tone={meta.tone}>{meta.label}</Badge>
                       </div>
-                      <p className="mt-1 text-[12px] text-fg-muted">
+                      <p className="mt-1 text-[13px] text-fg-muted">
                         {item.citation} · {item.cadence}
                         {item.dueDate ? ` · due ${formatDate(item.dueDate, "long")}` : ""}
                       </p>
@@ -129,39 +129,39 @@ export default function BoardCompliance() {
                     <div className="hidden shrink-0 text-right sm:block">
                       {item.dueDate && item.status !== "compliant" ? (
                         <p
-                          className={`text-[12px] font-semibold ${
+                          className={`text-[13px] font-semibold ${
                             item.status === "overdue" ? "text-danger" : "text-warn"
                           }`}
                         >
                           {relativeDays(item.dueDate)}
                         </p>
                       ) : item.completedDate ? (
-                        <p className="text-[12px] text-fg-subtle">
+                        <p className="text-[13px] text-fg-subtle">
                           done {formatDate(item.completedDate)}
                         </p>
                       ) : null}
-                      <p className="mt-0.5 text-[11px] text-fg-subtle">{item.owner.split(",")[0]}</p>
+                      <p className="mt-0.5 text-[13px] text-fg-subtle">{item.owner.split(",")[0]}</p>
                     </div>
                     <ChevronDown className="mt-1 size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
                   </summary>
                   <div className="border-t border-border bg-surface-2 px-5 py-4">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                        <p className="text-[13px] font-semibold text-fg-muted">
                           What the law requires
                         </p>
-                        <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
+                        <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
                           {item.summary}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                        <p className="text-[13px] font-semibold text-fg-muted">
                           Evidence on file
                         </p>
-                        <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
+                        <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
                           {item.evidence}
                         </p>
-                        <p className="mt-2 text-[12px] text-fg-subtle">
+                        <p className="mt-2 text-[13px] text-fg-subtle">
                           Responsible: {item.owner}
                         </p>
                       </div>
@@ -169,7 +169,7 @@ export default function BoardCompliance() {
                     {item.actionHref ? (
                       <Link
                         href={item.actionHref}
-                        className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[12px] font-semibold text-brand-fg"
+                        className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-semibold text-brand-fg"
                       >
                         {item.actionLabel}
                         <ArrowRight className="size-3.5" />
@@ -185,7 +185,7 @@ export default function BoardCompliance() {
         <div className="space-y-5">
           <Card>
             <CardHeader
-              title="Reserve study cadence"
+              title="How often a reserve study is due"
               
               icon={<GraduationCap className="size-4" />}
             />
@@ -197,16 +197,16 @@ export default function BoardCompliance() {
               ].map((r) => (
                 <div key={r.label} className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-fg">{r.label}</p>
-                    <p className="text-[11px] text-fg-muted">{r.note}</p>
+                    <p className="text-[15px] font-medium text-fg">{r.label}</p>
+                    <p className="text-[13px] text-fg-muted">{r.note}</p>
                   </div>
-                  <p className="tnum shrink-0 text-[12px] font-medium text-fg">{r.value}</p>
+                  <p className="tnum shrink-0 text-[13px] font-medium text-fg">{r.value}</p>
                 </div>
               ))}
             </div>
             <div className="border-t border-border px-5 py-4">
               <Meter value={0.41} tone="warn" aria-label="Reserves 41 percent funded" />
-              <p className="mt-2 text-[12px] text-fg-muted">41 percent funded against the study.</p>
+              <p className="mt-2 text-[13px] text-fg-muted">41 percent funded against the study.</p>
             </div>
           </Card>
 
@@ -228,12 +228,12 @@ export default function BoardCompliance() {
                 { name: "Federal, IRS reporting", count: 1 },
               ].map((j) => (
                 <div key={j.name} className="flex items-center justify-between gap-3">
-                  <span className="text-[13px] text-fg">{j.name}</span>
-                  <span className="tnum text-[12px] text-fg-muted">{j.count}</span>
+                  <span className="text-[15px] text-fg">{j.name}</span>
+                  <span className="tnum text-[13px] text-fg-muted">{j.count}</span>
                 </div>
               ))}
             </div>
-            <p className="border-t border-border px-5 py-3 text-[11px] leading-relaxed text-fg-subtle">
+            <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
               Recorded 2015, so RCW 64.38 governs rather than WUCIOA.
             </p>
           </Card>

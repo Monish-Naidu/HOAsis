@@ -55,7 +55,7 @@ export function LibraryBrowser({ articles }: { articles: LibraryArticle[] }) {
               value={state}
               onChange={(e) => setState(e.target.value as StateCode | "all")}
               aria-label="Filter by state"
-              className="bg-transparent text-[13px] font-medium text-fg outline-none"
+              className="bg-transparent text-[15px] font-medium text-fg outline-none"
             >
               <option value="all">All states</option>
               {STATES.map((s) => (
@@ -74,7 +74,7 @@ export function LibraryBrowser({ articles }: { articles: LibraryArticle[] }) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search the library"
             aria-label="Search the library"
-            className="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
+            className="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
           />
         </span>
       </div>
@@ -87,7 +87,7 @@ export function LibraryBrowser({ articles }: { articles: LibraryArticle[] }) {
             onClick={() => setTopic(t)}
             aria-pressed={topic === t}
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
+              "shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
               topic === t
                 ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
                 : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -99,7 +99,7 @@ export function LibraryBrowser({ articles }: { articles: LibraryArticle[] }) {
       </div>
 
       {state !== "all" ? (
-        <p className="mt-4 text-[13px] text-fg-muted">
+        <p className="mt-4 text-[15px] text-fg-muted">
           Showing general guidance plus what applies in {stateName}.
         </p>
       ) : null}
@@ -122,13 +122,13 @@ export function LibraryBrowser({ articles }: { articles: LibraryArticle[] }) {
                     </Badge>
                   ))}
                 </div>
-                <h2 className="mt-2.5 text-[16px] font-semibold leading-snug tracking-[-0.015em] text-fg">
+                <h2 className="mt-2.5 text-[17px] font-semibold leading-snug tracking-[-0.015em] text-fg">
                   {article.title}
                 </h2>
-                <p className="mt-1.5 flex-1 text-[13px] leading-relaxed text-fg-muted">
+                <p className="mt-1.5 flex-1 text-[15px] leading-relaxed text-fg-muted">
                   {article.summary}
                 </p>
-                <p className="mt-3 text-[11px] text-fg-subtle">
+                <p className="mt-3 text-[13px] text-fg-subtle">
                   {formatDate(article.publishedDate, "long")} · {article.readMinutes} minute read
                 </p>
               </Card>

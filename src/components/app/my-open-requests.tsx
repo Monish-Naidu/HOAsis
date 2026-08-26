@@ -25,7 +25,7 @@ export function MyOpenRequests() {
     <section>
       <SectionTitle
         action={
-          <Link href="/resident/requests" className="text-[12px] font-medium text-accent">
+          <Link href="/resident/requests" className="text-[13px] font-medium text-accent">
             All {mine.length}
           </Link>
         }
@@ -42,8 +42,8 @@ export function MyOpenRequests() {
             }`}
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-fg">{r.title}</p>
-              <p className="mt-0.5 text-[11px] text-fg-muted">
+              <p className="truncate text-[15px] font-medium text-fg">{r.title}</p>
+              <p className="mt-0.5 text-[13px] text-fg-muted">
                 {r.reference} · submitted {formatDate(r.submittedDate)}
               </p>
             </div>

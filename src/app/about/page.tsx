@@ -55,13 +55,13 @@ export default function AboutPage() {
       <MarketingHeader />
       <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <Reveal>
-          <h1 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[44px]">
+          <h1 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[48px]">
             Built for the person who did not want the job.
           </h1>
         </Reveal>
 
         <Reveal delay={80}>
-          <div className="mt-6 space-y-4 text-[15px] leading-[1.75] text-fg-muted">
+          <div className="mt-6 space-y-4 text-[17px] leading-[1.75] text-fg-muted">
             <p>
               Roughly two in five American community associations manage themselves. That work
               falls to volunteers who did not run for office so much as fail to leave the room
@@ -84,7 +84,7 @@ export default function AboutPage() {
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+            <h2 className="text-[13px] font-semibold text-fg-muted">
               What we believe
             </h2>
           </Reveal>
@@ -95,8 +95,8 @@ export default function AboutPage() {
                   <span className="mb-3 inline-flex size-9 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-fg">
                     <Icon className="size-4" strokeWidth={1.9} />
                   </span>
-                  <h3 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">{title}</h3>
-                  <p className="mt-1.5 text-[14px] leading-relaxed text-fg-muted">{body}</p>
+                  <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">{title}</h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{body}</p>
                 </Card>
               </Reveal>
             ))}
@@ -105,12 +105,12 @@ export default function AboutPage() {
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+            <h2 className="text-[13px] font-semibold text-fg-muted">
               Who we are
             </h2>
-            <p className="mt-3 text-[15px] leading-[1.75] text-fg-muted">
+            <p className="mt-3 text-[17px] leading-[1.75] text-fg-muted">
               Two people who between them cover the whole job: one who knows what actually breaks
-              in a community, and one who knows why the books never quite tie out.
+              in a community, and one who knows why the numbers never quite match.
             </p>
           </Reveal>
 
@@ -140,8 +140,8 @@ export default function AboutPage() {
                     <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-fg">
                       {founder.name}
                     </h3>
-                    <p className="mt-0.5 text-[12px] font-medium text-fg-muted">{founder.role}</p>
-                    <p className="mt-3 text-[14px] leading-relaxed text-fg-muted">{founder.bio}</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-fg-muted">{founder.role}</p>
+                    <p className="mt-3 text-[15px] leading-relaxed text-fg-muted">{founder.bio}</p>
                   </div>
                 </Card>
               </Reveal>
@@ -151,10 +151,10 @@ export default function AboutPage() {
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+            <h2 className="text-[13px] font-semibold text-fg-muted">
               Who it is for
             </h2>
-            <div className="mt-4 space-y-4 text-[15px] leading-[1.75] text-fg-muted">
+            <div className="mt-4 space-y-4 text-[17px] leading-[1.75] text-fg-muted">
               <p>
                 Self-managed associations, roughly 20 to 400 homes, where a handful of neighbors
                 run the whole thing. Single family, townhome, or condo. If you have a professional
@@ -171,17 +171,17 @@ export default function AboutPage() {
 
         <Reveal delay={120}>
           <div className="mt-12 rounded-card border border-border bg-surface p-6">
-            <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-fg">
+            <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
               Have a look around
             </h2>
-            <p className="mt-2 text-[14px] leading-relaxed text-fg-muted">
+            <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
               The demo is a fictional 88 home association in Brier, Washington, with a full set of
               books, a live meeting, an open ballot, and a reserve plan that does not quite work.
               Sign in as anyone.
             </p>
             <Link
               href="/signin"
-              className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-[13px] font-semibold text-brand-fg"
+              className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg"
             >
               Open the demo
               <ArrowRight className="size-3.5" />

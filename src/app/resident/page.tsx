@@ -41,8 +41,8 @@ export default function ResidentHome() {
         >
           <Radio className="size-4 shrink-0 text-ok" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold text-ok">{live.title}</span>
-            <span className="block text-[11px] text-ok opacity-90">
+            <span className="block truncate text-[15px] font-semibold text-ok">{live.title}</span>
+            <span className="block text-[13px] text-ok opacity-90">
               Live now · {live.attendees.length} joined · tap to join
             </span>
           </span>
@@ -59,10 +59,10 @@ export default function ResidentHome() {
             <Vote className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-semibold text-fg">
+            <span className="block text-[15px] font-semibold text-fg">
               {toVote.length === 1 ? "A ballot needs your vote" : `${toVote.length} ballots need your vote`}
             </span>
-            <span className="block truncate text-[11px] text-fg-muted">
+            <span className="block truncate text-[13px] text-fg-muted">
               {toVote[0].title} · closes {relativeDays(toVote[0].closesDate)}
             </span>
           </span>
@@ -106,15 +106,15 @@ export default function ResidentHome() {
               <div className="p-4">
                 <div className="mb-1.5 flex items-center gap-2">
                   <Megaphone className="size-3.5 text-fg-subtle" />
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                  <span className="text-[13px] font-semibold text-fg-muted">
                     Pinned · {pinned.category}
                   </span>
                 </div>
-                <h3 className="text-[14px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+                <h3 className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
                   {pinned.title}
                 </h3>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{pinned.body}</p>
-                <p className="mt-2.5 text-[11px] text-fg-subtle">
+                <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{pinned.body}</p>
+                <p className="mt-2.5 text-[13px] text-fg-subtle">
                   {pinned.author} · {formatDate(pinned.postedDate)}
                 </p>
               </div>
@@ -123,16 +123,16 @@ export default function ResidentHome() {
           {rest.map((a) => (
             <Card key={a.id}>
               <div className="p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                <span className="text-[13px] font-semibold text-fg-muted">
                   {a.category}
                 </span>
-                <h3 className="mt-1 text-[14px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+                <h3 className="mt-1 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
                   {a.title}
                 </h3>
-                <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-fg-muted">
+                <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
                   {a.body}
                 </p>
-                <p className="mt-2.5 text-[11px] text-fg-subtle">
+                <p className="mt-2.5 text-[13px] text-fg-subtle">
                   {a.author} · {formatDate(a.postedDate)}
                 </p>
               </div>
@@ -165,8 +165,8 @@ function QuickAction({
       <span className="mb-2 inline-flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
         {icon}
       </span>
-      <p className="text-[13px] font-semibold text-fg">{label}</p>
-      <p className="mt-0.5 text-[11px] leading-snug text-fg-muted">{hint}</p>
+      <p className="text-[15px] font-semibold text-fg">{label}</p>
+      <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{hint}</p>
     </Link>
   );
 }

@@ -62,7 +62,7 @@ export function AddMethod({ onDone }: { onDone: () => void }) {
             onClick={() => setRail(id)}
             aria-pressed={rail === id}
             className={cn(
-              "flex flex-col items-center gap-1 py-3 text-[12px] font-medium transition-colors",
+              "flex flex-col items-center gap-1 py-3 text-[13px] font-medium transition-colors",
               rail === id
                 ? "border-b-2 border-navy-900 text-fg dark:border-navy-100"
                 : "text-fg-muted hover:text-fg",
@@ -95,7 +95,7 @@ function LinkBank({ onDone }: { onDone: () => void }) {
   if (!institution) {
     return (
       <div className="p-4">
-        <p className="mb-3 text-[13px] text-fg-muted">Choose your bank to connect it.</p>
+        <p className="mb-3 text-[15px] text-fg-muted">Choose your bank to connect it.</p>
         <div className="space-y-1.5">
           {supportedInstitutions.map((i) => (
             <button
@@ -107,11 +107,11 @@ function LinkBank({ onDone }: { onDone: () => void }) {
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
                 <Building2 className="size-4" />
               </span>
-              <span className="flex-1 text-[13px] font-medium text-fg">{i.name}</span>
+              <span className="flex-1 text-[15px] font-medium text-fg">{i.name}</span>
             </button>
           ))}
         </div>
-        <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-snug text-fg-subtle">
+        <p className="mt-3 flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
           <ShieldCheck className="mt-px size-3 shrink-0" />
           You sign in with your bank, not with us. HOAsis receives an account mask and a token,
           never your account number and never your bank password.
@@ -122,7 +122,7 @@ function LinkBank({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="p-4">
-      <p className="mb-3 text-[13px] font-medium text-fg">
+      <p className="mb-3 text-[15px] font-medium text-fg">
         Which {institution.name} account?
       </p>
       <div className="space-y-1.5">
@@ -143,7 +143,7 @@ function LinkBank({ onDone }: { onDone: () => void }) {
             className="flex w-full items-center gap-3 rounded-lg border border-border px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
           >
             <Landmark className="size-4 shrink-0 text-fg-muted" />
-            <span className="flex-1 text-[13px] font-medium capitalize text-fg">
+            <span className="flex-1 text-[15px] font-medium capitalize text-fg">
               {account.type} ••{account.mask}
             </span>
             <Badge tone="ok">Free to you</Badge>
@@ -216,7 +216,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
       </Callout>
 
       <label className="block">
-        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+        <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
           Card number
         </span>
         <div className="flex h-10 items-center gap-2 rounded-lg border border-border bg-surface-2 px-3">
@@ -227,7 +227,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
             value={number}
             onChange={(e) => setNumber(formatCardNumber(e.target.value))}
             placeholder={TEST_CARD}
-            className="tnum min-w-0 flex-1 bg-transparent text-[14px] text-fg outline-none placeholder:text-fg-subtle"
+            className="tnum min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
           />
           {brand !== "unknown" ? <Badge tone="neutral">{BRAND_LABEL[brand]}</Badge> : null}
         </div>
@@ -235,7 +235,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
 
       <div className="grid grid-cols-3 gap-2">
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
             Expires
           </span>
           <input
@@ -247,11 +247,11 @@ function AddCard({ onDone }: { onDone: () => void }) {
               setExpiry(raw.length > 2 ? `${raw.slice(0, 2)}/${raw.slice(2)}` : raw);
             }}
             placeholder="MM/YY"
-            className="tnum h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[14px] text-fg outline-none placeholder:text-fg-subtle"
+            className="tnum h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
             {cvcLengthFor(brand) === 4 ? "CID" : "CVC"}
           </span>
           <input
@@ -260,11 +260,11 @@ function AddCard({ onDone }: { onDone: () => void }) {
             value={cvc}
             onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
             placeholder={"•".repeat(cvcLengthFor(brand))}
-            className="tnum h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[14px] text-fg outline-none placeholder:text-fg-subtle"
+            className="tnum h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
             ZIP
           </span>
           <input
@@ -273,7 +273,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
             value={postalCode}
             onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
             placeholder="98036"
-            className="tnum h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[14px] text-fg outline-none placeholder:text-fg-subtle"
+            className="tnum h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
           />
         </label>
       </div>
@@ -281,7 +281,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
       {problems.length ? (
         <ul className="space-y-1 rounded-lg bg-danger-soft px-3 py-2">
           {problems.map((problem) => (
-            <li key={problem} className="text-[12px] text-danger">
+            <li key={problem} className="text-[13px] text-danger">
               {problem}
             </li>
           ))}
@@ -291,7 +291,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
       <Button variant="primary" size="lg" className="w-full" type="submit">
         Add card
       </Button>
-      <p className="flex items-start gap-1.5 text-[11px] leading-snug text-fg-subtle">
+      <p className="flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
         <Lock className="mt-px size-3 shrink-0" />
         In production this field is hosted by the payment processor and the number never reaches
         our code. Here it is checked and discarded in the same call, so only the brand, the last
@@ -323,10 +323,10 @@ function AddApplePay({ onDone }: { onDone: () => void }) {
       <div className="flex items-start gap-3 rounded-lg bg-surface-2 p-3">
         <Apple className="mt-0.5 size-4 shrink-0 text-fg-muted" />
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium text-fg">
+          <p className="text-[15px] font-medium text-fg">
             {available ? "Apple Pay is available on this device" : "Apple Pay is not available here"}
           </p>
-          <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">
+          <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
             {available
               ? "Confirming would normally open the Apple Pay sheet. This prototype has no merchant identifier, so it records the card on file instead."
               : "Apple Pay needs Safari on an Apple device, over HTTPS, with a registered merchant identifier. None of those are set up for this prototype."}
@@ -349,13 +349,13 @@ function AddApplePay({ onDone }: { onDone: () => void }) {
           });
           onDone();
         }}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-black text-[15px] font-medium text-white transition-opacity hover:opacity-90"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-black text-[17px] font-medium text-white transition-opacity hover:opacity-90"
       >
         <Apple className="size-4" />
         Set up Apple Pay
       </button>
 
-      <p className="flex items-start gap-1.5 text-[11px] leading-snug text-fg-subtle">
+      <p className="flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
         <Check className="mt-px size-3 shrink-0" />
         Apple Pay costs the association the same as the card behind it. It is faster to use, not
         cheaper to accept.

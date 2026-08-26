@@ -41,13 +41,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="no-scrollbar sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto pb-4">
               <AdminNav />
               <div className="mt-6 rounded-card border border-border bg-surface p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                <p className="text-[13px] font-semibold text-fg-muted">
                   Support
                 </p>
-                <p className="mt-1.5 text-[12px] leading-relaxed text-fg-muted">
+                <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
                   Phone and chat, 7am to 11pm, every day.
                 </p>
-                <p className="mt-2 text-[13px] font-semibold text-fg">(888) 555-0199</p>
+                <p className="mt-2 text-[15px] font-semibold text-fg">(888) 555-0199</p>
               </div>
             </div>
           </aside>

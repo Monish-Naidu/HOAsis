@@ -17,7 +17,7 @@ export default function ResidentRequests() {
     <div className="animate-rise space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Requests</h1>
+          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Requests</h1>
           
         </div>
         <Link
@@ -53,7 +53,7 @@ export default function ResidentRequests() {
 
       {history.length ? (
         <details className="group">
-          <summary className="mb-3 flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle [&::-webkit-details-marker]:hidden">
+          <summary className="mb-3 flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-semibold text-fg-muted [&::-webkit-details-marker]:hidden">
             History ({history.length})
             <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
           </summary>
@@ -65,7 +65,7 @@ export default function ResidentRequests() {
         </details>
       ) : null}
 
-      <p className="text-[11px] leading-relaxed text-fg-subtle">
+      <p className="text-[13px] leading-relaxed text-fg-subtle">
         Requests are association records. They leave the queue when they are decided, but they
         stay here and on your unit record.
       </p>
@@ -96,17 +96,17 @@ function RequestRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-fg-subtle">
+          <span className="text-[12px] font-semibold text-fg-subtle">
             {kindLabel[request.kind]}
           </span>
           {request.dueDate && !["approved", "denied", "closed"].includes(request.status) ? (
-            <span className="text-[10px] font-medium text-warn">
+            <span className="text-[12px] font-medium text-warn">
               board must respond {relativeDays(request.dueDate)}
             </span>
           ) : null}
         </div>
-        <p className="mt-0.5 truncate text-[13px] font-medium text-fg">{request.title}</p>
-        <p className="mt-0.5 text-[11px] text-fg-muted">
+        <p className="mt-0.5 truncate text-[15px] font-medium text-fg">{request.title}</p>
+        <p className="mt-0.5 text-[13px] text-fg-muted">
           {request.reference} · {formatDate(request.submittedDate)}
         </p>
       </div>

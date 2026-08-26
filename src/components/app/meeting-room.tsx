@@ -23,7 +23,7 @@ export function MeetingRoom({ meeting, compact }: { meeting: Meeting; compact?: 
             <Video className="size-4" />
             Join the call
           </Button>
-          <div className="text-[12px] leading-snug text-fg-muted">
+          <div className="text-[13px] leading-snug text-fg-muted">
             <p>
               Dial in: <span className="tnum font-medium text-fg">{meeting.dialIn}</span>
             </p>
@@ -32,7 +32,7 @@ export function MeetingRoom({ meeting, compact }: { meeting: Meeting; compact?: 
             </p>
           </div>
         </div>
-        <p className="mt-3 flex items-center gap-1.5 text-[11px] text-fg-subtle">
+        <p className="mt-3 flex items-center gap-1.5 text-[13px] text-fg-subtle">
           <Users className="size-3" />
           {meeting.attendees.length} already here
         </p>
@@ -53,13 +53,13 @@ export function MeetingRoom({ meeting, compact }: { meeting: Meeting; compact?: 
             key={a.name}
             className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-navy-900 dark:bg-navy-800"
           >
-            <span className="flex size-10 items-center justify-center rounded-full bg-navy-700 text-[13px] font-semibold text-navy-50">
+            <span className="flex size-10 items-center justify-center rounded-full bg-navy-700 text-[15px] font-semibold text-navy-50">
               {a.name
                 .split(" ")
                 .map((p) => p[0])
                 .join("")}
             </span>
-            <span className="absolute bottom-1.5 left-2 truncate text-[10px] font-medium text-navy-100">
+            <span className="absolute bottom-1.5 left-2 truncate text-[12px] font-medium text-navy-100">
               {a.name}
               {a.isHost ? " · host" : ""}
             </span>
@@ -68,7 +68,7 @@ export function MeetingRoom({ meeting, compact }: { meeting: Meeting; compact?: 
             ) : null}
           </div>
         ))}
-        <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-border-2 px-3 text-center text-[10px] leading-snug text-fg-subtle">
+        <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-border-2 px-3 text-center text-[12px] leading-snug text-fg-subtle">
           Camera preview is not wired up in this prototype
         </div>
       </div>

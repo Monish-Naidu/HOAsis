@@ -38,7 +38,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
     <Card className="overflow-hidden">
       <div className="px-4 py-3.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.07em] text-fg-subtle">
+          <span className="text-[12px] font-semibold text-fg-subtle">
             {kindLabel[ballot.kind]}
           </span>
           {submitted ? (
@@ -50,14 +50,14 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
             <Badge tone="warn">Needs your vote</Badge>
           )}
         </div>
-        <h3 className="mt-1.5 text-[14px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+        <h3 className="mt-1.5 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
           {ballot.title}
         </h3>
 
         {/* The description is paragraphs, not one unbroken block. */}
         <div className="mt-2 space-y-2">
           {(expanded ? ballot.body : ballot.body.slice(0, 1)).map((p) => (
-            <p key={p} className="text-[13px] leading-relaxed text-fg-muted">
+            <p key={p} className="text-[15px] leading-relaxed text-fg-muted">
               {p}
             </p>
           ))}
@@ -66,14 +66,14 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-medium text-accent"
+            className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-accent"
           >
             {expanded ? "Show less" : "Read the full text"}
             <ChevronDown className={cn("size-3 transition-transform", expanded && "rotate-180")} />
           </button>
         ) : null}
 
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-fg-subtle">
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3" />
             {closed
@@ -116,9 +116,9 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                   ) : null}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-medium text-fg">{o.label}</span>
+                  <span className="block text-[15px] font-medium text-fg">{o.label}</span>
                   {o.detail ? (
-                    <span className="block text-[11px] text-fg-muted">{o.detail}</span>
+                    <span className="block text-[13px] text-fg-muted">{o.detail}</span>
                   ) : null}
                 </span>
               </button>
@@ -129,7 +129,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
             <>
               <div className="mt-3 flex items-start gap-2 rounded-lg bg-ok-soft px-3 py-2">
                 <ShieldCheck className="mt-px size-3.5 shrink-0 text-ok" />
-                <p className="text-[11px] leading-snug text-ok">
+                <p className="text-[13px] leading-snug text-ok">
                   Vote recorded. Receipt <span className="font-mono font-semibold">{receipt}</span>.
                   You can change it until the ballot closes.
                 </p>
@@ -137,7 +137,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
               {!resultsUnlocked ? (
                 <div className="mt-2 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2">
                   <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
-                  <p className="text-[11px] leading-snug text-fg-muted">
+                  <p className="text-[13px] leading-snug text-fg-muted">
                     Results are sealed until the ballot closes on{" "}
                     {formatDate(ballot.closesDate, "long")}.
                   </p>
@@ -161,7 +161,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
       {/* Results */}
       {showResults && cast > 0 ? (
         <div className="space-y-2.5 border-t border-border bg-surface-2 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <p className="text-[13px] font-semibold text-fg-muted">
             {closed ? "Final result" : "Where it stands"}
           </p>
           {ballot.options.map((o) => {
@@ -171,11 +171,11 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
             return (
               <div key={o.id}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
-                  <span className="truncate text-[12px] text-fg">
+                  <span className="truncate text-[13px] text-fg">
                     {o.label}
                     {mine ? " · your vote" : ""}
                   </span>
-                  <span className="tnum shrink-0 text-[11px] text-fg-muted">
+                  <span className="tnum shrink-0 text-[13px] text-fg-muted">
                     {votes} · {Math.round(share * 100)}%
                   </span>
                 </div>
@@ -187,7 +187,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
       ) : null}
 
       {ballot.certifiedDate ? (
-        <p className="border-t border-border px-4 py-2.5 text-[11px] text-fg-muted">
+        <p className="border-t border-border px-4 py-2.5 text-[13px] text-fg-muted">
           Certified {formatDate(ballot.certifiedDate, "long")} by {ballot.certifiedBy}
         </p>
       ) : null}

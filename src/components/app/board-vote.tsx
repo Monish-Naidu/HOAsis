@@ -24,7 +24,7 @@ export function BoardVote({
 
   return (
     <Card className="p-3">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+      <p className="mb-2 text-[13px] font-semibold text-fg-muted">
         Your vote
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -37,7 +37,7 @@ export function BoardVote({
               onClick={() => onCast(option.id)}
               aria-pressed={mine}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors",
+                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors",
                 mine
                   ? "border-navy-700 bg-navy-900 text-navy-50 dark:border-navy-300 dark:bg-navy-100 dark:text-navy-950"
                   : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -50,7 +50,7 @@ export function BoardVote({
         })}
       </div>
       {ballot.myVoteOptionId ? (
-        <p className="mt-2 text-[11px] text-fg-subtle">
+        <p className="mt-2 text-[13px] text-fg-subtle">
           Recorded. You can change it until the ballot closes.
         </p>
       ) : null}

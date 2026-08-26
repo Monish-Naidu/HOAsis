@@ -66,14 +66,14 @@ export default async function UnsubscribePage({
               <span className="mb-4 flex size-11 items-center justify-center rounded-full bg-ok-soft text-ok">
                 <Check className="size-5" strokeWidth={2.5} />
               </span>
-              <h1 className="text-[21px] font-semibold tracking-[-0.02em] text-fg">
+              <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
                 You are unsubscribed
               </h1>
-              <p className="mt-2 text-[14px] leading-relaxed text-fg-muted">
+              <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
                 You will no longer receive {LABEL[category!] ?? "those emails"} from your
                 association.
               </p>
-              <p className="mt-4 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5 text-[12px] leading-snug text-fg-muted">
+              <p className="mt-4 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5 text-[13px] leading-snug text-fg-muted">
                 <ShieldCheck className="mt-px size-4 shrink-0 text-fg-subtle" />
                 Notices about your account, such as an assessment coming due or a balance
                 past due, will still reach you. Your board is required to send those.
@@ -81,10 +81,10 @@ export default async function UnsubscribePage({
             </>
           ) : (
             <>
-              <h1 className="text-[21px] font-semibold tracking-[-0.02em] text-fg">
+              <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
                 {failure ? "That did not work" : "This link is not valid"}
               </h1>
-              <p className="mt-2 text-[14px] leading-relaxed text-fg-muted">
+              <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
                 {failure ??
                   "It may have been altered on the way here. Open the most recent email and use the link at the bottom of it."}
               </p>
@@ -92,7 +92,7 @@ export default async function UnsubscribePage({
           )}
           <Link
             href="/resident/account"
-            className="mt-6 inline-flex h-10 items-center rounded-lg border border-border-2 px-4 text-[13px] font-semibold text-fg hover:bg-surface-2"
+            className="mt-6 inline-flex h-10 items-center rounded-lg border border-border-2 px-4 text-[15px] font-semibold text-fg hover:bg-surface-2"
           >
             Manage all email preferences
           </Link>

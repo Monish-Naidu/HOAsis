@@ -98,7 +98,7 @@ export function SignInPanel() {
               type="button"
               onClick={() => setMode(m)}
               className={cn(
-                "py-3 text-[13px] font-medium transition-colors",
+                "py-3 text-[15px] font-medium transition-colors",
                 mode === m
                   ? "border-b-2 border-navy-900 text-fg dark:border-navy-100"
                   : "text-fg-muted hover:text-fg",
@@ -130,7 +130,7 @@ export function SignInPanel() {
           {notice ? (
             <p
               className={cn(
-                "rounded-lg px-3 py-2 text-[12px] leading-snug",
+                "rounded-lg px-3 py-2 text-[13px] leading-snug",
                 notice.tone === "danger" ? "bg-danger-soft text-danger" : "bg-ok-soft text-ok",
               )}
               role="status"
@@ -149,13 +149,13 @@ export function SignInPanel() {
             <ArrowRight className="size-4" />
           </Button>
           {mode === "sign-in" ? (
-            <p className="text-center text-[12px] text-fg-muted">
+            <p className="text-center text-[13px] text-fg-muted">
               <button type="button" className="hover:text-fg">
                 Forgot your password?
               </button>
             </p>
           ) : (
-            <p className="text-center text-[11px] leading-snug text-fg-subtle">
+            <p className="text-center text-[13px] leading-snug text-fg-subtle">
               If your board has already added your household, signing up with the email they
               used puts you straight into your association.
             </p>
@@ -165,13 +165,13 @@ export function SignInPanel() {
 
       {hasSupabase ? (
         <Card className="p-4">
-          <p className="text-[12px] font-semibold text-fg">Try a real association</p>
-          <p className="mt-1 text-[11px] leading-snug text-fg-muted">
+          <p className="text-[13px] font-semibold text-fg">Try a real association</p>
+          <p className="mt-1 text-[13px] leading-snug text-fg-muted">
             A demo board, stored in the database rather than in this browser. It can only
             reach its own association, which is enforced by the database rather than by
             this screen.
           </p>
-          <dl className="mt-3 space-y-1 font-mono text-[11px] text-fg-muted">
+          <dl className="mt-3 space-y-1 font-mono text-[13px] text-fg-muted">
             <div className="flex gap-2">
               <dt className="w-16 shrink-0 text-fg-subtle">email</dt>
               <dd className="min-w-0 truncate text-fg">{DEMO.email}</dd>
@@ -206,7 +206,7 @@ export function SignInPanel() {
               aria-checked={option.id === community.id}
               onClick={() => setCommunity(option.id)}
               className={cn(
-                "flex-1 rounded-lg border px-3 py-2 text-[12px] font-medium transition-colors",
+                "flex-1 rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors",
                 option.id === community.id
                   ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
                   : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -221,7 +221,7 @@ export function SignInPanel() {
       <Card className="overflow-hidden">
         <div className="flex items-start gap-2 border-b border-border px-4 py-2.5">
           <Info className="mt-px size-3.5 shrink-0 text-fg-subtle" />
-          <p className="text-[11px] leading-snug text-fg-muted">
+          <p className="text-[13px] leading-snug text-fg-muted">
             Prototype. No real accounts exist, so pick a seat and the app signs you in as
             that person.
           </p>
@@ -247,8 +247,8 @@ export function SignInPanel() {
               {s.isAdmin ? <Building2 className="size-4" /> : <User className="size-4" />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-fg">{s.name}</span>
-              <span className="block text-[11px] text-fg-muted">
+              <span className="block truncate text-[15px] font-medium text-fg">{s.name}</span>
+              <span className="block text-[13px] text-fg-muted">
                 {s.role} · Unit {s.unit}
               </span>
             </span>
@@ -275,7 +275,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+      <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
         {label}
       </span>
       <input
@@ -283,7 +283,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[14px] text-fg outline-none placeholder:text-fg-subtle focus:border-border-2"
+        className="h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-border-2"
       />
     </label>
   );

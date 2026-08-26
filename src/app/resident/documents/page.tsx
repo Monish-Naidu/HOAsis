@@ -26,8 +26,8 @@ export default function ResidentDocuments() {
   return (
     <div className="animate-rise space-y-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Documents</h1>
-        <p className="mt-1 text-[13px] text-fg-muted">{visible.length} documents</p>
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Documents</h1>
+        <p className="mt-1 text-[15px] text-fg-muted">{visible.length} documents</p>
       </div>
 
       <Callout tone="brand" icon={<Globe className="size-4" />} title={publicRecordsUrl(community)} >
@@ -54,8 +54,8 @@ export default function ResidentDocuments() {
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium text-fg">{d.name}</p>
-                  <p className="mt-0.5 truncate text-[11px] text-fg-muted">
+                  <p className="truncate text-[15px] font-medium text-fg">{d.name}</p>
+                  <p className="mt-0.5 truncate text-[13px] text-fg-muted">
                     {formatDate(d.updatedDate)} · {d.size}
                     {d.requiredBy ? ` · ${d.requiredBy}` : ""}
                   </p>

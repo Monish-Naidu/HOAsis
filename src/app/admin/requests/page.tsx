@@ -56,7 +56,7 @@ export default function BoardRequests() {
         action={
           <Link
             href="/resident/requests"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-2 px-4 text-[13px] font-medium text-fg hover:bg-surface-2"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-2 px-4 text-[15px] font-medium text-fg hover:bg-surface-2"
           >
             <Eye className="size-3.5" />
             See the resident&apos;s view
@@ -103,18 +103,18 @@ export default function BoardRequests() {
                 r.daysLeft <= 5 ? "bg-warn-soft text-warn" : "bg-surface-3 text-fg-muted"
               }`}
             >
-              <span className="tnum text-[15px] font-bold leading-none">{r.daysLeft}</span>
-              <span className="text-[9px] font-semibold uppercase">days</span>
+              <span className="tnum text-[17px] font-bold leading-none">{r.daysLeft}</span>
+              <span className="text-[12px] font-semibold uppercase">days</span>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[13px] font-semibold text-fg">{r.title}</p>
+                <p className="text-[15px] font-semibold text-fg">{r.title}</p>
                 <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
               </div>
-              <p className="mt-0.5 text-[11px] text-fg-muted">
+              <p className="mt-0.5 text-[13px] text-fg-muted">
                 {r.reference} · Unit {r.unit} · {r.ownerName}
               </p>
-              <p className="mt-0.5 text-[11px] text-fg-subtle">{r.dueReason}</p>
+              <p className="mt-0.5 text-[13px] text-fg-subtle">{r.dueReason}</p>
             </div>
             <div className="flex gap-1.5">
               <Button
@@ -153,16 +153,16 @@ export default function BoardRequests() {
             >
               <Avatar name={r.ownerName} tone="neutral" />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium leading-snug text-fg">{r.title}</p>
-                <p className="mt-0.5 text-[11px] text-fg-muted">
+                <p className="text-[15px] font-medium leading-snug text-fg">{r.title}</p>
+                <p className="mt-0.5 text-[13px] text-fg-muted">
                   {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
                 </p>
-                <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-fg-muted">
+                <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-fg-muted">
                   {r.summary}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
-                  <span className="text-[11px] text-fg-subtle">
+                  <span className="text-[13px] text-fg-subtle">
                     {r.thread.length} updates
                     {r.attachments.length ? ` · ${r.attachments.length} files` : ""}
                   </span>
@@ -173,7 +173,7 @@ export default function BoardRequests() {
                         updateRequestStatus(r.id, "approved", "Approved by the board.");
                         notify(`${r.reference} approved`);
                       }}
-                      className="h-7 rounded-md bg-brand px-2.5 text-[11px] font-medium text-brand-fg"
+                      className="h-7 rounded-md bg-brand px-2.5 text-[13px] font-medium text-brand-fg"
                     >
                       Approve
                     </button>
@@ -183,7 +183,7 @@ export default function BoardRequests() {
                         updateRequestStatus(r.id, "denied", "Denied by the board.");
                         notify(`${r.reference} denied`, "warn");
                       }}
-                      className="h-7 rounded-md px-2.5 text-[11px] font-medium text-danger hover:bg-danger-soft"
+                      className="h-7 rounded-md px-2.5 text-[13px] font-medium text-danger hover:bg-danger-soft"
                     >
                       Deny
                     </button>
@@ -210,25 +210,25 @@ export default function BoardRequests() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[13px] font-medium text-fg">{v.rule}</p>
+                    <p className="text-[15px] font-medium text-fg">{v.rule}</p>
                     <Badge tone={meta.tone}>{meta.label}</Badge>
                   </div>
-                  <p className="mt-0.5 text-[11px] text-fg-muted">
+                  <p className="mt-0.5 text-[13px] text-fg-muted">
                     {v.reference} · Unit {v.unit} · {v.ownerName}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-fg-subtle">
+                  <p className="mt-0.5 text-[13px] text-fg-subtle">
                     {v.ruleCitation} · opened {formatDate(v.openedDate)}
                     {v.stage !== "cured" ? ` · next action ${relativeDays(v.nextActionDate)}` : ""}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
                   {v.fineCents ? (
-                    <p className="tnum text-[13px] font-semibold text-danger">
+                    <p className="tnum text-[15px] font-semibold text-danger">
                       ${(v.fineCents / 100).toFixed(0)}
                     </p>
                   ) : null}
                   {v.photoCount ? (
-                    <p className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-fg-subtle">
+                    <p className="mt-0.5 flex items-center justify-end gap-1 text-[13px] text-fg-subtle">
                       <Camera className="size-3" />
                       {v.photoCount}
                     </p>

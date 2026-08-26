@@ -8,7 +8,6 @@ import { Avatar } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { residentTabs } from "@/components/app/resident-nav";
-import { Assistant } from "@/components/app/assistant";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero } from "@/components/app/community-hero";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -58,7 +57,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               aria-checked={!phonePreview}
               onClick={() => setPhonePreview(false)}
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-colors",
+                "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
                 !phonePreview ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
               )}
             >
@@ -71,7 +70,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               aria-checked={phonePreview}
               onClick={() => setPhonePreview(true)}
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-colors",
+                "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
                 phonePreview ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
               )}
             >
@@ -90,10 +89,10 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const appHeader = (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md lg:hidden">
       <div className="min-w-0">
-        <p className="truncate text-[15px] font-semibold tracking-[-0.015em] text-fg">
+        <p className="truncate text-[17px] font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-[11px] text-fg-muted">
+        <p className="truncate text-[13px] text-fg-muted">
           Unit {unit} · {address}
         </p>
       </div>
@@ -133,11 +132,10 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               <CommunityHero compact />
               <div className="px-4 pt-4">{children}</div>
             </main>
-            <Assistant variant="inset" />
             <TabBar pathname={pathname} tabs={tabs} />
           </div>
         </div>
-        <p className="hidden pb-10 text-center text-[12px] text-fg-subtle lg:block">
+        <p className="hidden pb-10 text-center text-[13px] text-fg-subtle lg:block">
           The same screens and tokens carry into the native app.
         </p>
       </div>
@@ -156,8 +154,8 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <aside className="hidden w-56 shrink-0 lg:block">
           <div className="no-scrollbar sticky top-8 max-h-[calc(100dvh-4rem)] overflow-y-auto">
             <div className="rounded-card border border-border bg-surface p-4">
-              <p className="text-[13px] font-semibold text-fg">{associationName}</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-fg-muted">
+              <p className="text-[15px] font-semibold text-fg">{associationName}</p>
+              <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
                 Unit {unit}
                 <br />
                 {address}
@@ -173,7 +171,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                     href={href}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
                       active
                         ? "bg-brand-soft text-brand-soft-fg"
                         : "text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -186,19 +184,18 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               })}
             </nav>
             <div className="mt-4 rounded-card border border-border bg-surface p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+              <p className="text-[13px] font-semibold text-fg-muted">
                 Need a person
               </p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-fg-muted">
+              <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
                 Phone and chat, 7am to 11pm, every day.
               </p>
-              <p className="mt-2 text-[13px] font-semibold text-fg">(888) 555-0199</p>
+              <p className="mt-2 text-[15px] font-semibold text-fg">(888) 555-0199</p>
             </div>
           </div>
         </aside>
         <main className="min-w-0 flex-1 lg:max-w-2xl">{children}</main>
       </div>
-      <Assistant />
       <div className="lg:hidden">
         <TabBar pathname={pathname} tabs={tabs} pinned />
       </div>
@@ -221,10 +218,10 @@ function PhoneHeader({
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md">
       <div className="min-w-0">
-        <p className="truncate text-[15px] font-semibold tracking-[-0.015em] text-fg">
+        <p className="truncate text-[17px] font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-[11px] text-fg-muted">
+        <p className="truncate text-[13px] text-fg-muted">
           Unit {unit} · {address}
         </p>
       </div>
@@ -286,7 +283,7 @@ function TabBar({
                 )}
               >
                 <Icon className="size-[19px]" strokeWidth={active ? 2.3 : 1.8} />
-                <span className={cn("text-[10px]", active ? "font-semibold" : "font-medium")}>
+                <span className={cn("text-[12px]", active ? "font-semibold" : "font-medium")}>
                   {label}
                 </span>
               </Link>

@@ -23,18 +23,18 @@ export default function ResidentAccount() {
   return (
     <div className="animate-rise space-y-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Account</h1>
-        <p className="mt-1 text-[13px] text-fg-muted">
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Account</h1>
+        <p className="mt-1 text-[15px] text-fg-muted">
           Unit {currentOwner.unit} · {currentOwner.displayName}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <p className="text-[13px] font-semibold text-fg-muted">
             Balance
           </p>
-          <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-fg">
+          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
             {money(currentOwner.balanceCents)}
           </p>
           <Badge
@@ -57,13 +57,13 @@ export default function ResidentAccount() {
           </Badge>
         </Card>
         <Card className="p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+          <p className="text-[13px] font-semibold text-fg-muted">
             Paid in {paidYear}
           </p>
-          <p className="tnum mt-1.5 text-[22px] font-semibold leading-none text-fg">
+          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
             {money(paidThisYear, { cents: false })}
           </p>
-          <p className="mt-2 text-[11px] text-fg-muted">
+          <p className="mt-2 text-[13px] text-fg-muted">
             {money(association.duesCents, { cents: false })}/mo assessment
           </p>
         </Card>
@@ -74,7 +74,7 @@ export default function ResidentAccount() {
       <section>
         <SectionTitle
           action={
-            <button className="inline-flex items-center gap-1 text-[12px] font-medium text-accent">
+            <button className="inline-flex items-center gap-1 text-[13px] font-medium text-accent">
               <Download className="size-3" />
               Statement
             </button>
@@ -96,22 +96,22 @@ export default function ResidentAccount() {
                     <Receipt className="size-3.5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-fg">{line.label}</p>
-                    <p className="mt-0.5 text-[11px] text-fg-muted">
+                    <p className="truncate text-[15px] font-medium text-fg">{line.label}</p>
+                    <p className="mt-0.5 text-[13px] text-fg-muted">
                       {formatDate(line.date, "long")}
                       {line.method ? ` · ${line.method}` : ""}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p
-                      className={`tnum text-[13px] font-semibold ${
+                      className={`tnum text-[15px] font-semibold ${
                         isPayment ? "text-ok" : "text-fg"
                       }`}
                     >
                       {isPayment ? "−" : ""}
                       {money(Math.abs(line.amountCents))}
                     </p>
-                    <p className="tnum mt-0.5 text-[11px] text-fg-subtle">
+                    <p className="tnum mt-0.5 text-[13px] text-fg-subtle">
                       bal {money(line.balanceAfterCents)}
                     </p>
                   </div>
@@ -142,19 +142,19 @@ export default function ResidentAccount() {
                   {body}
                 </summary>
                 <div className="border-t border-border bg-surface-2 px-4 py-3">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                  <p className="mb-2 text-[13px] font-semibold text-fg-muted">
                     Applied to
                   </p>
                   <ul className="space-y-1.5">
                     {line.appliedTo.map((a) => (
-                      <li key={a.chargeId} className="flex justify-between text-[12px]">
+                      <li key={a.chargeId} className="flex justify-between text-[13px]">
                         <span className="text-fg-muted">{a.label}</span>
                         <span className="tnum font-medium text-fg">{money(a.amountCents)}</span>
                       </li>
                     ))}
                   </ul>
                   {line.feeCents ? (
-                    <p className="mt-2.5 border-t border-border pt-2 text-[11px] text-fg-subtle">
+                    <p className="mt-2.5 border-t border-border pt-2 text-[13px] text-fg-subtle">
                       Processing cost {money(line.feeCents)}, paid by the association.
                     </p>
                   ) : null}
@@ -170,11 +170,11 @@ export default function ResidentAccount() {
         className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
       >
         <Landmark className="size-4 shrink-0 text-fg-subtle" />
-        <span className="flex-1 text-[13px] font-medium text-fg">Association funds</span>
+        <span className="flex-1 text-[15px] font-medium text-fg">Association funds</span>
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>
 
-      <p className="text-[11px] leading-relaxed text-fg-subtle">
+      <p className="text-[13px] leading-relaxed text-fg-subtle">
         {money(totalFees)} in processing costs absorbed by the association this year.
       </p>
     </div>

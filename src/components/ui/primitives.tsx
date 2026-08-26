@@ -52,11 +52,11 @@ export function CardHeader({
           </span>
         ) : null}
         <div className="min-w-0">
-          <h2 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-fg">
+          <h2 className="truncate text-[17px] font-semibold tracking-[-0.01em] text-fg">
             {title}
           </h2>
           {subtitle ? (
-            <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{subtitle}</p>
+            <p className="mt-0.5 text-[15px] leading-snug text-fg-muted">{subtitle}</p>
           ) : null}
         </div>
       </div>
@@ -76,7 +76,7 @@ export function SectionTitle({
 }) {
   return (
     <div className={cn("mb-3 flex items-baseline justify-between gap-4", className)}>
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+      <h2 className="text-[13px] font-semibold text-fg-muted">
         {children}
       </h2>
       {action}
@@ -99,11 +99,11 @@ export function PageHeader({
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+          <p className="mb-1.5 text-[13px] font-semibold text-fg-muted">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.025em] text-fg">
+        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em] text-fg">
           {title}
         </h1>
         {description ? (
@@ -120,7 +120,7 @@ export function PageHeader({
 /* -------------------------------------------------------------------------- */
 
 const buttonStyles = {
-  base: "inline-flex items-center justify-center gap-2 rounded-lg text-[13px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
+  base: "inline-flex items-center justify-center gap-2 rounded-lg text-[15px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
   variant: {
     primary: "bg-brand text-brand-fg hover:opacity-90",
     secondary: "border border-border-2 bg-surface text-fg hover:bg-surface-2",
@@ -205,7 +205,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-[0.01em]",
+        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-semibold tracking-[0.01em]",
         tones[tone],
         className,
       )}
@@ -238,7 +238,7 @@ export function Stat({
   return (
     <div className={cn("rounded-card border border-border bg-surface p-4 shadow-card", className)}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+        <p className="text-[13px] font-semibold text-fg-muted">
           {label}
         </p>
         {icon ? <span className="text-fg-subtle">{icon}</span> : null}
@@ -256,7 +256,7 @@ export function Stat({
       >
         {value}
       </p>
-      {hint ? <p className="mt-1.5 text-[12px] leading-snug text-fg-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-[13px] leading-snug text-fg-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -313,7 +313,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
         tone === "brand" ? "bg-brand-soft text-brand-soft-fg" : "bg-surface-3 text-fg-muted",
         className,
       )}
@@ -345,8 +345,8 @@ export function Row({
 export function KeyValue({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <dt className="text-[13px] text-fg-muted">{label}</dt>
-      <dd className="tnum text-[13px] font-medium text-fg">{children}</dd>
+      <dt className="text-[15px] text-fg-muted">{label}</dt>
+      <dd className="tnum text-[15px] font-medium text-fg">{children}</dd>
     </div>
   );
 }
@@ -365,7 +365,7 @@ export function EmptyState({
       {icon ? <div className="mb-3 text-fg-subtle">{icon}</div> : null}
       <p className="text-sm font-medium text-fg">{title}</p>
       {description ? (
-        <p className="mt-1 max-w-sm text-[13px] text-fg-muted">{description}</p>
+        <p className="mt-1 max-w-sm text-[15px] text-fg-muted">{description}</p>
       ) : null}
     </div>
   );
@@ -399,9 +399,9 @@ export function Callout({
       <div className="flex items-start gap-3">
         {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold">{title}</p>
+          <p className="text-[15px] font-semibold">{title}</p>
           {children ? (
-            <div className="mt-1 text-[13px] leading-relaxed opacity-90">{children}</div>
+            <div className="mt-1 text-[15px] leading-relaxed opacity-90">{children}</div>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -463,9 +463,9 @@ export function SettingRow({
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-fg">{title}</p>
+        <p className="text-[15px] font-medium text-fg">{title}</p>
         {description ? (
-          <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">{description}</p>
+          <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{description}</p>
         ) : null}
       </div>
       <div className="shrink-0">{children}</div>

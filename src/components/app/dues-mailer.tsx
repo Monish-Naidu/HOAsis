@@ -77,7 +77,7 @@ export function DuesMailer() {
       <Card className="mt-5">
         <CardHeader title="Dues email" icon={<Mail className="size-4" />} />
         <div className="px-5 py-4">
-          <p className="text-[13px] leading-relaxed text-fg-muted">
+          <p className="text-[15px] leading-relaxed text-fg-muted">
             The demo runs in this browser, so there is nothing to send from. Sign in to a real
             association to email its owners.
           </p>
@@ -123,7 +123,7 @@ export function DuesMailer() {
       </div>
 
       {unreachable > 0 ? (
-        <p className="flex items-start gap-2 border-t border-border px-5 py-3 text-[12px] leading-snug text-warn">
+        <p className="flex items-start gap-2 border-t border-border px-5 py-3 text-[13px] leading-snug text-warn">
           <AlertTriangle className="mt-px size-3.5 shrink-0" />
           {pluralize(unreachable, "household")} without an email address will not receive
           anything. Add one on the Homeowners tab.
@@ -132,7 +132,7 @@ export function DuesMailer() {
 
       {outcome ? (
         <div className="border-t border-border px-5 py-3">
-          <p className="text-[13px] font-medium text-fg">
+          <p className="text-[15px] font-medium text-fg">
             {outcome.dryRun
               ? `${pluralize(outcome.sent, "household")} would receive this`
               : `${pluralize(outcome.sent, "email")} sent`}
@@ -142,7 +142,7 @@ export function DuesMailer() {
           {outcome.errors.length ? (
             <ul className="mt-1.5 space-y-0.5">
               {outcome.errors.slice(0, 4).map((error) => (
-                <li key={error} className="text-[11px] text-danger">
+                <li key={error} className="text-[13px] text-danger">
                   {error}
                 </li>
               ))}
@@ -178,13 +178,13 @@ function Run({
   return (
     <div className="rounded-card border border-border p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[14px] font-semibold text-fg">{title}</p>
+        <p className="text-[15px] font-semibold text-fg">{title}</p>
         <Badge tone={tone === "warn" ? "warn" : "neutral"}>
           <Users className="size-2.5" />
           {count} {countLabel}
         </Badge>
       </div>
-      <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">{detail}</p>
+      <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{detail}</p>
       <div className="mt-3 flex gap-2">
         <Button variant="secondary" size="sm" onClick={onPreview} disabled={disabled}>
           Preview

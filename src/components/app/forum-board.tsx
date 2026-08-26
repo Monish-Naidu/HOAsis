@@ -83,8 +83,8 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
     <div className="animate-rise space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-fg">Forum</h1>
-          <p className="mt-1 text-[13px] text-fg-muted">
+          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Forum</h1>
+          <p className="mt-1 text-[15px] text-fg-muted">
             {pluralize(posts.length, "post")} from your neighbors
           </p>
         </div>
@@ -103,7 +103,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 type="button"
                 onClick={() => setCategory(c)}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  "rounded-full px-2.5 py-1 text-[13px] font-medium transition-colors",
                   category === c
                     ? "bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950"
                     : "border border-border text-fg-muted hover:text-fg",
@@ -117,17 +117,17 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="What is this about?"
-            className="w-full bg-transparent text-[15px] font-medium text-fg outline-none placeholder:text-fg-subtle"
+            className="w-full bg-transparent text-[17px] font-medium text-fg outline-none placeholder:text-fg-subtle"
           />
           <textarea
             rows={3}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Add the details"
-            className="mt-2 w-full resize-none bg-transparent text-[13px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
+            className="mt-2 w-full resize-none bg-transparent text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
           />
           <div className="mt-2 flex items-center justify-between border-t border-border pt-2.5">
-            <p className="text-[11px] text-fg-subtle">
+            <p className="text-[13px] text-fg-subtle">
               {account?.role === "resident"
                 ? "A board member reviews posts before neighbors see them."
                 : "Board posts publish immediately."}
@@ -150,12 +150,12 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   <div className="mb-1.5 flex flex-wrap items-center gap-2">
                     <Badge tone="warn">Pending</Badge>
                     <Badge tone="neutral">{post.category}</Badge>
-                    <span className="text-[11px] text-fg-subtle">
+                    <span className="text-[13px] text-fg-subtle">
                       {post.author} · Unit {post.unit} · {formatDate(post.at, "long")}
                     </span>
                   </div>
-                  <h3 className="text-[15px] font-semibold leading-snug text-fg">{post.title}</h3>
-                  <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{post.body}</p>
+                  <h3 className="text-[17px] font-semibold leading-snug text-fg">{post.title}</h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{post.body}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3">
                   <Button
@@ -198,7 +198,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
             type="button"
             onClick={() => setFilter(c)}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+              "shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
               filter === c
                 ? "bg-brand-soft text-brand-soft-fg"
                 : "border border-border text-fg-muted hover:text-fg",
@@ -232,20 +232,20 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                     </Badge>
                   ) : null}
                   <Badge tone="neutral">{p.category}</Badge>
-                  <span className="text-[11px] text-fg-subtle">{formatDate(p.at, "long")}</span>
+                  <span className="text-[13px] text-fg-subtle">{formatDate(p.at, "long")}</span>
                 </div>
-                <h2 className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+                <h2 className="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-fg">
                   {p.title}
                 </h2>
                 <p
                   className={cn(
-                    "mt-1.5 text-[13px] leading-relaxed text-fg-muted",
+                    "mt-1.5 text-[15px] leading-relaxed text-fg-muted",
                     !expanded && "line-clamp-3",
                   )}
                 >
                   {p.body}
                 </p>
-                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-fg-subtle">
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
                   <span className="font-medium text-fg-muted">
                     {p.author} · Unit {p.unit}
                   </span>
@@ -262,7 +262,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 <button
                   type="button"
                   onClick={() => likePost(p.id)}
-                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
                 >
                   <Heart className="size-3.5" />
                   {p.likes}
@@ -270,7 +270,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 <button
                   type="button"
                   onClick={() => setOpenPost(expanded ? null : p.id)}
-                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
                 >
                   <MessageSquare className="size-3.5" />
                   {p.replies.length}
@@ -280,7 +280,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                     <button
                       type="button"
                       onClick={() => togglePinned(p.id)}
-                      className="rounded-md px-2 py-1 text-[12px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+                      className="rounded-md px-2 py-1 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
                     >
                       {p.pinned ? "Unpin" : "Pin"}
                     </button>
@@ -290,7 +290,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                         const undo = removePost(p.id);
                         notify(`Removed "${p.title}"`, "warn", { label: "Undo", onClick: undo });
                       }}
-                      className="rounded-md px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger-soft"
+                      className="rounded-md px-2 py-1 text-[13px] font-medium text-danger hover:bg-danger-soft"
                     >
                       Remove
                     </button>
@@ -303,13 +303,13 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   {p.replies.map((r) => (
                     <div key={r.id}>
                       <div className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-[12px] font-semibold text-fg">{r.author}</span>
-                        <span className="text-[11px] text-fg-subtle">
+                        <span className="text-[13px] font-semibold text-fg">{r.author}</span>
+                        <span className="text-[13px] text-fg-subtle">
                           Unit {r.unit} · {formatDate(r.at)}
                         </span>
                         {r.authorRole ? <Badge tone="brand">{r.authorRole}</Badge> : null}
                       </div>
-                      <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">{r.body}</p>
+                      <p className="mt-0.5 text-[15px] leading-relaxed text-fg-muted">{r.body}</p>
                     </div>
                   ))}
                 </div>
@@ -320,7 +320,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
       </div>
 
       <SectionTitle>House rules</SectionTitle>
-      <p className="text-[12px] leading-relaxed text-fg-subtle">
+      <p className="text-[13px] leading-relaxed text-fg-subtle">
         Anything that needs a board decision belongs in a request, not here. Requests carry a
         deadline and a record. Forum posts do not.
       </p>

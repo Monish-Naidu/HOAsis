@@ -133,7 +133,7 @@ export function AdminNav() {
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+              "group flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
               active
                 ? "bg-brand-soft text-brand-soft-fg"
                 : "text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -144,7 +144,7 @@ export function AdminNav() {
             {badge && badge.count > 0 ? (
               <span
                 className={cn(
-                  "tnum ml-auto hidden rounded px-1.5 py-0.5 text-[10px] font-bold lg:inline-block",
+                  "tnum ml-auto hidden rounded px-1.5 py-0.5 text-[12px] font-bold lg:inline-block",
                   badge.tone === "danger" && "bg-danger-soft text-danger",
                   badge.tone === "warn" && "bg-warn-soft text-warn",
                   badge.tone === "neutral" && "bg-surface-3 text-fg-muted",

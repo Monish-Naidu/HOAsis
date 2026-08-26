@@ -34,11 +34,11 @@ export function BankStep({
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[15px] font-semibold text-fg">{account.institution}</p>
+                <p className="text-[17px] font-semibold text-fg">{account.institution}</p>
                 <Badge tone="ok">Operating</Badge>
               </div>
-              <p className="mt-0.5 text-[13px] text-fg-muted">Account ending {account.mask}</p>
-              <p className="mt-2 text-[12px] leading-relaxed text-fg-subtle">
+              <p className="mt-0.5 text-[15px] text-fg-muted">Account ending {account.mask}</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-fg-subtle">
                 Assessments paid through HOAsis are deposited here and appear in your ledger
                 already categorized.
               </p>

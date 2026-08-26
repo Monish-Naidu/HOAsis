@@ -20,7 +20,7 @@ export function CommunityName() {
 
   if (communities.length < 2) {
     return (
-      <span className="hidden items-center px-2 py-1 text-[13px] font-medium text-fg sm:inline-flex">
+      <span className="hidden items-center px-2 py-1 text-[15px] font-medium text-fg sm:inline-flex">
         {settings.displayName}
       </span>
     );
@@ -33,7 +33,7 @@ export function CommunityName() {
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-medium text-fg hover:bg-surface-2"
+        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[15px] font-medium text-fg hover:bg-surface-2"
       >
         {settings.displayName}
         <ChevronDown className={cn("size-3.5 text-fg-subtle transition-transform", open && "rotate-180")} />
@@ -63,7 +63,7 @@ export function CommunityName() {
                     setCommunity(option.id);
                     router.push("/signin");
                   }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] transition-colors hover:bg-surface-2"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[15px] transition-colors hover:bg-surface-2"
                 >
                   <Building2 className="size-3.5 shrink-0 text-fg-subtle" />
                   <span className="min-w-0 flex-1 truncate font-medium text-fg">
@@ -76,7 +76,7 @@ export function CommunityName() {
               </li>
             ))}
             <li className="border-t border-border px-3 py-2">
-              <p className="text-[11px] leading-snug text-fg-subtle">
+              <p className="text-[13px] leading-snug text-fg-subtle">
                 Switching signs you out. Accounts belong to one association.
               </p>
             </li>
@@ -133,12 +133,12 @@ export function CommunityHero({
         <h1
           className={cn(
             "font-semibold tracking-[-0.03em] text-white drop-shadow-sm",
-            compact ? "text-[20px]" : "text-[26px] sm:text-[32px]",
+            compact ? "text-[20px]" : "text-[28px] sm:text-[34px]",
           )}
         >
           {settings.displayName}
         </h1>
-        {line ? <p className="mt-0.5 text-[12px] text-white/85 sm:text-[13px]">{line}</p> : null}
+        {line ? <p className="mt-0.5 text-[13px] text-white/85 sm:text-[15px]">{line}</p> : null}
       </div>
     </section>
   );

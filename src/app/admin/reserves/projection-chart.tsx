@@ -121,20 +121,20 @@ export function ProjectionChart({ projection }: { projection: Projection }) {
           />
         ) : null}
 
-        <text x={padding.left} y={height - 6} className="fill-fg-subtle text-[11px]">
+        <text x={padding.left} y={height - 6} className="fill-fg-subtle text-[13px]">
           {projection.years[0]?.year}
         </text>
         <text
           x={width - padding.right}
           y={height - 6}
           textAnchor="end"
-          className="fill-fg-subtle text-[11px]"
+          className="fill-fg-subtle text-[13px]"
         >
           {projection.years.at(-1)?.year}
         </text>
       </svg>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-[12px]">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-[13px]">
         {active ? (
           <p className="text-fg">
             <span className="tnum font-semibold">{active.year}</span>
@@ -153,7 +153,7 @@ export function ProjectionChart({ projection }: { projection: Projection }) {
         ) : (
           <p className="text-fg-muted">Hover a year for the detail.</p>
         )}
-        <p className="flex items-center gap-3 text-[11px] text-fg-subtle">
+        <p className="flex items-center gap-3 text-[13px] text-fg-subtle">
           <span className="flex items-center gap-1">
             <span className="size-2 rounded-full bg-warn" />
             Replacement

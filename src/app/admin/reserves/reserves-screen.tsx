@@ -139,19 +139,19 @@ export function ReservesScreen() {
               },
             ].map((step, index) => (
               <li key={step.title} className="flex gap-3 border-b border-border py-3 last:border-b-0">
-                <span className="tnum flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[12px] font-semibold text-brand-soft-fg">
+                <span className="tnum flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[13px] font-semibold text-brand-soft-fg">
                   {index + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-medium text-fg">{step.title}</span>
-                  <span className="mt-0.5 block text-[12px] leading-relaxed text-fg-muted">
+                  <span className="block text-[15px] font-medium text-fg">{step.title}</span>
+                  <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
                     {step.body}
                   </span>
                 </span>
               </li>
             ))}
           </ol>
-          <p className="border-t border-border px-5 py-3 text-[11px] leading-relaxed text-fg-subtle">
+          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
             The projection below returns as soon as there is a component schedule to project.
           </p>
         </Card>
@@ -296,7 +296,7 @@ export function ReservesScreen() {
               onChange={setGrowth}
               format={(v) => `${v.toFixed(1)}%`}
             />
-            <p className="border-t border-border pt-3 text-[11px] leading-relaxed text-fg-subtle">
+            <p className="border-t border-border pt-3 text-[13px] leading-relaxed text-fg-subtle">
               Moving reserves to a higher yield is the one lever that costs owners nothing. Every
               other lever raises somebody&apos;s assessment.
             </p>
@@ -321,7 +321,7 @@ export function ReservesScreen() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[620px] text-left">
             <thead>
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                 <th className="px-5 py-2.5 font-semibold">Account</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Balance</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Yield</th>
@@ -333,10 +333,10 @@ export function ReservesScreen() {
               {interest.reserveAccounts.map((account) => {
                 const uninsured = Math.max(0, account.balanceCents - account.insuredLimitCents);
                 return (
-                  <tr key={account.id} className="border-b border-border text-[13px] last:border-b-0">
+                  <tr key={account.id} className="border-b border-border text-[15px] last:border-b-0">
                     <td className="px-5 py-3">
                       <p className="font-medium text-fg">{account.name}</p>
-                      <p className="text-[11px] text-fg-muted">
+                      <p className="text-[13px] text-fg-muted">
                         {account.institution} ••{account.mask}
                       </p>
                     </td>
@@ -373,7 +373,7 @@ export function ReservesScreen() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left">
             <thead>
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                 <th className="px-5 py-2.5 font-semibold">Component</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Replaced</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Cost today</th>
@@ -394,12 +394,12 @@ export function ReservesScreen() {
                   return (
                     <tr
                       key={component.id}
-                      className="border-b border-border text-[13px] last:border-b-0"
+                      className="border-b border-border text-[15px] last:border-b-0"
                     >
                       <td className="px-5 py-3">
                         <p className="font-medium text-fg">{component.name}</p>
                         {component.note ? (
-                          <p className="text-[11px] text-fg-muted">{component.note}</p>
+                          <p className="text-[13px] text-fg-muted">{component.note}</p>
                         ) : null}
                       </td>
                       <td className="tnum px-3 py-3 text-right">
@@ -425,7 +425,7 @@ export function ReservesScreen() {
                           tone={share >= 0.8 ? "ok" : share >= 0.4 ? "brand" : "warn"}
                           aria-label={`${component.name} ${Math.round(share * 100)} percent funded`}
                         />
-                        <span className="tnum mt-1 block text-[11px] text-fg-subtle">
+                        <span className="tnum mt-1 block text-[13px] text-fg-subtle">
                           {Math.round(share * 100)}%
                         </span>
                       </td>
@@ -441,12 +441,12 @@ export function ReservesScreen() {
       <Card className="mt-5">
         <CardHeader
           title="Year by year"
-          subtitle="Opening plus contributions plus interest, less what gets replaced"
+          subtitle="What you start with, plus savings and interest, less what you replace"
         />
         <div className="max-h-[26rem] overflow-auto">
           <table className="w-full min-w-[720px] text-left">
             <thead className="sticky top-0 bg-surface">
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                 <th className="px-5 py-2.5 font-semibold">Year</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Opening</th>
                 <th className="px-3 py-2.5 text-right font-semibold">In</th>
@@ -459,14 +459,14 @@ export function ReservesScreen() {
               {projection.years.map((year) => (
                 <tr
                   key={year.year}
-                  className={`border-b border-border text-[13px] last:border-b-0 ${
+                  className={`border-b border-border text-[15px] last:border-b-0 ${
                     year.isShortfall ? "bg-danger-soft/40" : ""
                   }`}
                 >
                   <td className="tnum px-5 py-2 font-medium text-fg">
                     {year.year}
                     {year.expenditures.length ? (
-                      <span className="ml-2 text-[11px] text-fg-muted">
+                      <span className="ml-2 text-[13px] text-fg-muted">
                         {year.expenditures.map((e) => e.name).join(", ")}
                       </span>
                     ) : null}
@@ -520,8 +520,8 @@ function Slider({
   return (
     <label className="block">
       <span className="mb-1 flex items-baseline justify-between">
-        <span className="text-[12px] text-fg-muted">{label}</span>
-        <span className="tnum text-[13px] font-semibold text-fg">{format(value)}</span>
+        <span className="text-[13px] text-fg-muted">{label}</span>
+        <span className="tnum text-[15px] font-semibold text-fg">{format(value)}</span>
       </span>
       <input
         type="range"

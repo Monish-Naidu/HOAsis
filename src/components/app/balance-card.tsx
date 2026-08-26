@@ -21,13 +21,13 @@ export function BalanceCard() {
   return (
     <Card className="overflow-hidden border-navy-800 bg-navy-900 text-navy-50 shadow-raised dark:border-navy-700">
       <div className="p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-navy-300">
+        <p className="text-[13px] font-semibold text-navy-300">
           {past ? "Past due" : "Balance due"}
         </p>
         <p className="tnum mt-1.5 text-[40px] font-semibold leading-none tracking-[-0.035em]">
           {money(owner.balanceCents)}
         </p>
-        <p className="mt-2 text-[13px] text-navy-200">
+        <p className="mt-2 text-[15px] text-navy-200">
           {past
             ? `${owner.daysPastDue} days past due`
             : owner.balanceCents === 0
@@ -39,13 +39,13 @@ export function BalanceCard() {
         <div className="mt-4 flex gap-2">
           <Link
             href="/resident/pay"
-            className="flex h-10 flex-1 items-center justify-center rounded-lg bg-navy-50 text-[14px] font-semibold text-navy-950 transition-opacity hover:opacity-90"
+            className="flex h-10 flex-1 items-center justify-center rounded-lg bg-navy-50 text-[15px] font-semibold text-navy-950 transition-opacity hover:opacity-90"
           >
             Pay {money(amount, { cents: false })}
           </Link>
           <Link
             href="/resident/account"
-            className="flex h-10 items-center justify-center rounded-lg border border-navy-600 px-4 text-[13px] font-medium text-navy-100 transition-colors hover:bg-navy-800"
+            className="flex h-10 items-center justify-center rounded-lg border border-navy-600 px-4 text-[15px] font-medium text-navy-100 transition-colors hover:bg-navy-800"
           >
             History
           </Link>
@@ -57,7 +57,7 @@ export function BalanceCard() {
           className="flex items-center gap-2 border-t border-navy-700 bg-navy-800/60 px-5 py-3 transition-colors hover:bg-navy-800"
         >
           <Sparkles className="size-4 shrink-0 text-navy-300" />
-          <span className="flex-1 text-[12px] leading-snug text-navy-100">
+          <span className="flex-1 text-[13px] leading-snug text-navy-100">
             Turn on autopay and skip the late fees.
           </span>
           <ChevronRight className="size-4 shrink-0 text-navy-400" />
