@@ -270,7 +270,196 @@ It costs nothing and it removes the single easiest defense.
 
 ## 4. Neighbor reporting: the recommendation
 
-*Pending.*
+**Recommendation: yes to resident reporting, no to anonymity, and no to a resident report
+ever becoming a violation without a board member looking at it first.**
+
+Three separate decisions, and they are usually collapsed into one. Taking them apart is the
+whole answer.
+
+### 4.1 Anonymity: do not promise it, because in some states you cannot keep it
+
+Arizona has legislated this directly. When an owner contests a violation notice, the
+association has ten business days to answer, and the answer must include:
+
+> 1. The provision of the community documents that has allegedly been violated.
+> 2. The date of the violation or the date the violation was observed.
+> 3. **The first and last name of the person or persons who observed the violation.**
+> 4. The process the member must follow to contest the notice.
+>
+> A.R.S. 33-1803(D)
+> ([azleg.gov](https://www.azleg.gov/ars/33/01803.htm), fetched 26 Aug 2026)
+
+The condominium statute is word for word identical at A.R.S. 33-1242(C).
+([azleg.gov](https://www.azleg.gov/ars/33/01242.htm), fetched 26 Aug 2026)
+
+Until it complies, "the association shall not proceed with any action to enforce the
+community documents, including the collection of attorney fees." A.R.S. 33-1803(E).
+
+So in Arizona, an association that acts on an anonymous tip has two options once the owner
+pushes back: name the observer, or drop the enforcement. A product that promised the
+reporter anonymity has put the board in the position of breaking a promise to one member in
+order to keep a statutory duty to another.
+
+**Texas gets to the same place by a different route.** The evidence packet under Tex. Prop.
+Code 209.007(f) is "all documents, photographs, and communications relating to the matter
+the association intends to introduce at the hearing." A neighbor's written complaint is a
+communication relating to the matter. If the board wants to rely on it, the owner sees it.
+If the board does not want to rely on it, then the complaint was never the evidence and the
+board's own observation was, which is the model recommended below anyway.
+
+**The general principle, independent of any statute:** an accusation the accused cannot see
+is not something they can answer, and every state's process is built on an opportunity to
+be heard. Colorado's phrasing is the clearest: "a fair and impartial fact-finding process
+concerning whether the alleged violation actually occurred and whether the unit owner is the
+one who should be held responsible." C.R.S. 38-33.3-209.5(2)(b)(I).
+
+**What to build instead of anonymity.** Two words that are not the same word:
+
+- **Not published.** The reporter's name is not shown to the accused owner in the portal, is
+  not printed on the notice, and is not read out at a meeting.
+- **Not confidential.** The reporter's name is recorded, is visible to the board, and will
+  be disclosed if a hearing, a statute, or a subpoena requires it.
+
+The submit form should say this in one sentence, before the person types anything: *We
+record who reports. We do not put your name on the notice. If this goes to a hearing, or if
+state law requires it, your name may be disclosed.* Anyone unwilling to report on those
+terms is telling you something useful about the report.
+
+### 4.2 The board should see who reported, and should see the pattern
+
+Two fair housing exposures run in opposite directions, and a reporting feature sits between
+them.
+
+**Acting on complaints can create liability.** Under 24 CFR 100.7(a)(1)(iii) a person is
+directly liable for "failing to take prompt action to correct and end a discriminatory
+housing practice by a third-party, where the person knew or should have known of the
+discriminatory conduct and had the power to correct it," with the scope of the duty set by
+"the extent of the person's control or any other legal responsibility."
+([law.cornell.edu](https://www.law.cornell.edu/cfr/text/24/100.7), fetched 26 Aug 2026)
+
+Harassment under the Fair Housing Act includes hostile environment harassment: unwelcome
+conduct "sufficiently severe or pervasive as to interfere with" the use and enjoyment of a
+dwelling, judged on "the nature of the conduct, the context..., the severity, scope,
+frequency, duration, and location." No economic or psychological injury is required. 24 CFR
+100.600. And unlike employment law, the Title VII affirmative defense to vicarious liability
+for hostile environment harassment does not apply in housing.
+([law.cornell.edu](https://www.law.cornell.edu/cfr/text/24/100.600), fetched 26 Aug 2026)
+
+Put those together. A campaign of repeated complaints by one owner against one neighbor,
+targeting a protected characteristic, can be harassment. An association with a reporting
+tool that logs every one of those complaints cannot say it did not know.
+
+**Not acting on complaints can also create liability.** The same doctrine cuts the other
+way, and community association counsel say so. Hirzel Law's Michigan blog, writing on when
+an HOA should step into a neighbor dispute, puts it bluntly: "selective enforcement of HOA
+rules or a failure to properly enforce HOA rules may potentially expose them to liability if
+it results in the creation of a hostile environment under the Fair Housing Act."
+([micondolaw.com](https://micondolaw.com/2021/02/01/neighbor-disputes-within-homeowners-associations-when-should-the-hoa-intervene/),
+fetched 26 Aug 2026)
+
+**So the board needs the data, not less of it.** The product decision follows directly:
+
+- Store `reportedBy` on every resident report. Always.
+- On the board's view of a property, show how many reports this address has received and
+  from how many distinct reporters.
+- On the board's view of a reporter, show how many reports they have filed and against how
+  many distinct addresses.
+- Surface a quiet flag when one reporter accounts for a disproportionate share of reports
+  against one address. Do not accuse anyone. Show the count and let the board look.
+
+That last item is the feature nobody in this market has, and it is a five-line query.
+
+### 4.3 A resident report is not a violation
+
+This is the load-bearing modeling decision.
+
+**Two record types.**
+
+- **Concern.** Created by a resident. Visible to the board only. Has a reporter, a subject
+  address, a description, optional photos, a status. Never generates a notice. Never appears
+  on the accused owner's account. Never counts toward anything.
+- **Violation.** Created by a board member or manager, always after an inspection they
+  performed. Has a cited rule, a stage, a clock, an owner-visible evidence set. This is the
+  record that produces notices and fines.
+
+A concern can be **converted** into a violation. Conversion requires a board member to
+record that they inspected it, with a date. The violation that results cites the rule and
+carries the inspector's observation, not the neighbor's.
+
+**Why this matters more than it sounds.**
+
+1. **It fixes the Arizona problem.** The person who "observed the violation" for statutory
+   purposes is the board member who went and looked. That name is disclosable without
+   exposing the neighbor, because the neighbor is not the evidence.
+2. **It fixes the selective enforcement problem.** If violations only exist where a board
+   member inspected, then enforcement tracks inspections, not complaints. A board that
+   inspects the whole community on a route is defensibly uniform. A board that only ever
+   inspects addresses it received complaints about is not, and now the data will show that
+   too.
+3. **It keeps false reports out of the record.** A concern that a board member inspects and
+   dismisses closes as "inspected, no violation found." The accused owner never hears about
+   it, and no notice was ever generated from an accusation nobody checked.
+4. **It sets expectations for the reporter.** The reporter should be told, at submit time,
+   that the board will look and that they will not be told the outcome. Not because the
+   board is secretive, but because the outcome is another owner's private enforcement
+   record. Getting this wrong is how the tool becomes a scoreboard.
+
+**One exception worth building: safety.** A concern flagged as an immediate hazard (a
+blocked fire lane, a downed line, a loose dog) should page the board rather than sit in a
+queue. Several statutes already treat health and safety differently. Colorado gives a
+72-hour cure for a violation that "threatens the public safety or health" against 30 days
+otherwise, C.R.S. 38-33.3-209.5(1.7)(b)(II). Texas exempts safety threats from the cure
+requirement, 209.006(b)(2)(A), and defines the term at 209.006(f). Nevada exempts imminent
+threats from its fine caps.
+
+### 4.4 Safeguards that go with the feature
+
+Everything below is cheap and each one prevents a specific failure.
+
+1. **Named reports only.** No anonymous submit path. Logged in, or not at all.
+2. **The stated policy at the point of submission**, in one sentence, as drafted in 4.1.
+3. **A required rule selection.** The reporter picks which rule they think is being broken,
+   from the association's actual rule list. This does three things: it filters out
+   "I don't like their taste," it teaches residents what the rules actually say, and it gives
+   the board a starting citation. If no rule fits, the form should say so and offer a
+   neighbor-dispute path instead of an enforcement path.
+4. **A rate limit, disclosed.** A cap on reports per household per month, with the number
+   shown. This is the least popular safeguard and the most effective one.
+5. **No resident-visible leaderboard, count, or map of violations.** The accused owner's
+   enforcement record is visible to the accused owner and the board. Nobody else.
+6. **A cooling-off on repeat reports.** The same reporter against the same address within
+   some window attaches to the existing concern instead of creating a new one. It stops
+   volume from looking like severity.
+7. **Board inspection required before any notice**, per 4.3. No exceptions outside the
+   safety path.
+8. **An audit trail on the concern-to-violation conversion**, showing who inspected, when,
+   and what they found. This is the document that defends the board later.
+9. **A written enforcement policy the product generates.** Colorado requires an adopted
+   written policy before any fine, C.R.S. 38-33.3-209.5(2)(a). Nevada requires a fine
+   schedule delivered to every unit, NRS 116.31031(3). Washington requires "a previously
+   established schedule... furnished to the owners," RCW 64.38.020. The product should
+   produce this document, not assume the board has one.
+10. **A neighbor-dispute off-ramp.** Most reports are not rule violations. Give them
+    somewhere else to go, and say plainly that the association does not adjudicate disputes
+    between neighbors that do not involve a covenant.
+
+### 4.5 The counterargument, stated fairly
+
+The case against building this at all: complaint-driven enforcement is the single most
+disliked thing HOAs do, and a product that makes reporting one click easier will increase
+the volume of it. Being the tool that industrialized neighbor surveillance is a bad outcome
+even if every individual report is valid.
+
+That argument is right about the risk and wrong about the alternative. Residents already
+report. They do it by email, by phone, at the mailbox, and in a Facebook group, and in every
+one of those channels there is no rule citation, no record of who said it, no inspection
+step, and no pattern visible to anyone. The reporting is not the problem. The **unstructured**
+reporting is the problem, because it is exactly the version that produces selective
+enforcement and undocumented decisions.
+
+The product's job is to make the report harder to file and much harder to act on than the
+board expects, while making the record of it complete. That is the opposite of what a
+one-click report button does, and it is the position worth taking publicly.
 
 ---
 
@@ -783,11 +972,125 @@ half of that sentence, do not ship the feature.
 
 ## 8. Sources
 
-*Compiled at the end of the document.*
+All fetched 26 August 2026 unless noted.
+
+### Statutes and regulations
+
+| Source | URL |
+| --- | --- |
+| Ariz. Rev. Stat. 33-1803 (HOA, notice of violation) | https://www.azleg.gov/ars/33/01803.htm |
+| Ariz. Rev. Stat. 33-1242 (condominium, same) | https://www.azleg.gov/ars/33/01242.htm |
+| Cal. Civ. Code 4040 (individual delivery) | https://california.public.law/codes/civil_code_section_4040 |
+| Cal. Civ. Code 4041 (annual delivery preference) | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=4041 |
+| Cal. Civ. Code 5850 (fine schedule, $100 cap) | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=5850 |
+| Cal. Civ. Code 5855 (10-day notice, 14-day decision) | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=5855 |
+| Cal. Civ. Code 1708.8 (invasion of privacy) | https://california.public.law/codes/civil_code_section_1708.8 |
+| C.R.S. 38-33.3-209.5 (responsible governance, fines, cure) | https://colorado.public.law/statutes/crs_38-33.3-209.5 |
+| Fla. Stat. 720.303 (meetings, records, electronic notice) | https://www.flsenate.gov/Laws/Statutes/2024/720.303 |
+| Fla. Stat. 720.305 (fines, hearing committee) | https://www.flsenate.gov/Laws/Statutes/2024/720.305 |
+| Fla. Stat. 617.0141 (notice, electronic transmission) | https://www.flsenate.gov/Laws/Statutes/2024/617.0141 |
+| Fla. Stat. 934.50 (drones) | https://www.flsenate.gov/Laws/Statutes/2024/934.50 |
+| Fla. Stat. 501.059 (Telephone Solicitation Act) | https://www.flsenate.gov/Laws/Statutes/2024/501.059 |
+| Nev. Rev. Stat. 116.31031 (fines, photograph requirement) | https://www.leg.state.nv.us/NRS/NRS-116.html |
+| N.C. Gen. Stat. 47F-3-107.1 (adjudicatory panel) | https://www.ncleg.gov/EnactedLegislation/Statutes/HTML/BySection/Chapter_47F/GS_47F-3-107.1.html |
+| Tex. Prop. Code 209.006 (certified mail notice) | https://texas.public.law/statutes/tex._prop._code_section_209.006 |
+| Tex. Prop. Code 209.007 (hearing, evidence packet) | https://texas.public.law/statutes/tex._prop._code_section_209.007 |
+| Tex. Prop. Code 209.0042 (alternative notice, opt-in) | https://texas.public.law/statutes/tex._prop._code_section_209.0042 |
+| Tex. Prop. Code 209.0051 (open board meetings, email notice) | https://texas.public.law/statutes/tex._prop._code_section_209.0051 |
+| Tex. Prop. Code 202.003 (liberal construction of covenants) | https://texas.public.law/statutes/tex._prop._code_section_202.003 |
+| Tex. Gov't Code 423.002, 423.003 (drones) | https://texas.public.law/statutes/tex._gov%27t_code_section_423.003 |
+| Va. Code 55.1-1819 (rules, hearing, certified mail) | https://law.lis.virginia.gov/vacode/title55.1/chapter18/section55.1-1819/ |
+| RCW 64.38.020 (WA HOA powers, fines) | https://app.leg.wa.gov/RCW/default.aspx?cite=64.38.020 |
+| RCW 64.90.405 (WUCIOA, fines) | https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.405 |
+| RCW 64.90.515 (WUCIOA, notice and electronic consent) | https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.515 |
+| 47 C.F.R. 64.1200 (TCPA rules) | https://www.law.cornell.edu/cfr/text/47/64.1200 |
+| 47 U.S.C. 227 (TCPA, damages) | https://www.law.cornell.edu/uscode/text/47/227 |
+| 15 U.S.C. 7001 (E-SIGN consumer consent) | https://www.law.cornell.edu/uscode/text/15/7001 |
+| 24 C.F.R. 100.7 (FHA direct and vicarious liability) | https://www.law.cornell.edu/cfr/text/24/100.7 |
+| 24 C.F.R. 100.600 (FHA harassment) | https://www.law.cornell.edu/cfr/text/24/100.600 |
+
+### Cases and agency orders
+
+| Source | URL |
+| --- | --- |
+| *Facebook, Inc. v. Duguid*, 592 U.S. 395 (2021), No. 19-511 | https://www.supremecourt.gov/opinions/20pdf/19-511_p86b.pdf |
+| *Insurance Marketing Coalition Ltd. v. FCC*, 127 F.4th 303 (11th Cir. 2025), No. 24-10277 | http://media.ca11.uscourts.gov/opinions/pub/files/202410277.pdf |
+| FCC 24-24, Report and Order, CG Docket 02-278 (revocation of consent), adopted 15 Feb 2024 | https://docs.fcc.gov/public/attachments/FCC-24-24A1.pdf |
+
+### Industry and vendor documentation
+
+| Source | URL |
+| --- | --- |
+| CTIA, Messaging Principles and Best Practices (2019) | https://api.ctia.org/wp-content/uploads/2019/07/190719-CTIA-Messaging-Principles-and-Best-Practices-FINAL.pdf |
+| Twilio, Programmable Messaging and A2P 10DLC | https://www.twilio.com/docs/messaging/compliance/a2p-10dlc |
+| Twilio, ISV onboarding for A2P 10DLC | https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/onboarding-isv |
+| Twilio, US SMS pricing | https://www.twilio.com/en-us/sms/pricing/us |
+| Telnyx, messaging pricing | https://telnyx.com/pricing/messaging |
+| Plivo, US SMS pricing | https://www.plivo.com/sms/pricing/us/ |
+
+### Industry commentary and research
+
+| Source | URL |
+| --- | --- |
+| Foundation for Community Association Research, Statistical Review (Fact Book 2025) | https://foundation.caionline.org/publications/factbook/statistical-review/ |
+| Foundation for Community Association Research, Homeowner Satisfaction Survey dashboard | https://foundation.caionline.org/research/survey_homeowner/homeowner-satisfaction-survey-dashboard/ |
+| Hirzel Law, "Neighbor Disputes within Homeowners Associations: When Should the HOA Intervene?" | https://micondolaw.com/2021/02/01/neighbor-disputes-within-homeowners-associations-when-should-the-hoa-intervene/ |
+| Tinnelly Law Group, "AB 130 - $100 Fine Caps, Hearing Procedures, and Prohibited ADU Fees" | https://www.hoalawblog.com/ab-130-100-fine-caps-hearing-procedures-and-prohibited-adu-fees/ |
+| ManageCasa, HOA violations and enforcement guide | https://managecasa.com/articles/hoa-violations-and-enforcement-the-complete-process-guide |
+| CMGT, HOA rules enforcement resource | https://cmgt.org/resources/hoa-rules-enforcement |
 
 ---
 
 ## 9. What could not be verified
 
-*Compiled at the end of the document.*
+Listed so nobody later mistakes a gap for a finding.
+
+**1. The proportion of violations that start as neighbor complaints.** No survey, no
+industry study, no management company dataset. Vendor blogs assert it without a source.
+Do not put a percentage on a slide.
+
+**2. Exact A2P 10DLC registration fees.** Twilio's fee article
+(help.twilio.com/hc/en-us/articles/1260803965530) is JavaScript-rendered and the help center
+returns a bot challenge to automated fetches. Telnyx, Plivo, Bandwidth, and SignalWire all
+publish per-message pricing without publishing brand or campaign registration fees. The
+Campaign Registry does not publish a public fee schedule at a stable URL. Per-message prices
+and phone number rental in section 7.3 are verified from Twilio's public pricing page; the
+one-time and monthly registration fees are not. **Get these from a Twilio or Telnyx quote
+before pricing the SMS feature.**
+
+**3. What owners actually want by channel.** The Foundation for Community Association
+Research runs a 3,000-homeowner survey across six editions from 2016 to 2026, but the
+findings sit behind an interactive dashboard that did not yield channel-preference data.
+Section 6.4 is reasoned design position, and is labeled as such in the text.
+
+**4. California Civil Code 5855(f): 14 days or 15.** Two sources disagreed. The California
+Legislative Information site and Tinnelly Law's summary of AB 130 both say the decision
+notice is due within **14 days**, and Tinnelly states AB 130 changed it from 15 to 14
+effective 30 June 2025. Older secondary sources still say 15. Fourteen is used above. Verify
+before relying on it.
+
+**5. Colorado's electronic notice rules outside the delinquency context.** C.R.S.
+38-33.3-209.5(1.7)(a)(I) was read in full and requires certified mail plus posting plus one
+of first-class mail, text, or email for **delinquency** notices. Whether Colorado permits
+electronic delivery for other association notices was not run down.
+
+**6. Whether any state statute bars anonymous complaints outright.** Arizona's disclosure
+requirement was found and read. No search was run for a state that prohibits an association
+from accepting an anonymous complaint in the first place. The Arizona provision is a
+disclosure duty triggered by the owner contesting, not a ban on receiving tips.
+
+**7. *Wetzel v. Glen St. Andrew Living Community* and other owner-on-owner harassment
+cases.** Cited widely for the proposition that a housing provider can be liable for failing
+to stop tenant-on-tenant harassment. The regulation it rests on, 24 CFR 100.7, was read
+directly and is cited above. The opinion itself was not read for this document.
+
+**8. Whether photographing a neighbor's property triggers any state's video surveillance or
+eavesdropping statute.** Only the privacy torts and the two drone statutes were checked.
+Audio is a separate and stricter question in two-party consent states, and was not
+researched. **If violation reporting ever accepts video, this needs its own pass.**
+
+**9. State mini-TCPA statutes other than Florida's.** Oklahoma, Washington, and Maryland
+have their own telephone solicitation statutes. Only Florida's was read. Florida's is
+limited to sales calls and does not reach association messages; **do not assume the others
+are drafted the same way.**
 

@@ -32,6 +32,9 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
   const [openDays, setOpenDays] = useState(21);
   const [quorumPercent, setQuorumPercent] = useState(20);
   const [threshold, setThreshold] = useState("A majority of votes cast");
+  const [kind, setKind] = useState<"poll" | "budget" | "amendment" | "special-assessment">(
+    "amendment",
+  );
 
   const field =
     "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
@@ -48,13 +51,15 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
       reference: `BAL-${todayIsoDate().slice(0, 4)}-${String(seq).padStart(3, "0")}`,
       title: title.trim(),
       body: body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
-      kind: "poll",
+      kind,
       audience: "owners",
       status: "open",
       opensDate: opensOn,
       closesDate: closesOn,
       eligible: homes,
-      quorumRequired: quorum,
+      // A poll decides nothing, so requiring a quorum on one would be theatre.
+      // Anything binding without a quorum passes on a single vote.
+      quorumRequired: kind === "poll" ? 0 : quorum,
       thresholdLabel: threshold,
       // Running totals stay hidden while voting is open, which is the
       // association's own setting and the default everywhere for a reason:
@@ -195,6 +200,25 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
             </select>
           </label>
         </div>
+
+        <label className="block">
+          <span className="text-[13px] font-semibold text-fg-muted">What kind of vote</span>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as typeof kind)}
+            aria-label="Ballot kind"
+            className={`mt-1.5 ${field}`}
+          >
+            <option value="amendment">A decision that binds the association</option>
+            <option value="budget">Ratifying the budget</option>
+            <option value="special-assessment">Approving a special assessment</option>
+            <option value="poll">A non-binding poll</option>
+          </select>
+          <span className="mt-1.5 block text-[13px] leading-snug text-fg-muted">
+            A poll gathers opinion and decides nothing, so it needs no quorum. Everything else
+            does, or it passes on a single vote.
+          </span>
+        </label>
 
         <label className="block">
           <span className="text-[13px] font-semibold text-fg-muted">What it takes to pass</span>
