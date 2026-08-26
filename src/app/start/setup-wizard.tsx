@@ -89,7 +89,10 @@ export function SetupWizard() {
     }
   }
 
-  if (done) return <FinishedPanel draft={draft} onOpen={() => router.push("/admin")} />;
+  // Straight to the plan rather than the dashboard. A board that lands on an
+  // empty workspace has to work out what to do next; one that lands on a plan
+  // is told, in the order that gets money moving first.
+  if (done) return <FinishedPanel draft={draft} onOpen={() => router.push("/start/plan")} />;
 
   return (
     <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
@@ -543,7 +546,7 @@ function FinishedPanel({ draft, onOpen }: { draft: CommunityDraft; onOpen: () =>
       </Card>
 
       <Button variant="primary" size="lg" className="mt-6 w-full" onClick={onOpen}>
-        Open {draft.name}
+        See what is next
         <ArrowRight className="size-4" />
       </Button>
     </div>

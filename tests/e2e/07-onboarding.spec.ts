@@ -81,7 +81,7 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   // Step 4, bank. Skipping is a supported path.
   await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
   await page.waitForTimeout(1200);
-  await page.getByRole("button", { name: /^Open / }).click();
+  await page.getByRole("button", { name: /See what is next/ }).click();
   await page.waitForTimeout(900);
 }
 
@@ -207,6 +207,59 @@ test.describe("getting to money", () => {
     // The quoted comma case, which used to split into a household called
     // Tanaka living in unit Yuki.
     expect(health.text, "a quoted name was split on its comma").toContain("Tanaka, Yuki");
+  });
+});
+
+test.describe("the plan is its own screen", () => {
+  test("onboarding lands on the plan, not on an empty workspace", async ({ page }) => {
+    await onboard(page, {
+      name: "Landing HOA",
+      state: "Washington",
+      dues: "175",
+      property: "Detached homes",
+      origin: "Brand new",
+    });
+
+    expect(page.url(), "onboarding did not land on the plan").toContain("/start/plan");
+    const health = await inspect(page);
+    expect(health.crashed).toBe(false);
+    expect(health.text, "the plan does not name the association").toContain("Landing HOA is live");
+  });
+
+  test("the plan is leavable, from the header and from the foot", async ({ page }) => {
+    await onboard(page, {
+      name: "Escape Hatch HOA",
+      state: "Washington",
+      dues: "140",
+      property: "Detached homes",
+      origin: "Brand new",
+    });
+
+    // A plan that has to be finished before the product opens is a plan people
+    // abandon, so both exits are asserted.
+    await expect(page.getByRole("link", { name: "Skip for now" })).toBeVisible();
+    await page.getByRole("link", { name: /Go to the dashboard/ }).click();
+    await page.waitForTimeout(900);
+
+    expect(page.url(), "the dashboard link did not leave the plan").toContain("/admin");
+    const health = await expectHealthy(page, "dashboard after leaving the plan");
+    expect(health.text).toContain("Escape Hatch HOA");
+  });
+
+  test("the plan is reachable again later", async ({ page }) => {
+    await onboard(page, {
+      name: "Return Visit HOA",
+      state: "Washington",
+      dues: "160",
+      property: "Detached homes",
+      origin: "Brand new",
+    });
+
+    await page.goto("/admin/setup");
+    const health = await expectHealthy(page, "plan inside the workspace");
+    expect(health.text, "the plan is not available in the workspace").toMatch(
+      /Start collecting|You can take payments/,
+    );
   });
 });
 

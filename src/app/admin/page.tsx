@@ -61,7 +61,7 @@ export default function BoardDashboard() {
   return (
     <>
       <PageHeader
-        eyebrow={`${association.name} · ${association.unitCount} units`}
+        eyebrow={`${association.name} · ${pluralize(association.unitCount, "unit")}`}
         title="Dashboard"
         
         action={
@@ -76,6 +76,9 @@ export default function BoardDashboard() {
           nothing to run, so a dashboard of four zeroes and two empty cards
           tells them nothing and looks broken. Until there is something to
           operate, this page is setup. */}
+      {/* Once there is anything to operate, the workspace looks like a
+          workspace and the plan is one line. A to-do list living permanently
+          on the dashboard is how a board learns to read past it. */}
       {running ? <SetupPlanSummary /> : <SetupPlan />}
 
       {running ? (
@@ -94,7 +97,7 @@ export default function BoardDashboard() {
         <Stat
           label="Operating cash"
           value={money(cash.operating, { cents: false })}
-          hint={`${association.unitCount} units · ${money(association.duesCents, { cents: false })}/mo assessment`}
+          hint={`${pluralize(association.unitCount, "unit")} · ${money(association.duesCents, { cents: false })}/mo assessment`}
           icon={<Landmark className="size-4" />}
         />
         <Stat

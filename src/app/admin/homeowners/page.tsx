@@ -149,7 +149,7 @@ export default function BoardHomeowners() {
   return (
     <>
       <PageHeader
-        eyebrow={`${association.unitCount} units · ${owners.length} households`}
+        eyebrow={`${pluralize(association.unitCount, "unit")} · ${pluralize(owners.length, "household")}`}
         title="Homeowners"
         
         action={
