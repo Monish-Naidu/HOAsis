@@ -283,6 +283,9 @@ export async function loadCommunity(
     // has not paid for one has no components and the screens say so.
     reserveComponents: [],
     savingsOffers: [],
+    sharedCosts: [],
+    sharedCostBills: [],
+    specialAssessments: [],
     payouts: [],
     violations: [],
     complianceItems: [],

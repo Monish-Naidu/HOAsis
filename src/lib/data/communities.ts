@@ -24,6 +24,11 @@ import {
   communityAmenities as mmAmenities,
   communitySettings as mmSettings,
 } from "./settings";
+import {
+  sharedCostBills as mmSharedCostBills,
+  sharedCosts as mmSharedCosts,
+  specialAssessments as mmAssessments,
+} from "./shared-costs";
 import { messageTemplates as mmTemplates } from "./templates";
 import { ballots as mmBallots, meetings as mmMeetings } from "./voting";
 import { testCommunityOne } from "./test-community-one";
@@ -45,6 +50,9 @@ export const mehrMeadows: Community = {
   yearElapsed: YEAR_ELAPSED,
   reserveComponents: mmReserveComponents,
   savingsOffers: mmSavingsOffers,
+  sharedCosts: mmSharedCosts,
+  sharedCostBills: mmSharedCostBills,
+  specialAssessments: mmAssessments,
   vendors: mmVendors,
   payouts: mmPayouts,
   requests: mmRequests,

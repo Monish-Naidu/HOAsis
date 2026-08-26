@@ -289,3 +289,102 @@ export function communitySlug(c: Community): string {
 export function publicRecordsUrl(c: Community): string {
   return `${communitySlug(c).replace(/-/g, "")}.hoasis.app/records`;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Shared costs: what the association pays on everyone's behalf.               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The most recent bill for each active shared cost, with its trend.
+ *
+ * `changeYearOverYear` compares against the same month a year earlier rather
+ * than last month, because every utility is seasonal and a December to January
+ * comparison says nothing. A board that sees "water is up 6% on last July"
+ * knows whether to look for a leak; "water is up 40% on January" is just
+ * summer.
+ */
+export function sharedCostSummary(c: Community) {
+  const active = c.sharedCosts.filter((s) => s.active);
+
+  const rows = active.map((cost) => {
+    const bills = c.sharedCostBills
+      .filter((b) => b.sharedCostId === cost.id)
+      .sort((a, b) => a.periodStart.localeCompare(b.periodStart));
+    const latest = bills.at(-1);
+    const yearAgo = bills.at(-13);
+    const trailingYear = bills.slice(-12).reduce((t, b) => t + b.totalCents, 0);
+
+    return {
+      cost,
+      bills,
+      latest,
+      trailingYearCents: trailingYear,
+      /** What one home paid over the last twelve months, on average. */
+      perHomeYearCents: latest?.homes ? Math.round(trailingYear / latest.homes) : 0,
+      changeYearOverYear:
+        latest && yearAgo && yearAgo.totalCents > 0
+          ? (latest.totalCents - yearAgo.totalCents) / yearAgo.totalCents
+          : undefined,
+    };
+  });
+
+  const monthlyCents = rows.reduce((t, r) => t + (r.latest?.totalCents ?? 0), 0);
+  const homes = rows[0]?.latest?.homes ?? c.owners.length;
+
+  return {
+    rows,
+    enabled: active.length > 0,
+    monthlyCents,
+    /** What the average home pays a month for everything the association passes on. */
+    perHomeMonthlyCents: homes ? Math.round(monthlyCents / homes) : 0,
+    trailingYearCents: rows.reduce((t, r) => t + r.trailingYearCents, 0),
+  };
+}
+
+/**
+ * Every month of one shared cost, oldest first, for a chart.
+ *
+ * Returns the figures rather than pixels so the same numbers can be exported to
+ * CSV, which is what a treasurer actually wants at budget time.
+ */
+export function sharedCostTrend(c: Community, sharedCostId: string) {
+  const cost = c.sharedCosts.find((s) => s.id === sharedCostId);
+  const bills = c.sharedCostBills
+    .filter((b) => b.sharedCostId === sharedCostId)
+    .sort((a, b) => a.periodStart.localeCompare(b.periodStart));
+  const peak = bills.reduce((m, b) => Math.max(m, b.totalCents), 0);
+  return { cost, bills, peakCents: peak };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Special assessments: the ones that end.                                     */
+/* -------------------------------------------------------------------------- */
+
+export function assessmentProgress(c: Community) {
+  const rows = c.specialAssessments.map((a) => {
+    const collected = Math.min(a.collectedCents, a.totalCents);
+    const remaining = a.totalCents - collected;
+    const paidInstallments = a.totalCents
+      ? Math.floor((collected / a.totalCents) * a.installments)
+      : 0;
+    return {
+      assessment: a,
+      collectedCents: collected,
+      remainingCents: remaining,
+      percent: a.totalCents ? collected / a.totalCents : 0,
+      installmentsPaid: paidInstallments,
+      installmentsLeft: Math.max(0, a.installments - paidInstallments),
+      /** What one home still owes on it, on average. Buyers ask this. */
+      perHomeRemainingCents: c.owners.length
+        ? Math.round(remaining / c.owners.length)
+        : remaining,
+    };
+  });
+  return {
+    rows,
+    active: rows.filter((r) => r.assessment.status === "active"),
+    /** Nothing to show, which is the state most associations are in. */
+    enabled: rows.length > 0,
+    outstandingCents: rows.reduce((t, r) => t + r.remainingCents, 0),
+  };
+}

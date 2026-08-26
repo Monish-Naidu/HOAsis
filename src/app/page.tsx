@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { money } from "@/lib/utils";
+import { money, today } from "@/lib/utils";
 import {
   ArrowRight,
   Check,
@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Badge, Card } from "@/components/ui/primitives";
-import { libraryArticles } from "@/lib/data";
+import { budget, interestSummary, libraryArticles, owners, reserveComponents } from "@/lib/data";
+import { MANAGEMENT_RANGE_PER_HOME, PAYMENT_COSTS, tierFor } from "@/lib/pricing";
+import { defaultAssumptions, projectReserves, requiredMonthlyContribution } from "@/lib/reserves";
 
 export const metadata = {
   title: "HOAsis, community management for self-managed HOAs",
@@ -20,15 +22,61 @@ export const metadata = {
 };
 
 /**
- * The cost case, as arithmetic rather than a percentage.
+ * The cost case, as arithmetic a board can check.
  *
- * Our own number is settled at $4 a home a month. What a management company
- * charges is not ours to state, so the comparison stays a blank the reader
- * fills in from their own contract, which is more persuasive than a figure we
- * surveyed and they can argue with.
+ * Every figure here is computed from the same tier table the pricing page
+ * reads, because these two pages drifted once and the front page ended up
+ * quoting a per door rate three times our actual price. The worked example is
+ * an association of 88 homes, which is close to the median self-managed size.
  */
-const OUR_PRICE_PER_HOME = 4_00;
 const EXAMPLE_HOMES = 88;
+const EXAMPLE_TIER = tierFor(EXAMPLE_HOMES);
+const OUR_YEAR = EXAMPLE_TIER.monthlyCents * 12;
+const MANAGED_YEAR = {
+  low: MANAGEMENT_RANGE_PER_HOME.low * EXAMPLE_HOMES * 12,
+  high: MANAGEMENT_RANGE_PER_HOME.high * EXAMPLE_HOMES * 12,
+};
+
+/**
+ * The number floated over the hero photograph.
+ *
+ * It is computed from the demo association's own reserve study by the same
+ * functions the board screen uses, so the claim on the front page cannot drift
+ * from what the product actually says. A board can check it in the live demo.
+ *
+ * We lead with the year rather than a percentage because the year is the part
+ * that changes behaviour. Nobody calls a meeting over "68% funded".
+ */
+const HERO_OUTLOOK = (() => {
+  const startYear = today().getUTCFullYear();
+  const interest = interestSummary();
+  const transfer = budget.find((b) => b.category === "Reserve transfer");
+  const monthlyContributionCents = transfer ? Math.round(transfer.annualCents / 12) : 0;
+  const assumptions = defaultAssumptions({
+    openingBalanceCents: interest.balance,
+    monthlyContributionCents,
+    apyPercent: interest.blendedApy,
+  });
+  const projection = projectReserves(reserveComponents, assumptions, startYear);
+
+  if (projection.firstShortfallYear !== null) {
+    const required = requiredMonthlyContribution(reserveComponents, assumptions, startYear);
+    const perHome = Math.round(
+      Math.max(0, required - monthlyContributionCents) / Math.max(1, owners.length),
+    );
+    return {
+      year: projection.firstShortfallYear,
+      headline: "The year this HOA runs short",
+      detail: `Fixed today for ${money(perHome)} a home a month`,
+    };
+  }
+
+  return {
+    year: projection.years.at(-1)?.year ?? startYear,
+    headline: "Funded this far ahead",
+    detail: "Every roof and road paid for, no special assessment",
+  };
+})();
 
 /** Each value section pairs a claim with the screen that proves it. */
 const SHOWCASE = [
@@ -235,17 +283,18 @@ export default function MarketingHome() {
                   className="object-cover"
                 />
               </div>
-              {/* One real number from the demo, floated over the corner, so the
-                  hero shows the product rather than only describing it. */}
-              <figcaption className="absolute -bottom-5 -left-4 flex items-center gap-3 rounded-2xl border border-border bg-surface/95 px-4 py-3 shadow-float backdrop-blur-md sm:-left-8">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
-                  <Check className="size-4" strokeWidth={2.6} />
+              {/* The demo association's real reserve outlook, floated over the
+                  corner, so the hero shows the product working rather than
+                  only describing it. */}
+              <figcaption className="absolute -bottom-6 -left-4 flex items-center gap-4 rounded-2xl border border-border bg-surface/95 px-5 py-3.5 shadow-float backdrop-blur-md sm:-left-8">
+                <span className="text-[34px] font-semibold leading-none tracking-tight text-fg tabular-nums">
+                  {HERO_OUTLOOK.year}
                 </span>
-                <span>
-                  <span className="block text-[15px] font-semibold text-fg">The numbers match</span>
-                  <span className="block text-[13px] text-fg-muted">
-                    Every report shows the same figure
+                <span className="border-l border-border pl-4">
+                  <span className="block text-[15px] font-semibold text-fg">
+                    {HERO_OUTLOOK.headline}
                   </span>
+                  <span className="block text-[13px] text-fg-muted">{HERO_OUTLOOK.detail}</span>
                 </span>
               </figcaption>
             </figure>
@@ -342,34 +391,34 @@ export default function MarketingHome() {
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <Reveal>
             <h2 className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[40px]">
-              The savings are not a rounding error.
+              One price for the whole association.
             </h2>
             <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-fg-muted">
-              Full service management is quoted per door per month, and so are we. Ours is
-              four dollars. Put yours next to it, multiply both by your homes and by twelve,
-              and the gap is what stops leaving the community every year.
+              Not per home, not per feature, not per board member. Here is the whole bill for
+              an association of {EXAMPLE_HOMES} homes, next to what a management company
+              charges for the same year.
             </p>
           </Reveal>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {[
               {
-                label: "Management company",
-                value: "your rate",
-                detail: "Per home per month, off your own contract",
-                accent: false,
-              },
-              {
                 label: "HOAsis",
-                value: "$4",
-                detail: `Per home per month. ${EXAMPLE_HOMES} homes is ${money(OUR_PRICE_PER_HOME * EXAMPLE_HOMES * 12, { cents: false })} a year`,
+                value: `${money(EXAMPLE_TIER.monthlyCents, { cents: false })}/mo`,
+                detail: `${money(OUR_YEAR, { cents: false })} a year. Every feature, unlimited residents.`,
+                accent: true,
+              },
+              {
+                label: "Works out to",
+                value: `${money(Math.round(EXAMPLE_TIER.monthlyCents / EXAMPLE_HOMES))}`,
+                detail: "Per home, per month. It falls as the association grows.",
                 accent: false,
               },
               {
-                label: "Stays in the community",
-                value: "the difference",
-                detail: "Every year, before anything compounds",
-                accent: true,
+                label: "A management company",
+                value: `${money(MANAGEMENT_RANGE_PER_HOME.low, { cents: false })} to ${money(MANAGEMENT_RANGE_PER_HOME.high, { cents: false })}`,
+                detail: `Per home, per month. At ${EXAMPLE_HOMES} homes that is ${money(MANAGED_YEAR.low, { cents: false })} to ${money(MANAGED_YEAR.high, { cents: false })} a year. Check your contract.`,
+                accent: false,
               },
             ].map((item, index) => (
               <Reveal key={item.label} delay={index * 80}>
@@ -391,7 +440,7 @@ export default function MarketingHome() {
                     {item.value}
                   </p>
                   <p
-                    className={`mt-2 text-[13px] ${item.accent ? "text-ok opacity-90" : "text-fg-muted"}`}
+                    className={`mt-2 text-[13px] leading-snug ${item.accent ? "text-ok opacity-90" : "text-fg-muted"}`}
                   >
                     {item.detail}
                   </p>
@@ -401,9 +450,22 @@ export default function MarketingHome() {
           </div>
 
           <Reveal delay={240}>
+            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-[15px] text-fg-muted">
+              {[
+                `Bank payments ${money(PAYMENT_COSTS.achCents)}, flat`,
+                `Cards at cost, ${PAYMENT_COSTS.cardPercent}% + ${PAYMENT_COSTS.cardFixedCents}\u00A2`,
+                "No setup fee, no per feature pricing",
+                "Cancel whenever, export everything",
+              ].map((line) => (
+                <span key={line} className="inline-flex items-center gap-2">
+                  <Check className="size-4 text-ok" strokeWidth={2.6} />
+                  {line}
+                </span>
+              ))}
+            </div>
             <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-fg-muted">
-              Whatever that difference turns out to be, it goes into reserves instead of a
-              management fee. Over a decade at a realistic yield, that is the gap between
+              We do not mark up card fees, so the difference between the two columns stays in
+              the association. Put it in reserves and over a decade it is the gap between
               replacing a roof on schedule and levying a special assessment for it.
             </p>
           </Reveal>

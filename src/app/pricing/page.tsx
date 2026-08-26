@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowRight, Check, Minus } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Badge, Card } from "@/components/ui/primitives";
+import { PRICING_TIERS } from "@/lib/pricing";
+import { money } from "@/lib/utils";
 
 export const metadata = {
   title: "Pricing",
@@ -9,51 +11,10 @@ export const metadata = {
 };
 
 /**
- * Pricing.
- *
- * Flat bands rather than a per door rate, because that is how this market
- * prices and a board comparing us to a competitor is comparing one monthly
- * number to another. Per door came from management companies, who charge $10
- * to $20 a door; a board looking at us has already left one of those.
- *
- * Deliberately cheapest at the small end, where self management is most
- * common and the buyer is most price sensitive, and a premium in the middle
- * where the reserve model earns it.
+ * Pricing reads the shared tier table so the front page and this page cannot
+ * quote different numbers, which they did once.
  */
-const TIERS = [
-  {
-    name: "Small",
-    homes: "Up to 25 homes",
-    price: "$39",
-    unit: "per month",
-    note: "Cheaper than anyone else at this size. Same product as the largest plan.",
-    highlight: false,
-  },
-  {
-    name: "Standard",
-    homes: "26 to 75 homes",
-    price: "$69",
-    unit: "per month",
-    note: "The most common size for a self-managed association.",
-    highlight: true,
-  },
-  {
-    name: "Large",
-    homes: "76 to 150 homes",
-    price: "$109",
-    unit: "per month",
-    note: "Where reserve planning starts to carry real money.",
-    highlight: false,
-  },
-  {
-    name: "Very large",
-    homes: "151 to 400 homes",
-    price: "$179",
-    unit: "per month",
-    note: "Above 400 homes, talk to us and we will quote it.",
-    highlight: false,
-  },
-];
+const TIERS = PRICING_TIERS;
 
 /**
  * What a payment actually costs, next to the incumbent.
@@ -151,9 +112,9 @@ export default function PricingPage() {
                 </div>
                 <p className="mt-1 text-[13px] text-fg-muted">{tier.homes}</p>
                 <p className="tnum mt-5 text-[40px] font-semibold leading-none tracking-[-0.035em] text-fg">
-                  {tier.price}
+                  {money(tier.monthlyCents, { cents: false })}
                 </p>
-                <p className="mt-1.5 text-[13px] text-fg-muted">{tier.unit}</p>
+                <p className="mt-1.5 text-[13px] text-fg-muted">per month</p>
                 <p className="mt-4 border-t border-border pt-4 text-[15px] leading-relaxed text-fg-muted">
                   {tier.note}
                 </p>

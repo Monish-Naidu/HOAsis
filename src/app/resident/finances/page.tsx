@@ -6,6 +6,7 @@ import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
 import { Badge, Card, Meter, SectionTitle } from "@/components/ui/primitives";
 import { budgetSummary, cashPosition, interestSummary, reserveSummary } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
+import { SharedCostCard } from "@/components/app/shared-cost-card";
 import { formatDate, money, shortMoney } from "@/lib/utils";
 
 export default function ResidentFinances() {
@@ -46,6 +47,8 @@ export default function ResidentFinances() {
           </p>
         </Card>
       </div>
+
+      <SharedCostCard community={community} />
 
       {/* Interest */}
       <section>

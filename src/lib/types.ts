@@ -584,3 +584,88 @@ export interface ForumPost {
   pinned?: boolean;
   replies: ForumReply[];
 }
+
+/* -------------------------------------------------------------------------- */
+/* Layers: what an association charges beyond a flat monthly due.              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How a shared bill is divided between homes.
+ *
+ * Equal is the default and the only one that needs no data about the homes.
+ * The rest exist because dividing a water bill equally between a studio and a
+ * four bedroom is the argument that starts most utility disputes. Splitting by
+ * occupancy or floor area is what the utility billing industry calls RUBS.
+ */
+export type AllocationMethod = "equal" | "square_feet" | "bedrooms" | "occupants" | "submeter";
+
+export type SharedCostKind =
+  | "water"
+  | "sewer"
+  | "trash"
+  | "gas"
+  | "electric"
+  | "internet"
+  | "other";
+
+/**
+ * A bill the association receives and passes on.
+ *
+ * Water, trash, bulk internet. The association is the customer of record, so
+ * owners never see the provider's invoice and normally have no idea what the
+ * community actually pays. That opacity is the complaint; the provider and the
+ * account reference are stored so a statement can answer it.
+ */
+export interface SharedCost {
+  id: ID;
+  name: string;
+  kind: SharedCostKind;
+  /** Who the association pays. Shown to owners, deliberately. */
+  provider: string;
+  accountRef: string;
+  allocation: AllocationMethod;
+  /** Some boards add an administration percentage. Recorded, never hidden in the rate. */
+  markupPercent: number;
+  active: boolean;
+  /** How the provider measures usage: gallons, therms, kWh. */
+  usageUnit: string;
+}
+
+/** One provider bill, for one period, already divided. */
+export interface SharedCostBill {
+  id: ID;
+  sharedCostId: ID;
+  periodStart: ISODate;
+  periodEnd: ISODate;
+  dueOn: ISODate;
+  totalCents: Cents;
+  usageAmount?: number;
+  /** Homes the bill was divided between. */
+  homes: number;
+  /** What the median home paid, which is the number owners actually ask for. */
+  averageShareCents: Cents;
+  /** The current owner's own share, when there is a signed in owner. */
+  myShareCents?: Cents;
+}
+
+/**
+ * One large cost, approved once, split across homes, and paid off.
+ *
+ * Distinct from dues because it ends. Owners want to see how much is left, and
+ * a buyer's lender asks about it by name.
+ */
+export interface SpecialAssessment {
+  id: ID;
+  title: string;
+  /** Why the board levied it, in their words. Several states require this be stated. */
+  reason: string;
+  totalCents: Cents;
+  allocation: AllocationMethod;
+  installments: number;
+  firstDueOn: ISODate;
+  /** The vote that authorised it, when the documents required one. */
+  ballotId?: ID;
+  /** Collected so far, across every home. */
+  collectedCents: Cents;
+  status: "proposed" | "active" | "complete";
+}

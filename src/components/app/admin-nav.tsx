@@ -63,8 +63,11 @@ export function AdminNav() {
     },
   };
 
-  // Any one of the listed capabilities opens the tab.
-  const visible = items.filter((i) => !i.need || i.need.some((c) => can(c)));
+  // Two separate questions: may they open it, and is there anything on it.
+  const visible = items.filter(
+    (i) =>
+      (!i.need || i.need.some((c) => can(c))) && (!i.present || i.present(community)),
+  );
 
   return (
     <nav aria-label="Admin sections" className="flex gap-1 lg:flex-col">

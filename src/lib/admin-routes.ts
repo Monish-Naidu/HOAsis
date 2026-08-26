@@ -1,5 +1,6 @@
 import {
   Banknote,
+  Droplets,
   FileText,
   Inbox,
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
   Vote,
 } from "lucide-react";
 import type { Capability } from "@/lib/types";
+import type { Community } from "@/lib/data/community";
 
 /**
  * Every board route, and what it takes to open one.
@@ -33,6 +35,18 @@ export interface AdminRoute {
   key: string;
   /** Any one of these opens it. Absent means every member may look. */
   need?: Capability[];
+  /**
+   * Whether this association has anything on the tab at all.
+   *
+   * Capability answers "may they", this answers "is there anything there". An
+   * association that bills one flat due has no shared costs and no assessments,
+   * and putting an empty tab in front of them every day is how a simple product
+   * stops feeling simple. Absent means always show.
+   *
+   * It only hides the link. The page itself still renders, so a bookmark or a
+   * link from Settings works, and turning the layer on is one click away.
+   */
+  present?: (c: Community) => boolean;
 }
 
 export const ADMIN_ROUTES: AdminRoute[] = [
@@ -54,6 +68,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // Was ungated, which showed every household's balance, email and days past
     // due to any resident who reached the URL.
     need: ["finances", "communications"],
+  },
+  {
+    href: "/admin/shared-costs",
+    label: "Shared costs",
+    icon: Droplets,
+    key: "shared-costs",
+    need: ["finances"],
+    present: (c) => c.sharedCosts.length > 0 || c.specialAssessments.length > 0,
   },
   { href: "/admin/requests", label: "Requests", icon: Inbox, key: "requests", need: ["requests"] },
   { href: "/admin/voting", label: "Voting", icon: Vote, key: "voting", need: ["voting"] },

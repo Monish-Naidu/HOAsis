@@ -19,6 +19,9 @@ import type {
   Payout,
   ReserveComponent,
   SavingsOffer,
+  SharedCost,
+  SharedCostBill,
+  SpecialAssessment,
   Vendor,
   Violation,
 } from "@/lib/types";
@@ -65,6 +68,18 @@ export interface Community {
   yearElapsed: number;
   reserveComponents: ReserveComponent[];
   savingsOffers: SavingsOffer[];
+
+  /**
+   * Layers on top of dues, both empty for most associations.
+   *
+   * A board that bills one flat amount never creates either, and every screen
+   * that reads them renders nothing rather than an empty table. That is the
+   * whole contract: adding a capability must not add a screen to associations
+   * that did not ask for it.
+   */
+  sharedCosts: SharedCost[];
+  sharedCostBills: SharedCostBill[];
+  specialAssessments: SpecialAssessment[];
 
   vendors: Vendor[];
   payouts: Payout[];

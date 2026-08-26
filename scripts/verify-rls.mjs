@@ -100,13 +100,14 @@ async function seed() {
   const alphaUnit2 = await unit(alpha.id, "2");
   const betaUnit1 = await unit(beta.id, "1");
 
-  const [resident, neighbor, treasurer, outsider] = await Promise.all([
+  const [resident, neighbor, treasurer, outsider, chair] = await Promise.all([
     makeUser("resident"),
     makeUser("neighbor"),
     makeUser("treasurer"),
     makeUser("outsider"),
+    makeUser("chair"),
   ]);
-  created.users.push(resident.id, neighbor.id, treasurer.id, outsider.id);
+  created.users.push(resident.id, neighbor.id, treasurer.id, outsider.id, chair.id);
 
   const member = async (associationId, unitId, profile, role, capabilities) => {
     const { error } = await admin.from("memberships").insert({
@@ -120,6 +121,9 @@ async function seed() {
     if (error) throw new Error(`membership ${role}: ${error.message}`);
   };
 
+  // Every association has a sitting President, which the database insists on.
+  // Building one by hand without one is not a state the product can reach.
+  await member(alpha.id, alphaUnit1.id, chair, "president", ["finances", "permissions"]);
   await member(alpha.id, alphaUnit1.id, resident, "resident", []);
   await member(alpha.id, alphaUnit2.id, neighbor, "resident", []);
   await member(alpha.id, alphaUnit2.id, treasurer, "treasurer", ["finances"]);

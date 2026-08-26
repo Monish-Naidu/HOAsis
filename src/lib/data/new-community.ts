@@ -229,6 +229,12 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     yearElapsed: yearElapsedFrom(FISCAL_YEAR_START, asOf),
     reserveComponents: [],
     savingsOffers: [],
+    // Nothing beyond a flat monthly due. A new association bills one thing,
+    // and the shared cost and assessment screens stay out of its way until it
+    // says otherwise.
+    sharedCosts: [],
+    sharedCostBills: [],
+    specialAssessments: [],
 
     vendors: [],
     payouts: [],
