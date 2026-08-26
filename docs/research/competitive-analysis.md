@@ -167,7 +167,60 @@ never be left without an officer.
 **Gap to close:** a genuine board-transition flow. Hand over, brief the
 successor, and produce a "state of the association" pack. Nobody has this.
 
-### 5. Compliance is nobody's product
+### 5. Shared utility costs sit in a gap between two industries
+
+Researched 26 August 2026.
+
+A large share of condominium, townhome and older single-family associations are on
+a **master utility meter**. The association is the customer of record for water,
+sewer, trash, sometimes gas and bulk internet. It pays one bill and recovers the
+cost inside dues. Owners therefore have no bill to look at, no account to log in
+to, and no way to check what they are paying for.
+
+Splitting that bill across homes has its own industry. It is called **RUBS**, ratio
+utility billing, when the split uses a formula (occupancy, square footage, bedroom
+count) and **submetering** when each unit has a real meter. Vendors include
+SimpleSUB, AmCoBi, Synergy Utility Billing, Think Utility Services and Guardian.
+Properties using a RUBS allocation report **6% to 27% reductions in water usage**
+purely from making the cost visible.
+
+Here is the gap:
+
+- **The utility billing vendors do not do the association's books.** They produce an
+  allocation file and hand it back. Reconciliation, statements, delinquency and
+  reserves are somebody else's problem.
+- **The HOA platforms do not do utilities.** PayHOA supports a *separate account*
+  for utility expenses and recommends tracking them there, which is bookkeeping
+  advice, not a feature. Neither PayHOA nor EasyHOA allocates a provider bill across
+  homes, publishes the provider's name to owners, or shows what a utility has cost
+  the community over time.
+
+So an association on a master meter runs two systems and reconciles them by hand,
+or gives up and buries the cost in dues where nobody can question it.
+
+**We now sit in the middle.** A provider bill is posted once, split by whichever
+basis the association chose, and lands on statements as an ordinary charge. Owners
+see the provider's name, the community total, and their own share. The board sees
+two years of cost per home and the year-on-year change against the same month last
+year, because every utility is seasonal and a December-to-January comparison says
+nothing.
+
+Two details worth knowing, because they are why this normally goes wrong:
+
+1. **Rounding.** Dividing a bill by 37 homes leaves a remainder. Rounding each share
+   independently produces a total a few cents off the bill the association actually
+   owes, every month, forever. We use largest-remainder allocation, and it is
+   verified across 144 consecutive bills in the three-year test suite.
+2. **Markup.** Some boards add an administration percentage, and several states cap
+   or forbid it. We store it as a separate recorded field rather than folding it
+   into the rate, so what owners are charged is always reproducible from what the
+   provider charged.
+
+**Positioning:** this is the only feature in the product that a competitor cannot
+copy by adding a screen. It requires the allocation engine, the statement, and the
+books to be the same system.
+
+### 6. Compliance is nobody's product
 
 Research repeatedly notes boards fall behind on state-mandated reserve studies
 and annual disclosures, and that compliance risk grows because nobody tracks it.
@@ -377,6 +430,16 @@ and it is a claim we can demonstrate in ninety seconds.
 - [The HOA software buying mistake boards make in their first 90 days](https://www.streetinsider.com/KeyCrew/The+HOA+Software+Buying+Mistake+Most+Boards+Make+in+Their+First+90+Days/26342337.html)
 - [HOA software for self-managed boards, buyer's guide, Solume](https://www.community.solume.com/blog/hoa-software-self-managed-boards-guide)
 - [Stripe pricing](https://stripe.com/pricing), for the pass-through card rate
+
+On shared utility billing:
+
+- [RUBS explained, National Center for Housing Management](https://www.nchm.org/rubs-ratio-utility-billing-system-explained/)
+- [Water submetering for HOAs, SimpleSUB](https://www.simplesubwater.com/resources/water-submetering-for-hoas-the-complete-guide)
+- [Submetering for savings, CooperatorNews](https://fl.cooperatornews.com/article/submetering-for-savings)
+- [RUBS billing, Synergy Utility Billing](https://www.synergyutilitybilling.com/services/rubs-billing/)
+- [Ratio utility billing systems, Think Utility Services](https://thinkutilityservices.com/rubs-ratio-utility-billing-systems/)
+- [PayHOA on utility accounts and budget items](https://www.payhoa.com/budget-items-what-does-an-hoa-need/)
+- [PayHOA glossary, special assessment](https://www.payhoa.com/glossary/special-assessment/)
 
 Competitor pricing was read from their own published pages on 26 August 2026 and
 should be re-checked before anything here is quoted publicly. Mid-band PayHOA
