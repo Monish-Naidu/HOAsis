@@ -94,23 +94,24 @@ export function AdminNav() {
   const comp = complianceSummary(community);
   const delinq = delinquency(community);
 
+  /**
+   * A badge means somebody owes a decision here, and nothing else.
+   *
+   * It used to mean "there are things on this tab", which put a number beside
+   * seven of twelve and turned the whole row into wallpaper. An open ballot is
+   * not board work, it is resident work; a missing reserve study is a standing
+   * condition, not a queue. Both said so every day and neither was ever acted
+   * on because of the badge.
+   */
   const badges: Partial<Record<string, NavBadge>> = {
     money: { count: recon.needsReview.length, tone: "warn" },
-    reserves: {
-      count: community.reserveComponents.length === 0 ? 1 : 0,
-      tone: "warn",
-    },
     requests: {
       count: requests.filter(
         (r) => !["approved", "denied", "closed"].includes(r.status),
       ).length,
       tone: "neutral",
     },
-    voting: { count: community.ballots.filter((b) => b.status === "open").length, tone: "neutral" },
-    compliance: {
-      count: comp.overdue.length + comp.dueSoon.length,
-      tone: comp.overdue.length ? "danger" : "warn",
-    },
+    compliance: { count: comp.overdue.length, tone: "danger" },
     communications: { count: unread, tone: "neutral" },
     homeowners: { count: delinq.past.length, tone: "warn" },
     vendors: {

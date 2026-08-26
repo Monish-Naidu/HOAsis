@@ -18,14 +18,12 @@ import {
   ButtonLink,
   Card,
   CardHeader,
-  Meter,
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
 import {
   budgetSummary,
   cashPosition,
-  complianceSummary,
   delinquency,
   reserveSummary,
 } from "@/lib/metrics";
@@ -36,12 +34,11 @@ import {
 } from "@/lib/app-state";
 import { SetupChecklist } from "@/components/app/setup-checklist";
 import { useToast } from "@/components/app/toast";
-import { daysFromToday, formatDate, money, pluralize, relativeDays, shortMoney } from "@/lib/utils";
+import { daysFromToday, formatDate, money, pluralize } from "@/lib/utils";
 
 export default function BoardDashboard() {
   const { community } = useAppState();
   const association = community.association;
-  const bankAccounts = community.bankAccounts;
   const cash = cashPosition(community);
   const recon = useReconciliation();
   const approvals = usePendingApprovals();
@@ -54,7 +51,6 @@ export default function BoardDashboard() {
   const delinq = delinquency(community);
   const bud = budgetSummary(community);
   const reserve = reserveSummary(community);
-  const comp = complianceSummary(community);
 
   return (
     <>
@@ -117,8 +113,12 @@ export default function BoardDashboard() {
         />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
+      {/* Two columns, two questions: what needs a decision about money, and
+          what needs a decision about everything else. Anything that is
+          analysis rather than a decision lives on its own tab, because a
+          dashboard that shows everything is one nobody reads. */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-5">
+        <div className="space-y-5 lg:col-span-3">
           {/* Needs review */}
           <Card>
             <CardHeader
@@ -203,93 +203,10 @@ export default function BoardDashboard() {
               </div>
             ))}
           </Card>
-
-          {/* Budget vs actual */}
-          <Card>
-            <CardHeader
-              title="Budget vs. actual"
-              subtitle={`Fiscal year 2026 · ${Math.round(bud.yearElapsed * 100)}% elapsed`}
-              icon={<TrendingUp className="size-4" />}
-            />
-            <div className="px-5 py-4">
-              <div className="space-y-3.5">
-                {bud.expense.map((line) => {
-                  const pace = line.ytdActualCents / line.annualCents;
-                  const over = pace > bud.yearElapsed + 0.06;
-                  return (
-                    <div key={line.category}>
-                      <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                        <span className="truncate text-[13px] text-fg">{line.category}</span>
-                        <span className="tnum shrink-0 text-[12px] text-fg-muted">
-                          {shortMoney(line.ytdActualCents)}
-                          <span className="text-fg-subtle"> / {shortMoney(line.annualCents)}</span>
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <Meter
-                          value={pace}
-                          tone={over ? "warn" : "brand"}
-                          aria-label={`${line.category}: ${Math.round(pace * 100)}% of annual budget spent`}
-                        />
-                        {/* Where spending "should" be today */}
-                        <span
-                          className="absolute -top-0.5 h-2.5 w-px bg-fg-subtle"
-                          style={{ left: `${bud.yearElapsed * 100}%` }}
-                          aria-hidden
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="mt-4 flex items-center gap-2 border-t border-border pt-3 text-[11px] text-fg-subtle">
-                <span className="inline-block h-2.5 w-px bg-fg-subtle" />
-                Tick marks today.
-              </p>
-            </div>
-          </Card>
         </div>
 
-        <div className="space-y-5">
-          {/* Compliance */}
-          <Card>
-            <CardHeader
-              title="Compliance"
-              subtitle={`${comp.compliant.length} of ${comp.compliant.length + comp.openCount} obligations clear`}
-              icon={<CheckCircle2 className="size-4" />}
-            />
-            <div className="px-5 py-4">
-              <Meter value={comp.score} tone={comp.overdue.length ? "warn" : "ok"} />
-              <p className="mt-2 text-[12px] text-fg-muted">
-                {comp.overdue.length
-                  ? `${comp.overdue.length} overdue · ${comp.dueSoon.length} due soon`
-                  : `${comp.dueSoon.length} due soon`}
-              </p>
-            </div>
-            {[...comp.overdue, ...comp.dueSoon].slice(0, 3).map((item) => (
-              <Link
-                key={item.id}
-                href="/admin/compliance"
-                className="block border-t border-border px-5 py-3 transition-colors hover:bg-surface-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[13px] font-medium leading-snug text-fg">{item.title}</p>
-                  <Badge tone={item.status === "overdue" ? "danger" : "warn"}>
-                    {item.dueDate ? relativeDays(item.dueDate) : item.status}
-                  </Badge>
-                </div>
-                <p className="mt-0.5 text-[11px] text-fg-muted">{item.citation}</p>
-              </Link>
-            ))}
-            <Link
-              href="/admin/compliance"
-              className="flex items-center justify-between border-t border-border px-5 py-2.5 text-[12px] font-medium text-accent hover:bg-surface-2"
-            >
-              Full register
-              <ArrowRight className="size-3.5" />
-            </Link>
-          </Card>
-
+        {/* What needs a decision that is not about a transaction. */}
+        <div className="space-y-5 lg:col-span-2">
           {/* Clocks */}
           <Card>
             <CardHeader
@@ -359,37 +276,6 @@ export default function BoardDashboard() {
                   >
                     Hold
                   </button>
-                </div>
-              </div>
-            ))}
-          </Card>
-
-          {/* Accounts */}
-          <Card>
-            <CardHeader title="Accounts" />
-            {bankAccounts.map((a) => (
-              <div key={a.id} className="border-b border-border px-5 py-3 last:border-b-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-fg">{a.name}</p>
-                    <p className="truncate text-[11px] text-fg-muted">
-                      {a.institution} ••{a.mask}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="tnum text-[13px] font-semibold text-fg">
-                      {money(a.balanceCents, { cents: false })}
-                    </p>
-                    <p
-                      className={`text-[10px] font-medium ${
-                        a.status === "live" ? "text-ok" : "text-warn"
-                      }`}
-                    >
-                      {a.status === "live"
-                        ? `synced ${a.syncedMinutesAgo}m ago`
-                        : `${Math.round(a.syncedMinutesAgo / 60)}h stale`}
-                    </p>
-                  </div>
                 </div>
               </div>
             ))}
