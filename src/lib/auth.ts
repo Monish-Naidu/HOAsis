@@ -104,7 +104,13 @@ export async function signUp(
   const { data, error } = await client.auth.signUp({
     email: email.trim(),
     password,
-    options: { data: { full_name: fullName.trim() } },
+    options: {
+      data: { full_name: fullName.trim() },
+      // Without this, confirming an email lands on whatever Supabase has as
+      // the site URL, which is the marketing page, and the person who just
+      // confirmed has no idea it worked.
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
   });
   if (error) return { ok: false, message: readable(error.message) };
 

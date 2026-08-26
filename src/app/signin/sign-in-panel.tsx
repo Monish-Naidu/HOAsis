@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Building2, Info, User } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { signInWithPassword, signUp } from "@/lib/auth";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 
 /**
@@ -22,6 +23,26 @@ const DEMO = {
   email: "dana@willowcreek.test",
   password: "WillowCreek2026!",
 };
+
+/**
+ * Where somebody goes once they are signed in.
+ *
+ * Mirrors the rule in the auth callback, because arriving through a
+ * confirmation email and arriving through this form should not put the same
+ * person in two different places.
+ */
+async function destinationAfterSignIn(): Promise<string> {
+  try {
+    const { data } = await supabaseBrowser().rpc("my_associations");
+    const rows = (data ?? []) as { role: string }[];
+    if (!rows.length) return "/start";
+    return rows.some((m) => m.role !== "resident") ? "/admin" : "/resident";
+  } catch {
+    // If the lookup fails, the resident side is the safe landing: it shows
+    // less rather than more, and the header still offers the switch.
+    return "/resident";
+  }
+}
 
 export function SignInPanel() {
   const router = useRouter();
@@ -41,7 +62,10 @@ export function SignInPanel() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<{ tone: "danger" | "ok"; text: string } | null>(null);
+  const params = useSearchParams();
+  const [notice, setNotice] = useState<{ tone: "danger" | "ok"; text: string } | null>(
+    params.get("error") ? { tone: "danger", text: readableLinkError(params.get("error")!) } : null,
+  );
 
   function enter(accountId: string) {
     signIn(accountId);
@@ -82,10 +106,11 @@ export function SignInPanel() {
       setNotice({ tone: "ok", text: result.message });
       return;
     }
-    // Where they land depends on what they belong to, which the app learns as
-    // soon as the session settles. Sending them to the resident side is the
-    // safe default; a board member switches with one control in the header.
-    router.push(mode === "create" ? "/start" : "/resident");
+
+    // The same question the confirmation link asks: what do they already
+    // belong to? Sending every board member to the resident side and making
+    // them find the switch was a small daily insult.
+    router.push(await destinationAfterSignIn());
   }
 
   return (
@@ -287,4 +312,16 @@ function Field({
       />
     </label>
   );
+}
+
+/** Confirmation links fail in a few ordinary ways. Say which. */
+function readableLinkError(raw: string): string {
+  const text = raw.toLowerCase();
+  if (text.includes("expired")) {
+    return "That confirmation link has expired. Sign in below, or create the account again to get a fresh one.";
+  }
+  if (text.includes("already") || text.includes("used")) {
+    return "That link has already been used. Your email is confirmed, so just sign in.";
+  }
+  return "That link did not work. Sign in below and we will sort it out.";
 }

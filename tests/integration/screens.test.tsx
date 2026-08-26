@@ -11,6 +11,9 @@ const replace = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace, back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
   usePathname: () => "/resident",
+  // The sign in panel reads the error a failed confirmation link bounces back
+  // with, so the mock has to answer for it.
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const { AppStateProvider, useAppState } = await import("@/lib/app-state");

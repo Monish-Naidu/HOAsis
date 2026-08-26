@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { SignInPanel } from "./sign-in-panel";
@@ -37,7 +38,11 @@ export default function AuthLanding() {
       <main className="relative flex flex-1 items-center justify-center px-5 pb-16">
         <div className="w-full max-w-sm">
           <CommunityMasthead />
-          <SignInPanel />
+          {/* Reads the error a failed confirmation link bounces back with,
+              which makes this page dynamic unless it is wrapped. */}
+          <Suspense fallback={null}>
+            <SignInPanel />
+          </Suspense>
         </div>
       </main>
     </div>
