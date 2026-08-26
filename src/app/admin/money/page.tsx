@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -11,7 +10,6 @@ import {
   Download,
   Filter,
   Landmark,
-  PiggyBank,
   ShieldAlert,
   Star,
 } from "lucide-react";
@@ -21,24 +19,22 @@ import {
   Callout,
   Card,
   CardHeader,
-  Meter,
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
+import { MoneyTabs } from "@/components/app/money-tabs";
 import { useMemo, useState } from "react";
 import {
   budgetSummary,
   cashPosition,
   insuranceExposure,
-  interestSummary,
-  reserveSummary,
   communitySlug,
 } from "@/lib/metrics";
 import { BankConnect } from "@/components/app/bank-connect";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { downloadCsv, toCsv } from "@/lib/core/export";
-import { formatDate, money, pluralize, shortMoney } from "@/lib/utils";
+import { formatDate, money, pluralize  } from "@/lib/utils";
 
 const savedViews = [
   { name: "Everything, this month", starred: true },
@@ -58,7 +54,6 @@ export default function BoardMoney() {
     timeZone: "UTC",
   });
   const bankAccounts = community.bankAccounts;
-  const reserveComponents = community.reserveComponents;
   const cash = cashPosition(community);
   const recon = useReconciliation();
   const { notify } = useToast();
@@ -94,19 +89,15 @@ export default function BoardMoney() {
     );
     notify(`Exported ${pluralize(rows.length, "transaction")}`);
   }
-  const reserve = reserveSummary(community);
   const bud = budgetSummary(community);
-  const interest = interestSummary(community);
   const exposure = insuranceExposure(community);
-  // Reserve cash sits in savings, separate from operating. Nothing here shops
-  // for a better rate, deliberately.
-  const reserveAccounts = community.bankAccounts.filter((a) => a.kind !== "operating");
 
   return (
     <>
+      <MoneyTabs />
       <PageHeader
-        eyebrow="Accounting"
         title="Money"
+        description="What came in, what went out, and anything still waiting on a decision."
         
         action={
           <div className="flex gap-2">
@@ -133,6 +124,25 @@ export default function BoardMoney() {
         }
       />
 
+      {exposure.totalUninsured > 0 ? (
+        <Callout
+          tone="warn"
+          className="mb-5"
+          icon={<ShieldAlert className="size-4" />}
+          title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
+        >
+          {exposure.rows
+            .filter((row) => row.uninsured > 0)
+            .map((row) => (
+              <span key={row.institution} className="block">
+                {row.institution} holds {money(row.balance, { cents: false })} against a{" "}
+                {money(row.limit, { cents: false })} limit. The limit is per bank, not per
+                account, so a second account there does not extend it.
+              </span>
+            ))}
+        </Callout>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="Total cash"
@@ -145,7 +155,7 @@ export default function BoardMoney() {
           icon={<Landmark className="size-4" />}
         />
         <Stat
-          label="Income YTD"
+          label="Money in this year"
           value={money(bud.incomeYtd, { cents: false })}
           tone="ok"
           hint={
@@ -156,7 +166,7 @@ export default function BoardMoney() {
           icon={<ArrowUpRight className="size-4" />}
         />
         <Stat
-          label="Expenses YTD"
+          label="Money out this year"
           value={money(bud.expenseYtd, { cents: false })}
           hint={
             bud.expensePace === undefined
@@ -166,7 +176,7 @@ export default function BoardMoney() {
           icon={<ArrowDownRight className="size-4" />}
         />
         <Stat
-          label="Needs review"
+          label="Waiting on you"
           value={String(recon.needsReview.length)}
           tone={recon.needsReview.length ? "warn" : "ok"}
           hint="Held out of reports until confirmed"
@@ -276,7 +286,7 @@ export default function BoardMoney() {
       {/* Ledger */}
       <Card className="mt-5">
         <CardHeader
-          title="General ledger"
+          title="Every transaction"
           subtitle={`${rows.length} of ${pluralize(ledger.length, "transaction")} · ${monthLabel}`}
           action={
             <div className="flex items-center gap-2">
@@ -426,174 +436,10 @@ export default function BoardMoney() {
       </Card>
 
 
-      {/* Reserve cash: what it holds, what it earns, where it could earn more. */}
-      <Card className="mt-5">
-        <CardHeader
-          title="Reserve cash"
-          
-          icon={<PiggyBank className="size-4" />}
-        />
-        <div className="grid gap-5 px-5 py-4 sm:grid-cols-4">
-          <div>
-            <p className="text-[13px] font-semibold text-fg-muted">
-              Reserve balance
-            </p>
-            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
-              {money(interest.balance, { cents: false })}
-            </p>
-            <p className="mt-1 text-[13px] text-fg-muted">
-              Across {pluralize(interest.reserveAccounts.length, "account")}
-            </p>
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-fg-muted">
-              Blended yield
-            </p>
-            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
-              {interest.blendedApy.toFixed(2)}%
-            </p>
-            <p className="mt-1 text-[13px] text-fg-muted">Weighted by balance</p>
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-fg-muted">
-              Interest earned YTD
-            </p>
-            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-ok">
-              {money(interest.earnedYtd, { cents: false })}
-            </p>
-            <p className="mt-1 text-[13px] text-fg-muted">Posted and reconciled</p>
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-fg-muted">
-              Projected, full year
-            </p>
-            <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
-              {money(interest.projectedAnnual, { cents: false })}
-            </p>
-            <p className="mt-1 text-[13px] text-fg-muted">At today&apos;s rates</p>
-          </div>
-        </div>
-
-        {exposure.totalUninsured > 0 ? (
-          <div className="px-5 pb-4">
-            <Callout
-              tone="warn"
-              icon={<ShieldAlert className="size-4" />}
-              title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
-            >
-              {exposure.rows
-                .filter((r) => r.uninsured > 0)
-                .map((r) => (
-                  <span key={r.institution}>
-                    {r.institution} holds {money(r.balance, { cents: false })} against a{" "}
-                    {money(r.limit, { cents: false })} limit. A sweep spreads the balance across
-                    member banks so all of it stays covered.
-                  </span>
-                ))}
-            </Callout>
-          </div>
-        ) : null}
-
-        {/* A shelf of savings products used to sit here, with a recommended
-            one and an "Open account" button. Reserve money belongs in one
-            insured, liquid savings account, and shopping rates is not a job a
-            volunteer treasurer should be nudged into by their books. What is
-            left is the only version of this that matters: is the reserve
-            actually separate from operating money. */}
-        {reserveAccounts.length === 0 ? (
-          <div className="border-t border-border px-5 py-6 text-center">
-            <p className="text-[15px] font-medium text-fg">No reserve account yet</p>
-            <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-fg-muted">
-              Every dollar of reserve is sitting in the operating account, where it earns
-              nothing and is one mistake away from paying a landscaping invoice. Opening a
-              separate insured savings account is the one change that costs owners nothing.
-            </p>
-          </div>
-        ) : null}
-      </Card>
-
-      {/* Reserves */}
-      <Card className="mt-5">
-        <CardHeader
-          title="Reserve schedule"
-          subtitle={
-            reserve.hasStudy
-              ? `${Math.round(reserve.percentFunded * 100)}% funded · ${money(reserve.funded, { cents: false })} of ${money(reserve.required, { cents: false })} in replacement obligations`
-              : "No study on file, so there is nothing to measure against yet"
-          }
-          action={
-            <Link href="/admin/compliance" className="text-[13px] font-medium text-accent hover:underline">
-              Why this matters
-            </Link>
-          }
-        />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left">
-            <thead>
-              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
-                <th className="px-5 py-2.5 font-semibold">Component</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Remaining life</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Replacement</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Funded</th>
-                <th className="w-40 px-5 py-2.5 font-semibold">Progress</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reserveComponents.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-6 text-center">
-                    <p className="text-[15px] font-medium text-fg">No reserve study on file</p>
-                    <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-fg-muted">
-                      Washington expects one, and without it there is no way to know what the
-                      association should be saving. A study for a small community is usually a
-                      few hundred dollars.
-                    </p>
-                  </td>
-                </tr>
-              ) : null}
-              {reserveComponents.map((c) => {
-                const pct = c.fundedCents / c.replacementCostCents;
-                const urgent = c.remainingLifeYears <= 2;
-                return (
-                  <tr key={c.id} className="border-b border-border text-[15px] last:border-b-0">
-                    <td className="px-5 py-3">
-                      <p className="font-medium text-fg">{c.name}</p>
-                      {c.note ? (
-                        <p className="mt-0.5 text-[13px] text-fg-muted">{c.note}</p>
-                      ) : c.lastInspection ? (
-                        <p className="mt-0.5 text-[13px] text-fg-subtle">
-                          Last inspected {formatDate(c.lastInspection, "long")}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="tnum px-3 py-3 text-right">
-                      <span className={urgent ? "font-semibold text-warn" : "text-fg-muted"}>
-                        {c.remainingLifeYears} yr
-                      </span>
-                    </td>
-                    <td className="tnum px-3 py-3 text-right text-fg">
-                      {shortMoney(c.replacementCostCents)}
-                    </td>
-                    <td className="tnum px-3 py-3 text-right text-fg-muted">
-                      {shortMoney(c.fundedCents)}
-                    </td>
-                    <td className="px-5 py-3">
-                      <Meter
-                        value={pct}
-                        tone={pct >= 0.8 ? "ok" : urgent ? "warn" : "brand"}
-                        aria-label={`${c.name} ${Math.round(pct * 100)}% funded`}
-                      />
-                      <span className="tnum mt-1 block text-[13px] text-fg-subtle">
-                        {Math.round(pct * 100)}%
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* Two reserve sections used to sit here, duplicating the whole of the
+          Reserves tab. Both are one click away under Next 30 years now, and
+          this page keeps only the balance, which belongs in "what do we have"
+          the same way the operating balance does. */}
     </>
   );
 }

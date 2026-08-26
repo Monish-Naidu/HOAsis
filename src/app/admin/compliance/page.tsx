@@ -82,7 +82,7 @@ export default function BoardCompliance() {
     <>
       <PageHeader
         eyebrow={`${association.stateName} · RCW 64.38 association`}
-        title="Compliance register"
+        title="Deadlines"
         
       />
 
@@ -95,7 +95,7 @@ export default function BoardCompliance() {
           icon={<CheckCircle2 className="size-4" />}
         />
         <Stat
-          label="Action needed"
+          label="Overdue"
           value={String(comp.overdue.length)}
           tone={comp.overdue.length ? "danger" : "ok"}
           hint="Past due or missing a prerequisite"
@@ -109,7 +109,7 @@ export default function BoardCompliance() {
           icon={<Clock className="size-4" />}
         />
         <Stat
-          label="Next deadline"
+          label="Next one due"
           value={comp.nextDeadline?.dueDate ? formatDate(comp.nextDeadline.dueDate) : "None"}
           hint={comp.nextDeadline?.title}
           icon={<Scale className="size-4" />}

@@ -175,7 +175,7 @@ export default function BoardHomeowners() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          label="Collection rate"
+          label="Paid on time"
           value={`${Math.round(delinq.collectionRate * 100)}%`}
           tone="ok"
           hint={`${owners.length - delinq.past.length} of ${owners.length} accounts current`}
@@ -187,13 +187,13 @@ export default function BoardHomeowners() {
           hint={pluralize(delinq.past.length, "account")}
         />
         <Stat
-          label="On autopay"
+          label="Paying automatically"
           value={`${Math.round(delinq.autopayRate * 100)}%`}
           hint="Autopay accounts never get a reminder email"
           icon={<Repeat className="size-4" />}
         />
         <Stat
-          label="In collections"
+          label="Sent to collections"
           value={String(delinq.byBucket.collections.length)}
           tone={delinq.byBucket.collections.length ? "danger" : "ok"}
           hint="Referred to counsel"

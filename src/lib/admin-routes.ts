@@ -47,6 +47,17 @@ export interface AdminRoute {
    * link from Settings works, and turning the layer on is one click away.
    */
   present?: (c: Community) => boolean;
+  /**
+   * Reachable and gated, but not its own line in the sidebar.
+   *
+   * Reserves and shared costs are both money, and a volunteer who opens this
+   * once a month does not carry a mental model in which those are separate
+   * places. They sit behind one Money tab now. They keep their routes, because
+   * links and bookmarks point at them, and they keep their entry here, because
+   * this list is what gates them: a route that is not listed is reachable by
+   * any member, which is how ten screens once leaked an association's money.
+   */
+  hidden?: boolean;
 }
 
 export const ADMIN_ROUTES: AdminRoute[] = [
@@ -55,6 +66,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
   { href: "/admin/money", label: "Money", icon: Banknote, key: "money", need: ["finances"] },
   {
     href: "/admin/reserves",
+    hidden: true,
     label: "Reserves",
     icon: PiggyBank,
     key: "reserves",
@@ -71,6 +83,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
   },
   {
     href: "/admin/shared-costs",
+    hidden: true,
     label: "Shared costs",
     icon: Droplets,
     key: "shared-costs",

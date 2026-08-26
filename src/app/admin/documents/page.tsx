@@ -98,7 +98,6 @@ export default function BoardDocuments() {
   return (
     <>
       <PageHeader
-        eyebrow="Records"
         title="Documents"
         
         action={

@@ -47,7 +47,6 @@ export default function BoardCommunications() {
   return (
     <>
       <PageHeader
-        eyebrow="Owner communications"
         title="Communications"
         
         action={
@@ -77,7 +76,7 @@ export default function BoardCommunications() {
         />
         <Stat label="Open threads" value={String(threads.length)} icon={<Users className="size-4" />} />
         <Stat
-          label="Avg. board reply"
+          label="Average reply time"
           value={stats.avgReplyDays === undefined ? "No replies yet" : `${stats.avgReplyDays} days`}
           tone={stats.avgReplyDays !== undefined && stats.avgReplyDays <= 2 ? "ok" : "neutral"}
           hint={stats.sent ? `${pluralize(stats.sent, "reply", "replies")} sent` : undefined}

@@ -75,7 +75,7 @@ test.describe("board actions", () => {
     await page.waitForLoadState("networkidle");
 
     const before = (await inspect(page)).text;
-    const needsReview = Number(before.match(/Needs review\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    const needsReview = Number(before.match(/Waiting on you\s*\n?\s*(\d+)/)?.[1] ?? "0");
     expect(needsReview, "nothing to confirm, so this proves nothing").toBeGreaterThan(0);
 
     await page.getByRole("button", { name: "Confirm" }).first().click();
@@ -87,7 +87,7 @@ test.describe("board actions", () => {
     await page.waitForTimeout(700);
 
     const after = (await inspect(page)).text;
-    const restored = Number(after.match(/Needs review\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    const restored = Number(after.match(/Waiting on you\s*\n?\s*(\d+)/)?.[1] ?? "0");
     expect(restored, "undo did not restore the transaction").toBe(needsReview);
   });
 
@@ -331,5 +331,58 @@ test.describe("turning a layer on", () => {
     const health = await inspect(page);
     expect(health.crashed, "removing a shared cost crashed").toBe(false);
     expect(health.text, "the removed cost is still listed").not.toContain("Trash and recycling");
+  });
+});
+
+test.describe("money is one place", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "admin" });
+  });
+
+  test("reserves and shared costs live behind Money, not in the sidebar", async ({ page }) => {
+    await page.goto("/admin");
+    await page.waitForLoadState("networkidle");
+
+    const tabs = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('aside a[href^="/admin"]')).map((a) =>
+        (a.textContent ?? "").trim().split("\n")[0],
+      ),
+    );
+    // Everything on both is money. The distinction was ours, not theirs.
+    expect(tabs.some((t) => t.startsWith("Reserves")), "Reserves is still its own line").toBe(false);
+    expect(tabs.some((t) => t.startsWith("Shared costs")), "Shared costs is still its own line").toBe(false);
+    expect(tabs.some((t) => t.startsWith("Money")), "Money vanished entirely").toBe(true);
+  });
+
+  test("the control moves between the three, and names the horizon", async ({ page }) => {
+    await page.goto("/admin/money");
+    const health = await expectHealthy(page, "money");
+    // The label teaches the thing no competitor does, rather than hiding it
+    // behind a word like "Reserves".
+    expect(health.text, "the horizon is not named").toContain("Next 30 years");
+
+    await page.getByRole("link", { name: "Next 30 years" }).click();
+    await page.waitForTimeout(600);
+    expect(page.url()).toContain("/admin/reserves");
+    await expectHealthy(page, "reserves through the control");
+  });
+
+  test("Money no longer duplicates the reserve schedule", async ({ page }) => {
+    await page.goto("/admin/money");
+    const health = await expectHealthy(page, "money without reserve duplication");
+    expect(health.text, "the reserve schedule is still duplicated on Money").not.toContain(
+      "Reserve schedule",
+    );
+  });
+
+  test("a resident still cannot reach reserves by typing the URL", async ({ page }) => {
+    // Hiding a link is not gating a page. This is the hole that once served ten
+    // screens of association money to anybody who guessed the path.
+    await seedSession(page, { seat: SEATS.resident, view: "admin" });
+    await page.goto("/admin/reserves");
+    await page.waitForLoadState("networkidle");
+    const health = await inspect(page);
+    expect(health.crashed).toBe(false);
+    expect(health.text, "reserves leaked to a resident").not.toMatch(/\$[\d,]{3,}/);
   });
 });

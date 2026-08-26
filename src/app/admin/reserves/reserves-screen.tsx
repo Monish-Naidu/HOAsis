@@ -12,6 +12,7 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
+import { MoneyTabs } from "@/components/app/money-tabs";
 import { communitySlug, interestSummary } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import {
@@ -82,6 +83,7 @@ export function ReservesScreen() {
   if (!funding.measurable) {
     return (
       <>
+        <MoneyTabs />
         <PageHeader eyebrow="Reserves" title="Funding plan" />
         <Callout
           tone="warn"
@@ -111,7 +113,7 @@ export function ReservesScreen() {
             hint="From the adopted budget"
           />
           <Stat
-            label="Components tracked"
+            label="Things to replace"
             value="0"
             tone="warn"
             hint="Roofs, paving, fencing, shared drainage"
@@ -200,14 +202,14 @@ export function ReservesScreen() {
           hint={`${band.label} · against ${money(funding.accruedLiabilityCents, { cents: false })} accrued`}
         />
         <Stat
-          label="Interest earned YTD"
+          label="Interest earned this year"
           value={money(interest.earnedYtd, { cents: false })}
           tone="ok"
           hint={`${interest.blendedApy.toFixed(2)}% on reserve savings`}
           icon={<TrendingUp className="size-4" />}
         />
         <Stat
-          label="First shortfall"
+          label="First year you come up short"
           value={shortfall ? String(shortfall) : "None"}
           tone={shortfall ? "danger" : "ok"}
           hint={

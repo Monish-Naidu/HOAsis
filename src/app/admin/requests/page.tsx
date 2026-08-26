@@ -52,7 +52,7 @@ export default function BoardRequests() {
   return (
     <>
       <PageHeader
-        eyebrow="Owner requests & enforcement"
+        eyebrow="Owner requests"
         title="Requests"
         
         action={
@@ -69,7 +69,7 @@ export default function BoardRequests() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Open requests" value={String(open.length)} icon={<Inbox className="size-4" />} />
         <Stat
-          label="On a legal clock"
+          label="Has a deadline"
           value={String(clocks.length)}
           tone="warn"
           hint={clocks[0] ? `Soonest: ${relativeDays(clocks[0].dueDate!)}` : undefined}

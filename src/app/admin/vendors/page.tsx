@@ -74,7 +74,6 @@ export default function BoardVendors() {
   return (
     <>
       <PageHeader
-        eyebrow="Payables"
         title="Vendors"
         
         action={
@@ -87,21 +86,21 @@ export default function BoardVendors() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          label="ACH enabled"
+          label="Can be paid by bank"
           value={achShare === undefined ? "None yet" : `${Math.round(achShare * 100)}%`}
           tone={achShare === undefined ? "neutral" : "ok"}
           hint={vendors.length ? `${achCount} of ${pluralize(vendors.length, "vendor")}` : "Add a vendor to start paying by bank transfer"}
           icon={<Landmark className="size-4" />}
         />
         <Stat
-          label="ACH settlement"
+          label="Bank payment lands in"
           value={speed.ach > 0 ? `${speed.ach.toFixed(1)} days` : "No payments yet"}
           tone={speed.ach > 0 ? "ok" : "neutral"}
           hint={speed.check > 0 ? `Checks average ${speed.check.toFixed(0)} days` : "Nothing paid by check yet"}
           icon={<Timer className="size-4" />}
         />
         <Stat
-          label="Awaiting approval"
+          label="Waiting on a signature"
           value={String(awaiting.length)}
           tone="warn"
           hint="Two signatures required over $1,000"

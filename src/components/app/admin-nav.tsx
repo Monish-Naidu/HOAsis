@@ -64,10 +64,13 @@ export function AdminNav() {
     },
   };
 
-  // Two separate questions: may they open it, and is there anything on it.
+  // Three separate questions: may they open it, is there anything on it, and
+  // does it deserve its own line rather than living inside another tab.
   const visible = items.filter(
     (i) =>
-      (!i.need || i.need.some((c) => can(c))) && (!i.present || i.present(community)),
+      !i.hidden &&
+      (!i.need || i.need.some((c) => can(c))) &&
+      (!i.present || i.present(community)),
   );
 
   const activeRoute = visible.find(({ href }) =>
