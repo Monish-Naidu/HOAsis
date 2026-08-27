@@ -163,6 +163,20 @@ Still open in this area:
 
 ---
 
+## Next up: the landing page
+
+Monish's friend designed a landing page and a logo, and he wants them used. The
+brief, the decisions already taken, and a written description of the design are
+in **`docs/design/landing-page.md`**. Read that first.
+
+Blocked on three files Monish has to supply: the logo, the hero illustration,
+and ideally a daylight render of the same illustration so the theme toggle
+still means something. Nothing can be wired without them.
+
+The two decisions not to re-litigate: their look with **our** new-build
+positioning, and the self-serve CTA into `/start` rather than a demo request
+form.
+
 ## Also open, from earlier in the session
 
 - ~~**Balance import.**~~ Done 2026-08-26, as
