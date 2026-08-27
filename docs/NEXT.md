@@ -20,7 +20,9 @@ product. That was removed on purpose, not left undone. `parseRoster`, the
 records demand letter, and the leaving-a-management-company plan are gone from
 the tree; git history has them if the market ever comes back.
 
-Run all three before and after any change:
+Run these before and after any change. The first four take about fifteen
+seconds together; the last two take three minutes and are 97% of the wall time,
+so run them when the change earns them rather than by reflex.
 
 ```bash
 pnpm lint && npx tsc --noEmit && pnpm build
@@ -28,6 +30,12 @@ npx vitest run
 (pnpm start -p 3000 &) ; sleep 9 ; npx playwright test    # needs a server, it does not start one
 pnpm db:verify                                            # hits the real Supabase project
 ```
+
+`vitest` is 3.7s for 440 tests and is never the thing slowing you down.
+Playwright is 114s and `db:verify` is 88s of network round trips. Skip
+Playwright unless the change drives a flow a spec covers, and skip `db:verify`
+unless the change touches the data layer, the schema or SQL. Measured
+2026-08-27.
 
 ---
 
@@ -163,19 +171,36 @@ Still open in this area:
 
 ---
 
-## Next up: the landing page
+## The landing page — DONE, on placeholder art
 
-Monish's friend designed a landing page and a logo, and he wants them used. The
-brief, the decisions already taken, and a written description of the design are
-in **`docs/design/landing-page.md`**. Read that first.
+Built 2026-08-27. The friend's design is live on `/`: dark navy hero, split
+layout, two-line headline with one accent word, illustration bleeding off the
+right edge, and his circled palm as the mark. `docs/design/landing-page.md` has
+the decisions, the measured colours and the layout notes.
 
-Blocked on three files Monish has to supply: the logo, the hero illustration,
-and ideally a daylight render of the same illustration so the theme toggle
-still means something. Nothing can be wired without them.
-
-The two decisions not to re-litigate: their look with **our** new-build
+The two decisions not to re-litigate held: their look with **our** new-build
 positioning, and the self-serve CTA into `/start` rather than a demo request
-form.
+form. Nav stayed Home, Pricing, Library, About rather than the design's
+Features, Solutions, Resources, because those pages do not exist and inventing
+nav for them advertises a site we do not have.
+
+**Both assets are placeholders cut from the design screenshot**, which is now
+committed at `docs/design/landing-page-reference.png`. Three files are still
+owed and each one is a drop-in:
+
+1. **The logo as SVG.** `src/components/app/logo.tsx` is redrawn by eye at
+   6.7x, not traced. It is close; it is not his file.
+2. **The full-resolution hero render.** `public/marketing/hero-community.jpg`
+   is the screenshot's text-free right side, upscaled. It loses the left half
+   of the ring road, which is the part of the composition that reads as a
+   neighbourhood rather than as a lake.
+3. **A daylight version of the same scene**, at
+   `public/marketing/hero-community-day.png`. The light theme currently lifts
+   the night render with `brightness-[1.28] saturate-[.82]`. It reads as an
+   overcast morning, which works, but it is a stand-in for a real day render
+   and swapping it in is a source change, not a layout change.
+
+Remember `rm -rf .next/cache/images` when any of them lands.
 
 ## Also open, from earlier in the session
 
