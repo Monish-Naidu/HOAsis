@@ -67,7 +67,7 @@ const ORIGIN: {
     detail:
       "You are the builder or developer. The association has to exist before the first home closes.",
     changes:
-      "Homes come straight from the plat, unsold lots are billed to you, and reserves get funded from the first assessment.",
+      "Homes come straight from your site plan, the ones that have not sold are billed to you, and reserves get funded from the first assessment.",
     icon: HardHat,
   },
   {
@@ -246,7 +246,7 @@ export function SituationStep({
           })}
         </div>
         <p className="mt-2.5 text-[13px] leading-relaxed text-fg-subtle">
-          Not sure between the last two? If the builder still owns lots here, you are taking
+          Not sure between the last two? If the builder still owns homes here, you are taking
           over. If they left years ago, you already run it.
         </p>
       </fieldset>

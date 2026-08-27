@@ -1,13 +1,13 @@
 /**
  * Homes in a community that does not have residents yet.
  *
- * An established association arrives with a roster: names, emails, balances,
- * exported from whatever they were using. A new build has none of that. What it
- * has is a recorded plat with numbered lots, released in phases, and buyers who
- * arrive one closing at a time over two or three years.
+ * A new build has no residents and will not have them for two or three years.
+ * What it has is numbered lots released in phases, and buyers who arrive one
+ * closing at a time. An established association does have a list, but it lives
+ * in a spreadsheet or a manager's system we are deliberately not importing.
  *
- * So the homes come from the plat rather than from a spreadsheet. A builder
- * types the ranges they already know and every lot exists from day one, which
+ * Both know their numbers, so both type ranges. Every home exists from day one,
+ * which
  * is the state that makes the rest of the product correct: an unsold lot still
  * owes an assessment, still counts toward a quorum, and still has to be
  * somewhere on the roster. An association that only knows about sold lots gets
@@ -69,16 +69,21 @@ export function lotLabel(prefix: string, number: number): string {
  * owners billed for one home, or one of them silently missing. Better to say so
  * than to quietly drop the duplicate.
  */
-export function phaseProblems(phases: LotPhase[]): PhaseProblem[] {
+export function phaseProblems(phases: LotPhase[], homeNoun = "Lot"): PhaseProblem[] {
   const problems: PhaseProblem[] = [];
   const claimed = new Map<number, string>();
 
   for (const phase of phases) {
-    if (Number.isFinite(phase.from) && Number.isFinite(phase.to) && phase.to < phase.from) {
+    // `to` is zero until somebody types one, and a range nobody has finished
+    // entering is not an error. Reporting it as backwards put a warning under
+    // the very first row of an untouched form, which reads as "you have done
+    // something wrong" before they have done anything at all.
+    const started = Number.isFinite(phase.to) && phase.to > 0;
+    if (Number.isFinite(phase.from) && started && phase.to < phase.from) {
       problems.push({
         phaseId: phase.id,
         kind: "reversed",
-        message: `${phase.label} runs from ${phase.from} to ${phase.to}, which is backwards.`,
+        message: `${phase.label} runs from ${phase.from} down to ${phase.to}. Swap them round.`,
       });
       continue;
     }
@@ -88,7 +93,7 @@ export function phaseProblems(phases: LotPhase[]): PhaseProblem[] {
       problems.push({
         phaseId: phase.id,
         kind: "too-many",
-        message: `${phase.label} would create ${count.toLocaleString()} homes. Check the range.`,
+        message: `${phase.label} would create ${count.toLocaleString()} homes. Check the numbers.`,
       });
       continue;
     }
@@ -106,8 +111,8 @@ export function phaseProblems(phases: LotPhase[]): PhaseProblem[] {
         kind: "overlap",
         message:
           overlaps.length === 1
-            ? `Lot ${shown} is already in an earlier phase.`
-            : `Lots ${shown}${overlaps.length > 3 ? " and others" : ""} are already in an earlier phase.`,
+            ? `${homeNoun} ${shown} is listed twice.`
+            : `${homeNoun}s ${shown}${overlaps.length > 3 ? " and others" : ""} are listed twice.`,
       });
     }
   }
@@ -145,17 +150,22 @@ export function totalLots(phases: LotPhase[], prefix = ""): number {
   return expandPhases(phases, prefix).length;
 }
 
-/** The phase a builder starts with, so the first screen is never empty. */
-export function firstPhase(): LotPhase {
-  return { id: "phase-1", label: "Phase 1", from: 1, to: 0 };
+/**
+ * The row the screen starts with, so it is never empty.
+ *
+ * `group` is what this association calls a run of numbers. A builder releases
+ * land in phases; an association that has been running for years has groups.
+ */
+export function firstPhase(group = "Phase"): LotPhase {
+  return { id: "phase-1", label: `${group} 1`, from: 1, to: 0 };
 }
 
-/** The next phase, numbered and starting where the last one left off. */
-export function nextPhase(phases: LotPhase[]): LotPhase {
+/** The next one, numbered and starting where the last left off. */
+export function nextPhase(phases: LotPhase[], group = "Phase"): LotPhase {
   const highest = phases.reduce(
     (max, phase) => (lotsInPhase(phase) > 0 ? Math.max(max, phase.to) : max),
     0,
   );
   const index = phases.length + 1;
-  return { id: `phase-${index}`, label: `Phase ${index}`, from: highest + 1, to: 0 };
+  return { id: `phase-${index}`, label: `${group} ${index}`, from: highest + 1, to: 0 };
 }

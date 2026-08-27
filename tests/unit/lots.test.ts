@@ -91,13 +91,19 @@ describe("phaseProblems", () => {
   it("names a backwards range rather than creating nothing quietly", () => {
     const problems = phaseProblems([phase({ from: 88, to: 1 })]);
     expect(problems[0].kind).toBe("reversed");
-    expect(problems[0].message).toContain("backwards");
+    expect(problems[0].message).toContain("Swap them round");
+  });
+
+  it("says nothing about a range nobody has finished typing", () => {
+    // `firstPhase` starts at 1 with no last number, so the untouched first row
+    // was reporting itself as backwards before the reader had typed anything.
+    expect(phaseProblems([phase({ from: 1, to: 0 })])).toEqual([]);
   });
 
   it("catches a missed decimal point", () => {
     const problems = phaseProblems([phase({ from: 1, to: 10_000 })]);
     expect(problems[0].kind).toBe("too-many");
-    expect(problems[0].message).toContain("Check the range");
+    expect(problems[0].message).toContain("Check the numbers");
   });
 
   it("lists several overlapping lots without printing all of them", () => {

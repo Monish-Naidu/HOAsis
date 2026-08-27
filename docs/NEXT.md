@@ -214,6 +214,36 @@ owed and each one is a drop-in:
 
 Remember `rm -rf .next/cache/images` when any of them lands.
 
+## Setting up reads the answers it was already given
+
+Fixed 2026-08-27. The second screen of `/start` asks what kind of homes these
+are and who is setting the association up. The third screen then ignored both
+and gave everybody the builder's vocabulary: take them from the plat, who is
+building it, unsold, none sold yet. A board that has run its own townhome
+association since 2004 was being asked to name the developer of a community
+that finished before they moved in, which reads as the wrong product.
+
+- **`src/lib/wording.ts`** decides whether these are lots, units or homes,
+  whether a run of them is a Phase or a Group, and whether a builder exists at
+  all. The homes step follows it. Nothing about what gets stored changed.
+- **The builder field is not rendered** when the origin is `existing`. That was
+  the loudest part of the mismatch.
+- **Property type earns its question.** It decides whether a reserve study is a
+  statutory duty or good practice, whether the association insures the
+  structures, and whether the maintenance matrix and structural tasks exist at
+  all. `src/lib/setup-plan.ts` has the rules. The situation screen now says so
+  above the choices, and the homes screen carries the vocabulary through.
+- **"Plat" is gone from every user-facing string.** It is a real term and it is
+  the right word in a title report; it is not the right word on the third
+  screen of a signup. Kept in code comments, where precision is free.
+- **A range nobody has finished typing is not an error.** `firstPhase` starts
+  at 1 with no last number, and `phaseProblems` was reporting the untouched
+  first row as backwards before the reader had typed anything.
+
+Still open: an established association that identifies homes by street address
+rather than by number has to invent numbers. The model is number ranges
+throughout, so this is a real piece of work rather than a copy change.
+
 ## Onboarding has its own tab now
 
 Added 2026-08-27, after the plan turned out to be reachable only from the

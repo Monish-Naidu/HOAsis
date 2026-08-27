@@ -31,6 +31,7 @@ import {
   restoreDraft,
 } from "@/lib/pending-draft";
 import { cn, money } from "@/lib/utils";
+import { wordingFor } from "@/lib/wording";
 
 /**
  * Setting up an association.
@@ -41,11 +42,12 @@ import { cn, money } from "@/lib/utils";
  * are all real, and every one of them can wait until somebody is logged in and
  * already collecting.
  *
- * The homes step is the one that has to be fast, and in a community that is
- * still being built it is not a roster at all. There are no residents to
- * import. There is a recorded plat with numbered lots, so the homes are
- * generated from the ranges the builder already knows, and the buyers are
- * attached one closing at a time afterwards.
+ * The homes step is the one that has to be fast, and it is not a roster: in a
+ * community still being built there are no residents to import, and in an
+ * established one there is no reason to retype a list that already exists
+ * somewhere. Either way the homes are generated from numbered ranges, which
+ * both kinds of association already know, and owners are attached one at a
+ * time afterwards.
  */
 
 /**
@@ -59,7 +61,7 @@ import { cn, money } from "@/lib/utils";
 const STEPS = [
   { id: "association", label: "Association", blurb: "Who you are and what a home pays" },
   { id: "situation", label: "Your place", blurb: "What kind of community this is" },
-  { id: "homes", label: "Homes", blurb: "The lots in the plat" },
+  { id: "homes", label: "Homes", blurb: "Every home and its number" },
   { id: "bank", label: "Bank", blurb: "Where dues land" },
 ] as const;
 
@@ -386,21 +388,29 @@ function AssociationStep({ draft, patch }: StepProps) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The homes, generated from the plat rather than imported from a roster.
+ * The homes, generated from numbered ranges rather than imported from a roster.
  *
- * An established association arrives with a list of residents. A new build
- * does not have one, and will not for two or three years. What it has is
- * numbered lots released in phases, so that is what this asks for.
+ * This screen used to be written for a builder and shown to everybody: take
+ * them from the plat, who is building it, unsold, none sold yet. A board that
+ * has run their own association for fifteen years was being asked to name the
+ * developer of a community that finished before they moved in. It read as the
+ * wrong product.
  *
- * Every lot exists from the first day, sold or not, because an unsold lot
+ * So it reads the two answers from the previous screen. `wordingFor` decides
+ * whether these are lots, units or homes, and whether a builder exists at all;
+ * everything below follows from that. What gets stored is identical either
+ * way.
+ *
+ * Every home exists from the first day, sold or not, because an unsold one
  * still owes an assessment and still counts toward a quorum. A setup flow that
- * only creates the sold ones produces a budget that is short and vote
+ * only creates the occupied ones produces a budget that is short and vote
  * thresholds that are wrong, and both failures are silent.
  */
 function HomesStep({ draft, patch }: StepProps) {
-  const phases = draft.phases?.length ? draft.phases : [firstPhase()];
+  const w = wordingFor(draft.propertyType, draft.origin);
+  const phases = draft.phases?.length ? draft.phases : [firstPhase(w.group)];
   const prefix = draft.lotPrefix ?? "";
-  const problems = phaseProblems(phases);
+  const problems = phaseProblems(phases, w.Home);
   const lots = expandPhases(phases, prefix);
 
   const [namingUnit, setNamingUnit] = useState<string | null>(null);
@@ -448,8 +458,18 @@ function HomesStep({ draft, patch }: StepProps) {
 
   return (
     <Section
-      title="Which homes are in the community?"
-      detail="Take them from the plat. Every lot gets a balance and a vote from day one, whether or not it has sold."
+      title={
+        draft.origin === "builder"
+          ? "Which homes will be in the community?"
+          : "Which homes are in the community?"
+      }
+      detail={
+        draft.origin === "builder"
+          ? `Give the number ranges from your site plan. Every ${w.home} gets a balance and a vote from day one, whether or not it has sold.`
+          : draft.origin === "handover"
+            ? `Give the number ranges, including any the builder still owns. Every ${w.home} gets a balance and a vote.`
+            : `Give the number ranges you already use. Every ${w.home} gets a balance and a vote, and owner names can come now or later.`
+      }
     >
       <div className="rounded-card border border-border bg-surface-2 p-4">
         <p className="mb-3 text-[13px] font-semibold text-fg-muted">You</p>
@@ -472,8 +492,8 @@ function HomesStep({ draft, patch }: StepProps) {
           <input
             value={draft.founder.unit}
             onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
-            placeholder="Lot"
-            aria-label="Your lot"
+            placeholder={w.Home}
+            aria-label={`Your ${w.home}`}
             className={input}
           />
         </div>
@@ -482,40 +502,50 @@ function HomesStep({ draft, patch }: StepProps) {
         </p>
       </div>
 
-      <Field
-        label="Who is building it?"
-        hint="Named against every lot that has not sold, because somebody owns those and owes the assessment on them."
-      >
-        <input
-          value={draft.builderName ?? ""}
-          onChange={(e) => patch({ builderName: e.target.value })}
-          placeholder="Ridgeline Homes"
-          aria-label="Builder name"
-          className={input}
-        />
-      </Field>
+      {/* Only asked where there is one. An association that has run itself
+          since 2004 has no builder to name, and being asked for one is what
+          made this screen feel like somebody else's product. */}
+      {w.fromBuilder ? (
+        <Field
+          label={draft.origin === "builder" ? "Who is building it?" : "Who built it?"}
+          hint={`Put against every ${w.home} that has not sold yet, because whoever owns it still owes the assessment on it.`}
+        >
+          <input
+            value={draft.builderName ?? ""}
+            onChange={(e) => patch({ builderName: e.target.value })}
+            placeholder="Ridgeline Homes"
+            aria-label="Builder name"
+            className={input}
+          />
+        </Field>
+      ) : null}
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end gap-3">
-          <Field label="What the plat calls a lot" hint="Optional. Printed as part of the number.">
+          <Field
+            label="What goes before the number"
+            hint="Optional. It is printed as part of every number."
+          >
             <input
               value={prefix}
               onChange={(e) => setPhases(phases, e.target.value)}
-              placeholder="Lot"
-              aria-label="Lot prefix"
+              placeholder={w.numberExample}
+              aria-label="What goes before the number"
               className={cn(input, "w-32")}
             />
           </Field>
           <p className="pb-1 text-[13px] text-fg-subtle">
-            {lots.length > 0 ? `First one is ${lots[0]}` : "For example Lot, Unit or A-"}
+            {lots.length > 0
+              ? `First one is ${lots[0]}`
+              : `For example ${w.numberExample}, Building B or A-`}
           </p>
         </div>
 
         <Card className="divide-y divide-border overflow-hidden">
           <div className="grid grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-[13px] font-semibold text-fg-muted">
-            <span>Phase</span>
-            <span>From</span>
-            <span>To</span>
+            <span>{w.group}</span>
+            <span>First</span>
+            <span>Last</span>
             <span className="text-right">Homes</span>
             <span />
           </div>
@@ -582,10 +612,10 @@ function HomesStep({ draft, patch }: StepProps) {
           variant="ghost"
           size="sm"
           className="w-fit"
-          onClick={() => setPhases([...phases, nextPhase(phases)])}
+          onClick={() => setPhases([...phases, nextPhase(phases, w.group)])}
         >
           <Plus className="size-3.5" />
-          Add a phase
+          Add another {w.group.toLowerCase()}
         </Button>
       </div>
 
@@ -627,7 +657,9 @@ function HomesStep({ draft, patch }: StepProps) {
                     </>
                   ) : (
                     <span className="block text-[15px] text-fg-subtle">
-                      Unsold{draft.builderName?.trim() ? `, ${draft.builderName.trim()}` : ""}
+                      {w.fromBuilder
+                        ? `Not sold yet${draft.builderName?.trim() ? `, ${draft.builderName.trim()}` : ""}`
+                        : "No owner listed"}
                     </span>
                   )}
                 </span>
@@ -640,7 +672,7 @@ function HomesStep({ draft, patch }: StepProps) {
                     }}
                     className="shrink-0 text-[13px] font-medium text-brand hover:underline"
                   >
-                    {home.name.trim() ? "Edit" : "It has sold"}
+                    {home.name.trim() ? "Edit" : w.fromBuilder ? "It has sold" : "Add the owner"}
                   </button>
                 )}
               </div>
@@ -650,8 +682,8 @@ function HomesStep({ draft, patch }: StepProps) {
                   <input
                     value={buyer.name}
                     onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
-                    placeholder="Buyer name"
-                    aria-label={`Buyer for ${home.unit}`}
+                    placeholder={w.fromBuilder ? "Buyer name" : "Owner name"}
+                    aria-label={`Owner of ${home.unit}`}
                     autoFocus
                     className={cn(input, "h-9")}
                   />
@@ -677,7 +709,7 @@ function HomesStep({ draft, patch }: StepProps) {
               onClick={() => setShown(draft.households.length)}
               className="w-full px-3.5 py-3 text-left text-[13px] font-medium text-brand transition-colors hover:bg-surface-2"
             >
-              Show the other {draft.households.length - shown} lots
+              Show the other {draft.households.length - shown} {w.homes}
             </button>
           ) : null}
         </Card>
@@ -685,8 +717,14 @@ function HomesStep({ draft, patch }: StepProps) {
 
       <p className="flex items-center gap-2 text-[13px] text-fg-muted">
         <MapIcon className="size-3.5 shrink-0" />
-        {pluralHomes(unitCount(draft))} in the plat
-        {sold > 0 ? `, ${sold} sold` : ", none sold yet"}
+        {pluralHomes(unitCount(draft))}
+        {w.fromBuilder
+          ? sold > 0
+            ? `, ${sold} sold`
+            : ", none sold yet"
+          : sold > 0
+            ? `, ${sold} with an owner listed`
+            : ", no owners listed yet"}
         {draft.duesCents > 0 ? (
           <>
             {" · "}
@@ -695,10 +733,25 @@ function HomesStep({ draft, patch }: StepProps) {
         ) : null}
       </p>
 
-      <Callout tone="info" icon={<Users className="size-4" />} title="Buyers can wait">
-        You do not need names now. Add a buyer as each home closes, or invite them from the
-        roster later. Until then the lot sits against{" "}
-        {draft.builderName?.trim() || "the builder"}, which is who owes the assessment on it.
+      <Callout
+        tone="info"
+        icon={<Users className="size-4" />}
+        title={w.fromBuilder ? "Buyers can wait" : "Owner names can wait"}
+      >
+        {w.fromBuilder ? (
+          <>
+            You do not need names now. Add a buyer as each home closes, or invite them from
+            the roster later. Until then the {w.home} sits against{" "}
+            {draft.builderName?.trim() || "the builder"}, which is who owes the assessment on
+            it.
+          </>
+        ) : (
+          <>
+            You do not need them now. Add owners here, or invite everyone from the roster
+            once you are in. A {w.home} with nobody on it still has a balance and a vote, so
+            nothing is missing from your budget while you fill them in.
+          </>
+        )}
       </Callout>
     </Section>
   );

@@ -173,7 +173,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
         key: "homes",
         title: "Put every home on the register",
         detail:
-          "Take the lot or unit numbers from the plat and add the owners you have. Nothing needs to come out of another system.",
+          "Use the numbers you already give your homes, and add the owners you have. Nothing needs to come out of another system.",
         because:
           "A home that is not on the register has no balance, no vote and no way to sign in, so everything downstream is short by one.",
         href: "/admin/homeowners",

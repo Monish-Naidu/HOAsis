@@ -60,7 +60,7 @@ const SHOWCASE = [
     title: "Set the first assessment knowing what it has to cover.",
     body: "Roads, roofs and pumps each get replaced the year they wear out, at what it will cost by then. Everything is new, so the dates are known rather than guessed. Follow it forward and the first year the money runs out is the year owners get a surprise bill, so we name that year before the dues are set.",
     points: [
-      "Thirty years ahead, from the day the plat records",
+      "Thirty years ahead, from the day the community is recorded",
       "The exact monthly amount that avoids a special assessment",
       "What the builder funded, month by month, at handover",
     ],
@@ -484,7 +484,7 @@ export default function MarketingHome() {
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <Reveal>
             <h2 className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[40px]">
-              Every job the association has, from the plat to the handover.
+              Every job the association has, from the first home to the handover.
             </h2>
             <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-fg-muted">
               A management contract bundles these and quotes one number. Here they are unbundled,
