@@ -1,4 +1,5 @@
 import type { Community } from "@/lib/data/community";
+import { complianceRegister } from "@/lib/compliance";
 import { daysFromToday } from "@/lib/utils";
 
 /**
@@ -124,22 +125,23 @@ export function insuranceExposure(c: Community) {
 }
 
 
+/**
+ * The badge on the nav, from the same source as the screen behind it.
+ *
+ * This used to count a hand written fixture while the register counted
+ * something else, which is the exact drift this product is positioned
+ * against: two surfaces disagreeing about one number. Both now derive from
+ * `complianceRegister`.
+ */
 export function complianceSummary(c: Community) {
-  const overdue = c.complianceItems.filter((x) => x.status === "overdue");
-  const dueSoon = c.complianceItems.filter((x) => x.status === "due-soon");
-  const inProgress = c.complianceItems.filter((x) => x.status === "in-progress");
-  const compliant = c.complianceItems.filter((x) => x.status === "compliant");
+  const register = complianceRegister(c);
   return {
-    overdue,
-    dueSoon,
-    inProgress,
-    compliant,
-    // "Next" means the soonest deadline still ahead. Anything past is overdue.
-    nextDeadline: [...c.complianceItems]
-      .filter((x) => x.dueDate && x.status !== "compliant" && daysFromToday(x.dueDate) >= 0)
-      .sort((a, b) => (a.dueDate! < b.dueDate! ? -1 : 1))[0],
-    openCount: overdue.length + dueSoon.length + inProgress.length,
-    score: c.complianceItems.length ? compliant.length / c.complianceItems.length : 1,
+    overdue: register.overdue,
+    dueSoon: register.dueSoon,
+    nextDeadline: register.next,
+    // What the badge shows: things a board has a date on and has not passed.
+    openCount: register.overdue.length + register.dueSoon.length,
+    total: register.items.length,
   };
 }
 

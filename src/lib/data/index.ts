@@ -16,7 +16,6 @@ import {
   reserveComponents,
   savingsOffers,
 } from "./association";
-import { complianceItems } from "./compliance";
 import { documents } from "./documents";
 import {
   ledgerEntries,
@@ -75,7 +74,6 @@ export {
   bankAccounts,
   boardMembers,
   budget,
-  complianceItems,
   CURRENT_OWNER_ID,
   currentOwner,
   documents,
@@ -241,26 +239,6 @@ export function insuranceExposure() {
 }
 
 
-export function complianceSummary() {
-  const overdue = complianceItems.filter((c) => c.status === "overdue");
-  const dueSoon = complianceItems.filter((c) => c.status === "due-soon");
-  const inProgress = complianceItems.filter((c) => c.status === "in-progress");
-  const compliant = complianceItems.filter((c) => c.status === "compliant");
-  // "Next" means the soonest deadline still ahead of us. Anything already past
-  // is counted as overdue, not as something upcoming.
-  const nextDeadline = [...complianceItems]
-    .filter((c) => c.dueDate && c.status !== "compliant" && daysFromToday(c.dueDate) >= 0)
-    .sort((a, b) => (a.dueDate! < b.dueDate! ? -1 : 1))[0];
-  return {
-    overdue,
-    dueSoon,
-    inProgress,
-    compliant,
-    nextDeadline,
-    openCount: overdue.length + dueSoon.length + inProgress.length,
-    score: compliant.length / complianceItems.length,
-  };
-}
 
 export function openRequests() {
   return requests.filter((r) => !["approved", "denied", "closed"].includes(r.status));

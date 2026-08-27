@@ -301,7 +301,7 @@ export async function loadCommunity(
     specialAssessments: [],
     payouts: [],
     violations: [],
-    complianceItems: [],
+    violationReports: [],
     threads: [],
     announcements: [],
 

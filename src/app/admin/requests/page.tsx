@@ -11,11 +11,15 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
+import { useState } from "react";
 import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday } from "@/lib/utils";
-import { formatDate, relativeDays } from "@/lib/utils";
+import { formatDate, pluralize, relativeDays } from "@/lib/utils";
 import { resolveCitation } from "@/lib/governing";
+import { photoConcerns } from "@/lib/violations";
+import { EvidenceViewer } from "@/components/app/evidence-viewer";
+import { ReportQueue } from "@/components/app/report-queue";
 import type { CitationMatch } from "@/lib/governing";
 import type { RequestStatus, Violation } from "@/lib/types";
 
@@ -63,6 +67,7 @@ export default function BoardRequests() {
   // association saw four violations against households it has never had.
   const violations = community.violations;
   const openViolations = violations.filter((v) => v.stage !== "cured");
+  const [openEvidence, setOpenEvidence] = useState<string | null>(null);
 
   return (
     <>
@@ -225,6 +230,7 @@ export default function BoardRequests() {
             // mistyped, or the document it names has never been put into
             // words here. Both are worth knowing before the hearing.
             const cited = resolveCitation(v.ruleCitation, community.governingDocs);
+            const concerns = photoConcerns(v.photos);
             return (
               <div
                 key={v.id}
@@ -263,6 +269,15 @@ export default function BoardRequests() {
                         : ""}
                     </p>
                   ) : null}
+                  {/* Where a notice sits on contestable evidence, the board is
+                      told here rather than at the hearing. */}
+                  {concerns.length > 0 ? (
+                    <p className="mt-1 flex items-center gap-1.5 text-[13px] font-medium text-warn">
+                      <AlertTriangle className="size-3" />
+                      {pluralize(concerns.length, "photograph")} worth checking before this
+                      goes further
+                    </p>
+                  ) : null}
                 </div>
                 <div className="shrink-0 text-right">
                   {v.fineCents ? (
@@ -270,17 +285,36 @@ export default function BoardRequests() {
                       ${(v.fineCents / 100).toFixed(0)}
                     </p>
                   ) : null}
-                  {v.photoCount ? (
-                    <p className="mt-0.5 flex items-center justify-end gap-1 text-[13px] text-fg-subtle">
-                      <Camera className="size-3" />
-                      {v.photoCount}
-                    </p>
-                  ) : null}
+                  {/* A count told the board how many photographs existed and
+                      told the accused household nothing. The evidence is now
+                      something both sides can open. */}
+                  <button
+                    type="button"
+                    onClick={() => setOpenEvidence(openEvidence === v.id ? null : v.id)}
+                    aria-expanded={openEvidence === v.id}
+                    className="mt-0.5 flex items-center justify-end gap-1 text-[13px] font-medium text-brand hover:underline"
+                  >
+                    <Camera className="size-3" />
+                    {v.photos.length === 0
+                      ? "No evidence"
+                      : `${v.photos.length} photo${v.photos.length === 1 ? "" : "s"}`}
+                  </button>
                 </div>
+                {openEvidence === v.id ? (
+                  <div className="mt-3 w-full">
+                    <EvidenceViewer photos={v.photos} showConcerns />
+                    <p className="mt-2 text-[13px] leading-relaxed text-fg-subtle">
+                      Unit {v.unit} sees exactly these photographs, with the same dates and
+                      the same note of where each was taken from.
+                    </p>
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </Card>
+
+        <ReportQueue />
       </div>
     </>
   );

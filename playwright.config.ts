@@ -10,8 +10,18 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests/e2e",
+  /**
+   * Parallel across files, serial inside one.
+   *
+   * The suite ran on a single worker and took five minutes, which made every
+   * change to a screen a five minute wait. Nothing actually forced that: each
+   * test gets its own browser context and seeds its own localStorage, and the
+   * server holds no per-session state. What does matter is order inside a
+   * file, because several specs build an association in one test and read it
+   * back in the next, so `fullyParallel` stays off.
+   */
   fullyParallel: false,
-  workers: 1,
+  workers: process.env.CI ? 2 : 4,
   retries: 0,
   timeout: 45_000,
   expect: { timeout: 10_000 },

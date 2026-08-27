@@ -11,7 +11,6 @@ import type {
   BankAccount,
   CommunityAmenity,
   CommunitySettings,
-  ComplianceItem,
   DocumentRecord,
   ForumPost,
   HomeRequest,
@@ -27,6 +26,7 @@ import type {
   SpecialAssessment,
   Vendor,
   Violation,
+  ViolationReport,
 } from "@/lib/types";
 import type { BudgetLine } from "./budget";
 import type { MessageTemplate } from "./templates";
@@ -98,6 +98,14 @@ export interface Community {
 
   requests: HomeRequest[];
   violations: Violation[];
+  /**
+   * What neighbours have told the board.
+   *
+   * Separate from violations on purpose: a report is an input to an
+   * investigation and never a basis for enforcement, so the two must not be
+   * one collection that a screen can quietly conflate.
+   */
+  violationReports: ViolationReport[];
   documents: DocumentRecord[];
   /**
    * The governing documents as text, so they can be read and searched rather
@@ -106,7 +114,6 @@ export interface Community {
    */
   governingDocs: GoverningArticle[];
   governingAmendments: GoverningAmendment[];
-  complianceItems: ComplianceItem[];
 
   meetings: Meeting[];
   ballots: Ballot[];

@@ -30,6 +30,14 @@ export interface Association {
   duesCadence: "monthly" | "quarterly" | "annually";
   addressLine: string;
   managedBy: "self" | "professional";
+  /**
+   * The association's own tax id.
+   *
+   * Gates more than tax. A bank will not open an account in the association's
+   * name without it, and registering a brand with The Campaign Registry, which
+   * is what makes text messages actually arrive, needs it too.
+   */
+  ein?: string;
   /** Disclosed on the annual budget report in most states. */
   insuranceCarrier?: string;
   insurancePolicyNo?: string;
@@ -223,6 +231,42 @@ export interface HomeRequest {
   certificateId?: string;
 }
 
+/**
+ * Where a photograph was taken from.
+ *
+ * The privacy question in enforcement photography is not whether a photo
+ * exists, it is where the photographer was standing. A trash can shot from the
+ * sidewalk is unremarkable. The same yard shot over a fence, through a window,
+ * or from a drone is a different act, and in several states a different legal
+ * one. Recording the vantage makes that reviewable before a notice goes out
+ * rather than discoverable afterwards.
+ */
+export type PhotoVantage =
+  | "street"
+  | "common-area"
+  | "reporter-property"
+  | "over-boundary"
+  | "aerial"
+  | "unknown";
+
+export interface ViolationPhoto {
+  id: ID;
+  /**
+   * What the photograph shows, written down.
+   *
+   * Carried whether or not the image is present, because it is what the
+   * accused owner is entitled to be told and what a hearing actually turns on.
+   * Follows the same rule as the library's photo briefs: describing what is
+   * needed is honest, inventing it is not.
+   */
+  brief: string;
+  takenOn: ISODate;
+  takenBy: string;
+  vantage: PhotoVantage;
+  /** The image itself, where the association has uploaded one. */
+  src?: string;
+}
+
 export interface Violation {
   id: ID;
   reference: string;
@@ -234,8 +278,68 @@ export interface Violation {
   stage: "courtesy" | "first-notice" | "hearing" | "fined" | "cured";
   openedDate: ISODate;
   nextActionDate: ISODate;
-  photoCount: number;
+  /**
+   * The evidence, one record per photograph.
+   *
+   * This was a count. A count tells the board how many photographs exist and
+   * tells the accused owner nothing, which is backwards: due process runs on
+   * the owner being able to see what is being said about them.
+   */
+  photos: ViolationPhoto[];
   fineCents: Cents;
+  /** The resident report this started from, when it started from one. */
+  reportId?: ID;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reports from residents                                                      */
+/* -------------------------------------------------------------------------- */
+
+export type ReportStatus = "new" | "verifying" | "verified" | "dismissed";
+
+/**
+ * One neighbour telling the board about another.
+ *
+ * The rule this type exists to enforce is the one every management company and
+ * enforcement attorney converges on: **a complaint is an input to an
+ * investigation, never a basis for enforcement.** So a report is deliberately
+ * not a violation. It cannot become one until somebody on the board has gone
+ * and looked, and `verification` is where that goes.
+ *
+ * The reporter's name is held and never shown to the accused. Both halves
+ * matter. Naming them turns a rule into a feud, and not recording them at all
+ * hides the pattern that actually needs watching: one owner reporting one
+ * neighbour over and over, which is a fair housing problem before it is
+ * anything else.
+ */
+export interface ViolationReport {
+  id: ID;
+  reference: string;
+  /** Board only. Never rendered on anything the accused owner can reach. */
+  reporterId: ID;
+  reporterName: string;
+  reporterUnit: string;
+  /** The home the report is about. */
+  subjectUnit: string;
+  subjectOwnerId?: ID;
+  what: string;
+  observedOn: ISODate;
+  submittedOn: ISODate;
+  status: ReportStatus;
+  /**
+   * The board's own observation.
+   *
+   * Not the reporter's. This is the thing a notice may rest on, and until it
+   * exists the report is hearsay with a reference number.
+   */
+  verification?: {
+    by: string;
+    on: ISODate;
+    note: string;
+  };
+  dismissedReason?: string;
+  /** The violation this became, when the board raised one. */
+  violationId?: ID;
 }
 
 /* -------------------------------------------------------------------------- */

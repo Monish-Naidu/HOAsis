@@ -5,7 +5,6 @@ import { renderTemplate } from "@/lib/data/templates";
 import {
   budgetSummary,
   cashPosition,
-  complianceSummary,
   delinquency,
   insuranceExposure,
   interestSummary,
@@ -16,6 +15,8 @@ import {
   association,
   owners,
 } from "@/lib/data";
+import { complianceRegister } from "@/lib/compliance";
+import { mehrMeadows } from "@/lib/data/communities";
 
 const TODAY_ISO = todayIsoDate();
 
@@ -148,12 +149,12 @@ describe("association arithmetic", () => {
   });
 
   it("treats a past due date as overdue, never as the next deadline", () => {
-    const comp = complianceSummary();
-    if (comp.nextDeadline?.dueDate) {
-      expect(daysFromToday(comp.nextDeadline.dueDate)).toBeGreaterThanOrEqual(0);
+    const register = complianceRegister(mehrMeadows);
+    if (register.next?.dueDate) {
+      expect(daysFromToday(register.next.dueDate)).toBeGreaterThanOrEqual(0);
     }
-    for (const item of comp.overdue) {
-      if (item.dueDate) expect(daysFromToday(item.dueDate)).toBeLessThan(0);
+    for (const item of register.overdue) {
+      expect(daysFromToday(item.dueDate!)).toBeLessThan(0);
     }
   });
 });

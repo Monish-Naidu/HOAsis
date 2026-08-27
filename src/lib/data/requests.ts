@@ -1,4 +1,4 @@
-import type { HomeRequest, Violation } from "@/lib/types";
+import type { HomeRequest, Violation, ViolationReport } from "@/lib/types";
 
 export const requests: HomeRequest[] = [
   {
@@ -235,6 +235,20 @@ export const requests: HomeRequest[] = [
   },
 ];
 
+/**
+ * Enforcement, with the evidence attached.
+ *
+ * Two of these started as a report from a neighbour and two did not, which is
+ * the ordinary mix and the reason the distinction is modelled at all. In both
+ * cases the notice rests on a board member's own observation: the report is
+ * what made somebody go and look, and nothing more than that.
+ *
+ * The photographs are described rather than shown. We do not have enforcement
+ * photographs of a fictional community and generating them would be inventing
+ * evidence, which is a strange thing to do in the one part of the product that
+ * is about not doing that. The brief, the date, the photographer and the
+ * vantage are the parts a hearing actually turns on, and those are real here.
+ */
 export const violations: Violation[] = [
   {
     id: "vio-1",
@@ -247,7 +261,33 @@ export const violations: Violation[] = [
     stage: "first-notice",
     openedDate: "2026-08-06",
     nextActionDate: "2026-08-27",
-    photoCount: 3,
+    reportId: "rep-2026-018",
+    photos: [
+      {
+        id: "vio-1-p1",
+        brief:
+          "A box truck with contractor lettering on the driveway apron, taken at 6:40am from the public sidewalk. The lettering and the plate are both legible.",
+        takenOn: "2026-08-05",
+        takenBy: "Arya Mehr, President",
+        vantage: "street",
+      },
+      {
+        id: "vio-1-p2",
+        brief:
+          "The same truck in the same position the following morning, showing it stayed overnight rather than being present for a job.",
+        takenOn: "2026-08-06",
+        takenBy: "Arya Mehr, President",
+        vantage: "street",
+      },
+      {
+        id: "vio-1-p3",
+        brief:
+          "Wide shot of the street showing the truck relative to the property line, so the driveway it is on is not in question.",
+        takenOn: "2026-08-06",
+        takenBy: "Arya Mehr, President",
+        vantage: "street",
+      },
+    ],
     fineCents: 0,
   },
   {
@@ -261,7 +301,16 @@ export const violations: Violation[] = [
     stage: "courtesy",
     openedDate: "2026-08-15",
     nextActionDate: "2026-08-29",
-    photoCount: 1,
+    photos: [
+      {
+        id: "vio-2-p1",
+        brief:
+          "Two bins at the side of the house, visible from the sidewalk, on a Thursday. Collection on this street is Monday.",
+        takenOn: "2026-08-14",
+        takenBy: "Sofia Bergman, Secretary",
+        vantage: "street",
+      },
+    ],
     fineCents: 0,
   },
   {
@@ -275,7 +324,49 @@ export const violations: Violation[] = [
     stage: "hearing",
     openedDate: "2026-06-22",
     nextActionDate: "2026-09-16",
-    photoCount: 5,
+    reportId: "rep-2026-012",
+    photos: [
+      {
+        id: "vio-3-p1",
+        brief: "The front elevation as painted, taken from the street.",
+        takenOn: "2026-06-21",
+        takenBy: "Arya Mehr, President",
+        vantage: "street",
+      },
+      {
+        id: "vio-3-p2",
+        brief:
+          "The same elevation before the work, from the association's own file, for comparison.",
+        takenOn: "2024-09-03",
+        takenBy: "Association records",
+        vantage: "street",
+      },
+      {
+        id: "vio-3-p3",
+        brief: "Close shot of the trim colour against the approved palette card.",
+        takenOn: "2026-06-21",
+        takenBy: "Arya Mehr, President",
+        vantage: "street",
+      },
+      {
+        id: "vio-3-p4",
+        brief: "The side elevation, showing the same colour continues around the house.",
+        takenOn: "2026-06-21",
+        takenBy: "Arya Mehr, President",
+        vantage: "street",
+      },
+      {
+        id: "vio-3-p5",
+        // Kept, flagged, and not relied on. The point of recording the vantage
+        // is that a photograph like this one gets caught before the hearing
+        // rather than raised at it.
+        brief:
+          "The rear elevation, taken over the boundary fence from the neighbouring lot. Not relied on in the notice.",
+        takenOn: "2026-06-21",
+        takenBy: "Arya Mehr, President",
+        vantage: "over-boundary",
+      },
+    ],
     fineCents: 10_000,
   },
   {
@@ -289,7 +380,129 @@ export const violations: Violation[] = [
     stage: "cured",
     openedDate: "2026-05-30",
     nextActionDate: "2026-06-20",
-    photoCount: 2,
+    photos: [
+      {
+        id: "vio-4-p1",
+        brief: "The front bed as found, from the sidewalk.",
+        takenOn: "2026-05-29",
+        takenBy: "Sofia Bergman, Secretary",
+        vantage: "street",
+      },
+      {
+        id: "vio-4-p2",
+        brief: "The same bed after the work, which is what closed the matter.",
+        takenOn: "2026-06-18",
+        takenBy: "Sofia Bergman, Secretary",
+        vantage: "street",
+      },
+    ],
     fineCents: 0,
+  },
+];
+
+/**
+ * What neighbours have told the board.
+ *
+ * Deliberately a separate collection from `violations`. Two of these became
+ * notices after somebody went and looked, one was dismissed because the board
+ * looked and found nothing, and one is still sitting unverified. That last
+ * state is the honest one and the one a queue has to be able to show.
+ *
+ * `rep-2026-020` and `rep-2026-021` are the same reporter on the same
+ * neighbour inside a month. Neither is verified. The pattern is the finding,
+ * not either report.
+ */
+export const violationReports: ViolationReport[] = [
+  {
+    id: "rep-2026-022",
+    reference: "REP-2026-022",
+    reporterId: "own-031",
+    reporterName: "Colette Prieto",
+    reporterUnit: "31",
+    subjectUnit: "29",
+    subjectOwnerId: "own-029",
+    what: "Someone has been running a table saw in the driveway late in the evening for about a week.",
+    observedOn: "2026-08-18",
+    submittedOn: "2026-08-19",
+    status: "new",
+  },
+  {
+    id: "rep-2026-021",
+    reference: "REP-2026-021",
+    reporterId: "own-044",
+    reporterName: "Hollis Nakamura",
+    reporterUnit: "44",
+    subjectUnit: "45",
+    subjectOwnerId: "own-045",
+    what: "Their guests park across the shared driveway entrance most weekends.",
+    observedOn: "2026-08-16",
+    submittedOn: "2026-08-17",
+    status: "new",
+  },
+  {
+    id: "rep-2026-020",
+    reference: "REP-2026-020",
+    reporterId: "own-044",
+    reporterName: "Hollis Nakamura",
+    reporterUnit: "44",
+    subjectUnit: "45",
+    subjectOwnerId: "own-045",
+    what: "The recycling bin was left out two days after collection again.",
+    observedOn: "2026-07-28",
+    submittedOn: "2026-07-29",
+    status: "new",
+  },
+  {
+    id: "rep-2026-019",
+    reference: "REP-2026-019",
+    reporterId: "own-017",
+    reporterName: "Devon Achebe",
+    reporterUnit: "17",
+    subjectUnit: "18",
+    subjectOwnerId: "own-018",
+    what: "I think they have put up a shed at the back without asking anybody.",
+    observedOn: "2026-08-02",
+    submittedOn: "2026-08-03",
+    status: "dismissed",
+    dismissedReason:
+      "Looked on 5 August. It is a temporary garden store under the size the Committee reviews, and no approval was needed.",
+  },
+  {
+    id: "rep-2026-018",
+    reference: "REP-2026-018",
+    reporterId: "own-062",
+    reporterName: "Marguerite Lowry",
+    reporterUnit: "62",
+    subjectUnit: "63",
+    subjectOwnerId: "own-063",
+    what: "There is a work truck parked on the driveway overnight, most nights this month.",
+    observedOn: "2026-08-03",
+    submittedOn: "2026-08-04",
+    status: "verified",
+    verification: {
+      by: "Arya Mehr, President",
+      on: "2026-08-05",
+      note: "Walked the street at 6:40am on the 5th and again on the 6th. Truck present both mornings in the same position, commercial lettering visible from the sidewalk. Photographed from the public way.",
+    },
+    violationId: "vio-1",
+  },
+  {
+    id: "rep-2026-012",
+    reference: "REP-2026-012",
+    reporterId: "own-025",
+    reporterName: "Ines Farrow",
+    reporterUnit: "25",
+    subjectUnit: "26",
+    subjectOwnerId: "own-026",
+    what: "Number 26 has been repainted a colour I do not think was approved.",
+    observedOn: "2026-06-19",
+    submittedOn: "2026-06-20",
+    status: "verified",
+    verification: {
+      by: "Arya Mehr, President",
+      on: "2026-06-21",
+      note: "Checked the architectural file. No application on record for exterior paint since 2019. Colour on site does not match the approved palette.",
+    },
+    violationId: "vio-3",
   },
 ];

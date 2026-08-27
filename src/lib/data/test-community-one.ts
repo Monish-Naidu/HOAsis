@@ -518,6 +518,8 @@ export const testCommunityOne: Community = {
 
   violations: [],
 
+  violationReports: [],
+
   documents: [
     { id: "tc1-doc-1", name: "Declaration of Covenants, Conditions & Restrictions", category: "Governing", updatedDate: "2015-03-02", size: "1.4 MB", visibility: "public", requiredBy: "RCW 64.38, association records", fileType: "pdf" },
     { id: "tc1-doc-2", name: "Bylaws", category: "Governing", updatedDate: "2015-03-02", size: "620 KB", visibility: "public", requiredBy: "RCW 64.38, association records", fileType: "pdf" },
@@ -535,65 +537,6 @@ export const testCommunityOne: Community = {
     { id: "tc1-doc-14", name: "Welcome packet and parking rules", category: "Notices", updatedDate: "2026-09-01", size: "420 KB", visibility: "public", fileType: "pdf" },
     { id: "tc1-doc-15", name: "Emergency contact list", category: "Notices", updatedDate: "2026-09-01", size: "40 KB", visibility: "members", fileType: "pdf" },
     { id: "tc1-doc-16", name: "Architectural Change Request form", category: "Forms", updatedDate: "2026-09-01", size: "72 KB", visibility: "public", fileType: "pdf" },
-  ],
-
-  complianceItems: [
-    {
-      id: "tc1-cmp-reserve",
-      title: "Reserve study, never commissioned",
-      citation: "RCW 64.38, reserve study provisions",
-      jurisdiction: "Washington",
-      summary:
-        "Washington expects a reserve study with a funding disclosure in the annual budget. This association has never had one, and currently transfers nothing to reserves.",
-      evidence:
-        "No study on file. The 2027 budget allocates $0 to reserves against a projected surplus of $360.",
-      status: "overdue",
-      dueDate: "2026-12-31",
-      cadence: "Annually, full study on a longer cycle",
-      owner: "Grant Holloway, Treasurer",
-      actionLabel: "Open reserves",
-      actionHref: "/admin/reserves",
-    },
-    {
-      id: "tc1-cmp-annual-report",
-      title: "Nonprofit corporation annual report",
-      citation: "RCW 24.03A, Washington Secretary of State",
-      jurisdiction: "Washington",
-      summary:
-        "The association is a nonprofit corporation and files an annual report to stay in good standing.",
-      evidence: "Filed February 6, 2027. Next due February 2028.",
-      status: "compliant",
-      dueDate: "2028-02-28",
-      cadence: "Annually",
-      owner: "Priya Venkatesan, President",
-      completedDate: "2027-02-06",
-    },
-    {
-      id: "tc1-cmp-budget",
-      title: "Budget summary and ratification meeting",
-      citation: "RCW 64.38, budget adoption and ratification",
-      jurisdiction: "Washington",
-      summary:
-        "The board adopts a budget, delivers a summary to every owner, and sets a ratification meeting.",
-      evidence: "2027 budget adopted and delivered November 19, 2026. Ratified at the December meeting.",
-      status: "compliant",
-      cadence: "Annually",
-      owner: "Grant Holloway, Treasurer",
-      completedDate: "2026-11-19",
-    },
-    {
-      id: "tc1-cmp-records",
-      title: "Records available to owners on request",
-      citation: "RCW 64.38, association records",
-      jurisdiction: "Washington",
-      summary:
-        "The statute asks for records within a reasonable time. No written response policy has been adopted yet.",
-      evidence: "No requests received to date. No policy adopted.",
-      status: "in-progress",
-      dueDate: "2027-03-12",
-      cadence: "Per request",
-      owner: "Priya Venkatesan, President",
-    },
   ],
 
   meetings: [

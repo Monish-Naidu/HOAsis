@@ -18,7 +18,7 @@ import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
 import { caps, DEFAULT_ROLE_CAPABILITIES, NO_CAPABILITIES } from "@/lib/data/accounts";
-import { daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
+import { addDays, daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
 import {
@@ -52,7 +52,10 @@ import type {
   Owner,
   BankAccount,
   AccountRole,
+  Violation,
+  ViolationReport,
 } from "@/lib/types";
+import { canRaiseNotice } from "@/lib/violations";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 
 export type View = "resident" | "admin";
@@ -106,6 +109,24 @@ interface AppState {
   resetDemo: () => void;
   /** Adds a household to the register, with the account that lets them sign in. */
   addOwner: (input: { name: string; email: string; unit: string }) => Owner;
+  /** A neighbour telling the board about another home. Never a violation. */
+  addViolationReport: (input: {
+    reporterId: string;
+    reporterName: string;
+    reporterUnit: string;
+    subjectUnit: string;
+    subjectOwnerId?: string;
+    what: string;
+    observedOn: string;
+  }) => ViolationReport;
+  /** The board's own observation. Refuses an empty note. */
+  verifyReport: (reportId: string, by: string, note: string) => void;
+  dismissReport: (reportId: string, reason: string) => void;
+  /** Refuses anything nobody has gone and looked at. */
+  raiseNoticeFromReport: (
+    reportId: string,
+    input: { rule: string; ruleCitation: string; ownerId: string; ownerName: string },
+  ) => Violation;
   /** What each home owed on the day the association switched to us. */
   setOpeningBalances: (
     asOf: string,
@@ -272,6 +293,10 @@ const MUTABLE_SLICES = [
   // Text imported from an uploaded declaration has to land somewhere, and it
   // is the board's own document rather than reference data.
   "governingDocs",
+  // Residents can report, and a board can raise a notice off the back of one
+  // once somebody has been out to look.
+  "violations",
+  "violationReports",
 ] as const;
 
 type MutableSlice = (typeof MUTABLE_SLICES)[number];
@@ -435,6 +460,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const threads = useStore(sliceStore(communityId, "threads"));
   const documents = useStore(sliceStore(communityId, "documents"));
   const governingDocs = useStore(sliceStore(communityId, "governingDocs"));
+  const violationList = useStore(sliceStore(communityId, "violations"));
+  const reportList = useStore(sliceStore(communityId, "violationReports"));
   const associationRow = useStore(sliceStore(communityId, "association"));
   const meetingList = useStore(sliceStore(communityId, "meetings"));
   const reserveComponentList = useStore(sliceStore(communityId, "reserveComponents"));
@@ -930,6 +957,141 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  /* ------------------------------------------------------------ reports */
+
+  /**
+   * A neighbour telling the board about another home.
+   *
+   * Lands as a report and never as a violation. The gap between those two is
+   * the whole of this feature: what a resident submits is an input to an
+   * investigation, and it becomes enforceable only once somebody from the
+   * association has gone and looked.
+   */
+  const addViolationReport = useCallback(
+    (input: {
+      reporterId: string;
+      reporterName: string;
+      reporterUnit: string;
+      subjectUnit: string;
+      subjectOwnerId?: string;
+      what: string;
+      observedOn: string;
+    }) => {
+      const store = sliceStore(communityId, "violationReports");
+      const sequence = store.getSnapshot().length + 1;
+      const report: ViolationReport = {
+        id: `rep-${communityId}-${sequence}-${input.subjectUnit}`,
+        reference: `REP-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
+        reporterId: input.reporterId,
+        reporterName: input.reporterName,
+        reporterUnit: input.reporterUnit,
+        subjectUnit: input.subjectUnit.trim(),
+        subjectOwnerId: input.subjectOwnerId,
+        what: input.what.trim(),
+        observedOn: input.observedOn,
+        submittedOn: todayIsoDate(),
+        status: "new",
+      };
+      store.update((all) => [report, ...all]);
+      return report;
+    },
+    [communityId],
+  );
+
+  /**
+   * The board's own observation, written down.
+   *
+   * Not a status flip. The note is the thing a notice rests on, so a
+   * verification without one is refused rather than recorded, which is the
+   * difference between an investigation and a tick.
+   */
+  const verifyReport = useCallback(
+    (reportId: string, by: string, note: string) => {
+      if (!note.trim()) {
+        throw new ValidationError("Write down what you saw before marking this verified", {
+          reportId,
+        });
+      }
+      sliceStore(communityId, "violationReports").update((all) =>
+        all.map((r) =>
+          r.id === reportId
+            ? {
+                ...r,
+                status: "verified" as const,
+                verification: { by, on: todayIsoDate(), note: note.trim() },
+              }
+            : r,
+        ),
+      );
+    },
+    [communityId],
+  );
+
+  /** Closing a report the board looked at and found nothing in. */
+  const dismissReport = useCallback(
+    (reportId: string, reason: string) =>
+      sliceStore(communityId, "violationReports").update((all) =>
+        all.map((r) =>
+          r.id === reportId
+            ? { ...r, status: "dismissed" as const, dismissedReason: reason.trim() }
+            : r,
+        ),
+      ),
+    [communityId],
+  );
+
+  /**
+   * Raising a notice from a verified report.
+   *
+   * Refuses anything that has not been verified, in the state layer rather
+   * than only in the screen, because the screen is the part somebody will
+   * later copy. The notice carries the board's citation and the board's
+   * photographs; nothing the reporter wrote becomes the allegation.
+   */
+  const raiseNoticeFromReport = useCallback(
+    (
+      reportId: string,
+      input: { rule: string; ruleCitation: string; ownerId: string; ownerName: string },
+    ) => {
+      const reports = sliceStore(communityId, "violationReports");
+      const report = reports.getSnapshot().find((r) => r.id === reportId);
+      if (!report) throw new ValidationError("That report is not on file", { reportId });
+      if (!canRaiseNotice(report)) {
+        throw new ValidationError(
+          "Somebody has to go and look before a notice can rest on this",
+          { reportId },
+        );
+      }
+
+      const violations = sliceStore(communityId, "violations");
+      const sequence = violations.getSnapshot().length + 1;
+      const violation: Violation = {
+        id: `vio-${communityId}-${sequence}`,
+        reference: `VIO-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
+        ownerId: input.ownerId,
+        ownerName: input.ownerName,
+        unit: report.subjectUnit,
+        rule: input.rule.trim(),
+        ruleCitation: input.ruleCitation.trim(),
+        stage: "courtesy",
+        openedDate: todayIsoDate(),
+        nextActionDate: addDays(todayIsoDate(), 14),
+        // The board's own photographs go on afterwards. Nothing the reporter
+        // supplied is carried across as if the association had taken it.
+        photos: [],
+        fineCents: 0,
+        reportId,
+      };
+
+      violations.update((all) => [violation, ...all]);
+      reports.update((all) =>
+        all.map((r) => (r.id === reportId ? { ...r, violationId: violation.id } : r)),
+      );
+      return violation;
+    },
+    [communityId],
+  );
+
   /** Removes a household and its account together, returning one undo for both. */
   const removeOwner = useCallback(
     (ownerId: string) => {
@@ -1389,6 +1551,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       threads,
       documents,
       governingDocs,
+      violations: violationList,
+      violationReports: reportList,
       ballots,
       templates,
       association: associationRow,
@@ -1416,6 +1580,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       threads,
       documents,
       governingDocs,
+      violationList,
+      reportList,
       ballots,
       templates,
       associationRow,
@@ -1477,6 +1643,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     createRemoteAssociation,
     isRemote: Boolean(remote.community),
     addOwner,
+    addViolationReport,
+    verifyReport,
+    dismissReport,
+    raiseNoticeFromReport,
     setOpeningBalances,
     removeOwner,
     setAccountRole,

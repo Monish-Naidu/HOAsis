@@ -1,17 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Gavel, Megaphone, Plus } from "lucide-react";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { bucketRequests, useMyRequests } from "@/lib/app-state";
+import { bucketRequests, useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
 import { kindLabel, statusTone } from "@/lib/request-status";
-import { formatDate, relativeDays } from "@/lib/utils";
+import { formatDate, pluralize, relativeDays } from "@/lib/utils";
 
 
 
 export default function ResidentRequests() {
   const mine = useMyRequests();
   const { open, decided, history } = bucketRequests(mine);
+  const { community } = useAppState();
+  const owner = useCurrentOwner();
+  // A notice against your own home used to exist only on the board's side,
+  // which meant the evidence was something described to you rather than
+  // something you could look at.
+  const notices = owner
+    ? community.violations.filter((v) => v.ownerId === owner.id || v.unit === owner.unit)
+    : [];
+  const openNotices = notices.filter((v) => v.stage !== "cured");
 
   return (
     <div className="animate-rise space-y-6">
@@ -28,6 +37,56 @@ export default function ResidentRequests() {
           <Plus className="size-4" />
         </Link>
       </div>
+
+      {notices.length > 0 ? (
+        <Link
+          href="/resident/notices"
+          className={`flex items-center gap-3 rounded-card border p-4 shadow-card transition-colors ${
+            openNotices.length > 0
+              ? "border-warn/30 bg-warn-soft hover:bg-warn-soft/70"
+              : "border-border bg-surface hover:bg-surface-2"
+          }`}
+        >
+          <span
+            className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${
+              openNotices.length > 0 ? "bg-warn/15 text-warn" : "bg-surface-3 text-fg-muted"
+            }`}
+          >
+            <Gavel className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-fg">
+              {openNotices.length > 0
+                ? `${pluralize(openNotices.length, "open notice")} about your home`
+                : "Notices about your home"}
+            </span>
+            <span className="block text-[13px] leading-snug text-fg-muted">
+              {openNotices.length > 0
+                ? "See what the board is relying on, including every photograph"
+                : "Nothing outstanding. The record is kept here."}
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+        </Link>
+      ) : null}
+
+      <Link
+        href="/resident/report"
+        className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
+          <Megaphone className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-fg">
+            Tell the board about something
+          </span>
+          <span className="block text-[13px] leading-snug text-fg-muted">
+            Goes to them privately. The home you name never learns who reported it.
+          </span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+      </Link>
 
       {open.length ? (
         <section>

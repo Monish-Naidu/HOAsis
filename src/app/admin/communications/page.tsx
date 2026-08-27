@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/primitives";
 import { useState } from "react";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
+import { DeliveryPanel } from "@/components/app/delivery-panel";
 import { useToast } from "@/components/app/toast";
 import { formatDate, pluralize } from "@/lib/utils";
 import { communicationsSummary } from "@/lib/metrics";
@@ -56,6 +57,10 @@ export default function BoardCommunications() {
             onClick={() => notify("Composer opens with the full owner list", "info")}
           >
             <Send className="size-3.5" />
+
+      <div className="mb-5">
+        <DeliveryPanel />
+      </div>
             New message
           </Button>
         }

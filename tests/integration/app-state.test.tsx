@@ -482,6 +482,135 @@ describe("admin actions change real records", () => {
   });
 });
 
+describe("reports from residents", () => {
+  /**
+   * The gap between a complaint and a notice, kept open.
+   *
+   * The change that would close it looks like a convenience: one button that
+   * turns a report into a violation. These tests are what that button would
+   * have to break.
+   */
+  it("lands as a report and never as a violation", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(MONISH));
+    const before = result.current.state.community.violations.length;
+
+    act(() => {
+      result.current.state.addViolationReport({
+        reporterId: "own-042",
+        reporterName: "Monish Naidu",
+        reporterUnit: "42",
+        subjectUnit: "43",
+        what: "A boat has been on the driveway for two weeks.",
+        observedOn: "2026-08-20",
+      });
+    });
+
+    expect(result.current.state.community.violations).toHaveLength(before);
+    const report = result.current.state.community.violationReports[0];
+    expect(report.status).toBe("new");
+    expect(report.subjectUnit).toBe("43");
+  });
+
+  it("refuses to mark a report verified with nothing written down", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const report = result.current.state.community.violationReports.find(
+      (r) => r.status === "new",
+    )!;
+
+    // Ticking a box is not an investigation, and the note is the thing a
+    // notice would rest on.
+    expect(() =>
+      act(() => result.current.state.verifyReport(report.id, "Arya Mehr", "   ")),
+    ).toThrow(/what you saw/i);
+    expect(
+      result.current.state.community.violationReports.find((r) => r.id === report.id)!.status,
+    ).toBe("new");
+  });
+
+  it("refuses to raise a notice from a report nobody has looked at", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const report = result.current.state.community.violationReports.find(
+      (r) => r.status === "new",
+    )!;
+    const before = result.current.state.community.violations.length;
+
+    expect(() =>
+      act(() =>
+        result.current.state.raiseNoticeFromReport(report.id, {
+          rule: "Boat stored on a driveway",
+          ruleCitation: "CC&Rs Art. IX §2(b)",
+          ownerId: "own-043",
+          ownerName: "Somebody",
+        }),
+      ),
+    ).toThrow(/go and look/i);
+    expect(result.current.state.community.violations).toHaveLength(before);
+  });
+
+  it("allows it once somebody looked, and carries none of the reporter's words across", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const report = result.current.state.community.violationReports.find(
+      (r) => r.status === "new",
+    )!;
+
+    act(() =>
+      result.current.state.verifyReport(
+        report.id,
+        "Arya Mehr, President",
+        "Walked past on the 21st. Boat present, blocking the sidewalk cut.",
+      ),
+    );
+    let raised!: { id: string; rule: string; photos: unknown[]; reportId?: string };
+    act(() => {
+      raised = result.current.state.raiseNoticeFromReport(report.id, {
+        rule: "Boat stored on a driveway",
+        ruleCitation: "CC&Rs Art. IX §2(b)",
+        ownerId: "own-043",
+        ownerName: "Somebody",
+      });
+    });
+
+    // The allegation is the board's, not the neighbour's, and the evidence
+    // starts empty because the board has not photographed anything yet.
+    expect(raised.rule).toBe("Boat stored on a driveway");
+    expect(raised.photos).toEqual([]);
+    expect(raised.reportId).toBe(report.id);
+
+    // And the report now points back, so the trail from complaint to notice is
+    // walkable in both directions.
+    const after = result.current.state.community.violationReports.find(
+      (r) => r.id === report.id,
+    )!;
+    expect(after.violationId).toBe(raised.id);
+  });
+
+  it("a dismissed report stays dismissed and cannot become a notice", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const report = result.current.state.community.violationReports.find(
+      (r) => r.status === "new",
+    )!;
+
+    act(() =>
+      result.current.state.dismissReport(report.id, "Looked on the 22nd. Nothing there."),
+    );
+    expect(() =>
+      act(() =>
+        result.current.state.raiseNoticeFromReport(report.id, {
+          rule: "Anything",
+          ruleCitation: "Rules & Regs §1.1",
+          ownerId: "own-043",
+          ownerName: "Somebody",
+        }),
+      ),
+    ).toThrow();
+  });
+});
+
 describe("opening balances", () => {
   /**
    * The one thing that moves when an association arrives from anywhere else.

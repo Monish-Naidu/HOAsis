@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import {
   Badge,
-  Callout,
   Card,
   CardHeader,
   EmptyState,
@@ -22,11 +21,30 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { complianceSummary, interestSummary } from "@/lib/metrics";
+import { interestSummary } from "@/lib/metrics";
+import { complianceRegister } from "@/lib/compliance";
+import type { ObligationCadence } from "@/lib/data/obligations";
 import { percentFunded } from "@/lib/reserves";
 import { useAppState } from "@/lib/app-state";
 import { formatDate, relativeDays, shortMoney } from "@/lib/utils";
 import type { ComplianceStatus } from "@/lib/types";
+
+/** How often, in words rather than in a slug. */
+const CADENCE_LABEL: Record<ObligationCadence, string> = {
+  annual: "Every year",
+  triennial: "Every three years",
+  "each-budget": "Every budget",
+  "on-request": "Whenever somebody asks",
+  ongoing: "Continuing",
+};
+
+/** Worst first, then soonest. */
+const STATUS_RANK: Record<ComplianceStatus, number> = {
+  overdue: 0,
+  "due-soon": 1,
+  "in-progress": 2,
+  compliant: 3,
+};
 
 const statusMeta: Record<
   ComplianceStatus,
@@ -69,50 +87,65 @@ export default function BoardCompliance() {
     },
   ];
   const association = community.association;
-  const complianceItems = community.complianceItems;
-  const comp = complianceSummary(community);
-  const ordered = [
-    ...comp.overdue,
-    ...comp.dueSoon,
-    ...comp.inProgress,
-    ...comp.compliant,
-  ];
+  /**
+   * Derived from the library's own research rather than hand written.
+   *
+   * The register used to be a fixture with a note in it saying not to trust
+   * the deadline maths. Every cited row here traces to a state article that
+   * carries its own sources, and the dates are arithmetic on this
+   * association's fiscal year. What is still not derived is whether they
+   * actually did it, because we cannot see the filed report.
+   */
+  const register = complianceRegister(community);
+  const ordered = [...register.items].sort((a, b) => {
+    if (STATUS_RANK[a.status] !== STATUS_RANK[b.status]) {
+      return STATUS_RANK[a.status] - STATUS_RANK[b.status];
+    }
+    return (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999");
+  });
 
   return (
     <>
       <PageHeader
-        eyebrow={`${association.stateName} · RCW 64.38 association`}
+        eyebrow={
+          register.cited
+            ? `${association.stateName} · deadlines from the ${association.stateName} guide`
+            : `${association.stateName} · general obligations`
+        }
         title="Deadlines"
-        
+        description="What this association owes and when it falls due. Whether it was done is yours to mark, because we cannot see the filed report."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          label="Clear"
-          value={`${comp.compliant.length}/${complianceItems.length}`}
-          tone="ok"
-          hint="Obligations with evidence on file"
-          icon={<CheckCircle2 className="size-4" />}
+          label="Tracked"
+          value={String(register.items.length)}
+          hint={
+            register.cited
+              ? `Written from the ${association.stateName} guide, with sections`
+              : "General obligations. Your state's sections are not written yet"
+          }
+          icon={<Scale className="size-4" />}
         />
         <Stat
-          label="Overdue"
-          value={String(comp.overdue.length)}
-          tone={comp.overdue.length ? "danger" : "ok"}
-          hint="Past due or missing a prerequisite"
+          label="Past due"
+          value={String(register.overdue.length)}
+          tone={register.overdue.length ? "danger" : "ok"}
+          hint="The date has gone"
           icon={<AlertTriangle className="size-4" />}
         />
         <Stat
-          label="Due soon"
-          value={String(comp.dueSoon.length + comp.inProgress.length)}
-          tone="warn"
-          hint="Within the next 90 days"
+          label="Inside 45 days"
+          value={String(register.dueSoon.length)}
+          tone={register.dueSoon.length ? "warn" : "ok"}
+          hint="Close enough to start on"
           icon={<Clock className="size-4" />}
         />
         <Stat
           label="Next one due"
-          value={comp.nextDeadline?.dueDate ? formatDate(comp.nextDeadline.dueDate) : "None"}
-          hint={comp.nextDeadline?.title}
-          icon={<Scale className="size-4" />}
+          value={register.next?.dueDate ? formatDate(register.next.dueDate) : "None dated"}
+          hint={register.next?.label}
+          icon={<CheckCircle2 className="size-4" />}
         />
       </div>
 
@@ -128,7 +161,7 @@ export default function BoardCompliance() {
               const meta = statusMeta[item.status];
               const Icon = meta.icon;
               return (
-                <details key={item.id} className="group border-b border-border last:border-b-0">
+                <details key={item.key} className="group border-b border-border last:border-b-0">
                   <summary className="flex cursor-pointer list-none items-start gap-3 px-5 py-4 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
                     <span
                       className={`mt-0.5 shrink-0 ${
@@ -146,12 +179,18 @@ export default function BoardCompliance() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
-                          {item.title}
+                          {item.label}
                         </p>
                         <Badge tone={meta.tone}>{meta.label}</Badge>
+                        {item.fromDayOne ? <Badge tone="neutral">From day one</Badge> : null}
                       </div>
                       <p className="mt-1 text-[13px] text-fg-muted">
-                        {item.citation} · {item.cadence}
+                        {/* A cited row names its section. An uncited one says
+                            so rather than borrowing the confidence of the
+                            rows around it. */}
+                        {item.citation ?? "General duty, section not written for your state yet"}
+                        {" · "}
+                        {CADENCE_LABEL[item.cadence]}
                         {item.dueDate ? ` · due ${formatDate(item.dueDate, "long")}` : ""}
                       </p>
                     </div>
@@ -164,46 +203,40 @@ export default function BoardCompliance() {
                         >
                           {relativeDays(item.dueDate)}
                         </p>
-                      ) : item.completedDate ? (
+                      ) : item.clockDays ? (
                         <p className="text-[13px] text-fg-subtle">
-                          done {formatDate(item.completedDate)}
+                          {item.clockDays} day clock
                         </p>
                       ) : null}
-                      <p className="mt-0.5 text-[13px] text-fg-subtle">{item.owner.split(",")[0]}</p>
                     </div>
                     <ChevronDown className="mt-1 size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
                   </summary>
                   <div className="border-t border-border bg-surface-2 px-5 py-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <p className="text-[13px] font-semibold text-fg-muted">
-                          What the law requires
-                        </p>
-                        <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
-                          {item.summary}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-semibold text-fg-muted">
-                          Evidence on file
-                        </p>
-                        <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
-                          {item.evidence}
-                        </p>
-                        <p className="mt-2 text-[13px] text-fg-subtle">
-                          Responsible: {item.owner}
-                        </p>
-                      </div>
+                    <p className="text-[13px] font-semibold text-fg-muted">
+                      What you have to be able to show
+                    </p>
+                    <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed text-fg-muted">
+                      {item.evidence}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {item.href ? (
+                        <Link
+                          href={item.href}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-semibold text-brand-fg"
+                        >
+                          Open the screen that holds it
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      ) : null}
+                      {item.article ? (
+                        <Link
+                          href={`/library/${item.article}`}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg"
+                        >
+                          Read where this comes from
+                        </Link>
+                      ) : null}
                     </div>
-                    {item.actionHref ? (
-                      <Link
-                        href={item.actionHref}
-                        className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-semibold text-brand-fg"
-                      >
-                        {item.actionLabel}
-                        <ArrowRight className="size-3.5" />
-                      </Link>
-                    ) : null}
                   </div>
                 </details>
               );
@@ -254,33 +287,51 @@ export default function BoardCompliance() {
             )}
           </Card>
 
-          <Callout
-            tone="info"
-            icon={<Info className="size-4" />}
-            title="Placeholder, not legal advice"
-          >
-            These Washington entries are placeholders. The chapter is right, the deadline math is not
-            verified. Nothing here should be relied on until counsel reviews it.
-          </Callout>
-
+          {/* Coverage is stated rather than implied. A board in a state we
+              have not written yet should know that is what it is looking at,
+              not assume the general rows carry the same weight as a cited
+              one. */}
           <Card>
-            <CardHeader title="Coverage" />
-            <div className="space-y-2.5 px-5 py-4">
-              {[
-                { name: "Washington, RCW 64.38 (HOA Act)", count: 5 },
-                { name: "Washington, RCW 24.03A (nonprofit)", count: 1 },
-                { name: "Federal, IRS reporting", count: 1 },
-              ].map((j) => (
-                <div key={j.name} className="flex items-center justify-between gap-3">
-                  <span className="text-[15px] text-fg">{j.name}</span>
-                  <span className="tnum text-[13px] text-fg-muted">{j.count}</span>
-                </div>
-              ))}
+            <CardHeader
+              title="Where these come from"
+              icon={<Info className="size-4" />}
+            />
+            <div className="space-y-3 px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-[15px] text-fg">With a section, from your state guide</span>
+                <span className="tnum shrink-0 text-[13px] font-medium text-fg-muted">
+                  {register.items.filter((i) => i.cited).length}
+                </span>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-[15px] text-fg">General duty, section not written yet</span>
+                <span className="tnum shrink-0 text-[13px] font-medium text-fg-muted">
+                  {register.items.filter((i) => !i.cited).length}
+                </span>
+              </div>
             </div>
             <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
-              Recorded 2015, so RCW 64.38 governs rather than WUCIOA.
+              {register.cited
+                ? `Every cited row traces to the ${association.stateName} guide in the library, which carries its own sources. The dates are worked out from your fiscal year. Whether you did it is yours to mark, and none of this is legal advice.`
+                : `${association.stateName} sections are not written into the register yet, so these are the duties almost every association has, with no statute attached. The library has the ${association.stateName} guide, and the sections will follow.`}
             </p>
           </Card>
+
+          {register.dayOne.length > 0 ? (
+            <Card>
+              <CardHeader
+                title="Owed from day one"
+                subtitle="Not a first year problem. These bind a community from the day it exists."
+              />
+              <div className="divide-y divide-border">
+                {register.dayOne.map((item) => (
+                  <p key={item.key} className="px-5 py-2.5 text-[15px] text-fg">
+                    {item.label}
+                  </p>
+                ))}
+              </div>
+            </Card>
+          ) : null}
         </div>
       </div>
     </>

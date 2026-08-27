@@ -1,8 +1,12 @@
 # What is left
 
-Handoff updated 2026-08-26. Everything not listed here is built, tested and
-pushed. Test suite at the time of writing: **378 unit, 112 end to end, 198
+Handoff updated 2026-08-27. Everything not listed here is built, tested and
+pushed. Test suite at the time of writing: **440 unit, 122 end to end, 198
 database checks**, all green.
+
+Playwright now runs four workers and the suite takes about two minutes rather
+than five. `fullyParallel` stays off, because several specs found an
+association in one test and read it back in the next.
 
 ## Who this is for, as of 2026-08-26
 
@@ -27,11 +31,10 @@ pnpm db:verify                                            # hits the real Supaba
 
 ---
 
-## The four open items, in the order to do them
+## The list of ten is done
 
-These came from one list of ten. Six are done: the collections ladder, the
-actionable past-due card, roster pagination, the ballot builder, recording a
-vendor payment on a date the board picks, and the governing documents.
+All ten items are built. What follows is what each one turned into, and what is
+still worth doing inside each area.
 
 ### 10. Bylaws, CC&Rs, templates, and parsing an uploaded document — DONE
 
@@ -109,54 +112,54 @@ argument, so a better model does not reopen it. Everything built above holds
 that line, and the tests in `tests/unit/governing.test.ts` exist mostly to
 catch a future change that quietly starts asserting what a provision means.
 
-### 4. Violations, and where they come from
+### 4, 5, 7 and 8 — DONE
 
-**Do this one first now.** Half of it is already done: the citation resolves
-and links, and an unresolved one is flagged. What is left is the sensitive
-half, whether residents can report violations. Research that did land, from a
-survey of what other platforms ship:
+Built 2026-08-26. The reasoning for 4, 5 and 8 is in
+`docs/decisions/enforcement-and-delivery.md`.
 
-- Management company and law firm guidance converges on one rule: **a complaint
-  is an input to an investigation, never a basis for enforcement.** Evidence
-  gets gathered before any notice is issued.
-- One source is blunter: a board "can't act on a complaint unless the
-  complainant signs it."
-- HOALife ships resident reporting and does not market it. Forty-four blog
-  posts, none about neighbor complaints, anonymity or selective enforcement.
-  Their own enforcement post describes it as manager-driven only. That is a
-  positioning vacuum.
-- No state statute bans anonymous HOA complaints. Florida's ban binds municipal
-  code inspectors, not associations. CAI has published no position.
+**4. Violations, and where they come from.** Residents can report. A report is
+a separate record from a violation and cannot become one until a board member
+has gone and looked and written down what they saw: `canRaiseNotice` requires
+the note, and `raiseNoticeFromReport` refuses without it in the state layer
+rather than only in the screen. The reporter is named to the board and to
+nothing the accused can reach. `reportingPatterns` surfaces one household
+repeatedly reporting the same neighbour, which is the fair housing problem
+worth seeing early. Resident side is `/resident/report`; the board queue sits
+under `/admin/requests`.
 
-Recommendation to implement: a resident can report, the report goes to the
-board privately, the board must verify independently before any notice, and the
-reporter is never named to the accused. Track who reported so a pattern of one
-owner repeatedly reporting one neighbor is visible to the board, because that
-pattern is a fair housing problem waiting to happen.
+**5. Violation photos.** `photoCount` became `photos`, each carrying what it
+shows, when, who took it, and **where from**. `EvidenceViewer` serves the board
+and the accused owner from the same component, and the owner now has a screen
+at all: `/resident/notices`. `photoConcerns` flags a photograph taken over a
+boundary or from the air before the notice goes out. The images themselves are
+described rather than generated, following the library's photo brief rule.
 
-### 5. Violation photos
+**7. Compliance.** Wired, not cut. `src/lib/data/obligations.ts` holds the
+obligations and `src/lib/compliance.ts` derives the register from them, with
+dates worked out from the association's fiscal year. Four states carry their
+own citations traced to their library article; everywhere else gets general
+duties with no statute attached, and the screen says which it is looking at.
+The old placeholder fixture is deleted, and the nav badge now derives from the
+same selector as the page, which it did not before.
 
-Click through the photos rather than showing a count. Due process says the
-accused owner should see the evidence against them, so build it so they can.
-The privacy question is real: photographing into a home, over a fence, or by
-drone is different from photographing a trash can at the curb.
+**8. Communications.** The rules, which are the hard half. `src/lib/delivery.ts`
+holds which notices may travel which channel, and where paper is the notice it
+says the electronic copy is a courtesy. Text is gated on two separate things,
+both real: prior express consent, revocable and never overridden, and
+registration with The Campaign Registry, which needs the EIN. The panel on
+`/admin/communications` shows how a roster splits across channels for a chosen
+notice kind, and how many households nothing reaches at all.
 
-### 7. Compliance
+Still open in this area:
 
-The question asked was whether the tab earns its place, and what it means for a
-brand new association. It currently reads from `complianceItems`, which is a
-placeholder register for Washington with chapter-level citations and a note in
-the fixture saying not to deepen it without a legal pass. The library now has
-that legal pass for twelve states, with citations. Either wire the register to
-the library research or cut the tab.
-
-### 8. Communications
-
-Email works and is wired to Resend. Text and in-app do not exist. The research
-agent covering TCPA consent and 10DLC registration died before reporting, so
-that needs redoing before any SMS is built. What is known already: some notices
-must legally go by mail and cannot be satisfied by email or text, and which
-ones differ by state.
+- **The state by state mail question.** Exactly which notices need certified
+  mail differs everywhere. It belongs in the compliance register where a row
+  carries a citation, not in `delivery.ts`.
+- **Consent capture.** `ContactConsent` is modelled and the rules read it, but
+  no screen asks an owner for it yet. Nothing texts anybody, so nothing is
+  broken; it is the next thing to build here.
+- **Eight more states** for the compliance register. WA, CO, FL and CA are
+  written. The library has articles for all twelve.
 
 ---
 

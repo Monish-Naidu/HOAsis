@@ -13,7 +13,6 @@ import {
   governingAmendments as mmGoverningAmendments,
   governingArticles as mmGoverning,
 } from "./governing";
-import { complianceItems as mmCompliance } from "./compliance";
 import { documents as mmDocuments } from "./documents";
 import { forumPosts as mmPosts } from "./forum";
 import { ledgerEntries as mmLedger, ownerCharges as mmCharges, payouts as mmPayouts, vendors as mmVendors } from "./ledger";
@@ -22,7 +21,11 @@ import { createdCommunities } from "./created-communities";
 import { threads as mmThreads } from "./messages";
 import { owners as mmOwners } from "./owners";
 import { paymentInstruments as mmInstruments } from "./payments";
-import { requests as mmRequests, violations as mmViolations } from "./requests";
+import {
+  requests as mmRequests,
+  violationReports as mmViolationReports,
+  violations as mmViolations,
+} from "./requests";
 import {
   architecturalForms as mmForms,
   communityAmenities as mmAmenities,
@@ -62,10 +65,10 @@ export const mehrMeadows: Community = {
   payouts: mmPayouts,
   requests: mmRequests,
   violations: mmViolations,
+  violationReports: mmViolationReports,
   documents: mmDocuments,
   governingDocs: mmGoverning,
   governingAmendments: mmGoverningAmendments,
-  complianceItems: mmCompliance,
   meetings: mmMeetings,
   ballots: mmBallots,
   threads: mmThreads,
