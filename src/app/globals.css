@@ -52,6 +52,17 @@
   --accent:      #2c6cd1;
   --ring:        #2c6cd1;
 
+  /* The landing hero, from the design on 2026-08-27.
+     `royal` is the CTA blue: flatter and more purple than `brand`, and the
+     same in both themes because it is a painted button, not a surface.
+     `hero-field` and `hero-accent` do flip, so the section reads as day on
+     the light theme and as the designed night on the dark one. */
+  --royal:       #1b3e8c;
+  --royal-hover: #21489e;
+  --royal-fg:    #ffffff;
+  --hero-field:  #eef2f9;
+  --hero-accent: #2f68d8;
+
   --ok:        #2e7d5b;
   --ok-soft:   #e6f2ec;
   --warn:      #a8710f;
@@ -82,6 +93,12 @@
   --brand-soft-fg: var(--navy-100);
   --accent:      #6ea0f0;
   --ring:        #6ea0f0;
+
+  --royal:       #1b3e8c;
+  --royal-hover: #2450ad;
+  --royal-fg:    #ffffff;
+  --hero-field:  #001330;
+  --hero-accent: #7dabf8;
 
   --ok:        #5cbd92;
   --ok-soft:   #122d24;
@@ -124,6 +141,11 @@
   --color-brand-soft: var(--brand-soft);
   --color-brand-soft-fg: var(--brand-soft-fg);
   --color-accent:    var(--accent);
+  --color-royal:     var(--royal);
+  --color-royal-hover: var(--royal-hover);
+  --color-royal-fg:  var(--royal-fg);
+  --color-hero-field: var(--hero-field);
+  --color-hero-accent: var(--hero-accent);
 
   --color-ok:        var(--ok);
   --color-ok-soft:   var(--ok-soft);

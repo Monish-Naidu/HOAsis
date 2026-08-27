@@ -2,9 +2,12 @@
 
 Monish's friend designed a landing page and a logo on 2026-08-27. He wants it
 used. This file exists because the design arrived as a screenshot pasted into a
-conversation, and a conversation does not survive a session. **The image itself
-is not in the repo yet.** If `docs/design/landing-page-reference.png` is
-missing, ask Monish to re-send it before doing detailed work.
+conversation, and a conversation does not survive a session.
+
+**Built on 2026-08-27.** The reference screenshot is now in the repo at
+`docs/design/landing-page-reference.png`, the mark is redrawn in
+`src/components/app/logo.tsx`, and the hero is the top of `src/app/page.tsx`.
+What is still outstanding is at the bottom of this file.
 
 ## Decisions already taken
 
@@ -65,29 +68,57 @@ trees and hedges between them, and path lights along the roads. Soft, low
 contrast, matte, no photographic texture. Reads as an illustration rather than
 a render.
 
-## What is needed before building it
+## What was built, and from what
 
-1. **The asset files.** Nothing can be wired without them.
-   - Logo: `public/brand/hoasis-mark.svg`, or PNG at 512px or larger.
-   - Hero: `public/marketing/hero-community.png` or `.webp`.
-2. **A day render of the same scene**, ideally: identical composition, daylight
-   palette, no window glow, at `public/marketing/hero-community-day.png`. The
-   supplied illustration is a night scene, and dropped onto the white theme it
-   reads as a dark slab rather than as a light-mode hero.
-3. **The reference screenshot itself**, at
-   `docs/design/landing-page-reference.png`, so this file stops being the only
-   record of it.
+The friend's assets never arrived, so both were derived from the screenshot:
 
-If no day render is coming, the fallback is to use the night illustration in
-both themes and treat it as a deliberately dark panel inset on the white page.
-That works. It is not the same idea, and it should be a choice rather than a
-default.
+- **The mark** is redrawn, not traced. `src/components/app/logo.tsx` is an open
+  `currentColor` stroke on a 40 unit box: circle, palm of eight fronds, two
+  dune ridges, a shoreline and two water strokes. Geometry was measured off the
+  screenshot at 6.7x. It replaces the old filled navy square holding a
+  roofline, so the change is everywhere the `Wordmark` appears, which is what
+  Monish asked for. Nothing is clipped, so there is no `id` to collide when the
+  header mark and the footer mark are on the same page.
+- **The hero illustration** is `public/marketing/hero-community.jpg`, cut from
+  the text-free right side of the screenshot (x 735, y 145, 801 by 879),
+  upscaled 2x and saved at JPEG 90. It is soft at very large sizes. See
+  `public/marketing/CREDITS.md`.
 
-## How to build it so a missing file is not a broken page
+Colours were sampled off the screenshot and added to `src/app/globals.css` and
+`src/lib/tokens.ts` as required:
 
-Build the hero to take both images and fall back to whichever exists, so the
-night render can land first and day can follow later without another pass.
-Colours come from semantic tokens as always, so the section flips with the
-theme rather than being painted navy twice. If the friend's blues do not exist
-in the ramp, add them to **both** `src/app/globals.css` and
-`src/lib/tokens.ts`, which `CLAUDE.md` requires.
+| Token | Light | Dark | From |
+| --- | --- | --- | --- |
+| `--royal` | `#1b3e8c` | `#1b3e8c` | the CTA button, same in both themes |
+| `--hero-field` | `#eef2f9` | `#001330` | the hero ground |
+| `--hero-accent` | `#2f68d8` | `#7dabf8` | the accent word, darkened for the light theme so it holds contrast |
+
+Layout notes worth keeping:
+
+- The illustration is a 58% wide band pinned to the right of the section,
+  bleeding off the edge, dissolved into the field by a gradient painted in the
+  field colour itself. That is why one set of markup works in both themes.
+- Both themes, resolved. The light theme lifts the night render with
+  `brightness-[1.28] saturate-[.82]` rather than dropping it on the page as a
+  dark slab. It reads as an overcast morning, which is close enough to day to
+  live on a white ground.
+- Under `lg` the same image runs full width beneath the copy.
+- The header was left alone apart from the CTA colour. The design's nav sits
+  borderless on the hero; ours is sticky and needs a background once you
+  scroll, and that is a scroll listener for a small gain.
+- The design's nav is Features, Solutions, Pricing, Resources, About. Ours is
+  Home, Pricing, Library, About, because those are the pages that exist. Do not
+  add nav for pages we do not have.
+
+## Still outstanding
+
+1. **The original artwork**, whenever the friend can send it.
+   - Logo: an SVG, so the redraw can be checked against it or replaced.
+   - Hero: the full-resolution render. The current crop loses the left half of
+     the ring road, which is the part of the composition that reads as a
+     neighbourhood rather than as a lake.
+2. **A day render of the same scene**: identical composition, daylight palette,
+   no window glow, at `public/marketing/hero-community-day.png`. The CSS filter
+   is a stand-in, not the idea.
+3. **The friend's typeface**, if there is one. The wordmark is currently Geist
+   semibold, which is close but not obviously the same face.

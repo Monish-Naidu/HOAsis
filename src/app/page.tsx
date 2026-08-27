@@ -7,7 +7,6 @@ import {
   MessageSquareText,
   ScaleIcon,
   ShieldCheck,
-  Users,
   Vote,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
@@ -191,29 +190,56 @@ export default function MarketingHome() {
     <div className="min-h-dvh bg-bg">
       <MarketingHeader />
 
-      {/* Hero */}
-      <section className="relative isolate overflow-hidden border-b border-border">
-        {/* A soft wash of brand color behind everything, so the section reads as
-            designed rather than as a photo with text dropped on it. */}
+      {/* Hero
+          The design Monish's friend drew on 2026-08-27, kept as a layout and
+          repointed at our positioning: their headline sold HOA management in
+          general, which is what every competitor's homepage already says.
+          `docs/design/landing-page.md` has the decisions in full.
+
+          The illustration is a night scene, so on the light theme the right
+          side of the band is deliberately a dark panel rather than a washed
+          out version of itself. When a daylight render of the same scene
+          arrives it drops in behind `hero-community-day` without a layout
+          change. */}
+      <section className="relative isolate overflow-hidden border-b border-border bg-hero-field">
+        {/* Full height, bleeding off the right edge, dissolved into the field
+            on its left rather than sitting in a box. The overlay is painted in
+            the field colour itself, so the fade lands on the page in either
+            theme without a second set of values. */}
         <div
-          className="absolute inset-0 -z-20 bg-[radial-gradient(120%_90%_at_15%_0%,var(--brand-soft)_0%,transparent_55%)]"
+          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] lg:block"
           aria-hidden
-        />
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-14 px-5 pb-20 pt-14 sm:pb-24 sm:pt-20 lg:grid-cols-[1fr_1fr] lg:gap-16">
-          <div>
+        >
+          <Image
+            src="/marketing/hero-community.jpg"
+            alt=""
+            fill
+            priority
+            sizes="58vw"
+            // The render is a night scene. On the light theme it is lifted
+            // and desaturated rather than dropped on the page as a dark slab,
+            // which is close enough to daylight to sit on a white ground. A
+            // real day render replaces the filter, not the layout.
+            className="object-cover object-[left_top] brightness-[1.28] saturate-[.82] dark:brightness-100 dark:saturate-100"
+          />
+          {/* The fade holds solid for the first stretch and then runs long,
+              so the illustration arrives out of the field instead of starting
+              at a visible edge. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[9%] via-hero-field/45 via-[44%] to-transparent to-[82%]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-hero-field/65 via-transparent via-[38%] to-hero-field/55" />
+        </div>
+
+        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[44rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-center lg:pb-24">
+          <div className="lg:pr-8">
             <Reveal>
-              <Badge tone="ok" dot>
-                Built for new communities
-              </Badge>
-              <h1 className="mt-5 text-balance text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
-                Hand over an HOA{" "}
-                <span className="bg-gradient-to-br from-navy-700 to-accent bg-clip-text text-transparent dark:from-navy-200 dark:to-accent">
-                  that already works.
-                </span>
+              <h1 className="text-balance text-[42px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[52px]">
+                Hand over an HOA
+                <br />
+                <span className="text-hero-accent">that already works.</span>
               </h1>
             </Reveal>
             <Reveal delay={90}>
-              <p className="mt-6 max-w-lg text-[17px] leading-relaxed text-fg-muted">
+              <p className="mt-6 max-w-md text-[17px] leading-relaxed text-fg-muted">
                 Stand the association up from the plat, before the first home closes. Every
                 lot on the books, reserves funded from the first assessment, and documents a
                 buyer can actually read. Then hand it to the owners with nothing to explain.
@@ -223,7 +249,7 @@ export default function MarketingHome() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/start"
-                  className="group inline-flex h-12 items-center gap-2 rounded-xl bg-brand px-6 text-[17px] font-semibold text-brand-fg shadow-raised transition-all hover:-translate-y-0.5 hover:shadow-float"
+                  className="group inline-flex h-12 items-center gap-2 rounded-xl bg-royal px-6 text-[17px] font-semibold text-royal-fg shadow-raised transition-all hover:-translate-y-0.5 hover:bg-royal-hover hover:shadow-float"
                 >
                   Set up a community
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -247,40 +273,20 @@ export default function MarketingHome() {
               </p>
             </Reveal>
           </div>
+        </div>
 
-          {/* The photograph earns its place by being visible, rather than being
-              flattened to a texture behind the words. */}
-          <Reveal delay={120}>
-            <figure className="relative">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border border-border shadow-float">
-                <Image
-                  src="/marketing/neighborhood.jpg"
-                  alt="A residential street of homes with mature trees and sidewalks"
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 520px"
-                  className="object-cover"
-                />
-              </div>
-              {/* Not a statistic. Whoever ends up running this community is
-                  three owners with day jobs, however carefully the builder set
-                  it up, and the thing worth saying is that the product expects
-                  exactly that and nothing more. */}
-              <figcaption className="absolute -bottom-6 -left-4 flex max-w-[20rem] items-center gap-3.5 rounded-2xl border border-border bg-surface/95 px-4 py-3.5 shadow-float backdrop-blur-md sm:-left-8">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-fg">
-                  <Users className="size-5" strokeWidth={2} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[15px] font-semibold text-fg">
-                    Ends up with the owners
-                  </span>
-                  <span className="block text-[13px] leading-snug text-fg-muted">
-                    Built so a neighbor with a day job can take it over
-                  </span>
-                </span>
-              </figcaption>
-            </figure>
-          </Reveal>
+        {/* Under lg there is no room beside the copy, so the same illustration
+            runs full width beneath it and keeps its own aspect. */}
+        <div className="relative -mb-px aspect-[16/11] w-full lg:hidden">
+          <Image
+            src="/marketing/hero-community.jpg"
+            alt="An aerial illustration of a subdivision at night, homes facing a ring road around a lake with a pavilion on the island in the middle"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover brightness-[1.28] saturate-[.82] dark:brightness-100 dark:saturate-100"
+          />
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-hero-field to-transparent" />
         </div>
       </section>
 

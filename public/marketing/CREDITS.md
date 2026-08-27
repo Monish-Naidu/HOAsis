@@ -1,5 +1,22 @@
 # Photo credits
 
+## The hero illustration
+
+`hero-community.jpg` is the one image here that is not a photograph, and it is
+not pretending to be. It is the stylised aerial a friend of Monish's drew for
+the landing page on 2026-08-27, and it reads as a drawing at a glance, which is
+the point: an illustration says "this is how we see it" where a fake photograph
+says "this is a place", and only the second one is a lie.
+
+It was cut out of the design screenshot rather than exported, because the
+screenshot is all we were given. `docs/design/landing-page-reference.png` is
+that screenshot; the crop is its right-hand side, upscaled. **Replace it with
+the original render when the artwork arrives**, and a daylight version of the
+same scene alongside it if one is ever made. Until then the light theme lifts
+the night scene with a CSS filter.
+
+## Photographs
+
 Every photograph here is a photograph. Nothing is generated, and each one was
 looked at before it went in: a render or a composite reads as fake to exactly
 the audience we are asking to trust us with their money.
