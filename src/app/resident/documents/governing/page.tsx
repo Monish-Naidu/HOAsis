@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, FileText, Vote } from "lucide-react";
+import { ArrowLeft, ChevronRight, FileText, ShieldQuestion, Vote } from "lucide-react";
 import { Badge, Card, EmptyState } from "@/components/ui/primitives";
-import { BylawReader } from "@/components/app/bylaw-reader";
+import { GoverningReader } from "@/components/app/governing-reader";
 import { AmendmentDiff } from "@/components/app/amendment-diff";
+import { DocumentHierarchy } from "@/components/app/document-hierarchy";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 
-export default function ResidentBylaws() {
+export default function ResidentGoverningDocuments() {
   const { community } = useAppState();
-  const articles = community.bylaws;
-  const open = community.bylawAmendments.filter((a) => a.stage === "open");
+  const articles = community.governingDocs;
+  const open = community.governingAmendments.filter((a) => a.stage === "open");
 
   return (
     <div className="animate-rise space-y-5">
@@ -24,10 +25,11 @@ export default function ResidentBylaws() {
           Documents
         </Link>
         <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.025em] text-fg">
-          Bylaws
+          The rules you live under
         </h1>
         <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
-          What each article means, in plain words, with the exact wording one tap away.
+          Three documents, searchable together, in plain words, with the exact wording one
+          tap away.
         </p>
       </div>
 
@@ -35,12 +37,33 @@ export default function ResidentBylaws() {
         <Card>
           <EmptyState
             icon={<FileText className="size-6" />}
-            title="The bylaws are here as a file"
-            description="Your board has uploaded the document but has not added the text yet, so it cannot be searched. You can still download it from Documents."
+            title="The documents are here as files"
+            description="Your board has uploaded them but has not added the text yet, so they cannot be searched. You can still download them from Documents."
           />
         </Card>
       ) : (
         <>
+          <Link
+            href="/resident/documents/what-you-agreed-to"
+            className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
+              <ShieldQuestion className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold text-fg">
+                The eight things worth knowing
+              </span>
+              <span className="block text-[13px] leading-snug text-fg-muted">
+                Flags, solar, signs, parking, working from home, renting out, what needs
+                approval, and what happens if you fall behind
+              </span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+          </Link>
+
+          <DocumentHierarchy articles={articles} />
+
           {open.length > 0 ? (
             <div className="space-y-3">
               {open.map((amendment) => {
@@ -90,7 +113,7 @@ export default function ResidentBylaws() {
             </div>
           ) : null}
 
-          <BylawReader
+          <GoverningReader
             articles={articles}
             amendedIds={open.map((a) => a.articleId ?? "").filter(Boolean)}
           />

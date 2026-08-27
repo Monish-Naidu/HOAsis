@@ -1,7 +1,7 @@
 # What is left
 
-Handoff written 2026-08-26. Everything not listed here is built, tested and
-pushed. Test suite at the time of writing: **321 unit, 101 end to end, 198
+Handoff updated 2026-08-26. Everything not listed here is built, tested and
+pushed. Test suite at the time of writing: **359 unit, 110 end to end, 198
 database checks**, all green.
 
 Run all three before and after any change:
@@ -15,22 +15,59 @@ pnpm db:verify                                            # hits the real Supaba
 
 ---
 
-## The five open items, in the order to do them
+## The four open items, in the order to do them
 
-These came from one list of ten. Five are done: the collections ladder, the
-actionable past-due card, roster pagination, the ballot builder, and recording
-a vendor payment on a date the board picks.
+These came from one list of ten. Six are done: the collections ladder, the
+actionable past-due card, roster pagination, the ballot builder, recording a
+vendor payment on a date the board picks, and the governing documents.
 
-### 10. Bylaws, CC&Rs, templates, and parsing an uploaded document
+### 10. Bylaws, CC&Rs, templates, and parsing an uploaded document — DONE
 
-**Do this one first.** It is the most valuable, and 4 and 5 depend on it,
-because a violation cites the documents this item structures.
+Built 2026-08-26. What shipped:
 
-What was asked: explain the difference between bylaws and CC&Rs, decide whether
-to ship a template, let a board upload their existing documents and parse them,
-and give a new owner a way to understand what they are buying into.
+- **The three documents are separate things in the model.** `GoverningArticle`
+  carries `document: "declaration" | "bylaws" | "rules"`. `Community.bylaws`
+  became `Community.governingDocs`, because a field named `bylaws` holding
+  CC&Rs is the exact conflation this item existed to fix. The declaration got
+  twelve articles and the board-adopted rules six, in
+  `src/lib/data/governing.ts`.
+- **The hierarchy is functional, not decorative.** `src/lib/governing.ts` holds
+  it. Amending the declaration reads seventy-five percent and recording with
+  the county out of the association's own Article XII; amending the bylaws
+  reads sixty-seven percent out of theirs; a rule takes a board vote and no
+  owner vote, and the amend screen says so and changes its own button. The
+  reader and `DocumentHierarchy` put state law above all three.
+- **Citations resolve.** `resolveCitation` turns "CC&Rs Art. IX §2(b)" into the
+  article, keeps the declaration's Article VII apart from the bylaws' Article
+  VII, and refuses rather than guesses. The violations list on
+  `/admin/requests` links a resolved citation and flags an unresolved one,
+  which is a real finding: a notice naming a provision nobody can produce.
+- **The new owner screen.** `/resident/documents/what-you-agreed-to` and the
+  board's `/admin/documents/new-owner`, both on the eight statutory disclosure
+  topics, each answered by a confirmed provision or left blank. A word match is
+  shown as a candidate to check, never as an answer.
+- **Import.** `/admin/documents/import`. `src/lib/governing-extract.ts` is a
+  real parser over text: it splits on the outermost heading level the document
+  uses, keeps wording verbatim, borrows a title from the next line and flags
+  that it did, reports preamble and empty headings as gaps, refuses a number
+  the document already has, and writes no plain reading at all.
+- **Templates.** Decided in `docs/decisions/shipping-document-templates.md`: no
+  declaration or bylaw text, ever; four starter policies at the rules layer in
+  `src/lib/data/policy-templates.ts`, offered only when the rules are selected.
 
-Research already in hand, from `docs/research/` and the agent reports:
+Still worth doing here, none of it blocking:
+
+- **PDF text extraction.** The import screen takes pasted text or a `.txt`
+  file. A PDF is refused with an explanation, because reading one as text gives
+  back its object stream. This belongs on the server.
+- **Editing an imported article.** A board can import and can amend, but cannot
+  write the missing plain reading directly in the reader. Right now the route
+  is to amend the article, which is heavier than the job.
+- **Tagging a disclosure candidate from the board screen.**
+  `/admin/documents/new-owner` lists the unconfirmed candidates for a topic but
+  has no tick to confirm one; the tick only exists during import.
+
+The research that fed it, kept because the reasoning still applies:
 
 - Three legislatures independently converged on the same short list of what a
   buyer must be warned about: **flags, solar, signs, parking, home business,
@@ -53,28 +90,19 @@ Research already in hand, from `docs/research/` and the agent reports:
   are windows rather than prohibitions, and an owner who does not know a rule
   exists cannot request the approval that would have made the project legal.
 
-**Decided already: we index governing documents, we do not judge them.** No
+**Standing: we index governing documents, we do not judge them.** No
 auto-detection of violations from a parsed document, ever. The reasoning is in
 `docs/decisions/parsing-governing-documents.md` and it is not an accuracy
-argument, so a better model does not reopen it. Build the four things that
-document lists: extract and index for search, help a board cite a provision
-correctly when they write a notice, tell a new owner what they are buying into
-using the statutory disclosure list, and show the parse as a draft the board
-confirms rather than as fact.
-
-Already built and reusable: `src/lib/data/bylaws.ts` holds structured articles
-with both the governing text and a plain reading;
-`src/components/app/bylaw-reader.tsx` renders and searches them;
-`src/components/app/amendment-diff.tsx` shows what an amendment changes.
+argument, so a better model does not reopen it. Everything built above holds
+that line, and the tests in `tests/unit/governing.test.ts` exist mostly to
+catch a future change that quietly starts asserting what a provision means.
 
 ### 4. Violations, and where they come from
 
-Map a violation to the rule it breaks. `Violation.ruleCitation` already carries
-strings like `CC&Rs Art. IX §2(b)`, but they are text, not links. Now that
-bylaws are structured, make the citation resolve.
-
-Whether residents can report violations is the sensitive half. Research that
-did land, from a survey of what other platforms ship:
+**Do this one first now.** Half of it is already done: the citation resolves
+and links, and an unresolved one is flagged. What is left is the sensitive
+half, whether residents can report violations. Research that did land, from a
+survey of what other platforms ship:
 
 - Management company and law firm guidance converges on one rule: **a complaint
   is an input to an investigation, never a basis for enforcement.** Evidence
@@ -160,3 +188,12 @@ ones differ by state.
 - The persisted slice validator falls through to "an array of records with
   ids". A slice holding a single object needs its own guard in
   `src/lib/core/guards.ts` or it silently falls back to the seed on every read.
+- The governing documents were renamed on 2026-08-26. `bylaws.ts` is now
+  `governing.ts`, `BylawArticle` is `GoverningArticle`, `bylaw-reader.tsx` is
+  `governing-reader.tsx`, and both `/admin/documents/bylaws` and
+  `/resident/documents/bylaws` are now `.../governing`. Anything written before
+  that date naming the old paths is stale.
+- `addGoverningArticles` drops an article whose number the document already
+  has, rather than merging. The import screen warns before the click, because
+  the alternative is a document with two Article VIIs and a board citing into
+  the ambiguity.

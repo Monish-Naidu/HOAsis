@@ -1,7 +1,7 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import type { BylawAmendment, BylawArticle } from "@/lib/types";
+import type { GoverningAmendment, GoverningArticle } from "@/lib/types";
 
 /**
  * What the words become.
@@ -16,9 +16,9 @@ export function AmendmentDiff({
   amendment,
   current,
 }: {
-  amendment: BylawAmendment;
+  amendment: GoverningAmendment;
   /** The article as it stands. Absent when the proposal adds a new one. */
-  current?: BylawArticle;
+  current?: GoverningArticle;
 }) {
   const before = current?.text ?? [];
   const after = amendment.kind === "remove" ? [] : amendment.text;

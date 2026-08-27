@@ -1,8 +1,8 @@
 import type {
   Account,
   AmenityBooking,
-  BylawAmendment,
-  BylawArticle,
+  GoverningAmendment,
+  GoverningArticle,
   Amenity,
   Announcement,
   ArchitecturalForm,
@@ -104,8 +104,8 @@ export interface Community {
    * than only downloaded. Empty for an association that has only uploaded a
    * scan, which every screen handles by pointing at the file instead.
    */
-  bylaws: BylawArticle[];
-  bylawAmendments: BylawAmendment[];
+  governingDocs: GoverningArticle[];
+  governingAmendments: GoverningAmendment[];
   complianceItems: ComplianceItem[];
 
   meetings: Meeting[];

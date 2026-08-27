@@ -9,7 +9,9 @@ import {
   FileSpreadsheet,
   FileText,
   Globe,
+  ScanLine,
   Search,
+  ShieldQuestion,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -24,6 +26,7 @@ import {
 import { useState } from "react";
 import Link from "next/link";
 import { publicRecordsUrl, recordsGaps } from "@/lib/metrics";
+import { GOVERNING_DOCS, disclosureCoverage, documentsPresent } from "@/lib/governing";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { formatDate, pluralize, todayIsoDate } from "@/lib/utils";
@@ -83,7 +86,10 @@ export default function BoardDocuments() {
   const [query, setQuery] = useState("");
   const publicDocs = documents.filter((d) => d.visibility === "public");
   const gaps = recordsGaps({ ...community, documents });
-  const openAmendments = community.bylawAmendments.filter((a) => a.stage === "open").length;
+  const governing = community.governingDocs;
+  const docsInWords = documentsPresent(governing);
+  const coverage = disclosureCoverage(governing);
+  const openAmendments = community.governingAmendments.filter((a) => a.stage === "open").length;
   const grouped = order
     .map((category) => ({
       category,
@@ -168,29 +174,79 @@ export default function BoardDocuments() {
         ) : null}
       </Card>
 
-      {community.bylaws.length > 0 ? (
+      <div className="mb-5 space-y-3">
         <Link
-          href="/admin/documents/bylaws"
-          className="mb-5 flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+          href="/admin/documents/governing"
+          className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
             <BookOpen className="size-5" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-fg">
-              Bylaws, readable and amendable
+              {docsInWords.length > 0
+                ? `${docsInWords.map((d) => GOVERNING_DOCS[d].label).join(", ")}, readable and amendable`
+                : "Your documents are files, not text"}
             </span>
             <span className="block text-[13px] leading-snug text-fg-muted">
-              {community.bylaws.length} articles owners can search in plain words.
+              {governing.length > 0
+                ? `${governing.length} articles owners can search in plain words.`
+                : "Owners can download them but cannot search them."}
               {openAmendments > 0
                 ? ` ${openAmendments} change${openAmendments === 1 ? "" : "s"} on the ballot.`
-                : " Start an amendment here."}
+                : ""}
             </span>
           </span>
           {openAmendments > 0 ? <Badge tone="warn">On the ballot</Badge> : null}
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
         </Link>
-      ) : null}
+
+        {/* The disclosure list is the one measure of these documents that a
+            board can act on. A count of articles says nothing; "three of the
+            eight things a buyer must be told have no answer on file" is a
+            morning's work with a clear finish. */}
+        <Link
+          href="/admin/documents/new-owner"
+          className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
+            <ShieldQuestion className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-fg">
+              What a new owner is told
+            </span>
+            <span className="block text-[13px] leading-snug text-fg-muted">
+              {coverage.answered === coverage.total
+                ? "All eight of the things a buyer must be warned about are answered by a provision."
+                : `${coverage.total - coverage.answered} of the ${coverage.total} things a buyer must be warned about have no confirmed answer.`}
+            </span>
+          </span>
+          <span className="tnum shrink-0 text-[15px] font-semibold text-fg">
+            {coverage.answered} / {coverage.total}
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+        </Link>
+
+        <Link
+          href="/admin/documents/import"
+          className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
+            <ScanLine className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-fg">
+              Import the text of a document
+            </span>
+            <span className="block text-[13px] leading-snug text-fg-muted">
+              Reads an uploaded declaration or rule set into articles owners can search. You
+              confirm every one of them.
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+        </Link>
+      </div>
 
       <Callout
         tone="ok"

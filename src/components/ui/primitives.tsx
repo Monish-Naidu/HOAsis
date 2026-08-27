@@ -355,10 +355,13 @@ export function EmptyState({
   icon,
   title,
   description,
+  action,
 }: {
   icon?: ReactNode;
   title: string;
   description?: string;
+  /** The one thing that would fill this emptiness, when there is one. */
+  action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -367,6 +370,7 @@ export function EmptyState({
       {description ? (
         <p className="mt-1 max-w-sm text-[15px] text-fg-muted">{description}</p>
       ) : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }

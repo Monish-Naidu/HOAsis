@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { allCommunities, mehrMeadows } from "@/lib/data/communities";
-import { bylawAmendments, bylawArticles } from "@/lib/data/bylaws";
+import { governingAmendments, governingArticles } from "@/lib/data/governing";
+import { violations } from "@/lib/data/requests";
+import { policyTemplates } from "@/lib/data/policy-templates";
+import { disclosureCoverage, resolveCitation } from "@/lib/governing";
 import { sharedCostBills, sharedCosts } from "@/lib/data/shared-costs";
 import { LIBRARY_TOPICS, STATES, libraryArticles } from "@/lib/data/library";
 
@@ -111,24 +114,61 @@ describe("every community is internally consistent", () => {
   }
 });
 
-describe("the bylaws", () => {
-  it("numbers every article once", () => {
-    const numbers = bylawArticles.map((a) => a.number);
-    expect(new Set(numbers).size).toBe(numbers.length);
+describe("the governing documents", () => {
+  it("numbers every article once within its own document", () => {
+    // Article VII of the declaration and Article VII of the bylaws are two
+    // different provisions. Uniqueness is per document, and conflating them is
+    // how a citation lands on the wrong one.
+    for (const doc of ["declaration", "bylaws", "rules"] as const) {
+      const numbers = governingArticles.filter((a) => a.document === doc).map((a) => a.number);
+      expect(new Set(numbers).size, `${doc} repeats an article number`).toBe(numbers.length);
+    }
+  });
+
+  it("gives every id once across all three documents", () => {
+    const ids = governingArticles.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("gives every article both the governing text and a plain reading", () => {
-    for (const article of bylawArticles) {
+    for (const article of governingArticles) {
       // Showing only the summary is misleading; only the deed language
-      // recreates the PDF nobody opens.
+      // recreates the PDF nobody opens. Text pulled from an upload is allowed
+      // to arrive without a plain reading, but nothing seeded here has that
+      // excuse.
       expect(article.text.length, `${article.number} has no text`).toBeGreaterThan(0);
-      expect(article.plain.length, `${article.number} has no plain reading`).toBeGreaterThan(20);
+      expect(article.extraction, `${article.number} is seeded, not extracted`).toBeUndefined();
+      expect(
+        (article.plain ?? "").length,
+        `${article.number} has no plain reading`,
+      ).toBeGreaterThan(20);
+    }
+  });
+
+  it("answers every one of the eight things a buyer must be told", () => {
+    // The demo association is the worked example. If its own documents cannot
+    // answer the statutory disclosure list, the screen built on that list has
+    // nothing to show.
+    const coverage = disclosureCoverage(governingArticles);
+    expect(coverage.gaps, `nothing addresses ${coverage.gaps.join(", ")}`).toEqual([]);
+    expect(coverage.answered).toBe(coverage.total);
+  });
+
+  it("resolves every citation a violation makes", () => {
+    // A citation that does not resolve is a notice resting on a provision
+    // nobody can find, which is the thing that loses at a hearing.
+    for (const violation of violations) {
+      const match = resolveCitation(violation.ruleCitation, governingArticles);
+      expect(
+        match.article?.number,
+        `${violation.reference} cites ${violation.ruleCitation}, which resolves to nothing`,
+      ).toBeTruthy();
     }
   });
 
   it("points every amendment at an article that exists", () => {
-    const ids = new Set(bylawArticles.map((a) => a.id));
-    for (const amendment of bylawAmendments) {
+    const ids = new Set(governingArticles.map((a) => a.id));
+    for (const amendment of governingAmendments) {
       if (amendment.kind === "add") continue;
       expect(
         ids.has(amendment.articleId ?? ""),
@@ -138,9 +178,35 @@ describe("the bylaws", () => {
   });
 
   it("never proposes a change that removes everything by accident", () => {
-    for (const amendment of bylawAmendments) {
+    for (const amendment of governingAmendments) {
       if (amendment.kind === "remove") continue;
       expect(amendment.text.length, `${amendment.title} would empty the article`).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("the starter policies", () => {
+  it("offers a number that does not collide with a rule already on file", () => {
+    // A collision imports as nothing, and the board is left with a button that
+    // appeared to work. Cheaper to catch here than on screen.
+    const taken = new Set(
+      governingArticles.filter((a) => a.document === "rules").map((a) => a.number),
+    );
+    for (const template of policyTemplates) {
+      expect(
+        taken.has(template.suggestedNumber),
+        `${template.title} would land on an existing ${template.suggestedNumber}`,
+      ).toBe(false);
+    }
+  });
+
+  it("names the obligation behind every one of them", () => {
+    // A starter offered without saying why is us asserting that a board needs
+    // this. Naming the statute makes it checkable rather than trusted.
+    for (const template of policyTemplates) {
+      expect(template.basis.length, `${template.title} names no basis`).toBeGreaterThan(40);
+      expect(template.why.length, `${template.title} says nothing about why`).toBeGreaterThan(40);
+      expect(template.text.length, `${template.title} has no wording`).toBeGreaterThan(2);
     }
   });
 });

@@ -15,7 +15,22 @@ import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday } from "@/lib/utils";
 import { formatDate, relativeDays } from "@/lib/utils";
+import { resolveCitation } from "@/lib/governing";
+import type { CitationMatch } from "@/lib/governing";
 import type { RequestStatus, Violation } from "@/lib/types";
+
+/**
+ * Why a citation did not land, said so a board can fix it.
+ *
+ * An unresolved citation is not a display problem. It means the notice names a
+ * provision nobody can produce, and "which provision are you relying on" is
+ * the first question at a hearing.
+ */
+const CITATION_PROBLEM: Record<NonNullable<CitationMatch["problem"]>, string> = {
+  "no-document": "does not name which document",
+  "not-in-this-document": "names no article that exists",
+  "document-not-loaded": "that document is not on file as text",
+};
 
 const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
   approved: "ok",
@@ -205,6 +220,11 @@ export default function BoardRequests() {
           />
           {violations.map((v) => {
             const meta = stageMeta[v.stage];
+            // A citation that resolves is a link into the words the notice
+            // rests on. One that does not is a finding: either it was
+            // mistyped, or the document it names has never been put into
+            // words here. Both are worth knowing before the hearing.
+            const cited = resolveCitation(v.ruleCitation, community.governingDocs);
             return (
               <div
                 key={v.id}
@@ -219,9 +239,30 @@ export default function BoardRequests() {
                     {v.reference} · Unit {v.unit} · {v.ownerName}
                   </p>
                   <p className="mt-0.5 text-[13px] text-fg-subtle">
-                    {v.ruleCitation} · opened {formatDate(v.openedDate)}
+                    {cited.article ? (
+                      <Link
+                        href="/admin/documents/governing"
+                        className="font-medium text-brand hover:underline"
+                        title={cited.article.title}
+                      >
+                        {v.ruleCitation}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-warn">
+                        {v.ruleCitation} · {CITATION_PROBLEM[cited.problem ?? "no-document"]}
+                      </span>
+                    )}{" "}
+                    · opened {formatDate(v.openedDate)}
                     {v.stage !== "cured" ? ` · next action ${relativeDays(v.nextActionDate)}` : ""}
                   </p>
+                  {cited.article ? (
+                    <p className="mt-0.5 text-[13px] text-fg-muted">
+                      {cited.article.title}
+                      {cited.parsed.section
+                        ? `, at section ${cited.parsed.section}`
+                        : ""}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="shrink-0 text-right">
                   {v.fineCents ? (

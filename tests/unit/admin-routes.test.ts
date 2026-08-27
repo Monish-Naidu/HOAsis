@@ -23,7 +23,7 @@ describe("capabilitiesFor", () => {
     expect(capabilitiesFor("/admin/money")).toEqual(["finances"]);
     // A child route inherits, or an unlisted child is a hole.
     expect(capabilitiesFor("/admin/money/anything")).toEqual(["finances"]);
-    expect(capabilitiesFor("/admin/documents/bylaws")).toEqual(
+    expect(capabilitiesFor("/admin/documents/governing")).toEqual(
       capabilitiesFor("/admin/documents"),
     );
   });

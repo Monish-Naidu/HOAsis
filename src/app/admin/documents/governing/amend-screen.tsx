@@ -12,12 +12,20 @@ import {
   EmptyState,
   PageHeader,
 } from "@/components/ui/primitives";
-import { BylawReader } from "@/components/app/bylaw-reader";
+import { GoverningReader } from "@/components/app/governing-reader";
 import { AmendmentDiff } from "@/components/app/amendment-diff";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import type { AmendmentKind, BylawAmendment } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
+import type { AmendmentKind, GoverningAmendment, GoverningDoc } from "@/lib/types";
+import {
+  GOVERNING_DOCS,
+  amendmentThreshold,
+  articlesIn,
+  documentsPresent,
+} from "@/lib/governing";
+import { policyTemplates } from "@/lib/data/policy-templates";
+import type { PolicyTemplate } from "@/lib/data/policy-templates";
+import { cn, formatDate } from "@/lib/utils";
 
 const STAGE_TONE = {
   draft: "neutral",
@@ -38,9 +46,24 @@ const STAGE_LABEL = {
 export function AmendScreen() {
   const { community } = useAppState();
   const { notify } = useToast();
-  const articles = community.bylaws;
+  const all = community.governingDocs;
+  const present = documentsPresent(all);
 
-  const [amendments, setAmendments] = useState<BylawAmendment[]>(community.bylawAmendments);
+  /**
+   * One document at a time.
+   *
+   * Amending is scoped to a document because the answer to "what does this
+   * take" is different for each of them, and a screen that lets a board pick
+   * Article VII without saying which Article VII is how the wrong instrument
+   * gets amended.
+   */
+  const [doc, setDoc] = useState<GoverningDoc>(present[0] ?? "bylaws");
+  const articles = articlesIn(all, doc);
+  const meta = GOVERNING_DOCS[doc];
+  const threshold = amendmentThreshold(all, doc);
+  const boardAdopted = doc === "rules";
+
+  const [amendments, setAmendments] = useState<GoverningAmendment[]>(community.governingAmendments);
   const [drafting, setDrafting] = useState<AmendmentKind | null>(null);
   const [targetId, setTargetId] = useState(articles[0]?.id ?? "");
   const [number, setNumber] = useState("");
@@ -77,6 +100,23 @@ export function AmendScreen() {
     }
   }
 
+  /**
+   * Loads a starter policy into the drafting form.
+   *
+   * A starter, not an adoption. The words land in the same boxes a board would
+   * have typed them into, and the recorded vote at the end is what gives them
+   * force. The reasoning for shipping these for rules and not for the
+   * declaration is in `docs/decisions/shipping-document-templates.md`.
+   */
+  function startFromTemplate(template: PolicyTemplate) {
+    setDrafting("add");
+    setNumber(template.suggestedNumber);
+    setTitle(template.title);
+    setBody(template.text.join("\n\n"));
+    setPlain(template.plain);
+    setRationale(template.why);
+  }
+
   function pickTarget(id: string) {
     setTargetId(id);
     const article = articles.find((a) => a.id === id);
@@ -93,9 +133,10 @@ export function AmendScreen() {
       .map((p) => p.trim())
       .filter(Boolean);
 
-    const amendment: BylawAmendment = {
+    const amendment: GoverningAmendment = {
       id: `amd-${Date.now()}`,
       kind: drafting,
+      document: doc,
       articleId: drafting === "add" ? undefined : targetId,
       number: number.trim() || "New article",
       title: title.trim() || "Untitled",
@@ -107,30 +148,40 @@ export function AmendScreen() {
       proposedBy: "Board of Directors",
       proposedOn: community.asOf,
       stage,
-      thresholdLabel: amendmentThreshold(articles),
+      thresholdLabel: threshold,
     };
     setAmendments((list) => [amendment, ...list]);
     reset();
     notify(
-      stage === "open"
-        ? "Sent to owners. Voting opens once the notice period passes."
-        : "Saved as a draft. Nobody has been notified.",
+      stage !== "open"
+        ? "Saved as a draft. Nobody has been notified."
+        : boardAdopted
+          ? "On the agenda. The board adopts this at a meeting, with no owner vote."
+          : "Sent to owners. Voting opens once the notice period passes.",
     );
   }
 
-  if (articles.length === 0) {
+  if (all.length === 0) {
     return (
       <>
         <PageHeader
           eyebrow="Documents"
-          title="Bylaws"
-          description="Add the text of your bylaws and owners can search them, read a plain summary of each article, and vote on changes with the exact wording in front of them."
+          title="Governing documents"
+          description="Import the text of your declaration, bylaws and rules and owners can search them, read a plain summary of each article, and vote on changes with the exact wording in front of them."
         />
         <Card>
           <EmptyState
             icon={<FileText className="size-6" />}
-            title="Only the file is here"
-            description="The bylaws are uploaded as a document, so owners can download them but cannot search them or see what an amendment would change."
+            title="Only the files are here"
+            description="The documents are uploaded as files, so owners can download them but cannot search them or see what an amendment would change."
+            action={
+              <Link
+                href="/admin/documents/import"
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90"
+              >
+                Import the text
+              </Link>
+            }
           />
         </Card>
       </>
@@ -141,7 +192,7 @@ export function AmendScreen() {
     <>
       <PageHeader
         eyebrow="Documents"
-        title="Bylaws"
+        title="Governing documents"
         description="What owners see, and where a change starts."
         action={
           <div className="flex gap-2">
@@ -161,15 +212,95 @@ export function AmendScreen() {
         }
       />
 
+      {/* Which document, before anything else. The three are not the same
+          instrument and they are not changed the same way, and a board that
+          picks the wrong one has amended nothing. */}
+      <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto pb-1">
+        {present.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            onClick={() => {
+              setDoc(kind);
+              reset();
+              const first = articlesIn(all, kind)[0];
+              if (first) setTargetId(first.id);
+            }}
+            aria-pressed={doc === kind}
+            className={cn(
+              "shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors",
+              doc === kind
+                ? "bg-brand text-brand-fg"
+                : "bg-surface-2 text-fg-muted hover:text-fg",
+            )}
+          >
+            {GOVERNING_DOCS[kind].label}
+          </button>
+        ))}
+      </div>
+
       <Callout
-        tone="info"
-        title={`Changing these bylaws takes ${amendmentThreshold(articles)}`}
+        tone={boardAdopted ? "warn" : "info"}
+        title={
+          boardAdopted
+            ? "The board adopts a rule on its own, which is why this layer is the risky one"
+            : `Changing this takes ${threshold}`
+        }
         icon={<Vote className="size-4" />}
       >
-        Owners must receive the marked up wording before voting opens. Drafting it here is
-        what produces that notice, so the vote is on the words rather than on a description
-        of them.
+        {boardAdopted
+          ? "No owner vote is needed, so nothing here stops a rule that goes further than the declaration allows. A rule that contradicts the document above it is void, and the time to catch that is now rather than at a hearing."
+          : `${meta.plain} Owners must receive the marked up wording before voting opens. Drafting it here is what produces that notice, so the vote is on the words rather than on a description of them.`}
       </Callout>
+
+      {/* Offered for the rules layer and nowhere else. A board already holds
+          the authority to adopt a rule; it does not hold the authority to be
+          handed a covenant we wrote and record it against everybody's land. */}
+      {boardAdopted && !drafting ? (
+        <Card className="mt-5">
+          <CardHeader
+            icon={<FilePlus2 className="size-4" />}
+            title="Policies most associations are expected to have"
+            subtitle="Starters you edit and adopt. Loading one changes nothing until the board votes."
+          />
+          <div className="divide-y divide-border">
+            {policyTemplates.map((template) => {
+              const already = articles.some(
+                (a) => a.title.toLowerCase() === template.title.toLowerCase(),
+              );
+              return (
+                <div key={template.id} className="flex items-start gap-3 px-5 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[15px] font-semibold text-fg">{template.title}</p>
+                      {already ? <Badge tone="ok">Already adopted</Badge> : null}
+                    </div>
+                    <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+                      {template.why}
+                    </p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-fg-subtle">
+                      {template.basis}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => startFromTemplate(template)}
+                  >
+                    Start from this
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
+            These are starting points, not legal advice, and they are offered for rules
+            only. Check each one against your declaration before adopting it: a rule that
+            goes further than the document above it is void. We do not supply covenant or
+            bylaw text, because those bind a home and the words should be your attorney&rsquo;s.
+          </p>
+        </Card>
+      ) : null}
 
       {drafting ? (
         <Card className="mt-5">
@@ -290,7 +421,8 @@ export function AmendScreen() {
                     proposedBy: "Board of Directors",
                     proposedOn: community.asOf,
                     stage: "draft",
-                    thresholdLabel: amendmentThreshold(articles),
+                    document: doc,
+                    thresholdLabel: threshold,
                   }}
                   current={drafting === "add" ? undefined : target}
                 />
@@ -300,7 +432,9 @@ export function AmendScreen() {
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => save("open")}>
                 <Send className="size-4" />
-                Send to owners and open voting
+                {boardAdopted
+                  ? "Put on the board agenda"
+                  : "Send to owners and open voting"}
               </Button>
               <Button variant="secondary" onClick={() => save("draft")}>
                 Save as a draft
@@ -354,9 +488,9 @@ export function AmendScreen() {
 
       <div className="mt-8">
         <h2 className="mb-3 text-[17px] font-semibold tracking-[-0.01em] text-fg">
-          The bylaws as they stand
+          {meta.label} as it stands
         </h2>
-        <BylawReader
+        <GoverningReader
           articles={articles}
           amendedIds={amendments
             .filter((a) => a.stage === "open")
@@ -375,18 +509,3 @@ export function AmendScreen() {
   );
 }
 
-/**
- * The threshold, read out of the association's own amendment article rather
- * than assumed.
- *
- * Every set of bylaws states its own bar, and it is usually a share of all
- * homes rather than of votes cast, which is a much higher hurdle than boards
- * expect. Hardcoding a majority here would quietly certify failed amendments.
- */
-function amendmentThreshold(articles: { text: string[]; title: string }[]): string {
-  const article = articles.find((a) => a.title.toLowerCase().includes("amendment"));
-  const match = article?.text
-    .join(" ")
-    .match(/([a-z-]+(?:\s+[a-z-]+)?)\s+percent of the total voting interests/i);
-  return match ? `${match[1]} percent of all homes` : "the share stated in your bylaws";
-}

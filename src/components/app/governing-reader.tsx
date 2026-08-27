@@ -1,18 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, Filter, Search, Sparkles } from "lucide-react";
+import { BookOpen, Filter, Landmark, Search, Sparkles } from "lucide-react";
 import { Badge, Card, EmptyState } from "@/components/ui/primitives";
-import type { BylawArticle, BylawTopic } from "@/lib/types";
+import type { GoverningArticle, GoverningDoc, GoverningTopic } from "@/lib/types";
+import { GOVERNING_DOCS, documentsPresent } from "@/lib/governing";
 import { formatDate, cn } from "@/lib/utils";
 
-const TOPIC_LABEL: Record<BylawTopic, string> = {
+const TOPIC_LABEL: Record<GoverningTopic, string> = {
   governance: "How it runs",
   money: "Money",
   meetings: "Meetings and votes",
   property: "Your home",
   enforcement: "Rules and fines",
   records: "Records",
+};
+
+/** Short enough to sit in front of an article number without crowding it. */
+const DOC_SHORT: Record<GoverningDoc, string> = {
+  declaration: "CC&Rs",
+  bylaws: "Bylaws",
+  rules: "Rules",
 };
 
 const AFFECTS_LABEL = {
@@ -22,36 +30,41 @@ const AFFECTS_LABEL = {
 } as const;
 
 /**
- * The bylaws, readable.
+ * The governing documents, readable.
  *
- * Two decisions carry this screen. The plain reading comes first and the
+ * Three decisions carry this screen. The plain reading comes first and the
  * governing text is one click away, because the plain reading is what makes
- * anybody look and the governing text is what actually binds. And every
- * article is tagged with who it constrains, because roughly half a bylaw set
- * is about how the board operates and an owner reading it cover to cover
- * gives up somewhere in Article V.
+ * anybody look and the governing text is what actually binds. Every article is
+ * tagged with who it constrains, because roughly half a bylaw set is about how
+ * the board operates and an owner reading it cover to cover gives up somewhere
+ * in Article V. And search runs across all three documents at once, because an
+ * owner with a question about a fence does not know which instrument the fence
+ * rule lives in, and should not have to.
  */
-export function BylawReader({
+export function GoverningReader({
   articles,
   amendedIds = [],
 }: {
-  articles: BylawArticle[];
+  articles: GoverningArticle[];
   /** Articles with a change currently on the table. */
   amendedIds?: string[];
 }) {
   const [query, setQuery] = useState("");
-  const [topic, setTopic] = useState<BylawTopic | "all">("all");
+  const [topic, setTopic] = useState<GoverningTopic | "all">("all");
+  const [doc, setDoc] = useState<GoverningDoc | "all">("all");
   const [mineOnly, setMineOnly] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
 
   const topics = useMemo(
-    () => [...new Set(articles.map((a) => a.topic))] as BylawTopic[],
+    () => [...new Set(articles.map((a) => a.topic))] as GoverningTopic[],
     [articles],
   );
+  const docs = useMemo(() => documentsPresent(articles), [articles]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     return articles.filter((a) => {
+      if (doc !== "all" && a.document !== doc) return false;
       if (topic !== "all" && a.topic !== topic) return false;
       if (mineOnly && a.affects === "board") return false;
       if (!q) return true;
@@ -60,11 +73,11 @@ export function BylawReader({
       return (
         a.title.toLowerCase().includes(q) ||
         a.number.toLowerCase().includes(q) ||
-        a.plain.toLowerCase().includes(q) ||
+        (a.plain ?? "").toLowerCase().includes(q) ||
         a.text.some((p) => p.toLowerCase().includes(q))
       );
     });
-  }, [articles, query, topic, mineOnly]);
+  }, [articles, query, topic, doc, mineOnly]);
 
   return (
     <div>
@@ -75,8 +88,8 @@ export function BylawReader({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search the bylaws, for example fence or late fee"
-            aria-label="Search the bylaws"
+            placeholder="Search all three documents, for example fence or late fee"
+            aria-label="Search the governing documents"
             className="h-10 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
           />
         </label>
@@ -95,6 +108,38 @@ export function BylawReader({
           Just what applies to me
         </button>
       </div>
+
+      {docs.length > 1 ? (
+        <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto pb-1">
+          {(["all", ...docs] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDoc(d)}
+              aria-pressed={doc === d}
+              className={cn(
+                "shrink-0 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                doc === d
+                  ? "border-brand bg-brand-soft text-brand-soft-fg"
+                  : "border-border-2 bg-surface text-fg-muted hover:text-fg",
+              )}
+            >
+              {d === "all" ? "All three documents" : GOVERNING_DOCS[d].label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Which document wins, said once, where somebody comparing two
+          provisions will actually be standing. */}
+      {doc !== "all" ? (
+        <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-relaxed text-fg-muted">
+          <Landmark className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            {GOVERNING_DOCS[doc].plain} Changed by {GOVERNING_DOCS[doc].changedBy.toLowerCase()}.
+          </span>
+        </p>
+      ) : null}
 
       <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto pb-1">
         {(["all", ...topics] as const).map((t) => (
@@ -120,7 +165,7 @@ export function BylawReader({
           <EmptyState
             icon={<BookOpen className="size-6" />}
             title="Nothing matches"
-            description="Try a plainer word. The search reads the full legal text, so a term from a letter you were sent should find it."
+            description="Try a plainer word. The search reads the full legal text of all three documents, so a term from a letter you were sent should find it."
           />
         </Card>
       ) : (
@@ -138,7 +183,7 @@ export function BylawReader({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[13px] font-semibold text-fg-muted">
-                      {article.number}
+                      {DOC_SHORT[article.document]} {article.number}
                     </span>
                     <Badge tone={article.affects === "owners" ? "brand" : "neutral"}>
                       {AFFECTS_LABEL[article.affects]}
@@ -149,15 +194,34 @@ export function BylawReader({
                         Amended {formatDate(article.amendedOn, "medium")}
                       </span>
                     ) : null}
+                    {/* A rule adopted after somebody bought still binds them,
+                        and they are entitled to know it was not there when
+                        they moved in. */}
+                    {article.adoptedOn ? (
+                      <span className="text-[13px] text-fg-subtle">
+                        Adopted by the board {formatDate(article.adoptedOn, "medium")}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-[17px] font-semibold tracking-[-0.01em] text-fg">
                     {article.title}
                   </p>
                   {/* The plain reading is the headline. The legal text is the
-                      footnote, which is the opposite of how a PDF presents it. */}
-                  <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
-                    {article.plain}
-                  </p>
+                      footnote, which is the opposite of how a PDF presents it.
+                      Where no plain reading has been written, the gap is shown
+                      as a gap: nothing here invents one, because a summary of a
+                      covenant is an interpretation and this screen does not
+                      make those. */}
+                  {article.plain ? (
+                    <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
+                      {article.plain}
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[15px] leading-relaxed text-fg-subtle">
+                      No plain reading has been written for this article yet. The exact
+                      wording is below.
+                    </p>
+                  )}
                   <p className="mt-2 text-[13px] font-medium text-brand">
                     {expanded ? "Hide the exact wording" : "Read the exact wording"}
                   </p>
@@ -167,7 +231,9 @@ export function BylawReader({
                   <div className="border-t border-border bg-surface-2 px-4 py-4">
                     <p className="flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
                       <Sparkles className="size-3.5" />
-                      As written in the recorded document
+                      {article.document === "declaration"
+                        ? "As written in the recorded declaration"
+                        : `As written in the ${GOVERNING_DOCS[article.document].label.toLowerCase()}`}
                     </p>
                     <div className="mt-2 space-y-2.5">
                       {article.text.map((paragraph, index) => (
@@ -179,6 +245,19 @@ export function BylawReader({
                         </p>
                       ))}
                     </div>
+                    {/* Where the words came from. Text a board typed and text
+                        pulled out of an upload are not the same kind of claim,
+                        and a reader is entitled to tell them apart. */}
+                    {article.extraction?.confirmedBy ? (
+                      <p className="mt-3 border-t border-border pt-3 text-[13px] leading-relaxed text-fg-subtle">
+                        Taken from the uploaded document and checked against it by{" "}
+                        {article.extraction.confirmedBy}
+                        {article.extraction.confirmedOn
+                          ? ` on ${formatDate(article.extraction.confirmedOn, "medium")}`
+                          : ""}
+                        .
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </Card>

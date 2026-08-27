@@ -155,6 +155,8 @@ interface AppState {
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
   addDocument: (document: Community["documents"][number]) => void;
+  /** Text confirmed out of an uploaded declaration, bylaws or rule set. */
+  addGoverningArticles: (articles: Community["governingDocs"]) => void;
   /**
    * Switching the shared cost layer on, and recording a provider bill.
    *
@@ -262,6 +264,9 @@ const MUTABLE_SLICES = [
   // A board could not create a ballot or schedule a meeting, so for a new
   // association the voting page was four permanent zeroes.
   "meetings",
+  // Text imported from an uploaded declaration has to land somewhere, and it
+  // is the board's own document rather than reference data.
+  "governingDocs",
 ] as const;
 
 type MutableSlice = (typeof MUTABLE_SLICES)[number];
@@ -424,6 +429,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const vendors = useStore(sliceStore(communityId, "vendors"));
   const threads = useStore(sliceStore(communityId, "threads"));
   const documents = useStore(sliceStore(communityId, "documents"));
+  const governingDocs = useStore(sliceStore(communityId, "governingDocs"));
   const associationRow = useStore(sliceStore(communityId, "association"));
   const meetingList = useStore(sliceStore(communityId, "meetings"));
   const reserveComponentList = useStore(sliceStore(communityId, "reserveComponents"));
@@ -1147,6 +1153,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  /**
+   * Adds text confirmed out of an uploaded governing document.
+   *
+   * Appends rather than replaces, and drops anything whose number is already
+   * on file. Importing the same file twice is the most likely way this gets
+   * used by mistake, and the failure it would otherwise produce is a document
+   * with two Article VIIs, which is exactly the ambiguity a board cites into.
+   */
+  const addGoverningArticles = useCallback(
+    (articles: Community["governingDocs"]) =>
+      sliceStore(communityId, "governingDocs").update((all) => {
+        const taken = new Set(all.map((a) => `${a.document}|${a.number}`));
+        const fresh = articles.filter((a) => !taken.has(`${a.document}|${a.number}`));
+        return [...all, ...fresh];
+      }),
+    [communityId],
+  );
+
   const updateAssociation = useCallback(
     (patch: Partial<Community["association"]>) =>
       sliceStore(communityId, "association").update((current) => ({ ...current, ...patch })),
@@ -1299,6 +1323,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       vendors,
       threads,
       documents,
+      governingDocs,
       ballots,
       templates,
       association: associationRow,
@@ -1325,6 +1350,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       vendors,
       threads,
       documents,
+      governingDocs,
       ballots,
       templates,
       associationRow,
@@ -1407,6 +1433,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     markW9Requested,
     replyToThread,
     addDocument,
+    addGoverningArticles,
     updateAssociation,
     addPayout,
     addBallot,

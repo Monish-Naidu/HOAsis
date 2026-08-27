@@ -15,7 +15,14 @@ import { Badge, Card, Callout, EmptyState, SectionTitle } from "@/components/ui/
 import { publicRecordsUrl } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
-import type { DocumentRecord } from "@/lib/types";
+import type { DocumentRecord, GoverningDoc } from "@/lib/types";
+
+/** Short enough to sit in front of an article number in a search result. */
+const DOC_SHORT: Record<GoverningDoc, string> = {
+  declaration: "CC&Rs",
+  bylaws: "Bylaws",
+  rules: "Rules",
+};
 
 const order: DocumentRecord["category"][] = [
   "Governing",
@@ -39,15 +46,15 @@ export default function ResidentDocuments() {
    * only on document titles returns nothing, which is how an owner concludes
    * the documents are useless and asks a board member instead.
    */
-  const bylawHits = useMemo(() => {
+  const articleHits = useMemo(() => {
     if (!q) return [];
-    return community.bylaws.filter(
+    return community.governingDocs.filter(
       (a) =>
         a.title.toLowerCase().includes(q) ||
-        a.plain.toLowerCase().includes(q) ||
+        (a.plain ?? "").toLowerCase().includes(q) ||
         a.text.some((p) => p.toLowerCase().includes(q)),
     );
-  }, [community.bylaws, q]);
+  }, [community.governingDocs, q]);
 
   const grouped = order
     .map((category) => ({
@@ -59,7 +66,7 @@ export default function ResidentDocuments() {
     .filter((g) => g.docs.length);
 
   const fillable = community.forms.filter((f) => (f.fields ?? []).length > 0);
-  const nothing = q && grouped.length === 0 && bylawHits.length === 0;
+  const nothing = q && grouped.length === 0 && articleHits.length === 0;
 
   return (
     <div className="animate-rise space-y-6">
@@ -77,42 +84,51 @@ export default function ResidentDocuments() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search, for example fence, late fee, or minutes"
-          aria-label="Search documents and bylaws"
+          aria-label="Search documents and governing documents"
           className="h-11 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
         />
       </label>
 
-      {bylawHits.length > 0 ? (
+      {articleHits.length > 0 ? (
         <section>
-          <SectionTitle>In the bylaws</SectionTitle>
+          <SectionTitle>In your governing documents</SectionTitle>
           <Card className="divide-y divide-border">
-            {bylawHits.slice(0, 4).map((article) => (
+            {articleHits.slice(0, 4).map((article) => (
               <Link
                 key={article.id}
-                href="/resident/documents/bylaws"
+                href="/resident/documents/governing"
                 className="block px-4 py-3 transition-colors hover:bg-surface-2"
               >
-                <p className="text-[13px] font-semibold text-fg-muted">{article.number}</p>
+                <p className="text-[13px] font-semibold text-fg-muted">
+                  {DOC_SHORT[article.document]} {article.number}
+                </p>
                 <p className="mt-0.5 text-[15px] font-semibold text-fg">{article.title}</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{article.plain}</p>
+                {article.plain ? (
+                  <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+                    {article.plain}
+                  </p>
+                ) : null}
               </Link>
             ))}
           </Card>
         </section>
       ) : null}
 
-      {!q && community.bylaws.length > 0 ? (
+      {!q && community.governingDocs.length > 0 ? (
         <Link
-          href="/resident/documents/bylaws"
+          href="/resident/documents/governing"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
             <BookOpen className="size-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-fg">Read the bylaws</span>
+            <span className="block text-[15px] font-semibold text-fg">
+              Read the rules you live under
+            </span>
             <span className="block text-[13px] leading-snug text-fg-muted">
-              Every rule in plain words, searchable, with the exact wording one tap away
+              The CC&amp;Rs, the bylaws and the rules, in plain words, searchable, with the
+              exact wording one tap away
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
@@ -157,7 +173,7 @@ export default function ResidentDocuments() {
           <EmptyState
             icon={<Search className="size-6" />}
             title="Nothing matches"
-            description="The search covers the full text of the bylaws as well as document names, so try a plainer word."
+            description="The search covers the full text of all three governing documents as well as document names, so try a plainer word."
           />
         </Card>
       ) : null}

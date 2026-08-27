@@ -10,9 +10,9 @@ import {
 import { accounts as mmAccounts } from "./accounts";
 import { budget as mmBudget, YEAR_ELAPSED } from "./budget";
 import {
-  bylawAmendments as mmBylawAmendments,
-  bylawArticles as mmBylaws,
-} from "./bylaws";
+  governingAmendments as mmGoverningAmendments,
+  governingArticles as mmGoverning,
+} from "./governing";
 import { complianceItems as mmCompliance } from "./compliance";
 import { documents as mmDocuments } from "./documents";
 import { forumPosts as mmPosts } from "./forum";
@@ -63,8 +63,8 @@ export const mehrMeadows: Community = {
   requests: mmRequests,
   violations: mmViolations,
   documents: mmDocuments,
-  bylaws: mmBylaws,
-  bylawAmendments: mmBylawAmendments,
+  governingDocs: mmGoverning,
+  governingAmendments: mmGoverningAmendments,
   complianceItems: mmCompliance,
   meetings: mmMeetings,
   ballots: mmBallots,

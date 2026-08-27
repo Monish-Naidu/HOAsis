@@ -779,13 +779,51 @@ export interface SpecialAssessment {
 /* Bylaws, as something a person can actually read.                           */
 /* -------------------------------------------------------------------------- */
 
-export type BylawTopic =
+export type GoverningTopic =
   | "governance"
   | "money"
   | "meetings"
   | "property"
   | "enforcement"
   | "records";
+
+/**
+ * Which of the three documents an article belongs to.
+ *
+ * Boards and owners use "bylaws" and "CC&Rs" interchangeably and they are not
+ * the same instrument. The declaration is recorded against the land, binds
+ * every future buyer whether they read it or not, and is the hardest to
+ * change. The bylaws govern how the association runs itself and are usually
+ * not recorded. Rules are adopted by the board under authority the declaration
+ * already grants, and can be changed at a single meeting.
+ *
+ * Storing which is which is not pedantry. It decides who may change the text,
+ * by what margin, and which provision wins when two of them disagree.
+ */
+export type GoverningDoc = "declaration" | "bylaws" | "rules";
+
+/**
+ * How a document is changed, and what beats what.
+ *
+ * The order of this list is the hierarchy: state law beats the declaration,
+ * the declaration beats the bylaws, the bylaws beat the rules. A board that
+ * adopts a rule contradicting its own declaration has adopted nothing, and
+ * that is the single most common self-managed mistake.
+ */
+export interface GoverningDocMeta {
+  kind: GoverningDoc;
+  /** What it is called on the cover page. */
+  label: string;
+  /** The form that reads naturally mid-sentence: "added to the CC&Rs". */
+  short: string;
+  /** One line an owner can hold on to. */
+  plain: string;
+  /** Who has to agree before the words change. */
+  changedBy: string;
+  /** Rank in the hierarchy. Lower wins. State law is 0 and is not a document. */
+  precedence: number;
+  recorded: boolean;
+}
 
 /**
  * One article of the governing documents.
@@ -796,22 +834,83 @@ export type BylawTopic =
  * summary is misleading, and one that shows only the deed language is the PDF
  * nobody opens.
  */
-export interface BylawArticle {
+export interface GoverningArticle {
   id: ID;
+  /** Which instrument this article is part of. Decides precedence. */
+  document: GoverningDoc;
   /** "Article VII", "Section 4.2". Printed as written in the document. */
   number: string;
   title: string;
-  topic: BylawTopic;
+  topic: GoverningTopic;
   /** The governing text, verbatim. Paragraphs. */
   text: string[];
-  /** What it means, in the words a neighbor would use. */
-  plain: string;
+  /**
+   * What it means, in the words a neighbor would use.
+   *
+   * Optional, and absent is a real state rather than a bug. Text pulled out of
+   * an uploaded document arrives without one, because a plain reading is an
+   * interpretation and a machine has no standing to write one. A board member
+   * writes it, and until somebody does the screen shows the governing text and
+   * says the summary is missing.
+   */
+  plain?: string;
   /** Who it actually constrains. Owners skip half of a bylaw set. */
   affects: "owners" | "board" | "both";
   /** When this article was last changed, and by which vote. */
   amendedOn?: ISODate;
   amendmentBallotId?: ID;
+  /**
+   * When a board adopted this rule.
+   *
+   * Only meaningful on the rules layer. A rule adopted after you moved in
+   * still binds you, and an owner is entitled to know that the thing they are
+   * being cited under did not exist when they bought.
+   */
+  adoptedOn?: ISODate;
+  /**
+   * Which of the things a buyer must be warned about this article settles.
+   *
+   * Confirmed by a person, never inferred. An extractor may propose a tag and
+   * the board accepts it, because "your documents ban flags" is an assertion
+   * about somebody's home and we do not make those on our own authority.
+   */
+  disclosureTopics?: DisclosureTopic[];
+  /**
+   * Set when the text came out of an uploaded file rather than being typed.
+   *
+   * Kept so a reader can tell a confirmed extraction from something a board
+   * member wrote, and so an extraction can be re-run without touching either.
+   */
+  extraction?: {
+    /** The document record the text was pulled from. */
+    sourceDocumentId?: ID;
+    /** Confirmed by a named board member on this date, or not yet. */
+    confirmedBy?: string;
+    confirmedOn?: ISODate;
+  };
 }
+
+/* -------------------------------------------------------------------------- */
+/* What a buyer has to be told                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The eight things a buyer must be warned about.
+ *
+ * Not our list. Virginia, Colorado and Washington legislated disclosure
+ * requirements independently and converged on the same short set, which is
+ * what makes it defensible as a schema: it is what statute says a buyer must
+ * be told, not what we think is interesting.
+ */
+export type DisclosureTopic =
+  | "flags"
+  | "solar"
+  | "signs"
+  | "parking"
+  | "home-business"
+  | "rentals"
+  | "architectural"
+  | "lien";
 
 export type AmendmentKind = "amend" | "add" | "remove";
 export type AmendmentStage = "draft" | "open" | "passed" | "failed" | "withdrawn";
@@ -824,9 +923,11 @@ export type AmendmentStage = "draft" | "open" | "passed" | "failed" | "withdrawn
  * we amend Article VII" on a ballot with the actual change in an attachment
  * nobody opens, and then wonder why the vote is challenged.
  */
-export interface BylawAmendment {
+export interface GoverningAmendment {
   id: ID;
   kind: AmendmentKind;
+  /** Which document is being changed. Decides the threshold and the recording. */
+  document: GoverningDoc;
   /** The article being changed. Absent when adding a new one. */
   articleId?: ID;
   /** Where a new article would sit, or the number of the one being changed. */
@@ -835,7 +936,7 @@ export interface BylawAmendment {
   /** The proposed text. Empty for a removal. */
   text: string[];
   plain: string;
-  topic: BylawTopic;
+  topic: GoverningTopic;
   /** Who the change would constrain, so an owner can tell if it reaches them. */
   affects: "owners" | "board" | "both";
   /** Why the board or the petitioning owners want it. */
