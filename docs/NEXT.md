@@ -53,13 +53,14 @@ Research already in hand, from `docs/research/` and the agent reports:
   are windows rather than prohibitions, and an owner who does not know a rule
   exists cannot request the approval that would have made the project legal.
 
-Open question that still needs its own research, and the agent covering it died
-mid-run: **whether to auto-detect violations from a parsed document.** The
-honest instinct is no. Telling a board "this owner is in violation" on a
-machine reading of their CC&Rs invites a false positive that becomes a fine,
-a hearing and a lawsuit. The safe version is extract and index for search, so
-an owner can find the fence rule, and a board can cite the right section in a
-notice. Decide this deliberately before building it.
+**Decided already: we index governing documents, we do not judge them.** No
+auto-detection of violations from a parsed document, ever. The reasoning is in
+`docs/decisions/parsing-governing-documents.md` and it is not an accuracy
+argument, so a better model does not reopen it. Build the four things that
+document lists: extract and index for search, help a board cite a provision
+correctly when they write a notice, tell a new owner what they are buying into
+using the statutory disclosure list, and show the parse as a draft the board
+confirms rather than as fact.
 
 Already built and reusable: `src/lib/data/bylaws.ts` holds structured articles
 with both the governing text and a plain reading;
