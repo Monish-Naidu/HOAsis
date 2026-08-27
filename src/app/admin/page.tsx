@@ -33,6 +33,7 @@ import {
   useReconciliation,
 } from "@/lib/app-state";
 import { SetupPlan, SetupPlanSummary } from "@/components/app/setup-plan";
+import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { useToast } from "@/components/app/toast";
 import { daysFromToday, formatDate, money, pluralize } from "@/lib/utils";
 
@@ -44,6 +45,13 @@ export default function BoardDashboard() {
     community.requests.length > 0 ||
     community.ballots.length > 0 ||
     community.payouts.length > 0;
+  // Ramping up is not the same as having nothing. An association that has
+  // taken one payment is running, and is also four of twelve done, and for
+  // those weeks the plan is still the thing they came here to work on. So the
+  // dashboard keeps the full plan until the back half of the list, then drops
+  // to one line; the sidebar carries it the rest of the way.
+  const plan = buildPlan(community, profileFromCommunity(community));
+  const rampingUp = !running || (!plan.allDone && plan.done * 2 < plan.total);
   const association = community.association;
   const cash = cashPosition(community);
   const recon = useReconciliation();
@@ -76,10 +84,11 @@ export default function BoardDashboard() {
           nothing to run, so a dashboard of four zeroes and two empty cards
           tells them nothing and looks broken. Until there is something to
           operate, this page is setup. */}
-      {/* Once there is anything to operate, the workspace looks like a
-          workspace and the plan is one line. A to-do list living permanently
-          on the dashboard is how a board learns to read past it. */}
-      {running ? <SetupPlanSummary /> : <SetupPlan />}
+      {/* Once the association is past the back half of the plan, the workspace
+          looks like a workspace and the plan is one line. A to-do list living
+          permanently on the dashboard is how a board learns to read past it,
+          and the sidebar keeps it reachable either way. */}
+      {rampingUp ? <SetupPlan /> : <SetupPlanSummary />}
 
       {running ? (
         <>

@@ -214,6 +214,27 @@ owed and each one is a drop-in:
 
 Remember `rm -rf .next/cache/images` when any of them lands.
 
+## Onboarding has its own tab now
+
+Added 2026-08-27, after the plan turned out to be reachable only from the
+dashboard, where it dropped to one line the moment anything happened in the
+association. A board that had connected a bank account and taken one payment
+was two of twelve done and had lost the list.
+
+- **`/admin/setup` is in `ADMIN_ROUTES`**, labelled "Setting up", second after
+  the dashboard, with a badge counting what is left. `present` removes it the
+  day the plan is complete.
+- **Listing it closed a hole.** The page existed before the entry did, and a
+  route absent from that table is served to any member who guesses the path,
+  so the setup plan and the association profile behind it were readable by
+  every resident. It needs `settings` or `finances` now: either, because the
+  president configures the association and the treasurer connects the bank,
+  and locking either out of the list they are working from is worse than
+  showing it to both.
+- **The dashboard keeps the full plan through the front half** of the list
+  rather than dropping to one line at the first transaction. Past halfway it
+  is one line again, and the sidebar carries it the rest of the way.
+
 ## Also open, from earlier in the session
 
 - ~~**Balance import.**~~ Done 2026-08-26, as

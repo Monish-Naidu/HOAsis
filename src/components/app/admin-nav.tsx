@@ -11,6 +11,7 @@ import {
 } from "@/lib/app-state";
 import { ADMIN_ROUTES } from "@/lib/admin-routes";
 import { complianceSummary, delinquency } from "@/lib/metrics";
+import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { TabPill } from "@/components/app/tab-pill";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ export function AdminNav() {
   const unread = useUnreadThreadCount();
   const comp = complianceSummary(community);
   const delinq = delinquency(community);
+  const plan = buildPlan(community, profileFromCommunity(community));
 
   /**
    * A badge means somebody owes a decision here, and nothing else.
@@ -48,6 +50,9 @@ export function AdminNav() {
    * on because of the badge.
    */
   const badges: Partial<Record<string, NavBadge>> = {
+    // What is left, not what is done. A board setting up wants to know how
+    // much further, and the row disappears entirely at zero.
+    setup: { count: plan.total - plan.done, tone: "neutral" },
     money: { count: recon.needsReview.length, tone: "warn" },
     requests: {
       count: requests.filter(

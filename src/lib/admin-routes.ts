@@ -4,6 +4,7 @@ import {
   FileText,
   Inbox,
   LayoutDashboard,
+  ListChecks,
   MessageSquareText,
   MessagesSquare,
   PiggyBank,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import type { Capability } from "@/lib/types";
 import type { Community } from "@/lib/data/community";
+import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 
 /**
  * Every board route, and what it takes to open one.
@@ -63,6 +65,33 @@ export interface AdminRoute {
 export const ADMIN_ROUTES: AdminRoute[] = [
 
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+  {
+    href: "/admin/setup",
+    label: "Setting up",
+    icon: ListChecks,
+    key: "setup",
+    // Second in the list while it exists, and gone the day it is finished.
+    //
+    // The plan used to live only on the dashboard, where it dropped to a
+    // single line the moment anything at all happened in the association. A
+    // board that had connected one bank account and taken one payment was two
+    // of twelve done and had lost the list. Ramping up takes weeks, and for
+    // those weeks this is the page they are actually working from, so it gets
+    // a line of its own like anything else they work from.
+    //
+    // Listing it here is also what closes a hole. The page existed before
+    // this entry did, and a route absent from this table is served to any
+    // member who guesses the path, so the setup plan and the association
+    // profile behind it were readable by every resident. `capabilitiesFor`
+    // now answers for it like anything else.
+    //
+    // Either capability opens it, because setting an association up is not one
+    // person's job: the president configures it and the treasurer connects the
+    // bank, and locking either of them out of the list they are working from
+    // is worse than showing it to both.
+    need: ["settings", "finances"],
+    present: (c) => !buildPlan(c, profileFromCommunity(c)).allDone,
+  },
   { href: "/admin/money", label: "Money", icon: Banknote, key: "money", need: ["finances"] },
   {
     href: "/admin/reserves",

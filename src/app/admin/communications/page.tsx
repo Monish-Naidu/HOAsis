@@ -49,7 +49,6 @@ export default function BoardCommunications() {
     <>
       <PageHeader
         title="Communications"
-        
         action={
           <Button
             variant="primary"
@@ -57,14 +56,17 @@ export default function BoardCommunications() {
             onClick={() => notify("Composer opens with the full owner list", "info")}
           >
             <Send className="size-3.5" />
-
-      <div className="mb-5">
-        <DeliveryPanel />
-      </div>
             New message
           </Button>
         }
       />
+
+      {/* Which ways a notice may actually go. It sits above the numbers
+          because it governs them: a household counted as reachable by email is
+          not reachable for a notice the statute says must go on paper. */}
+      <div className="mb-5">
+        <DeliveryPanel />
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Unread" value={String(unread)} tone="warn" icon={<Inbox className="size-4" />} />
