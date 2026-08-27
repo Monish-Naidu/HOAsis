@@ -191,10 +191,11 @@ export default function MarketingHome() {
       <MarketingHeader />
 
       {/* Hero
-          The design Monish's friend drew on 2026-08-27, kept as a layout and
-          repointed at our positioning: their headline sold HOA management in
-          general, which is what every competitor's homepage already says.
-          `docs/design/landing-page.md` has the decisions in full.
+          The design Monish's friend drew on 2026-08-27, layout and copy both.
+          Monish chose the copy as drawn on 2026-08-27 over a version pointed
+          at builders; `docs/design/landing-page.md` records why that was the
+          open question and what it costs. The CTA is still ours, into a wizard
+          that works, rather than the demo request the design asks for.
 
           The illustration is a night scene, so on the light theme the right
           side of the band is deliberately a dark panel rather than a washed
@@ -233,16 +234,15 @@ export default function MarketingHome() {
           <div className="lg:pr-8">
             <Reveal>
               <h1 className="text-balance text-[42px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[52px]">
-                Hand over an HOA
+                Your community.
                 <br />
-                <span className="text-hero-accent">that already works.</span>
+                Your <span className="text-hero-accent">oasis.</span>
               </h1>
             </Reveal>
             <Reveal delay={90}>
               <p className="mt-6 max-w-md text-[17px] leading-relaxed text-fg-muted">
-                Stand the association up from the plat, before the first home closes. Every
-                lot on the books, reserves funded from the first assessment, and documents a
-                buyer can actually read. Then hand it to the owners with nothing to explain.
+                HOAsis is the all-in-one platform that brings clarity, connection, and calm
+                to HOA management.
               </p>
             </Reveal>
             <Reveal delay={170}>

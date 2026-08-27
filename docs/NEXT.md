@@ -178,18 +178,30 @@ layout, two-line headline with one accent word, illustration bleeding off the
 right edge, and his circled palm as the mark. `docs/design/landing-page.md` has
 the decisions, the measured colours and the layout notes.
 
-The two decisions not to re-litigate held: their look with **our** new-build
-positioning, and the self-serve CTA into `/start` rather than a demo request
+The self-serve CTA into `/start` held, rather than the design's demo request
 form. Nav stayed Home, Pricing, Library, About rather than the design's
 Features, Solutions, Resources, because those pages do not exist and inventing
 nav for them advertises a site we do not have.
+
+**The copy decision reversed on the same day.** The plan was their look with
+our new-build positioning. Monish was shown the trade-off and chose the
+friend's copy word for word: "Your community. Your oasis." over "HOAsis is the
+all-in-one platform that brings clarity, connection, and calm to HOA
+management." The cost is that nothing above the fold now says this is for new
+communities; the proof band and the showcase below still do. If the page
+converts badly, test the headline first. `docs/design/landing-page.md` has it
+in full.
 
 **Both assets are placeholders cut from the design screenshot**, which is now
 committed at `docs/design/landing-page-reference.png`. Three files are still
 owed and each one is a drop-in:
 
-1. **The logo as SVG.** `src/components/app/logo.tsx` is redrawn by eye at
-   6.7x, not traced. It is close; it is not his file.
+1. **The logo as SVG.** Less urgent than it was. Monish sent a clean render on
+   2026-08-27 and `src/components/app/logo.tsx` was redrawn against it by
+   fitting the ring in the pixels (centre and radius by least squares, then
+   every stroke read off a run-length scan in ring units) rather than by eye.
+   It overlays the render closely. An actual SVG would still settle the last
+   tenth of a unit. The render is at `docs/design/logo-reference.png`.
 2. **The full-resolution hero render.** `public/marketing/hero-community.jpg`
    is the screenshot's text-free right side, upscaled. It loses the left half
    of the ring road, which is the part of the composition that reads as a

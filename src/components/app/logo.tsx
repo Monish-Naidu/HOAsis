@@ -26,40 +26,49 @@ export function Logo({ className, size = 28 }: { className?: string; size?: numb
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
-      // Weight is in user units against a 40 unit box, so the mark holds the
-      // same optical line at every size. The drawn logo is thinner still,
-      // around 0.7 here, which lands under a pixel anywhere it actually gets
-      // used and renders as grey mush; 1.3 is the thinnest that stays black.
+      // Weight is in user units against a 40 unit box. The drawn logo is
+      // thinner, 0.89 here, which lands well under a pixel at every size the
+      // mark is actually used at and renders as grey mush; 1.3 is the thinnest
+      // that stays solid at 24px.
       strokeWidth={1.3}
       className={cn("inline-block shrink-0", className)}
       style={{ width: size, height: size }}
       aria-hidden
     >
-      <circle cx="20" cy="20" r="16.4" />
+      {/* The ring is two arcs, not a circle: it breaks at about five o'clock
+          and again at seven, and the lower arc doubles as the far edge of the
+          water. Drawing a closed circle and laying the water over it is the
+          obvious shortcut and it loses the thing that makes the water read as
+          water rather than as a line across a coin. */}
+      <path d="M3.15 24.3A17.5 17.5 0 1 1 36.85 24.3" />
+      <path d="M8.07 32.8A17.5 17.5 0 0 0 32.16 32.59" />
 
-      {/* Dune: a main ridge and a smaller one stepping down in front of it. */}
-      <path d="M9.9 25.6 16.5 20 21.7 24.9" />
-      <path d="M10.8 27.2 13.6 24.5 16.3 27" />
+      {/* Dune: a tall ridge left of centre, and a smaller one stepping down to
+          the shore in front of it. */}
+      <path d="M10.7 24.6 16.6 19.9 22.7 25.2" />
+      <path d="M14 27.9 16 26.4 17.9 27.9" />
 
-      {/* Palm. The trunk rises just right of centre and the crown is a burst
-          of eight fronds around its head, four a side, long and short
-          alternating. Fewer than that and the mark reads as a shrub. */}
-      <path d="M25.2 27.5c-.6-5.3-.7-10.6-.3-15.9" />
-      <path d="M25 11.6c-1-2.8-3.4-4.4-6-4.4" />
-      <path d="M25 11.6c-2.9-2.6-6.1-3.1-8.4.7" />
-      <path d="M25 11.6c-3.5-.2-5.7 2.2-6 5.4" />
-      <path d="M25 11.6c-1.9.4-3 2.1-3.1 4.6" />
-      <path d="M25 11.6c.8-3.2 2.9-5 5.3-5.2" />
-      <path d="M25 11.6c2.5-2.9 6.1-2.9 8.6-.2" />
-      <path d="M25 11.6c3.3-.6 5.6 1.5 6 4.2" />
-      <path d="M25 11.6c1.7.3 2.8 2.2 2.8 4.9" />
+      {/* Palm. The trunk is dead vertical at 26, and the crown is eight fronds
+          around its head at 11. The top pair rise and hook, and the right one
+          crosses the ring rather than stopping at it, which is what the drawing
+          does. The outer pair reach furthest and arc over before dropping; the
+          rest fall away. */}
+      <path d="M25.95 27.4c-.15-5.5-.1-11 .1-16.4" />
+      <path d="M26 11c-1.4-3-2.2-4.8-3.7-5.3-.7-.2-1.3.2-1.5.9" />
+      <path d="M26 11c-2-1.4-3.5-1.8-5.5-1.1-1.3.5-1.9 1.3-1.8 2.2" />
+      <path d="M26 11c-1.7 0-3.4.2-4.3 1.4-.8 1.1-.5 3 .2 4.3" />
+      <path d="M26 11c-.5 1.3-1 2.2-2 3-.6.5-1.2 1-1.6 1.6" />
+      <path d="M26 11c1.4-3 2.4-5.4 4.2-5.8 1-.2 1.9.3 2 1.2" />
+      <path d="M26 11c2.5-1.8 5.5-2 7.9-.4 1.2.8 1.9 2.1 2 3.3" />
+      <path d="M26 11c1.9.2 3.8.8 5 2.1.9.9 1.3 1.7 1.4 2.6" />
+      <path d="M26 11c.6 1.3 1.2 2.2 2 3 .6.6.9 1.4 1 2.2" />
 
-      {/* Shoreline, then the water below it. Three strokes rather than one:
-          a flat line under an island reads as a rule, a bowl and a lens read
-          as water. */}
-      <path d="M5.9 27.7c4.4-.5 8.8-.7 13.2-.4 5.1.3 10.3.2 15.4-.2" />
-      <path d="M7.4 29.8c2.4 3.7 8 6.6 14 6.6 4 0 7.7-2.3 10.5-7" />
-      <path d="M12.4 32.5c4.6 2.4 9.9 2.3 15.9-.4" />
+      {/* The water. The shore runs the full width behind the island; below it
+          a current leaves the shore on the right and sweeps down to the left,
+          and one short line sits inside the lens it makes with the ring. */}
+      <path d="M4.5 28.3c2.4-.5 4.8-.7 7.2-.3 4.3.6 9.3.5 14.3-.2 3-.4 6.5.2 10 .5" />
+      <path d="M27 28.1c-3 .8-5.5 1.5-8.5 2.7-3 1.2-6 2-8.5 2.4" />
+      <path d="M30 31.9c-2 .7-4 1-6 1.2-1.8.2-3.6.5-5.2 1" />
     </svg>
   );
 }

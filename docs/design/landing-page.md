@@ -13,11 +13,18 @@ What is still outstanding is at the bottom of this file.
 
 Asked and answered on 2026-08-27:
 
-- **Their look, our positioning.** Take the dark navy hero, the split layout,
-  the illustration and the logo. Keep the headline pointed at builders and new
-  communities. The friend's copy is positioned at HOA management generally,
-  which would drop the wedge in `docs/decisions/who-this-is-for.md` and leave
-  the homepage saying what every competitor already says.
+- **Their look, and as of 2026-08-27 their copy too.** The original decision
+  was their look with our new-build positioning, because "the all-in-one
+  platform that brings clarity, connection, and calm to HOA management" is
+  what every competitor's homepage already says and it drops the wedge in
+  `docs/decisions/who-this-is-for.md`. Monish was shown that trade-off with
+  three alternatives that kept the wedge and chose the copy exactly as drawn.
+  It is his brand voice, and "Your community. Your oasis." is a better line
+  than what it replaced. **The cost is real and unpaid**: the homepage no
+  longer says anywhere above the fold that this is for new communities. The
+  proof band and the showcase sections below still do, which is the only
+  reason this is survivable. If the page ever converts badly, this is the
+  first thing to test.
 - **Self-serve stays.** Their CTA is "Request a Demo". Ours is "Set up a
   community" into a wizard that works end to end. Keep the wizard. A demo
   request needs a lead form and somewhere for leads to land, and it buries the
@@ -57,9 +64,8 @@ oasis.", with "oasis" in the light blue. Sub: "HOAsis is the all-in-one
 platform that brings clarity, connection, and calm to HOA management." Then the
 CTA, "Request a Demo" with a chevron.
 
-Per the decision above, the headline and sub get replaced with the new-build
-positioning and the CTA points at `/start`. The two-line construction and the
-one-accent-word device are worth keeping.
+As of 2026-08-27 the headline and sub are used verbatim, with only "oasis."
+carrying the accent colour, as drawn. The CTA still points at `/start`.
 
 **Illustration.** A stylised isometric aerial of a subdivision at night. A ring
 road circles a lake; a small pavilion sits on an island in the middle, reached
