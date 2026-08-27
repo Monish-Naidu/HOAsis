@@ -300,11 +300,19 @@ export function Avatar({
   className,
   tone = "brand",
 }: {
-  name: string;
+  /**
+   * Optional, because a home can exist with nobody in it.
+   *
+   * An unsold lot in a new build is owned by the builder and has no named
+   * resident, and this used to take the whole roster into the error boundary
+   * on the first render. A primitive that a real record can crash is a
+   * primitive with the wrong signature.
+   */
+  name?: string;
   className?: string;
   tone?: "brand" | "neutral";
 }) {
-  const text = name
+  const text = (name ?? "")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -319,7 +327,9 @@ export function Avatar({
       )}
       aria-hidden
     >
-      {text}
+      {/* An em dash rather than an empty circle, so a home with nobody in it
+          reads as deliberately blank instead of as a rendering failure. */}
+      {text || "—"}
     </span>
   );
 }

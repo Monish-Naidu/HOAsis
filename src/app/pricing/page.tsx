@@ -14,7 +14,8 @@ import { money } from "@/lib/utils";
 
 export const metadata = {
   title: "Pricing",
-  description: "Simple per home pricing with no feature gating. Payment costs pass through at cost.",
+  description:
+    "Simple per home pricing with no feature gating. Payment costs pass through at cost. Unsold lots are billed like any other home.",
 };
 
 /**
@@ -38,10 +39,11 @@ const TIERS = PRICE_EXAMPLES;
  * more than a per-association competitor charges. Publishing it would be a
  * self-inflicted wound and, worse, an argument for the wrong thing.
  *
- * The board reading this page is deciding whether to keep paying a management
- * company, not which spreadsheet to buy, and against a management company the
- * arithmetic is not close. So the rows compare per home per month, which is the
- * unit their existing contract is already quoted in.
+ * The person reading this page is a builder deciding whether to hand the new
+ * association to a management company, or a board that has just been handed
+ * one and is looking at what it costs to keep. Neither is choosing between us
+ * and another piece of software. So the rows compare per home per month, which
+ * is the unit a management proposal is already quoted in.
  *
  * Computed rather than written, so it cannot drift from the rate above.
  */
@@ -243,7 +245,7 @@ A 12 home association gets the same product as a 300 home one. Gating features b
               </h2>
               <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
                 The range is what full service management is published at, per door. Check it
-                against the contract you already have.
+                against the proposal on your desk.
               </p>
             </div>
             <div className="overflow-x-auto">

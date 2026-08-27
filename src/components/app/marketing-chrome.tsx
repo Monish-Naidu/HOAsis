@@ -101,8 +101,8 @@ export function MarketingFooter() {
         <div>
           <Wordmark size={34} />
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-fg-muted">
-            Community management for self-managed associations. Books that reconcile, an app
-            residents use, and compliance handled.
+            The HOA platform for new communities. Books that reconcile, an app residents
+            use, and reserves funded from the first assessment.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">

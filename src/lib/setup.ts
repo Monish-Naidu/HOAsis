@@ -64,10 +64,22 @@ export const SETUP_TASKS: SetupTask[] = [
     key: "invites",
     tier: "essential",
     label: "Invite your neighbors",
-    detail: "An email address for every home.",
+    detail: "An email address for every household that has one.",
     why: "A household with no address cannot be sent a notice, cannot be reminded about dues, and cannot reach their own balance. It is also the one gap that quietly makes your collection rate look worse than your neighbors are.",
     href: "/admin/homeowners",
-    done: (c) => c.owners.every((o) => o.email.trim().length > 0),
+    /**
+     * Counted against households, not against homes.
+     *
+     * In a community still being built most lots are unsold and held by the
+     * builder, and that is the ordinary state rather than a gap in the setup.
+     * Asking for an email on a lot nobody has bought is a task that cannot be
+     * finished, and a plan containing one of those is a plan people stop
+     * trusting. A lot gets counted the moment somebody moves into it.
+     */
+    done: (c) =>
+      c.owners
+        .filter((o) => o.members.length > 0)
+        .every((o) => o.email.trim().length > 0),
   },
 
   /* ---------------------------------------------------------- recommended */

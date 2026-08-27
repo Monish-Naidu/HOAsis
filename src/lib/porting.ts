@@ -1,24 +1,31 @@
 import type { AssociationOrigin } from "@/lib/data/new-community";
 
 /**
- * Getting an association's history into the product.
+ * The first weeks, whichever way an association arrives.
  *
- * Three situations arrive here and they are not variations on one job.
+ * Three situations, and not one of them is a records migration.
  *
- *   A brand new association has nothing to move. Its risk is not being
- *   properly constituted: no EIN, no registered agent, a bank account in
- *   somebody's own name.
+ *   A builder is standing the association up. Nothing exists yet, and what
+ *   goes wrong is not migration, it is constitution: no EIN, no registered
+ *   agent, a bank account in a project manager's own name, and dues nobody is
+ *   charging on the lots the builder still owns.
  *
- *   A board already self-managing has everything, scattered across a
- *   spreadsheet, a shared drive and one person's inbox. Its job is gathering.
+ *   Owners are taking control from the builder. Everything exists and somebody
+ *   else built it, including the reserve balance and the condition of the
+ *   roads. Their job is to find out what they are being handed while the
+ *   window to object is still open, and that window is set by statute and by
+ *   the construction warranty rather than by how busy the new board is.
  *
- *   A board leaving a management company has everything, held by somebody
- *   else, and a closing window. Its job is retrieval, and the order matters:
- *   demand the records before you cancel, because leverage disappears the day
- *   the contract ends.
+ *   An established association is opening its books here. It has a decade of
+ *   history and none of it moves. One opening balance per home on the day it
+ *   switches makes it correct from there, and reproducing somebody else's
+ *   ledger is both where migrations stall and a version that is never right.
  *
- * Giving all three the same checklist with reworded copy would be the same
- * mistake the old setup list made, one step further in.
+ * The order of each list is the substance of it. The turnover study comes
+ * before the release is signed, because signing is what ends the argument, and
+ * the opening balances come before the first run of dues, because a bill sent
+ * against the wrong balance is the one that loses an association its
+ * credibility in week one.
  */
 
 export interface PortingStep {
@@ -29,8 +36,6 @@ export interface PortingStep {
   /** Why it is in this position, when the order is not obvious. */
   because?: string;
   href?: string;
-  /** Opens the letter writer rather than navigating. */
-  action?: "records-letter";
 }
 
 export interface PortingPlan {
@@ -40,9 +45,9 @@ export interface PortingPlan {
 }
 
 const PLANS: Record<AssociationOrigin, PortingPlan> = {
-  new: {
-    title: "Make it official",
-    lede: "You have nothing to move, which is the easy part. What a new association gets wrong is existing properly on paper.",
+  builder: {
+    title: "Stand it up properly",
+    lede: "There is nothing to move, which is the easy part. What a builder gets wrong is the association existing properly on paper, and dues on the lots that have not sold.",
     steps: [
       {
         key: "ein",
@@ -50,111 +55,163 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
         detail:
           "Free from the IRS on Form SS-4, in about fifteen minutes. Never pay anyone for one.",
         because:
-          "A bank will not open an account for the association without it, so this comes first.",
+          "A bank will not open an account in the association's name without it, so this comes first.",
       },
       {
         key: "registered",
-        title: "Check the association is registered and has a live agent",
+        title: "Register the association and name a live agent",
         detail:
-          "Most associations are nonprofit corporations and owe the state an annual report. Several states also want a separate HOA registration.",
+          "Most associations are nonprofit corporations and owe the state an annual report. Several states also want a separate association registration.",
         because:
-          "Letting it lapse can suspend your right to enforce an assessment lien, and in some states makes directors personally liable.",
+          "Letting it lapse can suspend the right to enforce an assessment lien, and in some states makes directors personally liable. It is far cheaper to start it than to revive it.",
         href: "/library/first-30-days-self-managed-board",
       },
       {
         key: "bank",
         title: "Open the account in the association's name",
-        detail: "Two signatures on anything above a threshold you set, from day one.",
+        detail:
+          "Not the development company's, and not a project manager's. Two signatures on anything above a threshold, from day one.",
         because:
-          "Sole control of the money by one person is how self-management ends badly, and it is far harder to change later.",
+          "An account in the builder's name is the finding that turns a routine handover into a dispute, and it is far harder to change later.",
         href: "/admin/money",
       },
       {
-        key: "rules",
-        title: "Write down the rules you actually enforce",
-        detail: "A fine for breaking a rule that is not written down does not survive a challenge.",
-        href: "/admin/documents",
+        key: "unsold",
+        title: "Decide what the unsold lots pay, and write it down",
+        detail:
+          "Either the builder pays the full assessment on every lot it still owns, or it funds the deficit between what owners pay and what the budget needs.",
+        because:
+          "This is the single largest source of turnover litigation. Whichever the declaration says, the association's books have to show it happening from the first month.",
+        href: "/admin/money",
+      },
+      {
+        key: "documents",
+        title: "Put the recorded documents in, as text",
+        detail:
+          "The declaration you recorded, the bylaws, and the rules. Buyers can then search them in plain words before they close.",
+        because:
+          "Several states make the association, not the seller, responsible for giving a new member the covenants. Doing it at closing is much easier than doing it in arrears.",
+        href: "/admin/documents/import",
+      },
+      {
+        key: "reserves",
+        title: "Fund reserves from the first assessment",
+        detail:
+          "Get a study while the components are new and their replacement dates are known exactly.",
+        because:
+          "A budget that omits reserves sets a low first-year due, and the board that inherits it has to raise dues in its first month. That is the handover everybody remembers.",
+        href: "/admin/reserves",
       },
     ],
   },
 
-  "self-managed": {
-    title: "Bring your records in",
-    lede: "You already have all of this. It is in a spreadsheet, a shared drive, and somebody's inbox. Getting it into one place is the whole job.",
+  handover: {
+    title: "Find out what you are being handed",
+    lede: "The builder is giving you an association it built. Most of what matters is decided before you sign anything, and some of it stops being fixable on a date nobody will remind you about.",
     steps: [
       {
-        key: "roster",
-        title: "Import the roster",
-        detail: "Paste it or upload the CSV. Any column order, and a header row is fine.",
+        key: "turnover-study",
+        title: "Get an independent turnover study, before you sign a release",
+        detail:
+          "An engineer inspects the common areas and the construction. A CPA reviews the books from the first day the association existed.",
+        because:
+          "This is the whole thing. A release signed before the study is a release signed without knowing what it gives up, and it is the one document a builder always has ready.",
+        href: "/library/developer-turnover-checklist",
+      },
+      {
+        key: "reserve-check",
+        title: "Check what the reserve account actually holds",
+        detail:
+          "Against the study, and against what the declaration says the builder owed. Ask for the deposit history, not the balance.",
+        because:
+          "A balance tells you where you are. The deposit history tells you whether the builder funded reserves all along or topped it up the week before turnover.",
+        href: "/admin/reserves",
+      },
+      {
+        key: "unsold-dues",
+        title: "Ask what the builder paid on the lots it owned",
+        detail:
+          "Every unsold lot owed an assessment, or the builder owed the deficit. Get the ledger showing which, and that it was paid.",
+        because:
+          "It is the most commonly skipped obligation in the category, and the amount is usually large enough to matter. It also gets harder to collect the day the builder dissolves the entity.",
+        href: "/admin/money",
+      },
+      {
+        key: "warranty",
+        title: "Write down when the construction warranties end",
+        detail:
+          "Roads, roofs, the pool, the drainage. Each has its own clock, and some start at recording rather than at handover.",
+        because:
+          "A defect found the month after a warranty expires is the association's, permanently. Knowing the dates is what makes the inspection worth doing now rather than in spring.",
+      },
+      {
+        key: "records",
+        title: "Take the records in a form you can use",
+        detail:
+          "The roster with balances, the ledger, contracts, insurance, minutes, the reserve study, and every recorded document.",
+        because:
+          "Ask while the builder still wants the handover to go smoothly. Afterwards you are a former counterparty rather than a partner.",
+        href: "/admin/documents",
+      },
+      {
+        key: "board",
+        title: "Seat your own board and remove the builder's signers",
+        detail:
+          "New signature cards at the bank the same week, and their access removed the day control passes.",
+        because:
+          "An account somebody else can still reach is an account you cannot reconcile, and the gap tends to be months rather than days.",
+        href: "/admin/settings",
+      },
+    ],
+  },
+
+  existing: {
+    title: "Open your books here",
+    lede: "You already have all of this and none of it has to move. Set what each home owes on the day you switch, and you are correct from there.",
+    steps: [
+      {
+        key: "homes",
+        title: "Put every home on the register",
+        detail:
+          "Take the lot or unit numbers from the plat and add the owners you have. Nothing needs to come out of another system.",
+        because:
+          "A home that is not on the register has no balance, no vote and no way to sign in, so everything downstream is short by one.",
         href: "/admin/homeowners",
       },
       {
         key: "balances",
         title: "Set the opening balance for every home",
         detail:
-          "What each household owed on the day you switched. Nothing before that date has to move.",
+          "What each household owed on the day you switched, as one figure. Nothing before that date has to come across.",
         because:
-          "Importing years of history is where migrations stall. One opening figure per home is enough to be correct from here.",
-        href: "/admin/homeowners",
+          "This is the step that makes a switch work end to end. Importing years of history is where migrations stall, and one opening figure per home is enough to be correct from here.",
+        href: "/admin/homeowners/opening-balances",
       },
       {
         key: "documents",
-        title: "Upload the governing documents",
-        detail: "Declaration, bylaws, articles, rules, the current budget and last year's figures.",
-        href: "/admin/documents",
+        title: "Put the governing documents in as text",
+        detail:
+          "The recorded declaration, the bylaws, and whatever rules the board has adopted since.",
+        because:
+          "Owners can then search them in plain words instead of asking a board member, which is where most of the disputes in a self-run association start.",
+        href: "/admin/documents/import",
+      },
+      {
+        key: "reserves",
+        title: "Enter the reserve study you already have",
+        detail:
+          "The components, what is left on each, and what it will cost. If the study is more than three years old, that is worth knowing now.",
+        because:
+          "The budget and the study normally live in separate files, so nobody sees the connection until the year a special assessment lands. Together they name that year in advance.",
+        href: "/admin/reserves",
       },
       {
         key: "vendors",
         title: "Add whoever you pay",
         detail: "Landscaper, pool, insurance. Note which ones you still owe a W-9.",
-        because: "January is when a missing W-9 becomes a problem, and by then they may not answer.",
+        because:
+          "January is when a missing W-9 becomes a problem, and by then they may not answer.",
         href: "/admin/vendors",
-      },
-    ],
-  },
-
-  "leaving-manager": {
-    title: "Get your records back",
-    lede: "Your manager holds the association's records, and they are the association's property, not theirs. The order below matters more than the speed.",
-    steps: [
-      {
-        key: "demand",
-        title: "Send the records demand, before you give notice",
-        detail: "We will write it. Sign it and send it by a method that produces a receipt.",
-        because:
-          "This is the whole thing. A board that cancels first and asks afterwards gets a partial box months later. Ask while you are still the client.",
-        action: "records-letter",
-      },
-      {
-        key: "list",
-        title: "Work the handover list",
-        detail:
-          "Bank statements, the ledger, the roster with balances, contracts, insurance, minutes, the reserve study and every governing document.",
-        because: "Anything not on a list you wrote down is something you will find missing in April.",
-        href: "/library/developer-turnover-checklist",
-      },
-      {
-        key: "bank",
-        title: "Move the bank account into the association's own name",
-        detail:
-          "Not a sub-account of theirs. New signature cards, and remove their access the day the contract ends.",
-        because:
-          "An account you cannot see is an account you cannot reconcile, and some agreements leave their name on it.",
-        href: "/admin/money",
-      },
-      {
-        key: "vendors",
-        title: "Get the vendor contracts assigned to you",
-        detail:
-          "Ask each vendor to confirm in writing that the association is now the counterparty.",
-        because:
-          "Some contracts are held in the manager's name, not yours, and simply stop when they leave.",
-        href: "/admin/vendors",
-      },
-      {
-        key: "then-cancel",
-        title: "Only then, give notice",
-        detail: "Check the notice period in your agreement. Thirty to ninety days is usual.",
       },
     ],
   },
@@ -162,75 +219,4 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
 
 export function portingPlan(origin: AssociationOrigin | undefined): PortingPlan | null {
   return origin ? PLANS[origin] : null;
-}
-
-/**
- * The records demand, as a letter a board can sign.
- *
- * Deliberately not a template with blanks. A board that has to fill in blanks
- * writes a worse letter than the one we would have written, or does not send
- * it. What is left blank is only what we genuinely cannot know.
- *
- * It states the obligation rather than quoting a statute number. The deadlines
- * differ in every state and are the kind of detail that is wrong two sessions
- * later; the state's own article carries the citation, and the letter points
- * the board at it rather than putting an unverified number in writing over
- * their signature.
- */
-export function recordsDemandLetter(input: {
-  associationName: string;
-  stateName: string;
-  managerName?: string;
-  boardMemberName: string;
-  boardRole: string;
-  today: string;
-}): string {
-  const manager = input.managerName?.trim() || "[management company]";
-  return `${input.today}
-
-${manager}
-
-Re: Demand for association records, ${input.associationName}
-
-To whom it may concern,
-
-I write on behalf of the Board of Directors of ${input.associationName}.
-
-The records of the Association are the property of the Association. We are
-requesting that you produce complete copies of the following, in the electronic
-formats in which you hold them:
-
-  1.  All bank statements, cancelled checks and reconciliations, for the last
-      three fiscal years and the current one.
-  2.  The general ledger, accounts receivable ageing, and the assessment
-      account history for every unit, showing balances as of today.
-  3.  The owner roster, with mailing addresses, email addresses and unit
-      numbers.
-  4.  All executed vendor and service contracts currently in force, including
-      any held in your name on the Association's behalf.
-  5.  All insurance policies, declarations pages and claims history.
-  6.  Minutes of every board and member meeting, and all board resolutions.
-  7.  The current and prior adopted budgets, and the most recent reserve study
-      together with any supporting schedules.
-  8.  All governing documents, amendments and recorded instruments.
-  9.  Architectural applications, approvals and denials, and the violation and
-      enforcement file for every unit.
-  10. All tax returns filed on the Association's behalf, and the workpapers.
-
-Please confirm in writing within ten business days when these will be produced.
-${input.stateName} law sets the period in which an association's records must be
-made available; if that period is shorter than ten business days, we ask that
-you meet it.
-
-To be clear, this request is made while our agreement remains in force, and is
-not notice of termination.
-
-Please direct any questions to me.
-
-Sincerely,
-
-
-${input.boardMemberName}
-${input.boardRole}, ${input.associationName}
-`;
 }

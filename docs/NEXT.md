@@ -1,8 +1,20 @@
 # What is left
 
 Handoff updated 2026-08-26. Everything not listed here is built, tested and
-pushed. Test suite at the time of writing: **359 unit, 110 end to end, 198
+pushed. Test suite at the time of writing: **378 unit, 112 end to end, 198
 database checks**, all green.
+
+## Who this is for, as of 2026-08-26
+
+**New communities.** A builder standing an association up before the homes
+sell, and the owners who take it over at turnover. An established association
+opening its books here is supported as a third path, and is not a migration:
+it sets one opening balance per home and is correct from there.
+
+Nothing imports a spreadsheet, and nothing reads an export from another
+product. That was removed on purpose, not left undone. `parseRoster`, the
+records demand letter, and the leaving-a-management-company plan are gone from
+the tree; git history has them if the market ever comes back.
 
 Run all three before and after any change:
 
@@ -150,9 +162,12 @@ ones differ by state.
 
 ## Also open, from earlier in the session
 
-- **Balance import.** The self-managing porting plan tells a board to set an
-  opening balance per home and then points at the roster, where there is no way
-  to do it. This is the step that makes a real migration work end to end.
+- ~~**Balance import.**~~ Done 2026-08-26, as
+  `/admin/homeowners/opening-balances`. One figure per home on one date, which
+  lands on the statement as "Balance brought forward". It deliberately does not
+  set standing or days past due: a typed number says what is owed and nothing
+  about how long, and backdating somebody onto the collections ladder from an
+  inference is what loses at a hearing.
 - **Stripe.** Blocked on a Stripe account and a real domain. Apple Pay needs
   domain verification, which cannot be done on `hoasis.vercel.app`. Use Stripe
   rather than Plaid: Plaid verifies accounts, it does not move money, and

@@ -25,7 +25,7 @@ async function clearOnce(page: Page) {
 
 type Kind = "Detached homes" | "Townhomes" | "Condominiums";
 
-/** Founds an association with two households, both with emails. */
+/** Founds an association from the plat, with three lots and a named buyer. */
 async function found(page: Page, name: string, property: Kind) {
   await clearOnce(page);
   await waitForHydration(page);
@@ -39,19 +39,24 @@ async function found(page: Page, name: string, property: Kind) {
 
   await page.getByRole("button", { name: new RegExp(property) }).click();
   await page.getByRole("button", { name: /^Pool$/ }).click();
-  await page.getByRole("button", { name: /Brand new/ }).click();
+  await page.getByRole("button", { name: /We are building the community/ }).click();
   await page.getByRole("button", { name: /^Continue/ }).click();
   await page.waitForTimeout(300);
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
-  await page.getByLabel("Your unit").fill("1");
-  await page.getByRole("button", { name: "Paste a list instead" }).click();
-  await page
-    .getByLabel(/Paste your roster/i)
-    .fill("Marcus Bell, marcus@example.com, 2\nYuki Tanaka, yuki@example.com, 3");
-  await page.waitForTimeout(300);
-  await page.getByRole("button", { name: /^Add \d+ homes?$/ }).click();
+  await page.getByLabel("Your lot").fill("1");
+  await page.getByLabel("Builder name").fill("Ridgeline Homes");
+  await page.getByLabel("Phase 1 first lot").fill("1");
+  await page.getByLabel("Phase 1 last lot").fill("3");
+  await page.waitForTimeout(400);
+
+  // One lot has sold. The other two are the builder's, which is the ordinary
+  // state of a community that is still being built.
+  await page.getByRole("button", { name: "It has sold" }).first().click();
+  await page.getByLabel(/^Buyer for /).fill("Marcus Bell");
+  await page.getByLabel(/^Email for /).fill("marcus@example.com");
+  await page.getByRole("button", { name: "Save" }).click();
   await page.waitForTimeout(300);
   await page.getByRole("button", { name: /^Continue/ }).click();
   await page.waitForTimeout(300);

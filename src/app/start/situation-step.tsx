@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Home, Rows3 } from "lucide-react";
+import { Building2, HardHat, Home, KeyRound, Rows3, Truck } from "lucide-react";
 import type {
   AssociationOrigin,
   CommunityDraft,
@@ -13,10 +13,10 @@ import { cn } from "@/lib/utils";
 /**
  * Three questions of fact, which decide what the plan contains.
  *
- * Every one of these is something a board member simply knows. None of them
- * asks what they would like to configure, because a person elected last week
- * has no way to judge whether they need a vendor register, and asking makes our
- * job theirs. We take the facts and work out the rest.
+ * Every one of these is something a builder or a board member simply knows.
+ * None of them asks what they would like to configure, because a person
+ * elected last week has no way to judge whether they need a vendor register,
+ * and asking makes our job theirs. We take the facts and work out the rest.
  *
  * If an answer would not change the plan, it is not on this screen.
  */
@@ -42,21 +42,51 @@ const PROPERTY: { id: PropertyType; label: string; detail: string; icon: typeof 
   },
 ];
 
-const ORIGIN: { id: AssociationOrigin; label: string; detail: string }[] = [
+/**
+ * The three situations this product is built for, said plainly.
+ *
+ * Each one is a different first month, not a different set of words for the
+ * same one, so the answer decides what gets set up and what plan comes back.
+ * The line that matters on each card is `changes`: it says what picking it
+ * will actually do, because a person choosing between three cards should be
+ * choosing on consequences rather than on which description sounds most like
+ * them.
+ */
+const ORIGIN: {
+  id: AssociationOrigin;
+  label: string;
+  /** Who this is, in their own words. */
+  detail: string;
+  /** What picking it changes about the next few screens. */
+  changes: string;
+  icon: typeof Home;
+}[] = [
   {
-    id: "new",
-    label: "Brand new",
-    detail: "Just formed, or just taken over from the developer",
+    id: "builder",
+    label: "We are building the community",
+    detail:
+      "You are the builder or developer. The association has to exist before the first home closes.",
+    changes:
+      "Homes come straight from the plat, unsold lots are billed to you, and reserves get funded from the first assessment.",
+    icon: HardHat,
   },
   {
-    id: "self-managed",
-    label: "Already running it ourselves",
-    detail: "We have records somewhere, probably a spreadsheet",
+    id: "handover",
+    label: "We are taking over from the builder",
+    detail:
+      "Owners have elected their own board and control of the association is passing across.",
+    changes:
+      "You get the turnover checklist: what to check before you sign a release, and what the builder owed on the lots it still held.",
+    icon: KeyRound,
   },
   {
-    id: "leaving-manager",
-    label: "Leaving a management company",
-    detail: "They hold our records, our contracts and our bank details",
+    id: "existing",
+    label: "We already run our association",
+    detail:
+      "An established community moving here. However long you have been going, and whoever you were using.",
+    changes:
+      "Nothing has to be exported. You set what each home owed on the day you switch, and you are correct from there.",
+    icon: Truck,
   },
 ];
 
@@ -96,7 +126,7 @@ export function SituationStep({
     <div className="space-y-8">
       <div>
         <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
-          Tell us about the place
+          Tell us about the community
         </h2>
         <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
           Three questions. They decide what we set up, so you are never handed a list of
@@ -157,38 +187,68 @@ export function SituationStep({
       </fieldset>
 
       <fieldset>
-        <legend className="text-[15px] font-semibold text-fg">Where are you today?</legend>
-        <p className="mt-1 text-[13px] text-fg-muted">
-          A board leaving a manager has a different first week to one starting from nothing.
+        <legend className="text-[15px] font-semibold text-fg">Which of these is you?</legend>
+        {/* Named as the complete list rather than as three examples. A person
+            who does not see themselves here should find that out now, not four
+            screens in. */}
+        <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+          These are the three we support, and each one gets a different first month rather
+          than the same checklist reworded. None of them asks you to export anything from
+          wherever you are now.
         </p>
         <div className="mt-3 space-y-2">
-          {ORIGIN.map(({ id, label, detail }) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={draft.origin === id}
-              onClick={() => patch({ origin: id })}
-              className={cn(
-                "flex w-full items-start gap-3 rounded-card border p-4 text-left transition-colors",
-                draft.origin === id
-                  ? "border-brand bg-brand-soft"
-                  : "border-border-2 hover:bg-surface-2",
-              )}
-            >
-              <span
+          {ORIGIN.map(({ id, label, detail, changes, icon: Icon }) => {
+            const picked = draft.origin === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={picked}
+                onClick={() => patch({ origin: id })}
                 className={cn(
-                  "mt-0.5 size-4 shrink-0 rounded-full border-2",
-                  draft.origin === id ? "border-brand bg-brand" : "border-border-2",
+                  "flex w-full items-start gap-3.5 rounded-card border p-4 text-left transition-colors",
+                  picked ? "border-brand bg-brand-soft" : "border-border-2 hover:bg-surface-2",
                 )}
-                aria-hidden
-              />
-              <span className="min-w-0">
-                <span className="block text-[15px] font-semibold text-fg">{label}</span>
-                <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
-              </span>
-            </button>
-          ))}
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg",
+                    picked ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
+                  )}
+                  aria-hidden
+                >
+                  <Icon className="size-4.5" strokeWidth={1.9} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold text-fg">{label}</span>
+                  <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
+                    {detail}
+                  </span>
+                  {/* What picking it does, shown only once picked, so the three
+                      cards stay comparable and the consequence is confirmed
+                      rather than competing for attention. */}
+                  {picked ? (
+                    <span className="mt-2 block border-t border-brand/25 pt-2 text-[13px] leading-relaxed text-brand-soft-fg">
+                      <span className="font-semibold">What that changes: </span>
+                      {changes}
+                    </span>
+                  ) : null}
+                </span>
+                <span
+                  className={cn(
+                    "mt-1 size-4 shrink-0 rounded-full border-2",
+                    picked ? "border-brand bg-brand" : "border-border-2",
+                  )}
+                  aria-hidden
+                />
+              </button>
+            );
+          })}
         </div>
+        <p className="mt-2.5 text-[13px] leading-relaxed text-fg-subtle">
+          Not sure between the last two? If the builder still owns lots here, you are taking
+          over. If they left years ago, you already run it.
+        </p>
       </fieldset>
 
       <fieldset>

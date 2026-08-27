@@ -1,0 +1,161 @@
+/**
+ * Homes in a community that does not have residents yet.
+ *
+ * An established association arrives with a roster: names, emails, balances,
+ * exported from whatever they were using. A new build has none of that. What it
+ * has is a recorded plat with numbered lots, released in phases, and buyers who
+ * arrive one closing at a time over two or three years.
+ *
+ * So the homes come from the plat rather than from a spreadsheet. A builder
+ * types the ranges they already know and every lot exists from day one, which
+ * is the state that makes the rest of the product correct: an unsold lot still
+ * owes an assessment, still counts toward a quorum, and still has to be
+ * somewhere on the roster. An association that only knows about sold lots gets
+ * both its budget and its vote thresholds wrong.
+ */
+
+export interface LotPhase {
+  /** Stable across edits so a list can key on it. */
+  id: string;
+  /** "Phase 1", "The Meadows". Whatever the plat calls it. */
+  label: string;
+  /** Inclusive. */
+  from: number;
+  to: number;
+}
+
+/**
+ * The most lots one phase may create.
+ *
+ * A guard against a typo rather than a product limit. "1 to 1000" is a real
+ * phase; "1 to 10000" is a missed decimal point, and finding out by way of ten
+ * thousand rows is worse than being told.
+ */
+export const MAX_LOTS_PER_PHASE = 1_000;
+
+export interface PhaseProblem {
+  phaseId: string;
+  kind: "reversed" | "too-many" | "overlap";
+  message: string;
+}
+
+/** How many lots a phase covers, or zero if the range does not make sense. */
+export function lotsInPhase(phase: LotPhase): number {
+  if (!Number.isFinite(phase.from) || !Number.isFinite(phase.to)) return 0;
+  if (phase.to < phase.from) return 0;
+  return phase.to - phase.from + 1;
+}
+
+/**
+ * A lot number as it will be printed.
+ *
+ * The prefix is whatever the plat uses and is stored on the home rather than
+ * added at render time, because it appears on a notice, in a citation and on a
+ * cheque, and those have to agree with the recorded document.
+ */
+export function lotLabel(prefix: string, number: number): string {
+  const clean = prefix.trim();
+  if (!clean) return String(number);
+  // "A-" and "Lot" want different spacing, and a builder types one or the
+  // other. Trailing punctuation means they have already said how it joins.
+  return /[-/.\s]$/.test(prefix) ? `${prefix}${number}` : `${clean} ${number}`;
+}
+
+/**
+ * What a board should be told before the homes are created.
+ *
+ * Overlap is the one that matters. A builder typing Phase 2 as 44 to 88 when
+ * Phase 1 ended at 44 produces two Lot 44s, and the failure that follows is two
+ * owners billed for one home, or one of them silently missing. Better to say so
+ * than to quietly drop the duplicate.
+ */
+export function phaseProblems(phases: LotPhase[]): PhaseProblem[] {
+  const problems: PhaseProblem[] = [];
+  const claimed = new Map<number, string>();
+
+  for (const phase of phases) {
+    if (Number.isFinite(phase.from) && Number.isFinite(phase.to) && phase.to < phase.from) {
+      problems.push({
+        phaseId: phase.id,
+        kind: "reversed",
+        message: `${phase.label} runs from ${phase.from} to ${phase.to}, which is backwards.`,
+      });
+      continue;
+    }
+
+    const count = lotsInPhase(phase);
+    if (count > MAX_LOTS_PER_PHASE) {
+      problems.push({
+        phaseId: phase.id,
+        kind: "too-many",
+        message: `${phase.label} would create ${count.toLocaleString()} homes. Check the range.`,
+      });
+      continue;
+    }
+
+    const overlaps: number[] = [];
+    for (let n = phase.from; n <= phase.to; n += 1) {
+      const owner = claimed.get(n);
+      if (owner && owner !== phase.label) overlaps.push(n);
+      else claimed.set(n, phase.label);
+    }
+    if (overlaps.length) {
+      const shown = overlaps.slice(0, 3).join(", ");
+      problems.push({
+        phaseId: phase.id,
+        kind: "overlap",
+        message:
+          overlaps.length === 1
+            ? `Lot ${shown} is already in an earlier phase.`
+            : `Lots ${shown}${overlaps.length > 3 ? " and others" : ""} are already in an earlier phase.`,
+      });
+    }
+  }
+
+  return problems;
+}
+
+/**
+ * Every lot the phases describe, in order, with no duplicates.
+ *
+ * A phase carrying a problem contributes nothing rather than contributing
+ * something wrong. `phaseProblems` is what tells the builder why, and the two
+ * are meant to be shown together.
+ */
+export function expandPhases(phases: LotPhase[], prefix = ""): string[] {
+  const problems = new Set(phaseProblems(phases).map((p) => p.phaseId));
+  const seen = new Set<string>();
+  const lots: string[] = [];
+
+  for (const phase of phases) {
+    if (problems.has(phase.id)) continue;
+    for (let n = phase.from; n <= phase.to; n += 1) {
+      const label = lotLabel(prefix, n);
+      if (seen.has(label)) continue;
+      seen.add(label);
+      lots.push(label);
+    }
+  }
+
+  return lots;
+}
+
+/** How many homes the phases add up to, for a count shown while typing. */
+export function totalLots(phases: LotPhase[], prefix = ""): number {
+  return expandPhases(phases, prefix).length;
+}
+
+/** The phase a builder starts with, so the first screen is never empty. */
+export function firstPhase(): LotPhase {
+  return { id: "phase-1", label: "Phase 1", from: 1, to: 0 };
+}
+
+/** The next phase, numbered and starting where the last one left off. */
+export function nextPhase(phases: LotPhase[]): LotPhase {
+  const highest = phases.reduce(
+    (max, phase) => (lotsInPhase(phase) > 0 ? Math.max(max, phase.to) : max),
+    0,
+  );
+  const index = phases.length + 1;
+  return { id: `phase-${index}`, label: `Phase ${index}`, from: highest + 1, to: 0 };
+}

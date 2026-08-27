@@ -7,6 +7,7 @@ import {
   Lock,
   Mail,
   Repeat,
+  Scale,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -22,6 +23,7 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CollectionsLadder } from "@/components/app/collections-ladder";
 import { collectionsLadder, DEFAULT_COLLECTION_POLICY } from "@/lib/collections";
@@ -163,6 +165,16 @@ export default function BoardHomeowners() {
         
         action={
           <div className="flex gap-2">
+            {/* An association arriving from anywhere else needs this before it
+                bills anything. It is the only thing that has to move, which is
+                the whole reason nothing here imports a ledger. */}
+            <Link
+              href="/admin/homeowners/opening-balances"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-2 bg-surface px-4 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2"
+            >
+              <Scale className="size-3.5" />
+              Opening balances
+            </Link>
             <Button variant="secondary" size="md" onClick={exportRoster}>
               <Download className="size-3.5" />
               Export roster
@@ -342,7 +354,10 @@ export default function BoardHomeowners() {
                             <Building2 className="size-3.5" />
                           </span>
                         ) : (
-                          <Avatar name={o.members[0]} />
+                          // An unsold lot has no named resident. The display
+                          // name is the builder, which is who holds it and who
+                          // owes the assessment on it.
+                          <Avatar name={o.members[0] ?? o.displayName} />
                         )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">

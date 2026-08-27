@@ -2,17 +2,26 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Upload, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Map as MapIcon, Plus, Trash2, Users } from "lucide-react";
 import { Button, Callout, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
 import { STATES } from "@/lib/data/library";
 import {
   emptyDraft,
+  otherHomes,
   unitCount,
   type CommunityDraft,
   type DraftHousehold,
 } from "@/lib/data/new-community";
+import {
+  expandPhases,
+  firstPhase,
+  lotsInPhase,
+  nextPhase,
+  phaseProblems,
+  type LotPhase,
+} from "@/lib/lots";
 import { BankStep } from "./bank-step";
 import { SituationStep } from "./situation-step";
 import { AccountStep } from "./account-step";
@@ -32,24 +41,25 @@ import { cn, money } from "@/lib/utils";
  * are all real, and every one of them can wait until somebody is logged in and
  * already collecting.
  *
- * The roster step is the one that has to be fast. A board arrives holding a
- * spreadsheet or an email chain, so it accepts a pasted list as readily as it
- * accepts typing, and the roster is the unit count rather than a second number
- * that has to agree with it.
+ * The homes step is the one that has to be fast, and in a community that is
+ * still being built it is not a roster at all. There are no residents to
+ * import. There is a recorded plat with numbered lots, so the homes are
+ * generated from the ranges the builder already knows, and the buyers are
+ * attached one closing at a time afterwards.
  */
 
 /**
  * Cheap questions first, the long one third, the highest friction one last.
  *
  * "Situation" sits before "Homes" because it takes twenty seconds and it
- * changes what the rest of setup contains. Typing a roster is the longest
- * step, and connecting a bank is the one people leave to fetch a statement
- * for, so it stays at the end where leaving does the least damage.
+ * changes what the rest of setup contains. Connecting a bank is the one people
+ * leave to go and fetch a statement for, so it stays at the end where leaving
+ * does the least damage.
  */
 const STEPS = [
   { id: "association", label: "Association", blurb: "Who you are and what a home pays" },
   { id: "situation", label: "Your place", blurb: "What kind of community this is" },
-  { id: "homes", label: "Homes", blurb: "Who lives here" },
+  { id: "homes", label: "Homes", blurb: "The lots in the plat" },
   { id: "bank", label: "Bank", blurb: "Where dues land" },
 ] as const;
 
@@ -375,44 +385,74 @@ function AssociationStep({ draft, patch }: StepProps) {
 /* Step 2: the roster                                                         */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The homes, generated from the plat rather than imported from a roster.
+ *
+ * An established association arrives with a list of residents. A new build
+ * does not have one, and will not for two or three years. What it has is
+ * numbered lots released in phases, so that is what this asks for.
+ *
+ * Every lot exists from the first day, sold or not, because an unsold lot
+ * still owes an assessment and still counts toward a quorum. A setup flow that
+ * only creates the sold ones produces a budget that is short and vote
+ * thresholds that are wrong, and both failures are silent.
+ */
 function HomesStep({ draft, patch }: StepProps) {
-  const [entry, setEntry] = useState<DraftHousehold>({ name: "", email: "", unit: "" });
-  const [bulk, setBulk] = useState("");
-  const [pasting, setPasting] = useState(false);
+  const phases = draft.phases?.length ? draft.phases : [firstPhase()];
+  const prefix = draft.lotPrefix ?? "";
+  const problems = phaseProblems(phases);
+  const lots = expandPhases(phases, prefix);
 
-  const taken = new Set([draft.founder.unit.trim(), ...draft.households.map((h) => h.unit)]);
-  const canAdd = entry.name.trim() && entry.unit.trim() && !taken.has(entry.unit.trim());
+  const [namingUnit, setNamingUnit] = useState<string | null>(null);
+  const [buyer, setBuyer] = useState({ name: "", email: "" });
+  /**
+   * How many lots to draw.
+   *
+   * A subdivision is commonly eighty or ninety lots and almost all of them are
+   * unsold during setup, so the full list is scenery a builder has to scroll
+   * past to reach the button. It is still reachable, because somebody naming a
+   * buyer needs to find their lot.
+   */
+  const [shown, setShown] = useState(12);
 
-  function add() {
-    if (!canAdd) return;
+  /**
+   * Rebuilds the homes whenever the ranges change.
+   *
+   * Buyers already recorded against a lot survive, because a builder editing
+   * Phase 3 must not lose the four families who closed last month.
+   */
+  function setPhases(next: LotPhase[], nextPrefix = prefix) {
+    const known = new Map(draft.households.map((h) => [h.unit, h]));
+    const households: DraftHousehold[] = expandPhases(next, nextPrefix).map(
+      (unit) => known.get(unit) ?? { name: "", email: "", unit },
+    );
+    patch({ phases: next, lotPrefix: nextPrefix, households });
+  }
+
+  function editPhase(id: string, change: Partial<LotPhase>) {
+    setPhases(phases.map((p) => (p.id === id ? { ...p, ...change } : p)));
+  }
+
+  function saveBuyer(unit: string) {
     patch({
-      households: [
-        ...draft.households,
-        { name: entry.name.trim(), email: entry.email.trim(), unit: entry.unit.trim() },
-      ],
+      households: draft.households.map((h) =>
+        h.unit === unit ? { ...h, name: buyer.name.trim(), email: buyer.email.trim() } : h,
+      ),
     });
-    setEntry({ name: "", email: "", unit: "" });
+    setNamingUnit(null);
+    setBuyer({ name: "", email: "" });
   }
 
-  function importPasted() {
-    const parsed = parseRoster(bulk).filter((h) => !taken.has(h.unit));
-    if (!parsed.length) return;
-    patch({ households: [...draft.households, ...parsed] });
-    setBulk("");
-    setPasting(false);
-  }
-
-  const preview = pasting ? parseRoster(bulk) : [];
+  const mine = draft.founder.unit.trim();
+  const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
 
   return (
     <Section
-      title="Who lives here?"
-      detail="Start with your own home. Every household gets a balance, a login, and a vote."
+      title="Which homes are in the community?"
+      detail="Take them from the plat. Every lot gets a balance and a vote from day one, whether or not it has sold."
     >
       <div className="rounded-card border border-border bg-surface-2 p-4">
-        <p className="mb-3 text-[13px] font-semibold text-fg-muted">
-          You
-        </p>
+        <p className="mb-3 text-[13px] font-semibold text-fg-muted">You</p>
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_5.5rem]">
           <input
             value={draft.founder.name}
@@ -432,8 +472,8 @@ function HomesStep({ draft, patch }: StepProps) {
           <input
             value={draft.founder.unit}
             onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
-            placeholder="Unit"
-            aria-label="Your unit"
+            placeholder="Lot"
+            aria-label="Your lot"
             className={input}
           />
         </div>
@@ -442,131 +482,211 @@ function HomesStep({ draft, patch }: StepProps) {
         </p>
       </div>
 
-      {pasting ? (
-        <div className="flex flex-col gap-3">
-          <Field
-            label="Paste your roster"
-            hint="One household per line: name, email, unit. Any order, and a header row is fine."
-          >
-            <textarea
-              value={bulk}
-              onChange={(e) => setBulk(e.target.value)}
-              rows={7}
-              autoFocus
-              placeholder={"Marcus Bell, marcus@example.com, 2\nYuki Tanaka, yuki@example.com, 3"}
-              className={cn(input, "h-auto py-2 font-mono text-[13px] leading-relaxed")}
+      <Field
+        label="Who is building it?"
+        hint="Named against every lot that has not sold, because somebody owns those and owes the assessment on them."
+      >
+        <input
+          value={draft.builderName ?? ""}
+          onChange={(e) => patch({ builderName: e.target.value })}
+          placeholder="Ridgeline Homes"
+          aria-label="Builder name"
+          className={input}
+        />
+      </Field>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="What the plat calls a lot" hint="Optional. Printed as part of the number.">
+            <input
+              value={prefix}
+              onChange={(e) => setPhases(phases, e.target.value)}
+              placeholder="Lot"
+              aria-label="Lot prefix"
+              className={cn(input, "w-32")}
             />
           </Field>
-          {/* A board leaving a manager has a file, not a clipboard. Making
-              them open it, select all and paste is three steps we can remove. */}
-          <label className="inline-flex h-9 w-fit cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2">
-            <Upload className="size-4" />
-            Choose a CSV instead
-            <input
-              type="file"
-              accept=".csv,.tsv,.txt,text/csv,text/plain"
-              className="sr-only"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (!file) return;
-                setBulk(await file.text());
-              }}
-            />
-          </label>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" size="sm" onClick={importPasted} disabled={!preview.length}>
-              Add {preview.length ? pluralHomes(preview.length) : "households"}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setPasting(false)}>
-              Cancel
-            </Button>
-            {bulk.trim() && !preview.length ? (
-              <span className="text-[13px] text-warn">
-                No lines read as a household yet. Each needs a name and a unit.
-              </span>
-            ) : null}
-          </div>
+          <p className="pb-1 text-[13px] text-fg-subtle">
+            {lots.length > 0 ? `First one is ${lots[0]}` : "For example Lot, Unit or A-"}
+          </p>
         </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_5.5rem]">
-            <input
-              value={entry.name}
-              onChange={(e) => setEntry({ ...entry, name: e.target.value })}
-              placeholder="Household name"
-              aria-label="Household name"
-              onKeyDown={(e) => e.key === "Enter" && add()}
-              className={input}
-            />
-            <input
-              type="email"
-              value={entry.email}
-              onChange={(e) => setEntry({ ...entry, email: e.target.value })}
-              placeholder="Email"
-              aria-label="Household email"
-              onKeyDown={(e) => e.key === "Enter" && add()}
-              className={input}
-            />
-            <input
-              value={entry.unit}
-              onChange={(e) => setEntry({ ...entry, unit: e.target.value })}
-              placeholder="Unit"
-              aria-label="Household unit"
-              onKeyDown={(e) => e.key === "Enter" && add()}
-              className={input}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={add} disabled={!canAdd}>
-              <Plus className="size-3.5" />
-              Add household
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setPasting(true)}>
-              Paste a list instead
-            </Button>
-            {entry.unit.trim() && taken.has(entry.unit.trim()) ? (
-              <span className="text-[13px] text-danger">
-                Unit {entry.unit.trim()} is already on the roster.
-              </span>
-            ) : null}
-          </div>
-        </div>
-      )}
 
-      {draft.households.length ? (
         <Card className="divide-y divide-border overflow-hidden">
-          {draft.households.map((h, index) => (
-            <div key={h.unit} className="flex items-center gap-3 px-3.5 py-2.5">
-              <span className="w-14 shrink-0 text-[13px] font-medium text-fg-subtle">
-                Unit {h.unit}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-medium text-fg">{h.name}</span>
-                {h.email ? (
-                  <span className="block truncate text-[13px] text-fg-subtle">{h.email}</span>
-                ) : (
-                  <span className="block text-[13px] text-warn">No email, so no invitation</span>
+          <div className="grid grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-[13px] font-semibold text-fg-muted">
+            <span>Phase</span>
+            <span>From</span>
+            <span>To</span>
+            <span className="text-right">Homes</span>
+            <span />
+          </div>
+          {phases.map((phase) => {
+            const problem = problems.find((p) => p.phaseId === phase.id);
+            return (
+              <div key={phase.id}>
+                <div className="grid grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 px-3.5 py-2.5">
+                  <input
+                    value={phase.label}
+                    onChange={(e) => editPhase(phase.id, { label: e.target.value })}
+                    aria-label={`Name of ${phase.label}`}
+                    className={cn(input, "h-9")}
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={Number.isFinite(phase.from) ? phase.from : ""}
+                    onChange={(e) =>
+                      editPhase(phase.id, { from: Number.parseInt(e.target.value, 10) })
+                    }
+                    aria-label={`${phase.label} first lot`}
+                    className={cn(input, "h-9 tnum")}
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={Number.isFinite(phase.to) && phase.to > 0 ? phase.to : ""}
+                    onChange={(e) =>
+                      editPhase(phase.id, { to: Number.parseInt(e.target.value, 10) })
+                    }
+                    aria-label={`${phase.label} last lot`}
+                    className={cn(input, "h-9 tnum")}
+                  />
+                  <span className="tnum text-right text-[15px] font-medium text-fg-muted">
+                    {problem ? "—" : lotsInPhase(phase)}
+                  </span>
+                  {phases.length > 1 ? (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${phase.label}`}
+                      onClick={() => setPhases(phases.filter((p) => p.id !== phase.id))}
+                      className="rounded-md p-1 text-fg-subtle hover:bg-surface-2 hover:text-danger"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+                {/* A phase with a problem creates nothing rather than creating
+                    half of something. Two Lot 44s bills one home twice. */}
+                {problem ? (
+                  <p className="px-3.5 pb-2.5 text-[13px] leading-relaxed text-warn">
+                    {problem.message}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </Card>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-fit"
+          onClick={() => setPhases([...phases, nextPhase(phases)])}
+        >
+          <Plus className="size-3.5" />
+          Add a phase
+        </Button>
+      </div>
+
+      {lots.length > 0 ? (
+        <Card className="divide-y divide-border overflow-hidden">
+          {draft.households.slice(0, shown).map((home) => {
+            // The founder's own lot comes out of the plat like any other, and
+            // it is already entered above. Offering to sell it to somebody
+            // else here is how a builder ends up not owning their own home.
+            const isMine = mine !== "" && home.unit === mine;
+            return (
+            <div key={home.unit} className="px-3.5 py-2.5">
+              <div className="flex items-center gap-3">
+                <span className="w-20 shrink-0 truncate text-[13px] font-medium text-fg-subtle">
+                  {home.unit}
+                </span>
+                <span className="min-w-0 flex-1">
+                  {isMine ? (
+                    <span className="block text-[15px] font-medium text-fg">
+                      {draft.founder.name.trim() || "You"}
+                      <span className="ml-1.5 text-[13px] font-normal text-fg-subtle">
+                        yours
+                      </span>
+                    </span>
+                  ) : home.name.trim() ? (
+                    <>
+                      <span className="block truncate text-[15px] font-medium text-fg">
+                        {home.name}
+                      </span>
+                      {home.email ? (
+                        <span className="block truncate text-[13px] text-fg-subtle">
+                          {home.email}
+                        </span>
+                      ) : (
+                        <span className="block text-[13px] text-warn">
+                          No email, so no invitation
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="block text-[15px] text-fg-subtle">
+                      Unsold{draft.builderName?.trim() ? `, ${draft.builderName.trim()}` : ""}
+                    </span>
+                  )}
+                </span>
+                {isMine ? null : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNamingUnit(namingUnit === home.unit ? null : home.unit);
+                      setBuyer({ name: home.name, email: home.email });
+                    }}
+                    className="shrink-0 text-[13px] font-medium text-brand hover:underline"
+                  >
+                    {home.name.trim() ? "Edit" : "It has sold"}
+                  </button>
                 )}
-              </span>
-              <button
-                type="button"
-                aria-label={`Remove ${h.name}`}
-                onClick={() =>
-                  patch({ households: draft.households.filter((_, i) => i !== index) })
-                }
-                className="rounded-md p-1 text-fg-subtle hover:bg-surface-2 hover:text-danger"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
+              </div>
+
+              {namingUnit === home.unit && !isMine ? (
+                <div className="mt-2.5 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <input
+                    value={buyer.name}
+                    onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
+                    placeholder="Buyer name"
+                    aria-label={`Buyer for ${home.unit}`}
+                    autoFocus
+                    className={cn(input, "h-9")}
+                  />
+                  <input
+                    type="email"
+                    value={buyer.email}
+                    onChange={(e) => setBuyer({ ...buyer, email: e.target.value })}
+                    placeholder="Email"
+                    aria-label={`Email for ${home.unit}`}
+                    className={cn(input, "h-9")}
+                  />
+                  <Button variant="secondary" size="sm" onClick={() => saveBuyer(home.unit)}>
+                    Save
+                  </Button>
+                </div>
+              ) : null}
             </div>
-          ))}
+            );
+          })}
+          {draft.households.length > shown ? (
+            <button
+              type="button"
+              onClick={() => setShown(draft.households.length)}
+              className="w-full px-3.5 py-3 text-left text-[13px] font-medium text-brand transition-colors hover:bg-surface-2"
+            >
+              Show the other {draft.households.length - shown} lots
+            </button>
+          ) : null}
         </Card>
       ) : null}
 
       <p className="flex items-center gap-2 text-[13px] text-fg-muted">
-        <Users className="size-3.5 shrink-0" />
-        {pluralHomes(unitCount(draft))} on the roster
+        <MapIcon className="size-3.5 shrink-0" />
+        {pluralHomes(unitCount(draft))} in the plat
+        {sold > 0 ? `, ${sold} sold` : ", none sold yet"}
         {draft.duesCents > 0 ? (
           <>
             {" · "}
@@ -574,6 +694,12 @@ function HomesStep({ draft, patch }: StepProps) {
           </>
         ) : null}
       </p>
+
+      <Callout tone="info" icon={<Users className="size-4" />} title="Buyers can wait">
+        You do not need names now. Add a buyer as each home closes, or invite them from the
+        roster later. Until then the lot sits against{" "}
+        {draft.builderName?.trim() || "the builder"}, which is who owes the assessment on it.
+      </Callout>
     </Section>
   );
 }
@@ -698,99 +824,8 @@ function Field({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Parsing and validation                                                     */
+/* Validation                                                                 */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Reads a pasted roster.
- *
- * Boards arrive with a spreadsheet column, an email chain, or a list someone
- * typed in Notes, so this takes commas or tabs, tolerates a header row, and
- * finds the email wherever it sits rather than demanding a fixed column order.
- * Anything it cannot read is dropped rather than guessed at, and the count it
- * reports is what will actually be added.
- */
-/**
- * Splits one line into cells, respecting quotes.
- *
- * A roster exported from anywhere real contains at least one "Smith, John",
- * and splitting that on the comma produces a household called Smith living in
- * unit John. Quoted fields are the difference between an import that works on
- * the file a board actually has and one that works on a file we made up.
- */
-function splitCells(line: string): string[] {
-  const cells: string[] = [];
-  let cell = "";
-  let quoted = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      // A doubled quote inside a quoted field is a literal quote.
-      if (quoted && line[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else {
-        quoted = !quoted;
-      }
-      continue;
-    }
-    if (!quoted && (ch === "," || ch === "\t" || ch === ";")) {
-      cells.push(cell.trim());
-      cell = "";
-      continue;
-    }
-    cell += ch;
-  }
-  cells.push(cell.trim());
-  return cells.filter(Boolean);
-}
-
-/** Words that mean this row names columns rather than a person. */
-const HEADER_WORDS =
-  /^(name|household|owner|owners?[ _-]?name|unit|unit[ _-]?#|lot|address|email|e-?mail|phone|resident|member)$/i;
-
-/**
- * Turns a pasted or uploaded roster into households.
- *
- * Deliberately forgiving about column order, separators and headers, because
- * the file a board has came out of whatever their manager used and will not
- * match any format we specify. What it will reliably contain is a name, a
- * number that is the unit, and sometimes an email, so those are found by shape
- * rather than by position.
- */
-export function parseRoster(text: string): DraftHousehold[] {
-  const seen = new Set<string>();
-  const rows: DraftHousehold[] = [];
-
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) continue;
-
-    const cells = splitCells(line);
-    if (cells.length < 2) continue;
-
-    // A header names columns. Checking every cell rather than only the first
-    // catches "Unit, Owner, Email", which starts with a word we would
-    // otherwise mistake for data.
-    if (cells.filter((c) => HEADER_WORDS.test(c)).length >= 2) continue;
-
-    const email = cells.find((c) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c)) ?? "";
-    const rest = cells.filter((c) => c !== email);
-    // The unit is the last cell that looks like a unit number, which is what a
-    // unit is and a name never is.
-    const unit =
-      [...rest].reverse().find((c) => /^[a-z]?[-#]?\d+[a-z]?$/i.test(c)) ??
-      rest[rest.length - 1];
-    const name = rest.filter((c) => c !== unit).join(" ").trim();
-
-    if (!name || !unit || seen.has(unit)) continue;
-    seen.add(unit);
-    rows.push({ name, email, unit });
-  }
-
-  return rows;
-}
 
 /** Which steps hold enough to move past. Index matches STEPS. */
 function stepComplete(draft: CommunityDraft): boolean[] {

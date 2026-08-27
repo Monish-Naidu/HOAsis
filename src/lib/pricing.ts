@@ -7,7 +7,7 @@
  * times the real one. Both read this now, so a change lands in both.
  *
  * Priced per home per month. It is the convention a board already understands,
- * because it is how the management company they are leaving quotes, so the
+ * because it is how a management proposal is quoted, so the
  * comparison needs no arithmetic from them.
  */
 
@@ -46,6 +46,6 @@ export const MANAGEMENT_RANGE_PER_HOME = { low: 10_00, high: 20_00 };
 export const PRICE_EXAMPLES = [
   { homes: 12, note: "A duplex row or a small court" },
   { homes: 40, note: "A single street" },
-  { homes: 88, note: "About the median self-managed association", highlight: true },
+  { homes: 88, note: "A common single phase subdivision", highlight: true },
   { homes: 250, note: "A large development" },
 ];

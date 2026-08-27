@@ -115,9 +115,11 @@ const RESERVE_STUDY_STATES = new Set([
 function applies(task: SetupTask, p: AssociationProfile): boolean {
   switch (task.key) {
     case "vendors":
-      // A board leaving a manager has vendors, held by somebody else. A brand
-      // new association usually has not hired anyone yet.
-      return p.origin !== "new";
+      // A builder standing an association up has not hired the landscaper yet;
+      // whoever cuts the grass is still on the construction contract. A board
+      // taking over inherits vendors it did not choose, and needs to know
+      // which contracts are in the builder's name rather than its own.
+      return p.origin !== "builder";
 
     case "amenities":
       return p.sharedSpaces.length > 0;
@@ -189,14 +191,17 @@ function because(task: SetupTask, p: AssociationProfile): string | undefined {
       return `Rules differ by state, building age and height. Your ${p.stateName} page has the current position.`;
 
     case "vendors":
-      return p.origin === "leaving-manager"
-        ? "Your manager holds these contracts. Getting copies before you leave is the part boards forget."
+      return p.origin === "handover"
+        ? "Some of these contracts are in the builder's name rather than the association's, and those simply stop when the builder leaves. Ask each one to confirm in writing who the counterparty is now."
         : undefined;
 
     case "documents":
-      return p.origin === "leaving-manager"
-        ? "Ask your manager for the full record now. They are required to hand it over, and it gets harder after you cancel."
-        : undefined;
+      if (p.origin === "builder") {
+        return "Put the recorded declaration in as text before the first closing. Several states make the association, and not the seller, responsible for giving a new member the covenants.";
+      }
+      return p.origin === "handover"
+        ? "Take the full record while the builder still wants the handover to go smoothly. Afterwards you are a former counterparty rather than a partner."
+        : "You already hold these. Putting the text in is what lets an owner search them in plain words instead of asking a board member from memory.";
 
     case "amenities":
       return `You told us about ${listSpaces(p.sharedSpaces)}. Owners can reserve them once they are listed.`;

@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Building2, HeartHandshake, ShieldCheck } from "lucide-react";
+import { ArrowRight, Building2, HeartHandshake, Ruler, ShieldCheck } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Card } from "@/components/ui/primitives";
 
 export const metadata = {
   title: "About",
   description:
-    "A volunteer board carries a professional's liability with none of the training. This is what we built for that, and what we believe about running an association.",
+    "A community is handed to volunteers who were not trained for it, and most of what decides how that goes was settled before they arrived. This is what we built for that.",
 };
 
 /**
@@ -46,7 +46,12 @@ const BELIEFS = [
   {
     icon: HeartHandshake,
     title: "The next board inherits whatever you leave",
-    body: "Volunteers turn over every January. Requests, decisions, and the reasons behind them stay on the record, because otherwise the only institutional memory is whoever happens to still live there.",
+    body: "This starts at turnover and never stops. Requests, decisions, and the reasons behind them stay on the record, because otherwise the only institutional memory is whoever happens to still live there.",
+  },
+  {
+    icon: Ruler,
+    title: "A first budget that sells houses is not a first budget",
+    body: "Low dues in year one make a community easier to sell and hand the incoming board a shortfall it did not choose. We show what reserves actually require before the assessment is set, on the theory that a builder would rather know than find out at a deposition.",
   },
 ];
 
@@ -65,15 +70,22 @@ export default function AboutPage() {
           <div className="mt-6 space-y-4 text-[17px] leading-[1.75] text-fg-muted">
             <p>
               A board is usually three or four neighbors with day jobs. Between them they are
-              responsible for a few hundred thousand dollars, a set of roofs that will need
-              replacing, and a stack of legal deadlines nobody mentioned at the meeting where
-              they volunteered.
+              responsible for a few hundred thousand dollars, a set of roads and roofs that
+              will need replacing, and a stack of legal deadlines nobody mentioned at the
+              meeting where they volunteered.
+            </p>
+            <p>
+              Almost all of that was decided before they arrived. The builder set the first
+              budget, wrote the covenants, and chose what went into reserves, and the board
+              that inherits those choices finds out what they were somewhere around the second
+              winter. A community handed over well and one handed over badly look identical on
+              the day, and completely different four years later.
             </p>
             <p>
               Most software for this assumes a professional manager sits in the middle. It
               expects someone who knows what accrual accounting is, who has run an election
-              before, and who reads statutes for a living. A volunteer board has none of that
-              and exactly the same liability.
+              before, and who reads statutes for a living. The owners who end up holding a new
+              community have none of that and exactly the same liability.
             </p>
             <p>
               HOAsis assumes the other thing. It assumes you are careful, busy, unpaid, and

@@ -106,6 +106,11 @@ interface AppState {
   resetDemo: () => void;
   /** Adds a household to the register, with the account that lets them sign in. */
   addOwner: (input: { name: string; email: string; unit: string }) => Owner;
+  /** What each home owed on the day the association switched to us. */
+  setOpeningBalances: (
+    asOf: string,
+    balances: { ownerId: string; amountCents: number }[],
+  ) => void;
   removeOwner: (ownerId: string) => () => void;
   /** Connects an account the association can receive dues into. */
   /** Appoints a household to an office, or returns them to being a resident. */
@@ -865,6 +870,66 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
+  /**
+   * What each home owed on the day the association switched to us.
+   *
+   * The one step that makes a move from anywhere else work end to end, and the
+   * reason nothing in this product imports a ledger. Reproducing a decade of
+   * somebody else's history is where a migration stalls, and the reproduced
+   * version is never right anyway: a single opening figure per home is enough
+   * to be correct from the switch date forward.
+   *
+   * It is written as a dated line on the statement rather than as a number
+   * that appears from nowhere, because an owner who cannot see where a balance
+   * came from disputes it, and a board that cannot show where it came from
+   * loses that dispute.
+   */
+  const setOpeningBalances = useCallback(
+    (asOf: string, balances: { ownerId: string; amountCents: number }[]) => {
+      const byOwner = new Map(balances.map((b) => [b.ownerId, b.amountCents]));
+
+      // Only the balance moves. Standing and days past due are deliberately
+      // left alone: a figure typed into a box says what is owed and says
+      // nothing about how long it has been owed, and turning it into
+      // "collections" would drop a household onto the enforcement ladder on
+      // their first day here on the strength of an inference. The ladder runs
+      // off the calendar from the switch date, which is the whole reason it is
+      // defensible at a hearing.
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((owner) => {
+          const amount = byOwner.get(owner.id);
+          return amount === undefined ? owner : { ...owner, balanceCents: amount };
+        }),
+      );
+
+      sliceStore(communityId, "ownerCharges").update((all) => {
+        const next = { ...all };
+        for (const { ownerId, amountCents } of balances) {
+          const existing = (next[ownerId] ?? []).filter(
+            (line) => line.id !== `${ownerId}-opening`,
+          );
+          if (amountCents === 0) {
+            next[ownerId] = existing;
+            continue;
+          }
+          next[ownerId] = [
+            {
+              id: `${ownerId}-opening`,
+              date: asOf,
+              label: "Balance brought forward",
+              kind: "charge" as const,
+              amountCents,
+              balanceAfterCents: amountCents,
+            },
+            ...existing,
+          ];
+        }
+        return next;
+      });
+    },
+    [communityId],
+  );
+
   /** Removes a household and its account together, returning one undo for both. */
   const removeOwner = useCallback(
     (ownerId: string) => {
@@ -1412,6 +1477,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     createRemoteAssociation,
     isRemote: Boolean(remote.community),
     addOwner,
+    setOpeningBalances,
     removeOwner,
     setAccountRole,
     dismissedSetupTasks,

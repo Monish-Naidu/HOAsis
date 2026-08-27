@@ -22,18 +22,18 @@ import {
 } from "@/lib/pricing";
 
 export const metadata = {
-  title: "HOAsis, community management for self-managed HOAs",
+  title: "HOAsis, the HOA platform for new communities",
   description:
-    "Everything a management company does, run from your own website. Books that reconcile, an app residents use, and reserves you can actually plan.",
+    "Stand up an association before the first home closes, and hand over one that survives the audit. Reserves funded from day one, documents buyers can read, and books that reconcile.",
 };
 
 /**
- * The cost case, as arithmetic a board can check.
+ * The cost case, as arithmetic a builder or a board can check.
  *
  * Every figure here is computed from the same tier table the pricing page
  * reads, because these two pages drifted once and the front page ended up
  * quoting a per door rate three times our actual price. The worked example is
- * an association of 88 homes, which is close to the median self-managed size.
+ * a community of 88 homes, which is a common single-phase subdivision.
  */
 const EXAMPLE_HOMES = 88;
 const OUR_MONTH = monthlyFor(EXAMPLE_HOMES);
@@ -45,15 +45,38 @@ const MANAGED_YEAR = {
 
 
 
-/** Each value section pairs a claim with the screen that proves it. */
+/**
+ * Each value section pairs a claim with the screen that proves it.
+ *
+ * Reserves lead. In an established association the first question is whether
+ * the books are right; in a new one the books are empty and correct, and the
+ * question that decides the next thirty years is whether the first budget
+ * funds the roads. A low first-year assessment sells houses and hands the
+ * incoming board a shortfall, and that is the failure this product is pointed
+ * at now.
+ */
 const SHOWCASE = [
   {
+    eyebrow: "Reserves",
+    title: "Set the first assessment knowing what it has to cover.",
+    body: "Roads, roofs and pumps each get replaced the year they wear out, at what it will cost by then. Everything is new, so the dates are known rather than guessed. Follow it forward and the first year the money runs out is the year owners get a surprise bill, so we name that year before the dues are set.",
+    points: [
+      "Thirty years ahead, from the day the plat records",
+      "The exact monthly amount that avoids a special assessment",
+      "What the builder funded, month by month, at handover",
+    ],
+    image: "/marketing/product-reserves.png",
+    width: 2360,
+    height: 1360,
+    alt: "A thirty year reserve plan, with sliders for savings, yield and inflation",
+  },
+  {
     eyebrow: "Accounting",
-    title: "See at a glance whether the books are right.",
-    body: "Anything that needs a person to decide is kept out of your reports until somebody decides it. Nothing is filed automatically, duplicate charges are caught before they reach a statement, and the dashboard tells you plainly when something is unresolved.",
+    title: "Hand over books that survive the audit.",
+    body: "Anything that needs a person to decide is kept out of your reports until somebody decides it. Nothing is filed automatically, duplicate charges are caught before they reach a statement, and the assessment on every lot the builder still owns is on the ledger like any other home.",
     points: [
       "Live bank feeds, updated as they happen",
-      "Duplicate charges caught for you",
+      "Unsold lots billed like every other home",
       "One balance, and every report shows it",
     ],
     image: "/marketing/product-dashboard.png",
@@ -62,23 +85,9 @@ const SHOWCASE = [
     alt: "The board dashboard, with three transactions waiting to be reviewed",
   },
   {
-    eyebrow: "Reserves",
-    title: "Know the year the money runs out, while you can still fix it.",
-    body: "Roofs, paving and pumps each get replaced the year they wear out, at what it will cost by then. Follow that forward and the first year you come up short is the year owners get a surprise bill. We show you that year, then work out the monthly saving that avoids it.",
-    points: [
-      "Thirty years ahead, not just today",
-      "How much of what you owe is saved",
-      "The exact monthly amount that fixes it",
-    ],
-    image: "/marketing/product-reserves.png",
-    width: 2360,
-    height: 1360,
-    alt: "A thirty year reserve plan, with sliders for savings, yield and inflation",
-  },
-  {
     eyebrow: "Residents",
-    title: "The three things an owner ever does, made quick.",
-    body: "Pay, look something up, ask for something. Every payment method shows what it costs before anyone commits, and every payment shows which charges it cleared. The same screens become the phone app.",
+    title: "A buyer who knows the rules before they close.",
+    body: "Pay, look something up, ask for something. Your recorded documents are searchable in plain words, so an owner finds the fence rule instead of asking a board member. Every payment method shows what it costs before anyone commits. The same screens become the phone app.",
     points: [
       "What the card costs, shown before you pay",
       "Requests with a receipt you can show a contractor",
@@ -116,6 +125,7 @@ const ALSO = [
 ];
 
 const JOBS = [
+  "Bill every lot, including the ones still unsold",
   "Collect assessments and chase the late ones",
   "Pay vendors by ACH with two signatures",
   "Keep the books and produce statements",
@@ -125,6 +135,7 @@ const JOBS = [
   "Log violations through notice, cure, and hearing",
   "Answer owners without losing the thread",
   "Track every compliance deadline that applies",
+  "Hand the whole record across at turnover",
 ];
 
 /**
@@ -192,19 +203,20 @@ export default function MarketingHome() {
           <div>
             <Reveal>
               <Badge tone="ok" dot>
-                Built for boards that self-manage
+                Built for new communities
               </Badge>
               <h1 className="mt-5 text-balance text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
-                Run your HOA without{" "}
+                Hand over an HOA{" "}
                 <span className="bg-gradient-to-br from-navy-700 to-accent bg-clip-text text-transparent dark:from-navy-200 dark:to-accent">
-                  a management company.
+                  that already works.
                 </span>
               </h1>
             </Reveal>
             <Reveal delay={90}>
               <p className="mt-6 max-w-lg text-[17px] leading-relaxed text-fg-muted">
-                Collect dues, keep the books straight, and answer records requests on time.
-                Everything a manager does, run by the people who actually live there.
+                Stand the association up from the plat, before the first home closes. Every
+                lot on the books, reserves funded from the first assessment, and documents a
+                buyer can actually read. Then hand it to the owners with nothing to explain.
               </p>
             </Reveal>
             <Reveal delay={170}>
@@ -213,7 +225,7 @@ export default function MarketingHome() {
                   href="/start"
                   className="group inline-flex h-12 items-center gap-2 rounded-xl bg-brand px-6 text-[17px] font-semibold text-brand-fg shadow-raised transition-all hover:-translate-y-0.5 hover:shadow-float"
                 >
-                  Set up your association
+                  Set up a community
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 <Link
@@ -250,20 +262,20 @@ export default function MarketingHome() {
                   className="object-cover"
                 />
               </div>
-              {/* Not a statistic. A board looking at this is three volunteers
-                  who took the job because the alternative was a management
-                  company, and the thing worth saying to them is that the
-                  product expects exactly that and nothing more. */}
+              {/* Not a statistic. Whoever ends up running this community is
+                  three owners with day jobs, however carefully the builder set
+                  it up, and the thing worth saying is that the product expects
+                  exactly that and nothing more. */}
               <figcaption className="absolute -bottom-6 -left-4 flex max-w-[20rem] items-center gap-3.5 rounded-2xl border border-border bg-surface/95 px-4 py-3.5 shadow-float backdrop-blur-md sm:-left-8">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-fg">
                   <Users className="size-5" strokeWidth={2} />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[15px] font-semibold text-fg">
-                    Made for volunteer boards
+                    Ends up with the owners
                   </span>
                   <span className="block text-[13px] leading-snug text-fg-muted">
-                    A neighbor with a day job, not a property manager
+                    Built so a neighbor with a day job can take it over
                   </span>
                 </span>
               </figcaption>
@@ -284,7 +296,7 @@ export default function MarketingHome() {
               label: "of US associations are underfunded on reserves",
               note: "Association Reserves, 100,000+ studies",
             },
-            { value: "30 yr", label: "We show you the year the money runs out" },
+            { value: "30 yr", label: "The year the money runs out, named before dues are set" },
             {
               value: money(PRICE_PER_TRANSACTION_CENTS),
               label: "Every payment, flat. Never a percentage of the assessment",
@@ -384,8 +396,8 @@ export default function MarketingHome() {
             </h2>
             <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-fg-muted">
               Not per home, not per feature, not per board member. Here is the whole bill for
-              an association of {EXAMPLE_HOMES} homes, next to what a management company
-              charges for the same year.
+              a community of {EXAMPLE_HOMES} homes, next to what a management company charges
+              to run the same one for a year.
             </p>
           </Reveal>
 
@@ -461,16 +473,16 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* The nine jobs */}
+      {/* The eleven jobs */}
       <section className="border-b border-border bg-surface">
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <Reveal>
             <h2 className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[40px]">
-              The nine jobs you are paying someone else to do.
+              Every job the association has, from the plat to the handover.
             </h2>
             <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-fg-muted">
               A management contract bundles these and quotes one number. Here they are unbundled,
-              and every one of them is in the product.
+              and every one of them is in the product on the day the community records.
             </p>
           </Reveal>
           <ul className="mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">

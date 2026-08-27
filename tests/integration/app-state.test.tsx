@@ -482,6 +482,146 @@ describe("admin actions change real records", () => {
   });
 });
 
+describe("opening balances", () => {
+  /**
+   * The one thing that moves when an association arrives from anywhere else.
+   *
+   * Nothing in this product imports a ledger, so this figure is the entire
+   * migration. It has to land on the statement, and it has to not quietly
+   * reclassify anybody while it does.
+   */
+  it("sets the balance and writes it onto the statement as a dated line", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const owner = result.current.state.community.owners[1];
+
+    act(() =>
+      result.current.state.setOpeningBalances("2026-07-01", [
+        { ownerId: owner.id, amountCents: 124_050 },
+      ]),
+    );
+
+    const after = result.current.state.community.owners.find((o) => o.id === owner.id)!;
+    expect(after.balanceCents).toBe(124_050);
+
+    // A balance that appears from nowhere is one an owner disputes and a board
+    // cannot defend, so it is a line on the statement with a date on it.
+    const opening = result.current.state.community.ownerCharges[owner.id]?.[0];
+    expect(opening?.label).toBe("Balance brought forward");
+    expect(opening?.date).toBe("2026-07-01");
+    expect(opening?.amountCents).toBe(124_050);
+  });
+
+  it("does not put anybody into collections on the strength of a typed number", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const owner = result.current.state.community.owners.find((o) => o.standing === "current")!;
+
+    act(() =>
+      result.current.state.setOpeningBalances("2026-07-01", [
+        { ownerId: owner.id, amountCents: 90_000 },
+      ]),
+    );
+
+    // The figure says what is owed. It says nothing about how long it has been
+    // owed, and the ladder runs off the calendar from the switch date, which
+    // is what makes it defensible at a hearing.
+    const after = result.current.state.community.owners.find((o) => o.id === owner.id)!;
+    expect(after.standing).toBe("current");
+    expect(after.daysPastDue).toBe(0);
+  });
+
+  it("can be corrected without stacking a second opening line", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const owner = result.current.state.community.owners[2];
+
+    act(() =>
+      result.current.state.setOpeningBalances("2026-07-01", [
+        { ownerId: owner.id, amountCents: 50_000 },
+      ]),
+    );
+    act(() =>
+      result.current.state.setOpeningBalances("2026-07-01", [
+        { ownerId: owner.id, amountCents: 25_000 },
+      ]),
+    );
+
+    const lines = result.current.state.community.ownerCharges[owner.id] ?? [];
+    const opening = lines.filter((l) => l.label === "Balance brought forward");
+    expect(opening, "a correction stacked a second opening balance").toHaveLength(1);
+    expect(opening[0].amountCents).toBe(25_000);
+  });
+
+  it("clears the line entirely when a home turns out to owe nothing", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const owner = result.current.state.community.owners[3];
+
+    act(() =>
+      result.current.state.setOpeningBalances("2026-07-01", [
+        { ownerId: owner.id, amountCents: 30_000 },
+      ]),
+    );
+    act(() =>
+      result.current.state.setOpeningBalances("2026-07-01", [
+        { ownerId: owner.id, amountCents: 0 },
+      ]),
+    );
+
+    const lines = result.current.state.community.ownerCharges[owner.id] ?? [];
+    expect(lines.some((l) => l.label === "Balance brought forward")).toBe(false);
+    expect(
+      result.current.state.community.owners.find((o) => o.id === owner.id)!.balanceCents,
+    ).toBe(0);
+  });
+});
+
+describe("the setup plan and unsold lots", () => {
+  it("does not ask a builder to invite a household that does not exist", async () => {
+    const { SETUP_TASKS } = await import("@/lib/setup");
+    const { buildCommunity, emptyDraft } = await import("@/lib/data/new-community");
+    const invites = SETUP_TASKS.find((t) => t.key === "invites")!;
+
+    const community = buildCommunity(
+      {
+        ...emptyDraft(),
+        founder: { name: "Pat", email: "pat@example.com", unit: "1" },
+        builderName: "Ridgeline Homes",
+        households: [
+          { name: "Marcus Bell", email: "marcus@example.com", unit: "2" },
+          { name: "", email: "", unit: "3" },
+          { name: "", email: "", unit: "4" },
+        ],
+      },
+      "2026-08-26",
+    );
+
+    // Lots 3 and 4 are the builder's and nobody lives in them. A task that
+    // cannot be finished is a plan people stop trusting.
+    expect(invites.done(community), "a builder was nagged to invite an empty lot").toBe(true);
+  });
+
+  it("still asks once a home has somebody in it with no address", async () => {
+    const { SETUP_TASKS } = await import("@/lib/setup");
+    const { buildCommunity, emptyDraft } = await import("@/lib/data/new-community");
+    const invites = SETUP_TASKS.find((t) => t.key === "invites")!;
+
+    const community = buildCommunity(
+      {
+        ...emptyDraft(),
+        founder: { name: "Pat", email: "pat@example.com", unit: "1" },
+        households: [{ name: "Marcus Bell", email: "", unit: "2" }],
+      },
+      "2026-08-26",
+    );
+
+    expect(invites.done(community), "a real household with no email was let through").toBe(
+      false,
+    );
+  });
+});
+
 describe("payment instruments", () => {
   it("the first instrument an owner adds becomes their default", () => {
     const { result } = renderApp();

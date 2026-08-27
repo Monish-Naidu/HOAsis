@@ -1,4 +1,5 @@
 import type { Account, BankAccount, Owner, Cents, ISODate } from "@/lib/types";
+import type { LotPhase } from "@/lib/lots";
 import type { Community } from "./community";
 import { caps, GRANTABLE, NO_CAPABILITIES } from "./accounts";
 
@@ -46,14 +47,32 @@ const DEFAULT_LATE_AFTER_DAY = 10;
 export type PropertyType = "single-family" | "townhomes" | "condos";
 
 /**
- * Where the board is coming from.
+ * Who is setting this up.
  *
- * A brand new association has nothing to bring. One that has been self managing
- * has books and documents somewhere. One leaving a management company has all
- * of it, held by somebody else, and their first real task is getting it back.
- * These are three different first weeks.
+ * Three situations, and none of them is a records migration. Nothing here
+ * imports a spreadsheet or pulls an export out of another product, because
+ * that is a promise about somebody else's data format that we would then have
+ * to keep. What every one of these needs is a correct opening position, and
+ * that is a much smaller thing to ask for.
+ *
+ *   The builder is standing the association up before, or while, the homes
+ *   sell. Most lots are unsold and the builder owns them, which means the
+ *   builder owes the assessment on them. Their job is to constitute the thing
+ *   properly and to hand over books that survive an audit.
+ *
+ *   A handover is the other side of the same event. Owners have elected their
+ *   own board and are taking control from the developer. Their job is to find
+ *   out what they are being handed before the window to object closes: the
+ *   reserves, the construction, and whether the builder paid on the lots it
+ *   still owned.
+ *
+ *   An established association is one that already exists and is opening its
+ *   books here. It has years of history, and none of it moves. It sets one
+ *   opening balance per home as of the day it switches, and is correct from
+ *   there. Trying to reproduce a decade of somebody else's ledger is how a
+ *   migration stalls, and the reproduced version is never right anyway.
  */
-export type AssociationOrigin = "new" | "self-managed" | "leaving-manager";
+export type AssociationOrigin = "builder" | "handover" | "existing";
 
 /** Anything the association bills beyond a flat due. */
 export type ExtraCollection = "special-assessment" | "utilities";
@@ -81,8 +100,20 @@ export interface CommunityDraft {
   dueDay: number;
   /** The person setting this up. They become President. */
   founder: { name: string; email: string; unit: string };
-  /** Households the founder entered, not counting their own. */
+  /** Every home in the community, not counting the founder's own. */
   households: DraftHousehold[];
+  /**
+   * Who built it, when the association knows.
+   *
+   * Named on the roster against every lot that has not sold, because an unsold
+   * lot is not vacant: somebody owns it and owes the assessment on it, and a
+   * roster that leaves those blank is a budget that is short.
+   */
+  builderName?: string;
+  /** What the plat calls a lot. Printed as part of the number. */
+  lotPrefix?: string;
+  /** The ranges the homes were generated from, kept so they can be edited. */
+  phases?: LotPhase[];
   /** Where dues land. Optional only because a board can connect it later. */
   bankAccount?: BankAccount;
 
@@ -101,6 +132,13 @@ export interface CommunityDraft {
 }
 
 export interface DraftHousehold {
+  /**
+   * The household, once there is one.
+   *
+   * Empty on a lot that has not sold. That is a real state in a new build and
+   * not a gap to be filled in: the home exists, it owes an assessment, and it
+   * counts toward a quorum long before anybody moves in.
+   */
   name: string;
   email: string;
   unit: string;
@@ -149,8 +187,22 @@ function annualDues(draft: CommunityDraft): Cents {
 }
 
 /** Homes in the association: the roster, including the founder's own. */
+/**
+ * Every home except the founder's own.
+ *
+ * The founder's lot is entered separately and is also one of the lots the plat
+ * generates, so it arrives in the list twice. Left alone that is a duplicate
+ * owner on the roster, two ledgers for one home, and a unit count one too
+ * high, and all three are the quiet kind of wrong. Whichever order the builder
+ * fills the screen in, the founder's own lot belongs to the founder.
+ */
+export function otherHomes(draft: CommunityDraft): DraftHousehold[] {
+  const mine = draft.founder.unit.trim();
+  return draft.households.filter((h) => h.unit.trim() !== mine);
+}
+
 export function unitCount(draft: CommunityDraft): number {
-  return draft.households.length + 1;
+  return otherHomes(draft).length + 1;
 }
 
 /**
@@ -183,20 +235,28 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     boardRole: "President",
   };
 
-  const otherOwners: Owner[] = draft.households.map((household) => ({
-    id: ownerId(household.unit),
-    displayName: household.name,
-    members: [household.name],
-    email: household.email,
-    phone: "",
-    unit: household.unit,
-    address: `Unit ${household.unit}`,
-    moveInDate: asOf,
-    balanceCents: 0,
-    autopay: false,
-    standing: "current",
-    daysPastDue: 0,
-  }));
+  // An unsold lot is held by the builder, and saying so on the roster is the
+  // whole point of creating it. A blank row reads as missing data; a row
+  // naming the builder reads as the assessment somebody owes.
+  const unsoldLabel = draft.builderName?.trim() || "Unsold";
+
+  const otherOwners: Owner[] = otherHomes(draft).map((household) => {
+    const sold = Boolean(household.name.trim());
+    return {
+      id: ownerId(household.unit),
+      displayName: sold ? household.name : unsoldLabel,
+      members: sold ? [household.name] : [],
+      email: household.email,
+      phone: "",
+      unit: household.unit,
+      address: `Unit ${household.unit}`,
+      moveInDate: asOf,
+      balanceCents: 0,
+      autopay: false,
+      standing: "current",
+      daysPastDue: 0,
+    };
+  });
 
   const owners = [founderOwner, ...otherOwners];
 
@@ -212,15 +272,20 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     capabilities: caps([...GRANTABLE], true),
   };
 
-  const otherAccounts: Account[] = otherOwners.map((owner) => ({
-    id: accountId(owner.unit),
-    ownerId: owner.id,
-    name: owner.displayName,
-    email: owner.email,
-    unit: owner.unit,
-    role: "resident" as const,
-    capabilities: NO_CAPABILITIES,
-  }));
+  // Only a home with somebody in it gets a login. An unsold lot has nobody to
+  // sign in as, and creating an account for one would put a resident seat in
+  // the roster that can never be used.
+  const otherAccounts: Account[] = otherOwners
+    .filter((owner) => owner.members.length > 0)
+    .map((owner) => ({
+      id: accountId(owner.unit),
+      ownerId: owner.id,
+      name: owner.displayName,
+      email: owner.email,
+      unit: owner.unit,
+      role: "resident" as const,
+      capabilities: NO_CAPABILITIES,
+    }));
 
   return {
     id,

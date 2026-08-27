@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildPlan, profileFromCommunity, profileFromDraft } from "@/lib/setup-plan";
-import { portingPlan, recordsDemandLetter } from "@/lib/porting";
+import { portingPlan } from "@/lib/porting";
 import { mehrMeadows } from "@/lib/data/communities";
 import { emptyDraft } from "@/lib/data/new-community";
 import type { AssociationProfile } from "@/lib/setup-plan";
 
 const base: AssociationProfile = {
   propertyType: "single-family",
-  origin: "new",
+  origin: "builder",
   collects: [],
   sharedSpaces: [],
   homes: 40,
@@ -39,9 +39,13 @@ describe("the plan is built from the answers", () => {
     expect(detached).not.toContain("structural");
   });
 
-  it("never asks a brand new association about vendors it has not hired", () => {
-    expect(keys({ origin: "new" })).not.toContain("vendors");
-    expect(keys({ origin: "leaving-manager" })).toContain("vendors");
+  it("never asks a builder about vendors it has not hired yet", () => {
+    // Whoever cuts the grass on a site still being built is on the
+    // construction contract, not on the association's.
+    expect(keys({ origin: "builder" })).not.toContain("vendors");
+    // A board taking over inherits vendors it did not choose, some of them
+    // under contracts held in the builder's own name.
+    expect(keys({ origin: "handover" })).toContain("vendors");
   });
 
   it("only offers amenities when the board said they have some", () => {
@@ -79,7 +83,7 @@ describe("the plan is built from the answers", () => {
     const draft = {
       ...emptyDraft(),
       propertyType: "condos" as const,
-      origin: "leaving-manager" as const,
+      origin: "handover" as const,
       collects: ["utilities" as const],
       sharedSpaces: ["pool" as const],
       stateName: "Florida",
@@ -93,58 +97,53 @@ describe("the plan is built from the answers", () => {
   });
 });
 
-describe("porting an existing association", () => {
+describe("the first weeks of a community still being built", () => {
   it("gives each situation a different job, not a reworded list", () => {
-    const titles = (["new", "self-managed", "leaving-manager"] as const).map(
+    const titles = (["builder", "handover", "existing"] as const).map(
       (o) => portingPlan(o)!.title,
     );
     expect(new Set(titles).size, "two situations got the same plan").toBe(3);
   });
 
-  it("tells a board leaving a manager to demand records before giving notice", () => {
-    const plan = portingPlan("leaving-manager")!;
-    // Order is the entire argument here, so the demand must come first and
-    // giving notice must come last.
-    expect(plan.steps[0].key).toBe("demand");
-    expect(plan.steps.at(-1)!.key).toBe("then-cancel");
+  it("tells an established association to set one opening balance and stop there", () => {
+    const plan = portingPlan("existing")!;
+    const keys = plan.steps.map((s) => s.key);
+    // Homes before balances, because a balance needs somewhere to sit.
+    expect(keys.indexOf("homes")).toBeLessThan(keys.indexOf("balances"));
+    const balances = plan.steps.find((s) => s.key === "balances")!;
+    expect(balances.detail).toContain("day you switched");
+    // The claim that makes this tractable: nothing before the switch moves.
+    expect(balances.because).toContain("Importing years of history is where migrations stall");
   });
 
-  it("does not tell a brand new association to import anything", () => {
-    const keys = portingPlan("new")!.steps.map((s) => s.key);
-    expect(keys).toContain("ein");
-    expect(keys).not.toContain("roster");
+  it("tells a builder to constitute the association and charge its own unsold lots", () => {
+    const keys = portingPlan("builder")!.steps.map((s) => s.key);
+    expect(keys[0], "the EIN gates the bank account, so it comes first").toBe("ein");
+    // The largest source of turnover litigation, and the one a builder
+    // setting its own budget has every incentive to leave out.
+    expect(keys).toContain("unsold");
   });
 
-  it("writes the demand letter rather than leaving blanks", () => {
-    const letter = recordsDemandLetter({
-      associationName: "Harbor Point Condominiums",
-      stateName: "Washington",
-      managerName: "Cascade Community Management",
-      boardMemberName: "Pat Founder",
-      boardRole: "President",
-      today: "August 26, 2026",
-    });
-
-    expect(letter).toContain("Harbor Point Condominiums");
-    expect(letter).toContain("Cascade Community Management");
-    expect(letter).toContain("Pat Founder");
-    // The ten categories a board would otherwise forget.
-    expect(letter).toContain("general ledger");
-    expect(letter).toContain("reserve study");
-    // And the sentence that stops it reading as a termination notice, which
-    // is what destroys the leverage it exists to use.
-    expect(letter).toContain("not notice of termination");
-    expect(letter).not.toMatch(/\[(?!management company)/);
+  it("tells a board taking over to study the place before it signs a release", () => {
+    const plan = portingPlan("handover")!;
+    // Order is the entire argument here. A release signed before the study is
+    // a release signed without knowing what it gives up.
+    expect(plan.steps[0].key).toBe("turnover-study");
+    expect(plan.steps[0].because).toContain("release");
   });
 
-  it("names the manager as a placeholder only when it does not know one", () => {
-    const letter = recordsDemandLetter({
-      associationName: "A HOA",
-      stateName: "Texas",
-      boardMemberName: "Pat",
-      boardRole: "President",
-      today: "August 26, 2026",
-    });
-    expect(letter).toContain("[management company]");
+  it("never tells anyone to import or migrate records", () => {
+    // There is no prior association to move. A step about a roster export
+    // would mean the flow had drifted back to the market we left.
+    for (const origin of ["builder", "handover", "existing"] as const) {
+      const plan = portingPlan(origin)!;
+      const words = plan.steps.map((s) => `${s.title} ${s.detail}`).join(" ").toLowerCase();
+      // "Import" is allowed to appear nowhere in a step title or detail. The
+      // one place history is discussed is the reason line on the balances
+      // step, which exists to say that history does not move.
+      expect(words, `${origin} mentions a migration`).not.toMatch(
+        /spreadsheet|csv|export|import|management company/,
+      );
+    }
   });
 });
