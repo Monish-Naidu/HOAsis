@@ -29,9 +29,16 @@ import { publicRecordsUrl, recordsGaps } from "@/lib/metrics";
 import { GOVERNING_DOCS, disclosureCoverage, documentsPresent } from "@/lib/governing";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { formatDate, pluralize, todayIsoDate } from "@/lib/utils";
+import { formatDate, pluralize } from "@/lib/utils";
+import { DOCUMENT_ACCEPT } from "@/lib/documents";
 import type { DocumentRecord } from "@/lib/types";
 
+
+const VISIBILITY_WORD: Record<DocumentRecord["visibility"], string> = {
+  public: "public",
+  members: "visible to owners",
+  board: "board only",
+};
 
 const order: DocumentRecord["category"][] = [
   "Governing",
@@ -42,48 +49,12 @@ const order: DocumentRecord["category"][] = [
   "Forms",
 ];
 
-/** Bytes to the short form a person reads at a glance. */
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-const EXTENSION_TO_TYPE: Record<string, DocumentRecord["fileType"]> = {
-  pdf: "pdf",
-  xls: "xlsx",
-  xlsx: "xlsx",
-  doc: "docx",
-  docx: "docx",
-};
-
-/**
- * Turns a picked file into a record.
- *
- * Uploads land as board-only by default: a document nobody has classified yet
- * should never appear on the public records page by accident.
- *
- * The file itself is not stored. A real deployment puts it in object storage
- * and keeps the returned URL, which is a change to this function alone.
- */
-function toDocumentRecord(file: File, index: number): DocumentRecord {
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return {
-    id: `doc-upload-${index}-${file.name}`,
-    name: file.name.replace(/\.[^.]+$/, ""),
-    category: "Notices",
-    updatedDate: todayIsoDate(),
-    size: formatSize(file.size),
-    visibility: "board",
-    fileType: EXTENSION_TO_TYPE[extension] ?? "pdf",
-  };
-}
-
 export default function BoardDocuments() {
-  const { community, documents, addDocument, setDocumentVisibility, removeDocument } =
+  const { community, documents, uploadDocuments, setDocumentVisibility, removeDocument } =
     useAppState();
   const { notify } = useToast();
   const [query, setQuery] = useState("");
+  const [uploading, setUploading] = useState(false);
   const publicDocs = documents.filter((d) => d.visibility === "public");
   const gaps = recordsGaps({ ...community, documents });
   const governing = community.governingDocs;
@@ -107,25 +78,42 @@ export default function BoardDocuments() {
         title="Documents"
         
         action={
-          <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90">
+          <label
+            aria-busy={uploading}
+            className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90 aria-busy:cursor-progress aria-busy:opacity-70"
+          >
             <Upload className="size-3.5" />
-            Upload
+            {uploading ? "Uploading" : "Upload"}
             <input
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx"
+              accept={DOCUMENT_ACCEPT}
+              aria-label="Upload documents"
+              disabled={uploading}
               className="sr-only"
-              onChange={(event) => {
+              onChange={async (event) => {
                 const files = Array.from(event.target.files ?? []);
-                if (files.length === 0) return;
-                for (const file of files) addDocument(toDocumentRecord(file, documents.length));
-                notify(
-                  files.length === 1
-                    ? `Uploaded ${files[0].name}. Choose who can see it.`
-                    : `Uploaded ${files.length} files. Choose who can see them.`,
-                );
                 // Allows re-selecting the same file, which otherwise fires nothing.
                 event.target.value = "";
+                if (files.length === 0) return;
+                setUploading(true);
+                try {
+                  const outcome = await uploadDocuments(files);
+                  if (outcome.uploaded.length) {
+                    notify(
+                      outcome.uploaded.length === 1
+                        ? `Uploaded ${outcome.uploaded[0]}. Choose who can see it.`
+                        : `Uploaded ${outcome.uploaded.length} files. Choose who can see them.`,
+                    );
+                  }
+                  for (const refused of outcome.rejected) {
+                    notify(`${refused.name}: ${refused.reason}`, "warn");
+                  }
+                } catch (error) {
+                  notify(error instanceof Error ? error.message : "Could not upload", "warn");
+                } finally {
+                  setUploading(false);
+                }
               }}
             />
           </label>
@@ -304,20 +292,47 @@ export default function BoardDocuments() {
                     )}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-fg">{d.name}</p>
+                    {d.url ? (
+                      <a
+                        href={d.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block truncate text-[15px] font-medium text-fg hover:underline"
+                      >
+                        {d.name}
+                      </a>
+                    ) : (
+                      <p className="truncate text-[15px] font-medium text-fg">{d.name}</p>
+                    )}
                     <p className="truncate text-[13px] text-fg-muted">
                       Updated {formatDate(d.updatedDate, "long")} · {d.size}
                       {d.requiredBy ? ` · required by ${d.requiredBy}` : ""}
                     </p>
                   </div>
+                  {d.url ? (
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open ${d.name}`}
+                      className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  ) : null}
                   <select
                     value={d.visibility}
-                    onChange={(e) => {
-                      setDocumentVisibility(
-                        d.id,
-                        e.target.value as "public" | "members" | "board",
-                      );
-                      notify(`${d.name} is now ${e.target.value}`);
+                    onChange={async (e) => {
+                      const next = e.target.value as DocumentRecord["visibility"];
+                      try {
+                        await setDocumentVisibility(d.id, next);
+                        notify(`${d.name} is now ${VISIBILITY_WORD[next]}`);
+                      } catch (error) {
+                        notify(
+                          error instanceof Error ? error.message : "Could not change who can see it",
+                          "warn",
+                        );
+                      }
                     }}
                     aria-label={`Who can see ${d.name}`}
                     className="h-7 rounded-md border border-border bg-surface-2 px-2 text-[13px] font-medium text-fg outline-none"
@@ -329,9 +344,17 @@ export default function BoardDocuments() {
                   <button
                     type="button"
                     aria-label={`Remove ${d.name}`}
-                    onClick={() => {
-                      const undo = removeDocument(d.id);
-                      notify(`Removed ${d.name}`, "warn", { label: "Undo", onClick: undo });
+                    onClick={async () => {
+                      try {
+                        const undo = await removeDocument(d.id);
+                        notify(
+                          `Removed ${d.name}`,
+                          "warn",
+                          undo ? { label: "Undo", onClick: undo } : undefined,
+                        );
+                      } catch (error) {
+                        notify(error instanceof Error ? error.message : "Could not remove it", "warn");
+                      }
                     }}
                     className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
                   >

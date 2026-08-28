@@ -388,6 +388,10 @@ export interface DocumentRecord {
   visibility: "public" | "members" | "board";
   requiredBy?: string;
   fileType: "pdf" | "xlsx" | "docx";
+  /** Where the bytes live in Storage, for a real association. A demo keeps none. */
+  storagePath?: string;
+  /** A link that opens the file, good for a few hours. Absent when there is no file. */
+  url?: string;
 }
 
 /* -------------------------------------------------------------------------- */

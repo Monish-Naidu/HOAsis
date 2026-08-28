@@ -171,7 +171,67 @@ Still open in this area:
 
 ---
 
+## A real association does not save most of what the board does
+
+Found 2026-08-28, when Monish reported that "some of the pages in admin
+don't work, like documents". Every admin page renders for a real
+association, and almost nothing done on one is kept. The state layer in
+`src/lib/app-state.tsx` writes each action to a browser-local slice, and a
+real association (`remote.community`) reads only Postgres, so the write
+lands nowhere the screen looks. The demo is unaffected, which is why it was
+not noticed: every e2e test runs against the demo.
+
+**Documents are done, 2026-08-28**, and are the template for the rest:
+
+- Storage bucket `documents`, private, files under `<association id>/<document
+  id>.<ext>` (migrations 0016 and 0017). The storage policy reads the row, so
+  a resident can only open what is published to owners; the board reaches its
+  own folder outright, so removal works in either order.
+- `uploadDocuments`, `setDocumentVisibility` and `removeDocument` in
+  `app-state.tsx` branch on `remote.community`: demo path unchanged, real path
+  writes and then `refreshRemote()`. `src/lib/documents.ts` holds what both
+  paths share, including the `members` (app) to `owners` (database)
+  translation, which was previously not translated at all.
+- Rows carry a signed link (`DocumentRecord.url`, four hours) made in one
+  batch in `loadCommunity`, so a document is a plain link on the board page
+  and the resident page. The demo's fixture documents have no file and no
+  link.
+- Checked by `tests/unit/documents.test.ts`, eight new checks in
+  `scripts/verify-community-life.mjs`, and `tests/e2e/10-documents.spec.ts`
+  for the demo path. The real path was driven through the screens by hand
+  against Willow Creek: upload, open, publish, reload, remove.
+
+**Still browser-only for a real association**, grouped by screen. Each one
+needs the same treatment: a table or column if there is none, a policy, a
+branch in the mutation, a `verify-*.mjs` check.
+
+| Screen | Actions that do not persist |
+| --- | --- |
+| Money | `confirmLedgerEntry`, `dismissLedgerEntry`, `addPayout`, `approvePayout`, `addBudgetLine` |
+| Homeowners | `addInstrument`, `removeInstrument`, `setDefaultInstrument`, `setCapability` |
+| Requests | `addRequest`, `updateRequestStatus` (the `requests` table exists and is read) |
+| Voting | `addBallot`, `addMeeting`, `castVote` (an RPC `cast_vote` exists and is verified; the app does not call it) |
+| Communications | `replyToThread`, announcements |
+| Forum | `togglePinned`, `removePost`, `likePost` (posts and moderation have tables and policies) |
+| Vendors | `markW9Requested`, adding a vendor |
+| Documents | `addGoverningArticles` (the imported text of a declaration; "not stored server side yet" per `remote.ts`) |
+| Reserves | `addReserveComponent` |
+| Shared costs | `addSharedCost`, `removeSharedCost`, `postSharedCostBill` |
+| Settings | `updateAssociation` beyond the photo and insurance fields |
+
+Suggested order: requests and voting first, because their tables, policies
+and RPCs already exist and are verified, so the work is the branch in the
+mutation. Then money, which is the product's promise. Then the rest.
+
+One more thing seen on the way: every real-association page logs React
+error #418 (a hydration mismatch) on load. Cosmetic in the console, the page
+works. Likely the remote store's server snapshot (signed out) disagreeing
+with a client that already has a session. Not chased.
+
 ## The landing page — DONE, on placeholder art
+
+Rebuilt 2026-08-28 from Monish's five slide deck, slide for slide; the record
+is `docs/design/landing-page.md`. The placeholder art note below still holds.
 
 Built 2026-08-27. The friend's design is live on `/`: dark navy hero, split
 layout, two-line headline with one accent word, illustration bleeding off the

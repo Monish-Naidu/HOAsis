@@ -182,32 +182,40 @@ export default function ResidentDocuments() {
         <section key={category}>
           <SectionTitle>{category}</SectionTitle>
           <Card>
-            {docs.map((d, i) => (
-              <a
-                key={d.id}
-                href="#"
-                className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 ${
-                  i > 0 ? "border-t border-border" : ""
-                }`}
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
-                  {d.fileType === "xlsx" ? (
-                    <FileSpreadsheet className="size-4" />
-                  ) : (
-                    <FileText className="size-4" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-medium text-fg">{d.name}</span>
-                  <span className="block truncate text-[13px] text-fg-muted">
-                    {formatDate(d.updatedDate, "medium")} · {d.size}
+            {docs.map((d, i) => {
+              const rowClass = `flex items-center gap-3 px-4 py-3 transition-colors ${
+                i > 0 ? "border-t border-border" : ""
+              } ${d.url ? "hover:bg-surface-2" : ""}`;
+              const row = (
+                <>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
+                    {d.fileType === "xlsx" ? (
+                      <FileSpreadsheet className="size-4" />
+                    ) : (
+                      <FileText className="size-4" />
+                    )}
                   </span>
-                </span>
-                {d.visibility === "public" ? (
-                  <Badge tone="neutral">Public</Badge>
-                ) : null}
-              </a>
-            ))}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium text-fg">{d.name}</span>
+                    <span className="block truncate text-[13px] text-fg-muted">
+                      {formatDate(d.updatedDate, "medium")} · {d.size}
+                    </span>
+                  </span>
+                  {d.visibility === "public" ? <Badge tone="neutral">Public</Badge> : null}
+                </>
+              );
+              // A row opens the file when there is one. The demo's documents
+              // have none, and a link to nowhere is worse than no link.
+              return d.url ? (
+                <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className={rowClass}>
+                  {row}
+                </a>
+              ) : (
+                <div key={d.id} className={rowClass}>
+                  {row}
+                </div>
+              );
+            })}
           </Card>
         </section>
       ))}

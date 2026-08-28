@@ -4,6 +4,7 @@ import type { Account, Capability, ChargeLine, Owner } from "@/lib/types";
 import { caps } from "./accounts";
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
+import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
 
 /**
  * Loading a real association out of Postgres.
@@ -103,6 +104,23 @@ export async function loadCommunity(
     supabase.from("vendors").select("*").eq("association_id", associationId),
     supabase.from("amenities").select("*").eq("association_id", associationId),
   ]);
+
+  // Files open through short lived signed links, made in one batch here so a
+  // row is a plain link on every screen. Storage applies the same visibility
+  // rule as the table, so a resident is only ever handed links to what they
+  // may read.
+  const filePaths = (documents.data ?? [])
+    .map((d: { storage_path: string | null }) => d.storage_path)
+    .filter((path: string | null): path is string => Boolean(path));
+  const urlByPath = new Map<string, string>();
+  if (filePaths.length) {
+    const { data: signed } = await supabase.storage
+      .from("documents")
+      .createSignedUrls(filePaths, SIGNED_URL_SECONDS);
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl && !item.error) urlByPath.set(item.path, item.signedUrl);
+    }
+  }
 
   if (association.error || !association.data) {
     throw new Error(`Could not load that association: ${association.error?.message ?? "not found"}`);
@@ -335,11 +353,12 @@ export async function loadCommunity(
       id: d.id,
       name: d.name,
       category: d.category as Community["documents"][number]["category"],
-      visibility: d.visibility,
-      fileName: d.name,
-      fileType: "pdf" as const,
+      visibility: fromDbVisibility(d.visibility),
+      fileType: fileTypeOf(d.storage_path ?? d.name),
       size: d.size_label,
       updatedDate: d.updated_on,
+      storagePath: d.storage_path ?? undefined,
+      url: d.storage_path ? urlByPath.get(d.storage_path) : undefined,
     })),
 
     meetings: (meetings.data ?? []).map((m) => ({

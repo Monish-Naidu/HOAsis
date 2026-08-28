@@ -472,12 +472,14 @@ describe("admin actions change real records", () => {
     expect(result.current.state.vendors.find((v) => v.id === missing.id)!.w9OnFile).toBe(true);
   });
 
-  it("changing document visibility is what residents actually see", () => {
+  it("changing document visibility is what residents actually see", async () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
     const doc = result.current.state.documents.find((d) => d.visibility === "public")!;
 
-    act(() => result.current.state.setDocumentVisibility(doc.id, "board"));
+    await act(async () => {
+      await result.current.state.setDocumentVisibility(doc.id, "board");
+    });
     expect(result.current.state.documents.find((d) => d.id === doc.id)!.visibility).toBe("board");
   });
 });

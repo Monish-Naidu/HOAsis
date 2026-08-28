@@ -20,7 +20,7 @@ const stamp = Date.now();
 const PASSWORD = "life-" + Math.random().toString(36).slice(2) + "A1";
 const results = []; let failures = 0;
 const check = (n, p, d = "") => { results.push({ n, p, d }); if (!p) failures++; };
-const cleanup = { users: [], associations: [] };
+const cleanup = { users: [], associations: [], files: [] };
 const day = (o) => { const d = new Date(); d.setUTCDate(d.getUTCDate() + o); return d.toISOString().slice(0, 10); };
 
 async function makeUser(who) {
@@ -75,6 +75,54 @@ try {
   check("an owner sees owner documents and not board ones",
     (residentDocs ?? []).length === 1 && residentDocs[0].name === "CC&Rs",
     JSON.stringify((residentDocs ?? []).map((d) => d.name)));
+
+  // Files follow the row. The bytes live in Storage under the association's
+  // folder, and the storage policy reads the row to decide who may open them.
+  const stranger = await makeUser("stranger");
+  const ownersDocId = crypto.randomUUID();
+  const boardDocId = crypto.randomUUID();
+  const ownersPath = `${associationId}/${ownersDocId}.pdf`;
+  const boardPath = `${associationId}/${boardDocId}.pdf`;
+  cleanup.files.push(ownersPath, boardPath);
+  const pdf = new Blob(["%PDF-1.4 verify"], { type: "application/pdf" });
+
+  const { error: putError } = await president.client.storage.from("documents")
+    .upload(ownersPath, pdf, { contentType: "application/pdf" });
+  check("a documents holder can upload into their association's folder", !putError, putError?.message ?? "");
+  await president.client.storage.from("documents").upload(boardPath, pdf, { contentType: "application/pdf" });
+  const { error: rowError } = await president.client.from("documents").insert([
+    { id: ownersDocId, association_id: associationId, name: "Budget", category: "Financial", visibility: "owners", storage_path: ownersPath, size_label: "1 KB" },
+    { id: boardDocId, association_id: associationId, name: "Counsel letter", category: "Notices", visibility: "board", storage_path: boardPath, size_label: "1 KB" },
+  ]);
+  check("and file the rows that point at the files", !rowError, rowError?.message ?? "");
+
+  const { error: neighborPut } = await neighbor.client.storage.from("documents")
+    .upload(`${associationId}/${crypto.randomUUID()}.pdf`, pdf, { contentType: "application/pdf" });
+  check("a resident cannot upload", Boolean(neighborPut), neighborPut?.message ?? "no error");
+
+  const { data: ownersLink, error: ownersLinkError } = await neighbor.client.storage.from("documents").createSignedUrl(ownersPath, 60);
+  check("a resident can open a document published to owners", !ownersLinkError && Boolean(ownersLink?.signedUrl), ownersLinkError?.message ?? "");
+  const { error: boardLinkError } = await neighbor.client.storage.from("documents").createSignedUrl(boardPath, 60);
+  check("and cannot open a board only one", Boolean(boardLinkError), boardLinkError?.message ?? "no error");
+  const { error: strangerLinkError } = await stranger.client.storage.from("documents").createSignedUrl(ownersPath, 60);
+  check("a stranger cannot open anything", Boolean(strangerLinkError), strangerLinkError?.message ?? "no error");
+
+  // Storage answers a forbidden delete with silence rather than an error, so
+  // the proof is that the file is still there afterwards.
+  await neighbor.client.storage.from("documents").remove([ownersPath]);
+  const { data: afterResidentDelete } = await admin.storage.from("documents").list(associationId);
+  check("a resident's delete removes nothing", (afterResidentDelete ?? []).some((f) => f.name === `${ownersDocId}.pdf`));
+  const { error: boardDeleteError } = await president.client.storage.from("documents").remove([boardPath]);
+  const { data: afterBoardDelete } = await admin.storage.from("documents").list(associationId);
+  check("the board's delete does", !boardDeleteError && !(afterBoardDelete ?? []).some((f) => f.name === `${boardDocId}.pdf`), boardDeleteError?.message ?? "");
+
+  // The app deletes the row first and the file second, so the worst outcome
+  // of a failure between the two is an unreachable orphan rather than a
+  // document that appears to exist. That order has to work.
+  await president.client.from("documents").delete().eq("id", ownersDocId);
+  const { error: rowlessDeleteError } = await president.client.storage.from("documents").remove([ownersPath]);
+  const { data: afterRowlessDelete } = await admin.storage.from("documents").list(associationId);
+  check("the board can remove a file whose row is already gone", !rowlessDeleteError && !(afterRowlessDelete ?? []).some((f) => f.name === `${ownersDocId}.pdf`), rowlessDeleteError?.message ?? "");
 
   // Voting.
   const { data: ballot } = await president.client.from("ballots").insert({
@@ -134,6 +182,7 @@ try {
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
+  if (cleanup.files.length) await admin.storage.from("documents").remove(cleanup.files).catch(() => {});
   for (const id of cleanup.associations) await admin.from("associations").delete().eq("id", id);
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }

@@ -29,6 +29,15 @@ import {
   remoteSnapshot,
 } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import {
+  documentTitle,
+  formatSize,
+  mimeTypeOf,
+  rejectReason,
+  storagePathFor,
+  toDbVisibility,
+  toDocumentRecord,
+} from "@/lib/documents";
 import { signOutOfSupabase } from "@/lib/auth";
 
 /** The signed in person's id, read straight from the remote store snapshot. */
@@ -66,6 +75,12 @@ export type View = "resident" | "admin";
  * Collections are typed off the Community bundle rather than restated, so
  * adding a field to a community cannot leave this interface silently behind.
  */
+/** What came of an upload: the names that landed, and the ones refused with why. */
+export interface UploadOutcome {
+  uploaded: string[];
+  rejected: { name: string; reason: string }[];
+}
+
 interface AppState {
   /** Which association is being viewed, and what else is available. */
   community: Community;
@@ -104,7 +119,11 @@ interface AppState {
   addVendor: (vendor: Community["vendors"][number]) => void;
   saveTemplate: (template: Community["templates"][number]) => void;
   removeVendor: (vendorId: string) => () => void;
-  removeDocument: (documentId: string) => () => void;
+  /**
+   * Resolves with an undo for a demo. A real association gets none: the file
+   * is gone from Storage, and a toast offering to bring it back would lie.
+   */
+  removeDocument: (documentId: string) => Promise<(() => void) | undefined>;
   setCapability: (accountId: string, capability: Capability, on: boolean) => void;
   resetDemo: () => void;
   /** Adds a household to the register, with the account that lets them sign in. */
@@ -180,7 +199,12 @@ interface AppState {
   approvePayout: (payoutId: string) => void;
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
-  addDocument: (document: Community["documents"][number]) => void;
+  /**
+   * Files the board uploads. A demo keeps the name and size; a real
+   * association keeps the bytes in Storage and the rest in a row. Resolves
+   * with what landed and what was refused, so the screen can say both.
+   */
+  uploadDocuments: (files: File[]) => Promise<UploadOutcome>;
   /** Text confirmed out of an uploaded declaration, bylaws or rule set. */
   addGoverningArticles: (articles: Community["governingDocs"]) => void;
   /**
@@ -211,7 +235,7 @@ interface AppState {
   setDocumentVisibility: (
     documentId: string,
     visibility: Community["documents"][number]["visibility"],
-  ) => void;
+  ) => Promise<void>;
   /** Records a vote and returns the receipt the voter is shown. */
   castVote: (ballotId: string, optionId: string) => string;
   updateRequestStatus: (requestId: string, status: HomeRequest["status"], note?: string) => void;
@@ -1374,10 +1398,62 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [communityId],
   );
 
-  const addDocument = useCallback(
-    (document: Community["documents"][number]) =>
-      sliceStore(communityId, "documents").update((all) => [document, ...all]),
-    [communityId],
+  const uploadDocuments = useCallback(
+    async (files: File[]): Promise<UploadOutcome> => {
+      const outcome: UploadOutcome = { uploaded: [], rejected: [] };
+      const accepted: File[] = [];
+      for (const file of files) {
+        const reason = rejectReason(file);
+        if (reason) outcome.rejected.push({ name: file.name, reason });
+        else accepted.push(file);
+      }
+
+      if (!remote.community) {
+        // A demo has nowhere to put the bytes, so it keeps everything else.
+        const filed = accepted.map((file, index) =>
+          toDocumentRecord(file, `doc-upload-${Date.now()}-${index}`, todayIsoDate()),
+        );
+        if (filed.length) {
+          sliceStore(communityId, "documents").update((all) => [...filed, ...all]);
+        }
+        outcome.uploaded.push(...accepted.map((file) => file.name));
+        return outcome;
+      }
+
+      const supabase = supabaseBrowser();
+      const associationId = remote.community.id;
+      for (const file of accepted) {
+        const id = crypto.randomUUID();
+        const path = storagePathFor(associationId, id, file.name);
+        const { error: putError } = await supabase.storage
+          .from("documents")
+          .upload(path, file, { contentType: mimeTypeOf(file.name, file.type) });
+        if (putError) {
+          outcome.rejected.push({ name: file.name, reason: putError.message });
+          continue;
+        }
+        const { error: rowError } = await supabase.from("documents").insert({
+          id,
+          association_id: associationId,
+          name: documentTitle(file.name),
+          category: "Notices",
+          visibility: "board",
+          storage_path: path,
+          size_label: formatSize(file.size),
+        });
+        if (rowError) {
+          // The row is what makes a file reachable. Without one the bytes are
+          // an orphan, so take them back out rather than leave them.
+          await supabase.storage.from("documents").remove([path]);
+          outcome.rejected.push({ name: file.name, reason: rowError.message });
+          continue;
+        }
+        outcome.uploaded.push(file.name);
+      }
+      if (outcome.uploaded.length) await refreshRemote();
+      return outcome;
+    },
+    [remote.community, communityId],
   );
 
   /**
@@ -1465,19 +1541,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const setDocumentVisibility = useCallback(
-    (documentId: string, visibility: Community["documents"][number]["visibility"]) =>
-      sliceStore(communityId, "documents").update((all) =>
-        all.map((doc) => (doc.id === documentId ? { ...doc, visibility } : doc)),
-      ),
-    [communityId],
+    async (documentId: string, visibility: Community["documents"][number]["visibility"]) => {
+      if (!remote.community) {
+        sliceStore(communityId, "documents").update((all) =>
+          all.map((doc) => (doc.id === documentId ? { ...doc, visibility } : doc)),
+        );
+        return;
+      }
+      const { error } = await supabaseBrowser()
+        .from("documents")
+        .update({ visibility: toDbVisibility(visibility) })
+        .eq("id", documentId);
+      if (error) throw new Error(error.message);
+      await refreshRemote();
+    },
+    [remote.community, communityId],
   );
 
   const removeDocument = useCallback(
-    (documentId: string) =>
-      destructive(sliceStore(communityId, "documents"), (all) =>
-        all.filter((d) => d.id !== documentId),
-      ),
-    [communityId],
+    async (documentId: string) => {
+      if (!remote.community) {
+        return destructive(sliceStore(communityId, "documents"), (all) =>
+          all.filter((d) => d.id !== documentId),
+        );
+      }
+      const doc = remote.community.documents.find((d) => d.id === documentId);
+      const supabase = supabaseBrowser();
+      const { error } = await supabase.from("documents").delete().eq("id", documentId);
+      if (error) throw new Error(error.message);
+      // With the row gone nothing can reach the file, so the bytes go too. If
+      // this step fails the result is an unreachable orphan, not a document
+      // that appears to have survived.
+      if (doc?.storagePath) await supabase.storage.from("documents").remove([doc.storagePath]);
+      await refreshRemote();
+      return undefined;
+    },
+    [remote.community, communityId],
   );
 
   const castVote = useCallback(
@@ -1668,7 +1767,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     approvePayout,
     markW9Requested,
     replyToThread,
-    addDocument,
+    uploadDocuments,
     addGoverningArticles,
     updateAssociation,
     addPayout,
