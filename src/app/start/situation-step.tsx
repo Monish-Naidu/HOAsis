@@ -43,38 +43,47 @@ const PROPERTY: { id: PropertyType; label: string; detail: string; icon: typeof 
 ];
 
 /**
- * The three situations this product is built for, said plainly.
+ * Two situations, said plainly: a builder standing the association up, or the
+ * owners running it.
  *
- * Each one is a different first month, not a different set of words for the
- * same one, so the answer decides what gets set up and what plan comes back.
+ * The owners' door has one more answer inside it, because a board that took
+ * over from the builder last month and a board that has run the place since
+ * 2004 get a different first month: one gets the turnover checklist, the
+ * other sets what each home owed on the day it switched. Three answers are
+ * still stored; the screen just stops presenting the last two as a choice
+ * between strangers.
+ *
  * The line that matters on each card is `changes`: it says what picking it
- * will actually do, because a person choosing between three cards should be
- * choosing on consequences rather than on which description sounds most like
- * them.
+ * will actually do, so the choice is made on consequences rather than on
+ * which description sounds most like them.
  */
-const ORIGIN: {
+const BUILDER: {
   id: AssociationOrigin;
   label: string;
-  /** Who this is, in their own words. */
   detail: string;
-  /** What picking it changes about the next few screens. */
+  changes: string;
+  icon: typeof Home;
+} = {
+  id: "builder",
+  label: "We are building the community",
+  detail:
+    "You are the builder or developer. The association has to exist before the first home closes.",
+  changes:
+    "Homes come straight from your site plan, the ones that have not sold are billed to you, and reserves get funded from the first assessment. When the owners elect their board, you hand them the presidency from Settings. Nothing is set up twice.",
+  icon: HardHat,
+};
+
+const OWNERS: {
+  id: AssociationOrigin;
+  label: string;
+  detail: string;
   changes: string;
   icon: typeof Home;
 }[] = [
   {
-    id: "builder",
-    label: "We are building the community",
-    detail:
-      "You are the builder or developer. The association has to exist before the first home closes.",
-    changes:
-      "Homes come straight from your site plan, the ones that have not sold are billed to you, and reserves get funded from the first assessment.",
-    icon: HardHat,
-  },
-  {
     id: "handover",
     label: "We are taking over from the builder",
-    detail:
-      "Owners have elected their own board and control of the association is passing across.",
+    detail: "The builder still owns homes here, or left within the last year.",
     changes:
       "You get the turnover checklist: what to check before you sign a release, and what the builder owed on the lots it still held.",
     icon: KeyRound,
@@ -82,8 +91,7 @@ const ORIGIN: {
   {
     id: "existing",
     label: "We already run our association",
-    detail:
-      "An established community moving here. However long you have been going, and whoever you were using.",
+    detail: "An established community moving here. However long you have been going, and whoever you were using.",
     changes:
       "Nothing has to be exported. You set what each home owed on the day you switch, and you are correct from there.",
     icon: Truck,
@@ -187,67 +195,64 @@ export function SituationStep({
       </fieldset>
 
       <fieldset>
-        <legend className="text-[15px] font-semibold text-fg">Which of these is you?</legend>
-        {/* Named as the complete list rather than as three examples. A person
-            who does not see themselves here should find that out now, not four
-            screens in. */}
+        <legend className="text-[15px] font-semibold text-fg">Who is setting this up?</legend>
         <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-          These are the three we support, and each one gets a different first month rather
-          than the same checklist reworded. None of them asks you to export anything from
-          wherever you are now.
+          Two situations. A builder standing the association up before the homes sell, or the
+          owners running it. Neither asks you to export anything from wherever you are now.
         </p>
         <div className="mt-3 space-y-2">
-          {ORIGIN.map(({ id, label, detail, changes, icon: Icon }) => {
-            const picked = draft.origin === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={picked}
-                onClick={() => patch({ origin: id })}
+          <OriginCard
+            option={BUILDER}
+            picked={draft.origin === "builder"}
+            onPick={() => patch({ origin: "builder" })}
+          />
+
+          {/* The owners' door, with its one follow-up inside it. */}
+          <div
+            className={cn(
+              "rounded-card border p-4 transition-colors",
+              draft.origin === "handover" || draft.origin === "existing"
+                ? "border-brand bg-brand-soft/40"
+                : "border-border-2",
+            )}
+          >
+            <div className="flex items-start gap-3.5">
+              <span
                 className={cn(
-                  "flex w-full items-start gap-3.5 rounded-card border p-4 text-left transition-colors",
-                  picked ? "border-brand bg-brand-soft" : "border-border-2 hover:bg-surface-2",
+                  "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg",
+                  draft.origin === "handover" || draft.origin === "existing"
+                    ? "bg-brand text-brand-fg"
+                    : "bg-surface-3 text-fg-muted",
                 )}
+                aria-hidden
               >
-                <span
-                  className={cn(
-                    "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg",
-                    picked ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
-                  )}
-                  aria-hidden
-                >
-                  <Icon className="size-4.5" strokeWidth={1.9} />
+                <Home className="size-4.5" strokeWidth={1.9} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-fg">
+                  We are the owners
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-semibold text-fg">{label}</span>
-                  <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
-                    {detail}
-                  </span>
-                  {/* What picking it does, shown only once picked, so the three
-                      cards stay comparable and the consequence is confirmed
-                      rather than competing for attention. */}
-                  {picked ? (
-                    <span className="mt-2 block border-t border-brand/25 pt-2 text-[13px] leading-relaxed text-brand-soft-fg">
-                      <span className="font-semibold">What that changes: </span>
-                      {changes}
-                    </span>
-                  ) : null}
+                <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
+                  The owners run the association. One more thing decides your first month:
                 </span>
-                <span
-                  className={cn(
-                    "mt-1 size-4 shrink-0 rounded-full border-2",
-                    picked ? "border-brand bg-brand" : "border-border-2",
-                  )}
-                  aria-hidden
+              </span>
+            </div>
+            <div className="mt-3 space-y-2 sm:pl-12">
+              {OWNERS.map((option) => (
+                <OriginCard
+                  key={option.id}
+                  option={option}
+                  picked={draft.origin === option.id}
+                  onPick={() => patch({ origin: option.id })}
+                  compact
                 />
-              </button>
-            );
-          })}
+              ))}
+            </div>
+          </div>
         </div>
         <p className="mt-2.5 text-[13px] leading-relaxed text-fg-subtle">
-          Not sure between the last two? If the builder still owns homes here, you are taking
-          over. If they left years ago, you already run it.
+          Not sure? If the builder still owns homes here, you are taking over. If they left
+          years ago, you already run it.
         </p>
       </fieldset>
 
@@ -294,5 +299,64 @@ export function SituationStep({
         </div>
       </fieldset>
     </div>
+  );
+}
+
+function OriginCard({
+  option,
+  picked,
+  onPick,
+  compact = false,
+}: {
+  option: { id: AssociationOrigin; label: string; detail: string; changes: string; icon: typeof Home };
+  picked: boolean;
+  onPick: () => void;
+  compact?: boolean;
+}) {
+  const Icon = option.icon;
+  return (
+    <button
+      type="button"
+      aria-pressed={picked}
+      onClick={onPick}
+      className={cn(
+        "flex w-full items-start gap-3.5 rounded-card border text-left transition-colors",
+        compact ? "p-3" : "p-4",
+        picked ? "border-brand bg-brand-soft" : "border-border-2 bg-surface hover:bg-surface-2",
+      )}
+    >
+      <span
+        className={cn(
+          "mt-0.5 flex shrink-0 items-center justify-center rounded-lg",
+          compact ? "size-8" : "size-9",
+          picked ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
+        )}
+        aria-hidden
+      >
+        <Icon className={compact ? "size-4" : "size-4.5"} strokeWidth={1.9} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-semibold text-fg">{option.label}</span>
+        <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
+          {option.detail}
+        </span>
+        {/* What picking it does, shown only once picked, so the cards stay
+            comparable and the consequence is confirmed rather than competing
+            for attention. */}
+        {picked ? (
+          <span className="mt-2 block border-t border-brand/25 pt-2 text-[13px] leading-relaxed text-brand-soft-fg">
+            <span className="font-semibold">What that changes: </span>
+            {option.changes}
+          </span>
+        ) : null}
+      </span>
+      <span
+        className={cn(
+          "mt-1 size-4 shrink-0 rounded-full border-2",
+          picked ? "border-brand bg-brand" : "border-border-2",
+        )}
+        aria-hidden
+      />
+    </button>
   );
 }

@@ -10,6 +10,7 @@ import {
   Scale,
   Search,
   SlidersHorizontal,
+  ArrowRightLeft,
   Trash2,
 } from "lucide-react";
 import {
@@ -33,7 +34,7 @@ import { inviteUrl } from "@/lib/invitations";
 import { useToast } from "@/components/app/toast";
 import { TemplateComposer } from "@/components/app/template-composer";
 import { downloadCsv, toCsv } from "@/lib/core/export";
-import { money, pluralize } from "@/lib/utils";
+import { money, pluralize, todayIsoDate } from "@/lib/utils";
 import type { Owner } from "@/lib/types";
 
 const standingMeta: Record<Owner["standing"], { tone: "ok" | "warn" | "danger"; label: string }> = {
@@ -44,7 +45,13 @@ const standingMeta: Record<Owner["standing"], { tone: "ok" | "warn" | "danger"; 
 };
 
 export default function BoardHomeowners() {
-  const { community, addOwner, removeOwner, can } = useAppState();
+  const { community, addOwner, removeOwner, transferHome, can } = useAppState();
+  const [selling, setSelling] = useState<Owner | null>(null);
+  const [sale, setSale] = useState({ name: "", email: "", closingDate: todayIsoDate(), settle: true });
+  // Opening balances are for an association that switched here mid-life. A
+  // new build starts every home at zero, so for it the screen is noise.
+  const showOpeningBalances =
+    community.profile?.origin !== "builder" && community.profile?.origin !== "handover";
   const association = community.association;
   const owners = community.owners;
   const delinq = delinquency(community);
@@ -168,13 +175,15 @@ export default function BoardHomeowners() {
             {/* An association arriving from anywhere else needs this before it
                 bills anything. It is the only thing that has to move, which is
                 the whole reason nothing here imports a ledger. */}
-            <Link
-              href="/admin/homeowners/opening-balances"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-2 bg-surface px-4 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2"
-            >
-              <Scale className="size-3.5" />
-              Opening balances
-            </Link>
+            {showOpeningBalances ? (
+              <Link
+                href="/admin/homeowners/opening-balances"
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-2 bg-surface px-4 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2"
+              >
+                <Scale className="size-3.5" />
+                Opening balances
+              </Link>
+            ) : null}
             <Button variant="secondary" size="md" onClick={exportRoster}>
               <Download className="size-3.5" />
               Export roster
@@ -288,6 +297,90 @@ export default function BoardHomeowners() {
             </div>
           }
         />
+        {selling ? (
+          <div className="border-b border-border px-5 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold text-fg">
+                  Record the sale of unit {selling.unit}
+                </p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+                  {selling.displayName} moves out on the closing date. The home keeps its
+                  history; the buyer starts with a clean statement and their own sign in.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSelling(null)}>
+                Cancel
+              </Button>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_10rem_auto]">
+              <input
+                value={sale.name}
+                onChange={(e) => setSale({ ...sale, name: e.target.value })}
+                placeholder="Buyer name"
+                aria-label="Buyer name"
+                className={rosterInput}
+              />
+              <input
+                type="email"
+                value={sale.email}
+                onChange={(e) => setSale({ ...sale, email: e.target.value })}
+                placeholder="Buyer email"
+                aria-label="Buyer email"
+                className={rosterInput}
+              />
+              <input
+                type="date"
+                value={sale.closingDate}
+                onChange={(e) => setSale({ ...sale, closingDate: e.target.value })}
+                aria-label="Closing date"
+                className={rosterInput}
+              />
+              <Button
+                variant="primary"
+                size="md"
+                disabled={!sale.name.trim() || !sale.closingDate}
+                onClick={() => {
+                  transferHome(selling.id, {
+                    name: sale.name,
+                    email: sale.email,
+                    closingDate: sale.closingDate,
+                    settleBalance: sale.settle,
+                  });
+                  notify(`Unit ${selling.unit} is now ${sale.name.trim()}'s`);
+                  setSelling(null);
+                }}
+              >
+                Record the sale
+              </Button>
+            </div>
+            {selling.balanceCents > 0 ? (
+              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
+                <span className="font-medium text-fg">
+                  {money(selling.balanceCents)} is owed on this home.
+                </span>
+                <label className="inline-flex items-center gap-1.5 text-fg-muted">
+                  <input
+                    type="radio"
+                    name="settle"
+                    checked={sale.settle}
+                    onChange={() => setSale({ ...sale, settle: true })}
+                  />
+                  Settled at closing
+                </label>
+                <label className="inline-flex items-center gap-1.5 text-fg-muted">
+                  <input
+                    type="radio"
+                    name="settle"
+                    checked={!sale.settle}
+                    onChange={() => setSale({ ...sale, settle: false })}
+                  />
+                  Carries to the buyer
+                </label>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {adding ? (
           <div className="grid gap-3 border-b border-border px-5 py-4 sm:grid-cols-[1fr_1fr_6rem_auto]">
             <input
@@ -397,6 +490,19 @@ export default function BoardHomeowners() {
                     </td>
                     <td className="px-5 py-3">
                       <span className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelling(o);
+                            setSale({ name: "", email: "", closingDate: todayIsoDate(), settle: true });
+                            setAdding(false);
+                          }}
+                          aria-label={`Record the sale of ${o.displayName}'s home`}
+                          title="Record a sale"
+                          className="rounded-md border border-border-2 px-2 py-1 text-[13px] font-medium text-fg hover:bg-surface-2"
+                        >
+                          <ArrowRightLeft className="size-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => copyInvite(o)}

@@ -121,7 +121,7 @@ test.describe("the three questions", () => {
     await expect(next, "both answered and still blocked").toBeEnabled();
   });
 
-  test("names the three situations it supports, and what each one changes", async ({
+  test("names the two situations it supports, and what each one changes", async ({
     page,
   }) => {
     await clearOnce(page);
@@ -135,20 +135,19 @@ test.describe("the three questions", () => {
     await page.waitForTimeout(300);
 
     const health = await inspect(page);
-    // Presented as the complete list rather than as three examples. Somebody
-    // who is none of these should find out here, not four screens in.
-    expect(health.text, "the supported set is not named").toContain(
-      "These are the three we support",
-    );
+    // Two doors: the builder, or the owners. A person who is neither should
+    // find that out here, not four screens in.
+    expect(health.text, "the question is not asked").toContain("Who is setting this up?");
     for (const option of [
       "We are building the community",
+      "We are the owners",
       "We are taking over from the builder",
       "We already run our association",
     ]) {
       expect(health.text, `${option} is missing`).toContain(option);
     }
-    // The two that are easiest to confuse are separated explicitly.
-    expect(health.text, "no help telling the last two apart").toContain(
+    // The two answers behind the owners' door are told apart explicitly.
+    expect(health.text, "no help telling the owners' two answers apart").toContain(
       "If the builder still owns homes here",
     );
 
@@ -160,6 +159,13 @@ test.describe("the three questions", () => {
     expect(picked.text, "picking an option explains nothing").toContain("What that changes");
     expect(picked.text, "the established path still implies an export").toContain(
       "Nothing has to be exported",
+    );
+
+    // The builder is told the handover happens inside the product.
+    await page.getByRole("button", { name: /We are building the community/ }).click();
+    await page.waitForTimeout(300);
+    expect((await inspect(page)).text, "the builder is not told how the handover works").toContain(
+      "hand them the presidency",
     );
   });
 });

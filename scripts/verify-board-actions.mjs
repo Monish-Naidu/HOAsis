@@ -168,6 +168,21 @@ try {
   const { data: balance } = await neighbor.client.from("unit_balances").select("balance_cents").eq("unit_id", neighborUnit).single();
   check("opening balance: shows on the home's balance", balance?.balance_cents === 12_000, String(balance?.balance_cents));
 
+  // A sale. The seller's seat ends, the buyer is seated, the home keeps its
+  // history, and what was owed is settled as a payment line at closing.
+  const soldUnit = crypto.randomUUID();
+  await president.client.rpc("add_household", { p_association_id: associationId, p_unit_id: soldUnit, p_name: "Seller", p_email: `seller-${stamp}@example.com`, p_unit: "5" });
+  await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "charge", label: "Assessment", amount_cents: 25_000, due_on: day(-30) });
+  const { error: closingError } = await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "payment", label: "Paid at closing", amount_cents: -25_000, due_on: day(0) });
+  const { data: newSeat, error: saleError } = await president.client.rpc("transfer_home", { p_unit_id: soldUnit, p_new_name: "Buyer", p_new_email: `buyer-${stamp}@example.com`, p_closing_date: day(0) });
+  check("transfer_home: the board records a sale", !closingError && !saleError && Boolean(newSeat), saleError?.message ?? closingError?.message ?? "");
+  const { data: seats } = await admin.from("memberships").select("full_name,ends_on").eq("unit_id", soldUnit).order("starts_on");
+  check("transfer_home: the seller's seat ended and the buyer's began", (seats ?? []).length === 2 && seats[0].ends_on !== null && seats[1].ends_on === null, JSON.stringify(seats));
+  const { data: soldBalances, error: soldBalanceError } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", soldUnit);
+  check("transfer_home: the buyer starts at zero", !soldBalanceError && (soldBalances ?? []).length === 1 && soldBalances[0].balance_cents === 0, soldBalanceError?.message ?? JSON.stringify(soldBalances));
+  const { error: presidentSale } = await president.client.rpc("transfer_home", { p_unit_id: presidentUnit, p_new_name: "Nobody", p_new_email: "", p_closing_date: day(0) });
+  check("transfer_home: the President's home cannot be sold out from under the office", Boolean(presidentSale), presidentSale?.message ?? "no error");
+
   // Likes, once each.
   const { data: post } = await president.client.from("posts").insert({
     association_id: associationId, author_id: president.id, author_name: "Dana", title: "Hello", body: "Hi", status: "published",

@@ -7,13 +7,14 @@ import { TabPill } from "@/components/app/tab-pill";
 import { cn } from "@/lib/utils";
 
 /**
- * The three money questions, as one place.
+ * The money questions, as one place.
  *
  * Money and Reserves were separate tabs, and the distinction was ours rather
- * than theirs: everything on both is money. What actually separates them is
- * the horizon, so the labels say the horizon. "Next 30 years" also teaches the
- * thing nobody else in this category does, which is worth more sitting in the
- * open than buried behind a word like "Reserves".
+ * than theirs: everything on both is money. What separates them is the
+ * horizon: this month, and the things that wear out over years. The reserves
+ * tab used to be called "Next 30 years" after the projection it carried; the
+ * projection is out for now and the tab says what is left, which is the
+ * reserves themselves.
  *
  * Shared costs only appears for an association that has any, so a board
  * billing one flat due still sees two tabs and no explaining.
@@ -26,8 +27,8 @@ const VIEWS = [
   },
   {
     href: "/admin/reserves",
-    label: "Next 30 years",
-    detail: "What has to be replaced, and whether you can afford it",
+    label: "Reserves",
+    detail: "What wears out, when, and what is set aside",
   },
 ] as const;
 

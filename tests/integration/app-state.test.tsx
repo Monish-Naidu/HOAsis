@@ -472,6 +472,35 @@ describe("admin actions change real records", () => {
     expect(result.current.state.vendors.find((v) => v.id === missing.id)!.w9OnFile).toBe(true);
   });
 
+  it("records a sale: the buyer is seated clean and the seller's balance is settled at closing", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const seller = result.current.state.community.owners.find(
+      (o) => o.balanceCents > 0 && !o.boardRole,
+    )!;
+    const owed = seller.balanceCents;
+
+    act(() =>
+      result.current.state.transferHome(seller.id, {
+        name: "Priya Nair",
+        email: "priya@example.com",
+        closingDate: "2026-08-20",
+        settleBalance: true,
+      }),
+    );
+
+    const home = result.current.state.community.owners.find((o) => o.id === seller.id)!;
+    expect(home.displayName).toBe("Priya Nair");
+    expect(home.balanceCents).toBe(0);
+    expect(home.standing).toBe("current");
+    const statement = result.current.state.community.ownerCharges[seller.id];
+    expect(statement[0]).toMatchObject({ label: "Paid at closing", amountCents: -owed });
+    // The seller's sign in went with them; the buyer has a resident seat.
+    const seats = result.current.state.accounts.filter((a) => a.ownerId === seller.id);
+    expect(seats).toHaveLength(1);
+    expect(seats[0]).toMatchObject({ name: "Priya Nair", role: "resident" });
+  });
+
   it("changing document visibility is what residents actually see", async () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));

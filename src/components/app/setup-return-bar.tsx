@@ -1,29 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { ArrowLeft, Check } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 
 /**
- * The way back to the plan.
+ * The way back to the list.
  *
- * Every task on the plan links into the workspace, and once a board followed
- * one there was nothing to follow back. They uploaded the governing documents
- * and were then standing on the Documents page with no sign that they had just
- * completed a step, and no route to the next one.
+ * Every task on the list links into the workspace, and once a board followed
+ * one there was nothing to follow back. So while setup is unfinished a thin
+ * bar rides above the page with the count and a way back, and it disappears
+ * the moment the list is complete.
  *
- * So while setup is unfinished, a thin bar rides above the page with the count
- * and a way back. It disappears the moment the plan is complete, which is the
- * only acceptable behaviour for a bar that appears on every screen.
- *
- * Hidden on the plan itself, where it would only point at the page you are on.
+ * It also does the returning. A board that came here from the list, with
+ * `?from=setup` on the address, is taken back to the list the moment the
+ * task this screen exists for is done, with the count moved. Somebody who
+ * came here on their own is left where they are.
  */
 export function SetupReturnBar() {
   const { community } = useAppState();
   const pathname = usePathname();
+  const router = useRouter();
+  const { notify } = useToast();
   const plan = buildPlan(community, profileFromCommunity(community));
+  const tasks = plan.phases.flatMap((phase) => phase.tasks);
+  const doneKeys = tasks.filter((task) => task.complete).map((task) => task.key).join(",");
+  const previous = useRef<string | null>(null);
+
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = doneKeys;
+    if (before === null) return;
+    const fresh = doneKeys.split(",").filter((key) => key && !before.split(",").includes(key));
+    if (!fresh.length) return;
+    const fromSetup =
+      new URLSearchParams(window.location.search).get("from") === "setup";
+    const finishedHere = fresh
+      .map((key) => tasks.find((task) => task.key === key))
+      .filter((task) => task && task.href === pathname);
+    if (!fromSetup || !finishedHere.length) return;
+    const label = finishedHere[0]?.label ?? "Done";
+    notify(`${label}: done. ${plan.done} of ${plan.total}.`, "ok");
+    router.push("/admin/setup");
+  }, [doneKeys, pathname, tasks, plan.done, plan.total, notify, router]);
 
   if (plan.allDone) return null;
   if (pathname === "/admin/setup" || pathname === "/admin") return null;
@@ -38,8 +61,6 @@ export function SetupReturnBar() {
         Back to setting up
       </span>
       <span className="flex shrink-0 items-center gap-2">
-        {/* The count is the point. A board that just finished a step should
-            see the number move without going anywhere to check. */}
         <span className="hidden text-[13px] text-fg-muted sm:inline">
           {plan.done} of {plan.total} done
         </span>

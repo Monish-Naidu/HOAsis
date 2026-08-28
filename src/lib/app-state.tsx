@@ -155,6 +155,16 @@ interface AppState {
     balances: { ownerId: string; amountCents: number }[],
   ) => void;
   removeOwner: (ownerId: string) => () => void;
+  /**
+   * A home changes hands. The seller's seat ends on the closing date, the
+   * buyer is seated with a clean statement, and the home keeps its history.
+   * What the seller owed is either settled at closing, which is the normal
+   * case and is written as a payment, or carried to the buyer.
+   */
+  transferHome: (
+    ownerId: string,
+    input: { name: string; email: string; closingDate: string; settleBalance: boolean },
+  ) => void;
   /** Connects an account the association can receive dues into. */
   /** Appoints a household to an office, or returns them to being a resident. */
   setAccountRole: (accountId: string, role: AccountRole) => void;
@@ -1500,6 +1510,98 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
+  const transferHome = useCallback(
+    (
+      ownerId: string,
+      input: { name: string; email: string; closingDate: string; settleBalance: boolean },
+    ) => {
+      const name = input.name.trim();
+      const email = input.email.trim();
+      if (remote.community) {
+        const rc = remote.community;
+        const owner = rc.owners.find((o) => o.id === ownerId);
+        const owed = owner?.balanceCents ?? 0;
+        void remoteWrite("Recording the sale", async () => {
+          const supabase = supabaseBrowser();
+          if (input.settleBalance && owed > 0) {
+            // Paid out of escrow at closing: a payment line, so the statement
+            // shows where the balance went rather than a number vanishing.
+            const { error } = await supabase.from("charges").insert({
+              association_id: rc.id,
+              unit_id: ownerId,
+              kind: "payment",
+              label: "Paid at closing",
+              amount_cents: -owed,
+              due_on: input.closingDate,
+            });
+            if (error) throw new Error(error.message);
+          }
+          return supabase.rpc("transfer_home", {
+            p_unit_id: ownerId,
+            p_new_name: name,
+            p_new_email: email,
+            p_closing_date: input.closingDate,
+          });
+        });
+        return;
+      }
+
+      const owners = sliceStore(communityId, "owners");
+      const before = owners.getSnapshot().find((o) => o.id === ownerId);
+      if (!before) return;
+      const settle = input.settleBalance && before.balanceCents > 0;
+      owners.update((all) =>
+        all.map((o) =>
+          o.id === ownerId
+            ? {
+                ...o,
+                displayName: name,
+                members: [name],
+                email,
+                moveInDate: input.closingDate,
+                balanceCents: settle ? 0 : o.balanceCents,
+                daysPastDue: settle ? 0 : o.daysPastDue,
+                standing: settle ? ("current" as const) : o.standing,
+                autopay: false,
+                autopayMethod: undefined,
+                boardRole: undefined,
+              }
+            : o,
+        ),
+      );
+      if (settle) {
+        sliceStore(communityId, "ownerCharges").update((all) => ({
+          ...all,
+          [ownerId]: [
+            {
+              id: `${ownerId}-closing-${input.closingDate}`,
+              date: input.closingDate,
+              label: "Paid at closing",
+              kind: "payment" as const,
+              amountCents: -before.balanceCents,
+              balanceAfterCents: 0,
+            },
+            ...(all[ownerId] ?? []),
+          ],
+        }));
+      }
+      // The seller's sign-in goes with them; the buyer gets a resident seat.
+      sliceStore(communityId, "accounts").update((all) => [
+        ...all.filter((a) => a.ownerId !== ownerId),
+        {
+          id: `${communityId}-acct-${before.unit}-${input.closingDate}`,
+          ownerId,
+          name,
+          email,
+          unit: before.unit,
+          role: "resident" as const,
+          capabilities: NO_CAPABILITIES,
+        },
+      ]);
+    },
+    [remote.community, communityId],
+  );
+
   /**
    * Builds an association from onboarding and signs the founder into it.
    *
@@ -2673,6 +2775,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     raiseNoticeFromReport,
     setOpeningBalances,
     removeOwner,
+    transferHome,
     setAccountRole,
     dismissedSetupTasks,
     dismissSetupTask,

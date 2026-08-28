@@ -139,8 +139,9 @@ export function AccountStep({
         </Button>
       </div>
       <p className="text-[13px] leading-relaxed text-fg-subtle">
-        Looking around builds a copy in this browser only. Nothing is sent anywhere, and
-        nobody else can see it.
+        Looking around builds a copy in this browser only. It is not saved anywhere else,
+        nobody else can sign in to it, and it is not the association. Come back signed in
+        when you are ready and it takes three minutes.
       </p>
     </div>
   );

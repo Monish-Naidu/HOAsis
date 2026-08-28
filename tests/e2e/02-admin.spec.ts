@@ -357,11 +357,10 @@ test.describe("money is one place", () => {
   test("the control moves between the three, and names the horizon", async ({ page }) => {
     await page.goto("/admin/money");
     const health = await expectHealthy(page, "money");
-    // The label teaches the thing no competitor does, rather than hiding it
-    // behind a word like "Reserves".
-    expect(health.text, "the horizon is not named").toContain("Next 30 years");
+    // The reserves live behind the money control, not on a tab of their own.
+    expect(health.text, "reserves are not reachable from money").toContain("Reserves");
 
-    await page.getByRole("link", { name: "Next 30 years" }).click();
+    await page.getByRole("link", { name: "Reserves" }).click();
     await page.waitForTimeout(600);
     expect(page.url()).toContain("/admin/reserves");
     await expectHealthy(page, "reserves through the control");

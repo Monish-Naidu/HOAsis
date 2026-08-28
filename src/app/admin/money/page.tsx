@@ -5,7 +5,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   BookmarkPlus,
-  Plus,
   Copy,
   Download,
   Filter,
@@ -40,14 +39,12 @@ import { formatDate, money, pluralize  } from "@/lib/utils";
 const savedViews = [
   { name: "Everything, this month", starred: true },
   { name: "Needs review", starred: false },
-  { name: "Reserve activity only", starred: false },
   { name: "Vendor payments > $1k", starred: false },
 ];
 
 export default function BoardMoney() {
   const { community, ledger, confirmLedgerEntry, dismissLedgerEntry, addBankAccount } =
     useAppState();
-  const [connecting, setConnecting] = useState(false);
   // The association's own present, not a month baked into the markup.
   const monthLabel = new Date(`${community.asOf}T12:00:00Z`).toLocaleDateString("en-US", {
     month: "long",
@@ -55,6 +52,10 @@ export default function BoardMoney() {
     timeZone: "UTC",
   });
   const bankAccounts = community.bankAccounts;
+  // One account. Dues land in it and vendors are paid out of it. Anything
+  // else the demo carries is listed, not managed.
+  const primary = bankAccounts.find((a) => a.kind === "operating") ?? bankAccounts[0];
+  const others = bankAccounts.filter((a) => a !== primary);
   const cash = cashPosition(community);
   const recon = useReconciliation();
   const { notify } = useToast();
@@ -65,8 +66,6 @@ export default function BoardMoney() {
     switch (view) {
       case "Needs review":
         return ledger.filter((e) => e.status === "needs-review");
-      case "Reserve activity only":
-        return ledger.filter((e) => e.accountId !== "acct-operating");
       case "Vendor payments > $1k":
         return ledger.filter((e) => e.amountCents <= -100_000);
       default:
@@ -146,13 +145,9 @@ export default function BoardMoney() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          label="Total cash"
+          label="In the bank"
           value={money(cash.total, { cents: false })}
-          hint={
-            bankAccounts.length
-              ? `Across ${pluralize(bankAccounts.length, "account")}`
-              : "No bank account connected yet"
-          }
+          hint={primary ? `${primary.institution} ••${primary.mask}` : "No bank account connected yet"}
           icon={<Landmark className="size-4" />}
         />
         <Stat
@@ -185,104 +180,80 @@ export default function BoardMoney() {
         />
       </div>
 
-      {/* Connecting an account is the one thing that blocks collecting, so it
-          sits above the accounts rather than behind a menu. */}
-      {connecting || !bankAccounts.length ? (
+      {/* One account. Dues land in it, vendors are paid out of it, and the
+          ledger below is both directions. Reserves are a line in the budget
+          and a study on the Reserves tab, not a second bank. */}
+      {!primary ? (
         <Card className="mt-5 p-5">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
-                {bankAccounts.length ? "Connect another account" : "Connect your operating account"}
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-                {bankAccounts.length
-                  ? "Reserves belong in their own account, separate from operating."
-                  : "Dues have nowhere to land until an account in the association's name is connected."}
-              </p>
-            </div>
-            {bankAccounts.length ? (
-              <Button variant="ghost" size="sm" onClick={() => setConnecting(false)}>
-                Cancel
-              </Button>
-            ) : null}
+          <div className="mb-4">
+            <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+              Connect the association&apos;s bank account
+            </h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+              Dues have nowhere to land until an account in the association&apos;s name is
+              connected. One account is all it takes: money in and money out both show here.
+            </p>
           </div>
           <BankConnect
-            kind={bankAccounts.some((a) => a.kind === "operating") ? "reserve" : "operating"}
             onConnect={(account) => {
               addBankAccount(account);
-              setConnecting(false);
               notify(`${account.institution} ••${account.mask} connected`, "ok");
             }}
           />
         </Card>
-      ) : null}
-
-      {/* Accounts */}
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        {bankAccounts.length && !connecting ? (
-          <button
-            type="button"
-            onClick={() => setConnecting(true)}
-            className="flex min-h-[7rem] flex-col items-center justify-center gap-1.5 rounded-card border border-dashed border-border-2 p-4 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-          >
-            <Plus className="size-4" />
-            <span className="text-[13px] font-medium">Connect an account</span>
-          </button>
-        ) : null}
-        {bankAccounts.map((a) => (
-          <Card key={a.id} className="p-4">
-            <div className="flex items-start justify-between">
+      ) : (
+        <Card className="mt-5 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-fg">
+                <Landmark className="size-5" strokeWidth={1.9} />
+              </span>
               <div className="min-w-0">
-                <p className="truncate text-[15px] font-semibold text-fg">{a.name}</p>
-                <p className="truncate text-[13px] text-fg-muted">
-                  {a.institution} ••{a.mask}
+                <p className="text-[15px] font-semibold text-fg">
+                  {primary.institution} ••{primary.mask}
+                </p>
+                <p className="text-[13px] text-fg-muted">
+                  The association&apos;s account. Dues come in here and vendors are paid from
+                  it.
                 </p>
               </div>
-              <Badge tone={a.status === "live" ? "ok" : "warn"} dot>
-                {a.status}
-              </Badge>
             </div>
-            <p className="tnum mt-3 text-[24px] font-semibold leading-none tracking-[-0.03em] text-fg">
-              {money(a.balanceCents)}
+            <Badge tone={primary.status === "live" ? "ok" : "warn"} dot>
+              {primary.status === "live" ? "Live feed" : primary.status}
+            </Badge>
+          </div>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <dt className="text-[13px] text-fg-muted">Balance</dt>
+              <dd className="tnum mt-0.5 text-[24px] font-semibold leading-none tracking-[-0.03em] text-fg">
+                {money(primary.balanceCents)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[13px] text-fg-muted">Reconciled through</dt>
+              <dd className="tnum mt-0.5 text-[15px] font-medium text-fg">
+                {formatDate(primary.reconciledThroughDate, "long")}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[13px] text-fg-muted">Feed</dt>
+              <dd className="mt-0.5 text-[15px] font-medium text-fg">
+                {primary.status === "live"
+                  ? `Synced ${primary.syncedMinutesAgo} min ago`
+                  : `Last seen ${Math.round(primary.syncedMinutesAgo / 60)}h ago`}
+                {primary.unreconciledCount ? (
+                  <span className="text-warn"> · {primary.unreconciledCount} to review</span>
+                ) : null}
+              </dd>
+            </div>
+          </dl>
+          {others.length ? (
+            <p className="mt-3 text-[13px] text-fg-subtle">
+              Also connected: {others.map((a) => `${a.name} ••${a.mask}`).join(", ")}.
             </p>
-            <dl className="mt-3 space-y-1 border-t border-border pt-2.5">
-              <div className="flex justify-between text-[13px]">
-                <dt className="text-fg-muted">Reconciled through</dt>
-                <dd className="tnum font-medium text-fg">
-                  {formatDate(a.reconciledThroughDate, "long")}
-                </dd>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <dt className="text-fg-muted">Unreconciled</dt>
-                <dd
-                  className={`tnum font-medium ${a.unreconciledCount ? "text-warn" : "text-ok"}`}
-                >
-                  {a.unreconciledCount}
-                </dd>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <dt className="text-fg-muted">Yield</dt>
-                <dd className="tnum font-medium text-fg">
-                  {a.apy.toFixed(2)}% APY
-                  {a.maturityDate ? `, matures ${formatDate(a.maturityDate)}` : ""}
-                </dd>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <dt className="text-fg-muted">Interest YTD</dt>
-                <dd className="tnum font-medium text-ok">{money(a.interestYtdCents)}</dd>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <dt className="text-fg-muted">Feed</dt>
-                <dd className="font-medium text-fg">
-                  {a.status === "live"
-                    ? `${a.syncedMinutesAgo} min ago`
-                    : `${Math.round(a.syncedMinutesAgo / 60)}h ago`}
-                </dd>
-              </div>
-            </dl>
-          </Card>
-        ))}
-      </div>
+          ) : null}
+        </Card>
+      )}
 
       {/* Ledger */}
       <div className="mt-5"><AddBudgetLine /></div>

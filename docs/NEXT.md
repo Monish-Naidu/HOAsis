@@ -228,29 +228,53 @@ Every page of it works as the demo does, and nothing done in it is anywhere
 else. Signing in first, or creating an account inside Quick Setup, is what
 makes an association real. Worth making unmissable in the wizard.
 
-## Asked for on 2026-08-28, queued in this order
+## Asked for on 2026-08-28 — DONE the same day
 
-1. **Setup to-do flow.** A compact status banner on the dashboard while
-   setup is unfinished, linking to `/admin/setup` as its own landing page:
-   each step either done in place or a link to the screen, which brings the
-   board back to the list when done. Leavable to the dashboard at any time;
-   the banner goes when the list is empty. The pieces exist (the plan page,
-   `SetupReturnBar`); the shape is what changes.
-2. **Onboarding verbiage and the three origins.** Monish's read: a builder
-   creating the association and an owner taking over from the builder are
-   the same association at two moments, so the handover should be an action
-   in the product, not a separate front door. `transfer_presidency` and
-   `transfer_home` already exist. Collapse the wizard to two situations and
-   put the handover where the roster is.
-3. **Home transfer on the Homeowners page.** A "Transfer this home" action
-   that seats the buyer and ends the seller's seat, showing any balance and
-   asking how it was settled at closing. Show "Opening balances" only when
-   the association said it is an established one; for a new build every home
-   starts at zero and the screen is noise.
-4. **Money, simplified.** One bank account, not several. Dues land in it,
-   vendor payments and ACH leave it, and the ledger shows both. Bank
-   connection should look like a real Plaid or Stripe link. Remove the
-   thirty year reserve projection for now; trends undecided.
+All four, plus one bug that was blocking real associations entirely.
+
+**The bug.** `association_origin` in Postgres still held the values from
+before the repositioning (`new`, `self-managed`, `leaving-manager`), while
+the wizard has sent `builder`, `handover`, `existing` since 2026-08-26. Every
+signed-in Quick Setup failed at the three questions with "invalid input value
+for enum association_origin". Migration 0020 adds the current values. That is
+also why Monish's "fads" ended up browser-only.
+
+1. **Setup to-do flow.** `/admin/setup` is the list: one task open at a time,
+   each with its reason on the row and, when open, either a form to do it
+   right there (bank, document, budget line, reserve component, vendor,
+   insurance, household) or a link to the screen with `?from=setup`.
+   `SetupReturnBar` watches the plan and, when the task the current screen
+   exists for completes with `?from=setup` on the address, toasts and sends
+   the board back to the list. The dashboard carries one line
+   (`SetupPlanSummary`: done count, next step, Continue) that disappears
+   when the list is empty, and an honest empty state while nothing runs.
+2. **Onboarding origins.** Two doors on the second screen: the builder, or
+   the owners, with the owners' two answers (took over from the builder,
+   already run it) inside their door. Three values are still stored, since
+   the plan and the porting checklist depend on them. The builder is told the
+   handover happens from Settings. `LocalCopyBanner` sits on every admin
+   screen of a browser-only community saying so, with a way to sign in.
+3. **Home sale.** "Record the sale" on every roster row: buyer, email,
+   closing date, and if the seller owes anything, whether it was settled at
+   closing (a "Paid at closing" payment line) or carries. Demo path in the
+   state layer; real path writes the payment and calls `transfer_home`.
+   Opening balances are offered only when the association is not a new
+   build (origin is neither builder nor handover).
+4. **Money, simplified.** One account card on Money (balance, reconciled
+   through, feed), connect flow only when there is none, no yield or CD
+   rows, no "connect another"; stats read In the bank, Money in, Money out,
+   Waiting on you. Reserves is four numbers and the component table; the
+   thirty year projection, sliders, chart and year-by-year are out for now
+   (`src/lib/reserves.ts` keeps the maths). The dashboard's reserve stat is
+   what is set aside, not a second bank.
+
+**Every onboarding combination was driven end to end**: three origins by
+three property types, through the wizard, then every item on the resulting
+checklist (8 to 11 of them) until "Everything is set up", with the automatic
+return checked on the board, amenity, photo and maintenance-matrix steps, and
+the dashboard banner gone at the end. The drive is a Playwright script in
+the session scratchpad, not in the repo; the e2e suite covers the builder
+column of it in `08-complete-setup.spec.ts`.
 
 ## The landing page — DONE, on placeholder art
 
