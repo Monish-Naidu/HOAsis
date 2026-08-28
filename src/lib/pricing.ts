@@ -49,3 +49,14 @@ export const PRICE_EXAMPLES = [
   { homes: 88, note: "A common single phase subdivision", highlight: true },
   { homes: 250, note: "A large development" },
 ];
+
+/**
+ * The free trial, in days.
+ *
+ * Ninety is long on purpose. An association bills monthly, so a thirty day
+ * trial ends before the first assessment run has even been reconciled, and a
+ * board that has not closed one month has not seen the product do its job.
+ * The front page quotes this and the pricing page repeats it; both read it
+ * here so the number cannot drift.
+ */
+export const TRIAL_DAYS = 90;

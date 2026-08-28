@@ -9,6 +9,7 @@ import {
   PRICE_EXAMPLES,
   PRICE_PER_HOME_CENTS,
   PRICE_PER_TRANSACTION_CENTS,
+  TRIAL_DAYS,
 } from "@/lib/pricing";
 import { money } from "@/lib/utils";
 
@@ -82,7 +83,7 @@ const INCLUDED = [
   "Documents and the public records page",
   "Compliance register for your state",
   "Community forum with moderation",
-  "Email support, from the people who built it",
+  "Live support, phone and chat, from the people who built it",
 ];
 
 /**
@@ -142,6 +143,9 @@ export default function PricingPage() {
               <p className="mt-1 text-[15px] text-fg-muted">
                 Plus {money(PRICE_PER_TRANSACTION_CENTS)} per payment, whichever way it arrives.
               </p>
+              <p className="mt-3 text-[15px] font-medium text-ok">
+                The first {TRIAL_DAYS} days are free. No card to start, cancel whenever.
+              </p>
             </div>
             {/* No tiers to compare, so the table is worked examples. A board
                 finds the row nearest their own size and stops reading. */}
@@ -179,7 +183,7 @@ export default function PricingPage() {
 
         <div className="mt-10 grid gap-5 lg:grid-cols-2">
           <Reveal>
-            <Card className="h-full p-6">
+            <Card id="included" className="h-full scroll-mt-20 p-6">
               <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
                 Included, always
               </h2>

@@ -1,181 +1,218 @@
 import Image from "next/image";
 import Link from "next/link";
-import { money } from "@/lib/utils";
 import {
   ArrowRight,
+  Bell,
+  BookOpen,
+  Briefcase,
+  CalendarDays,
+  ChartNoAxesColumn,
   Check,
-  MessageSquareText,
-  ScaleIcon,
+  ChevronRight,
+  CircleCheck,
+  CircleDollarSign,
+  ClipboardCheck,
+  Clock,
+  Contact,
+  CreditCard,
+  FolderOpen,
+  MessagesSquare,
   ShieldCheck,
+  Sparkles,
+  TriangleAlert,
+  UserRound,
+  UsersRound,
+  Video,
   Vote,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { Badge, Card } from "@/components/ui/primitives";
-import { libraryArticles } from "@/lib/data";
+import { Avatar, Card } from "@/components/ui/primitives";
 import {
-  annualFor,
-  MANAGEMENT_RANGE_PER_HOME,
-  monthlyFor,
-  PRICE_PER_HOME_CENTS,
-  PRICE_PER_TRANSACTION_CENTS,
-} from "@/lib/pricing";
+  articleBySlug,
+  liveMeeting,
+  openRequests,
+  reserveComponents,
+  reserveSummary,
+  upcomingMeetings,
+  vendorGaps,
+  vendors,
+} from "@/lib/data";
+import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
+import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 
 export const metadata = {
-  title: "HOAsis, the HOA platform for new communities",
+  title: "HOAsis. Run your HOA, not another job.",
   description:
-    "Stand up an association before the first home closes, and hand over one that survives the audit. Reserves funded from day one, documents buyers can read, and books that reconcile.",
+    "The all-in-one platform that brings clarity, connection, and calm to HOA management. Set up in minutes, no card to start, and the first 90 days are free.",
 };
 
-/**
- * The cost case, as arithmetic a builder or a board can check.
- *
- * Every figure here is computed from the same tier table the pricing page
- * reads, because these two pages drifted once and the front page ended up
- * quoting a per door rate three times our actual price. The worked example is
- * a community of 88 homes, which is a common single-phase subdivision.
+/*
+ * The page follows the deck Monish brought on 2026-08-28, slide for slide:
+ * hero, "Run your HOA", Greg, the five feature cards, the phone. Copy is the
+ * deck's, with em dashes replaced. `docs/design/landing-page.md` records the
+ * mapping and the few places this departs from the slides.
  */
-const EXAMPLE_HOMES = 88;
-const OUR_MONTH = monthlyFor(EXAMPLE_HOMES);
-const OUR_YEAR = annualFor(EXAMPLE_HOMES);
-const MANAGED_YEAR = {
-  low: MANAGEMENT_RANGE_PER_HOME.low * EXAMPLE_HOMES * 12,
-  high: MANAGEMENT_RANGE_PER_HOME.high * EXAMPLE_HOMES * 12,
-};
 
-
-
-/**
- * Each value section pairs a claim with the screen that proves it.
- *
- * Reserves lead. In an established association the first question is whether
- * the books are right; in a new one the books are empty and correct, and the
- * question that decides the next thirty years is whether the first budget
- * funds the roads. A low first-year assessment sells houses and hands the
- * incoming board a shortfall, and that is the failure this product is pointed
- * at now.
- */
-const SHOWCASE = [
-  {
-    eyebrow: "Reserves",
-    title: "Set the first assessment knowing what it has to cover.",
-    body: "Roads, roofs and pumps each get replaced the year they wear out, at what it will cost by then. Everything is new, so the dates are known rather than guessed. Follow it forward and the first year the money runs out is the year owners get a surprise bill, so we name that year before the dues are set.",
-    points: [
-      "Thirty years ahead, from the day the community is recorded",
-      "The exact monthly amount that avoids a special assessment",
-      "What the builder funded, month by month, at handover",
-    ],
-    image: "/marketing/product-reserves.png",
-    width: 2360,
-    height: 1360,
-    alt: "A thirty year reserve plan, with sliders for savings, yield and inflation",
-  },
-  {
-    eyebrow: "Accounting",
-    title: "Hand over books that survive the audit.",
-    body: "Anything that needs a person to decide is kept out of your reports until somebody decides it. Nothing is filed automatically, duplicate charges are caught before they reach a statement, and the assessment on every lot the builder still owns is on the ledger like any other home.",
-    points: [
-      "Live bank feeds, updated as they happen",
-      "Unsold lots billed like every other home",
-      "One balance, and every report shows it",
-    ],
-    image: "/marketing/product-dashboard.png",
-    width: 2360,
-    height: 1320,
-    alt: "The board dashboard, with three transactions waiting to be reviewed",
-  },
-  {
-    eyebrow: "Residents",
-    title: "A buyer who knows the rules before they close.",
-    body: "Pay, look something up, ask for something. Your recorded documents are searchable in plain words, so an owner finds the fence rule instead of asking a board member. Every payment method shows what it costs before anyone commits. The same screens become the phone app.",
-    points: [
-      "What the card costs, shown before you pay",
-      "Requests with a receipt you can show a contractor",
-      "The association's money, open to owners if the board allows",
-    ],
-    image: "/marketing/product-resident.png",
-    width: 860,
-    height: 1760,
-    alt: "The resident app showing a balance due, a live board meeting, and open ballots",
-    portrait: true,
-  },
+/** The strip under the hero. Every item is a promise the product keeps today. */
+const ASSURANCES = [
+  "No card to start",
+  "Set up in minutes",
+  "Cancel whenever",
+  `${TRIAL_DAYS}-day free trial`,
+  "Live support",
 ];
 
-const ALSO = [
+const BENEFITS = [
   {
-    icon: Vote,
-    title: "Voting people finish",
-    body: "Ballots that hold paragraphs, tallies sealed until close, and a video meeting with dial-in so the vote happens while everyone is on the line.",
+    icon: Clock,
+    title: "Save time",
+    body: "Automate everyday HOA tasks and reduce busywork.",
   },
   {
-    icon: ScaleIcon,
-    title: "Compliance with the evidence attached",
-    body: "Obligations tracked as dated items with the proof stapled on, so a records request is answered from something already assembled.",
-  },
-  {
-    icon: MessageSquareText,
-    title: "A forum, moderated",
-    body: "Neighbor to neighbor, held for review before it publishes. Anything needing a decision goes to a request instead, where it gets a deadline.",
+    icon: CircleDollarSign,
+    title: "Save money",
+    body: "Get professional tools without professional management fees.",
   },
   {
     icon: ShieldCheck,
-    title: "Nobody moves money alone",
-    body: "A second signature on payments that need one, an audit trail on every change, and a President whose access cannot be revoked out from under them.",
+    title: "Stay compliant",
+    body: "Keep records, deadlines, and requirements on track.",
   },
 ];
 
-const JOBS = [
-  "Bill every lot, including the ones still unsold",
-  "Collect assessments and chase the late ones",
-  "Pay vendors by ACH with two signatures",
-  "Keep the books and produce statements",
-  "Hold records and publish what must be public",
-  "Send notices with a log that proves delivery",
-  "Run elections and certify the result",
-  "Log violations through notice, cure, and hearing",
-  "Answer owners without losing the thread",
-  "Track every compliance deadline that applies",
-  "Hand the whole record across at turnover",
+const POCKET = [
+  {
+    icon: CircleCheck,
+    title: "Approve",
+    body: "Review requests, invoices, and documents on the go.",
+  },
+  {
+    icon: MessagesSquare,
+    title: "Communicate",
+    body: "Message homeowners and vendors instantly.",
+  },
+  {
+    icon: Bell,
+    title: "Stay informed",
+    body: "Get real-time updates on what matters most.",
+  },
+  {
+    icon: Video,
+    title: "Connect",
+    body: "Hop on a secure video call with board members or vendors.",
+  },
 ];
+
+const MORE = [
+  { icon: CreditCard, label: "Payments" },
+  { icon: CircleDollarSign, label: "Dues" },
+  { icon: TriangleAlert, label: "Violations" },
+  { icon: ClipboardCheck, label: "ARC requests" },
+  { icon: FolderOpen, label: "Documents" },
+  { icon: MessagesSquare, label: "Communications" },
+  { icon: CalendarDays, label: "Meetings" },
+  { icon: Vote, label: "Voting" },
+  { icon: ChartNoAxesColumn, label: "Reporting" },
+  { icon: Contact, label: "Directory" },
+];
+
+/**
+ * The five guides in the Knowledge Center card, in the deck's order: duties,
+ * meetings, collections, budgets, reserves. Real articles, so every row opens.
+ */
+const GUIDES = [
+  ["first-90-days-on-a-board", "Board member duties"],
+  ["running-a-board-meeting", "How to run a meeting"],
+  ["collecting-late-assessments", "Collection best practices"],
+  ["reading-an-hoa-budget", "Budgets and assessments"],
+  ["reserve-study-basics", "Reserve studies 101"],
+]
+  .map(([slug, label]) => {
+    const article = articleBySlug(slug);
+    return article ? { slug: article.slug, label } : undefined;
+  })
+  .filter((guide) => guide !== undefined);
+
+/* -------------------------------------------------------------------------- */
+/* Device frames                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A desktop around the dashboard screenshot.
+ *
+ * The deck shows the product on a monitor. Drawing the device in CSS keeps it
+ * crisp at any size, lets the bezel follow the theme, and means a fresh
+ * screenshot from `scripts/product-shots.mjs` drops straight in.
+ */
+function MonitorFrame({
+  src,
+  alt,
+  width,
+  height,
+}: {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+}) {
+  return (
+    <div className="relative mx-auto w-full max-w-[680px]">
+      <div className="rounded-[1.1rem] bg-navy-950 p-[9px] pb-[18px] shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
+        <div className="overflow-hidden rounded-[0.7rem] bg-surface">
+          <Image
+            src={src}
+            alt={alt}
+            width={width}
+            height={height}
+            sizes="(max-width: 1024px) 100vw, 680px"
+            className="h-auto w-full"
+          />
+        </div>
+      </div>
+      {/* The stand. Two shapes, a neck and a foot, drawn in surface tones so
+          they sit on either theme. */}
+      <div
+        className="mx-auto h-9 w-28 bg-gradient-to-b from-surface-3 to-border-2"
+        style={{ clipPath: "polygon(14% 0, 86% 0, 100% 100%, 0 100%)" }}
+        aria-hidden
+      />
+      <div className="mx-auto h-1.5 w-64 rounded-full bg-border-2" aria-hidden />
+    </div>
+  );
+}
 
 /**
  * A phone around the resident screenshot.
  *
  * The capture is the screen only, with no bezel of its own, so the device is
- * drawn here in CSS. That keeps it crisp at any size, lets the frame follow
- * the theme, and means a new screenshot drops straight in without matching a
- * baked in border.
- *
- * The device is cropped short and faded into the page rather than shown whole.
- * A full phone next to a column of text is taller than everything around it
- * and drags the eye to the bottom of the section; fading it out keeps the
- * weight on the screen content, which is the part worth looking at.
+ * drawn here in CSS. The device is cropped short and faded into the page
+ * rather than shown whole: a full phone next to a column of text is taller
+ * than everything around it and drags the eye to the bottom of the section.
  */
 function PhoneFrame({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="relative mx-auto w-[262px] sm:w-[288px]">
-      <div className="relative h-[380px] overflow-hidden sm:h-[420px]">
+    <div className="relative mx-auto w-[272px] sm:w-[296px]">
+      <div className="relative h-[460px] overflow-hidden sm:h-[520px]">
         <div className="rounded-t-[2.75rem] bg-navy-950 px-[10px] pt-[10px] shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
-          <div className="relative overflow-hidden rounded-t-[2.15rem] bg-bg">
+          {/* The screenshot is the light theme in both modes, so the strip
+              above it is painted white to match rather than themed. */}
+          <div className="relative overflow-hidden rounded-t-[2.15rem] bg-[#ffffff] pt-8">
+            <span
+              className="absolute left-1/2 top-2.5 h-[22px] w-[86px] -translate-x-1/2 rounded-full bg-navy-950"
+              aria-hidden
+            />
             <Image
               src={src}
               alt={alt}
               width={764}
               height={1162}
-              priority={false}
-              sizes="(max-width: 640px) 262px, 288px"
+              sizes="(max-width: 640px) 272px, 296px"
               className="h-auto w-full"
-            />
-            {/* Dynamic island. */}
-            <span
-              className="absolute left-1/2 top-2 h-[22px] w-[86px] -translate-x-1/2 rounded-full bg-navy-950"
-              aria-hidden
             />
           </div>
         </div>
-
-        {/* Dissolves the device into the section instead of cutting it flat. */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-bg/80 to-bg"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-hero-field/80 to-hero-field"
           aria-hidden
         />
       </div>
@@ -183,30 +220,392 @@ function PhoneFrame({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export default function MarketingHome() {
-  const featured = libraryArticles.slice(0, 3);
+/* -------------------------------------------------------------------------- */
+/* The feature cards' miniature screens                                        */
+/*                                                                             */
+/* Each one is drawn from the same records the demo runs on, so the card and   */
+/* the product a visitor opens next agree with each other.                     */
+/* -------------------------------------------------------------------------- */
 
+function Mini({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div className={cn("rounded-xl border border-border bg-surface p-3 shadow-raised", className)}>
+      {children}
+    </div>
+  );
+}
+
+function Pill({ tone, children }: { tone: "ok" | "info"; children: React.ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
+        tone === "ok" ? "bg-ok-soft text-ok" : "bg-info-soft text-info",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ComplianceMini() {
+  const update = articleBySlug("washington-recent-changes");
+  return (
+    <Mini>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[12px] font-semibold text-fg">Washington updates</p>
+        <Pill tone="ok">New</Pill>
+      </div>
+      <p className="mt-2 text-[11px] leading-snug text-fg-muted">
+        {update?.summary ?? "Bill numbers and effective dates, in plain words."}
+      </p>
+      <Link
+        href={update ? `/library/${update.slug}` : "/library"}
+        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-accent"
+      >
+        Read summary
+        <ArrowRight className="size-3" />
+      </Link>
+    </Mini>
+  );
+}
+
+function Ring({ percent }: { percent: number }) {
+  const r = 17;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg viewBox="0 0 44 44" className="size-12 shrink-0 -rotate-90" aria-hidden>
+      <circle cx="22" cy="22" r={r} fill="none" strokeWidth="5" className="stroke-surface-3" />
+      <circle
+        cx="22"
+        cy="22"
+        r={r}
+        fill="none"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeDasharray={`${(c * percent) / 100} ${c}`}
+        className="stroke-accent"
+      />
+    </svg>
+  );
+}
+
+function ReserveMini() {
+  const percent = Math.round(reserveSummary().percentFunded * 100);
+  const onTrack = percent >= 70;
+  const year = today().getUTCFullYear();
+  const soonest = [...reserveComponents]
+    .sort((a, b) => a.remainingLifeYears - b.remainingLifeYears)
+    .slice(0, 3);
+  return (
+    <Mini>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-medium text-fg-muted">Reserve health</p>
+          <p className="tnum mt-0.5 text-[22px] font-semibold leading-none tracking-[-0.02em] text-fg">
+            {percent}%
+          </p>
+          <p className={cn("mt-1 text-[11px] font-semibold", onTrack ? "text-ok" : "text-warn")}>
+            {onTrack ? "On track" : "Behind the study"}
+          </p>
+        </div>
+        <Ring percent={percent} />
+      </div>
+      <ul className="mt-3 space-y-2 border-t border-border pt-3">
+        {soonest.map((component) => {
+          const funded = Math.round((component.fundedCents / component.replacementCostCents) * 100);
+          return (
+            <li key={component.id}>
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="truncate text-fg">{component.name.split(",")[0]}</span>
+                <span className="tnum shrink-0 text-fg-muted">
+                  {year + component.remainingLifeYears} · {funded}%
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
+                <div
+                  className={cn(
+                    "h-full rounded-full",
+                    funded >= 80 ? "bg-ok" : funded >= 50 ? "bg-info" : "bg-warn",
+                  )}
+                  style={{ width: `${funded}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Mini>
+  );
+}
+
+function VendorMini() {
+  return (
+    <Mini className="p-2">
+      <ul className="divide-y divide-border">
+        {vendors.slice(0, 3).map((vendor) => {
+          const active =
+            vendor.w9OnFile && (!vendor.coiExpires || daysFromToday(vendor.coiExpires) >= 0);
+          return (
+            <li key={vendor.id} className="px-1 py-1.5">
+              <p className="truncate text-[11px] font-semibold leading-tight text-fg">
+                {vendor.name}
+              </p>
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <p className="truncate text-[10px] text-fg-muted">{vendor.service}</p>
+                <Pill tone={active ? "ok" : "info"}>{active ? "Active" : "Review"}</Pill>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Mini>
+  );
+}
+
+function TransitionMini() {
+  return (
+    <Mini>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-3 text-fg-muted">
+            <UserRound className="size-4" />
+          </span>
+          <span className="text-[10px] font-medium leading-tight text-fg-muted">
+            Outgoing
+            <br />
+            board
+          </span>
+        </div>
+        <span className="h-px flex-1 bg-border" aria-hidden />
+        <ChevronRight className="-mx-1 size-3 shrink-0 text-fg-subtle" />
+        <div className="flex items-center gap-2">
+          <span className="text-right text-[10px] font-medium leading-tight text-fg-muted">
+            Incoming
+            <br />
+            board
+          </span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-fg">
+            <UserRound className="size-4" />
+          </span>
+        </div>
+      </div>
+      <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2.5">
+        {["Documents", "History", "Contacts", "Projects", "Financials"].map((item) => (
+          <li key={item} className="flex items-center gap-1.5 text-[11px] text-fg">
+            <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </Mini>
+  );
+}
+
+function KnowledgeMini() {
+  return (
+    <Mini className="p-1.5">
+      <ul className="divide-y divide-border">
+        {GUIDES.map((article) => (
+          <li key={article.slug}>
+            <Link
+              href={`/library/${article.slug}`}
+              className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-[11px] font-medium text-fg hover:bg-surface-2"
+            >
+              <span className="truncate">{article.label}</span>
+              <ChevronRight className="size-3 shrink-0 text-fg-subtle" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Mini>
+  );
+}
+
+/**
+ * The five cards on slide four. Two of them are about guidance rather than a
+ * screen, so their links open the library; the other three open the demo,
+ * because the honest way to learn more about a feature is to use it.
+ */
+const FEATURES = [
+  {
+    icon: ShieldCheck,
+    tone: "bg-ok-soft text-ok",
+    title: "Compliance updates",
+    body: "Stay ahead of changing laws and requirements so your community stays protected.",
+    href: "/library",
+    mini: <ComplianceMini />,
+  },
+  {
+    icon: ChartNoAxesColumn,
+    tone: "bg-info-soft text-info",
+    title: "Reserve tracking",
+    body: "Know what you're saving for and whether you're on track for the future.",
+    href: "/signin",
+    mini: <ReserveMini />,
+  },
+  {
+    icon: Briefcase,
+    tone: "bg-ok-soft text-ok",
+    title: "Vendor management",
+    body: "Keep vendors, contracts, insurance, and projects organized in one place.",
+    href: "/signin",
+    mini: <VendorMini />,
+  },
+  {
+    icon: UsersRound,
+    tone: "bg-brand-soft text-brand-soft-fg",
+    title: "Board transitions",
+    body: "Everything the next board needs to succeed is already here.",
+    href: "/signin",
+    mini: <TransitionMini />,
+  },
+  {
+    icon: BookOpen,
+    tone: "bg-warn-soft text-warn",
+    title: "Knowledge center",
+    body: "Get answers, templates, and guidance when you need it, built for volunteer boards.",
+    href: "/library",
+    mini: <KnowledgeMini />,
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* The cards floating beside the phone                                         */
+/* -------------------------------------------------------------------------- */
+
+function Notice({
+  icon: Icon,
+  tone,
+  title,
+  body,
+  children,
+  className,
+}: {
+  icon: typeof Bell;
+  tone: string;
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-border bg-surface p-3.5 shadow-float",
+        className,
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", tone)}
+        >
+          <Icon className="size-4" strokeWidth={2.2} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[14px] font-semibold leading-tight text-fg">{title}</p>
+          <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{body}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PocketNotices({ className }: { className?: string }) {
+  const request = openRequests()[0];
+  const coi = vendorGaps().expiringCoi[0];
+  const next = upcomingMeetings().find((meeting) => meeting.status !== "live");
+  const live = liveMeeting();
+
+  return (
+    <div className={className} aria-hidden>
+      {request ? (
+        <Notice
+          icon={ClipboardCheck}
+          tone="bg-info-soft text-info"
+          title={`New ${request.kind} request`}
+          body={`Unit ${request.unit}`}
+        />
+      ) : null}
+      {coi ? (
+        <Notice
+          icon={ShieldCheck}
+          tone="bg-warn-soft text-warn"
+          title={`Vendor COI expires in ${daysFromToday(coi.coiExpires!)} days`}
+          body={coi.name}
+        />
+      ) : null}
+      {next ? (
+        <Notice
+          icon={CalendarDays}
+          tone="bg-brand-soft text-brand-soft-fg"
+          title="Board meeting"
+          body={`${formatDate(next.date)} at ${next.time}, ${next.location}`}
+        />
+      ) : null}
+      {live ? (
+        <Notice
+          icon={Video}
+          tone="bg-ok-soft text-ok"
+          title="Video call with the board"
+          body={`Live now, ${live.attendees.length} joined`}
+        >
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="flex -space-x-2">
+              {live.attendees.slice(0, 3).map((person) => (
+                <Avatar
+                  key={person.name}
+                  name={person.name}
+                  className="size-7 text-[10px] ring-2 ring-surface"
+                />
+              ))}
+            </div>
+            <span className="inline-flex h-8 items-center rounded-lg bg-royal px-3.5 text-[13px] font-semibold text-royal-fg">
+              Join call
+            </span>
+          </div>
+        </Notice>
+      ) : null}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* The page                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function IconRow({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof Clock;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="flex items-start gap-4 py-5">
+      <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
+        <Icon className="size-6" strokeWidth={1.9} />
+      </span>
+      <div>
+        <p className="text-[19px] font-semibold tracking-[-0.02em] text-fg">{title}</p>
+        <p className="mt-1 text-[16px] leading-relaxed text-fg-muted">{body}</p>
+      </div>
+    </li>
+  );
+}
+
+export default function MarketingHome() {
   return (
     <div className="min-h-dvh bg-bg">
       <MarketingHeader />
 
-      {/* Hero
-          The design Monish's friend drew on 2026-08-27, layout and copy both.
-          Monish chose the copy as drawn on 2026-08-27 over a version pointed
-          at builders; `docs/design/landing-page.md` records why that was the
-          open question and what it costs. The CTA is still ours, into a wizard
-          that works, rather than the demo request the design asks for.
-
-          The illustration is a night scene, so on the light theme the right
-          side of the band is deliberately a dark panel rather than a washed
-          out version of itself. When a daylight render of the same scene
-          arrives it drops in behind `hero-community-day` without a layout
-          change. */}
-      <section className="relative isolate overflow-hidden border-b border-border bg-hero-field">
-        {/* Full height, bleeding off the right edge, dissolved into the field
-            on its left rather than sitting in a box. The overlay is painted in
-            the field colour itself, so the fade lands on the page in either
-            theme without a second set of values. */}
+      {/* Hero, slide one. The header sits on this field with no bar of its
+          own, which is why the section starts at the top of the page and the
+          copy carries the top padding. */}
+      <section className="relative isolate -mt-[69px] overflow-hidden bg-hero-field pt-[69px]">
         <div
           className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] lg:block"
           aria-hidden
@@ -217,66 +616,51 @@ export default function MarketingHome() {
             fill
             priority
             sizes="58vw"
-            // The render is a night scene. On the light theme it is lifted
-            // and desaturated rather than dropped on the page as a dark slab,
-            // which is close enough to daylight to sit on a white ground. A
-            // real day render replaces the filter, not the layout.
+            // A night render. On the light theme it is lifted and desaturated
+            // rather than dropped on the page as a dark slab. A real day
+            // render replaces the filter, not the layout.
             className="object-cover object-[left_top] brightness-[1.28] saturate-[.82] dark:brightness-100 dark:saturate-100"
           />
-          {/* The fade holds solid for the first stretch and then runs long,
-              so the illustration arrives out of the field instead of starting
-              at a visible edge. */}
           <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[9%] via-hero-field/45 via-[44%] to-transparent to-[82%]" />
           <div className="absolute inset-0 bg-gradient-to-b from-hero-field/65 via-transparent via-[38%] to-hero-field/55" />
         </div>
 
-        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[44rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-center lg:pb-24">
+        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[42rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-center lg:pb-24">
           <div className="lg:pr-8">
             <Reveal>
-              <h1 className="text-balance text-[42px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[52px]">
+              <h1 className="text-balance text-[44px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[56px]">
                 Your community.
                 <br />
                 Your <span className="text-hero-accent">oasis.</span>
               </h1>
             </Reveal>
             <Reveal delay={90}>
-              <p className="mt-6 max-w-md text-[17px] leading-relaxed text-fg-muted">
+              <p className="mt-6 max-w-md text-[18px] leading-relaxed text-fg-muted">
                 HOAsis is the all-in-one platform that brings clarity, connection, and calm
                 to HOA management.
               </p>
             </Reveal>
             <Reveal delay={170}>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <Link
                   href="/start"
                   className="group inline-flex h-12 items-center gap-2 rounded-xl bg-royal px-6 text-[17px] font-semibold text-royal-fg shadow-raised transition-all hover:-translate-y-0.5 hover:bg-royal-hover hover:shadow-float"
                 >
-                  Set up a community
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                  Quick Setup
+                  <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 <Link
                   href="/signin"
-                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-border-2 bg-surface px-6 text-[17px] font-semibold text-fg transition-colors hover:bg-surface-2"
+                  className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-fg-muted transition-colors hover:text-fg"
                 >
                   See the live demo
+                  <ArrowRight className="size-4" />
                 </Link>
               </div>
-            </Reveal>
-            <Reveal delay={240}>
-              <p className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[15px] text-fg-subtle">
-                {["No card to start", "Set up in minutes", "Cancel whenever"].map((item) => (
-                  <span key={item} className="inline-flex items-center gap-1.5">
-                    <Check className="size-3.5 text-ok" strokeWidth={2.6} />
-                    {item}
-                  </span>
-                ))}
-              </p>
             </Reveal>
           </div>
         </div>
 
-        {/* Under lg there is no room beside the copy, so the same illustration
-            runs full width beneath it and keeps its own aspect. */}
         <div className="relative -mb-px aspect-[16/11] w-full lg:hidden">
           <Image
             src="/marketing/hero-community.jpg"
@@ -290,374 +674,291 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Proof band */}
-      <section className="border-b border-border bg-surface">
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-6 px-5 py-8 sm:grid-cols-4">
-          {[
-            // Facts a board can act on, not trivia about our internals. The
-            // first names the problem nobody else solves, the second and third
-            // are prices anyone can check against a competitor's own page.
-            {
-              value: "74%",
-              label: "of US associations are underfunded on reserves",
-              note: "Association Reserves, 100,000+ studies",
-            },
-            { value: "30 yr", label: "The year the money runs out, named before dues are set" },
-            {
-              value: money(PRICE_PER_TRANSACTION_CENTS),
-              label: "Every payment, flat. Never a percentage of the assessment",
-            },
-            { value: "All", label: "Every feature on every plan. No add-ons" },
-          ].map((stat, index) => (
-            <Reveal key={stat.label} delay={index * 60}>
-              <div>
-                <p className="tnum text-[28px] font-semibold leading-none tracking-[-0.03em] text-fg">
-                  {stat.value}
-                </p>
-                <p className="mt-1.5 text-[13px] leading-snug text-fg-muted">{stat.label}</p>
-                {"note" in stat && stat.note ? (
-                  <p className="mt-1 text-[12px] leading-snug text-fg-subtle">{stat.note}</p>
-                ) : null}
-              </div>
-            </Reveal>
+      {/* The strip along the bottom of slide one. Fixed navy in both themes,
+          like the device bezels: it is a painted band, not a surface. */}
+      <div className="bg-navy-900 text-navy-50 dark:bg-navy-800">
+        <ul className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 py-4 text-[14px] font-medium sm:justify-between">
+          {ASSURANCES.map((item) => (
+            <li key={item} className="inline-flex items-center gap-2">
+              <Check className="size-4 text-navy-300" strokeWidth={2.6} />
+              {item}
+            </li>
           ))}
-        </div>
-      </section>
+        </ul>
+      </div>
 
-      {/* Showcase */}
-      {/* Copy in two columns, then the screenshot at full container width.
-          It used to be a 50/50 split, which meant a dense board dashboard was
-          rendered at about 560px: technically present, and unreadable. A
-          screenshot nobody can read is worse than no screenshot, because it
-          says the product is cluttered. */}
-      {SHOWCASE.map((section, index) => (
-        <section
-          key={section.title}
-          className={`border-b border-border ${index % 2 === 1 ? "bg-surface" : ""}`}
-        >
-          <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:py-24">
-            <div className="grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <Reveal>
-                <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                  {section.eyebrow}
-                </p>
-                <h2 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-fg sm:text-[44px]">
-                  {section.title}
-                </h2>
-              </Reveal>
-
-              <Reveal delay={80}>
-                {/* Held near 62 characters, which is where a line stops
-                    needing a second pass to read. */}
-                <p className="max-w-[62ch] text-[18px] leading-[1.65] text-fg-muted">
-                  {section.body}
-                </p>
-                <ul className="mt-6 space-y-3">
-                  {section.points.map((point) => (
-                    <li key={point} className="flex items-start gap-3">
-                      <Check className="mt-1 size-4 shrink-0 text-ok" strokeWidth={2.4} />
-                      <span className="text-[17px] leading-snug text-fg">{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-            </div>
-
-            <Reveal delay={160} className="mt-12">
-              {section.portrait ? (
-                <div className="flex justify-center">
-                  <PhoneFrame src={section.image} alt={section.alt} />
-                </div>
-              ) : (
-                <div className="overflow-hidden rounded-[1.25rem] border border-border shadow-float">
-                  <Image
-                    src={section.image}
-                    alt={section.alt}
-                    width={section.width}
-                    height={section.height}
-                    sizes="(max-width: 1152px) 100vw, 1112px"
-                    className="h-auto w-full"
-                  />
-                </div>
-              )}
+      {/* Slide two. */}
+      <section className="border-b border-border bg-surface">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <div>
+            <Reveal>
+              <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
+                Run your HOA.
+                <br />
+                <span className="text-hero-accent">Not another job.</span>
+              </h2>
+              <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
+                HOAsis gives your board the tools to save time, save money, and stay organized,
+                so your community thrives.
+              </p>
+            </Reveal>
+            <Reveal delay={90}>
+              <ul className="mt-6 divide-y divide-border">
+                {BENEFITS.map((benefit) => (
+                  <IconRow key={benefit.title} {...benefit} />
+                ))}
+              </ul>
+              <Link
+                href="#features"
+                className="mt-2 inline-flex items-center gap-2 text-[18px] font-semibold text-accent hover:underline"
+              >
+                See how HOAsis works
+                <ArrowRight className="size-4" />
+              </Link>
             </Reveal>
           </div>
-        </section>
-      ))}
-
-      {/* Cost */}
-      <section className="relative isolate overflow-hidden border-b border-border">
-        <Image
-          src="/marketing/homes.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="-z-10 object-cover opacity-[0.12] dark:opacity-[0.14]"
-        />
-        <div className="absolute inset-0 -z-10 bg-bg/70" aria-hidden />
-        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
-          <Reveal>
-            <h2 className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[40px]">
-              One price for the whole association.
-            </h2>
-            <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-fg-muted">
-              Not per home, not per feature, not per board member. Here is the whole bill for
-              a community of {EXAMPLE_HOMES} homes, next to what a management company charges
-              to run the same one for a year.
-            </p>
-          </Reveal>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                label: "HOAsis",
-                value: `${money(PRICE_PER_HOME_CENTS)}`,
-                detail: `Per home, per month. Every feature, unlimited residents.`,
-                accent: true,
-              },
-              {
-                label: `At ${EXAMPLE_HOMES} homes`,
-                value: `${money(OUR_MONTH, { cents: false })}/mo`,
-                detail: `${money(OUR_YEAR, { cents: false })} a year, plus ${money(PRICE_PER_TRANSACTION_CENTS)} a payment.`,
-                accent: false,
-              },
-              {
-                label: "A management company",
-                value: `${money(MANAGEMENT_RANGE_PER_HOME.low, { cents: false })} to ${money(MANAGEMENT_RANGE_PER_HOME.high, { cents: false })}`,
-                detail: `Per home, per month. At ${EXAMPLE_HOMES} homes that is ${money(MANAGED_YEAR.low, { cents: false })} to ${money(MANAGED_YEAR.high, { cents: false })} a year. Check your contract.`,
-                accent: false,
-              },
-            ].map((item, index) => (
-              <Reveal key={item.label} delay={index * 80}>
-                <Card
-                  className={`h-full p-5 ${item.accent ? "border-ok/30 bg-ok-soft" : ""}`}
-                >
-                  <p
-                    className={`text-[13px] font-semibold ${
-                      item.accent ? "text-ok" : "text-fg-subtle"
-                    }`}
-                  >
-                    {item.label}
-                  </p>
-                  <p
-                    className={`tnum mt-2 text-[34px] font-semibold leading-none tracking-[-0.03em] ${
-                      item.accent ? "text-ok" : "text-fg"
-                    }`}
-                  >
-                    {item.value}
-                  </p>
-                  <p
-                    className={`mt-2 text-[13px] leading-snug ${item.accent ? "text-ok opacity-90" : "text-fg-muted"}`}
-                  >
-                    {item.detail}
-                  </p>
-                </Card>
-              </Reveal>
-            ))}
-          </div>
-
-          <Reveal delay={240}>
-            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-[15px] text-fg-muted">
-              {[
-                `${money(PRICE_PER_TRANSACTION_CENTS)} a payment, any rail`,
-                "No percentage of what an owner pays",
-                "No setup fee, no per feature pricing",
-                "Cancel whenever, export everything",
-              ].map((line) => (
-                <span key={line} className="inline-flex items-center gap-2">
-                  <Check className="size-4 text-ok" strokeWidth={2.6} />
-                  {line}
-                </span>
-              ))}
-            </div>
-            <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-fg-muted">
-              We do not mark up card fees, so what a manager would have taken stays in the
-              association instead. Put it in reserves and over a decade it is the gap between
-              replacing a roof on schedule and levying a special assessment for it.
-            </p>
+          <Reveal delay={160}>
+            <MonitorFrame
+              src="/marketing/product-dashboard.png"
+              alt="The HOAsis board dashboard: operating cash, reserves, past due balances, and transactions waiting for review"
+              width={2360}
+              height={1320}
+            />
           </Reveal>
         </div>
       </section>
 
-      {/* The eleven jobs */}
-      <section className="border-b border-border bg-surface">
-        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
-          <Reveal>
-            <h2 className="max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[40px]">
-              Every job the association has, from the first home to the handover.
-            </h2>
-            <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-fg-muted">
-              A management contract bundles these and quotes one number. Here they are unbundled,
-              and every one of them is in the product on the day the community records.
-            </p>
-          </Reveal>
-          <ul className="mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-            {JOBS.map((job, index) => (
-              <Reveal key={job} delay={index * 35}>
-                <li className="flex items-start gap-2.5">
-                  <Check className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={2.4} />
-                  <span className="text-[15px] leading-snug text-fg">{job}</span>
-                </li>
-              </Reveal>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* And also */}
-      <section className="border-b border-border">
-        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
-          <div className="grid gap-4 md:grid-cols-2">
-            {ALSO.map(({ icon: Icon, title, body }, index) => (
-              <Reveal key={title} delay={index * 70}>
-                <Card className="h-full p-5 transition-transform hover:-translate-y-0.5">
-                  <span className="mb-3 inline-flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-fg">
-                    <Icon className="size-5" strokeWidth={1.9} />
-                  </span>
-                  <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">{title}</h3>
-                  <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{body}</p>
-                </Card>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Library */}
-      <section className="relative isolate overflow-hidden border-b border-border">
-        <Image
-          src="/marketing/house.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="-z-10 object-cover opacity-[0.1] dark:opacity-[0.12]"
-        />
-        <div className="absolute inset-0 -z-10 bg-bg/75" aria-hidden />
-        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
-          <Reveal>
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[40px]">
-                  A library, free to anyone
-                </h2>
-                <p className="mt-3 max-w-xl text-[17px] leading-relaxed text-fg-muted">
-                  No account, no email gate, whether or not you ever use the product. Most of it is
-                  general. The state specific parts are where the value is, because nobody else
-                  publishes those for free.
-                </p>
-              </div>
+      {/* Slide three. */}
+      <section className="border-b border-border bg-hero-field">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <div>
+            <Reveal>
+              <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
+                Sound familiar?
+              </h2>
+              <p className="mt-3 text-[24px] font-semibold tracking-[-0.02em] text-hero-accent">
+                Meet Greg.
+              </p>
+              <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
+                He just wanted to enjoy his home. Then someone asked him to join the HOA board.
+                Suddenly, it felt like a second job.
+              </p>
+              <p className="mt-6 text-[19px] font-semibold tracking-[-0.015em] text-fg">
+                HOAsis was built to change that.
+              </p>
+            </Reveal>
+            <Reveal delay={90}>
               <Link
-                href="/library"
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 bg-surface px-4 text-[15px] font-semibold text-fg hover:bg-surface-2"
+                href="/start"
+                className="group mt-7 inline-flex h-12 items-center gap-2 rounded-xl bg-royal px-6 text-[17px] font-semibold text-royal-fg shadow-raised transition-all hover:-translate-y-0.5 hover:bg-royal-hover hover:shadow-float"
               >
-                Browse all {libraryArticles.length}
-                <ArrowRight className="size-3.5" />
+                Start today
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
-            </div>
-          </Reveal>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {featured.map((article, index) => (
-              <Reveal key={article.slug} delay={index * 70}>
-                <Link href={`/library/${article.slug}`} className="group block h-full">
-                  <Card className="h-full p-5 transition-all group-hover:-translate-y-0.5 group-hover:shadow-raised">
-                    <Badge tone="neutral">{article.topic}</Badge>
-                    <h3 className="mt-2.5 text-[17px] font-semibold leading-snug tracking-[-0.015em] text-fg">
-                      {article.title}
-                    </h3>
-                    <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
-                      {article.summary}
-                    </p>
-                    <p className="mt-3 text-[13px] text-fg-subtle">
-                      {article.readMinutes} minute read
-                    </p>
-                  </Card>
-                </Link>
-              </Reveal>
-            ))}
+            </Reveal>
           </div>
-        </div>
-      </section>
-
-      {/* A moment of quiet between the argument and the ask. */}
-      <section className="relative isolate overflow-hidden border-b border-border">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
-          <Reveal>
-            <div className="relative aspect-[5/4] overflow-hidden rounded-[1.75rem] border border-border shadow-float">
+          <Reveal delay={160}>
+            {/* A still, on purpose. The deck drew this as a video player, and
+                Monish decided on 2026-08-28 that there is no video to make. A
+                play button that opens nothing would say "mock-up". */}
+            <div className="overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
               <Image
-                src="/marketing/evening.jpg"
-                alt="Townhomes at dusk with their windows lit"
-                fill
-                sizes="(max-width: 1024px) 100vw, 520px"
-                className="object-cover"
+                src="/marketing/greg-story.jpg"
+                alt="Greg at his kitchen table, head in hand, surrounded by binders and the things pulling at a new board member: endless emails, confusing spreadsheets, unhappy neighbors, vendor headaches, compliance confusion"
+                width={1038}
+                height={640}
+                sizes="(max-width: 1024px) 100vw, 660px"
+                className="h-auto w-full"
               />
             </div>
           </Reveal>
-          <Reveal delay={90}>
-            <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[40px]">
-              Board work should not eat your evenings.
-            </h2>
-            <p className="mt-4 max-w-lg text-[17px] leading-relaxed text-fg-muted">
-              Most of what a volunteer board does is chasing: a balance nobody can find, a vote
-              nobody finished, a document somebody swears was emailed. That work does not need
-              more hours. It needs one place where the numbers already agree.
-            </p>
-            <ul className="mt-6 flex flex-col gap-3">
-              {[
-                ["Dues collect themselves", "Owners pay from their phone, and it lands in the books categorized."],
-                ["Votes that finish", "Ballots, quorum, and a receipt each owner can check."],
-                ["Answers on file", "Records, minutes, and budgets where owners can find them."],
-              ].map(([title, body]) => (
-                <li key={title} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
-                    <Check className="size-3" strokeWidth={3} />
-                  </span>
-                  <span>
-                    <span className="block text-[15px] font-semibold text-fg">{title}</span>
-                    <span className="block text-[15px] leading-relaxed text-fg-muted">{body}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+        </div>
+      </section>
+
+      {/* Slide four. */}
+      <section id="features" className="scroll-mt-16 border-b border-border bg-surface">
+        <div className="mx-auto w-full max-w-7xl px-5 py-20 sm:py-24">
+          <Reveal>
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="text-balance text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
+                Built for the way HOA boards{" "}
+                <span className="text-hero-accent">actually work.</span>
+              </h2>
+              <p className="mx-auto mt-5 max-w-2xl text-[18px] leading-relaxed text-fg-muted">
+                Powerful tools for the things that matter most, so your community runs smoothly
+                today and is prepared for tomorrow.
+              </p>
+            </div>
+          </Reveal>
+
+          {/* Five across on a wide screen. Under that they keep their width
+              and scroll sideways, because five cards squeezed into three
+              columns leaves two orphans on a second row and a card at 180px
+              cannot hold a screen anyone can read. */}
+          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 xl:mx-0 xl:grid xl:grid-cols-5 xl:overflow-visible xl:px-0">
+            {FEATURES.map(({ icon: Icon, tone, title, body, href, mini }, index) => (
+              <Reveal
+                key={title}
+                delay={index * 70}
+                className="w-[284px] shrink-0 snap-start xl:w-auto"
+              >
+                <Card className="flex h-full flex-col p-5 transition-transform hover:-translate-y-0.5">
+                  <div className="flex flex-col items-center text-center">
+                    <span
+                      className={cn(
+                        "flex size-14 items-center justify-center rounded-full",
+                        tone,
+                      )}
+                    >
+                      <Icon className="size-6" strokeWidth={1.9} />
+                    </span>
+                    <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.02em] text-fg">
+                      {title}
+                    </h3>
+                  </div>
+                  <div className="mt-4">{mini}</div>
+                  <p className="mt-4 flex-1 text-[14px] leading-relaxed text-fg-muted">{body}</p>
+                  <Link
+                    href={href}
+                    className="mt-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-accent hover:underline"
+                  >
+                    Learn more
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={120}>
+            <div className="mt-6 flex flex-col gap-5 rounded-2xl bg-hero-field p-5 sm:p-6 lg:flex-row lg:items-center">
+              <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
+                <Sparkles className="size-6" strokeWidth={1.9} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+                  And that&apos;s just the beginning.
+                </p>
+                <ul className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] font-medium text-fg-muted">
+                  {MORE.map(({ icon: Icon, label }) => (
+                    <li key={label} className="inline-flex items-center gap-1.5">
+                      <Icon className="size-3.5 text-accent" strokeWidth={2} />
+                      {label}
+                    </li>
+                  ))}
+                  <li>and more</li>
+                </ul>
+              </div>
+              <Link
+                href="/pricing#included"
+                className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-royal px-5 text-[15px] font-semibold text-royal-fg transition-colors hover:bg-royal-hover"
+              >
+                Explore all features
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </Reveal>
         </div>
       </section>
 
-      {/* Close */}
+      {/* Slide five. */}
+      <section className="relative isolate overflow-hidden border-b border-border bg-hero-field">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <div>
+            <Reveal>
+              <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
+                Your entire community.
+                <br />
+                <span className="text-hero-accent">In your pocket.</span>
+              </h2>
+              <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
+                HOAsis keeps you informed, connected, and in control from any phone. Anytime,
+                anywhere.
+              </p>
+            </Reveal>
+            <Reveal delay={90}>
+              <ul className="mt-4 divide-y divide-border">
+                {POCKET.map((item) => (
+                  <IconRow key={item.title} {...item} />
+                ))}
+              </ul>
+              <p className="mt-2 text-[15px] text-fg-subtle">
+                Works in any browser today. iPhone and Android apps are next.
+              </p>
+            </Reveal>
+          </div>
+
+          <div className="relative lg:min-h-[560px]">
+            <Reveal delay={160}>
+              <div className="lg:absolute lg:left-0 lg:top-0 lg:w-[296px]">
+                <PhoneFrame
+                  src="/marketing/product-resident.png"
+                  alt="The resident app showing a balance due, a live board meeting, and open ballots"
+                />
+              </div>
+            </Reveal>
+            <Reveal delay={240}>
+              <PocketNotices className="mt-8 grid gap-3 sm:grid-cols-2 lg:absolute lg:right-0 lg:top-6 lg:mt-0 lg:flex lg:w-[320px] lg:flex-col lg:gap-4" />
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* The price, in one line. The strip under the hero promises a free
+          trial, and the next question is what comes after it. */}
+      <section className="border-b border-border bg-surface">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6 px-5 py-12 sm:py-14">
+          <Reveal>
+            <h2 className="text-[26px] font-semibold tracking-[-0.03em] text-fg sm:text-[32px]">
+              One price. Every feature.
+            </h2>
+            <p className="mt-2 max-w-xl text-[17px] leading-relaxed text-fg-muted">
+              {money(PRICE_PER_HOME_CENTS)} per home per month after your {TRIAL_DAYS} free days.{" "}
+              {money(PRICE_PER_TRANSACTION_CENTS)} per payment, any rail. No setup fee, no add-ons,
+              cancel whenever.
+            </p>
+          </Reveal>
+          <Reveal delay={80}>
+            <Link
+              href="/pricing"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-border-2 bg-surface px-5 text-[15px] font-semibold text-fg transition-colors hover:bg-surface-2"
+            >
+              See pricing
+              <ArrowRight className="size-4" />
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Close. */}
       <section className="relative isolate overflow-hidden bg-navy-900 text-navy-50 dark:bg-navy-800">
-        <Image
-          src="/marketing/aerial.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="-z-20 object-cover"
-        />
-        {/* Scrim, so the type stays legible over any part of the photograph. */}
+        <Image src="/marketing/aerial.jpg" alt="" fill sizes="100vw" className="-z-20 object-cover" />
         <div
           className="absolute inset-0 -z-10 bg-gradient-to-b from-navy-950/85 via-navy-950/75 to-navy-950/90"
           aria-hidden
         />
         <div className="mx-auto w-full max-w-6xl px-5 py-24 text-center">
           <Reveal>
-            <h2 className="mx-auto max-w-2xl text-[34px] font-semibold leading-tight tracking-[-0.03em] sm:text-[40px]">
-              Have a look before you decide anything.
+            <h2 className="mx-auto max-w-2xl text-[36px] font-semibold leading-tight tracking-[-0.035em] sm:text-[48px]">
+              Start today.
             </h2>
-            <p className="mx-auto mt-4 max-w-lg text-[17px] leading-relaxed text-navy-200">
-              The demo is a real association with real numbers behind it, including a reserve plan
-              that does not quite work. Sign in as a board member or a resident and go anywhere.
+            <p className="mx-auto mt-4 max-w-lg text-[18px] leading-relaxed text-navy-200">
+              Set up your community in minutes. No card to start, {TRIAL_DAYS} days free, cancel
+              whenever.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/start"
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-navy-50 px-6 text-[15px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
+                className="inline-flex h-12 items-center gap-2 rounded-xl bg-navy-50 px-6 text-[16px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
               >
-                Set up your association
+                Quick Setup
                 <ArrowRight className="size-4" />
               </Link>
               <Link
                 href="/signin"
-                className="inline-flex h-11 items-center gap-2 rounded-lg border border-navy-50/30 px-6 text-[15px] font-semibold text-navy-50 transition-colors hover:bg-navy-50/10"
+                className="inline-flex h-12 items-center gap-2 rounded-xl border border-navy-50/30 px-6 text-[16px] font-semibold text-navy-50 transition-colors hover:bg-navy-50/10"
               >
-                Open the demo
+                See the live demo
               </Link>
             </div>
           </Reveal>

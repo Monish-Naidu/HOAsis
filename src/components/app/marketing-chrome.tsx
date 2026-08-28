@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -8,20 +8,58 @@ import { Wordmark } from "@/components/app/logo";
 import { ThemeToggle } from "@/components/app/theme";
 import { cn } from "@/lib/utils";
 
+/**
+ * The nav from the deck of 2026-08-28: Home, Pricing, Resources, About.
+ *
+ * "Resources" is the library. The route keeps its name because links to it
+ * exist; the label follows the design, because that is the word a board
+ * member scans for.
+ */
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/library", label: "Library" },
+  { href: "/library", label: "Resources" },
   { href: "/about", label: "About" },
 ];
+
+function subscribeToScroll(onChange: () => void) {
+  window.addEventListener("scroll", onChange, { passive: true });
+  return () => window.removeEventListener("scroll", onChange);
+}
+
+/**
+ * Whether the page has moved off the top.
+ *
+ * The design sets the nav straight on the hero with no bar of its own. A
+ * sticky header still needs a ground once content scrolls under it, so this
+ * is the one bit of browser state the header reads: transparent at the top,
+ * solid after eight pixels. Read through `useSyncExternalStore` so the server
+ * render and the first client render agree on "not scrolled".
+ */
+function useScrolled() {
+  return useSyncExternalStore(
+    subscribeToScroll,
+    () => window.scrollY > 8,
+    () => false,
+  );
+}
 
 export function MarketingHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const scrolled = useScrolled();
+  const solid = scrolled || open;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-3">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b transition-[background-color,border-color] duration-300",
+        solid ? "border-border bg-bg/85 backdrop-blur-md" : "border-transparent bg-transparent",
+      )}
+    >
+      {/* A fixed height, because the hero pulls itself up under this bar by
+          exactly that much so the field runs to the top of the page. */}
+      <div className="mx-auto flex h-[68px] w-full max-w-6xl items-center justify-between gap-4 px-5">
         <Link
           href="/"
           aria-label="HOAsis home"
@@ -41,7 +79,7 @@ export function MarketingHeader() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "rounded-lg px-3 py-1.5 text-[15px] font-medium transition-colors",
-                  active ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg",
+                  active ? "text-fg" : "text-fg-muted hover:text-fg",
                 )}
               >
                 {link.label}
@@ -62,7 +100,7 @@ export function MarketingHeader() {
             href="/start"
             className="inline-flex h-9 items-center rounded-lg bg-royal px-4 text-[15px] font-semibold text-royal-fg transition-colors hover:bg-royal-hover"
           >
-            Get started
+            Quick Setup
           </Link>
           <button
             type="button"
@@ -101,8 +139,8 @@ export function MarketingFooter() {
         <div>
           <Wordmark size={34} />
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-fg-muted">
-            The HOA platform for new communities. Books that reconcile, an app residents
-            use, and reserves funded from the first assessment.
+            Your community. Your oasis. The all-in-one platform that brings clarity,
+            connection, and calm to HOA management.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
@@ -118,8 +156,8 @@ export function MarketingFooter() {
         </nav>
       </div>
       <p className="mx-auto w-full max-w-6xl px-5 pb-8 text-[13px] text-fg-subtle">
-        Prototype. Figures shown are fixture data for a fictional Washington association. The
-        library is general information, not legal advice. Photography from Unsplash.
+        Figures shown are demo data for a fictional Washington association. The library is
+        general information, not legal advice. Photography from Unsplash.
       </p>
     </footer>
   );

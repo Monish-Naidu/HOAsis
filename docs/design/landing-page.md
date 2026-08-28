@@ -128,3 +128,53 @@ Layout notes worth keeping:
    is a stand-in, not the idea.
 3. **The friend's typeface**, if there is one. The wordmark is currently Geist
    semibold, which is close but not obviously the same face.
+
+## The rehaul from the deck, 2026-08-28
+
+Monish brought a five slide deck, `home website.pptx`, and asked for the site
+to match it in look and in words: "a rehaul with this as the template". The
+slides are in `deck-2026-08-28/`, downsized. Slide three also carries the shot
+list for Greg's video, which is a set of generation prompts rather than site
+copy. He singled out slides two and four as the look he wants.
+
+What each slide became:
+
+| Slide | Section on the page |
+| --- | --- |
+| 1, hero | Unchanged layout. CTA is now **Quick Setup**, as the slide's overlay says, into `/start`. The five promises along the bottom of the slide are a navy strip under the hero. |
+| 2, "Run your HOA. Not another job." | Copy left, the real dashboard screenshot in a CSS monitor right. The slide's dashboard is a drawing; ours is the product. |
+| 3, "Sound familiar? Meet Greg." | The slide had two lines whited out and the button relabelled **Start Today**; the page follows the edited version. The slide drew a video player; Monish decided on 2026-08-28 there is no video to make, so the section is the still in a frame with no play control. |
+| 4, "Built for the way HOA boards actually work." | Five cards with a miniature screen each, drawn from the demo's records: the Washington law article, the reserve components, the vendors, the library. Five across on `xl`, a snap-scrolling row below that. "Explore all features" goes to `/pricing#included`. |
+| 5, "Your entire community. In your pocket." | The phone with notice cards floating beside it, each derived from a demo record. **No store badges**: there is no native app yet, so the line reads "Works in any browser today. iPhone and Android apps are next." |
+
+After the five slides there is one line of pricing and a closing band, because
+the strip promises a free trial and the next question is what comes after it.
+
+Decisions taken in the rehaul, and why:
+
+- **Em dashes are removed** from the deck's copy. Four of its lines have one;
+  each is now a comma or a full stop. Everything else is word for word.
+- **"90-day free trial" is now a product fact**, `TRIAL_DAYS` in
+  `src/lib/pricing.ts`, quoted by the strip, the closing band and the pricing
+  page from the one constant. It was not a stated policy before the deck.
+- **"Live support"** on the strip is what the board sidebar already
+  promises, phone and chat 7am to 11pm. The pricing page said "email
+  support"; it now says the same thing as the strip.
+- **The nav reads Home, Pricing, Resources, About.** "Resources" is the
+  library under the deck's label; the route is unchanged.
+- **The header is transparent at the top and solid after eight pixels**,
+  read through `useSyncExternalStore`. The hero pulls itself up under the
+  header by the header's fixed height so the field runs to the top edge.
+- **The footer no longer says "Prototype."** The demo data disclaimer stays.
+- **The Greg still** is a crop of slide three with the drawn play button
+  painted out, `public/marketing/greg-story.jpg`. See `CREDITS.md`.
+- **The reserve card shows the demo's real 41%, "Behind the study".** The
+  deck drew 78% "On track". Reserves are the moat, and this card is the one
+  place the page shows the product catching an underfunded plan; it also
+  agrees with the dashboard screenshot two sections above it.
+
+Still owed, in addition to the list above:
+
+1. **A clean still of Greg** without the play button, if one is ever
+   rendered; the painted-out version is close but not original.
+2. **Native apps**, before the pocket section can carry store badges.

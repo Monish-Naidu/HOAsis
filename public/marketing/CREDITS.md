@@ -15,6 +15,15 @@ the original render when the artwork arrives**, and a daylight version of the
 same scene alongside it if one is ever made. Until then the light theme lifts
 the night scene with a CSS filter.
 
+## Greg
+
+`greg-story.jpg` is Greg, the board member on slide three of the deck of
+2026-08-28, cropped from the slide above the player controls. The slide had a
+play button drawn into the picture; it is painted out here with a patch of the
+sweater beside it, because a play button that opens nothing is the surest way
+to tell a visitor the page is a mock-up. There is no video coming; a clean
+render of the same frame would still be an improvement on the patch.
+
 ## Photographs
 
 Every photograph here is a photograph. Nothing is generated, and each one was
