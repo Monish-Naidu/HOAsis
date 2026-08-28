@@ -45,7 +45,7 @@ async function found(page: Page, name: string, property: Kind) {
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
-  await page.getByLabel("Your lot").fill("1");
+  await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
   await page.getByLabel("Builder name").fill("Ridgeline Homes");
   await page.getByLabel("Phase 1 first lot").fill("1");
   await page.getByLabel("Phase 1 last lot").fill("3");
@@ -54,7 +54,7 @@ async function found(page: Page, name: string, property: Kind) {
   // One lot has sold. The other two are the builder's, which is the ordinary
   // state of a community that is still being built.
   await page.getByRole("button", { name: "It has sold" }).first().click();
-  await page.getByLabel(/^Buyer for /).fill("Marcus Bell");
+  await page.getByLabel(/^(Buyer for|Owner of) /).fill("Marcus Bell");
   await page.getByLabel(/^Email for /).fill("marcus@example.com");
   await page.getByRole("button", { name: "Save" }).click();
   await page.waitForTimeout(300);

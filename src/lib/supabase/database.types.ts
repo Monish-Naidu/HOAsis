@@ -47,6 +47,7 @@ export type Database = {
           max_hours: number | null
           name: string
           reservable: boolean
+          rules: Json | null
           status: string
         }
         Insert: {
@@ -56,6 +57,7 @@ export type Database = {
           max_hours?: number | null
           name: string
           reservable?: boolean
+          rules?: Json | null
           status?: string
         }
         Update: {
@@ -65,6 +67,7 @@ export type Database = {
           max_hours?: number | null
           name?: string
           reservable?: boolean
+          rules?: Json | null
           status?: string
         }
         Relationships: [
@@ -82,6 +85,7 @@ export type Database = {
           cancel_reason: string | null
           canceled_at: string | null
           city: string
+          collects: string[]
           created_at: string
           deleted_at: string | null
           deletion_requested_by: string | null
@@ -96,12 +100,16 @@ export type Database = {
           insurance_policy_no: string | null
           late_after_day: number
           name: string
+          origin: Database["public"]["Enums"]["association_origin"] | null
           payment_fee_cents: number
           payment_fee_paid_by: string
           payment_fee_waived_on_ach: boolean
           photo_credit: string | null
           photo_url: string | null
+          property_type: Database["public"]["Enums"]["property_type"] | null
+          settings: Json
           setup_completed_at: string | null
+          shared_spaces: string[]
           software_fee_cents_per_home: number
           state: string
           stripe_account_id: string | null
@@ -111,6 +119,7 @@ export type Database = {
           cancel_reason?: string | null
           canceled_at?: string | null
           city: string
+          collects?: string[]
           created_at?: string
           deleted_at?: string | null
           deletion_requested_by?: string | null
@@ -125,12 +134,16 @@ export type Database = {
           insurance_policy_no?: string | null
           late_after_day?: number
           name: string
+          origin?: Database["public"]["Enums"]["association_origin"] | null
           payment_fee_cents?: number
           payment_fee_paid_by?: string
           payment_fee_waived_on_ach?: boolean
           photo_credit?: string | null
           photo_url?: string | null
+          property_type?: Database["public"]["Enums"]["property_type"] | null
+          settings?: Json
           setup_completed_at?: string | null
+          shared_spaces?: string[]
           software_fee_cents_per_home?: number
           state: string
           stripe_account_id?: string | null
@@ -140,6 +153,7 @@ export type Database = {
           cancel_reason?: string | null
           canceled_at?: string | null
           city?: string
+          collects?: string[]
           created_at?: string
           deleted_at?: string | null
           deletion_requested_by?: string | null
@@ -154,12 +168,16 @@ export type Database = {
           insurance_policy_no?: string | null
           late_after_day?: number
           name?: string
+          origin?: Database["public"]["Enums"]["association_origin"] | null
           payment_fee_cents?: number
           payment_fee_paid_by?: string
           payment_fee_waived_on_ach?: boolean
           photo_credit?: string | null
           photo_url?: string | null
+          property_type?: Database["public"]["Enums"]["property_type"] | null
+          settings?: Json
           setup_completed_at?: string | null
+          shared_spaces?: string[]
           software_fee_cents_per_home?: number
           state?: string
           stripe_account_id?: string | null
@@ -217,11 +235,15 @@ export type Database = {
       ballots: {
         Row: {
           association_id: string
+          audience: string
           body: string[]
+          certified_by: string | null
+          certified_on: string | null
           closes_on: string
           created_at: string
           id: string
           kind: string
+          live_results_visible: boolean
           meeting_id: string | null
           opens_on: string
           quorum_required: number
@@ -232,11 +254,15 @@ export type Database = {
         }
         Insert: {
           association_id: string
+          audience?: string
           body?: string[]
+          certified_by?: string | null
+          certified_on?: string | null
           closes_on: string
           created_at?: string
           id?: string
           kind?: string
+          live_results_visible?: boolean
           meeting_id?: string | null
           opens_on: string
           quorum_required?: number
@@ -247,11 +273,15 @@ export type Database = {
         }
         Update: {
           association_id?: string
+          audience?: string
           body?: string[]
+          certified_by?: string | null
+          certified_on?: string | null
           closes_on?: string
           created_at?: string
           id?: string
           kind?: string
+          live_results_visible?: boolean
           meeting_id?: string | null
           opens_on?: string
           quorum_required?: number
@@ -318,10 +348,49 @@ export type Database = {
           },
         ]
       }
+      budget_lines: {
+        Row: {
+          annual_cents: number
+          association_id: string
+          category: string
+          created_at: string
+          id: string
+          kind: string
+          position: number
+        }
+        Insert: {
+          annual_cents?: number
+          association_id: string
+          category: string
+          created_at?: string
+          id?: string
+          kind: string
+          position?: number
+        }
+        Update: {
+          annual_cents?: number
+          association_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charges: {
         Row: {
           amount_cents: number
           association_id: string
+          category: Database["public"]["Enums"]["charge_category"]
           created_at: string
           due_on: string
           id: string
@@ -332,6 +401,7 @@ export type Database = {
         Insert: {
           amount_cents: number
           association_id: string
+          category?: Database["public"]["Enums"]["charge_category"]
           created_at?: string
           due_on: string
           id?: string
@@ -342,6 +412,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           association_id?: string
+          category?: Database["public"]["Enums"]["charge_category"]
           created_at?: string
           due_on?: string
           id?: string
@@ -511,6 +582,121 @@ export type Database = {
           },
         ]
       }
+      forms: {
+        Row: {
+          association_id: string
+          created_at: string
+          decision_days: number | null
+          description: string
+          fields: Json | null
+          file_name: string
+          governed_by: string | null
+          id: string
+          label: string
+          size_label: string
+          updated_on: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          decision_days?: number | null
+          description?: string
+          fields?: Json | null
+          file_name?: string
+          governed_by?: string | null
+          id?: string
+          label: string
+          size_label?: string
+          updated_on?: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          decision_days?: number | null
+          description?: string
+          fields?: Json | null
+          file_name?: string
+          governed_by?: string | null
+          id?: string
+          label?: string
+          size_label?: string
+          updated_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      governing_articles: {
+        Row: {
+          adopted_on: string | null
+          affects: string
+          amended_on: string | null
+          amendment_ballot_id: string | null
+          association_id: string
+          created_at: string
+          disclosure_topics: Json | null
+          document: string
+          extraction: Json | null
+          id: string
+          number: string
+          plain: string | null
+          position: number
+          text: Json
+          title: string
+          topic: string
+        }
+        Insert: {
+          adopted_on?: string | null
+          affects?: string
+          amended_on?: string | null
+          amendment_ballot_id?: string | null
+          association_id: string
+          created_at?: string
+          disclosure_topics?: Json | null
+          document: string
+          extraction?: Json | null
+          id?: string
+          number: string
+          plain?: string | null
+          position?: number
+          text?: Json
+          title?: string
+          topic?: string
+        }
+        Update: {
+          adopted_on?: string | null
+          affects?: string
+          amended_on?: string | null
+          amendment_ballot_id?: string | null
+          association_id?: string
+          created_at?: string
+          disclosure_topics?: Json | null
+          document?: string
+          extraction?: Json | null
+          id?: string
+          number?: string
+          plain?: string | null
+          position?: number
+          text?: Json
+          title?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governing_articles_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ledger_entries: {
         Row: {
           amount_cents: number
@@ -577,37 +763,46 @@ export type Database = {
       }
       meetings: {
         Row: {
+          agenda: Json
           association_id: string
           created_at: string
           dial_in: string | null
           held_at: string
           held_on: string
           id: string
+          kind: string
           location: string
+          notice_sent_on: string | null
           passcode: string | null
           status: string
           title: string
         }
         Insert: {
+          agenda?: Json
           association_id: string
           created_at?: string
           dial_in?: string | null
           held_at?: string
           held_on: string
           id?: string
+          kind?: string
           location?: string
+          notice_sent_on?: string | null
           passcode?: string | null
           status?: string
           title: string
         }
         Update: {
+          agenda?: Json
           association_id?: string
           created_at?: string
           dial_in?: string | null
           held_at?: string
           held_on?: string
           id?: string
+          kind?: string
           location?: string
+          notice_sent_on?: string | null
           passcode?: string | null
           status?: string
           title?: string
@@ -693,6 +888,53 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          association_id: string
+          baseline_id: string | null
+          body: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          subject: string
+          trigger: string
+          updated_on: string
+        }
+        Insert: {
+          association_id: string
+          baseline_id?: string | null
+          body?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          subject?: string
+          trigger?: string
+          updated_on?: string
+        }
+        Update: {
+          association_id?: string
+          baseline_id?: string | null
+          body?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          subject?: string
+          trigger?: string
+          updated_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_allocations: {
         Row: {
           amount_cents: number
@@ -722,6 +964,77 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_instruments: {
+        Row: {
+          added_on: string
+          association_id: string
+          created_at: string
+          detail: Json
+          id: string
+          is_default: boolean
+          kind: string
+          label: string
+          mask: string
+          profile_id: string | null
+          unit_id: string
+        }
+        Insert: {
+          added_on?: string
+          association_id: string
+          created_at?: string
+          detail?: Json
+          id?: string
+          is_default?: boolean
+          kind: string
+          label: string
+          mask?: string
+          profile_id?: string | null
+          unit_id: string
+        }
+        Update: {
+          added_on?: string
+          association_id?: string
+          created_at?: string
+          detail?: Json
+          id?: string
+          is_default?: boolean
+          kind?: string
+          label?: string
+          mask?: string
+          profile_id?: string | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_instruments_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_instruments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_instruments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "payment_instruments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -800,11 +1113,108 @@ export type Database = {
           },
         ]
       }
+      payouts: {
+        Row: {
+          amount_cents: number
+          approvals: Json
+          approvals_required: number
+          association_id: string
+          created_at: string
+          expected_on: string
+          id: string
+          invoice_number: string
+          issued_on: string
+          method: string
+          status: string
+          vendor_id: string | null
+          vendor_name: string
+        }
+        Insert: {
+          amount_cents: number
+          approvals?: Json
+          approvals_required?: number
+          association_id: string
+          created_at?: string
+          expected_on?: string
+          id?: string
+          invoice_number?: string
+          issued_on?: string
+          method?: string
+          status?: string
+          vendor_id?: string | null
+          vendor_name: string
+        }
+        Update: {
+          amount_cents?: number
+          approvals?: Json
+          approvals_required?: number
+          association_id?: string
+          created_at?: string
+          expected_on?: string
+          id?: string
+          invoice_number?: string
+          issued_on?: string
+          method?: string
+          status?: string
+          vendor_id?: string | null
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          liked_at: string
+          post_id: string
+          profile_id: string
+        }
+        Insert: {
+          liked_at?: string
+          post_id: string
+          profile_id: string
+        }
+        Update: {
+          liked_at?: string
+          post_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_likes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           association_id: string
           author_id: string | null
           author_name: string
+          author_role: string | null
           body: string
           category: string
           created_at: string
@@ -813,13 +1223,16 @@ export type Database = {
           moderated_at: string | null
           moderated_by: string | null
           pinned: boolean
+          rejection_reason: string | null
           status: Database["public"]["Enums"]["post_status"]
           title: string
+          unit_label: string
         }
         Insert: {
           association_id: string
           author_id?: string | null
           author_name: string
+          author_role?: string | null
           body?: string
           category?: string
           created_at?: string
@@ -828,13 +1241,16 @@ export type Database = {
           moderated_at?: string | null
           moderated_by?: string | null
           pinned?: boolean
+          rejection_reason?: string | null
           status?: Database["public"]["Enums"]["post_status"]
           title: string
+          unit_label?: string
         }
         Update: {
           association_id?: string
           author_id?: string | null
           author_name?: string
+          author_role?: string | null
           body?: string
           category?: string
           created_at?: string
@@ -843,8 +1259,10 @@ export type Database = {
           moderated_at?: string | null
           moderated_by?: string | null
           pinned?: boolean
+          rejection_reason?: string | null
           status?: Database["public"]["Enums"]["post_status"]
           title?: string
+          unit_label?: string
         }
         Relationships: [
           {
@@ -890,43 +1308,67 @@ export type Database = {
       requests: {
         Row: {
           association_id: string
+          attachments: Json
           body: string
+          certificate_id: string | null
           created_at: string
+          decided_by: string | null
           decided_note: string | null
+          decided_on: string | null
+          due_on: string | null
+          due_reason: string | null
           filed_by: string | null
           id: string
           kind: Database["public"]["Enums"]["request_kind"]
           reference: string
           status: Database["public"]["Enums"]["request_status"]
+          submission: Json | null
           submitted_on: string
+          thread: Json
           title: string
           unit_id: string
         }
         Insert: {
           association_id: string
+          attachments?: Json
           body?: string
+          certificate_id?: string | null
           created_at?: string
+          decided_by?: string | null
           decided_note?: string | null
+          decided_on?: string | null
+          due_on?: string | null
+          due_reason?: string | null
           filed_by?: string | null
           id?: string
           kind: Database["public"]["Enums"]["request_kind"]
           reference: string
           status?: Database["public"]["Enums"]["request_status"]
+          submission?: Json | null
           submitted_on?: string
+          thread?: Json
           title: string
           unit_id: string
         }
         Update: {
           association_id?: string
+          attachments?: Json
           body?: string
+          certificate_id?: string | null
           created_at?: string
+          decided_by?: string | null
           decided_note?: string | null
+          decided_on?: string | null
+          due_on?: string | null
+          due_reason?: string | null
           filed_by?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["request_kind"]
           reference?: string
           status?: Database["public"]["Enums"]["request_status"]
+          submission?: Json | null
           submitted_on?: string
+          thread?: Json
           title?: string
           unit_id?: string
         }
@@ -957,6 +1399,53 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reserve_components: {
+        Row: {
+          association_id: string
+          created_at: string
+          funded_cents: number
+          id: string
+          last_inspection: string | null
+          name: string
+          note: string | null
+          remaining_life_years: number
+          replacement_cost_cents: number
+          useful_life_years: number
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          funded_cents?: number
+          id?: string
+          last_inspection?: string | null
+          name: string
+          note?: string | null
+          remaining_life_years?: number
+          replacement_cost_cents?: number
+          useful_life_years?: number
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          funded_cents?: number
+          id?: string
+          last_inspection?: string | null
+          name?: string
+          note?: string | null
+          remaining_life_years?: number
+          replacement_cost_cents?: number
+          useful_life_years?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reserve_components_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
             referencedColumns: ["id"]
           },
         ]
@@ -1000,27 +1489,325 @@ export type Database = {
           },
         ]
       }
+      shared_cost_bills: {
+        Row: {
+          association_id: string
+          created_at: string
+          due_on: string
+          id: string
+          period_end: string
+          period_start: string
+          posted_at: string | null
+          shared_cost_id: string
+          total_cents: number
+          usage_amount: number | null
+          usage_unit: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          due_on: string
+          id?: string
+          period_end: string
+          period_start: string
+          posted_at?: string | null
+          shared_cost_id: string
+          total_cents: number
+          usage_amount?: number | null
+          usage_unit?: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          due_on?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          posted_at?: string | null
+          shared_cost_id?: string
+          total_cents?: number
+          usage_amount?: number | null
+          usage_unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_cost_bills_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_cost_bills_shared_cost_id_fkey"
+            columns: ["shared_cost_id"]
+            isOneToOne: false
+            referencedRelation: "shared_costs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_cost_shares: {
+        Row: {
+          basis: number
+          bill_id: string
+          charge_id: string | null
+          id: string
+          share_cents: number
+          unit_id: string
+        }
+        Insert: {
+          basis?: number
+          bill_id: string
+          charge_id?: string | null
+          id?: string
+          share_cents: number
+          unit_id: string
+        }
+        Update: {
+          basis?: number
+          bill_id?: string
+          charge_id?: string | null
+          id?: string
+          share_cents?: number
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_cost_shares_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "shared_cost_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_cost_shares_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "shared_cost_history"
+            referencedColumns: ["bill_id"]
+          },
+          {
+            foreignKeyName: "shared_cost_shares_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_cost_shares_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "shared_cost_shares_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_costs: {
+        Row: {
+          account_ref: string
+          active: boolean
+          allocation: Database["public"]["Enums"]["allocation_method"]
+          association_id: string
+          created_at: string
+          id: string
+          markup_percent: number
+          name: string
+          provider: string
+        }
+        Insert: {
+          account_ref?: string
+          active?: boolean
+          allocation?: Database["public"]["Enums"]["allocation_method"]
+          association_id: string
+          created_at?: string
+          id?: string
+          markup_percent?: number
+          name: string
+          provider?: string
+        }
+        Update: {
+          account_ref?: string
+          active?: boolean
+          allocation?: Database["public"]["Enums"]["allocation_method"]
+          association_id?: string
+          created_at?: string
+          id?: string
+          markup_percent?: number
+          name?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_costs_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      special_assessments: {
+        Row: {
+          allocation: Database["public"]["Enums"]["allocation_method"]
+          association_id: string
+          ballot_id: string | null
+          created_at: string
+          first_due_on: string
+          id: string
+          installments: number
+          levied_at: string | null
+          reason: string
+          title: string
+          total_cents: number
+        }
+        Insert: {
+          allocation?: Database["public"]["Enums"]["allocation_method"]
+          association_id: string
+          ballot_id?: string | null
+          created_at?: string
+          first_due_on: string
+          id?: string
+          installments?: number
+          levied_at?: string | null
+          reason?: string
+          title: string
+          total_cents: number
+        }
+        Update: {
+          allocation?: Database["public"]["Enums"]["allocation_method"]
+          association_id?: string
+          ballot_id?: string | null
+          created_at?: string
+          first_due_on?: string
+          id?: string
+          installments?: number
+          levied_at?: string | null
+          reason?: string
+          title?: string
+          total_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "special_assessments_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "special_assessments_ballot_id_fkey"
+            columns: ["ballot_id"]
+            isOneToOne: false
+            referencedRelation: "ballot_turnout"
+            referencedColumns: ["ballot_id"]
+          },
+          {
+            foreignKeyName: "special_assessments_ballot_id_fkey"
+            columns: ["ballot_id"]
+            isOneToOne: false
+            referencedRelation: "ballots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      threads: {
+        Row: {
+          association_id: string
+          created_at: string
+          id: string
+          messages: Json
+          participants: Json
+          subject: string
+          tag: string
+          unit_id: string | null
+          unread: boolean
+          updated_on: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          participants?: Json
+          subject: string
+          tag?: string
+          unit_id?: string | null
+          unread?: boolean
+          updated_on?: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          participants?: Json
+          subject?: string
+          tag?: string
+          unit_id?: string | null
+          unread?: boolean
+          updated_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threads_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threads_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "threads_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           address: string
           association_id: string
+          bedrooms: number | null
           created_at: string
           id: string
           label: string
+          occupants: number | null
+          square_feet: number | null
         }
         Insert: {
           address?: string
           association_id: string
+          bedrooms?: number | null
           created_at?: string
           id?: string
           label: string
+          occupants?: number | null
+          square_feet?: number | null
         }
         Update: {
           address?: string
           association_id?: string
+          bedrooms?: number | null
           created_at?: string
           id?: string
           label?: string
+          occupants?: number | null
+          square_feet?: number | null
         }
         Relationships: [
           {
@@ -1072,6 +1859,181 @@ export type Database = {
             columns: ["association_id"]
             isOneToOne: false
             referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      violation_reports: {
+        Row: {
+          association_id: string
+          created_at: string
+          dismissed_reason: string | null
+          id: string
+          observed_on: string
+          reference: string
+          reporter_name: string
+          reporter_profile_id: string | null
+          reporter_unit: string
+          status: string
+          subject_unit: string
+          subject_unit_id: string | null
+          submitted_on: string
+          verification_note: string | null
+          verified_by: string | null
+          verified_on: string | null
+          violation_id: string | null
+          what: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          dismissed_reason?: string | null
+          id?: string
+          observed_on: string
+          reference: string
+          reporter_name?: string
+          reporter_profile_id?: string | null
+          reporter_unit?: string
+          status?: string
+          subject_unit: string
+          subject_unit_id?: string | null
+          submitted_on?: string
+          verification_note?: string | null
+          verified_by?: string | null
+          verified_on?: string | null
+          violation_id?: string | null
+          what: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          dismissed_reason?: string | null
+          id?: string
+          observed_on?: string
+          reference?: string
+          reporter_name?: string
+          reporter_profile_id?: string | null
+          reporter_unit?: string
+          status?: string
+          subject_unit?: string
+          subject_unit_id?: string | null
+          submitted_on?: string
+          verification_note?: string | null
+          verified_by?: string | null
+          verified_on?: string | null
+          violation_id?: string | null
+          what?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "violation_reports_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "violation_reports_reporter_profile_id_fkey"
+            columns: ["reporter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "violation_reports_subject_unit_id_fkey"
+            columns: ["subject_unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "violation_reports_subject_unit_id_fkey"
+            columns: ["subject_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      violations: {
+        Row: {
+          association_id: string
+          created_at: string
+          fine_cents: number
+          id: string
+          next_action_on: string | null
+          opened_on: string
+          owner_name: string
+          photos: Json
+          reference: string
+          report_id: string | null
+          rule: string
+          rule_citation: string
+          stage: string
+          unit_id: string | null
+          unit_label: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          fine_cents?: number
+          id?: string
+          next_action_on?: string | null
+          opened_on?: string
+          owner_name?: string
+          photos?: Json
+          reference: string
+          report_id?: string | null
+          rule: string
+          rule_citation?: string
+          stage?: string
+          unit_id?: string | null
+          unit_label?: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          fine_cents?: number
+          id?: string
+          next_action_on?: string | null
+          opened_on?: string
+          owner_name?: string
+          photos?: Json
+          reference?: string
+          report_id?: string | null
+          rule?: string
+          rule_citation?: string
+          stage?: string
+          unit_id?: string | null
+          unit_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "violations_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "violations_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "violation_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "violations_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "violations_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -1186,6 +2148,58 @@ export type Database = {
           },
         ]
       }
+      monthly_activity: {
+        Row: {
+          association_id: string | null
+          billed_cents: number | null
+          category: Database["public"]["Enums"]["charge_category"] | null
+          charge_count: number | null
+          credited_cents: number | null
+          month: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charges_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_cost_history: {
+        Row: {
+          allocation: Database["public"]["Enums"]["allocation_method"] | null
+          association_id: string | null
+          average_share_cents: number | null
+          bill_id: string | null
+          homes: number | null
+          name: string | null
+          period_end: string | null
+          period_start: string | null
+          provider: string | null
+          shared_cost_id: string | null
+          total_cents: number | null
+          usage_amount: number | null
+          usage_unit: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_cost_bills_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_cost_bills_shared_cost_id_fkey"
+            columns: ["shared_cost_id"]
+            isOneToOne: false
+            referencedRelation: "shared_costs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unit_balances: {
         Row: {
           association_id: string | null
@@ -1204,6 +2218,20 @@ export type Database = {
       }
     }
     Functions: {
+      add_household: {
+        Args: {
+          p_association_id: string
+          p_email: string
+          p_name: string
+          p_unit: string
+          p_unit_id: string
+        }
+        Returns: string
+      }
+      allocate_cents: {
+        Args: { p_basis: number[]; p_total_cents: number }
+        Returns: number[]
+      }
       cancel_association_deletion: {
         Args: { p_association_id: string }
         Returns: undefined
@@ -1219,6 +2247,7 @@ export type Database = {
       create_association: {
         Args: {
           p_city: string
+          p_collects?: string[]
           p_due_day: number
           p_dues_cadence: Database["public"]["Enums"]["dues_cadence"]
           p_dues_cents: number
@@ -1226,6 +2255,9 @@ export type Database = {
           p_founder_unit: string
           p_households?: Json
           p_name: string
+          p_origin?: Database["public"]["Enums"]["association_origin"]
+          p_property_type?: Database["public"]["Enums"]["property_type"]
+          p_shared_spaces?: string[]
           p_state: string
         }
         Returns: string
@@ -1252,6 +2284,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      home_history: {
+        Args: { p_unit_id: string }
+        Returns: {
+          email: string
+          ends_on: string
+          full_name: string
+          is_current: boolean
+          starts_on: string
+        }[]
+      }
       is_member_of: { Args: { target: string }; Returns: boolean }
       is_statutory: {
         Args: { c: Database["public"]["Enums"]["email_category"] }
@@ -1265,6 +2307,20 @@ export type Database = {
         Args: { p_association_id: string }
         Returns: undefined
       }
+      levy_special_assessment: {
+        Args: {
+          p_allocation?: Database["public"]["Enums"]["allocation_method"]
+          p_association_id: string
+          p_ballot_id?: string
+          p_first_due_on?: string
+          p_installments?: number
+          p_reason: string
+          p_title: string
+          p_total_cents: number
+        }
+        Returns: string
+      }
+      like_post: { Args: { p_post_id: string }; Returns: number }
       my_associations: {
         Args: never
         Returns: {
@@ -1275,6 +2331,19 @@ export type Database = {
         }[]
       }
       my_unit_ids: { Args: never; Returns: string[] }
+      post_shared_cost_bill: {
+        Args: {
+          p_due_on?: string
+          p_period_end: string
+          p_period_start: string
+          p_readings?: Json
+          p_shared_cost_id: string
+          p_total_cents: number
+          p_usage_amount?: number
+          p_usage_unit?: string
+        }
+        Returns: string
+      }
       record_payment: {
         Args: {
           p_amount_cents: number
@@ -1287,6 +2356,7 @@ export type Database = {
         }
         Returns: string
       }
+      remove_household: { Args: { p_unit_id: string }; Returns: undefined }
       request_association_deletion: {
         Args: { p_association_id: string; p_typed_name: string }
         Returns: string
@@ -1295,6 +2365,15 @@ export type Database = {
         Args: { p_association_id: string }
         Returns: undefined
       }
+      transfer_home: {
+        Args: {
+          p_closing_date?: string
+          p_new_email: string
+          p_new_name: string
+          p_unit_id: string
+        }
+        Returns: string
+      }
       transfer_presidency: {
         Args: { p_to_profile: string }
         Returns: undefined
@@ -1302,6 +2381,13 @@ export type Database = {
     }
     Enums: {
       account_kind: "operating" | "reserve" | "cd"
+      allocation_method:
+        | "equal"
+        | "square_feet"
+        | "bedrooms"
+        | "occupants"
+        | "submeter"
+      association_origin: "new" | "self-managed" | "leaving-manager"
       ballot_status: "scheduled" | "open" | "closed" | "certified"
       board_role:
         | "resident"
@@ -1320,6 +2406,13 @@ export type Database = {
         | "forum"
         | "settings"
         | "permissions"
+      charge_category:
+        | "dues"
+        | "special_assessment"
+        | "shared_cost"
+        | "late_fee"
+        | "fine"
+        | "other"
       charge_kind: "charge" | "payment" | "credit"
       doc_visibility: "public" | "owners" | "board"
       dues_cadence: "monthly" | "quarterly" | "annually"
@@ -1333,13 +2426,20 @@ export type Database = {
       payment_rail: "ach" | "card" | "apple-pay" | "google-pay"
       payment_state: "pending" | "settled" | "failed" | "refunded"
       post_status: "pending" | "published" | "rejected"
-      request_kind: "maintenance" | "architectural" | "records" | "amenity"
+      property_type: "single-family" | "townhomes" | "condos"
+      request_kind:
+        | "maintenance"
+        | "architectural"
+        | "records"
+        | "amenity"
+        | "violation-appeal"
       request_status:
         | "submitted"
         | "in-review"
         | "approved"
         | "denied"
         | "closed"
+        | "info-needed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1471,6 +2571,14 @@ export const Constants = {
   public: {
     Enums: {
       account_kind: ["operating", "reserve", "cd"],
+      allocation_method: [
+        "equal",
+        "square_feet",
+        "bedrooms",
+        "occupants",
+        "submeter",
+      ],
+      association_origin: ["new", "self-managed", "leaving-manager"],
       ballot_status: ["scheduled", "open", "closed", "certified"],
       board_role: [
         "resident",
@@ -1491,6 +2599,14 @@ export const Constants = {
         "settings",
         "permissions",
       ],
+      charge_category: [
+        "dues",
+        "special_assessment",
+        "shared_cost",
+        "late_fee",
+        "fine",
+        "other",
+      ],
       charge_kind: ["charge", "payment", "credit"],
       doc_visibility: ["public", "owners", "board"],
       dues_cadence: ["monthly", "quarterly", "annually"],
@@ -1505,13 +2621,21 @@ export const Constants = {
       payment_rail: ["ach", "card", "apple-pay", "google-pay"],
       payment_state: ["pending", "settled", "failed", "refunded"],
       post_status: ["pending", "published", "rejected"],
-      request_kind: ["maintenance", "architectural", "records", "amenity"],
+      property_type: ["single-family", "townhomes", "condos"],
+      request_kind: [
+        "maintenance",
+        "architectural",
+        "records",
+        "amenity",
+        "violation-appeal",
+      ],
       request_status: [
         "submitted",
         "in-review",
         "approved",
         "denied",
         "closed",
+        "info-needed",
       ],
     },
   },

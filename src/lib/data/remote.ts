@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Community } from "./community";
-import type { Account, Capability, ChargeLine, Owner } from "@/lib/types";
+import type { Account, Capability, ChargeLine, CommunitySettings, Owner } from "@/lib/types";
 import { caps } from "./accounts";
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
@@ -85,6 +85,8 @@ export async function loadCommunity(
     association, units, memberships, charges, banks, ledger, balances,
     requests, documents, meetings, ballots, ballotOptions, tallies, myVotes,
     posts, vendors, amenities,
+    instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
+    budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
@@ -103,6 +105,21 @@ export async function loadCommunity(
     supabase.from("posts").select("*").eq("association_id", associationId).order("created_at", { ascending: false }),
     supabase.from("vendors").select("*").eq("association_id", associationId),
     supabase.from("amenities").select("*").eq("association_id", associationId),
+    // Each of these is scoped by row level security as well as by the filter:
+    // a resident's instruments are their own, a report is its reporter's, and
+    // the board's tables come back empty for anyone else.
+    supabase.from("payment_instruments").select("*").eq("association_id", associationId).order("added_on"),
+    supabase.from("payouts").select("*").eq("association_id", associationId).order("issued_on", { ascending: false }),
+    supabase.from("violation_reports").select("*").eq("association_id", associationId).order("submitted_on", { ascending: false }),
+    supabase.from("violations").select("*").eq("association_id", associationId).order("opened_on", { ascending: false }),
+    supabase.from("threads").select("*").eq("association_id", associationId).order("updated_on", { ascending: false }),
+    supabase.from("governing_articles").select("*").eq("association_id", associationId).order("position"),
+    supabase.from("budget_lines").select("*").eq("association_id", associationId).order("position"),
+    supabase.from("reserve_components").select("*").eq("association_id", associationId).order("remaining_life_years"),
+    supabase.from("message_templates").select("*").eq("association_id", associationId),
+    supabase.from("forms").select("*").eq("association_id", associationId).order("updated_on"),
+    supabase.from("shared_costs").select("*").eq("association_id", associationId),
+    supabase.from("shared_cost_bills").select("*").eq("association_id", associationId).order("period_end", { ascending: false }),
   ]);
 
   // Files open through short lived signed links, made in one batch here so a
@@ -127,6 +144,8 @@ export async function loadCommunity(
   }
 
   const a = association.data;
+  // Display preferences with no column of their own live in a jsonb patch.
+  const stored = (a.settings ?? {}) as Partial<CommunitySettings>;
   const unitRows = units.data ?? [];
   const memberRows = memberships.data ?? [];
   const chargeRows = charges.data ?? [];
@@ -240,20 +259,30 @@ export async function loadCommunity(
     settings: {
       displayName: a.name,
       photoUrl: a.photo_url ?? "",
-      homeLayout: "calendar",
-      banner: { enabled: false, title: "", detail: "", updatedDate: today },
-      showFundsToResidents: true,
-      showLiveVoteResults: false,
+      photoCredit: a.photo_credit ?? undefined,
+      homeLayout: stored.homeLayout ?? "calendar",
+      banner: stored.banner ?? { enabled: false, title: "", detail: "", updatedDate: today },
+      showFundsToResidents: stored.showFundsToResidents ?? true,
+      showLiveVoteResults: stored.showLiveVoteResults ?? false,
       autopayLateAfterDay: a.late_after_day,
-      paymentFeeCents: 0,
-      paymentFeePaidBy: "association",
-      paymentFeeWaivedOnAch: true,
-      forumEnabled: true,
+      paymentFeeCents: a.payment_fee_cents ?? 0,
+      paymentFeePaidBy: (a.payment_fee_paid_by ?? "association") as "owner" | "association",
+      paymentFeeWaivedOnAch: a.payment_fee_waived_on_ach ?? true,
+      forumEnabled: stored.forumEnabled ?? true,
     },
 
     owners,
     accounts,
-    instruments: [],
+    instruments: (instruments.data ?? []).map((i) => ({
+      ...(i.detail ?? {}),
+      id: i.id,
+      ownerId: i.unit_id,
+      kind: i.kind,
+      label: i.label,
+      mask: i.mask,
+      isDefault: i.is_default,
+      addedDate: i.added_on,
+    })),
 
     bankAccounts: (banks.data ?? []).map((b) => ({
       id: b.id,
@@ -282,27 +311,44 @@ export async function loadCommunity(
       status: e.confirmed_at ? ("cleared" as const) : ("needs-review" as const),
     })),
 
-    budget: [
-      {
-        category: "Assessments",
-        annualCents:
-          a.dues_cents *
-          (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1) *
-          unitRows.length,
-        ytdActualCents: (ledger.data ?? [])
-          .filter((e) => e.category === "Assessments" && e.amount_cents > 0)
-          .reduce((total, e) => total + e.amount_cents, 0),
-        kind: "income",
-      },
-    ],
+    budget: (budgetRows.data ?? []).length
+      ? (budgetRows.data ?? []).map((line) => ({
+          category: line.category as Community["budget"][number]["category"],
+          annualCents: Number(line.annual_cents),
+          // Actuals come from the books, never from a typed number, so the
+          // budget screen and the ledger cannot disagree.
+          ytdActualCents: (ledger.data ?? [])
+            .filter((e) => e.category === line.category)
+            .filter((e) => (line.kind === "income" ? e.amount_cents > 0 : e.amount_cents < 0))
+            .reduce((total, e) => total + Math.abs(e.amount_cents), 0),
+          kind: line.kind as "income" | "expense",
+        }))
+      : [
+          {
+            category: "Assessments",
+            annualCents:
+              a.dues_cents *
+              (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1) *
+              unitRows.length,
+            ytdActualCents: (ledger.data ?? [])
+              .filter((e) => e.category === "Assessments" && e.amount_cents > 0)
+              .reduce((total, e) => total + e.amount_cents, 0),
+            kind: "income",
+          },
+        ],
     yearElapsed: Number(today.slice(5, 7)) / 12,
 
-    // A reserve study is commissioned, not generated, so an association that
-    // has not paid for one has no components and the screens say so.
-    reserveComponents: [],
+    reserveComponents: (reserveRows.data ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      usefulLifeYears: c.useful_life_years,
+      remainingLifeYears: c.remaining_life_years,
+      replacementCostCents: Number(c.replacement_cost_cents),
+      fundedCents: Number(c.funded_cents),
+      lastInspection: c.last_inspection ?? undefined,
+      note: c.note ?? undefined,
+    })),
     savingsOffers: [],
-    // Text of the governing documents is not stored server side yet, so the
-    // reader falls back to the uploaded file list.
     // Reservations are not stored server side yet, so the picker offers every
     // slot rather than pretending a free hour is taken.
     amenityBookings: [],
@@ -312,15 +358,102 @@ export async function loadCommunity(
       collects: a.collects ?? [],
       sharedSpaces: a.shared_spaces ?? [],
     },
-    governingDocs: [],
+    governingDocs: (articleRows.data ?? []).map((g) => ({
+      id: g.id,
+      document: g.document,
+      number: g.number,
+      title: g.title,
+      topic: g.topic,
+      text: (g.text ?? []) as string[],
+      plain: g.plain ?? undefined,
+      affects: g.affects,
+      amendedOn: g.amended_on ?? undefined,
+      amendmentBallotId: g.amendment_ballot_id ?? undefined,
+      adoptedOn: g.adopted_on ?? undefined,
+      disclosureTopics: g.disclosure_topics ?? undefined,
+      extraction: g.extraction ?? undefined,
+    })),
     governingAmendments: [],
-    sharedCosts: [],
-    sharedCostBills: [],
+    sharedCosts: (sharedCostRows.data ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      kind: (c.kind ?? "other") as Community["sharedCosts"][number]["kind"],
+      provider: c.provider,
+      accountRef: c.account_ref,
+      allocation: c.allocation,
+      markupPercent: Number(c.markup_percent),
+      active: c.active,
+      usageUnit: c.usage_unit ?? "",
+    })),
+    sharedCostBills: (sharedBillRows.data ?? []).map((b) => ({
+      id: b.id,
+      sharedCostId: b.shared_cost_id,
+      periodStart: b.period_start,
+      periodEnd: b.period_end,
+      dueOn: b.due_on,
+      totalCents: Number(b.total_cents),
+      usageAmount: b.usage_amount === null ? undefined : Number(b.usage_amount),
+      homes: unitRows.length,
+      averageShareCents: unitRows.length ? Math.round(Number(b.total_cents) / unitRows.length) : 0,
+    })),
     specialAssessments: [],
-    payouts: [],
-    violations: [],
-    violationReports: [],
-    threads: [],
+    payouts: (payoutRows.data ?? []).map((p) => ({
+      id: p.id,
+      vendorId: p.vendor_id ?? "",
+      vendor: p.vendor_name,
+      invoiceNumber: p.invoice_number,
+      amountCents: p.amount_cents,
+      method: p.method,
+      status: p.status,
+      issuedDate: p.issued_on,
+      expectedDate: p.expected_on,
+      approvals: (p.approvals ?? []) as { name: string; at: string }[],
+      approvalsRequired: p.approvals_required,
+    })),
+    violations: (violationRows.data ?? []).map((v) => ({
+      id: v.id,
+      reference: v.reference,
+      ownerId: v.unit_id ?? "",
+      ownerName: v.owner_name,
+      unit: v.unit_label,
+      rule: v.rule,
+      ruleCitation: v.rule_citation,
+      stage: v.stage,
+      openedDate: v.opened_on,
+      nextActionDate: v.next_action_on ?? v.opened_on,
+      photos: (v.photos ?? []) as Community["violations"][number]["photos"],
+      fineCents: v.fine_cents,
+      reportId: v.report_id ?? undefined,
+    })),
+    violationReports: (reportRows.data ?? []).map((r) => ({
+      id: r.id,
+      reference: r.reference,
+      reporterId: r.reporter_profile_id ?? "",
+      reporterName: r.reporter_name,
+      reporterUnit: r.reporter_unit,
+      subjectUnit: r.subject_unit,
+      subjectOwnerId: r.subject_unit_id ?? undefined,
+      what: r.what,
+      observedOn: r.observed_on,
+      submittedOn: r.submitted_on,
+      status: r.status,
+      verification: r.verified_on
+        ? { by: r.verified_by ?? "", on: r.verified_on, note: r.verification_note ?? "" }
+        : undefined,
+      dismissedReason: r.dismissed_reason ?? undefined,
+      violationId: r.violation_id ?? undefined,
+    })),
+    threads: (threadRows.data ?? []).map((t) => ({
+      id: t.id,
+      subject: t.subject,
+      participants: (t.participants ?? []) as string[],
+      ownerId: t.unit_id ?? undefined,
+      unit: t.unit_id ? unitRows.find((u) => u.id === t.unit_id)?.label : undefined,
+      updatedDate: t.updated_on,
+      unread: t.unread,
+      tag: t.tag,
+      messages: (t.messages ?? []) as Community["threads"][number]["messages"],
+    })),
     announcements: [],
 
     vendors: (vendors.data ?? []).map((v) => ({
@@ -345,8 +478,14 @@ export async function loadCommunity(
       summary: r.body,
       status: r.status,
       submittedDate: r.submitted_on,
-      attachments: [],
-      thread: [],
+      dueDate: r.due_on ?? undefined,
+      dueReason: r.due_reason ?? undefined,
+      decisionDate: r.decided_on ?? undefined,
+      decidedBy: r.decided_by ?? undefined,
+      attachments: (r.attachments ?? []) as Community["requests"][number]["attachments"],
+      thread: (r.thread ?? []) as Community["requests"][number]["thread"],
+      submission: r.submission ?? undefined,
+      certificateId: r.certificate_id ?? undefined,
     })),
 
     documents: (documents.data ?? []).map((d) => ({
@@ -370,10 +509,11 @@ export async function loadCommunity(
       dialIn: m.dial_in ?? "",
       passcode: m.passcode ?? "",
       status: m.status as Community["meetings"][number]["status"],
-      kind: "board" as const,
-      agenda: [],
-      ballotIds: [],
+      kind: (m.kind ?? "board") as Community["meetings"][number]["kind"],
+      agenda: (m.agenda ?? []) as string[],
+      ballotIds: (ballots.data ?? []).filter((b) => b.meeting_id === m.id).map((b) => b.id),
       attendees: [],
+      noticeSentDate: m.notice_sent_on ?? undefined,
     })),
 
     ballots: (ballots.data ?? []).map((b) => {
@@ -384,7 +524,7 @@ export async function loadCommunity(
         title: b.title,
         body: b.body,
         kind: b.kind as Community["ballots"][number]["kind"],
-        audience: "owners" as const,
+        audience: (b.audience ?? "owners") as Community["ballots"][number]["audience"],
         status: b.status,
         opensDate: b.opens_on,
         closesDate: b.closes_on,
@@ -404,19 +544,23 @@ export async function loadCommunity(
           })),
         myVoteOptionId: mine?.option_id ?? undefined,
         myVoteReceipt: mine?.receipt ?? undefined,
-        liveResultsVisible: false,
+        meetingId: b.meeting_id ?? undefined,
+        certifiedBy: b.certified_by ?? undefined,
+        certifiedDate: b.certified_on ?? undefined,
+        liveResultsVisible: b.live_results_visible ?? false,
       };
     }),
 
     posts: (posts.data ?? []).map((p) => ({
       id: p.id,
       author: p.author_name,
-      authorRole: "resident" as const,
-      unit: "",
+      authorRole: p.author_role ?? undefined,
+      unit: p.unit_label ?? "",
       category: p.category as Community["posts"][number]["category"],
       title: p.title,
       body: p.body,
       status: p.status,
+      rejectionReason: p.rejection_reason ?? undefined,
       moderatedBy: p.moderated_by ?? undefined,
       moderatedAt: p.moderated_at?.slice(0, 10),
       at: p.created_at.slice(0, 10),
@@ -433,6 +577,7 @@ export async function loadCommunity(
       reservable: a.reservable,
       status: a.status as Community["amenities"][number]["status"],
       maxHours: a.max_hours ?? undefined,
+      rules: a.rules ?? undefined,
     })),
     amenityStatus: (amenities.data ?? []).map((a) => ({
       id: a.id,
@@ -440,8 +585,44 @@ export async function loadCommunity(
       status: a.status as Community["amenityStatus"][number]["status"],
       detail: a.detail,
     })),
-    forms: architecturalForms.map((f) => ({ ...f, updatedDate: today })),
-    templates: messageTemplates.map((t) => ({ ...t, updatedDate: today })),
+    // The stock forms ship in code; what the board uploads is a row.
+    forms: [
+      ...architecturalForms.map((f) => ({ ...f, updatedDate: today })),
+      ...(formRows.data ?? []).map((f) => ({
+        id: f.id,
+        label: f.label,
+        description: f.description,
+        fileName: f.file_name,
+        size: f.size_label,
+        source: "uploaded" as const,
+        updatedDate: f.updated_on,
+        fields: f.fields ?? undefined,
+        governedBy: f.governed_by ?? undefined,
+        decisionDays: f.decision_days ?? undefined,
+      })),
+    ],
+    // A stock template edited by the board is a row that replaces it, keyed
+    // by the stock id; a template the board wrote from scratch is a row alone.
+    templates: (() => {
+      const rows = templateRows.data ?? [];
+      const toTemplate = (t: (typeof rows)[number], id: string) => ({
+        id,
+        name: t.name,
+        description: t.description,
+        subject: t.subject,
+        body: t.body,
+        trigger: t.trigger as Community["templates"][number]["trigger"],
+        updatedDate: t.updated_on,
+      });
+      const overrides = new Map(rows.filter((t) => t.baseline_id).map((t) => [t.baseline_id, t]));
+      return [
+        ...messageTemplates.map((t) => {
+          const own = overrides.get(t.id);
+          return own ? toTemplate(own, t.id) : { ...t, updatedDate: today };
+        }),
+        ...rows.filter((t) => !t.baseline_id).map((t) => toTemplate(t, t.id)),
+      ];
+    })(),
     ownerCharges,
   };
 }

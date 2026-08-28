@@ -162,6 +162,53 @@ export async function setRemoteAssociation(id: string): Promise<void> {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Writes                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Failures from writes that were fired without being awaited.
+ *
+ * Most mutations keep a synchronous signature because forty screens call them
+ * that way, so a database write runs in the background. A background failure
+ * still has to reach the person who clicked, and the state layer sits above
+ * the toast provider, so it comes out through here and a small component
+ * inside the provider turns it into a toast.
+ */
+const errorListeners = new Set<(message: string) => void>();
+
+export function subscribeRemoteErrors(listener: (message: string) => void) {
+  errorListeners.add(listener);
+  return () => errorListeners.delete(listener);
+}
+
+export function reportRemoteError(message: string) {
+  for (const listener of errorListeners) listener(message);
+}
+
+/**
+ * Runs a write, then re-reads the association so the screen shows what
+ * landed. A failure is reported rather than thrown, because nothing awaits
+ * this; the screen has already moved on.
+ */
+export async function remoteWrite(
+  label: string,
+  // PromiseLike, because a query builder is a thenable rather than a Promise.
+  write: () => PromiseLike<{ error: { message: string } | null } | void>,
+): Promise<boolean> {
+  try {
+    const result = await write();
+    if (result && result.error) throw new Error(result.error.message);
+    await refreshRemote();
+    return true;
+  } catch (error) {
+    reportRemoteError(
+      `${label}: ${error instanceof Error ? error.message : "the database refused it"}`,
+    );
+    return false;
+  }
+}
+
 /** Re-reads the active association. Call after any write. */
 export async function refreshRemote(): Promise<void> {
   if (!hasSupabase || !state.activeId) return;

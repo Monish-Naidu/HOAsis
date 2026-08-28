@@ -19,6 +19,7 @@ import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
 import { caps, DEFAULT_ROLE_CAPABILITIES, NO_CAPABILITIES } from "@/lib/data/accounts";
 import { addDays, daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
+import { isUuid, newId } from "@/lib/core/ids";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
 import {
@@ -26,6 +27,8 @@ import {
   setRemoteAssociation,
   loadRemote,
   refreshRemote,
+  remoteWrite,
+  reportRemoteError,
   remoteSnapshot,
 } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -561,48 +564,218 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   /* -------------------------------------------------------------- settings */
 
   const updateSettings = useCallback(
-    (patch: Partial<Community["settings"]>) =>
-      sliceStore(communityId, "settings").update((current) => ({ ...current, ...patch })),
-    [communityId],
+    (patch: Partial<Community["settings"]>) => {
+      if (!remote.community) {
+        sliceStore(communityId, "settings").update((current) => ({ ...current, ...patch }));
+        return;
+      }
+      // Columns where there are columns; the jsonb patch for the rest.
+      const rc = remote.community;
+      const columns: Record<string, unknown> = {};
+      const extras: Record<string, unknown> = {};
+      const COLUMN: Record<string, string> = {
+        displayName: "name",
+        photoUrl: "photo_url",
+        photoCredit: "photo_credit",
+        autopayLateAfterDay: "late_after_day",
+        paymentFeeCents: "payment_fee_cents",
+        paymentFeePaidBy: "payment_fee_paid_by",
+        paymentFeeWaivedOnAch: "payment_fee_waived_on_ach",
+      };
+      for (const [key, value] of Object.entries(patch)) {
+        if (COLUMN[key]) columns[COLUMN[key]] = value;
+        else extras[key] = value;
+      }
+      void remoteWrite("Saving settings", async () => {
+        const supabase = supabaseBrowser();
+        const next: Record<string, unknown> = { ...columns };
+        if (Object.keys(extras).length) {
+          const { data } = await supabase
+            .from("associations")
+            .select("settings")
+            .eq("id", rc.id)
+            .single();
+          next.settings = { ...((data?.settings as object | null) ?? {}), ...extras };
+        }
+        return supabase.from("associations").update(next).eq("id", rc.id);
+      });
+    },
+    [remote.community, communityId],
   );
 
   const setAmenities = useCallback(
-    (next: Community["amenities"]) => sliceStore(communityId, "amenities").set(next),
-    [communityId],
+    (next: Community["amenities"]) => {
+      if (!remote.community) {
+        sliceStore(communityId, "amenities").set(next);
+        return;
+      }
+      const rc = remote.community;
+      void remoteWrite("Saving amenities", async () => {
+        const supabase = supabaseBrowser();
+        const keep = new Set<string>();
+        for (const amenity of next) {
+          const row = {
+            association_id: rc.id,
+            name: amenity.name,
+            detail: amenity.detail,
+            reservable: amenity.reservable,
+            status: amenity.status,
+            max_hours: amenity.rules?.maxHours ?? amenity.maxHours ?? null,
+            rules: amenity.rules ?? null,
+          };
+          // A screen invents an id for a new item; the database gets to pick
+          // the real one, and the row is told apart by whether it is a uuid.
+          const id = isUuid(amenity.id) ? amenity.id : newId();
+          keep.add(id);
+          const { error } = isUuid(amenity.id)
+            ? await supabase.from("amenities").update(row).eq("id", id)
+            : await supabase.from("amenities").insert({ id, ...row });
+          if (error) throw new Error(error.message);
+        }
+        const gone = rc.amenities.filter((a) => !keep.has(a.id)).map((a) => a.id);
+        if (gone.length) return supabase.from("amenities").delete().in("id", gone);
+      });
+    },
+    [remote.community, communityId],
   );
 
   const setForms = useCallback(
-    (next: Community["forms"]) => sliceStore(communityId, "forms").set(next),
-    [communityId],
+    (next: Community["forms"]) => {
+      if (!remote.community) {
+        sliceStore(communityId, "forms").set(next);
+        return;
+      }
+      // The stock forms ship in code and are not rows, so only what the board
+      // uploaded is written, and only it can be taken away.
+      const rc = remote.community;
+      void remoteWrite("Saving forms", async () => {
+        const supabase = supabaseBrowser();
+        const keep = new Set<string>();
+        for (const form of next) {
+          if (form.source !== "uploaded") continue;
+          const row = {
+            association_id: rc.id,
+            label: form.label,
+            description: form.description,
+            file_name: form.fileName,
+            size_label: form.size,
+            updated_on: form.updatedDate,
+            fields: form.fields ?? null,
+            governed_by: form.governedBy ?? null,
+            decision_days: form.decisionDays ?? null,
+          };
+          const id = isUuid(form.id) ? form.id : newId();
+          keep.add(id);
+          const { error } = isUuid(form.id)
+            ? await supabase.from("forms").update(row).eq("id", id)
+            : await supabase.from("forms").insert({ id, ...row });
+          if (error) throw new Error(error.message);
+        }
+        const gone = rc.forms
+          .filter((f) => f.source === "uploaded" && !keep.has(f.id))
+          .map((f) => f.id);
+        if (gone.length) return supabase.from("forms").delete().in("id", gone);
+      });
+    },
+    [remote.community, communityId],
   );
 
   const removeForm = useCallback(
-    (formId: string) =>
-      destructive(sliceStore(communityId, "forms"), (all) => all.filter((f) => f.id !== formId)),
-    [communityId],
+    (formId: string) => {
+      if (!remote.community) {
+        return destructive(sliceStore(communityId, "forms"), (all) =>
+          all.filter((f) => f.id !== formId),
+        );
+      }
+      const form = remote.community.forms.find((f) => f.id === formId);
+      if (!form || form.source !== "uploaded") {
+        reportRemoteError("The stock forms cannot be removed, only the ones you uploaded");
+        return () => {};
+      }
+      const rc = remote.community;
+      const row = {
+        id: form.id,
+        association_id: rc.id,
+        label: form.label,
+        description: form.description,
+        file_name: form.fileName,
+        size_label: form.size,
+        updated_on: form.updatedDate,
+        fields: form.fields ?? null,
+        governed_by: form.governedBy ?? null,
+        decision_days: form.decisionDays ?? null,
+      };
+      void remoteWrite("Removing the form", () =>
+        supabaseBrowser().from("forms").delete().eq("id", formId),
+      );
+      return () => {
+        void remoteWrite("Restoring the form", () => supabaseBrowser().from("forms").insert(row));
+      };
+    },
+    [remote.community, communityId],
   );
 
   const removeAmenity = useCallback(
-    (amenityId: string) =>
-      destructive(sliceStore(communityId, "amenities"), (all) =>
-        all.filter((a) => a.id !== amenityId),
-      ),
-    [communityId],
+    (amenityId: string) => {
+      if (!remote.community) {
+        return destructive(sliceStore(communityId, "amenities"), (all) =>
+          all.filter((a) => a.id !== amenityId),
+        );
+      }
+      const rc = remote.community;
+      const amenity = rc.amenities.find((a) => a.id === amenityId);
+      void remoteWrite("Removing the amenity", () =>
+        supabaseBrowser().from("amenities").delete().eq("id", amenityId),
+      );
+      return () => {
+        if (!amenity) return;
+        void remoteWrite("Restoring the amenity", () =>
+          supabaseBrowser().from("amenities").insert({
+            id: amenity.id,
+            association_id: rc.id,
+            name: amenity.name,
+            detail: amenity.detail,
+            reservable: amenity.reservable,
+            status: amenity.status,
+            max_hours: amenity.rules?.maxHours ?? amenity.maxHours ?? null,
+            rules: amenity.rules ?? null,
+          }),
+        );
+      };
+    },
+    [remote.community, communityId],
   );
 
   const setCapability = useCallback(
     (id: string, capability: Capability, on: boolean) => {
       // The President's grid is deliberately immutable. An association that can
       // strip its President of access has no way back in.
-      sliceStore(communityId, "accounts").update((list) =>
-        list.map((a) =>
-          a.id === id && a.role !== "president"
-            ? { ...a, capabilities: { ...a.capabilities, [capability]: on } }
-            : a,
-        ),
+      if (!remote.community) {
+        sliceStore(communityId, "accounts").update((list) =>
+          list.map((a) =>
+            a.id === id && a.role !== "president"
+              ? { ...a, capabilities: { ...a.capabilities, [capability]: on } }
+              : a,
+          ),
+        );
+        return;
+      }
+      const rc = remote.community;
+      const account = rc.accounts.find((a) => a.id === id);
+      if (!account || account.role === "president") return;
+      const granted = Object.entries({ ...account.capabilities, [capability]: on })
+        .filter(([, held]) => held)
+        .map(([name]) => name);
+      void remoteWrite("Saving permissions", () =>
+        supabaseBrowser()
+          .from("memberships")
+          .update({ capabilities: granted })
+          .eq("association_id", rc.id)
+          .eq("profile_id", id)
+          .is("ends_on", null),
       );
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   const resetDemo = useCallback(() => resetCommunity(communityId), [communityId]);
@@ -663,19 +836,40 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    */
   const setAccountRole = useCallback(
     (accountId: string, role: AccountRole) => {
-      sliceStore(communityId, "accounts").update((all) =>
-        all.map((account) =>
-          account.id === accountId && account.role !== "president"
-            ? {
-                ...account,
-                role,
-                capabilities: caps(DEFAULT_ROLE_CAPABILITIES[role] ?? []),
-              }
-            : account,
-        ),
+      if (!remote.community) {
+        sliceStore(communityId, "accounts").update((all) =>
+          all.map((account) =>
+            account.id === accountId && account.role !== "president"
+              ? {
+                  ...account,
+                  role,
+                  capabilities: caps(DEFAULT_ROLE_CAPABILITIES[role] ?? []),
+                }
+              : account,
+          ),
+        );
+        return;
+      }
+      const rc = remote.community;
+      // Making somebody President is a handover, and the database keeps the
+      // rule that there is exactly one; it has its own function for that.
+      if (role === "president") {
+        void remoteWrite("Transferring the presidency", () =>
+          supabaseBrowser().rpc("transfer_presidency", { p_to_profile: accountId }),
+        );
+        return;
+      }
+      void remoteWrite("Saving the role", () =>
+        supabaseBrowser()
+          .from("memberships")
+          .update({ role, capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [] })
+          .eq("association_id", rc.id)
+          .eq("profile_id", accountId)
+          .is("ends_on", null)
+          .neq("role", "president"),
       );
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   /**
@@ -730,12 +924,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   /** Connects an account the association can receive dues into. */
   const addBankAccount = useCallback(
     (account: BankAccount) => {
-      sliceStore(communityId, "bankAccounts").update((all) => [
-        ...all.filter((a) => a.id !== account.id),
-        account,
-      ]);
+      if (!remote.community) {
+        sliceStore(communityId, "bankAccounts").update((all) => [
+          ...all.filter((a) => a.id !== account.id),
+          account,
+        ]);
+        return;
+      }
+      const rc = remote.community;
+      void remoteWrite("Connecting the account", () =>
+        supabaseBrowser().from("bank_accounts").insert({
+          id: isUuid(account.id) ? account.id : newId(),
+          association_id: rc.id,
+          kind: account.kind,
+          institution: account.institution,
+          mask: account.mask,
+        }),
+      );
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   /**
@@ -762,6 +969,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       method: string;
       kind: "ach" | "card" | "apple-pay";
     }) => {
+      if (remote.community) {
+        // The database does all four writes in one function, so a payment
+        // cannot land on the statement and miss the books.
+        void remoteWrite("Recording the payment", () =>
+          supabaseBrowser().rpc("record_payment", {
+            p_unit_id: input.ownerId,
+            p_amount_cents: input.amountCents,
+            p_rail: input.kind,
+            p_processor_fee_cents: input.processorCents,
+            p_platform_fee_cents: input.platformCents,
+            p_platform_fee_paid_by: input.platformPaidBy,
+          }),
+        );
+        return;
+      }
       const date = todayIsoDate();
       const charges = sliceStore(communityId, "ownerCharges");
       const existing = charges.getSnapshot()[input.ownerId] ?? [];
@@ -868,7 +1090,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
       }
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
 
@@ -881,13 +1103,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    */
   const addOwner = useCallback(
     (input: { name: string; email: string; unit: string }) => {
-      const owners = sliceStore(communityId, "owners");
       const unit = input.unit.trim();
-      if (owners.getSnapshot().some((o) => o.unit === unit)) {
+      const existing = remote.community
+        ? remote.community.owners
+        : sliceStore(communityId, "owners").getSnapshot();
+      if (existing.some((o) => o.unit === unit)) {
         throw new ValidationError(`Unit ${unit} is already on the roster`, { unit });
       }
 
-      const ownerId = `${communityId}-own-${unit}`;
+      // The id is chosen here so the screen can name the household before
+      // the write lands; the database takes it as given.
+      const ownerId = remote.community ? newId() : `${communityId}-own-${unit}`;
       const owner: Owner = {
         id: ownerId,
         displayName: input.name.trim(),
@@ -903,7 +1129,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         daysPastDue: 0,
       };
 
-      owners.update((all) => [...all, owner]);
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Adding the household", () =>
+          supabaseBrowser().rpc("add_household", {
+            p_association_id: rc.id,
+            p_unit_id: ownerId,
+            p_name: owner.displayName,
+            p_email: owner.email,
+            p_unit: unit,
+          }),
+        );
+        return owner;
+      }
+
+      sliceStore(communityId, "owners").update((all) => [...all, owner]);
       sliceStore(communityId, "accounts").update((all) => [
         ...all,
         {
@@ -918,7 +1158,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ]);
       return owner;
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   /**
@@ -937,6 +1177,33 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    */
   const setOpeningBalances = useCallback(
     (asOf: string, balances: { ownerId: string; amountCents: number }[]) => {
+      if (remote.community) {
+        // One dated line per home, replaced rather than stacked when it is
+        // corrected. The balance view sums it with everything else.
+        const rc = remote.community;
+        void remoteWrite("Saving opening balances", async () => {
+          const supabase = supabaseBrowser();
+          for (const { ownerId, amountCents } of balances) {
+            const { error: clearError } = await supabase
+              .from("charges")
+              .delete()
+              .eq("unit_id", ownerId)
+              .eq("label", "Balance brought forward");
+            if (clearError) throw new Error(clearError.message);
+            if (amountCents === 0) continue;
+            const { error } = await supabase.from("charges").insert({
+              association_id: rc.id,
+              unit_id: ownerId,
+              kind: amountCents > 0 ? "charge" : "credit",
+              label: "Balance brought forward",
+              amount_cents: amountCents,
+              due_on: asOf,
+            });
+            if (error) throw new Error(error.message);
+          }
+        });
+        return;
+      }
       const byOwner = new Map(balances.map((b) => [b.ownerId, b.amountCents]));
 
       // Only the balance moves. Standing and days past due are deliberately
@@ -978,7 +1245,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   /* ------------------------------------------------------------ reports */
@@ -1001,10 +1268,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       what: string;
       observedOn: string;
     }) => {
-      const store = sliceStore(communityId, "violationReports");
-      const sequence = store.getSnapshot().length + 1;
+      const existing = remote.community
+        ? remote.community.violationReports
+        : sliceStore(communityId, "violationReports").getSnapshot();
+      const sequence = existing.length + 1;
       const report: ViolationReport = {
-        id: `rep-${communityId}-${sequence}-${input.subjectUnit}`,
+        id: remote.community ? newId() : `rep-${communityId}-${sequence}-${input.subjectUnit}`,
         reference: `REP-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
         reporterId: input.reporterId,
         reporterName: input.reporterName,
@@ -1016,10 +1285,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         submittedOn: todayIsoDate(),
         status: "new",
       };
-      store.update((all) => [report, ...all]);
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Sending the report", () =>
+          supabaseBrowser().from("violation_reports").insert({
+            id: report.id,
+            association_id: rc.id,
+            reference: report.reference,
+            reporter_profile_id: remote.profileId,
+            reporter_name: report.reporterName,
+            reporter_unit: report.reporterUnit,
+            subject_unit: report.subjectUnit,
+            subject_unit_id: isUuid(report.subjectOwnerId ?? "") ? report.subjectOwnerId : null,
+            what: report.what,
+            observed_on: report.observedOn,
+            submitted_on: report.submittedOn,
+            status: "new",
+          }),
+        );
+        return report;
+      }
+      sliceStore(communityId, "violationReports").update((all) => [report, ...all]);
       return report;
     },
-    [communityId],
+    [remote.community, remote.profileId, communityId],
   );
 
   /**
@@ -1036,6 +1325,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           reportId,
         });
       }
+      if (remote.community) {
+        void remoteWrite("Saving what you saw", () =>
+          supabaseBrowser()
+            .from("violation_reports")
+            .update({
+              status: "verified",
+              verified_by: by,
+              verified_on: todayIsoDate(),
+              verification_note: note.trim(),
+            })
+            .eq("id", reportId),
+        );
+        return;
+      }
       sliceStore(communityId, "violationReports").update((all) =>
         all.map((r) =>
           r.id === reportId
@@ -1048,20 +1351,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ),
       );
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   /** Closing a report the board looked at and found nothing in. */
   const dismissReport = useCallback(
-    (reportId: string, reason: string) =>
+    (reportId: string, reason: string) => {
+      if (remote.community) {
+        void remoteWrite("Closing the report", () =>
+          supabaseBrowser()
+            .from("violation_reports")
+            .update({ status: "dismissed", dismissed_reason: reason.trim() })
+            .eq("id", reportId),
+        );
+        return;
+      }
       sliceStore(communityId, "violationReports").update((all) =>
         all.map((r) =>
           r.id === reportId
             ? { ...r, status: "dismissed" as const, dismissedReason: reason.trim() }
             : r,
         ),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   /**
@@ -1077,8 +1390,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       reportId: string,
       input: { rule: string; ruleCitation: string; ownerId: string; ownerName: string },
     ) => {
-      const reports = sliceStore(communityId, "violationReports");
-      const report = reports.getSnapshot().find((r) => r.id === reportId);
+      const reports = remote.community
+        ? remote.community.violationReports
+        : sliceStore(communityId, "violationReports").getSnapshot();
+      const report = reports.find((r) => r.id === reportId);
       if (!report) throw new ValidationError("That report is not on file", { reportId });
       if (!canRaiseNotice(report)) {
         throw new ValidationError(
@@ -1087,10 +1402,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      const violations = sliceStore(communityId, "violations");
-      const sequence = violations.getSnapshot().length + 1;
+      const existing = remote.community
+        ? remote.community.violations
+        : sliceStore(communityId, "violations").getSnapshot();
+      const sequence = existing.length + 1;
       const violation: Violation = {
-        id: `vio-${communityId}-${sequence}`,
+        id: remote.community ? newId() : `vio-${communityId}-${sequence}`,
         reference: `VIO-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
         ownerId: input.ownerId,
         ownerName: input.ownerName,
@@ -1107,30 +1424,80 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         reportId,
       };
 
-      violations.update((all) => [violation, ...all]);
-      reports.update((all) =>
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Raising the notice", async () => {
+          const supabase = supabaseBrowser();
+          const { error } = await supabase.from("violations").insert({
+            id: violation.id,
+            association_id: rc.id,
+            reference: violation.reference,
+            unit_id: isUuid(violation.ownerId) ? violation.ownerId : null,
+            unit_label: violation.unit,
+            owner_name: violation.ownerName,
+            rule: violation.rule,
+            rule_citation: violation.ruleCitation,
+            stage: violation.stage,
+            opened_on: violation.openedDate,
+            next_action_on: violation.nextActionDate,
+            photos: [],
+            fine_cents: 0,
+            report_id: reportId,
+          });
+          if (error) throw new Error(error.message);
+          return supabase
+            .from("violation_reports")
+            .update({ violation_id: violation.id })
+            .eq("id", reportId);
+        });
+        return violation;
+      }
+
+      sliceStore(communityId, "violations").update((all) => [violation, ...all]);
+      sliceStore(communityId, "violationReports").update((all) =>
         all.map((r) => (r.id === reportId ? { ...r, violationId: violation.id } : r)),
       );
       return violation;
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   /** Removes a household and its account together, returning one undo for both. */
   const removeOwner = useCallback(
     (ownerId: string) => {
-      const undoOwners = destructive(sliceStore(communityId, "owners"), (all) =>
-        all.filter((o) => o.id !== ownerId),
-      );
-      const undoAccounts = destructive(sliceStore(communityId, "accounts"), (all) =>
-        all.filter((a) => a.ownerId !== ownerId),
+      if (!remote.community) {
+        const undoOwners = destructive(sliceStore(communityId, "owners"), (all) =>
+          all.filter((o) => o.id !== ownerId),
+        );
+        const undoAccounts = destructive(sliceStore(communityId, "accounts"), (all) =>
+          all.filter((a) => a.ownerId !== ownerId),
+        );
+        return () => {
+          undoOwners();
+          undoAccounts();
+        };
+      }
+      // The database refuses to remove a home with a statement, and says so
+      // through the toast; a sale goes through the transfer instead.
+      const rc = remote.community;
+      const owner = rc.owners.find((o) => o.id === ownerId);
+      void remoteWrite("Removing the household", () =>
+        supabaseBrowser().rpc("remove_household", { p_unit_id: ownerId }),
       );
       return () => {
-        undoOwners();
-        undoAccounts();
+        if (!owner) return;
+        void remoteWrite("Restoring the household", () =>
+          supabaseBrowser().rpc("add_household", {
+            p_association_id: rc.id,
+            p_unit_id: owner.id,
+            p_name: owner.displayName,
+            p_email: owner.email,
+            p_unit: owner.unit,
+          }),
+        );
       };
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   /**
@@ -1156,12 +1523,61 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   /* ----------------------------------------------------------------- forum */
 
   const addPost = useCallback(
-    (post: ForumPost) => sliceStore(communityId, "posts").update((all) => [post, ...all]),
-    [communityId],
+    (post: ForumPost) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Posting", () =>
+          supabaseBrowser().from("posts").insert({
+            id: newId(),
+            association_id: rc.id,
+            author_id: remote.profileId,
+            author_name: post.author,
+            unit_label: post.unit,
+            author_role: post.authorRole ?? null,
+            category: post.category,
+            title: post.title,
+            body: post.body,
+            status: post.status,
+          }),
+        );
+        return;
+      }
+      sliceStore(communityId, "posts").update((all) => [post, ...all]);
+    },
+    [remote.community, remote.profileId, communityId],
   );
 
   const moderatePost = useCallback(
     (postId: string, decision: "published" | "rejected", reason?: string) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const post = rc.posts.find((p) => p.id === postId);
+        const moderator = rc.accounts.find((a) => a.id === remote.profileId);
+        void remoteWrite("Saving the decision", () =>
+          supabaseBrowser()
+            .from("posts")
+            .update({
+              status: decision,
+              moderated_by: moderator?.name ?? null,
+              moderated_at: new Date().toISOString(),
+              rejection_reason: decision === "rejected" ? (reason ?? null) : null,
+            })
+            .eq("id", postId),
+        );
+        return () => {
+          if (!post) return;
+          void remoteWrite("Undoing the decision", () =>
+            supabaseBrowser()
+              .from("posts")
+              .update({
+                status: post.status,
+                moderated_by: post.moderatedBy ?? null,
+                rejection_reason: post.rejectionReason ?? null,
+              })
+              .eq("id", postId),
+          );
+        };
+      }
       const moderator = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
@@ -1179,41 +1595,126 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ),
       );
     },
-    [communityId],
+    [remote.community, remote.profileId, communityId],
   );
 
   const togglePinned = useCallback(
-    (postId: string) =>
+    (postId: string) => {
+      if (remote.community) {
+        const post = remote.community.posts.find((p) => p.id === postId);
+        void remoteWrite("Pinning", () =>
+          supabaseBrowser().from("posts").update({ pinned: !post?.pinned }).eq("id", postId),
+        );
+        return;
+      }
       sliceStore(communityId, "posts").update((all) =>
         all.map((post) => (post.id === postId ? { ...post, pinned: !post.pinned } : post)),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   const removePost = useCallback(
-    (postId: string) =>
-      destructive(sliceStore(communityId, "posts"), (all) => all.filter((p) => p.id !== postId)),
-    [communityId],
+    (postId: string) => {
+      if (remote.community) {
+        // Removed means rejected, which hides it from every neighbour and
+        // keeps the record, and is the only version of removal that can be
+        // undone: the insert policy would not let a moderator put back a post
+        // that somebody else wrote.
+        const post = remote.community.posts.find((p) => p.id === postId);
+        void remoteWrite("Removing the post", () =>
+          supabaseBrowser().from("posts").update({ status: "rejected" }).eq("id", postId),
+        );
+        return () => {
+          if (!post) return;
+          void remoteWrite("Restoring the post", () =>
+            supabaseBrowser().from("posts").update({ status: post.status }).eq("id", postId),
+          );
+        };
+      }
+      return destructive(sliceStore(communityId, "posts"), (all) =>
+        all.filter((p) => p.id !== postId),
+      );
+    },
+    [remote.community, communityId],
   );
 
   const likePost = useCallback(
-    (postId: string) =>
+    (postId: string) => {
+      if (remote.community) {
+        void remoteWrite("Liking", () => supabaseBrowser().rpc("like_post", { p_post_id: postId }));
+        return;
+      }
       sliceStore(communityId, "posts").update((all) =>
         all.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   /* -------------------------------------------------------------- requests */
 
   const addRequest = useCallback(
-    (request: HomeRequest) =>
-      sliceStore(communityId, "requests").update((all) => [request, ...all]),
-    [communityId],
+    (request: HomeRequest) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Sending the request", () =>
+          supabaseBrowser().from("requests").insert({
+            id: newId(),
+            association_id: rc.id,
+            unit_id: request.ownerId,
+            filed_by: remote.profileId,
+            reference: request.reference,
+            kind: request.kind,
+            title: request.title,
+            body: request.summary,
+            status: request.status === "draft" ? "submitted" : request.status,
+            submitted_on: request.submittedDate,
+            due_on: request.dueDate ?? null,
+            due_reason: request.dueReason ?? null,
+            attachments: request.attachments,
+            thread: request.thread,
+            submission: request.submission ?? null,
+            certificate_id: request.certificateId ?? null,
+          }),
+        );
+        return;
+      }
+      sliceStore(communityId, "requests").update((all) => [request, ...all]);
+    },
+    [remote.community, remote.profileId, communityId],
   );
 
   const updateRequestStatus = useCallback(
     (requestId: string, status: HomeRequest["status"], note?: string) => {
+      const decided = ["approved", "denied"].includes(status);
+      const event = (request: HomeRequest, actorName: string) => ({
+        id: `rt-${request.id}-${request.thread.length}`,
+        at: todayIsoDate(),
+        actor: actorName,
+        actorRole: "board" as const,
+        body: note ?? `Status changed to ${status.replace("-", " ")}.`,
+        kind: "status" as const,
+      });
+      if (remote.community) {
+        const rc = remote.community;
+        const request = rc.requests.find((r) => r.id === requestId);
+        if (!request) return;
+        const actor = rc.accounts.find((a) => a.id === remote.profileId);
+        void remoteWrite("Saving the decision", () =>
+          supabaseBrowser()
+            .from("requests")
+            .update({
+              status,
+              decided_on: decided ? todayIsoDate() : (request.decisionDate ?? null),
+              decided_by: decided ? (actor?.name ?? null) : (request.decidedBy ?? null),
+              decided_note: note ?? null,
+              thread: [...request.thread, event(request, actor?.name ?? "Board")],
+            })
+            .eq("id", requestId),
+        );
+        return;
+      }
       const actor = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
@@ -1223,52 +1724,96 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             ? {
                 ...request,
                 status,
-                decisionDate: ["approved", "denied"].includes(status)
-                  ? todayIsoDate()
-                  : request.decisionDate,
-                decidedBy: ["approved", "denied"].includes(status) ? actor?.name : request.decidedBy,
-                thread: [
-                  ...request.thread,
-                  {
-                    id: `rt-${request.id}-${request.thread.length}`,
-                    at: todayIsoDate(),
-                    actor: actor?.name ?? "Board",
-                    actorRole: "board" as const,
-                    body: note ?? `Status changed to ${status.replace("-", " ")}.`,
-                    kind: "status" as const,
-                  },
-                ],
+                decisionDate: decided ? todayIsoDate() : request.decisionDate,
+                decidedBy: decided ? actor?.name : request.decidedBy,
+                thread: [...request.thread, event(request, actor?.name ?? "Board")],
               }
             : request,
         ),
       );
     },
-    [communityId],
+    [remote.community, remote.profileId, communityId],
   );
 
   /* ----------------------------------------------------------- instruments */
 
   const addInstrument = useCallback(
     (draft: Omit<PaymentInstrument, "id" | "isDefault">): PaymentInstrument => {
-      const store = sliceStore(communityId, "instruments");
-      const existing = store.getSnapshot();
+      const existing = remote.community
+        ? remote.community.instruments
+        : sliceStore(communityId, "instruments").getSnapshot();
       const mine = existing.filter((i) => i.ownerId === draft.ownerId);
       const instrument: PaymentInstrument = {
         ...draft,
-        id: `pm-${draft.kind}-${draft.mask}-${existing.length}`,
+        id: remote.community ? newId() : `pm-${draft.kind}-${draft.mask}-${existing.length}`,
         // The first one an owner adds becomes their default, because a payment
         // screen with nothing selected is a dead end.
         isDefault: mine.length === 0,
       };
-      store.set([...existing, instrument]);
+      if (remote.community) {
+        const rc = remote.community;
+        const { id, ownerId, kind, label, mask, isDefault, addedDate, ...detail } = instrument;
+        void remoteWrite("Saving the payment method", () =>
+          supabaseBrowser().from("payment_instruments").insert({
+            id,
+            association_id: rc.id,
+            unit_id: ownerId,
+            profile_id: remote.profileId,
+            kind,
+            label,
+            mask,
+            is_default: isDefault,
+            added_on: addedDate,
+            detail,
+          }),
+        );
+        return instrument;
+      }
+      sliceStore(communityId, "instruments").set([...existing, instrument]);
       return instrument;
     },
-    [communityId],
+    [remote.community, remote.profileId, communityId],
   );
 
   const removeInstrument = useCallback(
-    (instrumentId: string) =>
-      destructive(sliceStore(communityId, "instruments"), (all) => {
+    (instrumentId: string) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const removed = rc.instruments.find((i) => i.id === instrumentId);
+        const successor = removed?.isDefault
+          ? rc.instruments.find((i) => i.ownerId === removed.ownerId && i.id !== instrumentId)
+          : undefined;
+        void remoteWrite("Removing the payment method", async () => {
+          const supabase = supabaseBrowser();
+          const { error } = await supabase.from("payment_instruments").delete().eq("id", instrumentId);
+          if (error) throw new Error(error.message);
+          if (successor) {
+            return supabase
+              .from("payment_instruments")
+              .update({ is_default: true })
+              .eq("id", successor.id);
+          }
+        });
+        return () => {
+          if (!removed) return;
+          const { id, ownerId, kind, label, mask, isDefault, addedDate, ...detail } = removed;
+          void remoteWrite("Restoring the payment method", () =>
+            supabaseBrowser().from("payment_instruments").insert({
+              id,
+              association_id: rc.id,
+              unit_id: ownerId,
+              profile_id: remote.profileId,
+              kind,
+              label,
+              mask,
+              is_default: isDefault,
+              added_on: addedDate,
+              detail,
+            }),
+          );
+        };
+      }
+      return destructive(sliceStore(communityId, "instruments"), (all) => {
         const removed = all.find((i) => i.id === instrumentId);
         const kept = all.filter((i) => i.id !== instrumentId);
         if (!removed?.isDefault) return kept;
@@ -1276,12 +1821,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return successor
           ? kept.map((i) => (i.id === successor.id ? { ...i, isDefault: true } : i))
           : kept;
-      }),
-    [communityId],
+      });
+    },
+    [remote.community, remote.profileId, communityId],
   );
 
   const setDefaultInstrument = useCallback(
-    (instrumentId: string) =>
+    (instrumentId: string) => {
+      if (remote.community) {
+        const target = remote.community.instruments.find((i) => i.id === instrumentId);
+        if (!target) return;
+        void remoteWrite("Choosing the default", async () => {
+          const supabase = supabaseBrowser();
+          const { error } = await supabase
+            .from("payment_instruments")
+            .update({ is_default: false })
+            .eq("unit_id", target.ownerId);
+          if (error) throw new Error(error.message);
+          return supabase.from("payment_instruments").update({ is_default: true }).eq("id", instrumentId);
+        });
+        return;
+      }
       sliceStore(communityId, "instruments").update((all) => {
         const target = all.find((i) => i.id === instrumentId);
         if (!target) return all;
@@ -1289,15 +1849,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return all.map((i) =>
           i.ownerId === target.ownerId ? { ...i, isDefault: i.id === instrumentId } : i,
         );
-      }),
-    [communityId],
+      });
+    },
+    [remote.community, communityId],
   );
 
   /* ----------------------------------------------------------- admin work */
 
   const confirmLedgerEntry = useCallback(
-    (entryId: string, category?: Community["ledger"][number]["category"]) =>
-      destructive(sliceStore(communityId, "ledger"), (all) =>
+    (entryId: string, category?: Community["ledger"][number]["category"]) => {
+      if (remote.community) {
+        const entry = remote.community.ledger.find((e) => e.id === entryId);
+        void remoteWrite("Confirming the transaction", () =>
+          supabaseBrowser()
+            .from("ledger_entries")
+            .update({
+              confirmed_at: new Date().toISOString(),
+              category: category ?? entry?.suggestedCategory ?? entry?.category,
+            })
+            .eq("id", entryId),
+        );
+        return () => {
+          if (!entry) return;
+          void remoteWrite("Reopening the transaction", () =>
+            supabaseBrowser()
+              .from("ledger_entries")
+              .update({ confirmed_at: null, category: entry.category })
+              .eq("id", entryId),
+          );
+        };
+      }
+      return destructive(sliceStore(communityId, "ledger"), (all) =>
         all.map((entry) =>
           entry.id === entryId
             ? {
@@ -1310,20 +1892,63 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               }
             : entry,
         ),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   const dismissLedgerEntry = useCallback(
-    (entryId: string) =>
-      destructive(sliceStore(communityId, "ledger"), (all) =>
+    (entryId: string) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const entry = rc.ledger.find((e) => e.id === entryId);
+        void remoteWrite("Dismissing the transaction", () =>
+          supabaseBrowser().from("ledger_entries").delete().eq("id", entryId),
+        );
+        return () => {
+          if (!entry) return;
+          void remoteWrite("Restoring the transaction", () =>
+            supabaseBrowser().from("ledger_entries").insert({
+              id: entry.id,
+              association_id: rc.id,
+              bank_account_id: isUuid(entry.accountId) ? entry.accountId : null,
+              occurred_on: entry.date,
+              description: entry.description,
+              counterparty: entry.counterparty,
+              category: entry.category,
+              amount_cents: entry.amountCents,
+              confirmed_at: entry.status === "cleared" ? new Date().toISOString() : null,
+            }),
+          );
+        };
+      }
+      return destructive(sliceStore(communityId, "ledger"), (all) =>
         all.filter((e) => e.id !== entryId),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   const approvePayout = useCallback(
     (payoutId: string) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const approver = rc.accounts.find((a) => a.id === remote.profileId);
+        const payout = rc.payouts.find((p) => p.id === payoutId);
+        if (!approver || !payout) return;
+        if (payout.approvals.some((a) => a.name === approver.name)) return;
+        const approvals = [...payout.approvals, { name: approver.name, at: todayIsoDate() }];
+        void remoteWrite("Approving the payment", () =>
+          supabaseBrowser()
+            .from("payouts")
+            .update({
+              approvals,
+              status: approvals.length >= payout.approvalsRequired ? "scheduled" : payout.status,
+            })
+            .eq("id", payoutId),
+        );
+        return;
+      }
       const approver = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
@@ -1341,33 +1966,106 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }),
       );
     },
-    [communityId],
+    [remote.community, remote.profileId, communityId],
   );
 
   const markW9Requested = useCallback(
-    (vendorId: string) =>
+    (vendorId: string) => {
+      if (remote.community) {
+        void remoteWrite("Noting the W-9", () =>
+          supabaseBrowser().from("vendors").update({ w9_on_file: true }).eq("id", vendorId),
+        );
+        return;
+      }
       sliceStore(communityId, "vendors").update((all) =>
         all.map((vendor) => (vendor.id === vendorId ? { ...vendor, w9OnFile: true } : vendor)),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   const addVendor = useCallback(
-    (vendor: Community["vendors"][number]) =>
-      sliceStore(communityId, "vendors").update((all) => [vendor, ...all]),
-    [communityId],
+    (vendor: Community["vendors"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Adding the vendor", () =>
+          supabaseBrowser().from("vendors").insert({
+            id: newId(),
+            association_id: rc.id,
+            name: vendor.name,
+            service: vendor.service,
+            ach_enabled: vendor.achEnabled,
+            w9_on_file: vendor.w9OnFile,
+            coi_expires_on: vendor.coiExpires ?? null,
+            default_category: vendor.defaultCategory,
+          }),
+        );
+        return;
+      }
+      sliceStore(communityId, "vendors").update((all) => [vendor, ...all]);
+    },
+    [remote.community, communityId],
   );
 
   const removeVendor = useCallback(
-    (vendorId: string) =>
-      destructive(sliceStore(communityId, "vendors"), (all) =>
+    (vendorId: string) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const vendor = rc.vendors.find((v) => v.id === vendorId);
+        void remoteWrite("Removing the vendor", () =>
+          supabaseBrowser().from("vendors").delete().eq("id", vendorId),
+        );
+        return () => {
+          if (!vendor) return;
+          void remoteWrite("Restoring the vendor", () =>
+            supabaseBrowser().from("vendors").insert({
+              id: vendor.id,
+              association_id: rc.id,
+              name: vendor.name,
+              service: vendor.service,
+              ach_enabled: vendor.achEnabled,
+              w9_on_file: vendor.w9OnFile,
+              coi_expires_on: vendor.coiExpires ?? null,
+              default_category: vendor.defaultCategory,
+            }),
+          );
+        };
+      }
+      return destructive(sliceStore(communityId, "vendors"), (all) =>
         all.filter((v) => v.id !== vendorId),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   const replyToThread = useCallback(
     (threadId: string, body: string) => {
+      const message = (senderName: string, count: number) => ({
+        id: `m-${threadId}-${count}`,
+        at: todayIsoDate(),
+        from: senderName,
+        fromRole: "board" as const,
+        direction: "outbound" as const,
+        channel: "email" as const,
+        body,
+      });
+      if (remote.community) {
+        const rc = remote.community;
+        const thread = rc.threads.find((t) => t.id === threadId);
+        if (!thread) return;
+        const sender = rc.accounts.find((a) => a.id === remote.profileId);
+        void remoteWrite("Sending the reply", () =>
+          supabaseBrowser()
+            .from("threads")
+            .update({
+              unread: false,
+              updated_on: todayIsoDate(),
+              messages: [...thread.messages, message(sender?.name ?? "Board", thread.messages.length)],
+            })
+            .eq("id", threadId),
+        );
+        return;
+      }
       const sender = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
@@ -1378,24 +2076,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 ...thread,
                 unread: false,
                 updatedDate: todayIsoDate(),
-                messages: [
-                  ...thread.messages,
-                  {
-                    id: `m-${thread.id}-${thread.messages.length}`,
-                    at: todayIsoDate(),
-                    from: sender?.name ?? "Board",
-                    fromRole: "board" as const,
-                    direction: "outbound" as const,
-                    channel: "email" as const,
-                    body,
-                  },
-                ],
+                messages: [...thread.messages, message(sender?.name ?? "Board", thread.messages.length)],
               }
             : thread,
         ),
       );
     },
-    [communityId],
+    [remote.community, remote.profileId, communityId],
   );
 
   const uploadDocuments = useCallback(
@@ -1465,63 +2152,252 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * with two Article VIIs, which is exactly the ambiguity a board cites into.
    */
   const addGoverningArticles = useCallback(
-    (articles: Community["governingDocs"]) =>
+    (articles: Community["governingDocs"]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const offset = rc.governingDocs.length;
+        void remoteWrite("Filing the articles", () =>
+          supabaseBrowser()
+            .from("governing_articles")
+            // The unique key on document and number is what drops a second
+            // Article VII; ignoring the duplicate keeps the rest.
+            .upsert(
+              articles.map((article, index) => ({
+                association_id: rc.id,
+                document: article.document,
+                number: article.number,
+                title: article.title,
+                topic: article.topic,
+                text: article.text,
+                plain: article.plain ?? null,
+                affects: article.affects,
+                amended_on: article.amendedOn ?? null,
+                amendment_ballot_id: article.amendmentBallotId ?? null,
+                adopted_on: article.adoptedOn ?? null,
+                disclosure_topics: article.disclosureTopics ?? null,
+                extraction: article.extraction ?? null,
+                position: offset + index,
+              })),
+              { onConflict: "association_id,document,number", ignoreDuplicates: true },
+            ),
+        );
+        return;
+      }
       sliceStore(communityId, "governingDocs").update((all) => {
         const taken = new Set(all.map((a) => `${a.document}|${a.number}`));
         const fresh = articles.filter((a) => !taken.has(`${a.document}|${a.number}`));
         return [...all, ...fresh];
-      }),
-    [communityId],
+      });
+    },
+    [remote.community, communityId],
   );
 
   const updateAssociation = useCallback(
-    (patch: Partial<Community["association"]>) =>
-      sliceStore(communityId, "association").update((current) => ({ ...current, ...patch })),
-    [communityId],
+    (patch: Partial<Community["association"]>) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const COLUMN: Record<string, string> = {
+          name: "name",
+          duesCents: "dues_cents",
+          duesCadence: "dues_cadence",
+          fiscalYearStart: "fiscal_year_start",
+          insuranceCarrier: "insurance_carrier",
+          insurancePolicyNo: "insurance_policy_no",
+          insuranceExpiresOn: "insurance_expires_on",
+          ein: "ein",
+          state: "state",
+        };
+        const row: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(patch)) {
+          if (COLUMN[key]) row[COLUMN[key]] = value ?? null;
+        }
+        if (!Object.keys(row).length) return;
+        void remoteWrite("Saving the association", () =>
+          supabaseBrowser().from("associations").update(row).eq("id", rc.id),
+        );
+        return;
+      }
+      sliceStore(communityId, "association").update((current) => ({ ...current, ...patch }));
+    },
+    [remote.community, communityId],
   );
 
   const addPayout = useCallback(
-    (payout: Community["payouts"][number]) =>
+    (payout: Community["payouts"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Recording the payment", () =>
+          supabaseBrowser().from("payouts").insert({
+            id: newId(),
+            association_id: rc.id,
+            vendor_id: isUuid(payout.vendorId) ? payout.vendorId : null,
+            vendor_name: payout.vendor,
+            invoice_number: payout.invoiceNumber,
+            amount_cents: payout.amountCents,
+            method: payout.method,
+            status: payout.status,
+            issued_on: payout.issuedDate,
+            expected_on: payout.expectedDate,
+            approvals: payout.approvals,
+            approvals_required: payout.approvalsRequired,
+          }),
+        );
+        return;
+      }
       sliceStore(communityId, "payouts").update((all) =>
         [payout, ...all].sort((a, b) => b.issuedDate.localeCompare(a.issuedDate)),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   const addBallot = useCallback(
-    (ballot: Community["ballots"][number]) =>
-      sliceStore(communityId, "ballots").update((all) => [ballot, ...all]),
-    [communityId],
+    (ballot: Community["ballots"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Opening the ballot", async () => {
+          const supabase = supabaseBrowser();
+          const id = newId();
+          const { error } = await supabase.from("ballots").insert({
+            id,
+            association_id: rc.id,
+            title: ballot.title,
+            body: ballot.body,
+            kind: ballot.kind,
+            audience: ballot.audience,
+            status: ballot.status,
+            opens_on: ballot.opensDate,
+            closes_on: ballot.closesDate,
+            seats: ballot.seats ?? 1,
+            quorum_required: ballot.quorumRequired,
+            threshold_label: ballot.thresholdLabel,
+            meeting_id: isUuid(ballot.meetingId ?? "") ? ballot.meetingId : null,
+            live_results_visible: ballot.liveResultsVisible,
+          });
+          if (error) throw new Error(error.message);
+          return supabase.from("ballot_options").insert(
+            ballot.options.map((option, position) => ({
+              ballot_id: id,
+              label: option.label,
+              detail: option.detail ?? null,
+              position,
+            })),
+          );
+        });
+        return;
+      }
+      sliceStore(communityId, "ballots").update((all) => [ballot, ...all]);
+    },
+    [remote.community, communityId],
   );
 
   const addMeeting = useCallback(
-    (meeting: Community["meetings"][number]) =>
+    (meeting: Community["meetings"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Scheduling the meeting", () =>
+          supabaseBrowser().from("meetings").insert({
+            id: newId(),
+            association_id: rc.id,
+            title: meeting.title,
+            held_on: meeting.date,
+            held_at: meeting.time,
+            location: meeting.location,
+            dial_in: meeting.dialIn || null,
+            passcode: meeting.passcode || null,
+            status: meeting.status,
+            kind: meeting.kind,
+            agenda: meeting.agenda,
+            notice_sent_on: meeting.noticeSentDate ?? null,
+          }),
+        );
+        return;
+      }
       sliceStore(communityId, "meetings").update((all) =>
         [...all, meeting].sort((a, b) => a.date.localeCompare(b.date)),
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   const addBudgetLine = useCallback(
-    (line: Community["budget"][number]) =>
-      sliceStore(communityId, "budget").update((all) => [...all, line]),
-    [communityId],
+    (line: Community["budget"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Adding the budget line", () =>
+          supabaseBrowser().from("budget_lines").insert({
+            association_id: rc.id,
+            category: line.category,
+            annual_cents: line.annualCents,
+            kind: line.kind,
+            position: rc.budget.length,
+          }),
+        );
+        return;
+      }
+      sliceStore(communityId, "budget").update((all) => [...all, line]);
+    },
+    [remote.community, communityId],
   );
 
   const addReserveComponent = useCallback(
-    (component: Community["reserveComponents"][number]) =>
-      sliceStore(communityId, "reserveComponents").update((all) => [...all, component]),
-    [communityId],
+    (component: Community["reserveComponents"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Adding the component", () =>
+          supabaseBrowser().from("reserve_components").insert({
+            id: isUuid(component.id) ? component.id : newId(),
+            association_id: rc.id,
+            name: component.name,
+            useful_life_years: component.usefulLifeYears,
+            remaining_life_years: component.remainingLifeYears,
+            replacement_cost_cents: component.replacementCostCents,
+            funded_cents: component.fundedCents,
+            last_inspection: component.lastInspection ?? null,
+            note: component.note ?? null,
+          }),
+        );
+        return;
+      }
+      sliceStore(communityId, "reserveComponents").update((all) => [...all, component]);
+    },
+    [remote.community, communityId],
   );
 
   const addSharedCost = useCallback(
-    (cost: Community["sharedCosts"][number]) =>
-      sliceStore(communityId, "sharedCosts").update((all) => [...all, cost]),
-    [communityId],
+    (cost: Community["sharedCosts"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Adding the shared cost", () =>
+          supabaseBrowser().from("shared_costs").insert({
+            id: isUuid(cost.id) ? cost.id : newId(),
+            association_id: rc.id,
+            name: cost.name,
+            kind: cost.kind,
+            provider: cost.provider,
+            account_ref: cost.accountRef,
+            allocation: cost.allocation,
+            markup_percent: cost.markupPercent,
+            active: cost.active,
+            usage_unit: cost.usageUnit,
+          }),
+        );
+        return;
+      }
+      sliceStore(communityId, "sharedCosts").update((all) => [...all, cost]);
+    },
+    [remote.community, communityId],
   );
 
   const removeSharedCost = useCallback(
     (costId: string) => {
+      if (remote.community) {
+        // The bills go with it, by cascade.
+        void remoteWrite("Removing the shared cost", () =>
+          supabaseBrowser().from("shared_costs").delete().eq("id", costId),
+        );
+        return;
+      }
       sliceStore(communityId, "sharedCosts").update((all) =>
         all.filter((cost) => cost.id !== costId),
       );
@@ -1531,13 +2407,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         all.filter((bill) => bill.sharedCostId !== costId),
       );
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   const postSharedCostBill = useCallback(
-    (bill: Community["sharedCostBills"][number]) =>
-      sliceStore(communityId, "sharedCostBills").update((all) => [...all, bill]),
-    [communityId],
+    (bill: Community["sharedCostBills"][number]) => {
+      if (remote.community) {
+        const cost = remote.community.sharedCosts.find((c) => c.id === bill.sharedCostId);
+        // The database divides the bill between the homes and posts a charge
+        // to each, in one function, so the split cannot drift from the total.
+        void remoteWrite("Posting the bill", () =>
+          supabaseBrowser().rpc("post_shared_cost_bill", {
+            p_shared_cost_id: bill.sharedCostId,
+            p_period_start: bill.periodStart,
+            p_period_end: bill.periodEnd,
+            p_total_cents: bill.totalCents,
+            p_due_on: bill.dueOn,
+            p_usage_amount: bill.usageAmount ?? null,
+            p_usage_unit: cost?.usageUnit ?? "",
+          }),
+        );
+        return;
+      }
+      sliceStore(communityId, "sharedCostBills").update((all) => [...all, bill]);
+    },
+    [remote.community, communityId],
   );
 
   const setDocumentVisibility = useCallback(
@@ -1581,6 +2475,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const castVote = useCallback(
     (ballotId: string, optionId: string) => {
+      if (remote.community) {
+        // The receipt is minted by the database, where it cannot be forged,
+        // and arrives with the re-read. The screens show it from the ballot.
+        const existing = remote.community.ballots.find((b) => b.id === ballotId);
+        void remoteWrite("Casting your vote", () =>
+          supabaseBrowser().rpc("cast_vote", { p_ballot_id: ballotId, p_option_id: optionId }),
+        );
+        return existing?.myVoteReceipt ?? "";
+      }
       const store = sliceStore(communityId, "ballots");
       const existing = store.getSnapshot().find((b) => b.id === ballotId);
       const receipt = existing?.myVoteReceipt ?? voteReceipt(ballotId, optionId);
@@ -1609,17 +2512,39 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       return receipt;
     },
-    [communityId],
+    [remote.community, communityId],
   );
 
   const saveTemplate = useCallback(
-    (template: Community["templates"][number]) =>
+    (template: Community["templates"][number]) => {
+      if (remote.community) {
+        const rc = remote.community;
+        const row = {
+          association_id: rc.id,
+          name: template.name,
+          description: template.description,
+          subject: template.subject,
+          body: template.body,
+          trigger: template.trigger,
+          updated_on: todayIsoDate(),
+        };
+        void remoteWrite("Saving the template", () =>
+          isUuid(template.id)
+            ? supabaseBrowser().from("message_templates").update(row).eq("id", template.id)
+            : // A stock template, edited: the row replaces it, keyed by its id.
+              supabaseBrowser()
+                .from("message_templates")
+                .upsert({ ...row, baseline_id: template.id }, { onConflict: "association_id,baseline_id" }),
+        );
+        return;
+      }
       sliceStore(communityId, "templates").update((all) =>
         all.some((t) => t.id === template.id)
           ? all.map((t) => (t.id === template.id ? template : t))
           : [...all, template],
-      ),
-    [communityId],
+      );
+    },
+    [remote.community, communityId],
   );
 
   /**

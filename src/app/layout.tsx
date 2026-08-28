@@ -4,6 +4,7 @@ import { themeScript } from "@/components/app/theme";
 import { AppStateProvider } from "@/lib/app-state";
 import { ErrorBoundary } from "@/components/app/error-boundary";
 import { ToastProvider } from "@/components/app/toast";
+import { RemoteErrorToasts } from "@/components/app/remote-error-toasts";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -38,7 +39,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <ErrorBoundary label="The app">
           <AppStateProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              <RemoteErrorToasts />
+              {children}
+            </ToastProvider>
           </AppStateProvider>
         </ErrorBoundary>
       </body>

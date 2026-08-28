@@ -171,62 +171,86 @@ Still open in this area:
 
 ---
 
-## A real association does not save most of what the board does
+## A real association saves what the board does — DONE 2026-08-28
 
-Found 2026-08-28, when Monish reported that "some of the pages in admin
-don't work, like documents". Every admin page renders for a real
-association, and almost nothing done on one is kept. The state layer in
-`src/lib/app-state.tsx` writes each action to a browser-local slice, and a
-real association (`remote.community`) reads only Postgres, so the write
-lands nowhere the screen looks. The demo is unaffected, which is why it was
-not noticed: every e2e test runs against the demo.
+Found and fixed the same day. Monish reported that "some of the pages in
+admin don't work, like documents". Every admin page rendered for a real
+association, and almost nothing done on one was kept: the state layer in
+`src/lib/app-state.tsx` wrote each action to a browser-local slice, and a
+real association (`remote.community`) read only Postgres. The demo hid it,
+because every e2e test runs on the demo.
 
-**Documents are done, 2026-08-28**, and are the template for the rest:
+**What is in place now.** Every mutation in `app-state.tsx` branches on
+`remote.community`: the demo path is unchanged, the real path writes through
+`remoteWrite()` in `src/lib/data/remote-store.ts` and then re-reads the
+association. A failed background write reaches the person as a toast through
+`RemoteErrorToasts`, mounted in the root layout. Ids for new rows are chosen
+in the browser (`src/lib/core/ids.ts`) so a screen can name what it just
+created; the database takes them as given.
 
-- Storage bucket `documents`, private, files under `<association id>/<document
-  id>.<ext>` (migrations 0016 and 0017). The storage policy reads the row, so
-  a resident can only open what is published to owners; the board reaches its
-  own folder outright, so removal works in either order.
-- `uploadDocuments`, `setDocumentVisibility` and `removeDocument` in
-  `app-state.tsx` branch on `remote.community`: demo path unchanged, real path
-  writes and then `refreshRemote()`. `src/lib/documents.ts` holds what both
-  paths share, including the `members` (app) to `owners` (database)
-  translation, which was previously not translated at all.
-- Rows carry a signed link (`DocumentRecord.url`, four hours) made in one
-  batch in `loadCommunity`, so a document is a plain link on the board page
-  and the resident page. The demo's fixture documents have no file and no
-  link.
-- Checked by `tests/unit/documents.test.ts`, eight new checks in
-  `scripts/verify-community-life.mjs`, and `tests/e2e/10-documents.spec.ts`
-  for the demo path. The real path was driven through the screens by hand
-  against Willow Creek: upload, open, publish, reload, remove.
+Migrations 0016 to 0019 carry it: the `documents` bucket (0016, 0017), ten
+tables and the columns that were missing (0018: `payment_instruments`,
+`payouts`, `violation_reports`, `violations`, `threads`, `governing_articles`,
+`budget_lines`, `reserve_components`, `message_templates`, `forms`,
+`post_likes`; `associations.settings`; request threads and decisions; post
+moderation fields; ballot and meeting fields), and shared cost kind (0019).
+Three functions: `add_household`, `remove_household` (refused for a home with
+a statement, and for the President), `like_post` (once per person).
 
-**Still browser-only for a real association**, grouped by screen. Each one
-needs the same treatment: a table or column if there is none, a policy, a
-branch in the mutation, a `verify-*.mjs` check.
+Checked by `scripts/verify-board-actions.mjs` (59 checks, in `db:verify`),
+`verify-community-life.mjs` (22), unit tests, the demo e2e suite, and a drive
+through the real screens as the Willow Creek board: vendor, budget line,
+reserve component, ballot and a vote with a database receipt, household added
+and removed, amenity, a setting, a forum post, a request from the resident
+side. Test rows were removed afterwards.
 
-| Screen | Actions that do not persist |
-| --- | --- |
-| Money | `confirmLedgerEntry`, `dismissLedgerEntry`, `addPayout`, `approvePayout`, `addBudgetLine` |
-| Homeowners | `addInstrument`, `removeInstrument`, `setDefaultInstrument`, `setCapability` |
-| Requests | `addRequest`, `updateRequestStatus` (the `requests` table exists and is read) |
-| Voting | `addBallot`, `addMeeting`, `castVote` (an RPC `cast_vote` exists and is verified; the app does not call it) |
-| Communications | `replyToThread`, announcements |
-| Forum | `togglePinned`, `removePost`, `likePost` (posts and moderation have tables and policies) |
-| Vendors | `markW9Requested`, adding a vendor |
-| Documents | `addGoverningArticles` (the imported text of a declaration; "not stored server side yet" per `remote.ts`) |
-| Reserves | `addReserveComponent` |
-| Shared costs | `addSharedCost`, `removeSharedCost`, `postSharedCostBill` |
-| Settings | `updateAssociation` beyond the photo and insurance fields |
+**Still browser-only for a real association**, because no screen writes them
+yet or the table is not there: amenity bookings, announcements, replies on
+forum posts, a resident replying on a request thread, governing amendments,
+special assessments (the `levy_special_assessment` function exists and is
+verified; no screen calls it). Each is the same recipe as above.
 
-Suggested order: requests and voting first, because their tables, policies
-and RPCs already exist and are verified, so the work is the branch in the
-mutation. Then money, which is the product's promise. Then the rest.
+**Two things seen on the way, not fixed:**
 
-One more thing seen on the way: every real-association page logs React
-error #418 (a hydration mismatch) on load. Cosmetic in the console, the page
-works. Likely the remote store's server snapshot (signed out) disagreeing
-with a client that already has a session. Not chased.
+- Every non-fixture dashboard (`/admin` for a real association, and for a
+  community made in the browser through Quick Setup) logs React error #418, a
+  hydration mismatch, on a full load. Cosmetic in the console, the page
+  works, the dev server does not reproduce it, so it is specific to the
+  prerendered HTML. Not chased.
+- The e2e onboarding specs were failing before this work: the previous
+  session's last commit reworded the wizard ("lots" became "homes", "Buyer
+  for" became "Owner of", an established association's phases became
+  groups) and left the specs behind. Fixed in the specs.
+
+**A community made through Quick Setup without signing in lives only in
+that browser.** That is what Monish's "fads" is: it is not in the database.
+Every page of it works as the demo does, and nothing done in it is anywhere
+else. Signing in first, or creating an account inside Quick Setup, is what
+makes an association real. Worth making unmissable in the wizard.
+
+## Asked for on 2026-08-28, queued in this order
+
+1. **Setup to-do flow.** A compact status banner on the dashboard while
+   setup is unfinished, linking to `/admin/setup` as its own landing page:
+   each step either done in place or a link to the screen, which brings the
+   board back to the list when done. Leavable to the dashboard at any time;
+   the banner goes when the list is empty. The pieces exist (the plan page,
+   `SetupReturnBar`); the shape is what changes.
+2. **Onboarding verbiage and the three origins.** Monish's read: a builder
+   creating the association and an owner taking over from the builder are
+   the same association at two moments, so the handover should be an action
+   in the product, not a separate front door. `transfer_presidency` and
+   `transfer_home` already exist. Collapse the wizard to two situations and
+   put the handover where the roster is.
+3. **Home transfer on the Homeowners page.** A "Transfer this home" action
+   that seats the buyer and ends the seller's seat, showing any balance and
+   asking how it was settled at closing. Show "Opening balances" only when
+   the association said it is an established one; for a new build every home
+   starts at zero and the screen is noise.
+4. **Money, simplified.** One bank account, not several. Dues land in it,
+   vendor payments and ACH leave it, and the ledger shows both. Bank
+   connection should look like a real Plaid or Stripe link. Remove the
+   thirty year reserve projection for now; trends undecided.
 
 ## The landing page — DONE, on placeholder art
 

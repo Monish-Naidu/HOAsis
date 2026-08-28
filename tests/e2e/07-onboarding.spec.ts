@@ -74,11 +74,12 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   // Step 3, the homes in the plat.
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
-  await page.getByLabel("Your lot").fill("1");
+  await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
   if (a.builder) await page.getByLabel("Builder name").fill(a.builder);
   if (a.lots) {
-    await page.getByLabel("Phase 1 first lot").fill(String(a.lots.from));
-    await page.getByLabel("Phase 1 last lot").fill(String(a.lots.to));
+    // A builder's homes come in phases; an established association's in groups.
+    await page.getByLabel(/^(Phase|Group) 1 first lot$/).fill(String(a.lots.from));
+    await page.getByLabel(/^(Phase|Group) 1 last lot$/).fill(String(a.lots.to));
     await page.waitForTimeout(300);
   }
   await page.getByRole("button", { name: /^Continue/ }).click();
@@ -148,7 +149,7 @@ test.describe("the three questions", () => {
     }
     // The two that are easiest to confuse are separated explicitly.
     expect(health.text, "no help telling the last two apart").toContain(
-      "If the builder still owns lots here",
+      "If the builder still owns homes here",
     );
 
     // Picking one says what it will actually do, so the choice is made on
@@ -585,7 +586,7 @@ test.describe("get started and signing up are the same flow", () => {
     await page.waitForTimeout(300);
     await page.getByLabel("Your name").fill("Pat Founder");
     await page.getByLabel("Your email").fill("pat@example.com");
-    await page.getByLabel("Your lot").fill("1");
+    await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
     await page.getByRole("button", { name: /^Continue/ }).click();
     await page.waitForTimeout(300);
     await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
