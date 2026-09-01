@@ -19,7 +19,11 @@ promoting it from the product's name to the community's role in the story.
 
 The bird carries this. A hummingbird is small, fast, and precise, and it
 hovers exactly as long as the task takes: the right mascot for a volunteer
-board that has forty minutes on a Tuesday.
+board that has forty minutes on a Tuesday. The mark is the low-poly render
+Monish brought, replicated in SVG (`src/components/app/logo.tsx`): a fan of
+three gradient wing blades, a faceted body, a needle beak, twin tail
+streamers. Its blues are fixed artwork, not theme tokens, stepped to hold on
+white, the light hero, and navy alike.
 
 ## Voice rules
 
