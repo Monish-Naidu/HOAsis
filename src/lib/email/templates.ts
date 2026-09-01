@@ -158,7 +158,7 @@ export function pastDueEmail(input: DuesEmailInput) {
  * than leaving somebody to conclude we ignored one.
  */
 function footerFor(input: DuesEmailInput): string {
-  const sender = `Sent by ${input.associationName} through HOAsis.`;
+  const sender = `Sent by ${input.associationName} through ExpressHOA.`;
   if (!input.unsubscribeUrl) {
     return `${sender} This is a notice about your account, so it is sent to every owner and cannot be turned off. You can still turn off community updates and newsletters in your account settings.`;
   }

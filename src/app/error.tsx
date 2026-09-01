@@ -15,7 +15,7 @@ export default function RouteError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(`[hoasis] route error${error.digest ? ` ${error.digest}` : ""}: ${error.message}`);
+    console.error(`[expresshoa] route error${error.digest ? ` ${error.digest}` : ""}: ${error.message}`);
   }, [error]);
 
   return (

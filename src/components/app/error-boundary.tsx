@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo): void {
     this.props.onError?.(error, info);
     const detail = isHoasisError(error) ? error.describe() : error.message;
-    console.error(`[hoasis] ${this.props.label ?? "render"} failed: ${detail}`);
+    console.error(`[expresshoa] ${this.props.label ?? "render"} failed: ${detail}`);
   }
 
   private readonly reset = () => this.setState({ error: null });

@@ -68,7 +68,7 @@ export const communityAmenities: CommunityAmenity[] = [
 ];
 
 /**
- * Architectural request forms. HOAsis ships a baseline set so a new board is
+ * Architectural request forms. ExpressHOA ships a baseline set so a new board is
  * not staring at an empty dropdown; the admin can upload and label their own.
  */
 export const architecturalForms: ArchitecturalForm[] = [

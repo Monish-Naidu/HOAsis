@@ -64,7 +64,7 @@ export function MarketingHeader() {
       <div className="mx-auto flex h-[68px] w-full max-w-6xl items-center justify-between gap-4 px-5">
         <Link
           href="/"
-          aria-label="HOAsis home"
+          aria-label="ExpressHOA home"
           className="transition-transform duration-200 ease-out hover:scale-[1.02] active:scale-[0.99]"
         >
           <Wordmark size={40} />
@@ -96,13 +96,13 @@ export function MarketingHeader() {
             href="/signin"
             className="hidden h-9 items-center rounded-lg px-3 text-[15px] font-medium text-fg-muted hover:text-fg sm:inline-flex"
           >
-            Sign in
+            Log in
           </Link>
           <Link
             href="/start"
             className="inline-flex h-9 items-center rounded-lg bg-royal px-4 text-[15px] font-semibold text-royal-fg transition-colors hover:bg-royal-hover"
           >
-            Quick Setup
+            Get started
           </Link>
           <button
             type="button"
@@ -141,12 +141,12 @@ export function MarketingFooter() {
         <div>
           <Wordmark size={34} />
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-fg-muted">
-            Your community. Your oasis. The all-in-one platform that brings clarity,
-            connection, and calm to HOA management.
+            Moving your community forward. Everything your community needs to get
+            things done quickly, all in one place.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
-          {[...LINKS, { href: "/signin", label: "Sign in" }].map((link) => (
+          {[...LINKS, { href: "/signin", label: "Log in" }].map((link) => (
             <Link
               key={link.href}
               href={link.href}

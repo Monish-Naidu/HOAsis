@@ -88,7 +88,7 @@ export default function AboutPage() {
               community have none of that and exactly the same liability.
             </p>
             <p>
-              HOAsis assumes the other thing. It assumes you are careful, busy, unpaid, and
+              ExpressHOA assumes the other thing. It assumes you are careful, busy, unpaid, and
               slightly afraid of getting something wrong. So it shows its work, refuses to guess
               on your behalf, and names the deadline before it passes.
             </p>

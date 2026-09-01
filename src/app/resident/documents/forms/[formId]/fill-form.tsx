@@ -144,7 +144,7 @@ export function FillForm({ formId }: { formId: string }) {
         {
           id: `rt-${seq}-2`,
           at: todayIsoDate(),
-          actor: "HOAsis",
+          actor: "ExpressHOA",
           actorRole: "system",
           body: dueDate
             ? `The committee has until ${formatDate(dueDate, "medium")} to decide.`

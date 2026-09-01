@@ -61,7 +61,7 @@ export function TemplateComposer({
         days_past_due: String(recipients[0].daysPastDue),
         association: settings.displayName,
         dues: money(association.duesCents),
-        portal_link: `${settings.displayName.toLowerCase().replace(/\s+/g, "")}.hoasis.app/pay`,
+        portal_link: `${settings.displayName.toLowerCase().replace(/\s+/g, "")}.expresshoa.app/pay`,
       }
     : null;
 

@@ -43,7 +43,7 @@ if (!accessToken || !projectRef) {
  * account. Every other recipient is accepted and dropped, which looks exactly
  * like success. A verified domain in EMAIL_FROM is what lifts that.
  */
-const from = env.EMAIL_FROM ?? "HOAsis <onboarding@resend.dev>";
+const from = env.EMAIL_FROM ?? "ExpressHOA <onboarding@resend.dev>";
 const fromAddress = from.match(/<([^>]+)>/)?.[1] ?? from;
 const usingSharedSender = fromAddress.endsWith("@resend.dev");
 
@@ -80,7 +80,7 @@ if (probe.ok) {
       // Resend's sink address. Accepted and discarded, so this costs nothing
       // and reaches nobody.
       to: "delivered@resend.dev",
-      subject: "HOAsis SMTP check",
+      subject: "ExpressHOA SMTP check",
       text: "Capability probe from scripts/setup-resend.mjs.",
     }),
   });
@@ -117,7 +117,7 @@ const response = await fetch(
       smtp_user: "resend",
       smtp_pass: key,
       smtp_admin_email: fromAddress,
-      smtp_sender_name: from.replace(/\s*<[^>]+>/, "").trim() || "HOAsis",
+      smtp_sender_name: from.replace(/\s*<[^>]+>/, "").trim() || "ExpressHOA",
       // The built in cap was two an hour, which is what made onboarding
       // untestable. Resend's own limits apply beyond this.
       rate_limit_email_sent: 100,

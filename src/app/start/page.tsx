@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/app/theme";
 
 export const metadata = {
   title: "Set up your association",
-  description: "Create an HOAsis association in a few minutes.",
+  description: "Create an ExpressHOA association in a few minutes.",
 };
 
 export default function StartPage() {

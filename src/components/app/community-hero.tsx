@@ -91,7 +91,7 @@ export function CommunityName() {
 }
 
 /**
- * The community's own identity, sitting under the HOAsis bar and above
+ * The community's own identity, sitting under the ExpressHOA bar and above
  * everything else. The photo and the name are admin owned.
  */
 export function CommunityHero({

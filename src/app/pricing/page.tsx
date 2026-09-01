@@ -257,7 +257,7 @@ A 12 home association gets the same product as a 300 home one. Gating features b
                 <thead>
                   <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                     <th className="px-6 py-2.5 font-semibold" />
-                    <th className="px-4 py-2.5 text-right font-semibold">HOAsis</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">ExpressHOA</th>
                     <th className="px-6 py-2.5 text-right font-semibold">Management company</th>
                   </tr>
                 </thead>

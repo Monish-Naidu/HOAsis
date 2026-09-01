@@ -11,11 +11,13 @@ import {
   ChevronRight,
   CircleCheck,
   CircleDollarSign,
+  CircleX,
   ClipboardCheck,
   Clock,
   Contact,
   CreditCard,
   FolderOpen,
+  Headphones,
   MessagesSquare,
   ShieldCheck,
   Sparkles,
@@ -24,6 +26,7 @@ import {
   UsersRound,
   Video,
   Vote,
+  Zap,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Avatar, Card } from "@/components/ui/primitives";
@@ -41,9 +44,9 @@ import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@
 import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 
 export const metadata = {
-  title: "HOAsis. Run your HOA, not another job.",
+  title: "ExpressHOA. Moving your community forward.",
   description:
-    "The all-in-one platform that brings clarity, connection, and calm to HOA management. Set up in minutes, no card to start, and the first 90 days are free.",
+    "Everything your community needs to get things done quickly, all in one place. Set up in minutes, no card to start, and the first 90 days are free.",
 };
 
 /*
@@ -53,13 +56,16 @@ export const metadata = {
  * mapping and the few places this departs from the slides.
  */
 
-/** The strip under the hero. Every item is a promise the product keeps today. */
+/**
+ * The strip under the hero, from the 2026-09-01 brand concept: four promises
+ * with icons. Every item is a promise the product keeps today; the free trial
+ * moved to the pricing line, where the question it answers is asked.
+ */
 const ASSURANCES = [
-  "No card to start",
-  "Set up in minutes",
-  "Cancel whenever",
-  `${TRIAL_DAYS}-day free trial`,
-  "Live support",
+  { icon: Zap, label: "Setup in Minutes" },
+  { icon: CreditCard, label: "No Card to Start" },
+  { icon: CircleX, label: "Cancel Whenever" },
+  { icon: Headphones, label: "Live Support" },
 ];
 
 const BENEFITS = [
@@ -640,15 +646,15 @@ export default function MarketingHome() {
           <div className="lg:pr-8">
             <Reveal>
               <h1 className="text-balance text-[44px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[56px]">
-                Your community.
+                Moving your community
                 <br />
-                Your <span className="text-hero-accent">oasis.</span>
+                <span className="text-hero-accent">forward.</span>
               </h1>
             </Reveal>
             <Reveal delay={90}>
               <p className="mt-6 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                HOAsis is the all-in-one platform that brings clarity, connection, and calm
-                to HOA management.
+                Everything your community needs to get things done quickly, all in one
+                place.
               </p>
             </Reveal>
             <Reveal delay={170}>
@@ -657,14 +663,14 @@ export default function MarketingHome() {
                   href="/start"
                   className="group inline-flex h-12 items-center gap-2 rounded-xl bg-royal px-6 text-[17px] font-semibold text-royal-fg shadow-raised transition-all hover:-translate-y-0.5 hover:bg-royal-hover hover:shadow-float"
                 >
-                  Quick Setup
+                  Get started
                   <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 <Link
                   href="/signin"
                   className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-fg-muted transition-colors hover:text-fg"
                 >
-                  See the live demo
+                  See how it works
                   <ArrowRight className="size-4" />
                 </Link>
               </div>
@@ -695,11 +701,14 @@ export default function MarketingHome() {
       {/* The strip along the bottom of slide one. Fixed navy in both themes,
           like the device bezels: it is a painted band, not a surface. */}
       <div className="bg-navy-900 text-navy-50 dark:bg-navy-800">
-        <ul className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 py-4 text-[14px] font-medium sm:justify-between">
-          {ASSURANCES.map((item) => (
-            <li key={item} className="inline-flex items-center gap-2">
-              <Check className="size-4 text-navy-300" strokeWidth={2.6} />
-              {item}
+        <ul className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-5 py-4 text-[14px] font-medium sm:justify-between">
+          {ASSURANCES.map(({ icon: Icon, label }) => (
+            <li key={label} className="inline-flex items-center gap-2.5">
+              {/* Fixed colors: the strip is a painted navy band in both themes. */}
+              <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-[#7dabf8]">
+                <Icon className="size-4" strokeWidth={2} />
+              </span>
+              {label}
             </li>
           ))}
         </ul>
@@ -716,8 +725,8 @@ export default function MarketingHome() {
                 <span className="text-hero-accent">Not another job.</span>
               </h2>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                HOAsis gives your board the tools to save time, save money, and stay organized,
-                so your community thrives.
+                ExpressHOA gives your board the tools to get the work done in minutes, so
+                the neighborhood stays the calm place you chose.
               </p>
             </Reveal>
             <Reveal delay={90}>
@@ -730,7 +739,7 @@ export default function MarketingHome() {
                 href="#features"
                 className="mt-2 inline-flex items-center gap-2 text-[18px] font-semibold text-accent hover:underline"
               >
-                See how HOAsis works
+                See how ExpressHOA works
                 <ArrowRight className="size-4" />
               </Link>
             </Reveal>
@@ -738,7 +747,7 @@ export default function MarketingHome() {
           <Reveal delay={160}>
             <MonitorFrame
               src="/marketing/product-dashboard.png"
-              alt="The HOAsis board dashboard: money in and out by month, spending by category, cash on hand, and transactions waiting for review"
+              alt="The ExpressHOA board dashboard: money in and out by month, spending by category, cash on hand, and transactions waiting for review"
             />
           </Reveal>
         </div>
@@ -760,7 +769,7 @@ export default function MarketingHome() {
                 Suddenly, it felt like a second job.
               </p>
               <p className="mt-6 text-[19px] font-semibold tracking-[-0.015em] text-fg">
-                HOAsis was built to change that.
+                ExpressHOA was built to change that.
               </p>
             </Reveal>
             <Reveal delay={90}>
@@ -888,8 +897,8 @@ export default function MarketingHome() {
                 <span className="text-hero-accent">In your pocket.</span>
               </h2>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                HOAsis keeps you informed, connected, and in control from any phone. Anytime,
-                anywhere.
+                ExpressHOA keeps you informed, connected, and in control from any phone.
+                Anytime, anywhere.
               </p>
             </Reveal>
             <Reveal delay={90}>
@@ -967,14 +976,14 @@ export default function MarketingHome() {
                 href="/start"
                 className="inline-flex h-12 items-center gap-2 rounded-xl bg-navy-50 px-6 text-[16px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
               >
-                Quick Setup
+                Get started
                 <ArrowRight className="size-4" />
               </Link>
               <Link
                 href="/signin"
                 className="inline-flex h-12 items-center gap-2 rounded-xl border border-navy-50/30 px-6 text-[16px] font-semibold text-navy-50 transition-colors hover:bg-navy-50/10"
               >
-                See the live demo
+                See how it works
               </Link>
             </div>
           </Reveal>

@@ -161,7 +161,7 @@ describe("bank accounts", () => {
 });
 
 describe("processor cost", () => {
-  /** Isolates the processor's share from anything HOAsis adds. */
+  /** Isolates the processor's share from anything ExpressHOA adds. */
   const NO_PLATFORM_FEE = { flatCents: 0, paidBy: "owner" as const, waiveOnAch: false };
 
   it("charges ACH a flat cost with no percentage", () => {

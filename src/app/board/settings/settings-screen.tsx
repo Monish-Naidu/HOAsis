@@ -241,7 +241,7 @@ export function SettingsScreen() {
 
           <SettingRow
             title="Payment fee"
-            description="Flat HOAsis fee per payment, on top of the processor's cost"
+            description="Flat ExpressHOA fee per payment, on top of the processor's cost"
           >
             <select
               value={settings.paymentFeeCents}

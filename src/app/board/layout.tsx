@@ -9,7 +9,7 @@ import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 
-export const metadata = { title: { default: "Board", template: "%s · HOAsis" } };
+export const metadata = { title: { default: "Board", template: "%s · ExpressHOA" } };
 
 export default function BoardLayout({ children }: { children: React.ReactNode }) {
   return (
