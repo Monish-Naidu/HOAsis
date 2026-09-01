@@ -58,6 +58,7 @@ import {
 } from "@/lib/core/guards";
 import type {
   Account,
+  Announcement,
   Capability,
   ForumPost,
   HomeRequest,
@@ -191,6 +192,13 @@ interface AppState {
   isRemote: boolean;
 
   addPost: (post: ForumPost) => void;
+  addAnnouncement: (a: {
+    title: string;
+    body: string;
+    category: Announcement["category"];
+    pinned?: boolean;
+  }) => void;
+  removeAnnouncement: (id: string) => void;
   /** Returns an undo, because publishing broadcasts and rejecting discards. */
   moderatePost: (
     postId: string,
@@ -355,6 +363,9 @@ const MUTABLE_SLICES = [
   // once somebody has been out to look.
   "violations",
   "violationReports",
+  // What the board tells everyone. Was fixture-only, which meant a real
+  // association's residents were reading announcements nobody had written.
+  "announcements",
 ] as const;
 
 type MutableSlice = (typeof MUTABLE_SLICES)[number];
@@ -1670,6 +1681,72 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, remote.profileId, communityId],
   );
 
+  const addAnnouncement = useCallback(
+    (a: { title: string; body: string; category: Announcement["category"]; pinned?: boolean }) => {
+      // Author is the seat that pressed the button, in the form the fixtures
+      // established: "Arya Mehr, Board President".
+      const roleLabel: Record<string, string> = {
+        president: "Board President",
+        "vice-president": "Vice President",
+        treasurer: "Treasurer",
+        secretary: "Secretary",
+      };
+      if (remote.community) {
+        const rc = remote.community;
+        const me = rc.accounts.find((x) => x.id === remote.profileId);
+        const author = me
+          ? `${me.name}${roleLabel[me.role] ? `, ${roleLabel[me.role]}` : ""}`
+          : "The board";
+        void remoteWrite("Posting the announcement", () =>
+          supabaseBrowser().from("announcements").insert({
+            id: newId(),
+            association_id: rc.id,
+            author_name: author,
+            category: a.category,
+            title: a.title,
+            body: a.body,
+            pinned: a.pinned ?? false,
+          }),
+        );
+        return;
+      }
+      const me = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((x) => x.id === sessionStore.getSnapshot().accountId);
+      const author = me
+        ? `${me.name}${roleLabel[me.role] ? `, ${roleLabel[me.role]}` : ""}`
+        : "The board";
+      sliceStore(communityId, "announcements").update((all) => [
+        {
+          id: newId(),
+          title: a.title,
+          body: a.body,
+          category: a.category,
+          pinned: a.pinned,
+          author,
+          postedDate: todayIsoDate(),
+        },
+        ...all,
+      ]);
+    },
+    [remote.community, remote.profileId, communityId],
+  );
+
+  const removeAnnouncement = useCallback(
+    (id: string) => {
+      if (remote.community) {
+        void remoteWrite("Removing the announcement", () =>
+          supabaseBrowser().from("announcements").delete().eq("id", id),
+        );
+        return;
+      }
+      sliceStore(communityId, "announcements").update((all) =>
+        all.filter((a) => a.id !== id),
+      );
+    },
+    [remote.community, communityId],
+  );
+
   const moderatePost = useCallback(
     (postId: string, decision: "published" | "rejected", reason?: string) => {
       if (remote.community) {
@@ -2806,6 +2883,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addBankAccount,
     recordPayment,
     addPost,
+    addAnnouncement,
+    removeAnnouncement,
     moderatePost,
     togglePinned,
     removePost,

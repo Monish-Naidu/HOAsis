@@ -6,10 +6,13 @@ import {
   AtSign,
   Inbox,
   MailCheck,
+  Megaphone,
   Paperclip,
+  Pin,
   Send,
   Users,
 } from "lucide-react";
+import type { Announcement } from "@/lib/types";
 import {
   Avatar,
   Badge,
@@ -28,6 +31,152 @@ import { useToast } from "@/components/app/toast";
 import { formatDate, pluralize } from "@/lib/utils";
 import { communicationsSummary } from "@/lib/metrics";
 import { DuesMailer } from "@/components/app/dues-mailer";
+
+const CATEGORIES: Announcement["category"][] = ["Notice", "Maintenance", "Event", "Governance"];
+
+/**
+ * What every resident's home screen carries under "From the board".
+ *
+ * Announcements used to exist only as demo fixtures. Now the board writes
+ * them here, they persist, and removing one takes it off every resident's
+ * screen the same moment.
+ */
+function AnnouncementsManager() {
+  const { community, addAnnouncement, removeAnnouncement } = useAppState();
+  const { notify } = useToast();
+  const [composing, setComposing] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [category, setCategory] = useState<Announcement["category"]>("Notice");
+  const [pinned, setPinned] = useState(false);
+
+  const announcements = [...community.announcements].sort((a, b) =>
+    a.postedDate < b.postedDate ? 1 : -1,
+  );
+
+  function post() {
+    if (!title.trim() || !body.trim()) {
+      notify("An announcement needs a title and a body", "warn");
+      return;
+    }
+    addAnnouncement({ title: title.trim(), body: body.trim(), category, pinned });
+    setTitle("");
+    setBody("");
+    setPinned(false);
+    setCategory("Notice");
+    setComposing(false);
+    notify("Posted. Every resident's home screen carries it now.");
+  }
+
+  return (
+    <Card className="mt-5">
+      <CardHeader
+        title="Announcements"
+        subtitle={'What residents see under "From the board" on their home screen.'}
+        icon={<Megaphone className="size-4" />}
+        action={
+          composing ? undefined : (
+            <Button variant="primary" size="sm" onClick={() => setComposing(true)}>
+              New announcement
+            </Button>
+          )
+        }
+      />
+
+      {composing ? (
+        <div className="space-y-3 border-b border-border bg-surface-2 px-5 py-4">
+          <div className="flex flex-wrap gap-3">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title"
+              aria-label="Announcement title"
+              className="h-9 min-w-52 flex-1 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg placeholder:text-fg-subtle"
+            />
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as Announcement["category"])}
+              aria-label="Category"
+              className="h-9 rounded-lg border border-border-2 bg-surface px-2 text-[15px] text-fg"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="What should every household know?"
+            aria-label="Announcement body"
+            rows={3}
+            className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg placeholder:text-fg-subtle"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-[13px] font-medium text-fg-muted">
+              <input
+                type="checkbox"
+                checked={pinned}
+                onChange={(e) => setPinned(e.target.checked)}
+                className="size-4 accent-current"
+              />
+              Pin to the top of the home screen
+            </label>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setComposing(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" onClick={post}>
+                Post announcement
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {announcements.length === 0 && !composing ? (
+        <p className="px-5 py-6 text-center text-[15px] text-fg-muted">
+          Nothing posted yet. The first announcement most boards write is how dues are billed.
+        </p>
+      ) : null}
+      {announcements.map((a) => (
+        <div
+          key={a.id}
+          className="flex items-start gap-3 border-b border-border px-5 py-3 last:border-b-0"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[15px] font-medium text-fg">{a.title}</p>
+              {a.pinned ? (
+                <Badge tone="brand">
+                  <Pin className="size-2.5" />
+                  Pinned
+                </Badge>
+              ) : null}
+              <Badge tone="neutral">{a.category}</Badge>
+            </div>
+            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-fg-muted">{a.body}</p>
+            <p className="mt-1 text-[13px] text-fg-subtle">
+              {a.author} · {formatDate(a.postedDate)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              removeAnnouncement(a.id);
+              notify("Announcement removed", "warn");
+            }}
+            className="shrink-0 rounded-md px-2 py-1 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-danger"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </Card>
+  );
+}
 
 export default function BoardCommunications() {
   const { community, threads, replyToThread } = useAppState();
@@ -91,6 +240,8 @@ export default function BoardCommunications() {
       </div>
 
       <DuesMailer />
+
+      <AnnouncementsManager />
 
       {!active ? (
         <Card className="mt-5">

@@ -146,7 +146,7 @@ export default function BoardDashboard() {
 
           <StatTiles />
 
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <RecentActivity />
             <CommunityUpdates />
             <Announcements />
@@ -227,7 +227,7 @@ function StatTiles() {
   const approvalsCents = approvals.reduce((t, p) => t + p.amountCents, 0);
 
   return (
-    <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <StatTile
         icon={Landmark}
         tone="bg-info-soft text-info"

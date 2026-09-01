@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -73,6 +73,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "amenities_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          association_id: string
+          author_name: string
+          body: string
+          category: string
+          created_at: string
+          id: string
+          pinned: boolean
+          posted_on: string
+          title: string
+        }
+        Insert: {
+          association_id: string
+          author_name: string
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          posted_on?: string
+          title: string
+        }
+        Update: {
+          association_id?: string
+          author_name?: string
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          posted_on?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_association_id_fkey"
             columns: ["association_id"]
             isOneToOne: false
             referencedRelation: "associations"
@@ -1617,9 +1661,11 @@ export type Database = {
           association_id: string
           created_at: string
           id: string
+          kind: string
           markup_percent: number
           name: string
           provider: string
+          usage_unit: string
         }
         Insert: {
           account_ref?: string
@@ -1628,9 +1674,11 @@ export type Database = {
           association_id: string
           created_at?: string
           id?: string
+          kind?: string
           markup_percent?: number
           name: string
           provider?: string
+          usage_unit?: string
         }
         Update: {
           account_ref?: string
@@ -1639,9 +1687,11 @@ export type Database = {
           association_id?: string
           created_at?: string
           id?: string
+          kind?: string
           markup_percent?: number
           name?: string
           provider?: string
+          usage_unit?: string
         }
         Relationships: [
           {
@@ -2387,7 +2437,13 @@ export type Database = {
         | "bedrooms"
         | "occupants"
         | "submeter"
-      association_origin: "new" | "self-managed" | "leaving-manager"
+      association_origin:
+        | "new"
+        | "self-managed"
+        | "leaving-manager"
+        | "builder"
+        | "handover"
+        | "existing"
       ballot_status: "scheduled" | "open" | "closed" | "certified"
       board_role:
         | "resident"
@@ -2578,7 +2634,14 @@ export const Constants = {
         "occupants",
         "submeter",
       ],
-      association_origin: ["new", "self-managed", "leaving-manager"],
+      association_origin: [
+        "new",
+        "self-managed",
+        "leaving-manager",
+        "builder",
+        "handover",
+        "existing",
+      ],
       ballot_status: ["scheduled", "open", "closed", "certified"],
       board_role: [
         "resident",

@@ -35,6 +35,7 @@ const TABLES = [
   "requests",
   "documents",
   "posts",
+  "announcements",
   "vendors",
   "amenities",
   "email_log",

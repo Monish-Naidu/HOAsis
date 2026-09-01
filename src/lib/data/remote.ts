@@ -84,7 +84,7 @@ export async function loadCommunity(
   const [
     association, units, memberships, charges, banks, ledger, balances,
     requests, documents, meetings, ballots, ballotOptions, tallies, myVotes,
-    posts, vendors, amenities,
+    posts, vendors, amenities, announcementRows,
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
   ] = await Promise.all([
@@ -105,6 +105,7 @@ export async function loadCommunity(
     supabase.from("posts").select("*").eq("association_id", associationId).order("created_at", { ascending: false }),
     supabase.from("vendors").select("*").eq("association_id", associationId),
     supabase.from("amenities").select("*").eq("association_id", associationId),
+    supabase.from("announcements").select("*").eq("association_id", associationId).order("posted_on", { ascending: false }),
     // Each of these is scoped by row level security as well as by the filter:
     // a resident's instruments are their own, a report is its reporter's, and
     // the board's tables come back empty for anyone else.
@@ -454,7 +455,15 @@ export async function loadCommunity(
       tag: t.tag,
       messages: (t.messages ?? []) as Community["threads"][number]["messages"],
     })),
-    announcements: [],
+    announcements: (announcementRows.data ?? []).map((a) => ({
+      id: a.id,
+      title: a.title,
+      body: a.body,
+      postedDate: a.posted_on,
+      author: a.author_name,
+      pinned: a.pinned || undefined,
+      category: a.category as Community["announcements"][number]["category"],
+    })),
 
     vendors: (vendors.data ?? []).map((v) => ({
       id: v.id,

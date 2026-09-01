@@ -379,7 +379,6 @@ function QuickActions() {
  * announcement. Every row is read from the record it reports on.
  */
 function RecentActivity() {
-  const { community } = useAppState();
   const charges = useOwnerCharges();
   const requests = useMyRequests();
 
@@ -422,20 +421,9 @@ function RecentActivity() {
       tone: "bg-brand-soft text-brand-soft-fg",
     });
   }
-  const announcement = [...community.announcements].sort((a, b) =>
-    a.postedDate < b.postedDate ? 1 : -1,
-  )[0];
-  if (announcement) {
-    rows.push({
-      id: `ann-${announcement.id}`,
-      date: announcement.postedDate,
-      title: announcement.title,
-      href: "/resident/notices",
-      icon: Megaphone,
-      tone: "bg-warn-soft text-warn",
-    });
-  }
-
+  // Announcements deliberately stay out of this feed: they live two cards
+  // down under "From the board", and a second copy pointing elsewhere reads
+  // as a different item.
   const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4);
   if (feed.length === 0) return null;
 

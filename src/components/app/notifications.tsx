@@ -150,7 +150,8 @@ function useResidentNotices(): Notice[] {
       id: "announcement",
       title: announcement.title,
       detail: `${announcement.author} · ${relativeDays(announcement.postedDate)}`,
-      href: "/resident/notices",
+      // Announcements live on the home screen under "From the board".
+      href: "/resident",
       icon: Megaphone,
       tone: "bg-brand-soft text-brand-soft-fg",
     });

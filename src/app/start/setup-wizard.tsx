@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Map as MapIcon, Plus, Trash2, Users } from "lucide-react";
 import { Button, Callout, Card } from "@/components/ui/primitives";
@@ -106,6 +106,20 @@ export function SetupWizard() {
   const complete = useMemo(() => stepComplete(draft), [draft]);
 
   /**
+   * Every step change goes through here so the transition is one motion:
+   * the new section rises in (the `key` below remounts it through
+   * `animate-rise`) and the page returns to the top of the wizard, which
+   * matters after the homes step has been scrolled three phases deep.
+   */
+  const top = useRef<HTMLDivElement>(null);
+  const goTo = (next: number) => {
+    setStep(next);
+    requestAnimationFrame(() => {
+      top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  };
+
+  /**
    * A signed in person founds a real association. Anyone else builds one in
    * their own browser, which is what makes the product explorable without an
    * account and keeps evaluation data out of the database.
@@ -154,14 +168,14 @@ export function SetupWizard() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
+    <div ref={top} className="mx-auto w-full max-w-xl scroll-mt-6 px-5 py-10 sm:py-14">
       <ol className="flex items-stretch gap-2" aria-label="Setup progress">
         {STEPS.map((s, index) => (
           <li key={s.id} className="flex-1">
             <button
               type="button"
               disabled={index > step && !complete.slice(0, index).every(Boolean)}
-              onClick={() => setStep(index)}
+              onClick={() => goTo(index)}
               className="flex w-full flex-col gap-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span
@@ -172,10 +186,13 @@ export function SetupWizard() {
               />
               <span
                 className={cn(
-                  "text-[13px] font-medium",
+                  "inline-flex items-center gap-1 text-[13px] font-medium",
                   index === step ? "text-fg" : "text-fg-subtle",
                 )}
               >
+                {index < step && complete[index] ? (
+                  <Check className="size-3 text-ok" strokeWidth={3} />
+                ) : null}
                 {s.label}
               </span>
             </button>
@@ -219,7 +236,12 @@ export function SetupWizard() {
         </Callout>
       ) : null}
 
-      <div className="mt-8">
+      <p className="mt-6 text-[13px] font-semibold text-fg-muted">
+        Step {step + 1} of {STEPS.length} · {STEPS[step].blurb}
+      </p>
+
+      {/* Keyed by step so each section mounts fresh and rises in. */}
+      <div key={step} className="animate-rise mt-4">
         {step === 0 ? <AssociationStep draft={draft} patch={patch} /> : null}
         {step === 1 ? <SituationStep draft={draft} patch={patch} /> : null}
         {step === 2 ? <HomesStep draft={draft} patch={patch} /> : null}
@@ -243,7 +265,7 @@ export function SetupWizard() {
         <Button
           variant="ghost"
           size="md"
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
+          onClick={() => goTo(Math.max(0, step - 1))}
           disabled={step === 0}
         >
           <ArrowLeft className="size-4" />
@@ -269,7 +291,7 @@ export function SetupWizard() {
           <Button
             variant="primary"
             size="md"
-            onClick={() => setStep((s) => s + 1)}
+            onClick={() => goTo(step + 1)}
             disabled={!complete[step]}
           >
             Continue
