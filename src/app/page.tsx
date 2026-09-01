@@ -138,28 +138,48 @@ const GUIDES = [
 /* -------------------------------------------------------------------------- */
 
 /**
- * The monitor photograph around the dashboard screenshot.
- *
- * The device is the rendered artwork from 2026-08-31, which arrives with its
- * own studio backdrop, so the whole panel is presented as a framed still. The
- * screen area was measured off the photograph pixel by pixel; a fresh capture
- * from `scripts/product-shots.mjs` drops onto it unchanged.
+ * The dashboard on a display, the way Apple shows hardware: the device floats
+ * on the page itself with a soft ground shadow, no card and no studio
+ * backdrop. The monitor render from 2026-08-31 carried its own baked-in
+ * background, which read as a white slab on the dark theme, so the display is
+ * drawn here instead: a thin black bezel, an aluminum stand, and the real
+ * capture on the glass. The aluminum is fixed silver in both themes, like
+ * every device bezel in the product.
  */
 function MonitorFrame({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="relative mx-auto w-full max-w-[680px] overflow-hidden rounded-[1.25rem] bg-navy-950 shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
-      <Image
-        src="/marketing/device-monitor.jpg"
-        alt=""
-        width={1536}
-        height={1024}
-        sizes="(max-width: 1024px) 100vw, 680px"
-        className="h-auto w-full"
-      />
-      {/* The screen: left 11.33%, top 5.37%, 77.21% by 60.64% of the photo. */}
-      <div className="absolute left-[11.33%] top-[5.37%] h-[60.64%] w-[77.21%] overflow-hidden rounded-[2px]">
-        <Image src={src} alt={alt} fill sizes="(max-width: 1024px) 78vw, 530px" className="object-cover object-top" />
+    <div className="relative mx-auto w-full max-w-[680px]">
+      <div className="relative rounded-[clamp(12px,2.6vw,18px)] bg-[#0c0e11] p-[clamp(6px,1.4vw,10px)] shadow-[0_30px_70px_-20px_rgb(0_0_0/0.5)] ring-1 ring-black/30 dark:shadow-[0_30px_70px_-20px_rgb(0_0_0/0.85)]">
+        {/* The aluminum edge, caught by the light along the top. */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[clamp(12px,2.6vw,18px)] ring-1 ring-inset ring-white/15"
+          aria-hidden
+        />
+        <div className="overflow-hidden rounded-[clamp(6px,1.2vw,9px)] bg-surface">
+          <Image
+            src={src}
+            alt={alt}
+            width={2360}
+            height={1236}
+            sizes="(max-width: 1024px) 100vw, 660px"
+            className="h-auto w-full"
+          />
+        </div>
       </div>
+      {/* The stand: a flat neck and a plate, edge on. */}
+      <div
+        className="mx-auto h-[clamp(40px,8vw,64px)] w-[clamp(64px,13vw,96px)] bg-gradient-to-b from-[#c9ccd1] via-[#dcdfe3] to-[#aeb3b9]"
+        aria-hidden
+      />
+      <div
+        className="mx-auto h-[9px] w-[clamp(150px,36vw,240px)] rounded-[4px] bg-gradient-to-b from-[#e3e5e8] to-[#9ba0a6]"
+        aria-hidden
+      />
+      {/* The ground it sits on. */}
+      <div
+        className="mx-auto -mt-1.5 h-4 w-[70%] rounded-[100%] bg-black/20 blur-lg dark:bg-black/50"
+        aria-hidden
+      />
     </div>
   );
 }

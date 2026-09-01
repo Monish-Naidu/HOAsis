@@ -67,10 +67,12 @@ the forum rather than a synthesized safety feed.
 
 ## Device screen geometry (measured off the renders)
 
-- `device-monitor.jpg` (1536x1024): screen is the rectangle from (174, 55) to
-  (1359, 675) — as fractions: left 11.33%, top 5.37%, width 77.21%, height
-  60.64%. Aspect 1.91:1, which is why `product-shots.mjs` clips the dashboard
-  capture at 1180x618.
+- The monitor render (1536x1024) had its screen at (174, 55) to (1359, 675),
+  aspect 1.91:1, which is why `product-shots.mjs` clips the dashboard capture
+  at 1180x618. The render itself was retired on 2026-09-01: its baked-in
+  studio backdrop read as a white slab on the dark theme, so the landing page
+  draws an Apple-style display in code and keeps only the capture. The clip
+  aspect stays, because it is a good shape for a display.
 - `device-phone.png` (1086x1448): the screen is a quad, corners TL (296.5,
   125.5), TR (808.6, 41.3), BR (772.6, 1371.6), BL (217.3, 1367.9), found by
   fitting lines to the dark-pixel edges. The landing page maps a flat 430x1030

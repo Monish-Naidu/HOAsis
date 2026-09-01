@@ -9,17 +9,19 @@ import { ThemeToggle } from "@/components/app/theme";
 import { cn } from "@/lib/utils";
 
 /**
- * The nav from the deck of 2026-08-28: Home, Pricing, Resources, About.
+ * The nav from the deck of 2026-08-28: Home, Pricing, Resources.
  *
  * "Resources" is the library. The route keeps its name because links to it
  * exist; the label follows the design, because that is the word a board
  * member scans for.
+ *
+ * About is hidden for now on Monish's ask (2026-09-01). The page still
+ * renders at /about for anyone holding the link; only the ways in are gone.
  */
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/pricing", label: "Pricing" },
   { href: "/library", label: "Resources" },
-  { href: "/about", label: "About" },
 ];
 
 function subscribeToScroll(onChange: () => void) {

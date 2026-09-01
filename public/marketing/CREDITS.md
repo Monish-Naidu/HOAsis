@@ -13,11 +13,13 @@ version carries the light theme, the night version the dark one. They replaced
 
 ## The devices
 
-`device-monitor.jpg` and `device-phone.png` arrived in the same delivery:
-rendered device studies with dark screens, onto which the real product
-screenshots are composited in code (a measured rectangle for the monitor, a
-measured projective transform for the leaning phone; the numbers live in
-`src/app/page.tsx`). The screen content is always a real capture from
+`device-phone.png` is a rendered device study with a dark screen, from the
+same 2026-08-31 delivery as the heroes; the real resident capture is mapped
+onto its leaning glass with a measured projective transform (the numbers live
+in `src/app/page.tsx`). A matching monitor render arrived too, but it carried
+its own studio backdrop, which read as a white slab on the dark theme; the
+desktop display is drawn in code instead, Apple-style, with the capture on
+the glass. The screen content is always a real capture from
 `scripts/product-shots.mjs`, never drawn.
 
 ## Greg
