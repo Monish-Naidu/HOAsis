@@ -2,18 +2,23 @@
 
 ## The hero illustration
 
-`hero-community.jpg` is the one image here that is not a photograph, and it is
-not pretending to be. It is the stylised aerial a friend of Monish's drew for
-the landing page on 2026-08-27, and it reads as a drawing at a glance, which is
-the point: an illustration says "this is how we see it" where a fake photograph
-says "this is a place", and only the second one is a lie.
+`hero-day.jpg` and `hero-night.jpg` are the same lakeside neighborhood rendered
+twice, and they are the one set of images here that is not photography and is
+not pretending to be: an illustration says "this is how we see it" where a fake
+photograph says "this is a place", and only the second one is a lie. Monish
+brought them on 2026-08-31 (generated renders, made for this page); the day
+version carries the light theme, the night version the dark one. They replaced
+`hero-community.jpg`, the upscaled screenshot crop that stood in from
+2026-08-27, and with it the CSS filter that faked a daylight version.
 
-It was cut out of the design screenshot rather than exported, because the
-screenshot is all we were given. `docs/design/landing-page-reference.png` is
-that screenshot; the crop is its right-hand side, upscaled. **Replace it with
-the original render when the artwork arrives**, and a daylight version of the
-same scene alongside it if one is ever made. Until then the light theme lifts
-the night scene with a CSS filter.
+## The devices
+
+`device-monitor.jpg` and `device-phone.png` arrived in the same delivery:
+rendered device studies with dark screens, onto which the real product
+screenshots are composited in code (a measured rectangle for the monitor, a
+measured projective transform for the leaning phone; the numbers live in
+`src/app/page.tsx`). The screen content is always a real capture from
+`scripts/product-shots.mjs`, never drawn.
 
 ## Greg
 

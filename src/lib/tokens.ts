@@ -52,6 +52,9 @@ export const theme = {
     ok: "#2e7d5b",
     warn: "#a8710f",
     danger: "#b3453b",
+    /** Chart series, categorical, in fixed order. Validated 2026-09-01. */
+    chart: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"],
+    chartOther: "#78766f",
   },
   dark: {
     bg: palette.navy[950],
@@ -70,6 +73,9 @@ export const theme = {
     ok: "#5cbd92",
     warn: "#dfa845",
     danger: "#e2837a",
+    /** Same hues re-stepped for the dark surface. */
+    chart: ["#3987e5", "#d95926", "#199e70", "#c98500"],
+    chartOther: "#8d99ab",
   },
 } as const;
 

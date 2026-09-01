@@ -25,9 +25,11 @@ const SHOTS = [
     seat: { accountId: "acct-arya", view: "admin" },
     width: 1180,
     height: 900,
-    // Skip the community banner so the frame is the working area.
+    // Skip the community banner so the frame is the working area. The clip
+    // matches the monitor artwork's screen, which is 1.91:1, so the capture
+    // lands on it without cropping.
     clipFrom: "main",
-    clipHeight: 660,
+    clipHeight: 618,
   },
   {
     file: "product-money.png",
@@ -52,7 +54,9 @@ const SHOTS = [
     path: "/resident",
     seat: { accountId: "acct-monish", view: "resident" },
     width: 430,
-    height: 880,
+    // The phone artwork's screen quad is 430x1030; capturing at that shape
+    // means the projective overlay neither crops nor stretches.
+    height: 1030,
     mode: "app",
   },
 ];
@@ -83,7 +87,8 @@ for (const shot of SHOTS) {
         ]),
       );
       localStorage.setItem("hoasis-community", JSON.stringify("mehr-meadows"));
-      localStorage.setItem("hoasis-theme", JSON.stringify("light"));
+      // Raw, not JSON: the theme script compares the stored string directly.
+      localStorage.setItem("hoasis-theme", "light");
       if (mode) localStorage.setItem("hoasis-resident-mode", JSON.stringify(mode));
     },
     { seat: shot.seat, mode: shot.mode },

@@ -310,15 +310,12 @@ owed and each one is a drop-in:
    every stroke read off a run-length scan in ring units) rather than by eye.
    It overlays the render closely. An actual SVG would still settle the last
    tenth of a unit. The render is at `docs/design/logo-reference.png`.
-2. **The full-resolution hero render.** `public/marketing/hero-community.jpg`
-   is the screenshot's text-free right side, upscaled. It loses the left half
-   of the ring road, which is the part of the composition that reads as a
-   neighbourhood rather than as a lake.
-3. **A daylight version of the same scene**, at
-   `public/marketing/hero-community-day.png`. The light theme currently lifts
-   the night render with `brightness-[1.28] saturate-[.82]`. It reads as an
-   overcast morning, which works, but it is a stand-in for a real day render
-   and swapping it in is a source change, not a layout change.
+2. ~~**The full-resolution hero render.**~~ Landed 2026-09-01: Monish brought a
+   matched pair of lakeside renders. `hero-day.jpg` carries the light theme,
+   `hero-night.jpg` the dark one, and the `brightness/saturate` filter hack is
+   gone. It is a different scene from the ring-road screenshot, on purpose;
+   `hero-community.jpg` was deleted with it.
+3. ~~**A daylight version of the same scene.**~~ Same delivery; see above.
 
 Remember `rm -rf .next/cache/images` when any of them lands.
 

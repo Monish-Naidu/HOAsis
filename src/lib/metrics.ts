@@ -1,4 +1,5 @@
 import type { Community } from "@/lib/data/community";
+import type { LedgerCategory } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { daysFromToday } from "@/lib/utils";
 
@@ -80,6 +81,71 @@ export function reserveSummary(c: Community) {
     urgent: c.reserveComponents
       .filter((x) => x.remainingLifeYears <= 3)
       .sort((a, b) => a.remainingLifeYears - b.remainingLifeYears),
+  };
+}
+
+/**
+ * Money in and money out of the association by month, oldest first.
+ *
+ * Reserve transfers are excluded from both sides: moving cash between the
+ * association's own accounts is neither income nor spending, and counting it
+ * would inflate every month a board does the responsible thing.
+ *
+ * Months run from the first recorded entry to the last, holes filled with
+ * zeroes, capped at the trailing twelve. Figures, not pixels, so the same rows
+ * can back a chart and a CSV.
+ */
+export function monthlyFlows(c: Community) {
+  const byMonth = new Map<string, { inCents: number; outCents: number }>();
+  for (const e of c.ledger) {
+    if (e.category === "Reserve transfer") continue;
+    const key = e.date.slice(0, 7);
+    const row = byMonth.get(key) ?? { inCents: 0, outCents: 0 };
+    if (e.amountCents >= 0) row.inCents += e.amountCents;
+    else row.outCents += -e.amountCents;
+    byMonth.set(key, row);
+  }
+  const keys = [...byMonth.keys()].sort();
+  if (keys.length === 0) return [];
+  const months: { month: string; inCents: number; outCents: number }[] = [];
+  let [y, m] = keys[0].split("-").map(Number);
+  const last = keys[keys.length - 1];
+  for (;;) {
+    const key = `${y}-${String(m).padStart(2, "0")}`;
+    months.push({ month: key, ...(byMonth.get(key) ?? { inCents: 0, outCents: 0 }) });
+    if (key === last) break;
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return months.slice(-12);
+}
+
+/**
+ * Where the association's money actually went, largest first.
+ *
+ * The top four categories keep their own line; everything after folds into
+ * "Other", because a fifth slice is where a donut stops being readable.
+ * Reserve transfers are excluded for the same reason as `monthlyFlows`.
+ */
+export function spendingByCategory(c: Community) {
+  const totals = new Map<LedgerCategory, number>();
+  for (const e of c.ledger) {
+    if (e.amountCents >= 0 || e.category === "Reserve transfer") continue;
+    totals.set(e.category, (totals.get(e.category) ?? 0) - e.amountCents);
+  }
+  const sorted = [...totals.entries()]
+    .map(([category, cents]) => ({ category: category as LedgerCategory | "Other", cents }))
+    .sort((a, b) => b.cents - a.cents);
+  const top = sorted.slice(0, 4);
+  const otherCents = sorted.slice(4).reduce((t, r) => t + r.cents, 0);
+  const rows = otherCents > 0 ? [...top, { category: "Other" as const, cents: otherCents }] : top;
+  const totalCents = rows.reduce((t, r) => t + r.cents, 0);
+  return {
+    rows: rows.map((r) => ({ ...r, share: totalCents ? r.cents / totalCents : 0 })),
+    totalCents,
   };
 }
 

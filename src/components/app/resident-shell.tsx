@@ -131,7 +131,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             />
             <main className="no-scrollbar flex-1 overflow-y-auto pb-6">
               <CommunityHero compact />
-              <div className="px-4 pt-4">{children}</div>
+              <div className="@container px-4 pt-4">{children}</div>
             </main>
             <TabBar pathname={pathname} tabs={tabs} />
           </div>
@@ -154,46 +154,52 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
         <aside className="hidden w-56 shrink-0 lg:block">
           <div className="no-scrollbar sticky top-8 max-h-[calc(100dvh-4rem)] overflow-y-auto">
-            <div className="rounded-card border border-border bg-surface p-4">
-              <p className="text-[15px] font-semibold text-fg">{associationName}</p>
-              <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
-                Unit {unit}
-                <br />
-                {address}
-              </p>
+            {/* The navy rail from the 2026-09-01 dashboard design. A fixed
+                surface in both themes, like the device bezels, so it wears the
+                navy ramp rather than theme tokens. */}
+            <div className="rounded-card bg-navy-950 p-2 shadow-card ring-1 ring-navy-700/40">
+              <div className="px-3 pb-3 pt-2.5">
+                <p className="text-[15px] font-semibold text-white">{associationName}</p>
+                <p className="mt-0.5 text-[13px] leading-snug text-navy-300">
+                  Unit {unit}
+                  <br />
+                  {address}
+                </p>
+              </div>
+              <nav aria-label="Resident sections">
+                <TabPill
+                  activeKey={
+                    tabs.find((t) =>
+                      t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
+                    )?.href ?? ""
+                  }
+                  className="flex flex-col gap-1"
+                  pillClassName="bg-royal"
+                >
+                  {tabs.map(({ href, label, icon: Icon, webLabel }) => {
+                    const active =
+                      href === "/resident" ? pathname === href : pathname.startsWith(href);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        data-tab-key={href}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "relative z-10 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
+                          active
+                            ? "text-white"
+                            : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
+                        )}
+                      >
+                        <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                        {webLabel ?? label}
+                      </Link>
+                    );
+                  })}
+                </TabPill>
+              </nav>
             </div>
-            <nav aria-label="Resident sections" className="mt-4">
-              <TabPill
-                activeKey={
-                  tabs.find((t) =>
-                    t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
-                  )?.href ?? ""
-                }
-                className="flex flex-col gap-1"
-              >
-                {tabs.map(({ href, label, icon: Icon, webLabel }) => {
-                  const active =
-                    href === "/resident" ? pathname === href : pathname.startsWith(href);
-                  return (
-                    <Link
-                      key={href}
-                      href={href}
-                      data-tab-key={href}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "relative z-10 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
-                        active
-                          ? "text-brand-soft-fg"
-                          : "text-fg-muted hover:bg-surface-2 hover:text-fg",
-                      )}
-                    >
-                      <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-                      {webLabel ?? label}
-                    </Link>
-                  );
-                })}
-              </TabPill>
-            </nav>
             <div className="mt-4 rounded-card border border-border bg-surface p-3">
               {/* A support line that does not exist. An owner would have
                   called it. Their board is the right answer to almost every
@@ -211,7 +217,18 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </aside>
-        <main className="min-w-0 flex-1 lg:max-w-2xl">{children}</main>
+        {/* The home screen runs the full width for its dashboard grid; every
+            other screen keeps the phone-width column both modes share. The
+            container query context is what lets the same page collapse to one
+            column inside the phone frame. */}
+        <main
+          className={cn(
+            "min-w-0 flex-1 @container",
+            pathname === "/resident" ? "" : "lg:max-w-2xl",
+          )}
+        >
+          {children}
+        </main>
       </div>
       <div className="lg:hidden">
         <TabBar pathname={pathname} tabs={tabs} pinned />

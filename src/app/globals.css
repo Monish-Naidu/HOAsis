@@ -72,6 +72,16 @@
   --info:      #2c6cd1;
   --info-soft: #e8f0fc;
 
+  /* Chart series. Categorical identity only, assigned in this fixed order and
+     validated for color-vision separation on both surfaces (2026-09-01, the
+     dataviz six-check validator). `chart-other` is the deliberate neutral for
+     an "everything else" slice, never a fifth series. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-other: #78766f;
+
   --shadow-sm: 0 1px 2px rgb(11 21 36 / 0.05);
   --shadow-md: 0 2px 4px -1px rgb(11 21 36 / 0.06), 0 6px 16px -4px rgb(11 21 36 / 0.08);
   --shadow-lg: 0 8px 32px -8px rgb(11 21 36 / 0.16);
@@ -108,6 +118,13 @@
   --danger-soft: #351b19;
   --info:      #6ea0f0;
   --info-soft: #12233d;
+
+  /* Same four hues re-stepped for the dark surface, not a lightness flip. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-other: #8d99ab;
 
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.35), 0 6px 16px -4px rgb(0 0 0 / 0.45);
@@ -155,6 +172,12 @@
   --color-danger-soft: var(--danger-soft);
   --color-info:      var(--info);
   --color-info-soft: var(--info-soft);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-other: var(--chart-other);
 
   --shadow-card: var(--shadow-sm);
   --shadow-raised: var(--shadow-md);

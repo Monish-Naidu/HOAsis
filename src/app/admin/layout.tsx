@@ -38,11 +38,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <CommunityHero withLocation compact />
 
         <div className="mx-auto flex w-full max-w-[1400px] gap-8 px-4 py-6 lg:px-6 lg:py-8">
-          <aside className="hidden w-52 shrink-0 lg:block">
+          <aside className="hidden w-56 shrink-0 lg:block">
             {/* Travels with the reader, and scrolls itself if the viewport is
                 shorter than the nav rather than being cut off. */}
             <div className="no-scrollbar sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto pb-4">
-              <AdminNav />
+              {/* The navy rail from the dashboard design: a fixed surface in
+                  both themes, like the device bezels. */}
+              <div className="rounded-card bg-navy-950 p-2 shadow-card ring-1 ring-navy-700/40">
+                <AdminNav variant="rail" />
+              </div>
               {/* A phone number and "7am to 11pm, every day" sat here. Neither
                   was true, and a support commitment nobody can honour is the
                   worst kind of copy to ship: it is believed. The library is

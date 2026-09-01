@@ -29,7 +29,7 @@ const items = ADMIN_ROUTES;
  * a server component and these numbers change as the board works. A badge that
  * only updates on a full reload is worse than no badge.
  */
-export function AdminNav() {
+export function AdminNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const pathname = usePathname();
   const { can, community, requests } = useAppState();
   const recon = useReconciliation();
@@ -82,12 +82,23 @@ export function AdminNav() {
     href === "/admin" ? pathname === href : pathname.startsWith(href),
   );
 
+  /**
+   * Two dressings for one nav.
+   *
+   * The rail is the navy sidebar from the 2026-09-01 dashboard design: a
+   * deliberately fixed surface, like the device bezels, so its colors are the
+   * navy ramp and a couple of literals rather than theme tokens. The bar is
+   * the horizontal strip under the header on narrow screens, which sits on a
+   * themed surface and keeps the themed styling.
+   */
+  const rail = variant === "rail";
+
   return (
     <nav aria-label="Admin sections">
       <TabPill
         activeKey={activeRoute?.key ?? ""}
         className="flex gap-1 lg:flex-col"
-        pillClassName="bg-brand-soft"
+        pillClassName={rail ? "bg-royal" : "bg-brand-soft"}
       >
       {visible.map(({ href, label, icon: Icon, key }) => {
         const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
@@ -102,9 +113,13 @@ export function AdminNav() {
               // The selected background is the travelling pill behind the row,
               // not a class on the link, so it slides rather than cuts.
               "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
-              active
-                ? "text-brand-soft-fg"
-                : "text-fg-muted hover:bg-surface-2 hover:text-fg",
+              rail
+                ? active
+                  ? "text-white"
+                  : "text-navy-200 hover:bg-navy-800/70 hover:text-white"
+                : active
+                  ? "text-brand-soft-fg"
+                  : "text-fg-muted hover:bg-surface-2 hover:text-fg",
             )}
           >
             <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
@@ -113,9 +128,20 @@ export function AdminNav() {
               <span
                 className={cn(
                   "tnum ml-auto hidden rounded px-1.5 py-0.5 text-[12px] font-bold lg:inline-block",
-                  badge.tone === "danger" && "bg-danger-soft text-danger",
-                  badge.tone === "warn" && "bg-warn-soft text-warn",
-                  badge.tone === "neutral" && "bg-surface-3 text-fg-muted",
+                  rail
+                    ? cn(
+                        "bg-navy-800",
+                        // Fixed accents for the fixed surface. The dark theme's
+                        // warn and danger read on navy; the light theme's sink.
+                        badge.tone === "danger" && "text-[#e2837a]",
+                        badge.tone === "warn" && "text-[#dfa845]",
+                        badge.tone === "neutral" && "text-navy-200",
+                      )
+                    : cn(
+                        badge.tone === "danger" && "bg-danger-soft text-danger",
+                        badge.tone === "warn" && "bg-warn-soft text-warn",
+                        badge.tone === "neutral" && "bg-surface-3 text-fg-muted",
+                      ),
                 )}
               >
                 {badge.count}

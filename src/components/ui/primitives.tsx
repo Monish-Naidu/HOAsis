@@ -227,6 +227,7 @@ export function Stat({
   tone = "neutral",
   icon,
   className,
+  href,
 }: {
   label: string;
   value: ReactNode;
@@ -234,9 +235,21 @@ export function Stat({
   tone?: Tone;
   icon?: ReactNode;
   className?: string;
+  /** Makes the whole tile the way into its detail screen. */
+  href?: string;
 }) {
+  const As = href ? Link : "div";
   return (
-    <div className={cn("rounded-card border border-border bg-surface p-4 shadow-card", className)}>
+    <As
+      // TS wants href present when As is Link and absent when it is a div;
+      // the runtime is fine either way, so one cast keeps the union simple.
+      {...({ href } as { href: string })}
+      className={cn(
+        "block rounded-card border border-border bg-surface p-4 shadow-card",
+        href && "transition-colors hover:bg-surface-2",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <p className="text-[13px] font-semibold text-fg-muted">
           {label}
@@ -257,7 +270,7 @@ export function Stat({
         {value}
       </p>
       {hint ? <p className="mt-1.5 text-[13px] leading-snug text-fg-muted">{hint}</p> : null}
-    </div>
+    </As>
   );
 }
 

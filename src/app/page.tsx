@@ -138,81 +138,65 @@ const GUIDES = [
 /* -------------------------------------------------------------------------- */
 
 /**
- * A desktop around the dashboard screenshot.
+ * The monitor photograph around the dashboard screenshot.
  *
- * The deck shows the product on a monitor. Drawing the device in CSS keeps it
- * crisp at any size, lets the bezel follow the theme, and means a fresh
- * screenshot from `scripts/product-shots.mjs` drops straight in.
+ * The device is the rendered artwork from 2026-08-31, which arrives with its
+ * own studio backdrop, so the whole panel is presented as a framed still. The
+ * screen area was measured off the photograph pixel by pixel; a fresh capture
+ * from `scripts/product-shots.mjs` drops onto it unchanged.
  */
-function MonitorFrame({
-  src,
-  alt,
-  width,
-  height,
-}: {
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-}) {
+function MonitorFrame({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="relative mx-auto w-full max-w-[680px]">
-      <div className="rounded-[1.1rem] bg-navy-950 p-[9px] pb-[18px] shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
-        <div className="overflow-hidden rounded-[0.7rem] bg-surface">
-          <Image
-            src={src}
-            alt={alt}
-            width={width}
-            height={height}
-            sizes="(max-width: 1024px) 100vw, 680px"
-            className="h-auto w-full"
-          />
-        </div>
-      </div>
-      {/* The stand. Two shapes, a neck and a foot, drawn in surface tones so
-          they sit on either theme. */}
-      <div
-        className="mx-auto h-9 w-28 bg-gradient-to-b from-surface-3 to-border-2"
-        style={{ clipPath: "polygon(14% 0, 86% 0, 100% 100%, 0 100%)" }}
-        aria-hidden
+    <div className="relative mx-auto w-full max-w-[680px] overflow-hidden rounded-[1.25rem] bg-navy-950 shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
+      <Image
+        src="/marketing/device-monitor.jpg"
+        alt=""
+        width={1536}
+        height={1024}
+        sizes="(max-width: 1024px) 100vw, 680px"
+        className="h-auto w-full"
       />
-      <div className="mx-auto h-1.5 w-64 rounded-full bg-border-2" aria-hidden />
+      {/* The screen: left 11.33%, top 5.37%, 77.21% by 60.64% of the photo. */}
+      <div className="absolute left-[11.33%] top-[5.37%] h-[60.64%] w-[77.21%] overflow-hidden rounded-[2px]">
+        <Image src={src} alt={alt} fill sizes="(max-width: 1024px) 78vw, 530px" className="object-cover object-top" />
+      </div>
     </div>
   );
 }
 
 /**
- * A phone around the resident screenshot.
+ * The phone photograph around the resident screenshot.
  *
- * The capture is the screen only, with no bezel of its own, so the device is
- * drawn here in CSS. The device is cropped short and faded into the page
- * rather than shown whole: a full phone next to a column of text is taller
- * than everything around it and drags the eye to the bottom of the section.
+ * The device leans, so the flat capture is mapped onto the screen with a
+ * projective transform: the four screen corners were measured off the
+ * photograph, and the matrix maps a 430x1030 rectangle onto that quad at this
+ * exact render width. Change the width and the matrix must be recomputed
+ * (docs/design/dash-2026-09-01 has the measurement notes).
  */
 function PhoneFrame({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="relative mx-auto w-[272px] sm:w-[296px]">
-      <div className="relative h-[460px] overflow-hidden sm:h-[520px]">
-        <div className="rounded-t-[2.75rem] bg-navy-950 px-[10px] pt-[10px] shadow-float ring-1 ring-navy-700/50 dark:ring-navy-600/60">
-          {/* The screenshot is the light theme in both modes, so the strip
-              above it is painted white to match rather than themed. */}
-          <div className="relative overflow-hidden rounded-t-[2.15rem] bg-[#ffffff] pt-8">
-            <span
-              className="absolute left-1/2 top-2.5 h-[22px] w-[86px] -translate-x-1/2 rounded-full bg-navy-950"
-              aria-hidden
-            />
-            <Image
-              src={src}
-              alt={alt}
-              width={764}
-              height={1162}
-              sizes="(max-width: 640px) 272px, 296px"
-              className="h-auto w-full"
-            />
-          </div>
-        </div>
+    // A fixed render width: the matrix is computed for exactly 340px, and a
+    // uniform scale is the only resize that keeps the overlay registered.
+    <div className="relative mx-auto w-[340px] origin-top max-[359px]:scale-[.88]">
+      <Image
+        src="/marketing/device-phone.png"
+        alt=""
+        width={1086}
+        height={1448}
+        sizes="340px"
+        className="h-auto w-full"
+      />
+      <div
+        className="absolute left-0 top-0 h-[1030px] w-[430px] origin-top-left overflow-hidden rounded-[50px]"
+        style={{
+          transform:
+            "matrix3d(0.331930, -0.063114, 0, -0.000153, -0.029395, 0.341345, 0, -0.000080, 0, 0, 1, 0, 93.253766, 40.420067, 0, 1)",
+        }}
+      >
+        <Image src={src} alt={alt} fill sizes="430px" className="object-cover object-top" />
+        {/* A whisper of glass, so the flat capture sits in the photograph. */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-hero-field/80 to-hero-field"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent"
           aria-hidden
         />
       </div>
@@ -610,16 +594,23 @@ export default function MarketingHome() {
           className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] lg:block"
           aria-hidden
         >
+          {/* The same neighborhood rendered twice, 2026-08-31: day for the
+              light theme, night for the dark one. The filter hack that used
+              to fake the day version is gone. */}
           <Image
-            src="/marketing/hero-community.jpg"
+            src="/marketing/hero-day.jpg"
             alt=""
             fill
             priority
             sizes="58vw"
-            // A night render. On the light theme it is lifted and desaturated
-            // rather than dropped on the page as a dark slab. A real day
-            // render replaces the filter, not the layout.
-            className="object-cover object-[left_top] brightness-[1.28] saturate-[.82] dark:brightness-100 dark:saturate-100"
+            className="object-cover object-[left_top] dark:hidden"
+          />
+          <Image
+            src="/marketing/hero-night.jpg"
+            alt=""
+            fill
+            sizes="58vw"
+            className="hidden object-cover object-[left_top] dark:block"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[9%] via-hero-field/45 via-[44%] to-transparent to-[82%]" />
           <div className="absolute inset-0 bg-gradient-to-b from-hero-field/65 via-transparent via-[38%] to-hero-field/55" />
@@ -663,12 +654,19 @@ export default function MarketingHome() {
 
         <div className="relative -mb-px aspect-[16/11] w-full lg:hidden">
           <Image
-            src="/marketing/hero-community.jpg"
-            alt="An aerial illustration of a subdivision at night, homes facing a ring road around a lake with a pavilion on the island in the middle"
+            src="/marketing/hero-day.jpg"
+            alt="An illustrated lakeside neighborhood: white cottages on a green hill, a path winding between them down to the water"
             fill
             priority
             sizes="100vw"
-            className="object-cover brightness-[1.28] saturate-[.82] dark:brightness-100 dark:saturate-100"
+            className="object-cover dark:hidden"
+          />
+          <Image
+            src="/marketing/hero-night.jpg"
+            alt=""
+            fill
+            sizes="100vw"
+            className="hidden object-cover dark:block"
           />
           <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-hero-field to-transparent" />
         </div>
@@ -720,9 +718,7 @@ export default function MarketingHome() {
           <Reveal delay={160}>
             <MonitorFrame
               src="/marketing/product-dashboard.png"
-              alt="The HOAsis board dashboard: operating cash, reserves, past due balances, and transactions waiting for review"
-              width={2360}
-              height={1320}
+              alt="The HOAsis board dashboard: money in and out by month, spending by category, cash on hand, and transactions waiting for review"
             />
           </Reveal>
         </div>
