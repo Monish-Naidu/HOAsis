@@ -1,68 +1,26 @@
-import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The ExpressHOA hummingbird, replicated from the low-poly render Monish
- * brought on 2026-09-01: a fan of three gradient wing blades, a faceted body
- * leaning from head to tail, a needle beak, and twin tail streamers. A
- * hummingbird is small, fast, and precise, and it hovers exactly as long as
- * the task takes, which is the brand's whole argument
+ * The ExpressHOA hummingbird, traced from the flat mark Monish brought on
+ * 2026-09-01 (superseding the low-poly render from earlier the same day).
+ * A hummingbird is small, fast, and precise, and it hovers exactly as long
+ * as the task takes, which is the brand's whole argument
  * (docs/design/brand-expresshoa.md).
  *
- * The blues are fixed rather than tokens: this is artwork, like the device
- * bezels, and the ramp was chosen to hold on white, the light hero, and navy
- * alike. Gradient ids come from `useId`, because the mark renders more than
- * once per page (header and footer) and duplicated SVG defs ids are how one
- * copy quietly borrows the other's colors.
+ * The mark is one path filled with currentColor and defaults to `text-brand`,
+ * so it wears palette navy-800 on light surfaces and navy-100 on dark ones.
+ * On a deliberately fixed navy surface pass `className="text-white"`.
+ * Standalone SVG copies for use outside the app live in `public/brand/`.
  */
 export function Logo({ className, size = 28 }: { className?: string; size?: number }) {
-  const uid = useId();
-  const id = (name: string) => `${name}${uid}`;
-  const url = (name: string) => `url(#${id(name)})`;
   return (
     <svg
-      viewBox="0 0 100 100"
-      className={cn("inline-block shrink-0", className)}
+      viewBox="154 104 1044 1044"
+      className={cn("inline-block shrink-0 text-brand", className)}
       style={{ width: size, height: size }}
       aria-hidden
     >
-      <defs>
-        <linearGradient id={id("w1")} x1="0" y1="0" x2="0.4" y2="1">
-          <stop offset="0" stopColor="#e8f1ff" />
-          <stop offset="1" stopColor="#7fb0f7" />
-        </linearGradient>
-        <linearGradient id={id("w2")} x1="0" y1="0" x2="0.3" y2="1">
-          <stop offset="0" stopColor="#b9d4fe" />
-          <stop offset="1" stopColor="#5c96f2" />
-        </linearGradient>
-        <linearGradient id={id("w3")} x1="0" y1="0" x2="0.2" y2="1">
-          <stop offset="0" stopColor="#7fb0f7" />
-          <stop offset="1" stopColor="#2f6fe0" />
-        </linearGradient>
-        <linearGradient id={id("bd")} x1="0.2" y1="0" x2="0.9" y2="1">
-          <stop offset="0" stopColor="#5c96f2" />
-          <stop offset="1" stopColor="#2257c9" />
-        </linearGradient>
-        <linearGradient id={id("tl")} x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#4b8bf5" />
-          <stop offset="1" stopColor="#1e49a8" />
-        </linearGradient>
-      </defs>
-      {/* The wing fan, back blade to front. */}
-      <polygon points="48,42 6,16 20,3" fill={url("w1")} />
-      <polygon points="51,42 26,2 42,9" fill={url("w2")} />
-      <polygon points="58,46 47,7 63,17" fill={url("w3")} />
-      {/* Tail streamers. */}
-      <polygon points="40,62 12,78 3,91 30,72" fill={url("tl")} />
-      <polygon points="38,66 13,96 30,75" fill="#2f6fe0" />
-      <polygon points="43,64 30,84 43,71" fill="#1e49a8" />
-      {/* Body, then head over the wing roots. */}
-      <polygon points="48,38 64,36 60,52 42,52" fill={url("bd")} />
-      <polygon points="42,52 60,52 48,68 36,62" fill="#2257c9" />
-      <polygon points="56,24 66,28 64,37 52,34" fill="#4b8bf5" />
-      <polygon points="52,34 64,37 60,45 48,42" fill="#3567d8" />
-      {/* The needle. */}
-      <polygon points="64,30 98,26 65,34" fill="#1b3e8c" />
+      <path fill="currentColor" d="M 193 151.879 C 193 155.072, 208.371 190.713, 219.576 213.500 C 258.523 292.708, 299.348 341.398, 351.687 371.062 C 375.111 384.338, 415.153 402.898, 452.696 417.881 C 529.068 448.361, 585.878 478.548, 666.698 531.594 C 686.443 544.554, 695 549.664, 695 548.495 C 695 545, 675.183 511.932, 664.140 497 C 597.141 406.405, 487.049 311.336, 377 249.043 C 367.925 243.906, 357.575 238.026, 354 235.976 C 344.795 230.697, 317.215 216.201, 276 194.977 C 242.378 177.663, 206.588 158.714, 197.250 153.282 C 194.912 151.922, 193 151.291, 193 151.879 M 266.685 361.750 C 270.740 373.148, 289.271 408.089, 301.246 426.917 C 337.867 484.496, 375.780 518.753, 424.542 538.322 C 470.834 556.900, 527.277 569.340, 613.997 580.076 C 662.583 586.091, 702.609 592.234, 720.250 596.385 C 723.413 597.129, 726 597.357, 726 596.892 C 726 595.753, 711.033 583.095, 697.500 572.787 C 650.629 537.086, 587.753 498.683, 528.500 469.564 C 495.153 453.176, 483.102 448.055, 389.500 410.493 C 330.224 386.705, 286.443 368.771, 272.626 362.617 C 265.653 359.511, 265.902 359.547, 266.685 361.750 M 837.500 382.142 C 788.637 388.349, 756.156 423.694, 717.702 512.500 C 714.130 520.750, 709.135 531.919, 706.603 537.321 C 704.072 542.722, 702 547.334, 702 547.571 C 702 548.708, 712.365 547.752, 719.500 545.956 C 731.555 542.922, 743.092 538.458, 757.445 531.276 C 770.026 524.980, 777.804 520.329, 817.500 495.370 C 866.183 464.760, 900.311 450.526, 943 443.028 C 946.575 442.400, 954.450 440.358, 960.500 438.490 C 995.178 427.785, 1030.702 420.641, 1114.500 407.521 C 1152.195 401.619, 1161 399.986, 1161 398.896 C 1161 396.315, 1100.434 399.532, 1045.500 405.032 C 1035.050 406.078, 1017.500 407.844, 1006.500 408.957 C 965.016 413.153, 944.575 413.308, 931.354 409.529 C 928.134 408.609, 918.483 404.057, 909.906 399.415 C 881.314 383.939, 861.176 379.135, 837.500 382.142 M 928 451.054 C 887.579 469.196, 838.070 498.628, 807.115 522.920 C 784.259 540.855, 752.239 570.482, 742.181 583 C 740.192 585.475, 735.827 590.650, 732.480 594.500 C 718.751 610.292, 702.386 632.544, 690.927 651 C 677.777 672.180, 674.421 678.096, 666.045 694.855 C 641.074 744.823, 625.870 792.107, 617.445 846 L 616.741 850.500 627.141 840.500 C 649.024 819.458, 662.880 809.876, 717.500 778.010 C 752.770 757.434, 767.441 746.701, 787.116 727.081 C 819.736 694.552, 838.256 658.288, 849.970 604 C 861.565 550.263, 865.218 537.404, 874.027 519.294 C 882.400 502.083, 897.412 481.905, 909.880 471.104 C 919.095 463.120, 935.844 450.216, 940.079 447.836 C 942.235 446.623, 944 445.265, 944 444.816 C 944 443.770, 945.743 443.090, 928 451.054 M 670.907 647.873 C 646.683 661.199, 619.726 683.164, 589.294 714.372 C 572.305 731.794, 543.723 763.029, 530.155 779 C 505.687 807.801, 491.805 824.654, 472.083 849.500 C 414.802 921.664, 382.118 957.784, 330.750 1005.693 C 325.387 1010.694, 321 1015.005, 321 1015.273 C 321 1017.319, 371.897 993.228, 394.695 980.391 C 476.222 934.486, 539.117 877.691, 586.711 807 C 605.794 778.657, 614.891 762.698, 645.999 703 C 656.234 683.360, 666.295 665.386, 677.208 647.250 C 679.600 643.274, 679.193 643.315, 670.907 647.873 M 595.758 823.750 C 565.615 865.497, 531.609 900.842, 483.433 940.500 C 462.252 957.936, 461.122 959.358, 437.733 998 C 424.398 1020.031, 402.300 1054.877, 388.301 1075.946 C 379.368 1089.391, 372.172 1100.506, 372.312 1100.645 C 372.776 1101.109, 405.348 1081.502, 416.500 1074.045 C 518.428 1005.890, 580.390 930.805, 598.499 853.500 C 601.469 840.822, 605.688 812, 604.574 812 C 604.391 812, 600.424 817.288, 595.758 823.750" />
     </svg>
   );
 }

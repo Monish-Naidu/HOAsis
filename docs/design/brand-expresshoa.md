@@ -19,11 +19,13 @@ promoting it from the product's name to the community's role in the story.
 
 The bird carries this. A hummingbird is small, fast, and precise, and it
 hovers exactly as long as the task takes: the right mascot for a volunteer
-board that has forty minutes on a Tuesday. The mark is the low-poly render
-Monish brought, replicated in SVG (`src/components/app/logo.tsx`): a fan of
-three gradient wing blades, a faceted body, a needle beak, twin tail
-streamers. Its blues are fixed artwork, not theme tokens, stepped to hold on
-white, the light hero, and navy alike.
+board that has forty minutes on a Tuesday. The mark is the flat silhouette
+Monish brought on 2026-09-01 (superseding the low-poly render from earlier
+that day), traced to a single SVG path in `src/components/app/logo.tsx`.
+In the app it fills with currentColor and defaults to the `brand` token:
+palette navy-800 (#1b2b45) on light surfaces, navy-100 on dark. Standalone
+copies for use anywhere else live at `public/brand/expresshoa-mark-navy.svg`
+and `public/brand/expresshoa-mark-white.svg`.
 
 ## Voice rules
 
