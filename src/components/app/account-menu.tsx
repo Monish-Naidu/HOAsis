@@ -17,9 +17,9 @@ export function ViewSwitcher({ className }: { className?: string }) {
   const router = useRouter();
   if (!account || account.role === "resident") return null;
 
-  const go = (next: "resident" | "admin") => {
+  const go = (next: "resident" | "board") => {
     setView(next);
-    router.push(next === "admin" ? "/admin" : "/resident");
+    router.push(next === "board" ? "/board" : "/resident");
   };
 
   return (
@@ -34,7 +34,7 @@ export function ViewSwitcher({ className }: { className?: string }) {
       {(
         [
           { v: "resident" as const, label: "Resident", Icon: User },
-          { v: "admin" as const, label: "Admin", Icon: Building2 },
+          { v: "board" as const, label: "Board", Icon: Building2 },
         ]
       ).map(({ v, label, Icon }) => (
         <button

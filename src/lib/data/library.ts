@@ -574,7 +574,7 @@ Order the reserve study in month one, because it sets next year's assessment and
         fetched: "2026-08-26",
       },
       {
-        url: "https://law.lis.virginia.gov/admincode/title18/agency48/chapter60/section15/",
+        url: "https://law.lis.virginia.gov/boardcode/title18/agency48/chapter60/section15/",
         note: "18VAC48-60-15 timeframes for registration and annual report",
         fetched: "2026-08-26",
       },
@@ -5099,12 +5099,12 @@ A lawyer should review your collection policy and your complaint procedure once,
         fetched: "2026-08-26",
       },
       {
-        url: "https://law.lis.virginia.gov/admincodefull/title18/agency48/chapter60/",
+        url: "https://law.lis.virginia.gov/boardcodefull/title18/agency48/chapter60/",
         note: "Common Interest Community Association Registration Regulations, 18VAC48-60, registration timing, expiration, fees, complaint procedure certification",
         fetched: "2026-08-26",
       },
       {
-        url: "https://law.lis.virginia.gov/admincodefull/title18/agency48/chapter70/",
+        url: "https://law.lis.virginia.gov/boardcodefull/title18/agency48/chapter70/",
         note: "Common Interest Community Ombudsman Regulations, 18VAC48-70, required contents of the association complaint procedure and the final adverse decision process",
         fetched: "2026-08-26",
       },
@@ -5275,12 +5275,12 @@ If your governing documents or your resale packet template were last updated bef
         fetched: "2026-08-26",
       },
       {
-        url: "https://law.lis.virginia.gov/admincodefull/title18/agency48/chapter60/",
+        url: "https://law.lis.virginia.gov/boardcodefull/title18/agency48/chapter60/",
         note: "18VAC48-60 with the December 31, 2025 amendment dates and new 18VAC48-60-16",
         fetched: "2026-08-26",
       },
       {
-        url: "https://law.lis.virginia.gov/admincodefull/title18/agency48/chapter70/",
+        url: "https://law.lis.virginia.gov/boardcodefull/title18/agency48/chapter70/",
         note: "18VAC48-70 with the August 1, 2025 amendment dates",
         fetched: "2026-08-26",
       },

@@ -9,11 +9,11 @@ import { SEATS, expectHealthy, inspect, seedSession } from "./helpers";
  */
 test.describe("recording a sale", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
   test("the buyer takes the home and the statement shows the closing", async ({ page }) => {
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     await expectHealthy(page, "homeowners");
 
     // Somebody who owes something and is not on the board.
@@ -37,7 +37,7 @@ test.describe("recording a sale", () => {
     page,
   }) => {
     // The shipped demo predates the question and keeps the button.
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     await expect(page.getByRole("link", { name: "Opening balances" })).toBeVisible();
   });
 });

@@ -6,6 +6,47 @@ render, and a leaning phone render. The designs are the reference for the board
 dashboard (`/admin`) and the resident home (`/resident`); the renders went to
 `public/marketing/` as the landing hero and the device frames.
 
+## Second pass, same day
+
+Monish asked for the renders followed almost exactly, deviating only where a
+card had nothing real behind it or the copy was jargon. That pass:
+
+- Sidebar takes the design's names and order: Finances, Violations (its own
+  page now, out of Requests), Vendors, Requests, Reserve Study (its own line
+  again), Compliance, Community (the forum), Meetings (its own page, out of
+  Voting), Voting, Documents, Settings. Homeowners and Communications are not
+  in the render but are real work, so they keep rows.
+- Dashboard: title card ("Board Dashboard" + the holder's role), Monthly
+  Financial Overview across the full calendar year with a working year
+  filter, Spending by Category with the legend at the right and a "View full
+  financial report" link, the five tiles with icon-left layout and blue
+  action links, then the render's five bottom cards: Recent Activity,
+  Community Updates (the forum), Announcements, Upcoming Meetings & Events,
+  Quick Actions (Create Vote, Join Meeting, Review Requests, Send
+  Announcement, Review Invoices, Message Owners).
+- Reconciliation left the dashboard entirely, and the Finances page now says
+  "Match transactions" / "Matched through" instead of "Reconcile" — the
+  concept stays, the accounting word goes.
+- A notifications bell with a live badge sits top right in both shells; every
+  line in its panel is derived from a record, so the count is never invented.
+- Spending by Category now shows "Reserve contributions" as its own slice
+  (the render's Reserve Contributions), counted from the operating side of
+  the transfer only. The money in/out bars still exclude transfers.
+- Resident: My Home card with the owner's own photo (browser-stored,
+  community photo as the fallback), design-cased quick actions, mixed
+  activity feed, "View all community updates" footer. Sidebar reads
+  Dashboard / Payments / Requests / Documents / Community / Meetings /
+  Voting / Account. The phone preview is labeled "Mobile app" and wears an
+  iOS status bar.
+- The whole /admin tree became /board (redirects kept), and "admin" is now
+  "board" through the code; stored sessions with the old view value still
+  sign in.
+
+Deviations kept, and why: "ARC Requests" stays "Requests" (ours also carries
+maintenance, records and amenity asks, so the render's label would be wrong);
+there is no Reports line (nothing behind it yet); Community Updates carries
+the forum rather than a synthesized safety feed.
+
 ## What the designs changed
 
 - Board dashboard: money in/out bars and a spending donut (selectors

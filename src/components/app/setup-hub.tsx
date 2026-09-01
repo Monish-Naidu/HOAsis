@@ -277,7 +277,7 @@ export function SetupSummary() {
 
   return (
     <Link
-      href="/admin/setup"
+      href="/board/setup"
       className="mb-5 flex items-center gap-4 rounded-card border border-border bg-surface px-5 py-4 transition-colors hover:bg-surface-2"
     >
       <Ring percent={progress.percent} done={progress.done} total={progress.total} />

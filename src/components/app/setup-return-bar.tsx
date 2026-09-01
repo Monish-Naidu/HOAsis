@@ -45,15 +45,15 @@ export function SetupReturnBar() {
     if (!fromSetup || !finishedHere.length) return;
     const label = finishedHere[0]?.label ?? "Done";
     notify(`${label}: done. ${plan.done} of ${plan.total}.`, "ok");
-    router.push("/admin/setup");
+    router.push("/board/setup");
   }, [doneKeys, pathname, tasks, plan.done, plan.total, notify, router]);
 
   if (plan.allDone) return null;
-  if (pathname === "/admin/setup" || pathname === "/admin") return null;
+  if (pathname === "/board/setup" || pathname === "/board") return null;
 
   return (
     <Link
-      href="/admin/setup"
+      href="/board/setup"
       className="mb-5 flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-2.5 transition-colors hover:bg-surface-2"
     >
       <ArrowLeft className="size-4 shrink-0 text-fg-subtle" />

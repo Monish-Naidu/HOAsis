@@ -8,7 +8,9 @@ export default function ResidentCalendar() {
   const { community } = useAppState();
   return (
     <div className="animate-rise">
-      <h1 className="mb-4 text-[24px] font-semibold tracking-[-0.025em] text-fg">Calendar</h1>
+      <h1 className="mb-4 text-[24px] font-semibold tracking-[-0.025em] text-fg">
+        Meetings and events
+      </h1>
       <CalendarView entries={calendarEntries(community)} asOf={community.asOf} />
     </div>
   );

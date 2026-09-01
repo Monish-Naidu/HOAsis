@@ -128,8 +128,8 @@ test.describe("governing documents", () => {
   });
 
   test("a board can draft an amendment and preview it before sending", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/documents/governing");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/documents/governing");
     await expectHealthy(page, "bylaws");
 
     await page.getByRole("button", { name: "Amend", exact: true }).click();
@@ -147,8 +147,8 @@ test.describe("governing documents", () => {
   });
 
   test("changing a rule and changing a covenant are not the same act", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/documents/governing");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/documents/governing");
     await expectHealthy(page, "governing documents");
 
     // Seventy-five percent and a trip to the county recorder.
@@ -176,8 +176,8 @@ test.describe("governing documents", () => {
   test("a starter policy is offered for rules and for neither of the other two", async ({
     page,
   }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/documents/governing");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/documents/governing");
     await expectHealthy(page, "governing documents");
 
     // A board already holds the authority to adopt a rule. It does not hold
@@ -215,8 +215,8 @@ test.describe("governing documents", () => {
   });
 
   test("a board is told which of the eight it cannot answer", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/documents/new-owner");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/documents/new-owner");
     await expectHealthy(page, "new owner disclosure");
 
     const health = await inspect(page);
@@ -231,8 +231,8 @@ test.describe("importing a document", () => {
   test("an article number the document already has is refused, not silently dropped", async ({
     page,
   }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/documents/import");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/documents/import");
     await page.waitForLoadState("networkidle");
 
     // Importing the same file twice, or an amended copy that restates one
@@ -255,8 +255,8 @@ test.describe("importing a document", () => {
   });
 
   test("text becomes articles a board confirms, and gaps stay visible", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/documents/import");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/documents/import");
     await expectHealthy(page, "document import");
 
     await page.getByLabel("The text of the document").fill(
@@ -300,7 +300,7 @@ test.describe("importing a document", () => {
 
     // Only the one read cleanly starts ticked, so a board clicking straight
     // through imports the confident half and looks at the rest.
-    await page.goto("/admin/documents/governing");
+    await page.goto("/board/documents/governing");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Rules and regulations" }).click();
     await page.waitForTimeout(400);
@@ -312,8 +312,8 @@ test.describe("importing a document", () => {
   });
 
   test("nothing writes a plain reading on the board's behalf", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/documents/import");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/documents/import");
     await page.waitForLoadState("networkidle");
 
     await page.getByLabel("The text of the document").fill(
@@ -400,8 +400,8 @@ test.describe("forms", () => {
     expect(reference, "no reference was issued").toBeTruthy();
 
     // The whole point: it is a request the board can act on, not a file.
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/requests");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/requests");
     await page.waitForLoadState("networkidle");
     const board = await inspect(page);
     expect(board.text, "the board never received the signed form").toContain(

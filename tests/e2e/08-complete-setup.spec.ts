@@ -79,7 +79,7 @@ async function found(page: Page, name: string, property: Kind) {
 
 /** Uploads a document with the given name, which several tasks key off. */
 async function uploadDoc(page: Page, fileName: string) {
-  await page.goto("/admin/documents");
+  await page.goto("/board/documents");
   await page.waitForLoadState("networkidle");
   // Two file inputs live on this page. Target the labelled upload rather
   // than whichever one happens to be first in the document.
@@ -103,7 +103,7 @@ async function completeEverything(page: Page, property: Kind) {
   }
 
   // Budget: one expense line.
-  await page.goto("/admin/money");
+  await page.goto("/board/money");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Add a budget line" }).click();
   await page.getByLabel("Annual amount").fill("18000");
@@ -111,7 +111,7 @@ async function completeEverything(page: Page, property: Kind) {
   await page.waitForTimeout(500);
 
   // Reserves: one component.
-  await page.goto("/admin/reserves");
+  await page.goto("/board/reserves");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Add a component" }).click();
   await page.getByLabel("Component name").fill("Clubhouse roof");
@@ -120,7 +120,7 @@ async function completeEverything(page: Page, property: Kind) {
   await page.waitForTimeout(500);
 
   // Settings: insurance, an officer, an amenity, a photograph.
-  await page.goto("/admin/settings");
+  await page.goto("/board/settings");
   await page.waitForLoadState("networkidle");
   await page.getByLabel("Marcus Bell's role").selectOption("treasurer");
   await page.waitForTimeout(400);
@@ -137,14 +137,14 @@ async function completeEverything(page: Page, property: Kind) {
   await page.waitForTimeout(500);
 
   // Insurance last, so nothing else on this page re-renders over it.
-  await page.goto("/admin/settings");
+  await page.goto("/board/settings");
   await page.waitForLoadState("networkidle");
   await page.getByLabel("Insurance carrier").fill("Farmers Insurance");
   await page.getByLabel("Insurance carrier").blur();
   await page.waitForTimeout(600);
 
   // Vendors.
-  await page.goto("/admin/vendors");
+  await page.goto("/board/vendors");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Add vendor" }).click();
   await page.waitForTimeout(300);
@@ -160,7 +160,7 @@ for (const property of ["Detached homes", "Townhomes", "Condominiums"] as const)
     await found(page, `${property.split(" ")[0]} Complete HOA`, property);
     await completeEverything(page, property);
 
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, `${property} plan after finishing`);
 
     // A finished plan drops the ratio entirely and says so, so the completion
@@ -168,7 +168,7 @@ for (const property of ["Detached homes", "Townhomes", "Condominiums"] as const)
     // task is stuck when it is not.
     if (!health.text.includes("Everything is set up")) {
       const open = await page.evaluate(() =>
-        Array.from(document.querySelectorAll("main a[href^='/admin']"))
+        Array.from(document.querySelectorAll("main a[href^='/board']"))
           .map((el) => (el.textContent ?? "").trim().split("\n")[0])
           .filter((t) => t && t !== "Open"),
       );
@@ -187,7 +187,7 @@ test("the return bar carries a board back, and disappears when done", async ({ p
   await found(page, "Return Bar HOA", "Detached homes");
 
   // Mid setup, every workspace screen offers the way back.
-  await page.goto("/admin/documents");
+  await page.goto("/board/documents");
   await page.waitForLoadState("networkidle");
   await expect(
     page.getByRole("link", { name: /Back to setting up/ }),
@@ -196,7 +196,7 @@ test("the return bar carries a board back, and disappears when done", async ({ p
 
   await completeEverything(page, "Detached homes");
 
-  await page.goto("/admin/documents");
+  await page.goto("/board/documents");
   await page.waitForLoadState("networkidle");
   const after = await inspect(page);
   expect(

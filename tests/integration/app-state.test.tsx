@@ -38,7 +38,7 @@ describe("session", () => {
 
     act(() => result.current.state.signIn(ARYA));
     expect(result.current.state.account?.role).toBe("president");
-    expect(result.current.state.view).toBe("admin");
+    expect(result.current.state.view).toBe("board");
 
     act(() => result.current.state.signIn(MONISH));
     expect(result.current.state.view).toBe("resident");
@@ -844,7 +844,7 @@ describe("every admin can use the resident side", () => {
   it.each(ADMINS)("$role can switch to resident without signing out", (admin) => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(admin.id));
-    expect(result.current.state.view).toBe("admin");
+    expect(result.current.state.view).toBe("board");
 
     act(() => result.current.state.setView("resident"));
     expect(result.current.state.view).toBe("resident");
@@ -870,7 +870,7 @@ describe("every admin can use the resident side", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn("acct-dana"));
     act(() => result.current.state.setView("resident"));
-    act(() => result.current.state.setView("admin"));
+    act(() => result.current.state.setView("board"));
     expect(result.current.state.account?.role).toBe("treasurer");
     expect(result.current.state.can("finances")).toBe(true);
   });

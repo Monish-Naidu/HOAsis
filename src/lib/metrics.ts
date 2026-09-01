@@ -84,64 +84,63 @@ export function reserveSummary(c: Community) {
   };
 }
 
+/** The calendar years the ledger touches, newest first, for the chart filter. */
+export function ledgerYears(c: Community): number[] {
+  const years = new Set<number>();
+  for (const e of c.ledger) years.add(Number(e.date.slice(0, 4)));
+  return [...years].sort((a, b) => b - a);
+}
+
 /**
- * Money in and money out of the association by month, oldest first.
+ * Money in and money out of the association, one row per month of the given
+ * calendar year, January through December.
  *
  * Reserve transfers are excluded from both sides: moving cash between the
  * association's own accounts is neither income nor spending, and counting it
  * would inflate every month a board does the responsible thing.
  *
- * Months run from the first recorded entry to the last, holes filled with
- * zeroes, capped at the trailing twelve. Figures, not pixels, so the same rows
- * can back a chart and a CSV.
+ * Figures, not pixels, so the same rows can back a chart and a CSV.
  */
-export function monthlyFlows(c: Community) {
-  const byMonth = new Map<string, { inCents: number; outCents: number }>();
+export function monthlyFlows(c: Community, year: number) {
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    month: `${year}-${String(i + 1).padStart(2, "0")}`,
+    inCents: 0,
+    outCents: 0,
+  }));
   for (const e of c.ledger) {
     if (e.category === "Reserve transfer") continue;
-    const key = e.date.slice(0, 7);
-    const row = byMonth.get(key) ?? { inCents: 0, outCents: 0 };
+    if (Number(e.date.slice(0, 4)) !== year) continue;
+    const row = months[Number(e.date.slice(5, 7)) - 1];
     if (e.amountCents >= 0) row.inCents += e.amountCents;
     else row.outCents += -e.amountCents;
-    byMonth.set(key, row);
   }
-  const keys = [...byMonth.keys()].sort();
-  if (keys.length === 0) return [];
-  const months: { month: string; inCents: number; outCents: number }[] = [];
-  let [y, m] = keys[0].split("-").map(Number);
-  const last = keys[keys.length - 1];
-  for (;;) {
-    const key = `${y}-${String(m).padStart(2, "0")}`;
-    months.push({ month: key, ...(byMonth.get(key) ?? { inCents: 0, outCents: 0 }) });
-    if (key === last) break;
-    m += 1;
-    if (m > 12) {
-      m = 1;
-      y += 1;
-    }
-  }
-  return months.slice(-12);
+  return months;
 }
 
 /**
- * Where the association's money actually went, largest first.
+ * Where the association's money went in the given year, largest first.
  *
- * The top four categories keep their own line; everything after folds into
- * "Other", because a fifth slice is where a donut stops being readable.
- * Reserve transfers are excluded for the same reason as `monthlyFlows`.
+ * The top five categories keep their own line; everything after folds into
+ * "Other", because a sixth slice is where a donut stops being readable.
+ * Money moved into reserves is shown as its own category, "Reserve
+ * contributions", counting only the operating side of the transfer so the
+ * receiving entry cannot double it.
  */
-export function spendingByCategory(c: Community) {
-  const totals = new Map<LedgerCategory, number>();
+export function spendingByCategory(c: Community, year: number) {
+  const totals = new Map<string, number>();
   for (const e of c.ledger) {
-    if (e.amountCents >= 0 || e.category === "Reserve transfer") continue;
-    totals.set(e.category, (totals.get(e.category) ?? 0) - e.amountCents);
+    if (e.amountCents >= 0) continue;
+    if (Number(e.date.slice(0, 4)) !== year) continue;
+    const label: LedgerCategory | "Reserve contributions" =
+      e.category === "Reserve transfer" ? "Reserve contributions" : e.category;
+    totals.set(label, (totals.get(label) ?? 0) - e.amountCents);
   }
   const sorted = [...totals.entries()]
-    .map(([category, cents]) => ({ category: category as LedgerCategory | "Other", cents }))
+    .map(([category, cents]) => ({ category, cents }))
     .sort((a, b) => b.cents - a.cents);
-  const top = sorted.slice(0, 4);
-  const otherCents = sorted.slice(4).reduce((t, r) => t + r.cents, 0);
-  const rows = otherCents > 0 ? [...top, { category: "Other" as const, cents: otherCents }] : top;
+  const top = sorted.slice(0, 5);
+  const otherCents = sorted.slice(5).reduce((t, r) => t + r.cents, 0);
+  const rows = otherCents > 0 ? [...top, { category: "Other", cents: otherCents }] : top;
   const totalCents = rows.reduce((t, r) => t + r.cents, 0);
   return {
     rows: rows.map((r) => ({ ...r, share: totalCents ? r.cents / totalCents : 0 })),

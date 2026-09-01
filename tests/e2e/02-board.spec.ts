@@ -19,30 +19,30 @@ import {
 
 test.describe("board workspace", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
   for (const tab of ADMIN_TABS) {
     test(`${tab} works`, async ({ page }) => {
-      await page.goto("/admin");
-      await openTab(page, "/admin", tab);
+      await page.goto("/board");
+      await openTab(page, "/board", tab);
       const health = await expectHealthy(page, `admin ${tab}`);
       expect(health.headingCount, `${tab} rendered nothing`).toBeGreaterThan(0);
     });
   }
 
   test("every tab is reachable from every other tab", async ({ page }) => {
-    await page.goto("/admin");
+    await page.goto("/board");
     // Walking the whole nav in one session catches state that leaks between
     // screens, which a fresh load per tab would hide.
     for (const tab of ADMIN_TABS) {
-      await openTab(page, "/admin", tab);
+      await openTab(page, "/board", tab);
       await expectHealthy(page, `admin ${tab} (walked)`);
     }
   });
 
   test("the sidebar stays with the reader and never traps the page", async ({ page }) => {
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     await page.waitForLoadState("networkidle");
 
     const rail = page.locator("aside > div").first();
@@ -67,11 +67,11 @@ test.describe("board workspace", () => {
 
 test.describe("board actions", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
   test("confirming a transaction moves it and can be undone", async ({ page }) => {
-    await page.goto("/admin/money");
+    await page.goto("/board/money");
     await page.waitForLoadState("networkidle");
 
     const before = (await inspect(page)).text;
@@ -94,7 +94,7 @@ test.describe("board actions", () => {
   test("adding and removing a household both work, and removal is reversible", async ({
     page,
   }) => {
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "Add household" }).click();
@@ -131,7 +131,7 @@ test.describe("board actions", () => {
   });
 
   test("a rejected forum post can be put back", async ({ page }) => {
-    await page.goto("/admin/forum");
+    await page.goto("/board/forum");
     await page.waitForLoadState("networkidle");
 
     const health = await inspect(page);
@@ -147,7 +147,7 @@ test.describe("board actions", () => {
   });
 
   test("a past due notice fills in the household's real figures", async ({ page }) => {
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "Message past due" }).click();
@@ -165,7 +165,7 @@ test.describe("board actions", () => {
   });
 
   test("exporting the roster produces a real CSV", async ({ page }) => {
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     await page.waitForLoadState("networkidle");
 
     const download = page.waitForEvent("download");
@@ -178,7 +178,7 @@ test.describe("board actions", () => {
   });
 
   test("settings changes reach the resident side", async ({ page }) => {
-    await page.goto("/admin/settings");
+    await page.goto("/board/settings");
     await page.waitForLoadState("networkidle");
 
     const forum = page
@@ -204,11 +204,11 @@ test.describe("board actions", () => {
 
 test.describe("shared costs", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
   test("what the community pays is shown next to who it pays", async ({ page }) => {
-    await page.goto("/admin/shared-costs");
+    await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
     const health = await expectHealthy(page, "shared costs");
 
@@ -219,7 +219,7 @@ test.describe("shared costs", () => {
   });
 
   test("the history opens and reports a real bill", async ({ page }) => {
-    await page.goto("/admin/shared-costs");
+    await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "History" }).first().click();
@@ -246,14 +246,14 @@ test.describe("shared costs", () => {
     // empty tab every day is how a simple product stops feeling simple.
     await seedSession(page, {
       seat: TC1_SEATS.president,
-      view: "admin",
+      view: "board",
       community: "test-community-1",
     });
-    await page.goto("/admin");
+    await page.goto("/board");
     await page.waitForLoadState("networkidle");
 
     const tabs = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('aside a[href^="/admin"]')).map((a) =>
+      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
         (a.textContent ?? "").trim().split("\n")[0],
       ),
     );
@@ -271,10 +271,10 @@ test.describe("turning a layer on", () => {
     // through is the path that matters.
     await seedSession(page, {
       seat: TC1_SEATS.president,
-      view: "admin",
+      view: "board",
       community: "test-community-1",
     });
-    await page.goto("/admin/shared-costs");
+    await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
 
     const before = await inspect(page);
@@ -313,10 +313,10 @@ test.describe("turning a layer on", () => {
   test("removing a shared cost takes its bills with it", async ({ page }) => {
     await seedSession(page, {
       seat: TC1_SEATS.president,
-      view: "admin",
+      view: "board",
       community: "test-community-1",
     });
-    await page.goto("/admin/shared-costs");
+    await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "Add a shared cost" }).click();
@@ -336,38 +336,39 @@ test.describe("turning a layer on", () => {
 
 test.describe("money is one place", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
-  test("reserves and shared costs live behind Money, not in the sidebar", async ({ page }) => {
-    await page.goto("/admin");
+  test("the sidebar carries Finances and Reserve Study, and shared costs stay behind Finances", async ({ page }) => {
+    await page.goto("/board");
     await page.waitForLoadState("networkidle");
 
     const tabs = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('aside a[href^="/admin"]')).map((a) =>
+      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
         (a.textContent ?? "").trim().split("\n")[0],
       ),
     );
-    // Everything on both is money. The distinction was ours, not theirs.
-    expect(tabs.some((t) => t.startsWith("Reserves")), "Reserves is still its own line").toBe(false);
+    // The 2026-09-01 design gives the reserve study its own line again;
+    // shared costs remain a layer inside Finances.
+    expect(tabs.some((t) => t.startsWith("Reserve Study")), "Reserve Study lost its line").toBe(true);
     expect(tabs.some((t) => t.startsWith("Shared costs")), "Shared costs is still its own line").toBe(false);
-    expect(tabs.some((t) => t.startsWith("Money")), "Money vanished entirely").toBe(true);
+    expect(tabs.some((t) => t.startsWith("Finances")), "Finances vanished entirely").toBe(true);
   });
 
   test("the control moves between the three, and names the horizon", async ({ page }) => {
-    await page.goto("/admin/money");
+    await page.goto("/board/money");
     const health = await expectHealthy(page, "money");
     // The reserves live behind the money control, not on a tab of their own.
     expect(health.text, "reserves are not reachable from money").toContain("Reserves");
 
     await page.getByRole("link", { name: "Reserves" }).click();
     await page.waitForTimeout(600);
-    expect(page.url()).toContain("/admin/reserves");
+    expect(page.url()).toContain("/board/reserves");
     await expectHealthy(page, "reserves through the control");
   });
 
   test("Money no longer duplicates the reserve schedule", async ({ page }) => {
-    await page.goto("/admin/money");
+    await page.goto("/board/money");
     const health = await expectHealthy(page, "money without reserve duplication");
     expect(health.text, "the reserve schedule is still duplicated on Money").not.toContain(
       "Reserve schedule",
@@ -377,8 +378,8 @@ test.describe("money is one place", () => {
   test("a resident still cannot reach reserves by typing the URL", async ({ page }) => {
     // Hiding a link is not gating a page. This is the hole that once served ten
     // screens of association money to anybody who guessed the path.
-    await seedSession(page, { seat: SEATS.resident, view: "admin" });
-    await page.goto("/admin/reserves");
+    await seedSession(page, { seat: SEATS.resident, view: "board" });
+    await page.goto("/board/reserves");
     await page.waitForLoadState("networkidle");
     const health = await inspect(page);
     expect(health.crashed).toBe(false);
@@ -388,11 +389,11 @@ test.describe("money is one place", () => {
 
 test.describe("a board can actually run a vote", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
   test("the new ballot button opens a builder, not a toast", async ({ page }) => {
-    await page.goto("/admin/voting");
+    await page.goto("/board/voting");
     await page.waitForLoadState("networkidle");
 
     const before = (await inspect(page)).text;
@@ -422,7 +423,7 @@ test.describe("a board can actually run a vote", () => {
   });
 
   test("a ballot needs at least two choices before it can open", async ({ page }) => {
-    await page.goto("/admin/voting");
+    await page.goto("/board/voting");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "New ballot" }).click();
     await page.waitForTimeout(400);
@@ -439,11 +440,11 @@ test.describe("a board can actually run a vote", () => {
 
 test.describe("vendors", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
   test("every control on the page does something", async ({ page }) => {
-    await page.goto("/admin/vendors");
+    await page.goto("/board/vendors");
     const health = await expectHealthy(page, "vendors");
     // expectHealthy already fails on a button a screen reader cannot name or
     // that does nothing, so this asserts the page is whole.
@@ -452,7 +453,7 @@ test.describe("vendors", () => {
   });
 
   test("a payment already made from the board's own bank can be recorded", async ({ page }) => {
-    await page.goto("/admin/vendors");
+    await page.goto("/board/vendors");
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "Record a payment" }).click();
@@ -474,7 +475,7 @@ test.describe("vendors", () => {
   });
 
   test("routing a payment through us queues it for approval instead", async ({ page }) => {
-    await page.goto("/admin/vendors");
+    await page.goto("/board/vendors");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Record a payment" }).click();
     await page.waitForTimeout(400);

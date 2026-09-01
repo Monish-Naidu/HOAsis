@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADMIN_ROUTES, capabilitiesFor } from "@/lib/admin-routes";
+import { BOARD_ROUTES, capabilitiesFor } from "@/lib/board-routes";
 import { GRANTABLE } from "@/lib/data";
 
 /**
@@ -13,35 +13,35 @@ import { GRANTABLE } from "@/lib/data";
  */
 describe("capabilitiesFor", () => {
   it("gates every admin route except the dashboard", () => {
-    const ungated = ADMIN_ROUTES.filter((r) => !r.need).map((r) => r.href);
+    const ungated = BOARD_ROUTES.filter((r) => !r.need).map((r) => r.href);
     // The dashboard shows nothing a member may not see. Anything else without
     // a capability is reachable by every resident who guesses the path.
-    expect(ungated).toEqual(["/admin"]);
+    expect(ungated).toEqual(["/board"]);
   });
 
   it("gates a nested path the same as its parent", () => {
-    expect(capabilitiesFor("/admin/money")).toEqual(["finances"]);
+    expect(capabilitiesFor("/board/money")).toEqual(["finances"]);
     // A child route inherits, or an unlisted child is a hole.
-    expect(capabilitiesFor("/admin/money/anything")).toEqual(["finances"]);
-    expect(capabilitiesFor("/admin/documents/governing")).toEqual(
-      capabilitiesFor("/admin/documents"),
+    expect(capabilitiesFor("/board/money/anything")).toEqual(["finances"]);
+    expect(capabilitiesFor("/board/documents/governing")).toEqual(
+      capabilitiesFor("/board/documents"),
     );
   });
 
   it("matches the longest route, not the shortest", () => {
-    // "/admin" prefixes every other route, so a shortest match would gate
+    // "/board" prefixes every other route, so a shortest match would gate
     // nothing at all.
-    expect(capabilitiesFor("/admin/settings")).not.toEqual(capabilitiesFor("/admin"));
-    expect(capabilitiesFor("/admin/settings")).toEqual(["settings"]);
+    expect(capabilitiesFor("/board/settings")).not.toEqual(capabilitiesFor("/board"));
+    expect(capabilitiesFor("/board/settings")).toEqual(["settings"]);
   });
 
   it("leaves the dashboard open to any member", () => {
-    expect(capabilitiesFor("/admin")).toBeUndefined();
+    expect(capabilitiesFor("/board")).toBeUndefined();
   });
 
   it("names only capabilities that exist", () => {
     const known = new Set<string>(GRANTABLE);
-    for (const route of ADMIN_ROUTES) {
+    for (const route of BOARD_ROUTES) {
       for (const capability of route.need ?? []) {
         // A typo here silently gates a page to nobody, or to everybody,
         // depending which side reads it.
@@ -51,7 +51,7 @@ describe("capabilitiesFor", () => {
   });
 
   it("keeps hidden routes gated, because hiding a link protects nothing", () => {
-    const hidden = ADMIN_ROUTES.filter((r) => r.hidden);
+    const hidden = BOARD_ROUTES.filter((r) => r.hidden);
     expect(hidden.length, "nothing is hidden, so this proves nothing").toBeGreaterThan(0);
     for (const route of hidden) {
       expect(route.need, `${route.href} is hidden and ungated`).toBeTruthy();
@@ -59,8 +59,8 @@ describe("capabilitiesFor", () => {
   });
 
   it("gives every route a unique href and key", () => {
-    const hrefs = ADMIN_ROUTES.map((r) => r.href);
-    const keys = ADMIN_ROUTES.map((r) => r.key);
+    const hrefs = BOARD_ROUTES.map((r) => r.href);
+    const keys = BOARD_ROUTES.map((r) => r.key);
     expect(new Set(hrefs).size).toBe(hrefs.length);
     expect(new Set(keys).size).toBe(keys.length);
   });

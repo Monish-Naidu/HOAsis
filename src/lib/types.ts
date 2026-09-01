@@ -556,10 +556,10 @@ export interface Meeting {
 /* one capability that cannot be granted away, which is granting capabilities. */
 /* -------------------------------------------------------------------------- */
 
-export type AdminRole = "president" | "vice-president" | "treasurer" | "secretary";
-export type AccountRole = "resident" | AdminRole;
+export type BoardRole = "president" | "vice-president" | "treasurer" | "secretary";
+export type AccountRole = "resident" | BoardRole;
 
-export const ADMIN_ROLES: AdminRole[] = [
+export const ADMIN_ROLES: BoardRole[] = [
   "president",
   "vice-president",
   "treasurer",

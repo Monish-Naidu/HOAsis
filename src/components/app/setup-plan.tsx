@@ -53,7 +53,7 @@ export function SetupPlan() {
           Nothing outstanding. This page is here if you add something later.
         </p>
         <Link
-          href="/admin"
+          href="/board"
           className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg"
         >
           Open the dashboard
@@ -91,7 +91,7 @@ export function SetupPlan() {
               {plan.done} of {plan.total}
             </p>
             <Link
-              href="/admin"
+              href="/board"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg hover:bg-surface-2"
             >
               Back to the dashboard
@@ -240,12 +240,12 @@ function TaskRow({
 /** The screen a task's link opens, named the way the sidebar names it. */
 function screenName(href: string): string {
   const names: Record<string, string> = {
-    "/admin/homeowners": "Homeowners",
-    "/admin/money": "Money",
-    "/admin/documents": "Documents",
-    "/admin/settings": "Settings",
-    "/admin/reserves": "Reserves",
-    "/admin/vendors": "Vendors",
+    "/board/homeowners": "Homeowners",
+    "/board/money": "Money",
+    "/board/documents": "Documents",
+    "/board/settings": "Settings",
+    "/board/reserves": "Reserves",
+    "/board/vendors": "Vendors",
     "/library": "the library",
   };
   return names[href] ?? "the screen";
@@ -542,7 +542,7 @@ export function SetupPlanSummary() {
 
   return (
     <Link
-      href="/admin/setup"
+      href="/board/setup"
       className="mb-5 flex items-center gap-4 rounded-card border border-border bg-surface px-5 py-4 transition-colors hover:bg-surface-2"
     >
       <Ring percent={plan.percent} done={plan.done} total={plan.total} />

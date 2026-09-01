@@ -21,12 +21,12 @@ import { cn } from "@/lib/utils";
  */
 const VIEWS = [
   {
-    href: "/admin/money",
+    href: "/board/money",
     label: "This month",
     detail: "Cash, and anything waiting on you",
   },
   {
-    href: "/admin/reserves",
+    href: "/board/reserves",
     label: "Reserves",
     detail: "What wears out, when, and what is set aside",
   },
@@ -41,7 +41,7 @@ export function MoneyTabs() {
     ...(community.sharedCosts.length > 0 || community.specialAssessments.length > 0
       ? [
           {
-            href: "/admin/shared-costs",
+            href: "/board/shared-costs",
             label: "Shared costs",
             detail: "Bills the association passes on",
           } as const,

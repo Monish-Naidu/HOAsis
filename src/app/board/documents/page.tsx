@@ -164,7 +164,7 @@ export default function BoardDocuments() {
 
       <div className="mb-5 space-y-3">
         <Link
-          href="/admin/documents/governing"
+          href="/board/documents/governing"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
@@ -194,7 +194,7 @@ export default function BoardDocuments() {
             eight things a buyer must be told have no answer on file" is a
             morning's work with a clear finish. */}
         <Link
-          href="/admin/documents/new-owner"
+          href="/board/documents/new-owner"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
@@ -217,7 +217,7 @@ export default function BoardDocuments() {
         </Link>
 
         <Link
-          href="/admin/documents/import"
+          href="/board/documents/import"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">

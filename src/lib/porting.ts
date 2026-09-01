@@ -73,7 +73,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "Not the development company's, and not a project manager's. Two signatures on anything above a threshold, from day one.",
         because:
           "An account in the builder's name is the finding that turns a routine handover into a dispute, and it is far harder to change later.",
-        href: "/admin/money",
+        href: "/board/money",
       },
       {
         key: "unsold",
@@ -82,7 +82,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "Either the builder pays the full assessment on every lot it still owns, or it funds the deficit between what owners pay and what the budget needs.",
         because:
           "This is the single largest source of turnover litigation. Whichever the declaration says, the association's books have to show it happening from the first month.",
-        href: "/admin/money",
+        href: "/board/money",
       },
       {
         key: "documents",
@@ -91,7 +91,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "The declaration you recorded, the bylaws, and the rules. Buyers can then search them in plain words before they close.",
         because:
           "Several states make the association, not the seller, responsible for giving a new member the covenants. Doing it at closing is much easier than doing it in arrears.",
-        href: "/admin/documents/import",
+        href: "/board/documents/import",
       },
       {
         key: "reserves",
@@ -100,7 +100,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "Get a study while the components are new and their replacement dates are known exactly.",
         because:
           "A budget that omits reserves sets a low first-year due, and the board that inherits it has to raise dues in its first month. That is the handover everybody remembers.",
-        href: "/admin/reserves",
+        href: "/board/reserves",
       },
     ],
   },
@@ -125,7 +125,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "Against the study, and against what the declaration says the builder owed. Ask for the deposit history, not the balance.",
         because:
           "A balance tells you where you are. The deposit history tells you whether the builder funded reserves all along or topped it up the week before turnover.",
-        href: "/admin/reserves",
+        href: "/board/reserves",
       },
       {
         key: "unsold-dues",
@@ -134,7 +134,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "Every unsold lot owed an assessment, or the builder owed the deficit. Get the ledger showing which, and that it was paid.",
         because:
           "It is the most commonly skipped obligation in the category, and the amount is usually large enough to matter. It also gets harder to collect the day the builder dissolves the entity.",
-        href: "/admin/money",
+        href: "/board/money",
       },
       {
         key: "warranty",
@@ -151,7 +151,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "The roster with balances, the ledger, contracts, insurance, minutes, the reserve study, and every recorded document.",
         because:
           "Ask while the builder still wants the handover to go smoothly. Afterwards you are a former counterparty rather than a partner.",
-        href: "/admin/documents",
+        href: "/board/documents",
       },
       {
         key: "board",
@@ -160,7 +160,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "New signature cards at the bank the same week, and their access removed the day control passes.",
         because:
           "An account somebody else can still reach is an account you cannot reconcile, and the gap tends to be months rather than days.",
-        href: "/admin/settings",
+        href: "/board/settings",
       },
     ],
   },
@@ -176,7 +176,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "Use the numbers you already give your homes, and add the owners you have. Nothing needs to come out of another system.",
         because:
           "A home that is not on the register has no balance, no vote and no way to sign in, so everything downstream is short by one.",
-        href: "/admin/homeowners",
+        href: "/board/homeowners",
       },
       {
         key: "balances",
@@ -185,7 +185,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "What each household owed on the day you switched, as one figure. Nothing before that date has to come across.",
         because:
           "This is the step that makes a switch work end to end. Importing years of history is where migrations stall, and one opening figure per home is enough to be correct from here.",
-        href: "/admin/homeowners/opening-balances",
+        href: "/board/homeowners/opening-balances",
       },
       {
         key: "documents",
@@ -194,7 +194,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "The recorded declaration, the bylaws, and whatever rules the board has adopted since.",
         because:
           "Owners can then search them in plain words instead of asking a board member, which is where most of the disputes in a self-run association start.",
-        href: "/admin/documents/import",
+        href: "/board/documents/import",
       },
       {
         key: "reserves",
@@ -203,7 +203,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
           "The components, what is left on each, and what it will cost. If the study is more than three years old, that is worth knowing now.",
         because:
           "The budget and the study normally live in separate files, so nobody sees the connection until the year a special assessment lands. Together they name that year in advance.",
-        href: "/admin/reserves",
+        href: "/board/reserves",
       },
       {
         key: "vendors",
@@ -211,7 +211,7 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
         detail: "Landscaper, pool, insurance. Note which ones you still owe a W-9.",
         because:
           "January is when a missing W-9 becomes a problem, and by then they may not answer.",
-        href: "/admin/vendors",
+        href: "/board/vendors",
       },
     ],
   },

@@ -24,25 +24,15 @@ interface ResidentTab {
   visible?: (s: CommunitySettings) => boolean;
 }
 
-/** One nav definition, used by the phone tab bar and the website sidebar. */
+/**
+ * One nav definition, used by the phone tab bar and the website sidebar.
+ * Names and order follow the 2026-09-01 dashboard design: Dashboard,
+ * Payments, Requests, Documents, Community, Meetings, Voting, Account.
+ */
 export const residentTabs: ResidentTab[] = [
-  { href: "/resident", label: "Home", icon: Home },
-  { href: "/resident/pay", label: "Pay", icon: CreditCard, webLabel: "Pay dues" },
-  { href: "/resident/vote", label: "Vote", icon: Vote, webLabel: "Vote and meetings" },
+  { href: "/resident", label: "Dashboard", icon: Home },
+  { href: "/resident/pay", label: "Payments", icon: CreditCard },
   { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus },
-  {
-    href: "/resident/forum",
-    label: "Forum",
-    icon: MessageSquareText,
-    visible: (s) => s.forumEnabled,
-  },
-  { href: "/resident/account", label: "Account", icon: Receipt },
-  {
-    href: "/resident/calendar",
-    label: "Calendar",
-    icon: CalendarDays,
-    webOnly: true,
-  },
   {
     href: "/resident/documents",
     label: "Docs",
@@ -50,6 +40,20 @@ export const residentTabs: ResidentTab[] = [
     webLabel: "Documents",
     webOnly: true,
   },
+  {
+    href: "/resident/forum",
+    label: "Community",
+    icon: MessageSquareText,
+    visible: (s) => s.forumEnabled,
+  },
+  {
+    href: "/resident/calendar",
+    label: "Meetings",
+    icon: CalendarDays,
+    webOnly: true,
+  },
+  { href: "/resident/vote", label: "Vote", icon: Vote, webLabel: "Voting" },
+  { href: "/resident/account", label: "Account", icon: Receipt },
   {
     href: "/resident/finances",
     label: "Funds",

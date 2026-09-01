@@ -1,5 +1,6 @@
 import {
   Banknote,
+  ChartPie,
   Droplets,
   FileText,
   Inbox,
@@ -7,11 +8,12 @@ import {
   ListChecks,
   MessageSquareText,
   MessagesSquare,
-  PiggyBank,
-  Scale as ScaleIcon,
   Settings,
+  ShieldCheck,
+  TriangleAlert,
   Truck,
   Users,
+  Video,
   Vote,
 } from "lucide-react";
 import type { Capability } from "@/lib/types";
@@ -29,8 +31,13 @@ import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
  *
  * Adding a route here is what gates it. A route that is not listed is
  * reachable by any member, which is correct only for the dashboard.
+ *
+ * Order and naming follow the 2026-09-01 dashboard design
+ * (docs/design/dash-2026-09-01): Finances, Violations, Reserve Study,
+ * Community, Meetings each got their own line. Homeowners and Communications
+ * are not in that design but are real work, so they keep their rows.
  */
-export interface AdminRoute {
+export interface BoardRoute {
   href: string;
   label: string;
   icon: typeof Banknote;
@@ -52,21 +59,21 @@ export interface AdminRoute {
   /**
    * Reachable and gated, but not its own line in the sidebar.
    *
-   * Reserves and shared costs are both money, and a volunteer who opens this
-   * once a month does not carry a mental model in which those are separate
-   * places. They sit behind one Money tab now. They keep their routes, because
-   * links and bookmarks point at them, and they keep their entry here, because
-   * this list is what gates them: a route that is not listed is reachable by
-   * any member, which is how ten screens once leaked an association's money.
+   * Shared costs are money, and a volunteer who opens this once a month does
+   * not carry a mental model in which that is a separate place. It sits behind
+   * the Finances tab. It keeps its route, because links and bookmarks point at
+   * it, and it keeps its entry here, because this list is what gates it: a
+   * route that is not listed is reachable by any member, which is how ten
+   * screens once leaked an association's money.
    */
   hidden?: boolean;
 }
 
-export const ADMIN_ROUTES: AdminRoute[] = [
+export const BOARD_ROUTES: BoardRoute[] = [
 
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+  { href: "/board", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
   {
-    href: "/admin/setup",
+    href: "/board/setup",
     label: "Setting up",
     icon: ListChecks,
     key: "setup",
@@ -92,17 +99,9 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     need: ["settings", "finances"],
     present: (c) => !buildPlan(c, profileFromCommunity(c)).allDone,
   },
-  { href: "/admin/money", label: "Money", icon: Banknote, key: "money", need: ["finances"] },
+  { href: "/board/money", label: "Finances", icon: Banknote, key: "money", need: ["finances"] },
   {
-    href: "/admin/reserves",
-    hidden: true,
-    label: "Reserves",
-    icon: PiggyBank,
-    key: "reserves",
-    need: ["finances"],
-  },
-  {
-    href: "/admin/homeowners",
+    href: "/board/homeowners",
     label: "Homeowners",
     icon: Users,
     key: "homeowners",
@@ -111,7 +110,61 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     need: ["finances", "communications"],
   },
   {
-    href: "/admin/shared-costs",
+    href: "/board/violations",
+    label: "Violations",
+    icon: TriangleAlert,
+    key: "violations",
+    // Enforcement rides the same capability as requests: both are the board
+    // answering a household, and splitting the grant would strand one queue.
+    need: ["requests"],
+  },
+  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", need: ["vendors"] },
+  { href: "/board/requests", label: "Requests", icon: Inbox, key: "requests", need: ["requests"] },
+  {
+    href: "/board/reserves",
+    label: "Reserve Study",
+    icon: ChartPie,
+    key: "reserves",
+    need: ["finances"],
+  },
+  {
+    href: "/board/compliance",
+    label: "Compliance",
+    icon: ShieldCheck,
+    key: "compliance",
+    need: ["compliance"],
+  },
+  {
+    href: "/board/communications",
+    label: "Communications",
+    icon: MessagesSquare,
+    key: "communications",
+    need: ["communications"],
+  },
+  {
+    href: "/board/forum",
+    label: "Community",
+    icon: MessageSquareText,
+    key: "forum",
+    need: ["forum"],
+  },
+  {
+    href: "/board/meetings",
+    label: "Meetings",
+    icon: Video,
+    key: "meetings",
+    need: ["voting"],
+  },
+  { href: "/board/voting", label: "Voting", icon: Vote, key: "voting", need: ["voting"] },
+  {
+    href: "/board/documents",
+    label: "Documents",
+    icon: FileText,
+    key: "documents",
+    need: ["documents"],
+  },
+  {
+    href: "/board/shared-costs",
     hidden: true,
     label: "Shared costs",
     icon: Droplets,
@@ -119,42 +172,17 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     need: ["finances"],
     present: (c) => c.sharedCosts.length > 0 || c.specialAssessments.length > 0,
   },
-  { href: "/admin/requests", label: "Requests", icon: Inbox, key: "requests", need: ["requests"] },
-  { href: "/admin/voting", label: "Voting", icon: Vote, key: "voting", need: ["voting"] },
-  {
-    href: "/admin/compliance",
-    label: "Compliance",
-    icon: ScaleIcon,
-    key: "compliance",
-    need: ["compliance"],
-  },
-  {
-    href: "/admin/communications",
-    label: "Communications",
-    icon: MessagesSquare,
-    key: "communications",
-    need: ["communications"],
-  },
-  { href: "/admin/forum", label: "Forum", icon: MessageSquareText, key: "forum", need: ["forum"] },
-  { href: "/admin/vendors", label: "Vendors", icon: Truck, key: "vendors", need: ["vendors"] },
-  {
-    href: "/admin/documents",
-    label: "Documents",
-    icon: FileText,
-    key: "documents",
-    need: ["documents"],
-  },
-  { href: "/admin/settings", label: "Settings", icon: Settings, key: "settings", need: ["settings"] },
+  { href: "/board/settings", label: "Settings", icon: Settings, key: "settings", need: ["settings"] },
 ];
 
 /**
  * What the given path requires, matching the longest route first.
  *
- * Longest first because "/admin" is a prefix of every other route, so a
+ * Longest first because "/board" is a prefix of every other route, so a
  * shortest match would gate nothing.
  */
 export function capabilitiesFor(pathname: string): Capability[] | undefined {
-  const match = [...ADMIN_ROUTES]
+  const match = [...BOARD_ROUTES]
     .sort((a, b) => b.href.length - a.href.length)
     .find((route) => pathname === route.href || pathname.startsWith(`${route.href}/`));
   return match?.need;

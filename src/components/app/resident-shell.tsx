@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Monitor, Smartphone } from "lucide-react";
+import { BatteryFull, Monitor, Signal, Smartphone, Wifi } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
+import { ResidentBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { residentTabs } from "@/components/app/resident-nav";
@@ -46,7 +47,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <Link href="/">
           <Wordmark />
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <div
             className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5"
             role="radiogroup"
@@ -76,10 +77,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <Smartphone className="size-3.5" />
-              App preview
+              Mobile app
             </button>
           </div>
           <ViewSwitcher />
+          <ResidentBell />
           <ThemeToggle />
           <AccountMenu compact />
         </div>
@@ -98,14 +100,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         </p>
       </div>
       <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex size-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2"
-        >
-          <Bell className="size-[18px]" strokeWidth={1.9} />
-          <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-danger" />
-        </button>
+        <ResidentBell compact />
         <Avatar name={ownerName} />
       </div>
     </header>
@@ -123,6 +118,20 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               className="pointer-events-none absolute left-1/2 top-1.5 z-30 hidden h-1 w-16 -translate-x-1/2 rounded-full bg-navy-800 lg:block"
               aria-hidden
             />
+            {/* The status bar, so the preview reads as the app and not as a
+                narrow website. Apple's marketing clock, because every phone
+                render since the first keynote says 9:41. */}
+            <div
+              className="hidden items-center justify-between bg-surface px-7 pb-0.5 pt-2.5 text-[12px] font-semibold text-fg lg:flex"
+              aria-hidden
+            >
+              <span className="tnum">9:41</span>
+              <span className="flex items-center gap-1.5">
+                <Signal className="size-3.5" strokeWidth={2.4} />
+                <Wifi className="size-3.5" strokeWidth={2.4} />
+                <BatteryFull className="size-4" strokeWidth={2} />
+              </span>
+            </div>
             <PhoneHeader
               associationName={associationName}
               ownerName={ownerName}
@@ -260,14 +269,7 @@ function PhoneHeader({
         </p>
       </div>
       <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex size-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2"
-        >
-          <Bell className="size-[18px]" strokeWidth={1.9} />
-          <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-danger" />
-        </button>
+        <ResidentBell compact />
         <Avatar name={ownerName} />
       </div>
     </header>
@@ -301,7 +303,13 @@ function TabBar({
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Resident sections"
     >
-      <ul className="grid grid-cols-6">
+      <ul
+        className="grid"
+        // As many columns as tabs, so a hidden section never leaves a hole.
+        style={{
+          gridTemplateColumns: `repeat(${tabs.filter((t) => !t.webOnly).length}, 1fr)`,
+        }}
+      >
         {tabs
           .filter((t) => !t.webOnly)
           .map(({ href, label, icon: Icon }) => {

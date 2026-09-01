@@ -58,7 +58,7 @@ export function CollectionsLadder() {
         action={
           ladder.dueNow.length ? (
             <Link
-              href="/admin/communications"
+              href="/board/communications"
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
             >
               <Mail className="size-4" />
@@ -115,7 +115,7 @@ export function CollectionsLadder() {
           {policy.minimumPlanMonths} months is offered before anything is recorded.
         </p>
         <Link
-          href="/admin/settings"
+          href="/board/settings"
           className="inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-brand hover:underline"
         >
           Change

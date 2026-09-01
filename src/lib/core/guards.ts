@@ -38,13 +38,17 @@ export function isRecordArray<T extends { id: string }>() {
 
 export interface StoredSession {
   accountId: string | null;
-  view: "resident" | "admin";
+  view: "resident" | "board";
 }
 
 export function isSession(value: unknown): value is StoredSession {
   if (!isRecord(value)) return false;
   const accountOk = value.accountId === null || typeof value.accountId === "string";
-  const viewOk = value.view === "resident" || value.view === "admin";
+  // "admin" is the pre-2026-09-01 name for the board view. Accepting it keeps
+  // every session written before the rename signed in; app-state normalizes
+  // the value where the session is read.
+  const viewOk =
+    value.view === "resident" || value.view === "board" || value.view === "admin";
   return accountOk && viewOk;
 }
 

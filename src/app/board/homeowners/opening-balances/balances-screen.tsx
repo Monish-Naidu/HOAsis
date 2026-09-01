@@ -92,7 +92,7 @@ export function BalancesScreen() {
             description="Add the homes first. A balance needs somewhere to sit."
             action={
               <Link
-                href="/admin/homeowners"
+                href="/board/homeowners"
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90"
               >
                 Go to the roster
@@ -203,7 +203,7 @@ export function BalancesScreen() {
       </p>
 
       <p className="mt-8 text-[13px] text-fg-subtle">
-        <Link href="/admin/homeowners" className="text-brand hover:underline">
+        <Link href="/board/homeowners" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to the roster
         </Link>

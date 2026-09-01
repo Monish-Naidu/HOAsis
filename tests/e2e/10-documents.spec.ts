@@ -10,11 +10,11 @@ import { SEATS, expectHealthy, seedSession } from "./helpers";
  */
 test.describe("documents", () => {
   test.beforeEach(async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
+    await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
   test("an upload is listed, published, removed and brought back", async ({ page }) => {
-    await page.goto("/admin/documents");
+    await page.goto("/board/documents");
     await expectHealthy(page, "documents");
 
     await page.getByLabel("Upload documents").setInputFiles({
@@ -37,7 +37,7 @@ test.describe("documents", () => {
   });
 
   test("a file the browser would not accept is refused with a reason", async ({ page }) => {
-    await page.goto("/admin/documents");
+    await page.goto("/board/documents");
     await page.getByLabel("Upload documents").setInputFiles({
       name: "empty.pdf",
       mimeType: "application/pdf",

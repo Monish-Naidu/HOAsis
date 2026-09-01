@@ -17,8 +17,8 @@ import { SEATS, expectHealthy, inspect, seedSession } from "./helpers";
 
 test.describe("evidence", () => {
   test("the board opens the photographs rather than reading a count", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/requests");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/requests");
     await expectHealthy(page, "violations with evidence");
 
     // "3 photos" told a board how many existed and told the household
@@ -36,8 +36,8 @@ test.describe("evidence", () => {
   test("a photograph taken over a fence is flagged before the notice goes further", async ({
     page,
   }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/requests");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/requests");
     await page.waitForLoadState("networkidle");
 
     // The hearing file carries one. Finding it at the hearing is the failure
@@ -84,8 +84,8 @@ test.describe("reports from residents", () => {
   });
 
   test("the board sees who reported, and the pattern of who reports whom", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/requests");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/requests");
     const health = await expectHealthy(page, "report queue");
 
     expect(health.text, "the queue is missing").toContain("Reported by residents");
@@ -101,8 +101,8 @@ test.describe("reports from residents", () => {
   test("nothing turns a report into a notice without somebody going to look", async ({
     page,
   }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/requests");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/requests");
     await page.waitForLoadState("networkidle");
 
     const health = await inspect(page);
@@ -126,8 +126,8 @@ test.describe("reports from residents", () => {
 
 test.describe("deadlines", () => {
   test("every obligation names its section, or says it does not have one", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/compliance");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/compliance");
     const health = await expectHealthy(page, "compliance register");
 
     // Washington is written, so the rows carry real sections rather than the
@@ -141,8 +141,8 @@ test.describe("deadlines", () => {
 
 test.describe("how a notice reaches people", () => {
   test("says plainly when the letter is the notice", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/communications");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/communications");
     await expectHealthy(page, "communications");
 
     await page
@@ -160,8 +160,8 @@ test.describe("how a notice reaches people", () => {
   });
 
   test("text is off, and says exactly what would switch it on", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/communications");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/communications");
     await page.waitForLoadState("networkidle");
 
     const health = await inspect(page);

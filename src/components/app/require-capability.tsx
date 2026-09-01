@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { Callout } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
-import { capabilitiesFor } from "@/lib/admin-routes";
+import { capabilitiesFor } from "@/lib/board-routes";
 import { CAPABILITY_LABEL } from "@/lib/data";
 
 /**
@@ -13,7 +13,7 @@ import { CAPABILITY_LABEL } from "@/lib/data";
  * Lives in the layout rather than in each screen, because the version where
  * each screen guarded itself is the version we had, and ten of eleven forgot.
  * Hiding a navigation link is not access control: the URL is still typable,
- * and a resident who typed /admin/money was shown the association's books.
+ * and a resident who typed /board/money was shown the association's books.
  *
  * The rule is read from the same route table the navigation uses, so a page
  * cannot be offered under one rule and served under another.

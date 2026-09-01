@@ -45,7 +45,7 @@ export async function seedSession(
   page: Page,
   options: {
     seat?: string;
-    view?: "admin" | "resident";
+    view?: "board" | "resident";
     community?: string;
     residentMode?: "website" | "app";
     theme?: "light" | "dark";
@@ -53,7 +53,7 @@ export async function seedSession(
 ) {
   const {
     seat = SEATS.president,
-    view = "admin",
+    view = "board",
     community = "mehr-meadows",
     residentMode,
     theme = "light",
@@ -198,27 +198,30 @@ export async function expectHealthy(page: Page, label: string) {
  */
 export const ADMIN_TABS = [
   "Dashboard",
-  "Money",
+  "Finances",
   "Homeowners",
+  "Violations",
+  "Vendors",
   "Requests",
-  "Voting",
+  "Reserve Study",
   "Compliance",
   "Communications",
-  "Forum",
-  "Vendors",
+  "Community",
+  "Meetings",
+  "Voting",
   "Documents",
   "Settings",
 ] as const;
 
 export const RESIDENT_TABS = [
-  "Home",
-  "Pay dues",
-  "Vote and meetings",
+  "Dashboard",
+  "Payments",
   "Requests",
-  "Forum",
-  "Account",
-  "Calendar",
   "Documents",
+  "Community",
+  "Meetings",
+  "Voting",
+  "Account",
   "Association funds",
 ] as const;
 

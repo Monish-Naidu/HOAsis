@@ -177,7 +177,7 @@ export default function BoardHomeowners() {
                 the whole reason nothing here imports a ledger. */}
             {showOpeningBalances ? (
               <Link
-                href="/admin/homeowners/opening-balances"
+                href="/board/homeowners/opening-balances"
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-2 bg-surface px-4 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2"
               >
                 <Scale className="size-3.5" />

@@ -111,14 +111,14 @@ export default function BoardMoney() {
               onClick={() => {
                 const open = recon.needsReview.length;
                 if (open === 0) {
-                  notify("Already reconciled. Every report agrees.");
+                  notify("The books are matched. Every report agrees.");
                   return;
                 }
                 setView("Needs review");
                 notify(`${pluralize(open, "transaction")} still ${open === 1 ? "needs" : "need"} a decision`, "warn");
               }}
             >
-              Reconcile
+              Match transactions
             </Button>
           </div>
         }
@@ -230,7 +230,7 @@ export default function BoardMoney() {
               </dd>
             </div>
             <div>
-              <dt className="text-[13px] text-fg-muted">Reconciled through</dt>
+              <dt className="text-[13px] text-fg-muted">Matched through</dt>
               <dd className="tnum mt-0.5 text-[15px] font-medium text-fg">
                 {formatDate(primary.reconciledThroughDate, "long")}
               </dd>

@@ -180,7 +180,7 @@ test.describe("the plan is built from the answers", () => {
       origin: "We are building the community",
     });
 
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a new detached association");
 
     // Still building: whoever cuts the grass is on the construction contract,
@@ -210,7 +210,7 @@ test.describe("the plan is built from the answers", () => {
       collects: ["Utilities we pass on"],
     });
 
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a condo taking over");
 
     expect(health.text, "vendors missing for a board taking over").toContain("vendor");
@@ -231,7 +231,7 @@ test.describe("the plan is built from the answers", () => {
       origin: "We are taking over from the builder",
     });
 
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a California association");
     expect(health.text, "the plan never mentions their state").toContain("California");
   });
@@ -248,7 +248,7 @@ test.describe("getting to money", () => {
       lots: { from: 1, to: 4 },
     });
 
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await inspect(page);
     expect(health.crashed, "the plan crashed").toBe(false);
     // Either they can collect, or the plan says exactly how many things stand
@@ -267,7 +267,7 @@ test.describe("getting to money", () => {
       lots: { from: 1, to: 12 },
     });
 
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     const health = await expectHealthy(page, "roster generated from the plat");
     // An unsold lot is not vacant. Somebody owns it and owes the assessment,
     // and a roster that leaves those out is a budget that is short.
@@ -310,7 +310,7 @@ test.describe("the plan is its own screen", () => {
     await page.getByRole("link", { name: /Go to the dashboard/ }).click();
     await page.waitForTimeout(900);
 
-    expect(page.url(), "the dashboard link did not leave the plan").toContain("/admin");
+    expect(page.url(), "the dashboard link did not leave the plan").toContain("/board");
     const health = await expectHealthy(page, "dashboard after leaving the plan");
     expect(health.text).toContain("Escape Hatch HOA");
   });
@@ -324,7 +324,7 @@ test.describe("the plan is its own screen", () => {
       origin: "We are building the community",
     });
 
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan inside the workspace");
     expect(health.text, "the plan is not available in the workspace").toMatch(
       /Start collecting|You can take payments/,
@@ -343,7 +343,7 @@ test.describe("the dashboard", () => {
       lots: { from: 1, to: 6 },
     });
 
-    await page.goto("/admin");
+    await page.goto("/board");
     const health = await expectHealthy(page, "new association dashboard");
     expect(health.crashed).toBe(false);
     // Naming the association proves we are actually inside it. Asserting only
@@ -484,7 +484,7 @@ test.describe("an association that already runs itself", () => {
       lots: { from: 1, to: 4 },
     });
 
-    await page.goto("/admin/homeowners/opening-balances");
+    await page.goto("/board/homeowners/opening-balances");
     const health = await expectHealthy(page, "opening balances");
     expect(health.text, "the screen does not say what it is for").toContain(
       "day you switched",
@@ -497,7 +497,7 @@ test.describe("an association that already runs itself", () => {
     await page.getByRole("button", { name: /^Set \d+ balances?$/ }).click();
     await page.waitForTimeout(600);
 
-    await page.goto("/admin/homeowners");
+    await page.goto("/board/homeowners");
     const roster = await expectHealthy(page, "roster after opening balances");
     expect(roster.text, "the balance never reached the roster").toContain("1,240.50");
     // A figure typed into a box says what is owed and nothing about how long
@@ -517,7 +517,7 @@ test.describe("what kind of homes changes the plan", () => {
       property: "Condominiums",
       origin: "We are building the community",
     });
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, "condo plan");
 
     // Several states added inspection duties after Surfside.
@@ -537,7 +537,7 @@ test.describe("what kind of homes changes the plan", () => {
       property: "Townhomes",
       origin: "We are building the community",
     });
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, "townhome plan");
 
     expect(health.text).toContain("who fixes what");
@@ -558,7 +558,7 @@ test.describe("what kind of homes changes the plan", () => {
       property: "Detached homes",
       origin: "We are building the community",
     });
-    await page.goto("/admin/setup");
+    await page.goto("/board/setup");
     const health = await expectHealthy(page, "detached plan");
 
     // No shared wall, no shared roof, so the question never arises.

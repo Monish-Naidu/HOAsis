@@ -71,7 +71,7 @@ export function PlanScreen() {
           </p>
         </div>
         <Link
-          href="/admin"
+          href="/board"
           className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
         >
           Go to the dashboard

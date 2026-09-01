@@ -176,7 +176,7 @@ export function AmendScreen() {
             description="The documents are uploaded as files, so owners can download them but cannot search them or see what an amendment would change."
             action={
               <Link
-                href="/admin/documents/import"
+                href="/board/documents/import"
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90"
               >
                 Import the text
@@ -500,7 +500,7 @@ export function AmendScreen() {
       </div>
 
       <p className="mt-6 text-[13px] text-fg-subtle">
-        <Link href="/admin/documents" className="text-brand hover:underline">
+        <Link href="/board/documents" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to documents
         </Link>

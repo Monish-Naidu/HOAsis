@@ -70,7 +70,7 @@ import type {
 import { canRaiseNotice } from "@/lib/violations";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 
-export type View = "resident" | "admin";
+export type View = "resident" | "board";
 
 /**
  * Everything a screen can read or change.
@@ -295,6 +295,27 @@ const communityStore = new PersistedStore<string>(
   "hoasis-community",
   DEFAULT_COMMUNITY_ID,
   { breaker: storageBreaker, validate: (v): v is string => typeof v === "string" },
+);
+
+/**
+ * Photographs owners add of their own homes, keyed by owner id.
+ *
+ * Browser-only on purpose, for now: the photo is a personal touch on the
+ * owner's own dashboard, nothing else reads it, and shipping it without a
+ * migration means the card can fall back to the community photo the moment
+ * the browser forgets. Syncing it to storage is a later, deliberate step.
+ */
+const homePhotoStore = new PersistedStore<Record<string, string>>(
+  "hoasis-home-photos",
+  {},
+  {
+    breaker: storageBreaker,
+    validate: (v): v is Record<string, string> =>
+      typeof v === "object" &&
+      v !== null &&
+      !Array.isArray(v) &&
+      Object.values(v).every((x) => typeof x === "string"),
+  },
 );
 
 /** The slices a board can actually change. Everything else is reference data. */
@@ -525,7 +546,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         .find((a) => a.id === id);
       sessionStore.set({
         accountId: id,
-        view: next && next.role !== "resident" ? "admin" : "resident",
+        view: next && next.role !== "resident" ? "board" : "resident",
       });
     },
     [communityId],
@@ -1618,7 +1639,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // screen reads them.
     for (const slice of MUTABLE_SLICES) sliceStore(built.id, slice).set(built[slice]);
     communityStore.set(built.id);
-    sessionStore.set({ accountId: built.accounts[0].id, view: "admin" });
+    sessionStore.set({ accountId: built.accounts[0].id, view: "board" });
     return built;
   }, []);
 
@@ -2735,7 +2756,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // a screen is in. In demo mode community_ is the local overlay, so this
     // is the same data by a shorter route.
     accounts: community_.accounts,
-    view: session.view,
+    // "admin" is what sessions stored before the 2026-09-01 rename; the guard
+    // lets it through so nobody is signed out, and it reads as board here.
+    view: (session.view as string) === "admin" ? "board" : session.view,
     ready,
     settings: community_.settings,
     amenities: community_.amenities,
@@ -2840,6 +2863,29 @@ export function useOwnerCharges() {
   const { community } = useAppState();
   const owner = useCurrentOwner();
   return owner ? (community.ownerCharges[owner.id] ?? []) : [];
+}
+
+/** The signed-in owner's photo of their home, with a setter. Null clears it. */
+export function useHomePhoto(): {
+  photo: string | null;
+  setPhoto: (dataUrl: string | null) => void;
+} {
+  const owner = useCurrentOwner();
+  const all = useStore(homePhotoStore);
+  const ownerId = owner?.id;
+  const setPhoto = useCallback(
+    (dataUrl: string | null) => {
+      if (!ownerId) return;
+      homePhotoStore.update((current) => {
+        const next = { ...current };
+        if (dataUrl) next[ownerId] = dataUrl;
+        else delete next[ownerId];
+        return next;
+      });
+    },
+    [ownerId],
+  );
+  return { photo: ownerId ? (all[ownerId] ?? null) : null, setPhoto };
 }
 
 export function useMyRequests() {

@@ -111,7 +111,7 @@ export function NewOwnerScreen() {
             description="Nothing here can be answered until the text of your declaration and rules has been imported, because every answer has to name the provision it came from."
             action={
               <Link
-                href="/admin/documents/import"
+                href="/board/documents/import"
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90"
               >
                 Import the text
@@ -150,7 +150,7 @@ export function NewOwnerScreen() {
       )}
 
       <p className="mt-8 text-[13px] text-fg-subtle">
-        <Link href="/admin/documents" className="text-brand hover:underline">
+        <Link href="/board/documents" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to documents
         </Link>

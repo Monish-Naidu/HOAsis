@@ -70,7 +70,7 @@ export const GENERAL_OBLIGATIONS: Obligation[] = [
     cadence: "annual",
     fromDayOne: true,
     article: "first-30-days-self-managed-board",
-    href: "/admin/settings",
+    href: "/board/settings",
   },
   {
     key: "annual-meeting",
@@ -78,7 +78,7 @@ export const GENERAL_OBLIGATIONS: Obligation[] = [
     evidence: "The notice as sent, the date it went out, and the minutes.",
     cadence: "annual",
     article: "running-a-board-meeting",
-    href: "/admin/voting",
+    href: "/board/voting",
   },
   {
     key: "budget-to-owners",
@@ -86,7 +86,7 @@ export const GENERAL_OBLIGATIONS: Obligation[] = [
     evidence: "The adopted budget, the date it was sent, and the list it went to.",
     cadence: "each-budget",
     article: "reading-an-hoa-budget",
-    href: "/admin/money",
+    href: "/board/money",
   },
   {
     key: "insurance",
@@ -94,7 +94,7 @@ export const GENERAL_OBLIGATIONS: Obligation[] = [
     evidence: "Current declarations pages, and the bond over whoever touches the money.",
     cadence: "annual",
     fromDayOne: true,
-    href: "/admin/settings",
+    href: "/board/settings",
   },
   {
     key: "records-response",
@@ -103,7 +103,7 @@ export const GENERAL_OBLIGATIONS: Obligation[] = [
     cadence: "on-request",
     clockDays: 10,
     article: "enforcing-rules-fairly",
-    href: "/admin/documents",
+    href: "/board/documents",
   },
   {
     key: "reserve-study",
@@ -111,7 +111,7 @@ export const GENERAL_OBLIGATIONS: Obligation[] = [
     evidence: "The study, the most recent update, and the funding disclosure in the budget.",
     cadence: "annual",
     article: "reserve-study-basics",
-    href: "/admin/reserves",
+    href: "/board/reserves",
   },
 ];
 
@@ -135,7 +135,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       cadence: "annual",
       fromDayOne: true,
       article: "washington-hoa-law",
-      href: "/admin/settings",
+      href: "/board/settings",
     },
     {
       key: "wa-budget-ratification",
@@ -145,7 +145,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "RCW 64.90.525",
       cadence: "each-budget",
       article: "washington-hoa-law",
-      href: "/admin/money",
+      href: "/board/money",
     },
     {
       key: "wa-reserve-update",
@@ -155,7 +155,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "RCW 64.90.545",
       cadence: "annual",
       article: "washington-hoa-law",
-      href: "/admin/reserves",
+      href: "/board/reserves",
     },
     {
       key: "wa-reserve-disclosure",
@@ -165,7 +165,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "RCW 64.90.525",
       cadence: "each-budget",
       article: "washington-hoa-law",
-      href: "/admin/money",
+      href: "/board/money",
     },
     {
       key: "wa-records-response",
@@ -176,7 +176,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       cadence: "on-request",
       clockDays: 10,
       article: "washington-hoa-law",
-      href: "/admin/documents",
+      href: "/board/documents",
     },
     {
       key: "wa-audit",
@@ -186,7 +186,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "RCW 64.90.530",
       cadence: "annual",
       article: "washington-hoa-law",
-      href: "/admin/money",
+      href: "/board/money",
     },
     {
       key: "wa-annual-meeting",
@@ -196,7 +196,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "RCW 64.90.445",
       cadence: "annual",
       article: "washington-hoa-law",
-      href: "/admin/voting",
+      href: "/board/voting",
     },
   ],
   CO: [
@@ -209,7 +209,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       cadence: "annual",
       fromDayOne: true,
       article: "colorado-hoa-law",
-      href: "/admin/settings",
+      href: "/board/settings",
     },
     {
       key: "co-policies",
@@ -220,7 +220,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       cadence: "ongoing",
       fromDayOne: true,
       article: "colorado-hoa-law",
-      href: "/admin/documents/governing",
+      href: "/board/documents/governing",
     },
     {
       key: "co-disclosure",
@@ -230,7 +230,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "C.R.S. § 38-33.3-209.4(2)",
       cadence: "annual",
       article: "colorado-hoa-law",
-      href: "/admin/documents",
+      href: "/board/documents",
     },
   ],
   FL: [
@@ -242,7 +242,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       cadence: "ongoing",
       fromDayOne: true,
       article: "florida-hoa-law",
-      href: "/admin/documents/new-owner",
+      href: "/board/documents/new-owner",
     },
     {
       key: "fl-budget",
@@ -251,7 +251,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "Fla. Stat. § 720.303(6)",
       cadence: "each-budget",
       article: "florida-hoa-law",
-      href: "/admin/money",
+      href: "/board/money",
     },
     {
       key: "fl-records",
@@ -261,7 +261,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       cadence: "on-request",
       clockDays: 10,
       article: "florida-hoa-law",
-      href: "/admin/documents",
+      href: "/board/documents",
     },
   ],
   CA: [
@@ -272,7 +272,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "Civ. Code § 5550",
       cadence: "triennial",
       article: "california-hoa-law",
-      href: "/admin/reserves",
+      href: "/board/reserves",
     },
     {
       key: "ca-annual-disclosure",
@@ -282,7 +282,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "Civ. Code § 5300",
       cadence: "annual",
       article: "california-hoa-law",
-      href: "/admin/money",
+      href: "/board/money",
     },
     {
       key: "ca-policy-statement",
@@ -292,7 +292,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
       citation: "Civ. Code § 5310",
       cadence: "annual",
       article: "california-hoa-law",
-      href: "/admin/documents/governing",
+      href: "/board/documents/governing",
     },
   ],
 };

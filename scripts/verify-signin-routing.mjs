@@ -25,7 +25,7 @@ const cleanup = { users: [], associations: [] };
 /** The same decision the callback route makes, so the test covers the rule. */
 function destinationFor(memberships) {
   if (!memberships.length) return "/start";
-  return memberships.some((m) => m.role !== "resident") ? "/admin" : "/resident";
+  return memberships.some((m) => m.role !== "resident") ? "/board" : "/resident";
 }
 
 async function makeUser(who, email) {
@@ -58,7 +58,7 @@ try {
 
   ({ data: mine } = await founder.client.rpc("my_associations"));
   check("the founder then goes to the board workspace",
-    destinationFor(mine ?? []) === "/admin", destinationFor(mine ?? []));
+    destinationFor(mine ?? []) === "/board", destinationFor(mine ?? []));
 
   // 3. The household the board pre-added, signing up for the first time.
   const resident = await makeUser("Pre Added Pat", residentEmail);

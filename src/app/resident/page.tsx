@@ -1,8 +1,10 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import {
   CalendarCheck,
+  Camera,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
@@ -22,10 +24,12 @@ import { calendarEntries } from "@/lib/metrics";
 import {
   useAppState,
   useCurrentOwner,
+  useHomePhoto,
   useMyRequests,
   useOwnerCharges,
   useVisiblePosts,
 } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { HomeSchedule } from "@/components/app/home-schedule";
 import { MyOpenRequests } from "@/components/app/my-open-requests";
 import { cn, formatDate, money, pluralize, relativeDays } from "@/lib/utils";
@@ -85,6 +89,7 @@ export default function ResidentHome() {
 
       <div className="grid gap-5 @3xl:grid-cols-2">
         <div className="space-y-5">
+          <MyHomeCard />
           <AccountSummary />
           <QuickActions />
         </div>
@@ -102,6 +107,112 @@ export default function ResidentHome() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------- home */
+
+/**
+ * The design's My Home card: the photograph, the address, the association.
+ *
+ * The owner can add a photo of their own home; until they do, the community's
+ * cover photo stands in, which is the closest true image we hold. The photo
+ * lives in this browser (see `useHomePhoto`), so losing it costs a picture,
+ * never a record.
+ */
+function MyHomeCard() {
+  const { settings } = useAppState();
+  const owner = useCurrentOwner();
+  const { photo, setPhoto } = useHomePhoto();
+  const { notify } = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  if (!owner) return null;
+
+  async function choose(file: File) {
+    if (!file.type.startsWith("image/")) {
+      notify("That is not an image", "warn");
+      return;
+    }
+    // Shrunk before it is kept: localStorage holds megabytes, not a camera
+    // roll, and a card thumbnail never needs more than ~800px.
+    const url = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Could not read that image"));
+        image.src = url;
+      });
+      const scale = Math.min(1, 800 / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
+      setPhoto(canvas.toDataURL("image/jpeg", 0.82));
+      notify("Home photo added", "ok");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not read that image", "warn");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  return (
+    <Card className="flex items-stretch overflow-hidden">
+      <div className="relative w-28 shrink-0">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${photo ?? settings.photoUrl})` }}
+          aria-hidden
+        />
+        <input
+          ref={input}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void choose(file);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          aria-label={photo ? "Change the photo of your home" : "Add a photo of your home"}
+          title={photo ? "Change the photo of your home" : "Add a photo of your home"}
+          className="absolute bottom-1.5 right-1.5 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
+        >
+          <Camera className="size-3.5" />
+        </button>
+      </div>
+      <div className="min-w-0 flex-1 p-4">
+        <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">My Home</p>
+        <p className="mt-0.5 truncate text-[15px] text-fg-muted">{owner.address}</p>
+        <p className="truncate text-[13px] text-fg-subtle">{settings.displayName}</p>
+        <div className="mt-1.5 flex items-center gap-3">
+          <Link
+            href="/resident/account"
+            className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
+          >
+            View home details
+            <ChevronRight className="size-3.5" />
+          </Link>
+          {photo ? (
+            <button
+              type="button"
+              onClick={() => {
+                setPhoto(null);
+                notify("Back to the community photo");
+              }}
+              className="text-[13px] font-medium text-fg-subtle hover:text-fg-muted hover:underline"
+            >
+              Remove photo
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -213,22 +324,28 @@ function AccountSummary() {
 function QuickActions() {
   const actions = [
     { href: "/resident/vote", label: "Vote", icon: Vote, tone: "bg-ok-soft text-ok" },
-    { href: "/resident/vote", label: "Meetings", icon: Video, tone: "bg-info-soft text-info" },
+    {
+      // Meetings are joined from the voting page, where the room lives.
+      href: "/resident/vote",
+      label: "Join Meeting",
+      icon: Video,
+      tone: "bg-info-soft text-info",
+    },
     {
       href: "/resident/requests/new",
-      label: "New request",
+      label: "Submit Request",
       icon: Wrench,
       tone: "bg-brand-soft text-brand-soft-fg",
     },
     {
       href: "/resident/requests/new",
-      label: "Reserve amenity",
+      label: "Reserve Amenity",
       icon: CalendarCheck,
       tone: "bg-warn-soft text-warn",
     },
     {
       href: "/resident/documents",
-      label: "Documents",
+      label: "View Documents",
       icon: FileText,
       tone: "bg-surface-3 text-fg-muted",
     },
@@ -257,13 +374,70 @@ function QuickActions() {
 /* ---------------------------------------------------------------- activity */
 
 /**
- * The owner's own recent history: money that moved on their account, read from
- * the same ledger the Account screen shows in full.
+ * The owner's own recent history, mixed the way the design mixes it: money
+ * that moved on their account, the latest word on their requests, the latest
+ * announcement. Every row is read from the record it reports on.
  */
 function RecentActivity() {
+  const { community } = useAppState();
   const charges = useOwnerCharges();
-  const rows = [...charges].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4);
-  if (rows.length === 0) return null;
+  const requests = useMyRequests();
+
+  interface ActivityRow {
+    id: string;
+    date: string;
+    title: string;
+    href: string;
+    icon: typeof CircleDollarSign;
+    tone: string;
+    amount?: string;
+    amountTone?: string;
+  }
+
+  const rows: ActivityRow[] = [...charges]
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .slice(0, 2)
+    .map((c) => ({
+      id: c.id,
+      date: c.date,
+      title: c.label,
+      href: "/resident/account",
+      icon: c.kind === "payment" ? CircleDollarSign : Receipt,
+      tone: c.kind === "payment" ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted",
+      amount: money(Math.abs(c.amountCents)),
+      amountTone: c.kind === "payment" ? "text-ok" : "text-fg",
+    }));
+
+  const withUpdate = requests
+    .map((r) => ({ r, last: [...r.thread].sort((a, b) => (a.at < b.at ? 1 : -1))[0] }))
+    .filter((x) => x.last)
+    .sort((a, b) => (a.last.at < b.last.at ? 1 : -1))[0];
+  if (withUpdate) {
+    rows.push({
+      id: `req-${withUpdate.r.id}`,
+      date: withUpdate.last.at,
+      title: `Request ${withUpdate.r.reference} updated`,
+      href: "/resident/requests",
+      icon: Wrench,
+      tone: "bg-brand-soft text-brand-soft-fg",
+    });
+  }
+  const announcement = [...community.announcements].sort((a, b) =>
+    a.postedDate < b.postedDate ? 1 : -1,
+  )[0];
+  if (announcement) {
+    rows.push({
+      id: `ann-${announcement.id}`,
+      date: announcement.postedDate,
+      title: announcement.title,
+      href: "/resident/notices",
+      icon: Megaphone,
+      tone: "bg-warn-soft text-warn",
+    });
+  }
+
+  const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4);
+  if (feed.length === 0) return null;
 
   return (
     <Card>
@@ -278,41 +452,33 @@ function RecentActivity() {
           </Link>
         }
       />
-      {rows.map((c) => {
-        const payment = c.kind === "payment";
-        return (
-          <Link
-            key={c.id}
-            href="/resident/account"
-            className="flex items-center gap-3 border-b border-border px-5 py-2.5 last:border-b-0 hover:bg-surface-2"
+      {feed.map(({ icon: Icon, ...row }) => (
+        <Link
+          key={row.id}
+          href={row.href}
+          className="flex items-center gap-3 border-b border-border px-5 py-2.5 last:border-b-0 hover:bg-surface-2"
+        >
+          <span
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-full",
+              row.tone,
+            )}
           >
-            <span
-              className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-full",
-                payment ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted",
-              )}
-            >
-              {payment ? (
-                <CircleDollarSign className="size-4" strokeWidth={2} />
-              ) : (
-                <Receipt className="size-4" strokeWidth={2} />
-              )}
+            <Icon className="size-4" strokeWidth={2} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-medium text-fg">{row.title}</span>
+            <span className="block text-[13px] text-fg-muted">{formatDate(row.date)}</span>
+          </span>
+          {row.amount ? (
+            <span className={cn("tnum shrink-0 text-[15px] font-semibold", row.amountTone)}>
+              {row.amount}
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-medium text-fg">{c.label}</span>
-              <span className="block text-[13px] text-fg-muted">{formatDate(c.date)}</span>
-            </span>
-            <span
-              className={cn(
-                "tnum shrink-0 text-[15px] font-semibold",
-                payment ? "text-ok" : "text-fg",
-              )}
-            >
-              {money(Math.abs(c.amountCents))}
-            </span>
-          </Link>
-        );
-      })}
+          ) : (
+            <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+          )}
+        </Link>
+      ))}
     </Card>
   );
 }
@@ -412,6 +578,13 @@ function CommunityCard() {
           </p>
         </Link>
       ))}
+      <Link
+        href="/resident/forum"
+        className="flex items-center justify-between px-5 py-2.5 text-[13px] font-semibold text-accent hover:underline"
+      >
+        View all community updates
+        <ChevronRight className="size-3.5" />
+      </Link>
     </Card>
   );
 }

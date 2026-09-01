@@ -9,7 +9,7 @@ import {
   useUnreadThreadCount,
   useVendorGaps,
 } from "@/lib/app-state";
-import { ADMIN_ROUTES } from "@/lib/admin-routes";
+import { BOARD_ROUTES } from "@/lib/board-routes";
 import { complianceSummary, delinquency } from "@/lib/metrics";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { TabPill } from "@/components/app/tab-pill";
@@ -20,7 +20,7 @@ export interface NavBadge {
   tone: "danger" | "warn" | "neutral";
 }
 
-const items = ADMIN_ROUTES;
+const items = BOARD_ROUTES;
 
 /**
  * Counts live next to each section.
@@ -29,7 +29,7 @@ const items = ADMIN_ROUTES;
  * a server component and these numbers change as the board works. A badge that
  * only updates on a full reload is worse than no badge.
  */
-export function AdminNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
+export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const pathname = usePathname();
   const { can, community, requests } = useAppState();
   const recon = useReconciliation();
@@ -79,7 +79,7 @@ export function AdminNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   );
 
   const activeRoute = visible.find(({ href }) =>
-    href === "/admin" ? pathname === href : pathname.startsWith(href),
+    href === "/board" ? pathname === href : pathname.startsWith(href),
   );
 
   /**
@@ -101,7 +101,7 @@ export function AdminNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
         pillClassName={rail ? "bg-royal" : "bg-brand-soft"}
       >
       {visible.map(({ href, label, icon: Icon, key }) => {
-        const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
+        const active = href === "/board" ? pathname === href : pathname.startsWith(href);
         const badge = badges[key];
         return (
           <Link

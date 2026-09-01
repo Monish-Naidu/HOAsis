@@ -12,20 +12,20 @@ import { RESIDENT_TABS, SEATS, expectHealthy, inspect, openTab, seedSession } fr
 
 /** Which capabilities each seeded officer holds, per the fixtures. */
 const OFFICERS = [
-  { name: "president", seat: SEATS.president, expects: ["Money", "Settings", "Voting"] },
-  { name: "treasurer", seat: SEATS.treasurer, expects: ["Money"] },
+  { name: "president", seat: SEATS.president, expects: ["Finances", "Settings", "Voting"] },
+  { name: "treasurer", seat: SEATS.treasurer, expects: ["Finances"] },
   { name: "secretary", seat: SEATS.secretary, expects: ["Voting", "Documents", "Communications"] },
 ] as const;
 
 test.describe("officers", () => {
   for (const officer of OFFICERS) {
     test(`the ${officer.name} sees a workspace they can actually use`, async ({ page }) => {
-      await seedSession(page, { seat: officer.seat, view: "admin" });
-      await page.goto("/admin");
+      await seedSession(page, { seat: officer.seat, view: "board" });
+      await page.goto("/board");
       await expectHealthy(page, `${officer.name} dashboard`);
 
       const tabs = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('aside a[href^="/admin"]')).map((a) =>
+        Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
           (a.textContent ?? "").trim().split("\n")[0],
         ),
       );
@@ -40,18 +40,18 @@ test.describe("officers", () => {
     });
 
     test(`every tab the ${officer.name} is offered actually opens`, async ({ page }) => {
-      await seedSession(page, { seat: officer.seat, view: "admin" });
-      await page.goto("/admin");
+      await seedSession(page, { seat: officer.seat, view: "board" });
+      await page.goto("/board");
 
       const tabs = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('aside a[href^="/admin"]')).map((a) =>
+        Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
           (a.textContent ?? "").trim().split("\n")[0],
         ),
       );
 
       // Offering a control that then refuses is worse than not offering it.
       for (const tab of tabs) {
-        await openTab(page, "/admin", tab);
+        await openTab(page, "/board", tab);
         const health = await expectHealthy(page, `${officer.name} on ${tab}`);
         expect(
           health.text,
@@ -62,27 +62,27 @@ test.describe("officers", () => {
   }
 
   test("a resident is offered no board navigation", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.resident, view: "admin" });
-    await page.goto("/admin");
+    await seedSession(page, { seat: SEATS.resident, view: "board" });
+    await page.goto("/board");
     await page.waitForLoadState("networkidle");
 
     const tabs = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('aside a[href^="/admin"]')).map((a) =>
+      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
         (a.textContent ?? "").trim().split("\n")[0],
       ),
     );
     // The dashboard itself is not a capability, but nothing that manages money
     // or settings should be on offer.
     const forbidden = tabs.filter((t) =>
-      ["Money", "Settings", "Vendors", "Reserves", "Homeowners"].some((f) => t.startsWith(f)),
+      ["Finances", "Settings", "Vendors", "Reserve", "Homeowners"].some((f) => t.startsWith(f)),
     );
     expect(forbidden, "a resident is being offered board tools").toEqual([]);
   });
 
   test("a resident who types an admin URL is told, not shown", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.resident, view: "admin" });
+    await seedSession(page, { seat: SEATS.resident, view: "board" });
 
-    for (const path of ["/admin/money", "/admin/settings", "/admin/vendors"]) {
+    for (const path of ["/board/money", "/board/settings", "/board/vendors"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       const health = await inspect(page);
@@ -206,8 +206,8 @@ test.describe("booking an amenity", () => {
 
 test.describe("the board sets the rules", () => {
   test("booking rules are readable without opening anything", async ({ page }) => {
-    await seedSession(page, { seat: SEATS.president, view: "admin" });
-    await page.goto("/admin/settings");
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/settings");
     await page.waitForLoadState("networkidle");
 
     const health = await inspect(page);

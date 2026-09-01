@@ -1,16 +1,17 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/app/admin-nav";
+import { BoardNav } from "@/components/app/board-nav";
 import { RequireCapability } from "@/components/app/require-capability";
 import { SetupReturnBar } from "@/components/app/setup-return-bar";
 import { LocalCopyBanner } from "@/components/app/local-copy-banner";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero, CommunityName } from "@/components/app/community-hero";
+import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 
 export const metadata = { title: { default: "Board", template: "%s · HOAsis" } };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function BoardLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireSession>
       <div className="min-h-dvh bg-bg">
@@ -25,13 +26,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <ViewSwitcher />
+              <BoardBell />
               <ThemeToggle className="hidden sm:inline-flex" />
               <AccountMenu />
             </div>
           </div>
           {/* Horizontal nav on narrow screens */}
           <div className="no-scrollbar overflow-x-auto border-t border-border px-3 py-1.5 lg:hidden">
-            <AdminNav />
+            <BoardNav />
           </div>
         </header>
 
@@ -45,7 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {/* The navy rail from the dashboard design: a fixed surface in
                   both themes, like the device bezels. */}
               <div className="rounded-card bg-navy-950 p-2 shadow-card ring-1 ring-navy-700/40">
-                <AdminNav variant="rail" />
+                <BoardNav variant="rail" />
               </div>
               {/* A phone number and "7am to 11pm, every day" sat here. Neither
                   was true, and a support commitment nobody can honour is the

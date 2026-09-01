@@ -75,11 +75,15 @@
   /* Chart series. Categorical identity only, assigned in this fixed order and
      validated for color-vision separation on both surfaces (2026-09-01, the
      dataviz six-check validator). `chart-other` is the deliberate neutral for
-     an "everything else" slice, never a fifth series. */
+     an "everything else" slice, never a sixth series. Slot 5 and the neutral
+     sit in the CVD floor band on the dark surface, which is legal only with
+     the secondary encoding every chart here ships: 2px slice gaps and a
+     legend that names every value. */
   --chart-1: #2a78d6;
   --chart-2: #eb6834;
   --chart-3: #1baf7a;
   --chart-4: #eda100;
+  --chart-5: #e87ba4;
   --chart-other: #78766f;
 
   --shadow-sm: 0 1px 2px rgb(11 21 36 / 0.05);
@@ -119,11 +123,12 @@
   --info:      #6ea0f0;
   --info-soft: #12233d;
 
-  /* Same four hues re-stepped for the dark surface, not a lightness flip. */
+  /* Same hues re-stepped for the dark surface, not a lightness flip. */
   --chart-1: #3987e5;
   --chart-2: #d95926;
   --chart-3: #199e70;
   --chart-4: #c98500;
+  --chart-5: #d55181;
   --chart-other: #8d99ab;
 
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
@@ -177,6 +182,7 @@
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --color-chart-other: var(--chart-other);
 
   --shadow-card: var(--shadow-sm);

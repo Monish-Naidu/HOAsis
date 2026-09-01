@@ -45,7 +45,7 @@ describe("sign in", () => {
     wrap(<SignInPanel />);
 
     await user.click(screen.getByRole("button", { name: /Arya Mehr/ }));
-    expect(push).toHaveBeenCalledWith("/admin");
+    expect(push).toHaveBeenCalledWith("/board");
 
     push.mockClear();
     await user.click(screen.getByRole("button", { name: /Monish Naidu/ }));
@@ -75,7 +75,7 @@ describe("sign in", () => {
       .getAllByRole("button", { name: /^Sign in$/ })
       .find((button) => button.getAttribute("type") === "submit");
     await user.click(submit!);
-    expect(push).toHaveBeenCalledWith("/admin");
+    expect(push).toHaveBeenCalledWith("/board");
   });
 });
 

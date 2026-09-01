@@ -21,8 +21,8 @@ mkdirSync(OUT, { recursive: true });
 const SHOTS = [
   {
     file: "product-dashboard.png",
-    path: "/admin",
-    seat: { accountId: "acct-arya", view: "admin" },
+    path: "/board",
+    seat: { accountId: "acct-arya", view: "board" },
     width: 1180,
     height: 900,
     // Skip the community banner so the frame is the working area. The clip
@@ -33,8 +33,8 @@ const SHOTS = [
   },
   {
     file: "product-money.png",
-    path: "/admin/money",
-    seat: { accountId: "acct-arya", view: "admin" },
+    path: "/board/money",
+    seat: { accountId: "acct-arya", view: "board" },
     width: 1180,
     height: 950,
     clipFrom: "main",
@@ -42,8 +42,8 @@ const SHOTS = [
   },
   {
     file: "product-reserves.png",
-    path: "/admin/reserves",
-    seat: { accountId: "acct-arya", view: "admin" },
+    path: "/board/reserves",
+    seat: { accountId: "acct-arya", view: "board" },
     width: 1180,
     height: 950,
     clipFrom: "main",

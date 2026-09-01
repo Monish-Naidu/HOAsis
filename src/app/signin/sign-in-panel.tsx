@@ -36,7 +36,7 @@ async function destinationAfterSignIn(): Promise<string> {
     const { data } = await supabaseBrowser().rpc("my_associations");
     const rows = (data ?? []) as { role: string }[];
     if (!rows.length) return "/start";
-    return rows.some((m) => m.role !== "resident") ? "/admin" : "/resident";
+    return rows.some((m) => m.role !== "resident") ? "/board" : "/resident";
   } catch {
     // If the lookup fails, the resident side is the safe landing: it shows
     // less rather than more, and the header still offers the switch.
@@ -70,7 +70,7 @@ export function SignInPanel() {
   function enter(accountId: string) {
     signIn(accountId);
     const account = accounts.find((a) => a.id === accountId);
-    router.push(account && account.role !== "resident" ? "/admin" : "/resident");
+    router.push(account && account.role !== "resident" ? "/board" : "/resident");
   }
 
   /**

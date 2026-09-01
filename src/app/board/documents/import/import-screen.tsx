@@ -354,7 +354,7 @@ export function ImportScreen() {
               </Button>
               {imported ? (
                 <Link
-                  href="/admin/documents/governing"
+                  href="/board/documents/governing"
                   className="text-[13px] font-medium text-brand hover:underline"
                 >
                   See them in the reader
@@ -378,7 +378,7 @@ export function ImportScreen() {
       ) : null}
 
       <p className="mt-8 text-[13px] text-fg-subtle">
-        <Link href="/admin/documents" className="text-brand hover:underline">
+        <Link href="/board/documents" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to documents
         </Link>
