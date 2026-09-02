@@ -6,7 +6,6 @@ import {
   Briefcase,
   CalendarDays,
   ChartNoAxesColumn,
-  Check,
   ChevronRight,
   CircleCheck,
   CircleDollarSign,
@@ -22,22 +21,15 @@ import {
   Zap,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { Avatar, Card } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/primitives";
 import {
-  articleBySlug,
-  association,
-  communitySettings,
   liveMeeting,
   openRequests,
-  reserveComponents,
-  reserveSummary,
   upcomingMeetings,
   vendorGaps,
-  vendors,
 } from "@/lib/data";
-import { computePaymentCost, FEE_SCHEDULE } from "@/lib/payments/instruments";
 import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
-import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, money } from "@/lib/utils";
 
 export const metadata = {
   title: "ExpressHOA. Moving your community forward.",
@@ -219,268 +211,39 @@ function PhoneFrame({ src, alt }: { src: string; alt: string }) {
 /*                                                                             */
 /* Each one is drawn from the same records the demo runs on, so the card and   */
 /* the product a visitor opens next agree with each other.                     */
-/* -------------------------------------------------------------------------- */
-
-function Mini({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <div className={cn("rounded-xl border border-border bg-surface p-3 shadow-raised", className)}>
-      {children}
-    </div>
-  );
-}
-
-function Pill({ tone, children }: { tone: "ok" | "info"; children: React.ReactNode }) {
-  return (
-    <span
-      className={cn(
-        "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
-        tone === "ok" ? "bg-ok-soft text-ok" : "bg-info-soft text-info",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function ComplianceMini() {
-  const update = articleBySlug("washington-recent-changes");
-  return (
-    <Mini>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold text-fg">Washington updates</p>
-        <Pill tone="ok">New</Pill>
-      </div>
-      <p className="mt-2 text-[11px] leading-snug text-fg-muted">
-        {update?.summary ?? "Bill numbers and effective dates, in plain words."}
-      </p>
-      <Link
-        href={update ? `/library/${update.slug}` : "/library"}
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-accent"
-      >
-        Read summary
-        <ArrowRight className="size-3" />
-      </Link>
-    </Mini>
-  );
-}
-
-function Ring({ percent }: { percent: number }) {
-  const r = 17;
-  const c = 2 * Math.PI * r;
-  return (
-    <svg viewBox="0 0 44 44" className="size-12 shrink-0 -rotate-90" aria-hidden>
-      <circle cx="22" cy="22" r={r} fill="none" strokeWidth="5" className="stroke-surface-3" />
-      <circle
-        cx="22"
-        cy="22"
-        r={r}
-        fill="none"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeDasharray={`${(c * percent) / 100} ${c}`}
-        className="stroke-accent"
-      />
-    </svg>
-  );
-}
-
-function ReserveMini() {
-  const percent = Math.round(reserveSummary().percentFunded * 100);
-  const onTrack = percent >= 70;
-  const year = today().getUTCFullYear();
-  const soonest = [...reserveComponents]
-    .sort((a, b) => a.remainingLifeYears - b.remainingLifeYears)
-    .slice(0, 3);
-  return (
-    <Mini>
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-[11px] font-medium text-fg-muted">Reserve health</p>
-          <p className="tnum mt-0.5 text-[22px] font-semibold leading-none tracking-[-0.02em] text-fg">
-            {percent}%
-          </p>
-          <p className={cn("mt-1 text-[11px] font-semibold", onTrack ? "text-ok" : "text-warn")}>
-            {onTrack ? "On track" : "Behind the study"}
-          </p>
-        </div>
-        <Ring percent={percent} />
-      </div>
-      <ul className="mt-3 space-y-2 border-t border-border pt-3">
-        {soonest.map((component) => {
-          const funded = Math.round((component.fundedCents / component.replacementCostCents) * 100);
-          return (
-            <li key={component.id}>
-              <div className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="truncate text-fg">{component.name.split(",")[0]}</span>
-                <span className="tnum shrink-0 text-fg-muted">
-                  {year + component.remainingLifeYears} · {funded}%
-                </span>
-              </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
-                <div
-                  className={cn(
-                    "h-full rounded-full",
-                    funded >= 80 ? "bg-ok" : funded >= 50 ? "bg-info" : "bg-warn",
-                  )}
-                  style={{ width: `${funded}%` }}
-                />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </Mini>
-  );
-}
-
-function VendorMini() {
-  return (
-    <Mini className="p-2">
-      <ul className="divide-y divide-border">
-        {vendors.slice(0, 3).map((vendor) => {
-          const active =
-            vendor.w9OnFile && (!vendor.coiExpires || daysFromToday(vendor.coiExpires) >= 0);
-          return (
-            <li key={vendor.id} className="px-1 py-1.5">
-              <p className="truncate text-[11px] font-semibold leading-tight text-fg">
-                {vendor.name}
-              </p>
-              <div className="mt-0.5 flex items-center justify-between gap-2">
-                <p className="truncate text-[10px] text-fg-muted">{vendor.service}</p>
-                <Pill tone={active ? "ok" : "info"}>{active ? "Active" : "Review"}</Pill>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </Mini>
-  );
-}
-
-
-
-/**
- * The five cards on slide four. Two of them are about guidance rather than a
- * screen, so their links open the library; the other three open the demo,
- * because the honest way to learn more about a feature is to use it.
- */
-/**
- * The rails on the demo association's own dues, priced by the same
- * computePaymentCost the product runs, so the card and the pay screen agree.
- */
-function PaymentsMini() {
-  const policy = {
-    flatCents: communitySettings.paymentFeeCents,
-    paidBy: communitySettings.paymentFeePaidBy,
-    waiveOnAch: communitySettings.paymentFeeWaivedOnAch,
-  };
-  const dues = association.duesCents;
-  return (
-    <Mini className="p-2">
-      <ul className="divide-y divide-border">
-        {(
-          [
-            { kind: "ach", label: "Bank transfer" },
-            { kind: "card", label: "Card" },
-          ] as const
-        ).map(({ kind, label }) => {
-          const cost = computePaymentCost(kind, dues, policy);
-          return (
-            <li key={kind} className="px-1 py-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold text-fg">{label}</p>
-                <span className="tnum text-[11px] text-fg-muted">
-                  {money(cost.residentPaysCents)}
-                </span>
-              </div>
-              <div className="mt-0.5 flex items-center justify-between gap-2">
-                <p className="text-[10px] text-fg-muted">{FEE_SCHEDULE[kind].settlement}</p>
-                {/* Under a flat owner fee both rails cost the owner the same;
-                    the saving lands on the association, and the pay screen
-                    says so in the same words. */}
-                {kind === "ach" ? <Pill tone="ok">Saves the HOA</Pill> : null}
-              </div>
-            </li>
-          );
-        })}
-        <li className="flex items-center justify-between gap-2 px-1 py-1.5">
-          <p className="text-[11px] font-semibold text-fg">Autopay</p>
-          <Pill tone="info">On the 1st</Pill>
-        </li>
-      </ul>
-    </Mini>
-  );
-}
-
-/** Everything the four tiles left out, per the huddle: a list, not a grid. */
-function MoreList() {
-  return (
-    <Mini className="p-3">
-      <ul className="grid gap-y-1.5">
-        {[
-          "Violations",
-          "Architectural requests",
-          "Documents",
-          "Communication",
-          "Meetings",
-          "Voting",
-          "Reporting",
-          "Directory",
-          "Knowledge center",
-          "Board transitions",
-        ].map((item) => (
-          <li key={item} className="flex items-center gap-1.5 text-[12px] font-medium text-fg">
-            <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </Mini>
-  );
-}
-
 const FEATURES = [
   {
     icon: ShieldCheck,
     tone: "bg-ok-soft text-ok",
     title: "Compliance updates",
-    body: "Stay ahead of changing laws and requirements so your community stays protected.",
+    line: "Stay ahead of changing laws.",
     href: "/library",
-    mini: <ComplianceMini />,
   },
   {
     icon: ChartNoAxesColumn,
     tone: "bg-info-soft text-info",
     title: "Reserve tracking",
-    body: "Know what you're saving for and whether you're on track for the future.",
+    line: "Know if you're on track.",
     href: "/signin",
-    mini: <ReserveMini />,
   },
   {
     icon: Briefcase,
     tone: "bg-ok-soft text-ok",
     title: "Vendor management",
-    body: "Keep vendors, contracts, insurance, and projects organized in one place.",
+    line: "Contracts and invoices, one place.",
     href: "/signin",
-    mini: <VendorMini />,
   },
   {
     icon: CreditCard,
     tone: "bg-info-soft text-info",
     title: "Payments & dues",
-    body: "Dues by bank transfer or card, posted to the books the moment they clear.",
+    line: "Collected, posted, reconciled.",
     href: "/signin",
-    mini: <PaymentsMini />,
-  },
-  {
-    icon: Sparkles,
-    tone: "bg-warn-soft text-warn",
-    title: "...and more",
-    body: "One subscription, every feature. Nothing is gated behind a bigger plan.",
-    href: "/pricing#included",
-    mini: <MoreList />,
   },
 ];
+
+/** The and-more tile names a few, then hands off to the full list. */
+const MORE_ITEMS = ["Violations", "Architectural requests", "Meetings", "Voting", "Documents"];
 
 /* -------------------------------------------------------------------------- */
 /* The cards floating beside the phone                                         */
@@ -819,39 +582,50 @@ export default function MarketingHome() {
               and scroll sideways, because five cards squeezed into three
               columns leaves two orphans on a second row and a card at 180px
               cannot hold a screen anyone can read. */}
-          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 xl:mx-0 xl:grid xl:grid-cols-5 xl:overflow-visible xl:px-0">
-            {FEATURES.map(({ icon: Icon, tone, title, body, href, mini }, index) => (
-              <Reveal
-                key={title}
-                delay={index * 70}
-                className="w-[284px] shrink-0 snap-start xl:w-auto"
-              >
-                <Card className="flex h-full flex-col p-5 transition-transform hover:-translate-y-0.5">
-                  <div className="flex flex-col items-center text-center">
-                    <span
-                      className={cn(
-                        "flex size-14 items-center justify-center rounded-full",
-                        tone,
-                      )}
-                    >
-                      <Icon className="size-6" strokeWidth={1.9} />
-                    </span>
-                    <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.02em] text-fg">
-                      {title}
-                    </h3>
-                  </div>
-                  <div className="mt-4">{mini}</div>
-                  <p className="mt-4 flex-1 text-[14px] leading-relaxed text-fg-muted">{body}</p>
-                  <Link
-                    href={href}
-                    className="mt-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-accent hover:underline"
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {FEATURES.map(({ icon: Icon, tone, title, line, href }, index) => (
+              <Reveal key={title} delay={index * 70}>
+                <Link
+                  href={href}
+                  className="group flex h-full flex-col items-center rounded-card border border-border bg-surface p-6 text-center shadow-card transition-all duration-200 hover:-translate-y-1 hover:shadow-float"
+                >
+                  <span
+                    className={cn(
+                      "flex size-14 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105",
+                      tone,
+                    )}
                   >
-                    Learn more
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                </Card>
+                    <Icon className="size-6" strokeWidth={1.9} />
+                  </span>
+                  <h3 className="mt-4 text-[18px] font-semibold tracking-[-0.02em] text-fg">
+                    {title}
+                  </h3>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-fg-muted">{line}</p>
+                </Link>
               </Reveal>
             ))}
+            <Reveal delay={4 * 70}>
+              <Link
+                href="/pricing#included"
+                className="group flex h-full flex-col items-center rounded-card border border-border bg-surface p-6 text-center shadow-card transition-all duration-200 hover:-translate-y-1 hover:shadow-float"
+              >
+                <span className="flex size-14 items-center justify-center rounded-full bg-warn-soft text-warn transition-transform duration-200 group-hover:scale-105">
+                  <Sparkles className="size-6" strokeWidth={1.9} />
+                </span>
+                <h3 className="mt-4 text-[18px] font-semibold tracking-[-0.02em] text-fg">
+                  …and more
+                </h3>
+                <ul className="mt-2 space-y-0.5 text-[14px] leading-relaxed text-fg-muted">
+                  {MORE_ITEMS.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <span className="mt-2 inline-flex items-center gap-1 text-[14px] font-semibold text-accent group-hover:underline">
+                  Explore all features
+                  <ArrowRight className="size-3.5" />
+                </span>
+              </Link>
+            </Reveal>
           </div>
 
         </div>
