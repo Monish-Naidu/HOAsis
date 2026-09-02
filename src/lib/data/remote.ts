@@ -87,6 +87,7 @@ export async function loadCommunity(
     posts, vendors, amenities, announcementRows,
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
+    paymentRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
@@ -121,6 +122,9 @@ export async function loadCommunity(
     supabase.from("forms").select("*").eq("association_id", associationId).order("updated_on"),
     supabase.from("shared_costs").select("*").eq("association_id", associationId),
     supabase.from("shared_cost_bills").select("*").eq("association_id", associationId).order("period_end", { ascending: false }),
+    // Money in flight. RLS scopes a resident to their own unit's rows; settled
+    // payments already show as statement lines, so only the unfinished matter.
+    supabase.from("payments").select("*").eq("association_id", associationId).in("state", ["pending", "failed"]).order("created_at", { ascending: false }),
   ]);
 
   // Files open through short lived signed links, made in one batch here so a
@@ -255,6 +259,7 @@ export async function loadCommunity(
         | "active"
         | "past_due"
         | "canceled",
+      stripeAccountId: a.stripe_account_id ?? undefined,
     },
 
     settings: {
@@ -283,6 +288,15 @@ export async function loadCommunity(
       mask: i.mask,
       isDefault: i.is_default,
       addedDate: i.added_on,
+    })),
+
+    pendingPayments: (paymentRows.data ?? []).map((p) => ({
+      id: p.id,
+      unitId: p.unit_id,
+      amountCents: p.amount_cents,
+      rail: p.rail,
+      state: p.state as "pending" | "failed",
+      createdAt: p.created_at,
     })),
 
     bankAccounts: (banks.data ?? []).map((b) => ({

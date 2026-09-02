@@ -1838,6 +1838,7 @@ export type Database = {
           label: string
           occupants: number | null
           square_feet: number | null
+          stripe_customer_id: string | null
         }
         Insert: {
           address?: string
@@ -1848,6 +1849,7 @@ export type Database = {
           label: string
           occupants?: number | null
           square_feet?: number | null
+          stripe_customer_id?: string | null
         }
         Update: {
           address?: string
@@ -1858,6 +1860,7 @@ export type Database = {
           label?: string
           occupants?: number | null
           square_feet?: number | null
+          stripe_customer_id?: string | null
         }
         Relationships: [
           {
@@ -2397,6 +2400,7 @@ export type Database = {
       record_payment: {
         Args: {
           p_amount_cents: number
+          p_paid_by?: string
           p_platform_fee_cents?: number
           p_platform_fee_paid_by?: string
           p_processor_fee_cents?: number

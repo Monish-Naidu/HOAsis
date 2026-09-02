@@ -24,6 +24,7 @@ import {
   tokenizeCard,
 } from "@/lib/payments/instruments";
 import { cn, today, todayIsoDate } from "@/lib/utils";
+import { StripeSetupPanel } from "./stripe-setup-panel";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
@@ -51,6 +52,33 @@ const RAILS: { id: Rail; label: string; icon: typeof Landmark; hint: string }[] 
  */
 export function AddMethod({ onDone }: { onDone: () => void }) {
   const [rail, setRail] = useState<Rail>("ach");
+  const { isRemote, community } = useAppState();
+  const owner = useCurrentOwner();
+
+  // A real association saves methods through Stripe, so the demo tokenizer
+  // below never sees a real number. This is the "change of one function" the
+  // instruments module promised.
+  if (isRemote) {
+    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+    if (!owner || !community.association.stripeAccountId || !publishableKey) {
+      return (
+        <Card className="p-4">
+          <p className="text-[15px] font-medium text-fg">Online payments are not set up yet</p>
+          <p className="mt-1 text-[13px] text-fg-muted">
+            A payment method can be saved once the board finishes payment setup in Settings.
+          </p>
+        </Card>
+      );
+    }
+    return (
+      <StripeSetupPanel
+        associationId={community.association.id}
+        unitId={owner.id}
+        publishableKey={publishableKey}
+        onDone={onDone}
+      />
+    );
+  }
 
   return (
     <Card className="overflow-hidden">

@@ -12,6 +12,7 @@ import {
   isExpired,
   isValidRoutingNumber,
   linkBankAccount,
+  ownerCostFor,
   passesLuhn,
   tokenizeCard,
   validateCard,
@@ -164,9 +165,12 @@ describe("processor cost", () => {
   /** Isolates the processor's share from anything ExpressHOA adds. */
   const NO_PLATFORM_FEE = { flatCents: 0, paidBy: "owner" as const, waiveOnAch: false };
 
-  it("charges ACH a flat cost with no percentage", () => {
-    expect(feeForAmount("ach", 28_500, NO_PLATFORM_FEE)).toBe(35);
-    expect(feeForAmount("ach", 500_00, NO_PLATFORM_FEE)).toBe(35);
+  it("charges ACH a percentage that stops at the cap", () => {
+    // 0.8% of $285.00 is $2.28.
+    expect(feeForAmount("ach", 28_500, NO_PLATFORM_FEE)).toBe(228);
+    expect(feeForAmount("ach", 500_00, NO_PLATFORM_FEE)).toBe(400);
+    // 0.8% of $1,000 would be $8; Stripe stops at $5.
+    expect(feeForAmount("ach", 1_000_00, NO_PLATFORM_FEE)).toBe(500);
   });
 
   it("charges cards a percentage plus a flat cost", () => {
@@ -232,7 +236,7 @@ describe("platform fee", () => {
   it("passes the processor's cost through untouched", () => {
     const ach = computePaymentCost("ach", AMOUNT, OWNER_PAYS);
     const card = computePaymentCost("card", AMOUNT, OWNER_PAYS);
-    expect(ach.processorCents).toBe(35);
+    expect(ach.processorCents).toBe(228);
     // 2.9% of $285 is $8.265, rounding to $8.27, plus $0.30.
     expect(card.processorCents).toBe(857);
   });
@@ -242,13 +246,13 @@ describe("platform fee", () => {
     expect(cost.platformCents).toBe(150);
     expect(cost.residentPaysCents).toBe(286_50);
     // The processor still takes its cut out of the deposit either way.
-    expect(cost.associationNetsCents).toBe(284_65);
+    expect(cost.associationNetsCents).toBe(282_72);
   });
 
   it("takes it out of the deposit when the association carries it", () => {
     const cost = computePaymentCost("ach", AMOUNT, ASSOCIATION_PAYS);
     expect(cost.residentPaysCents).toBe(AMOUNT);
-    expect(cost.associationNetsCents).toBe(283_15);
+    expect(cost.associationNetsCents).toBe(281_22);
   });
 
   it("charges the same flat fee on every rail, unlike a percentage", () => {
@@ -307,12 +311,17 @@ describe("platform fee", () => {
     expect(cheapestInstrument([{ kind: "ach" } as PaymentInstrument], AMOUNT, OWNER_PAYS)).toBeUndefined();
   });
 
-  it("undercuts the incumbent on both rails", () => {
-    // PayHOA: $2.45 flat ACH, and 3.5% + $0.50 on cards.
+  it("undercuts the incumbent where the claim is actually true", () => {
+    // PayHOA: $2.45 flat ACH, and 3.5% + $0.50 on cards. On cards we win
+    // all-in. On ACH the honest 0.8% processor cost means the community's
+    // total (378¢ at $285) exceeds their flat 245¢; what undercuts them is
+    // the fee the owner sees when both products pass fees through. The
+    // all-in ACH comparison flips only below ~$119 of dues, so no test
+    // asserts it.
     const theirAch = 245;
     const theirCard = Math.round((AMOUNT * 3.5) / 100) + 50;
 
-    expect(feeForAmount("ach", AMOUNT, OWNER_PAYS)).toBeLessThan(theirAch);
+    expect(ownerCostFor("ach", AMOUNT, OWNER_PAYS)).toBeLessThan(theirAch);
     expect(feeForAmount("card", AMOUNT, OWNER_PAYS)).toBeLessThan(theirCard);
   });
 

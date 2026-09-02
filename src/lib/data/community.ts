@@ -19,6 +19,7 @@ import type {
   MessageThread,
   Owner,
   Payout,
+  PendingPayment,
   ReserveComponent,
   SavingsOffer,
   SharedCost,
@@ -63,6 +64,8 @@ export interface Community {
   owners: Owner[];
   accounts: Account[];
   instruments: PaymentInstrument[];
+  /** Stripe payments still in flight. Absent in the fixture demo on purpose. */
+  pendingPayments?: PendingPayment[];
 
   bankAccounts: BankAccount[];
   ledger: LedgerEntry[];

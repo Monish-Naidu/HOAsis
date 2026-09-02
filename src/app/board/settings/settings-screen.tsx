@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeftRight,
   CalendarDays,
@@ -57,6 +57,7 @@ export function SettingsScreen() {
     removeForm,
     resetDemo,
     can,
+    isRemote,
     documents,
     ledger,
     vendors,
@@ -243,6 +244,8 @@ export function SettingsScreen() {
               />
             </div>
           ) : null}
+
+          {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
 
           <SettingRow
             title="Payment fee"
@@ -623,5 +626,90 @@ export function SettingsScreen() {
       </div>
           <DangerZone />
 </>
+  );
+}
+
+/**
+ * Where payment onboarding stands, and the door into Stripe's hosted flow.
+ *
+ * Rendered only for a real association: the demo has no money to move. The
+ * status is read live from the connect route on every visit rather than
+ * cached in a column, because "charges enabled" is Stripe's fact, not ours,
+ * and a stale copy would tell a treasurer setup is done when it is not.
+ */
+function StripeOnboardingRow({ associationId }: { associationId: string }) {
+  const [status, setStatus] = useState<
+    | { name: "loading" }
+    | { name: "error" }
+    | { name: "none" }
+    | { name: "incomplete" }
+    | { name: "live" }
+  >({ name: "loading" });
+  const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/stripe/connect?associationId=${encodeURIComponent(associationId)}`,
+        );
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (cancelled) return;
+        if (!data.accountId) setStatus({ name: "none" });
+        else if (data.chargesEnabled) setStatus({ name: "live" });
+        else setStatus({ name: "incomplete" });
+      } catch {
+        if (!cancelled) setStatus({ name: "error" });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [associationId]);
+
+  async function openOnboarding() {
+    setRedirecting(true);
+    try {
+      const response = await fetch("/api/stripe/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ associationId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.url) throw new Error();
+      window.location.assign(data.url);
+    } catch {
+      setRedirecting(false);
+      setStatus({ name: "error" });
+    }
+  }
+
+  return (
+    <SettingRow
+      title="Accepting payments"
+      description={
+        status.name === "live"
+          ? "Dues settle to the association's own bank account through Stripe"
+          : "Connect the association to Stripe so residents can pay dues here"
+      }
+    >
+      {status.name === "loading" ? (
+        <span className="text-[13px] text-fg-subtle">Checking…</span>
+      ) : status.name === "live" ? (
+        <Badge tone="ok">Payments are live</Badge>
+      ) : status.name === "error" ? (
+        <span className="text-[13px] font-medium text-danger">Could not reach Stripe</span>
+      ) : (
+        <Button variant="primary" size="sm" onClick={openOnboarding} disabled={redirecting}>
+          {redirecting
+            ? "Opening…"
+            : status.name === "incomplete"
+              ? "Resume setup"
+              : "Set up payments"}
+        </Button>
+      )}
+    </SettingRow>
   );
 }

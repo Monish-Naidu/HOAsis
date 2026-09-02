@@ -30,6 +30,7 @@ import {
 } from "@/lib/payments/instruments";
 import { cn, formatDate, money, ordinal, relativeDays, today } from "@/lib/utils";
 import { AddMethod } from "./add-method";
+import { StripePayPanel } from "./stripe-pay-panel";
 import { useToast } from "@/components/app/toast";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
@@ -43,7 +44,7 @@ const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
 export function PayFlow() {
   const owner = useCurrentOwner();
   const instruments = useMyInstruments();
-  const { settings, community, removeInstrument, setDefaultInstrument, recordPayment } =
+  const { settings, community, isRemote, removeInstrument, setDefaultInstrument, recordPayment } =
     useAppState();
   const duesCents = community.association.duesCents;
   const nextCharge = community.nextChargeDate;
@@ -123,73 +124,159 @@ export function PayFlow() {
   }
 
   /* ---------------------------------------------------------------- form */
+  const heading = (
+    <div>
+      <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
+      <p className="mt-1 text-[15px] text-fg-muted">
+        Next assessment · due {formatDate(nextCharge, "long")}
+      </p>
+    </div>
+  );
+
+  // Shared between the demo and Stripe branches, as a JSX value rather than a
+  // nested component so the custom-amount input does not remount per keystroke.
+  const amountSection = (
+    <section>
+      <SectionTitle>Amount</SectionTitle>
+      <Card className="p-4">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setAmountMode("balance")}
+            aria-pressed={amountMode === "balance"}
+            className={cn(
+              "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
+              amountMode === "balance"
+                ? "border-navy-700 bg-brand-soft dark:border-navy-300"
+                : "border-border hover:bg-surface-2",
+            )}
+          >
+            <span className="block text-[13px] font-medium text-fg-muted">
+              {balanceCents > 0 ? "Full balance" : "Next assessment"}
+            </span>
+            <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
+              {money(balanceCents > 0 ? balanceCents : duesCents)}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAmountMode("custom")}
+            aria-pressed={amountMode === "custom"}
+            className={cn(
+              "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
+              amountMode === "custom"
+                ? "border-navy-700 bg-brand-soft dark:border-navy-300"
+                : "border-border hover:bg-surface-2",
+            )}
+          >
+            <span className="block text-[13px] font-medium text-fg-muted">Other amount</span>
+            <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
+              {amountMode === "custom" && amountCents ? money(amountCents) : "$0.00"}
+            </span>
+          </button>
+        </div>
+        {amountMode === "custom" ? (
+          <label className="mt-3 block">
+            <span className="sr-only">Payment amount</span>
+            <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
+              <span className="text-[17px] text-fg-muted">$</span>
+              <input
+                autoFocus
+                inputMode="decimal"
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+                placeholder="0.00"
+                className="tnum w-full bg-transparent text-[17px] font-medium text-fg outline-none placeholder:text-fg-subtle"
+              />
+            </div>
+          </label>
+        ) : null}
+      </Card>
+    </section>
+  );
+
+  // A real association pays through Stripe or not at all. The demo path below
+  // must never run here: it writes a settled payment with no money moving.
+  if (isRemote) {
+    const stripeAccountId = community.association.stripeAccountId;
+    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+    const inFlight = (community.pendingPayments ?? []).filter(
+      (p) => p.unitId === owner.id && p.state === "pending",
+    );
+    return (
+      <div className="animate-rise space-y-6">
+        {heading}
+        {inFlight.map((p) => (
+          <Callout
+            key={p.id}
+            tone="info"
+            icon={<Repeat className="size-4" />}
+            title={`${money(p.amountCents)} is processing`}
+          >
+            {p.rail === "ach"
+              ? "Bank payments take about 4 business days to clear."
+              : "This payment is being confirmed."}
+          </Callout>
+        ))}
+        {amountSection}
+        {stripeAccountId && publishableKey ? (
+          <>
+            <StripePayPanel
+              associationId={community.association.id}
+              unitId={owner.id}
+              amountCents={amountCents}
+              publishableKey={publishableKey}
+              instruments={instruments}
+            />
+            {adding ? (
+              <div className="space-y-2">
+                <AddMethod onDone={() => setAdding(false)} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setAdding(false)}
+                >
+                  <X className="size-3.5" />
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                size="md"
+                className="w-full"
+                onClick={() => setAdding(true)}
+              >
+                <Plus className="size-3.5" />
+                Add a payment method
+              </Button>
+            )}
+          </>
+        ) : (
+          <Callout
+            tone="info"
+            icon={<Info className="size-4" />}
+            title={
+              stripeAccountId
+                ? "Payments are not configured in this environment"
+                : "Your board hasn't set up online payments yet"
+            }
+          >
+            {stripeAccountId
+              ? "The Stripe publishable key is missing from this deployment."
+              : "Ask a board member to finish payment setup in Settings. Until then, dues are collected the way your board announced."}
+          </Callout>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="animate-rise space-y-6">
-      <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
-        <p className="mt-1 text-[15px] text-fg-muted">
-          Next assessment · due {formatDate(nextCharge, "long")}
-        </p>
-      </div>
+      {heading}
 
-      {/* Amount */}
-      <section>
-        <SectionTitle>Amount</SectionTitle>
-        <Card className="p-4">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setAmountMode("balance")}
-              aria-pressed={amountMode === "balance"}
-              className={cn(
-                "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
-                amountMode === "balance"
-                  ? "border-navy-700 bg-brand-soft dark:border-navy-300"
-                  : "border-border hover:bg-surface-2",
-              )}
-            >
-              <span className="block text-[13px] font-medium text-fg-muted">
-                {balanceCents > 0 ? "Full balance" : "Next assessment"}
-              </span>
-              <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
-                {money(balanceCents > 0 ? balanceCents : duesCents)}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAmountMode("custom")}
-              aria-pressed={amountMode === "custom"}
-              className={cn(
-                "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
-                amountMode === "custom"
-                  ? "border-navy-700 bg-brand-soft dark:border-navy-300"
-                  : "border-border hover:bg-surface-2",
-              )}
-            >
-              <span className="block text-[13px] font-medium text-fg-muted">Other amount</span>
-              <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
-                {amountMode === "custom" && amountCents ? money(amountCents) : "$0.00"}
-              </span>
-            </button>
-          </div>
-          {amountMode === "custom" ? (
-            <label className="mt-3 block">
-              <span className="sr-only">Payment amount</span>
-              <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
-                <span className="text-[17px] text-fg-muted">$</span>
-                <input
-                  autoFocus
-                  inputMode="decimal"
-                  value={custom}
-                  onChange={(e) => setCustom(e.target.value)}
-                  placeholder="0.00"
-                  className="tnum w-full bg-transparent text-[17px] font-medium text-fg outline-none placeholder:text-fg-subtle"
-                />
-              </div>
-            </label>
-          ) : null}
-        </Card>
-      </section>
+      {amountSection}
 
       {/* Instruments */}
       <section>

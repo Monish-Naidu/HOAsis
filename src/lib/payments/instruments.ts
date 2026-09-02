@@ -240,6 +240,8 @@ export interface FeeSchedule {
   /** What the processor charges. Passed through unchanged. */
   processorPercent: number;
   processorFlatCents: Cents;
+  /** Some rails cap the percentage. Stripe ACH stops at $5. */
+  processorCapCents?: Cents;
   settlement: string;
 }
 
@@ -252,7 +254,14 @@ export interface FeeSchedule {
  * suspect the difference.
  */
 export const FEE_SCHEDULE: Record<InstrumentKind, FeeSchedule> = {
-  ach: { processorPercent: 0, processorFlatCents: 35, settlement: "1 to 2 business days" },
+  // Stripe's published US rates. The screen quoting these numbers is the same
+  // screen a Stripe receipt will later confirm, so they must not drift.
+  ach: {
+    processorPercent: 0.8,
+    processorFlatCents: 0,
+    processorCapCents: 500,
+    settlement: "About 4 business days",
+  },
   card: { processorPercent: 2.9, processorFlatCents: 30, settlement: "Same day" },
   "apple-pay": { processorPercent: 2.9, processorFlatCents: 30, settlement: "Same day" },
 };
@@ -303,8 +312,10 @@ export function computePaymentCost(
   policy: PlatformFeePolicy = DEFAULT_FEE_POLICY,
 ): PaymentCost {
   const schedule = FEE_SCHEDULE[kind];
-  const processorCents =
+  const uncapped =
     Math.round((amountCents * schedule.processorPercent) / 100) + schedule.processorFlatCents;
+  const processorCents =
+    schedule.processorCapCents === undefined ? uncapped : Math.min(uncapped, schedule.processorCapCents);
 
   const waived = policy.waiveOnAch && kind === "ach";
   const platformCents = waived ? 0 : policy.flatCents;

@@ -44,6 +44,27 @@ export interface Association {
   insuranceExpiresOn?: ISODate;
   /** active, past_due or canceled. Cancelling stops billing and nothing else. */
   subscriptionStatus?: "active" | "past_due" | "canceled";
+  /**
+   * The association's Stripe connected account. Its presence is what turns the
+   * resident pay screen from a demo into real money movement; dues settle to
+   * this account, never to the platform.
+   */
+  stripeAccountId?: string;
+}
+
+/**
+ * A payment that has left the resident's hands but not finished. Settled
+ * payments become statement lines and never appear here; this exists so an
+ * ACH payment's multi-day flight is visible instead of looking like nothing
+ * happened.
+ */
+export interface PendingPayment {
+  id: ID;
+  unitId: ID;
+  amountCents: Cents;
+  rail: "ach" | "card" | "apple-pay" | "google-pay";
+  state: "pending" | "failed";
+  createdAt: string;
 }
 
 /* -------------------------------------------------------------------------- */

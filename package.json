@@ -15,12 +15,14 @@
     "db:types": "supabase gen types typescript --linked > src/lib/supabase/database.types.ts",
     "email:setup": "node scripts/setup-resend.mjs",
     "email:test": "node scripts/send-test-email.mjs",
-    "db:verify": "node scripts/verify-rls.mjs && node scripts/verify-onboarding.mjs && node scripts/verify-money.mjs && node scripts/verify-community-life.mjs && node scripts/verify-email.mjs && node scripts/verify-signin-routing.mjs && node scripts/verify-safety.mjs && node scripts/verify-scale.mjs && node scripts/verify-a-year.mjs && node scripts/verify-three-years.mjs && node scripts/verify-profile.mjs && node scripts/verify-board-actions.mjs",
+    "db:verify": "node scripts/verify-rls.mjs && node scripts/verify-onboarding.mjs && node scripts/verify-money.mjs && node scripts/verify-stripe.mjs && node scripts/verify-community-life.mjs && node scripts/verify-email.mjs && node scripts/verify-signin-routing.mjs && node scripts/verify-safety.mjs && node scripts/verify-scale.mjs && node scripts/verify-a-year.mjs && node scripts/verify-three-years.mjs && node scripts/verify-profile.mjs && node scripts/verify-board-actions.mjs",
     "shots": "node scripts/product-shots.mjs",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.8.2",
+    "@stripe/stripe-js": "^9.15.0",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "clsx": "^2.1.1",
@@ -29,6 +31,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "resend": "^6.22.1",
+    "stripe": "^22.6.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
