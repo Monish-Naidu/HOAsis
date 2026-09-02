@@ -5,17 +5,11 @@ import Link from "next/link";
 import {
   CalendarDays,
   ChevronRight,
-  CircleDollarSign,
   ClipboardCheck,
-  FileText,
-  Gavel,
   Home,
   Landmark,
   Megaphone,
-  MessageSquareText,
   Receipt,
-  Users,
-  Video,
   Vote,
 } from "lucide-react";
 import { Card, CardHeader, PageHeader } from "@/components/ui/primitives";
@@ -30,7 +24,6 @@ import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
 import {
   useAppState,
   usePendingApprovals,
-  useVisiblePosts,
 } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
@@ -73,6 +66,8 @@ export default function BoardDashboard() {
   const role =
     account && account.role !== "resident" ? ROLE_LABEL[account.role] : "Board member";
 
+  // TODO(ui-spec): year-over-year comparison (deltas, trends) is an open
+  // item from the huddle; the dropdown below only switches years.
   const yearSelect =
     years.length > 1 ? (
       <select
@@ -146,13 +141,11 @@ export default function BoardDashboard() {
 
           <StatTiles />
 
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <RecentActivity />
-            <CommunityUpdates />
-            <Announcements />
-            <UpcomingEvents />
-            <QuickActions />
-          </div>
+          {/* Everything resident-facing (activity, community, announcements,
+              events) left this page per the huddle: the board view is
+              admin-level only, and board members flip to the resident view
+              for the rest. Quick Actions is what remains. */}
+          <QuickActions />
         </>
       ) : null}
     </>
@@ -293,16 +286,6 @@ function StatTiles() {
 
 /* ------------------------------------------------------------ bottom cards */
 
-function ViewAll({ href }: { href: string }) {
-  return (
-    <Link
-      href={href}
-      className="shrink-0 text-[13px] font-medium text-accent hover:underline"
-    >
-      View all
-    </Link>
-  );
-}
 
 /** The five bottom cards are narrow; the shared CardHeader's 17px truncates. */
 function DenseHeader({ title, action }: { title: string; action?: React.ReactNode }) {
@@ -316,279 +299,16 @@ function DenseHeader({ title, action }: { title: string; action?: React.ReactNod
   );
 }
 
-interface FeedRow {
-  id: string;
-  date: string;
-  title: string;
-  detail?: string;
-  href: string;
-  icon: typeof CircleDollarSign;
-  tone: string;
-  amountCents?: number;
-}
 
-function FeedList({ rows }: { rows: FeedRow[] }) {
-  return (
-    <>
-      {rows.map(({ icon: Icon, ...row }) => (
-        <Link
-          key={row.id}
-          href={row.href}
-          className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-surface-2"
-        >
-          <span
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full",
-              row.tone,
-            )}
-          >
-            <Icon className="size-4" strokeWidth={2} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-medium leading-snug text-fg">
-              {row.title}
-            </span>
-            <span className="block truncate text-[12px] text-fg-muted">
-              {formatDate(row.date)}
-              {row.detail ? ` · ${row.detail}` : ""}
-            </span>
-          </span>
-          {row.amountCents !== undefined ? (
-            <span
-              className={cn(
-                "tnum shrink-0 text-[13px] font-semibold",
-                row.amountCents >= 0 ? "text-ok" : "text-fg",
-              )}
-            >
-              {money(row.amountCents, { sign: true })}
-            </span>
-          ) : null}
-        </Link>
-      ))}
-    </>
-  );
-}
-
-/**
- * What just happened, across the association, newest first. Merged from the
- * records themselves rather than kept as its own feed, so nothing here can be
- * stale: a payment appears because it is in the ledger, a request because it
- * was filed, a violation because a notice went out.
- */
-function RecentActivity() {
-  const { community, requests } = useAppState();
-
-  const rows: FeedRow[] = [];
-  const ledger = [...community.ledger].sort((a, b) => (a.date < b.date ? 1 : -1));
-  const payment = ledger.find((e) => e.amountCents > 0 && e.category === "Assessments");
-  if (payment) {
-    rows.push({
-      id: `led-${payment.id}`,
-      date: payment.date,
-      title: "Payment received",
-      detail: payment.description,
-      href: "/board/money",
-      icon: CircleDollarSign,
-      tone: "bg-ok-soft text-ok",
-      amountCents: payment.amountCents,
-    });
-  }
-  const request = [...requests].sort((a, b) =>
-    a.submittedDate < b.submittedDate ? 1 : -1,
-  )[0];
-  if (request) {
-    rows.push({
-      id: `req-${request.id}`,
-      date: request.submittedDate,
-      title: `${request.kind === "architectural" ? "ARC" : "New"} request submitted`,
-      detail: `Unit ${request.unit} · ${request.title}`,
-      href: "/board/requests",
-      icon: ClipboardCheck,
-      tone: "bg-info-soft text-info",
-    });
-  }
-  const violation = [...community.violations].sort((a, b) =>
-    a.openedDate < b.openedDate ? 1 : -1,
-  )[0];
-  if (violation) {
-    rows.push({
-      id: `vio-${violation.id}`,
-      date: violation.openedDate,
-      title: "Violation updated",
-      detail: `Unit ${violation.unit} · ${violation.rule}`,
-      href: "/board/violations",
-      icon: Gavel,
-      tone: "bg-brand-soft text-brand-soft-fg",
-    });
-  }
-  const invoice = [...community.payouts].sort((a, b) =>
-    a.issuedDate < b.issuedDate ? 1 : -1,
-  )[0];
-  if (invoice) {
-    rows.push({
-      id: `pay-${invoice.id}`,
-      date: invoice.issuedDate,
-      title: "Vendor invoice received",
-      detail: `${invoice.vendor} · ${invoice.invoiceNumber}`,
-      href: "/board/vendors",
-      icon: FileText,
-      tone: "bg-ok-soft text-ok",
-    });
-  }
-  const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4);
-  if (feed.length === 0) return null;
-
-  return (
-    <Card>
-      <DenseHeader title="Recent Activity" action={<ViewAll href="/board/money" />} />
-      <FeedList rows={feed} />
-    </Card>
-  );
-}
-
-/**
- * The design's Community Updates card, carried by the one record that is
- * actually the community talking: the forum. A synthesized safety feed would
- * be an invention.
- */
-function CommunityUpdates() {
-  const posts = useVisiblePosts();
-  const recent = [...posts].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 3);
-  if (recent.length === 0) return null;
-
-  return (
-    <Card>
-      <DenseHeader title="Community Updates" action={<ViewAll href="/board/forum" />} />
-      {recent.map((p) => (
-        <Link
-          key={p.id}
-          href="/board/forum"
-          className="flex items-start gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-surface-2"
-        >
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
-            <MessageSquareText className="size-4" strokeWidth={2} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-medium leading-snug text-fg">
-              {p.title}
-            </span>
-            <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-fg-muted">
-              {p.body}
-            </span>
-            <span className="mt-0.5 block text-[12px] text-fg-subtle">{formatDate(p.at)}</span>
-          </span>
-        </Link>
-      ))}
-    </Card>
-  );
-}
-
-function Announcements() {
-  const { community } = useAppState();
-  const recent = [...community.announcements]
-    .sort((a, b) => (a.postedDate < b.postedDate ? 1 : -1))
-    .slice(0, 3);
-  if (recent.length === 0) return null;
-
-  return (
-    <Card>
-      <DenseHeader title="Announcements" action={<ViewAll href="/board/communications" />} />
-      {recent.map((a) => (
-        <Link
-          key={a.id}
-          href="/board/communications"
-          className="flex items-start gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-surface-2"
-        >
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-warn-soft text-warn">
-            <Megaphone className="size-4" strokeWidth={2} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-medium leading-snug text-fg">
-              {a.title}
-            </span>
-            <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-fg-muted">
-              {a.body}
-            </span>
-            <span className="mt-0.5 block text-[12px] text-fg-subtle">
-              {formatDate(a.postedDate)}
-            </span>
-          </span>
-        </Link>
-      ))}
-    </Card>
-  );
-}
-
-function UpcomingEvents() {
-  const { community } = useAppState();
-  const rows: { id: string; date: string; title: string; detail: string; live?: boolean }[] = [];
-  for (const m of community.meetings) {
-    if (m.status === "ended" || daysFromToday(m.date) < 0) continue;
-    rows.push({
-      id: m.id,
-      date: m.date,
-      title: m.title,
-      detail: m.status === "live" ? "Live now" : `${m.time} · ${m.location}`,
-      live: m.status === "live",
-    });
-  }
-  for (const b of community.ballots) {
-    if (b.audience !== "owners") continue;
-    if (b.status === "open" && daysFromToday(b.closesDate) >= 0) {
-      rows.push({
-        id: `${b.id}-close`,
-        date: b.closesDate,
-        title: b.title,
-        detail: "Last day to vote",
-      });
-    }
-  }
-  const upcoming = rows.sort((a, b) => (a.date < b.date ? -1 : 1)).slice(0, 4);
-  if (upcoming.length === 0) return null;
-
-  return (
-    <Card>
-      <DenseHeader title="Upcoming Meetings & Events" action={<ViewAll href="/board/meetings" />} />
-      {upcoming.map((row) => (
-        <Link
-          key={row.id}
-          href="/board/meetings"
-          className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-surface-2"
-        >
-          <span className="flex w-10 shrink-0 flex-col items-center rounded-lg border border-border bg-surface-2 py-1">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-fg-subtle">
-              {formatDate(row.date).split(" ")[0]}
-            </span>
-            <span className="tnum text-[15px] font-semibold leading-tight text-fg">
-              {row.date.slice(8, 10).replace(/^0/, "")}
-            </span>
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-medium leading-snug text-fg">
-              {row.title}
-            </span>
-            <span className="block truncate text-[12px] text-fg-muted">{row.detail}</span>
-          </span>
-          {row.live ? (
-            <span className="shrink-0 rounded-md bg-ok-soft px-1.5 py-0.5 text-[11px] font-bold text-ok">
-              Live
-            </span>
-          ) : daysFromToday(row.date) === 0 ? (
-            <span className="shrink-0 rounded-md bg-info-soft px-1.5 py-0.5 text-[11px] font-bold text-info">
-              Tonight!
-            </span>
-          ) : null}
-        </Link>
-      ))}
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------ quick actions */
 
 const ACTIONS = [
   { href: "/board/voting", label: "Create Vote", icon: Vote, tone: "bg-ok-soft text-ok" },
-  { href: "/board/meetings", label: "Join Meeting", icon: Video, tone: "bg-info-soft text-info" },
+  {
+    href: "/board/meetings",
+    label: "Schedule Meeting",
+    icon: CalendarDays,
+    tone: "bg-info-soft text-info",
+  },
   {
     href: "/board/requests",
     label: "Review Requests",
@@ -601,35 +321,80 @@ const ACTIONS = [
     icon: Megaphone,
     tone: "bg-warn-soft text-warn",
   },
-  {
-    href: "/board/vendors",
-    label: "Review Invoices",
-    icon: Receipt,
-    tone: "bg-danger-soft text-danger",
-  },
-  {
-    href: "/board/communications",
-    label: "Message Owners",
-    icon: Users,
-    tone: "bg-info-soft text-info",
-  },
 ];
 
+/**
+ * The four actions the huddle confirmed, in two try-on layouts.
+ *
+ * Arya flagged that a five-item column under the five stat tiles reads
+ * awkwardly, so this renders either a full-width action bar (A) or a two-by-
+ * two list (B), switched by the small toggle in the corner. Temporary: once
+ * Monish picks from the screenshots, the loser and the toggle both go.
+ */
 function QuickActions() {
+  const [layout, setLayout] = useState<"a" | "b">("a");
+
+  const toggle = (
+    <div
+      className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5"
+      role="radiogroup"
+      aria-label="Quick actions layout"
+    >
+      {(["a", "b"] as const).map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={layout === option}
+          onClick={() => setLayout(option)}
+          className={cn(
+            "inline-flex h-6 items-center rounded-md px-2 text-[12px] font-semibold uppercase transition-colors",
+            layout === option ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
+          )}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (layout === "b") {
+    return (
+      <Card className="mt-5">
+        <DenseHeader title="Quick Actions" action={toggle} />
+        <div className="grid gap-px bg-border sm:grid-cols-2">
+          {ACTIONS.map(({ href, label, icon: Icon, tone }) => (
+            <Link
+              key={label}
+              href={href}
+              className="flex items-center gap-3 bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2"
+            >
+              <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", tone)}>
+                <Icon className="size-4" strokeWidth={2} />
+              </span>
+              <span className="flex-1 text-[15px] font-medium text-fg">{label}</span>
+              <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+            </Link>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <DenseHeader title="Quick Actions" />
-      <div className="grid grid-cols-3 gap-1 p-3 xl:grid-cols-2">
+    <Card className="mt-5">
+      <DenseHeader title="Quick Actions" action={toggle} />
+      <div className="grid grid-cols-2 gap-1 p-3 sm:grid-cols-4">
         {ACTIONS.map(({ href, label, icon: Icon, tone }) => (
           <Link
             key={label}
             href={href}
-            className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-3 text-center transition-colors hover:bg-surface-2"
+            className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-4 text-center transition-colors hover:bg-surface-2"
           >
-            <span className={cn("flex size-10 items-center justify-center rounded-full", tone)}>
-              <Icon className="size-[18px]" strokeWidth={2} />
+            <span className={cn("flex size-11 items-center justify-center rounded-full", tone)}>
+              <Icon className="size-5" strokeWidth={2} />
             </span>
-            <span className="text-[12px] font-medium leading-tight text-fg-muted">{label}</span>
+            <span className="text-[13px] font-medium leading-tight text-fg-muted">{label}</span>
           </Link>
         ))}
       </div>
