@@ -132,37 +132,42 @@ const POCKET = [
 function MonitorFrame({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="relative mx-auto w-full max-w-[680px]">
-      {/* Silver, per the huddle: the near-black bezel lost its edge against
-          the dark theme. The aluminum body reads on both. */}
-      <div className="relative rounded-[clamp(12px,2.6vw,18px)] bg-gradient-to-b from-[#e8eaed] via-[#d2d5da] to-[#b6bbc2] p-[clamp(6px,1.4vw,10px)] shadow-[0_30px_70px_-20px_rgb(0_0_0/0.45)] ring-1 ring-black/20 dark:shadow-[0_30px_70px_-20px_rgb(0_0_0/0.85)]">
+      {/* Studio Display proportions, silver finish: all screen, a thin
+          aluminum rim, no chin. The true product's near-black glass face is
+          exactly what the huddle killed for disappearing on the dark theme,
+          so the rim stays aluminum. */}
+      <div className="relative rounded-[clamp(8px,1.6vw,14px)] bg-gradient-to-b from-[#eceef0] via-[#d7dade] to-[#bcc1c7] p-[clamp(5px,1vw,8px)] shadow-[0_30px_70px_-20px_rgb(0_0_0/0.45)] ring-1 ring-black/20 dark:shadow-[0_30px_70px_-20px_rgb(0_0_0/0.85)]">
         {/* The machined edge, caught by the light along the top. */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-[clamp(12px,2.6vw,18px)] ring-1 ring-inset ring-white/50"
+          className="pointer-events-none absolute inset-0 rounded-[clamp(8px,1.6vw,14px)] ring-1 ring-inset ring-white/60"
           aria-hidden
         />
-        <div className="overflow-hidden rounded-[clamp(6px,1.2vw,9px)] bg-black p-px ring-1 ring-black/40">
-          <Image
-            src={src}
-            alt={alt}
-            width={2360}
-            height={1236}
-            sizes="(max-width: 1024px) 100vw, 660px"
-            className="h-auto w-full"
-          />
+        {/* A whisper of black glass between aluminum and picture. */}
+        <div className="overflow-hidden rounded-[clamp(4px,0.8vw,7px)] bg-black p-[2px]">
+          <div className="overflow-hidden rounded-[clamp(3px,0.6vw,5px)] bg-surface">
+            <Image
+              src={src}
+              alt={alt}
+              width={2360}
+              height={1236}
+              sizes="(max-width: 1024px) 100vw, 660px"
+              className="h-auto w-full"
+            />
+          </div>
         </div>
       </div>
-      {/* The stand: a flat neck and a plate, edge on. */}
+      {/* The stand: a slim arm and a low rounded foot, edge on. */}
       <div
-        className="mx-auto h-[clamp(40px,8vw,64px)] w-[clamp(64px,13vw,96px)] bg-gradient-to-b from-[#c9ccd1] via-[#dcdfe3] to-[#aeb3b9]"
+        className="mx-auto h-[clamp(38px,7.5vw,58px)] w-[clamp(48px,9vw,68px)] rounded-b-[3px] bg-gradient-to-b from-[#c4c8cd] via-[#dcdfe3] to-[#adb2b9] shadow-[inset_1px_0_1px_rgb(255_255_255/0.5),inset_-1px_0_1px_rgb(0_0_0/0.12)]"
         aria-hidden
       />
       <div
-        className="mx-auto h-[9px] w-[clamp(150px,36vw,240px)] rounded-[4px] bg-gradient-to-b from-[#e3e5e8] to-[#9ba0a6]"
+        className="mx-auto h-[7px] w-[clamp(130px,28vw,190px)] rounded-full bg-gradient-to-b from-[#e6e8eb] to-[#9ba0a6]"
         aria-hidden
       />
       {/* The ground it sits on. */}
       <div
-        className="mx-auto -mt-1.5 h-4 w-[70%] rounded-[100%] bg-black/20 blur-lg dark:bg-black/50"
+        className="mx-auto -mt-1 h-4 w-[64%] rounded-[100%] bg-black/20 blur-lg dark:bg-black/50"
         aria-hidden
       />
     </div>
