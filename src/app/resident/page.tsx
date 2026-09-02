@@ -1,18 +1,14 @@
 "use client";
 
-import { useRef } from "react";
 import Link from "next/link";
 import {
   CalendarCheck,
-  Camera,
   CheckCircle2,
   ChevronRight,
-  ClipboardList,
   CircleDollarSign,
   CreditCard,
   FileText,
   Megaphone,
-  MessageSquareText,
   Radio,
   Receipt,
   Video,
@@ -24,15 +20,11 @@ import { calendarEntries } from "@/lib/metrics";
 import {
   useAppState,
   useCurrentOwner,
-  useHomePhoto,
   useMyRequests,
   useOwnerCharges,
-  useVisiblePosts,
 } from "@/lib/app-state";
-import { useToast } from "@/components/app/toast";
 import { HomeSchedule } from "@/components/app/home-schedule";
-import { MyOpenRequests } from "@/components/app/my-open-requests";
-import { cn, formatDate, money, pluralize, relativeDays } from "@/lib/utils";
+import { cn, formatDate, money, relativeDays } from "@/lib/utils";
 
 /**
  * The resident home, laid out to the 2026-09-01 dashboard design.
@@ -87,149 +79,40 @@ export default function ResidentHome() {
         </Link>
       ) : null}
 
-      <div className="grid gap-5 @3xl:grid-cols-2">
-        <div className="space-y-5">
-          <MyHomeCard />
-          <AccountSummary />
-          <QuickActions />
-        </div>
-        <div className="space-y-5">
-          <RecentActivity />
-          <MyOpenRequests />
-        </div>
-      </div>
+      {/* The huddle's layout: the center of the screen answers "what do I
+          owe and how do I pay" with no scrolling. Account summary and Quick
+          Actions run the full width; activity and events share the rest.
+          Community left the dashboard on purpose (a five-home association
+          would see an empty card); it stays a sidebar tab. */}
+      <AccountSummary />
+      <QuickActions />
 
       <div className="grid gap-5 @3xl:grid-cols-2 @3xl:items-start">
-        <Announcements />
+        <RecentActivity />
         <div className="space-y-5">
-          <CommunityCard />
           <HomeSchedule entries={calendarEntries(community)} />
+          <Announcements />
         </div>
       </div>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------- home */
+
 
 /**
- * The design's My Home card: the photograph, the address, the association.
+ * The number an owner opens the app for, and the button that settles it.
  *
- * The owner can add a photo of their own home; until they do, the community's
- * cover photo stands in, which is the closest true image we hold. The photo
- * lives in this browser (see `useHomePhoto`), so losing it costs a picture,
- * never a record.
- */
-function MyHomeCard() {
-  const { settings } = useAppState();
-  const owner = useCurrentOwner();
-  const { photo, setPhoto } = useHomePhoto();
-  const { notify } = useToast();
-  const input = useRef<HTMLInputElement>(null);
-  if (!owner) return null;
-
-  async function choose(file: File) {
-    if (!file.type.startsWith("image/")) {
-      notify("That is not an image", "warn");
-      return;
-    }
-    // Shrunk before it is kept: localStorage holds megabytes, not a camera
-    // roll, and a card thumbnail never needs more than ~800px.
-    const url = URL.createObjectURL(file);
-    try {
-      const image = new Image();
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error("Could not read that image"));
-        image.src = url;
-      });
-      const scale = Math.min(1, 800 / Math.max(image.width, image.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(image.width * scale);
-      canvas.height = Math.round(image.height * scale);
-      canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
-      setPhoto(canvas.toDataURL("image/jpeg", 0.82));
-      notify("Home photo added", "ok");
-    } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not read that image", "warn");
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  }
-
-  return (
-    <Card className="flex items-stretch overflow-hidden">
-      <div className="relative w-28 shrink-0">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${photo ?? settings.photoUrl})` }}
-          aria-hidden
-        />
-        <input
-          ref={input}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/avif"
-          className="sr-only"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void choose(file);
-            e.target.value = "";
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => input.current?.click()}
-          aria-label={photo ? "Change the photo of your home" : "Add a photo of your home"}
-          title={photo ? "Change the photo of your home" : "Add a photo of your home"}
-          className="absolute bottom-1.5 right-1.5 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
-        >
-          <Camera className="size-3.5" />
-        </button>
-      </div>
-      <div className="min-w-0 flex-1 p-4">
-        <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">My Home</p>
-        <p className="mt-0.5 truncate text-[15px] text-fg-muted">{owner.address}</p>
-        <p className="truncate text-[13px] text-fg-subtle">{settings.displayName}</p>
-        <div className="mt-1.5 flex items-center gap-3">
-          <Link
-            href="/resident/account"
-            className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
-          >
-            View home details
-            <ChevronRight className="size-3.5" />
-          </Link>
-          {photo ? (
-            <button
-              type="button"
-              onClick={() => {
-                setPhoto(null);
-                notify("Back to the community photo");
-              }}
-              className="text-[13px] font-medium text-fg-subtle hover:text-fg-muted hover:underline"
-            >
-              Remove photo
-            </button>
-          ) : null}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ----------------------------------------------------------------- summary */
-
-/**
- * The two numbers an owner opens the app for: what they owe, and where their
- * asks stand. Balance and standing come off the owner record, the same one
- * the board's delinquency screen reads, so the two sides cannot disagree.
+ * Full width and first on the page, per the huddle: balance, a Pay Now that
+ * is always present, autopay standing, and the next assessment date. The
+ * open-requests half this card used to carry moved out with the huddle's
+ * decision that requests surface through Recent Activity instead.
  */
 function AccountSummary() {
   const { community } = useAppState();
   const owner = useCurrentOwner();
-  const requests = useMyRequests();
   if (!owner) return null;
 
-  const open = requests.filter((r) => !["approved", "denied", "closed"].includes(r.status));
   const past = owner.daysPastDue > 0;
   const nextCharge = community.nextChargeDate;
   const amount = owner.balanceCents > 0 ? owner.balanceCents : community.association.duesCents;
@@ -247,73 +130,54 @@ function AccountSummary() {
           </Link>
         }
       />
-      <div className="grid divide-y divide-border @sm:grid-cols-2 @sm:divide-x @sm:divide-y-0">
-        <div className="p-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-full bg-info-soft text-info">
-              <CreditCard className="size-4" strokeWidth={2} />
-            </span>
+      <div className="flex flex-col gap-4 p-4 @xl:flex-row @xl:items-center @xl:gap-6 @xl:px-5">
+        <div className="flex items-center gap-3.5 @xl:flex-1">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
+            <CreditCard className="size-5" strokeWidth={2} />
+          </span>
+          <div className="min-w-0">
             <p className="text-[13px] font-semibold text-fg-muted">
               {past ? "Past due" : "Current balance"}
             </p>
+            <p
+              className={cn(
+                "tnum mt-1 text-[34px] font-semibold leading-none tracking-[-0.03em]",
+                past ? "text-danger" : "text-fg",
+              )}
+            >
+              {money(owner.balanceCents)}
+            </p>
           </div>
-          <p
-            className={cn(
-              "tnum mt-2.5 text-[30px] font-semibold leading-none tracking-[-0.03em]",
-              past ? "text-danger" : "text-fg",
-            )}
-          >
-            {money(owner.balanceCents)}
-          </p>
+        </div>
+        <div className="flex flex-col gap-1 @xl:items-end">
           {owner.autopay ? (
-            <p className="mt-2.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-ok">
+            <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ok">
               <CheckCircle2 className="size-3.5" />
               Autopay is on
             </p>
           ) : (
             <Link
               href="/resident/pay#autopay"
-              className="mt-2.5 inline-block text-[13px] font-semibold text-accent hover:underline"
+              className="text-[13px] font-semibold text-accent hover:underline"
             >
               Turn on autopay
             </Link>
           )}
-          <p className="mt-1 text-[13px] text-fg-muted">
+          <p className="text-[13px] text-fg-muted">
             {past
               ? `${owner.daysPastDue} days past due`
               : `Next assessment ${formatDate(nextCharge, "long")}`}
           </p>
-          {owner.balanceCents > 0 ? (
-            <Link
-              href="/resident/pay"
-              className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
-            >
-              Pay {money(amount, { cents: false })}
-            </Link>
-          ) : null}
         </div>
-        <div className="p-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-full bg-brand-soft text-brand-soft-fg">
-              <ClipboardList className="size-4" strokeWidth={2} />
-            </span>
-            <p className="text-[13px] font-semibold text-fg-muted">Open requests</p>
-          </div>
-          <p className="tnum mt-2.5 text-[30px] font-semibold leading-none tracking-[-0.03em] text-fg">
-            {open.length}
-          </p>
-          <p className="mt-2.5 text-[13px] text-fg-muted">
-            {open.length === 0
-              ? "Nothing waiting on the board"
-              : `${pluralize(open.length, "request")} with the board`}
-          </p>
-          <Link
-            href="/resident/requests"
-            className="mt-1 inline-block text-[13px] font-semibold text-accent hover:underline"
-          >
-            View requests
-          </Link>
-        </div>
+        {/* Present even at a zero balance: paying ahead of the next
+            assessment is a real thing owners do, and the pay screen
+            handles it. */}
+        <Link
+          href="/resident/pay"
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-brand px-6 text-[16px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
+        >
+          Pay {money(amount, { cents: false })}
+        </Link>
       </div>
     </Card>
   );
@@ -393,9 +257,11 @@ function RecentActivity() {
     amountTone?: string;
   }
 
+  // TODO(ui-spec): requests currently surface only as these activity lines;
+  // Monish is deciding whether they need a clearer signal than this.
   const rows: ActivityRow[] = [...charges]
     .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, 2)
+    .slice(0, 4)
     .map((c) => ({
       id: c.id,
       date: c.date,
@@ -424,7 +290,7 @@ function RecentActivity() {
   // Announcements deliberately stay out of this feed: they live two cards
   // down under "From the board", and a second copy pointing elsewhere reads
   // as a different item.
-  const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4);
+  const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
   if (feed.length === 0) return null;
 
   return (
@@ -526,53 +392,3 @@ function Announcements() {
   );
 }
 
-/* ---------------------------------------------------------------- community */
-
-/**
- * What the neighbors are talking about. Real threads from the forum, not a
- * synthesized safety feed: if the association has nothing going on, the card
- * is simply absent.
- */
-function CommunityCard() {
-  const { settings } = useAppState();
-  const posts = useVisiblePosts();
-  if (!settings.forumEnabled) return null;
-  const recent = [...posts].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 3);
-  if (recent.length === 0) return null;
-
-  return (
-    <Card>
-      <CardHeader
-        title="Community"
-        icon={<MessageSquareText className="size-4" />}
-        action={
-          <Link
-            href="/resident/forum"
-            className="text-[13px] font-medium text-accent hover:underline"
-          >
-            Open forum
-          </Link>
-        }
-      />
-      {recent.map((p) => (
-        <Link
-          key={p.id}
-          href="/resident/forum"
-          className="block border-b border-border px-5 py-2.5 last:border-b-0 hover:bg-surface-2"
-        >
-          <p className="truncate text-[15px] font-medium text-fg">{p.title}</p>
-          <p className="mt-0.5 text-[13px] text-fg-muted">
-            {p.author} · {formatDate(p.at)} · {pluralize(p.replies.length, "reply", "replies")}
-          </p>
-        </Link>
-      ))}
-      <Link
-        href="/resident/forum"
-        className="flex items-center justify-between px-5 py-2.5 text-[13px] font-semibold text-accent hover:underline"
-      >
-        View all community updates
-        <ChevronRight className="size-3.5" />
-      </Link>
-    </Card>
-  );
-}

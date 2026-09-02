@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 import Link from "next/link";
+import { UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* -------------------------------------------------------------------------- */
@@ -340,9 +341,9 @@ export function Avatar({
       )}
       aria-hidden
     >
-      {/* An em dash rather than an empty circle, so a home with nobody in it
-          reads as deliberately blank instead of as a rendering failure. */}
-      {text || "—"}
+      {/* A person glyph rather than an empty circle, per the huddle: a user
+          with no photo and no derivable initials still reads as a person. */}
+      {text || <UserRound className="size-4" strokeWidth={2} />}
     </span>
   );
 }

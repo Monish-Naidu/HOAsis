@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
+import { MyHomeCard } from "@/components/app/my-home-card";
 import { formatDate, money, today } from "@/lib/utils";
 
 export default function ResidentAccount() {
@@ -28,6 +29,8 @@ export default function ResidentAccount() {
           Unit {currentOwner.unit} · {currentOwner.displayName}
         </p>
       </div>
+
+      <MyHomeCard detailsLink={false} />
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">

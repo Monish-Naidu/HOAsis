@@ -117,7 +117,9 @@ export function CommunityHero({
     <section
       className={cn(
         "relative isolate flex items-end overflow-hidden",
-        compact ? "h-28" : "h-36 sm:h-44",
+        // Taller per the 2026-09-01 huddle: the banner was leaving too much
+        // white space beneath it, so it carries more of the viewport now.
+        compact ? "h-28" : "h-44 sm:h-56",
         className,
       )}
       aria-label={settings.displayName}
