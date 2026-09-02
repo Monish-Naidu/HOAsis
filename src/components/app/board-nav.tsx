@@ -94,10 +94,15 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const rail = variant === "rail";
 
   return (
-    <nav aria-label="Admin sections">
+    <nav aria-label="Board sections" className={cn(rail && "flex min-h-full w-full")}>
       <TabPill
         activeKey={activeRoute?.key ?? ""}
-        className="flex gap-1 lg:flex-col"
+        className={cn(
+          "flex gap-1 lg:flex-col",
+          // In the full-height sidebar the rows share the leftover height, per
+          // the huddle: evenly spaced, not packed at the top of the column.
+          rail && "min-h-full w-full flex-col justify-evenly",
+        )}
         pillClassName={rail ? "bg-royal" : "bg-brand-soft"}
       >
       {visible.map(({ href, label, icon: Icon, key }) => {

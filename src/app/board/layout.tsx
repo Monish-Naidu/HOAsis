@@ -7,21 +7,33 @@ import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/acco
 import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
-import { Wordmark } from "@/components/app/logo";
+import { RailWordmark, Wordmark } from "@/components/app/logo";
 
 export const metadata = { title: { default: "Board", template: "%s · ExpressHOA" } };
 
 export default function BoardLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireSession>
-      <div className="min-h-dvh bg-bg">
+      <div className="min-h-dvh bg-bg lg:pl-56">
+        {/* The sidebar from the design comps, finally as drawn: flush to the
+            left edge, full viewport height, fixed while the page scrolls. The
+            community's name deliberately is not here; the banner already says
+            it, and the huddle called the sidebar copy redundant. */}
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col bg-navy-950 lg:flex">
+          <Link href="/board" className="flex items-center px-5 pb-1 pt-5">
+            <RailWordmark />
+          </Link>
+          <div className="no-scrollbar flex flex-1 overflow-y-auto px-3 py-3">
+            <BoardNav variant="rail" />
+          </div>
+        </aside>
         <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md">
           <div className="flex items-center justify-between gap-4 px-4 py-2.5 lg:px-6">
             <div className="flex items-center gap-3">
-              <Link href="/">
+              <Link href="/" className="lg:hidden">
                 <Wordmark />
               </Link>
-              <span className="hidden h-5 w-px bg-border sm:block" />
+              <span className="hidden h-5 w-px bg-border sm:block lg:hidden" />
               <CommunityName />
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -39,35 +51,8 @@ export default function BoardLayout({ children }: { children: React.ReactNode })
 
         <CommunityHero withLocation compact />
 
-        <div className="mx-auto flex w-full max-w-[1400px] gap-8 px-4 py-6 lg:px-6 lg:py-8">
-          <aside className="hidden w-56 shrink-0 lg:block">
-            {/* Travels with the reader, and scrolls itself if the viewport is
-                shorter than the nav rather than being cut off. */}
-            <div className="no-scrollbar sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto pb-4">
-              {/* The navy rail from the dashboard design: a fixed surface in
-                  both themes, like the device bezels. */}
-              <div className="rounded-card bg-navy-950 p-2 shadow-card ring-1 ring-navy-700/40">
-                <BoardNav variant="rail" />
-              </div>
-              {/* A phone number and "7am to 11pm, every day" sat here. Neither
-                  was true, and a support commitment nobody can honour is the
-                  worst kind of copy to ship: it is believed. The library is
-                  real, free, and the thing most questions are actually about. */}
-              <div className="mt-6 rounded-card border border-border bg-surface p-3">
-                <p className="text-[13px] font-semibold text-fg-muted">Stuck on something</p>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
-                  The library covers what your state requires, in plain words.
-                </p>
-                <Link
-                  href="/library"
-                  className="mt-2 inline-block text-[15px] font-semibold text-brand hover:underline"
-                >
-                  Open the library
-                </Link>
-              </div>
-            </div>
-          </aside>
-          <main className="min-w-0 flex-1">
+        <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-6 lg:py-8">
+          <main className="min-w-0">
             <LocalCopyBanner />
             <SetupReturnBar />
             <RequireCapability>{children}</RequireCapability>

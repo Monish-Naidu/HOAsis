@@ -53,7 +53,6 @@ export const residentTabs: ResidentTab[] = [
     webOnly: true,
   },
   { href: "/resident/vote", label: "Vote", icon: Vote, webLabel: "Voting" },
-  { href: "/resident/account", label: "Account", icon: Receipt },
   {
     href: "/resident/finances",
     label: "Funds",
@@ -62,4 +61,6 @@ export const residentTabs: ResidentTab[] = [
     webOnly: true,
     visible: (s) => s.showFundsToResidents,
   },
+  // Account closes the list, per the huddle's nav order.
+  { href: "/resident/account", label: "Account", icon: Receipt },
 ];

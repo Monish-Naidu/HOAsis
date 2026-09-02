@@ -26,6 +26,28 @@ export function Logo({ className, size = 28 }: { className?: string; size?: numb
 }
 
 /**
+ * The wordmark dressed for the navy sidebar.
+ *
+ * The standard Wordmark wears theme tokens (`text-fg`, `text-accent`), which
+ * disappear against navy-950 in the light theme. The rail is a deliberately
+ * fixed surface, so this variant wears fixed colors the same way the rail's
+ * own nav does: white ink, and the dark theme's accent blue for "HOA".
+ */
+export function RailWordmark({ size = 26 }: { size?: number }) {
+  return (
+    <span className="inline-flex items-center text-white" style={{ gap: size * 0.2 }}>
+      <Logo size={size} className="text-white" />
+      <span
+        className="font-semibold"
+        style={{ fontSize: size * 0.58, letterSpacing: "-0.02em", lineHeight: 1 }}
+      >
+        Express<span className="text-[#6ea0f0]">HOA</span>
+      </span>
+    </span>
+  );
+}
+
+/**
  * The mark and the name.
  *
  * Type is set at 0.58 of the mark and tracked in as it grows. Letter spacing

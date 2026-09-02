@@ -7,7 +7,7 @@ import { BatteryFull, Monitor, Signal, Smartphone, Wifi } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { ResidentBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
-import { Wordmark } from "@/components/app/logo";
+import { RailWordmark, Wordmark } from "@/components/app/logo";
 import { residentTabs } from "@/components/app/resident-nav";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
@@ -44,9 +44,15 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const topBar = (
     <header className="hidden border-b border-border bg-surface lg:block">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        <Link href="/">
-          <Wordmark />
-        </Link>
+        {/* In website mode the sidebar carries the logo; showing it twice on
+            one edge of the screen reads as a mistake. */}
+        <div>
+          {phonePreview ? (
+            <Link href="/">
+              <Wordmark />
+            </Link>
+          ) : null}
+        </div>
         <div className="flex items-center gap-2.5">
           <div
             className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5"
@@ -156,76 +162,58 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   /* -------------------------------------------------------------- website */
   return (
     <RequireSession>
-    <div className="min-h-dvh bg-bg">
+    <div className="min-h-dvh bg-bg lg:pl-56">
+      {/* The sidebar from the design comps, as drawn: flush left, full
+          viewport height, fixed while the page scrolls. No community name or
+          unit here; the banner already carries both, and the huddle called
+          the sidebar copy redundant. */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col bg-navy-950 lg:flex">
+        <Link href="/resident" className="flex items-center px-5 pb-1 pt-5">
+          <RailWordmark />
+        </Link>
+        <nav
+          aria-label="Resident sections"
+          className="no-scrollbar flex flex-1 overflow-y-auto px-3 py-3"
+        >
+          <TabPill
+            activeKey={
+              tabs.find((t) =>
+                t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
+              )?.href ?? ""
+            }
+            // Rows share the leftover height, per the huddle: evenly spaced
+            // down the column, not packed at the top.
+            className="flex min-h-full w-full flex-col justify-evenly gap-1"
+            pillClassName="bg-royal"
+          >
+            {tabs.map(({ href, label, icon: Icon, webLabel }) => {
+              const active =
+                href === "/resident" ? pathname === href : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  data-tab-key={href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative z-10 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
+                    active
+                      ? "text-white"
+                      : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
+                  )}
+                >
+                  <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                  {webLabel ?? label}
+                </Link>
+              );
+            })}
+          </TabPill>
+        </nav>
+      </aside>
       {topBar}
       {appHeader}
       <CommunityHero subtitle={`Unit ${unit} · ${address}`} />
       <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
-        <aside className="hidden w-56 shrink-0 lg:block">
-          <div className="no-scrollbar sticky top-8 max-h-[calc(100dvh-4rem)] overflow-y-auto">
-            {/* The navy rail from the 2026-09-01 dashboard design. A fixed
-                surface in both themes, like the device bezels, so it wears the
-                navy ramp rather than theme tokens. */}
-            <div className="rounded-card bg-navy-950 p-2 shadow-card ring-1 ring-navy-700/40">
-              <div className="px-3 pb-3 pt-2.5">
-                <p className="text-[15px] font-semibold text-white">{associationName}</p>
-                <p className="mt-0.5 text-[13px] leading-snug text-navy-300">
-                  Unit {unit}
-                  <br />
-                  {address}
-                </p>
-              </div>
-              <nav aria-label="Resident sections">
-                <TabPill
-                  activeKey={
-                    tabs.find((t) =>
-                      t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
-                    )?.href ?? ""
-                  }
-                  className="flex flex-col gap-1"
-                  pillClassName="bg-royal"
-                >
-                  {tabs.map(({ href, label, icon: Icon, webLabel }) => {
-                    const active =
-                      href === "/resident" ? pathname === href : pathname.startsWith(href);
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        data-tab-key={href}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "relative z-10 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
-                          active
-                            ? "text-white"
-                            : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
-                        )}
-                      >
-                        <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-                        {webLabel ?? label}
-                      </Link>
-                    );
-                  })}
-                </TabPill>
-              </nav>
-            </div>
-            <div className="mt-4 rounded-card border border-border bg-surface p-3">
-              {/* A support line that does not exist. An owner would have
-                  called it. Their board is the right answer to almost every
-                  question an owner has here, and it is the true one. */}
-              <p className="text-[13px] font-semibold text-fg-muted">Need a person</p>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
-                Your board answers requests here, and you can see where yours stands.
-              </p>
-              <Link
-                href="/resident/requests"
-                className="mt-2 inline-block text-[15px] font-semibold text-brand hover:underline"
-              >
-                Open a request
-              </Link>
-            </div>
-          </div>
-        </aside>
         {/* The home screen runs the full width for its dashboard grid; every
             other screen keeps the phone-width column both modes share. The
             container query context is what lets the same page collapse to one
