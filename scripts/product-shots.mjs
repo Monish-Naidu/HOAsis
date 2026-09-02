@@ -96,6 +96,8 @@ for (const shot of SHOTS) {
 
   await page.goto(`${BASE}${shot.path}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
+  // The dev-server overlay badge is not part of the product.
+  await page.evaluate(() => document.querySelector("nextjs-portal")?.remove());
 
   if (shot.clipFrom) {
     const box = await page.locator(shot.clipFrom).boundingBox();

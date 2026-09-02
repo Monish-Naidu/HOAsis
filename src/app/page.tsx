@@ -390,7 +390,10 @@ function PaymentsMini() {
               </div>
               <div className="mt-0.5 flex items-center justify-between gap-2">
                 <p className="text-[10px] text-fg-muted">{FEE_SCHEDULE[kind].settlement}</p>
-                {kind === "ach" ? <Pill tone="ok">Cheapest</Pill> : null}
+                {/* Under a flat owner fee both rails cost the owner the same;
+                    the saving lands on the association, and the pay screen
+                    says so in the same words. */}
+                {kind === "ach" ? <Pill tone="ok">Saves the HOA</Pill> : null}
               </div>
             </li>
           );
