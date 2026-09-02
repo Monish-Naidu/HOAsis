@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   Bell,
-  BookOpen,
   Briefcase,
   CalendarDays,
   ChartNoAxesColumn,
@@ -14,44 +13,36 @@ import {
   CircleX,
   ClipboardCheck,
   Clock,
-  Contact,
   CreditCard,
-  FolderOpen,
   Headphones,
   MessagesSquare,
   ShieldCheck,
   Sparkles,
-  TriangleAlert,
-  UserRound,
-  UsersRound,
   Video,
-  Vote,
   Zap,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Avatar, Card } from "@/components/ui/primitives";
 import {
   articleBySlug,
-  documents,
-  ledgerEntries,
+  association,
+  communitySettings,
   liveMeeting,
-  meetings,
   openRequests,
-  owners,
-  requests,
   reserveComponents,
   reserveSummary,
   upcomingMeetings,
   vendorGaps,
   vendors,
 } from "@/lib/data";
+import { computePaymentCost, FEE_SCHEDULE } from "@/lib/payments/instruments";
 import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
 import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 
 export const metadata = {
   title: "ExpressHOA. Moving your community forward.",
   description:
-    "Everything your community needs to get things done quickly, all in one place. Set up in minutes, no card to start, and the first 90 days are free.",
+    "Everything your HOA needs to get things done quickly, all in one place. Set up in minutes, no card to start, and the first 90 days are free.",
 };
 
 /*
@@ -114,18 +105,6 @@ const POCKET = [
   },
 ];
 
-const MORE = [
-  { icon: CreditCard, label: "Payments" },
-  { icon: CircleDollarSign, label: "Dues" },
-  { icon: TriangleAlert, label: "Violations" },
-  { icon: ClipboardCheck, label: "ARC requests" },
-  { icon: FolderOpen, label: "Documents" },
-  { icon: MessagesSquare, label: "Communications" },
-  { icon: CalendarDays, label: "Meetings" },
-  { icon: Vote, label: "Voting" },
-  { icon: ChartNoAxesColumn, label: "Reporting" },
-  { icon: Contact, label: "Directory" },
-];
 
 /**
  * The five guides in the Knowledge Center card, in the deck's order: duties,
@@ -136,15 +115,6 @@ const MORE = [
  * say the same thing. Renaming them for the card reads better until someone
  * clicks "Board member duties" and lands on a page that never uses the words.
  */
-const GUIDES = [
-  "first-90-days-on-a-board",
-  "running-a-board-meeting",
-  "collecting-late-assessments",
-  "reading-an-hoa-budget",
-  "reserve-study-basics",
-]
-  .map((slug) => articleBySlug(slug))
-  .filter((article) => article !== undefined);
 
 /* -------------------------------------------------------------------------- */
 /* Device frames                                                               */
@@ -162,13 +132,15 @@ const GUIDES = [
 function MonitorFrame({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="relative mx-auto w-full max-w-[680px]">
-      <div className="relative rounded-[clamp(12px,2.6vw,18px)] bg-[#0c0e11] p-[clamp(6px,1.4vw,10px)] shadow-[0_30px_70px_-20px_rgb(0_0_0/0.5)] ring-1 ring-black/30 dark:shadow-[0_30px_70px_-20px_rgb(0_0_0/0.85)]">
-        {/* The aluminum edge, caught by the light along the top. */}
+      {/* Silver, per the huddle: the near-black bezel lost its edge against
+          the dark theme. The aluminum body reads on both. */}
+      <div className="relative rounded-[clamp(12px,2.6vw,18px)] bg-gradient-to-b from-[#e8eaed] via-[#d2d5da] to-[#b6bbc2] p-[clamp(6px,1.4vw,10px)] shadow-[0_30px_70px_-20px_rgb(0_0_0/0.45)] ring-1 ring-black/20 dark:shadow-[0_30px_70px_-20px_rgb(0_0_0/0.85)]">
+        {/* The machined edge, caught by the light along the top. */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-[clamp(12px,2.6vw,18px)] ring-1 ring-inset ring-white/15"
+          className="pointer-events-none absolute inset-0 rounded-[clamp(12px,2.6vw,18px)] ring-1 ring-inset ring-white/50"
           aria-hidden
         />
-        <div className="overflow-hidden rounded-[clamp(6px,1.2vw,9px)] bg-surface">
+        <div className="overflow-hidden rounded-[clamp(6px,1.2vw,9px)] bg-black p-px ring-1 ring-black/40">
           <Image
             src={src}
             alt={alt}
@@ -380,84 +352,85 @@ function VendorMini() {
   );
 }
 
-function TransitionMini() {
-  return (
-    <Mini>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-3 text-fg-muted">
-            <UserRound className="size-4" />
-          </span>
-          <span className="text-[10px] font-medium leading-tight text-fg-muted">
-            Outgoing
-            <br />
-            board
-          </span>
-        </div>
-        <span className="h-px flex-1 bg-border" aria-hidden />
-        <ChevronRight className="-mx-1 size-3 shrink-0 text-fg-subtle" />
-        <div className="flex items-center gap-2">
-          <span className="text-right text-[10px] font-medium leading-tight text-fg-muted">
-            Incoming
-            <br />
-            board
-          </span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-fg">
-            <UserRound className="size-4" />
-          </span>
-        </div>
-      </div>
-      <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2.5">
-        {(
-          [
-            ["Documents", documents.length],
-            ["Financials", ledgerEntries.length],
-            ["Contacts", owners.length + vendors.length],
-            ["Meetings", meetings.length],
-            ["Requests", requests.length],
-          ] as const
-        ).map(([label, count]) => (
-          <li
-            key={label}
-            className="flex items-center justify-between gap-1.5 text-[11px] text-fg"
-          >
-            <span className="flex items-center gap-1.5">
-              <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
-              {label}
-            </span>
-            <span className="tnum text-fg-muted">{count}</span>
-          </li>
-        ))}
-      </ul>
-    </Mini>
-  );
-}
 
-function KnowledgeMini() {
-  return (
-    <Mini className="p-1.5">
-      <ul className="divide-y divide-border">
-        {GUIDES.map((article) => (
-          <li key={article.slug}>
-            <Link
-              href={`/library/${article.slug}`}
-              className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-[11px] font-medium text-fg hover:bg-surface-2"
-            >
-              <span className="truncate">{article.title}</span>
-              <ChevronRight className="size-3 shrink-0 text-fg-subtle" />
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </Mini>
-  );
-}
 
 /**
  * The five cards on slide four. Two of them are about guidance rather than a
  * screen, so their links open the library; the other three open the demo,
  * because the honest way to learn more about a feature is to use it.
  */
+/**
+ * The rails on the demo association's own dues, priced by the same
+ * computePaymentCost the product runs, so the card and the pay screen agree.
+ */
+function PaymentsMini() {
+  const policy = {
+    flatCents: communitySettings.paymentFeeCents,
+    paidBy: communitySettings.paymentFeePaidBy,
+    waiveOnAch: communitySettings.paymentFeeWaivedOnAch,
+  };
+  const dues = association.duesCents;
+  return (
+    <Mini className="p-2">
+      <ul className="divide-y divide-border">
+        {(
+          [
+            { kind: "ach", label: "Bank transfer" },
+            { kind: "card", label: "Card" },
+          ] as const
+        ).map(({ kind, label }) => {
+          const cost = computePaymentCost(kind, dues, policy);
+          return (
+            <li key={kind} className="px-1 py-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold text-fg">{label}</p>
+                <span className="tnum text-[11px] text-fg-muted">
+                  {money(cost.residentPaysCents)}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <p className="text-[10px] text-fg-muted">{FEE_SCHEDULE[kind].settlement}</p>
+                {kind === "ach" ? <Pill tone="ok">Cheapest</Pill> : null}
+              </div>
+            </li>
+          );
+        })}
+        <li className="flex items-center justify-between gap-2 px-1 py-1.5">
+          <p className="text-[11px] font-semibold text-fg">Autopay</p>
+          <Pill tone="info">On the 1st</Pill>
+        </li>
+      </ul>
+    </Mini>
+  );
+}
+
+/** Everything the four tiles left out, per the huddle: a list, not a grid. */
+function MoreList() {
+  return (
+    <Mini className="p-3">
+      <ul className="grid gap-y-1.5">
+        {[
+          "Violations",
+          "Architectural requests",
+          "Documents",
+          "Communication",
+          "Meetings",
+          "Voting",
+          "Reporting",
+          "Directory",
+          "Knowledge center",
+          "Board transitions",
+        ].map((item) => (
+          <li key={item} className="flex items-center gap-1.5 text-[12px] font-medium text-fg">
+            <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </Mini>
+  );
+}
+
 const FEATURES = [
   {
     icon: ShieldCheck,
@@ -484,20 +457,20 @@ const FEATURES = [
     mini: <VendorMini />,
   },
   {
-    icon: UsersRound,
-    tone: "bg-brand-soft text-brand-soft-fg",
-    title: "Board transitions",
-    body: "Everything the next board needs to succeed is already here.",
+    icon: CreditCard,
+    tone: "bg-info-soft text-info",
+    title: "Payments & dues",
+    body: "Dues by bank transfer or card, posted to the books the moment they clear.",
     href: "/signin",
-    mini: <TransitionMini />,
+    mini: <PaymentsMini />,
   },
   {
-    icon: BookOpen,
+    icon: Sparkles,
     tone: "bg-warn-soft text-warn",
-    title: "Knowledge center",
-    body: "Get answers, templates, and guidance when you need it, built for volunteer boards.",
-    href: "/library",
-    mini: <KnowledgeMini />,
+    title: "...and more",
+    body: "One subscription, every feature. Nothing is gated behind a bigger plan.",
+    href: "/pricing#included",
+    mini: <MoreList />,
   },
 ];
 
@@ -663,7 +636,7 @@ export default function MarketingHome() {
           <div className="absolute inset-0 bg-gradient-to-b from-hero-field/65 via-transparent via-[38%] to-hero-field/55" />
         </div>
 
-        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[42rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-center lg:pb-24">
+        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[42rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-start lg:pb-24 lg:pt-24">
           <div className="lg:pr-8">
             <Reveal>
               <h1 className="text-balance text-[44px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[56px]">
@@ -674,8 +647,7 @@ export default function MarketingHome() {
             </Reveal>
             <Reveal delay={90}>
               <p className="mt-6 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                Everything your community needs to get things done quickly, all in one
-                place.
+                Everything your HOA needs to get things done quickly, all in one place.
               </p>
             </Reveal>
             <Reveal delay={170}>
@@ -689,10 +661,9 @@ export default function MarketingHome() {
                 </Link>
                 <Link
                   href="/signin"
-                  className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-fg-muted transition-colors hover:text-fg"
+                  className="inline-flex h-12 items-center rounded-xl border border-border-2 px-6 text-[16px] font-semibold text-fg transition-colors hover:bg-surface-2"
                 >
-                  See how it works
-                  <ArrowRight className="size-4" />
+                  Log in
                 </Link>
               </div>
             </Reveal>
@@ -719,14 +690,14 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* The strip along the bottom of slide one. Fixed navy in both themes,
-          like the device bezels: it is a painted band, not a surface. */}
-      <div className="bg-navy-900 text-navy-50 dark:bg-navy-800">
+      {/* The strip along the bottom of slide one. The huddle called the navy
+          band too dark against the white page, so in light mode it is a quiet
+          gray with the blue carrying the icons and copy; dark keeps navy. */}
+      <div className="border-y border-border bg-surface-2 text-accent dark:border-0 dark:bg-navy-800 dark:text-navy-50">
         <ul className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-5 py-4 text-[14px] font-medium sm:justify-between">
           {ASSURANCES.map(({ icon: Icon, label }) => (
             <li key={label} className="inline-flex items-center gap-2.5">
-              {/* Fixed colors: the strip is a painted navy band in both themes. */}
-              <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-[#7dabf8]">
+              <span className="flex size-8 items-center justify-center rounded-full bg-accent/10 text-accent dark:bg-white/10 dark:text-[#7dabf8]">
                 <Icon className="size-4" strokeWidth={2} />
               </span>
               {label}
@@ -745,10 +716,7 @@ export default function MarketingHome() {
                 <br />
                 <span className="text-hero-accent">Not another job.</span>
               </h2>
-              <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                ExpressHOA gives your board the tools to get the work done in minutes, so
-                the neighborhood stays the calm place you chose.
-              </p>
+
             </Reveal>
             <Reveal delay={90}>
               <ul className="mt-6 divide-y divide-border">
@@ -757,11 +725,11 @@ export default function MarketingHome() {
                 ))}
               </ul>
               <Link
-                href="#features"
-                className="mt-2 inline-flex items-center gap-2 text-[18px] font-semibold text-accent hover:underline"
+                href="/start"
+                className="group mt-4 inline-flex h-12 items-center gap-2 rounded-xl bg-royal px-6 text-[17px] font-semibold text-royal-fg shadow-raised transition-all hover:-translate-y-0.5 hover:bg-royal-hover hover:shadow-float"
               >
-                See how ExpressHOA works
-                <ArrowRight className="size-4" />
+                Get started today
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </Reveal>
           </div>
@@ -876,34 +844,6 @@ export default function MarketingHome() {
             ))}
           </div>
 
-          <Reveal delay={120}>
-            <div className="mt-6 flex flex-col gap-5 rounded-2xl bg-hero-field p-5 sm:p-6 lg:flex-row lg:items-center">
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
-                <Sparkles className="size-6" strokeWidth={1.9} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
-                  And that&apos;s just the beginning.
-                </p>
-                <ul className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] font-medium text-fg-muted">
-                  {MORE.map(({ icon: Icon, label }) => (
-                    <li key={label} className="inline-flex items-center gap-1.5">
-                      <Icon className="size-3.5 text-accent" strokeWidth={2} />
-                      {label}
-                    </li>
-                  ))}
-                  <li>and more</li>
-                </ul>
-              </div>
-              <Link
-                href="/pricing#included"
-                className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-royal px-5 text-[15px] font-semibold text-royal-fg transition-colors hover:bg-royal-hover"
-              >
-                Explore all features
-                <ArrowRight className="size-4" />
-              </Link>
-            </div>
-          </Reveal>
         </div>
       </section>
 
@@ -974,6 +914,25 @@ export default function MarketingHome() {
             </Link>
           </Reveal>
         </div>
+        {/* The rails, named. Set as quiet wordmarks rather than borrowed logo
+            art, and only rails the product actually runs: the huddle said
+            mirror PayHOA's row (Plaid, Stripe...), but Plaid was ruled out on
+            2026-09-02, and a logo for a service we do not use is a lie. */}
+        <div className="border-t border-border">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-9 gap-y-2 px-5 py-5 sm:justify-between">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+              Payments run on
+            </p>
+            {["Stripe", "ACH", "Visa", "Mastercard", "Apple Pay", "Google Pay"].map((rail) => (
+              <span
+                key={rail}
+                className="text-[17px] font-bold tracking-tight text-fg-subtle"
+              >
+                {rail}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Close. */}
@@ -1004,7 +963,7 @@ export default function MarketingHome() {
                 href="/signin"
                 className="inline-flex h-12 items-center gap-2 rounded-xl border border-navy-50/30 px-6 text-[16px] font-semibold text-navy-50 transition-colors hover:bg-navy-50/10"
               >
-                See how it works
+                Log in
               </Link>
             </div>
           </Reveal>
