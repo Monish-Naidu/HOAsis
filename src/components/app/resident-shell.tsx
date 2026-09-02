@@ -12,7 +12,7 @@ import { residentTabs } from "@/components/app/resident-nav";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero } from "@/components/app/community-hero";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
 import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { settings } = useAppState();
   const owner = useCurrentOwner();
+  const { photo: homePhoto } = useHomePhoto();
   const associationName = settings.displayName;
   const tabs = visibleTabs(settings);
   const ownerName = owner?.members[0] ?? "";
@@ -170,6 +171,23 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col bg-navy-950 lg:flex">
         <Link href="/resident" className="flex items-center px-5 pb-1 pt-5">
           <RailWordmark />
+        </Link>
+        {/* The resident's own home, small, above the nav. Their photo when
+            they have added one on Account; the community's photo until then,
+            the closest true image we hold. Opens Account, where the photo is
+            managed. */}
+        <Link
+          href="/resident/account"
+          aria-label="Your home"
+          className="group mx-3 mt-3 block overflow-hidden rounded-lg ring-1 ring-navy-700/60"
+        >
+          <span
+            className="block h-20 bg-cover bg-center transition-transform duration-300 group-hover:scale-[1.03]"
+            style={{ backgroundImage: `url(${homePhoto ?? settings.photoUrl})` }}
+          />
+          <span className="block bg-navy-900/80 px-2.5 py-1.5 text-[12px] font-medium text-navy-200">
+            Unit {unit} · your home
+          </span>
         </Link>
         <nav
           aria-label="Resident sections"

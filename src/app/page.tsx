@@ -614,7 +614,7 @@ export default function MarketingHome() {
           copy carries the top padding. */}
       <section className="relative isolate -mt-[69px] overflow-hidden bg-hero-field pt-[69px]">
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] lg:block"
+          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[66%] lg:block"
           aria-hidden
         >
           {/* The same neighborhood rendered twice, 2026-08-31: day for the
@@ -635,7 +635,9 @@ export default function MarketingHome() {
             sizes="58vw"
             className="hidden object-cover object-[left_top] dark:block"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[9%] via-hero-field/45 via-[44%] to-transparent to-[82%]" />
+          {/* A shorter fade than before, so more of the render reads as
+              photograph rather than as wash. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[5%] via-hero-field/35 via-[34%] to-transparent to-[72%]" />
           <div className="absolute inset-0 bg-gradient-to-b from-hero-field/65 via-transparent via-[38%] to-hero-field/55" />
         </div>
 
@@ -643,7 +645,7 @@ export default function MarketingHome() {
           <div className="lg:pr-8">
             <Reveal>
               <h1 className="text-balance text-[44px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[56px]">
-                Moving your community
+                Moving your HOA
                 <br />
                 <span className="text-hero-accent">forward.</span>
               </h1>
