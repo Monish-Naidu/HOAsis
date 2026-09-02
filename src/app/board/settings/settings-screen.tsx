@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  ArrowLeftRight,
   CalendarDays,
   Check,
   FileText,
@@ -56,6 +57,10 @@ export function SettingsScreen() {
     removeForm,
     resetDemo,
     can,
+    documents,
+    ledger,
+    vendors,
+    requests,
   } = useAppState();
   const { notify } = useToast();
 
@@ -412,6 +417,38 @@ export function SettingsScreen() {
           <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
             The President is set apart on purpose. Handing over that office is its own step,
             because an association with no President has no way to grant access back.
+          </p>
+        </Card>
+
+        {/* What a board transition actually moves: nothing. The records are
+            the association's, so changing who holds an office above is the
+            entire handover. The counts are live so the claim stays checkable. */}
+        <Card>
+          <CardHeader
+            title="When the board changes"
+            subtitle="The records belong to the association, so there is nothing to hand over"
+            icon={<ArrowLeftRight className="size-4" />}
+          />
+          <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">
+            {(
+              [
+                [documents.length, "documents"],
+                [ledger.length, "ledger entries"],
+                [community.owners.length, "homeowner records"],
+                [vendors.length, "vendor contacts"],
+                [community.meetings.length, "meetings on record"],
+                [requests.length, "requests with history"],
+              ] as const
+            ).map(([count, noun]) => (
+              <div key={noun} className="bg-surface px-5 py-3">
+                <p className="tnum text-[22px] font-semibold leading-none text-fg">{count}</p>
+                <p className="mt-1 text-[13px] text-fg-muted">{noun}</p>
+              </div>
+            ))}
+          </div>
+          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
+            A new officer sees all of it the moment their office changes above. Nothing lives
+            in the outgoing treasurer&apos;s inbox, and nothing leaves when they do.
           </p>
         </Card>
 

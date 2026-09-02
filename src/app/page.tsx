@@ -32,8 +32,13 @@ import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marke
 import { Avatar, Card } from "@/components/ui/primitives";
 import {
   articleBySlug,
+  documents,
+  ledgerEntries,
   liveMeeting,
+  meetings,
   openRequests,
+  owners,
+  requests,
   reserveComponents,
   reserveSummary,
   upcomingMeetings,
@@ -126,18 +131,20 @@ const MORE = [
  * The five guides in the Knowledge Center card, in the deck's order: duties,
  * meetings, collections, budgets, reserves. Real articles, so every row opens.
  */
+/**
+ * Labeled with the articles' own titles, so the link and the page it opens
+ * say the same thing. Renaming them for the card reads better until someone
+ * clicks "Board member duties" and lands on a page that never uses the words.
+ */
 const GUIDES = [
-  ["first-90-days-on-a-board", "Board member duties"],
-  ["running-a-board-meeting", "How to run a meeting"],
-  ["collecting-late-assessments", "Collection best practices"],
-  ["reading-an-hoa-budget", "Budgets and assessments"],
-  ["reserve-study-basics", "Reserve studies 101"],
+  "first-90-days-on-a-board",
+  "running-a-board-meeting",
+  "collecting-late-assessments",
+  "reading-an-hoa-budget",
+  "reserve-study-basics",
 ]
-  .map(([slug, label]) => {
-    const article = articleBySlug(slug);
-    return article ? { slug: article.slug, label } : undefined;
-  })
-  .filter((guide) => guide !== undefined);
+  .map((slug) => articleBySlug(slug))
+  .filter((article) => article !== undefined);
 
 /* -------------------------------------------------------------------------- */
 /* Device frames                                                               */
@@ -401,10 +408,24 @@ function TransitionMini() {
         </div>
       </div>
       <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2.5">
-        {["Documents", "History", "Contacts", "Projects", "Financials"].map((item) => (
-          <li key={item} className="flex items-center gap-1.5 text-[11px] text-fg">
-            <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
-            {item}
+        {(
+          [
+            ["Documents", documents.length],
+            ["Financials", ledgerEntries.length],
+            ["Contacts", owners.length + vendors.length],
+            ["Meetings", meetings.length],
+            ["Requests", requests.length],
+          ] as const
+        ).map(([label, count]) => (
+          <li
+            key={label}
+            className="flex items-center justify-between gap-1.5 text-[11px] text-fg"
+          >
+            <span className="flex items-center gap-1.5">
+              <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
+              {label}
+            </span>
+            <span className="tnum text-fg-muted">{count}</span>
           </li>
         ))}
       </ul>
@@ -422,7 +443,7 @@ function KnowledgeMini() {
               href={`/library/${article.slug}`}
               className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-[11px] font-medium text-fg hover:bg-surface-2"
             >
-              <span className="truncate">{article.label}</span>
+              <span className="truncate">{article.title}</span>
               <ChevronRight className="size-3 shrink-0 text-fg-subtle" />
             </Link>
           </li>
