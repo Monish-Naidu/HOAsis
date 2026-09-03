@@ -3,28 +3,22 @@
 import {
   AlertTriangle,
   CheckCircle2,
-  FileWarning,
   Landmark,
-  Receipt,
+  Paperclip,
   Plus,
+  Receipt,
   ShieldAlert,
-  Timer,
+  StickyNote,
   Trash2,
   Truck,
 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Callout,
-  Card,
-  CardHeader,
-  PageHeader,
-  Stat,
-} from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
 import { useState } from "react";
-import { useAppState, usePendingApprovals, useVendorGaps } from "@/lib/app-state";
+import { useAppState, useVendorGaps } from "@/lib/app-state";
+import { InvoiceInbox } from "@/components/app/invoice-inbox";
 import { RecordPayment } from "@/components/app/record-payment";
 import { useToast } from "@/components/app/toast";
+import type { Payout } from "@/lib/types";
 import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 
 const payoutTone = {
@@ -34,11 +28,12 @@ const payoutTone = {
   "needs-approval": "warn",
 } as const;
 
+const field =
+  "h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none";
+
 export default function BoardVendors() {
   const gaps = useVendorGaps();
-  const awaiting = usePendingApprovals();
-  const { vendors, payouts, markW9Requested, approvePayout, addVendor, removeVendor } =
-    useAppState();
+  const { vendors, payouts, markW9Requested, addVendor, removeVendor } = useAppState();
   const { notify } = useToast();
   const [adding, setAdding] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -48,6 +43,8 @@ export default function BoardVendors() {
     achEnabled: true,
     w9OnFile: false,
   });
+
+  const needsApproval = payouts.filter((p) => p.approvals.length < p.approvalsRequired).length;
 
   function saveVendor() {
     if (!draft.name.trim()) return;
@@ -66,14 +63,11 @@ export default function BoardVendors() {
     setDraft({ name: "", service: "", achEnabled: true, w9OnFile: false });
     setAdding(false);
   }
-  // Undefined rather than zero when there are no vendors, so a board with none
-  // is not told that 0% of them are on ACH.
 
   return (
     <>
       <PageHeader
         title="Vendors"
-        
         action={
           // Each form carries its own Cancel, so the header offers the two
           // ways in and gets out of the way once one is open.
@@ -99,100 +93,29 @@ export default function BoardVendors() {
 
       {recording ? <RecordPayment onClose={() => setRecording(false)} /> : null}
 
-
-      {/* Four counts sat here and two were trivia. "Bank payment lands in 1.8
-          days" is a backward looking average of payments already made, which
-          tells a board nothing they can act on, and the signature card claimed
-          "two signatures required over $1,000", a policy this association had
-          never set anywhere. Stating a rule nobody chose is worse than saying
-          nothing. What is left is the three things that are somebody's job. */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat
-          label="Waiting on you"
-          value={String(awaiting.length)}
-          tone={awaiting.length ? "warn" : "ok"}
-          hint={
-            awaiting.length
-              ? "Payments a board member has to approve before they go"
-              : "Nothing needs approving"
-          }
-          icon={<Timer className="size-4" />}
-        />
-        <Stat
-          label="Missing a W-9"
-          value={String(gaps.missingW9.length)}
-          tone={gaps.missingW9.length ? "danger" : "ok"}
-          hint={
-            gaps.missingW9.length
-              ? "Pay one more than $600 in a year and the IRS wants a 1099 in January"
-              : "Every vendor has one on file"
-          }
-          icon={<FileWarning className="size-4" />}
-        />
-        <Stat
-          label="Insurance expiring"
-          value={String(gaps.expiringCoi.length)}
-          tone={gaps.expiringCoi.length ? "warn" : "ok"}
-          hint={
-            gaps.expiringCoi.length
-              ? "Within 60 days. An uninsured vendor on your property is your problem"
-              : "No certificate lapses in the next 60 days"
-          }
-          icon={<Landmark className="size-4" />}
-        />
-      </div>
-
-      {gaps.missingW9.length ? (
-        <Callout
-          tone="danger"
-          className="mt-5"
-          icon={<ShieldAlert className="size-4" />}
-          title={`${gaps.missingW9[0].name} has no W-9 on file`}
-          action={
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                markW9Requested(gaps.missingW9[0].id);
-                notify(`W-9 requested from ${gaps.missingW9[0].name}`);
-              }}
-            >
-              Request W-9
-            </Button>
-          }
-        >
-          Paid {money(gaps.missingW9[0].ytdPaidCents)} year to date, past the $600 threshold for a
-          1099-NEC. Without the W-9 the January filing will be wrong.
-        </Callout>
-      ) : null}
-
       {adding ? (
-        <Card className="mt-5">
+        <Card className="mb-5">
           <CardHeader
             title="New vendor"
             subtitle="Over $600 a year, the IRS needs a W-9 from them in January"
           />
           <div className="grid gap-3 px-5 py-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
-                Name
-              </span>
+              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">Name</span>
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 placeholder="Cascade Grounds Co."
-                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+                className={field}
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
-                Service
-              </span>
+              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">Service</span>
               <input
                 value={draft.service}
                 onChange={(e) => setDraft({ ...draft, service: e.target.value })}
                 placeholder="Grounds and irrigation"
-                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+                className={field}
               />
             </label>
           </div>
@@ -215,34 +138,77 @@ export default function BoardVendors() {
               />
               W-9 already on file
             </label>
-            <Button
-              variant="primary"
-              size="sm"
-              className="ml-auto"
-              disabled={!draft.name.trim()}
-              onClick={saveVendor}
-            >
-              Save vendor
-            </Button>
+            <div className="ml-auto flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" disabled={!draft.name.trim()} onClick={saveVendor}>
+                Save vendor
+              </Button>
+            </div>
           </div>
         </Card>
       ) : null}
 
+      {/* The inbox comes first because it is the work. Vendor records and the
+          payment trail are what the work leaves behind. */}
+      <InvoiceInbox />
+
+      {/* Two callouts, only when there is something to do. The count tiles
+          that used to sit here restated these and added averages nobody could
+          act on. */}
+      {gaps.missingW9.length ? (
+        <Callout
+          tone="danger"
+          className="mt-5"
+          icon={<ShieldAlert className="size-4" />}
+          title={`${gaps.missingW9[0].name} has no W-9 on file`}
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                markW9Requested(gaps.missingW9[0].id);
+                notify(`W-9 requested from ${gaps.missingW9[0].name}`);
+              }}
+            >
+              Request W-9
+            </Button>
+          }
+        >
+          Paid {money(gaps.missingW9[0].ytdPaidCents)} this year, past the $600 line for a
+          1099-NEC. Without the W-9 the January filing will be wrong.
+        </Callout>
+      ) : null}
+
+      {gaps.expiringCoi.length ? (
+        <Callout
+          tone="warn"
+          className="mt-5"
+          icon={<Landmark className="size-4" />}
+          title={
+            gaps.expiringCoi.length === 1
+              ? `${gaps.expiringCoi[0].name}'s insurance certificate expires ${relativeDays(gaps.expiringCoi[0].coiExpires ?? "")}`
+              : `${gaps.expiringCoi.length} insurance certificates expire within 60 days`
+          }
+        >
+          {gaps.expiringCoi.length === 1
+            ? "Ask for the renewed certificate before the next visit. An uninsured vendor on your property is your problem."
+            : gaps.expiringCoi.map((v) => v.name).join(", ")}
+        </Callout>
+      ) : null}
+
       <div className="mt-5 grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <CardHeader
-            title="Vendor list"
-            
-            icon={<Truck className="size-4" />}
-          />
+          <CardHeader title="Vendor list" icon={<Truck className="size-4" />} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-left">
               <thead>
                 <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
                   <th className="px-5 py-2.5 font-semibold">Vendor</th>
-                  <th className="px-3 py-2.5 font-semibold">Rail</th>
-                  <th className="px-3 py-2.5 font-semibold">Docs</th>
-                  <th className="px-5 py-2.5 text-right font-semibold">Paid YTD</th>
+                  <th className="px-3 py-2.5 font-semibold">Pays by</th>
+                  <th className="px-3 py-2.5 font-semibold">On file</th>
+                  <th className="px-5 py-2.5 text-right font-semibold">Paid this year</th>
                 </tr>
               </thead>
               <tbody>
@@ -312,59 +278,155 @@ export default function BoardVendors() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader title="Recent payouts" />
+          <CardHeader
+            title="Payments"
+            subtitle={
+              needsApproval
+                ? `${needsApproval} waiting for a board member's approval`
+                : "Every payment the association has made"
+            }
+          />
           {payouts.map((p) => (
-            <div key={p.id} className="border-b border-border px-5 py-3.5 last:border-b-0">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-[15px] font-medium text-fg">{p.vendor}</p>
-                  <p className="text-[13px] text-fg-muted">{p.invoiceNumber}</p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="tnum text-[15px] font-semibold text-fg">
-                    {money(p.amountCents, { cents: false })}
-                  </p>
-                  <Badge tone={payoutTone[p.status]} className="mt-0.5">
-                    {p.status.replace("-", " ")}
-                  </Badge>
-                </div>
-              </div>
-              {p.approvals.length < p.approvalsRequired ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    approvePayout(p.id);
-                    notify(`Approved ${p.vendor}`);
-                  }}
-                  className="mt-2 h-7 rounded-md bg-brand px-2.5 text-[13px] font-medium text-brand-fg"
-                >
-                  Add my approval
-                </button>
-              ) : null}
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
-                <span className="font-medium uppercase">{p.method}</span>
-                <span>
-                  {p.status === "paid" ? "landed" : "lands"} {relativeDays(p.expectedDate)}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  {p.approvals.length >= p.approvalsRequired ? (
-                    <CheckCircle2 className="size-3 text-ok" />
-                  ) : (
-                    <AlertTriangle className="size-3 text-warn" />
-                  )}
-                  {p.approvals.length}/{p.approvalsRequired} approvals
-                </span>
-              </div>
-              {p.method === "check" ? (
-                <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-[13px] leading-snug text-warn">
-                  Check rail, {daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)} days in
-                  transit. Ask this vendor to enable ACH.
-                </p>
-              ) : null}
-            </div>
+            <PayoutRow key={p.id} payout={p} />
           ))}
         </Card>
       </div>
     </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* One payment, with its note and the invoice it settled                       */
+/* -------------------------------------------------------------------------- */
+
+function PayoutRow({ payout: p }: { payout: Payout }) {
+  const { invoices, isRemote, approvePayout, setPayoutNotes } = useAppState();
+  const { notify } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(p.notes ?? "");
+  const invoice = p.invoiceId ? invoices.find((i) => i.id === p.invoiceId) : undefined;
+  const approved = p.approvals.length >= p.approvalsRequired;
+
+  function save() {
+    setPayoutNotes(p.id, draft);
+    notify(draft.trim() ? "Note saved" : "Note removed");
+    setEditing(false);
+  }
+
+  return (
+    <div
+      id={`payout-${p.id}`}
+      className="scroll-mt-24 border-b border-border px-5 py-3.5 target:bg-brand-soft/40 last:border-b-0"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-medium text-fg">{p.vendor}</p>
+          <p className="text-[13px] text-fg-muted">{p.invoiceNumber}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="tnum text-[15px] font-semibold text-fg">
+            {money(p.amountCents, { cents: false })}
+          </p>
+          <Badge tone={payoutTone[p.status]} className="mt-0.5">
+            {p.status.replace("-", " ")}
+          </Badge>
+        </div>
+      </div>
+
+      {!approved ? (
+        <Button
+          variant="primary"
+          size="sm"
+          className="mt-2 h-7 px-2.5 text-[13px]"
+          onClick={() => {
+            approvePayout(p.id);
+            notify(`Approved ${p.vendor}`);
+          }}
+        >
+          Add my approval
+        </Button>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
+        <span className="font-medium uppercase">{p.method}</span>
+        <span>
+          {p.status === "paid" ? "landed" : "lands"} {relativeDays(p.expectedDate)}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          {approved ? (
+            <CheckCircle2 className="size-3 text-ok" />
+          ) : (
+            <AlertTriangle className="size-3 text-warn" />
+          )}
+          {p.approvals.length}/{p.approvalsRequired} approvals
+        </span>
+      </div>
+
+      {p.method === "check" ? (
+        <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-[13px] leading-snug text-warn">
+          Check, {daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)} days in transit.
+          Ask this vendor to take ACH.
+        </p>
+      ) : null}
+
+      {invoice?.file ? (
+        <p className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-fg-muted">
+          <Paperclip className="size-3" />
+          {invoice.file.name}
+          <span className="text-fg-subtle">{invoice.file.size}</span>
+        </p>
+      ) : null}
+
+      {editing ? (
+        <div className="mt-2">
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={2}
+            placeholder="Anything the next treasurer should know"
+            aria-label="Note on this payment"
+            className="w-full resize-none rounded-lg border border-border-2 bg-surface px-2.5 py-2 text-[15px] text-fg outline-none focus:border-brand"
+          />
+          <div className="mt-1.5 flex justify-end gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDraft(p.notes ?? "");
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" onClick={save}>
+              Save
+            </Button>
+          </div>
+        </div>
+      ) : isRemote ? (
+        p.notes ? (
+          <p className="mt-2 text-[13px] text-fg">{p.notes}</p>
+        ) : null
+      ) : p.notes ? (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-2 flex w-full items-start gap-1.5 rounded-md bg-surface-2 px-2.5 py-1.5 text-left text-[13px] text-fg transition-colors hover:bg-surface-3"
+        >
+          <StickyNote className="mt-0.5 size-3 shrink-0 text-fg-subtle" />
+          <span className="min-w-0 flex-1 leading-snug">{p.notes}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+        >
+          <StickyNote className="size-3" />
+          Add a note
+        </button>
+      )}
+    </div>
   );
 }

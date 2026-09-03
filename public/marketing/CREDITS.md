@@ -22,16 +22,15 @@ desktop display is drawn in code instead, Apple-style, with the capture on
 the glass. The screen content is always a real capture from
 `scripts/product-shots.mjs`, never drawn.
 
-## Clarence
+## Eric
 
-`clarence-story.jpg` is Clarence, the board member on slide three. Until
-2026-09-03 this was a render lifted from the deck ("Greg"), with a play button
-painted out. Monish asked for a real, free photograph of a real person who
-looks the way a new board member feels, so it is now
-[Pexels photo 7926668](https://www.pexels.com/photo/stressed-old-man-reading-paperwork-at-home-7926668/)
-by Nicola Barts, under the [Pexels license](https://www.pexels.com/license/)
-(free to use, no attribution required, credited anyway). Cropped to 4:5 and
-resized to 1200px wide.
+`eric-story.jpg` is Eric, the board member on slide three. Until 2026-09-03
+this was a render lifted from the deck ("Greg"), with a play button painted
+out. Monish asked for a real, free photograph of a professional who looks the
+way a new board member feels, surrounded by paper, so it is now
+[Pexels photo 8428074](https://www.pexels.com/photo/8428074/) by Kampus
+Production, under the [Pexels license](https://www.pexels.com/license/) (free
+to use, no attribution required, credited anyway). Resized to 1400px wide.
 
 ## Photographs
 

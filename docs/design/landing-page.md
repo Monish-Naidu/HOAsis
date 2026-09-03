@@ -167,7 +167,7 @@ Decisions taken in the rehaul, and why:
   header by the header's fixed height so the field runs to the top edge.
 - **The footer no longer says "Prototype."** The demo data disclaimer stays.
 - **The Greg still** is a crop of slide three with the drawn play button
-  painted out. Replaced 2026-09-03 by a real photograph, `public/marketing/clarence-story.jpg`, and the character is now Clarence. See `CREDITS.md`.
+  painted out. Replaced 2026-09-03 by a real photograph, `public/marketing/eric-story.jpg`, and the character is now Eric. See `CREDITS.md`.
 - **The reserve card shows the demo's real 41%, "Behind the study".** The
   deck drew 78% "On track". Reserves are the moat, and this card is the one
   place the page shows the product catching an underfunded plan; it also

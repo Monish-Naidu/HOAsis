@@ -26,6 +26,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
   const [method, setMethod] = useState<"ach" | "check" | "card">("ach");
   const [reference, setReference] = useState("");
   const [throughUs, setThroughUs] = useState(false);
+  const [note, setNote] = useState("");
 
   const field =
     "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
@@ -118,6 +119,18 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
           </label>
         </div>
 
+        <label className="block">
+          <span className="text-[13px] font-semibold text-fg-muted">Note (optional)</span>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder="Anything the next treasurer should know"
+            aria-label="Note on this payment"
+            className="mt-1.5 w-full resize-none rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] text-fg outline-none focus:border-brand"
+          />
+        </label>
+
         <label className="flex items-start gap-2.5">
           <input
             type="checkbox"
@@ -155,6 +168,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
               expectedDate: paidOn,
               approvals: [],
               approvalsRequired: throughUs ? 2 : 0,
+              notes: note.trim() || undefined,
             });
             notify(
               throughUs

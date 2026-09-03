@@ -87,6 +87,26 @@ describe("every community is internally consistent", () => {
         }
       });
 
+      it("points every invoice at a vendor it knows", () => {
+        const vendors = new Set(community.vendors.map((v) => v.id));
+        for (const invoice of community.invoices) {
+          expect(vendors.has(invoice.vendorId), `${invoice.number} is from nobody`).toBe(true);
+        }
+      });
+
+      it("links every paid invoice to a payment that exists", () => {
+        // A paid invoice with no payment behind it is a file attached to
+        // nothing, which is the exact thing the attachment exists to prevent.
+        const payouts = new Set(community.payouts.map((p) => p.id));
+        for (const invoice of community.invoices) {
+          if (invoice.status !== "paid") continue;
+          expect(
+            payouts.has(invoice.payoutId ?? ""),
+            `${invoice.number} is paid by a payment that is not there`,
+          ).toBe(true);
+        }
+      });
+
       it("keeps money in integer cents", () => {
         const cents = [
           community.association.duesCents,

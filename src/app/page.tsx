@@ -47,7 +47,7 @@ export const metadata = {
 
 /*
  * The page follows the deck Monish brought on 2026-08-28, slide for slide:
- * hero, "Run your HOA", Clarence, the five feature cards, the phone. Copy is the
+ * hero, "Run your HOA", Eric, the five feature cards, the phone. Copy is the
  * deck's, with em dashes replaced. `docs/design/landing-page.md` records the
  * mapping and the few places this departs from the slides.
  */
@@ -752,7 +752,7 @@ export default function MarketingHome() {
                 Sound familiar?
               </h2>
               <p className="mt-3 text-[24px] font-semibold tracking-[-0.02em] text-hero-accent">
-                Meet Clarence.
+                Meet Eric.
               </p>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
                 He just wanted to enjoy his home. Then someone asked him to join the HOA board.
@@ -777,15 +777,14 @@ export default function MarketingHome() {
                 and Monish decided on 2026-08-28 that there is no video to make.
                 On 2026-09-03 the slide's render gave way to a real photo of a
                 real person, because a render reads as fake to exactly the
-                people we are asking to trust us. Portrait, so it stands beside
-                the copy rather than under it. */}
-            <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float lg:ml-auto lg:mr-0">
+                people we are asking to trust us. */}
+            <div className="overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
               <Image
-                src="/marketing/clarence-story.jpg"
-                alt="Clarence on his couch at home, head in hand, reading a letter, with a past due notice and a crumpled page on the coffee table in front of him"
-                width={1200}
-                height={1500}
-                sizes="(max-width: 1024px) 100vw, 420px"
+                src="/marketing/eric-story.jpg"
+                alt="Eric at his desk in a suit, fingers pressed to his temples over an open binder, with shelves of files and paperwork behind him"
+                width={1400}
+                height={934}
+                sizes="(max-width: 1024px) 100vw, 660px"
                 className="h-auto w-full"
               />
             </div>
