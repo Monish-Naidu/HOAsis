@@ -148,6 +148,405 @@ export function spendingByCategory(c: Community, year: number) {
   };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Years: one year on its own, two side by side, and the run of them.          */
+/* -------------------------------------------------------------------------- */
+
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function monthName(month: number, style: "short" | "long" = "short") {
+  const long = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  return style === "long" ? long[month - 1] : SHORT_MONTHS[month - 1];
+}
+
+/** The month (1 to 12) of the given entry. */
+const monthOf = (date: string) => Number(date.slice(5, 7));
+const yearOf = (date: string) => Number(date.slice(0, 4));
+
+/**
+ * One calendar year, totalled.
+ *
+ * Income and spend follow `monthlyFlows`: reserve transfers sit outside both,
+ * and are reported on their own as `reserveCents`, the operating side of each
+ * transfer. `throughMonth` is the last month with anything in it, which is
+ * what makes a partial year comparable to a full one: August against August,
+ * never eight months against twelve.
+ */
+export function yearSummary(c: Community, year: number, throughMonth = 12) {
+  const flows = monthlyFlows(c, year).slice(0, throughMonth);
+  const incomeCents = flows.reduce((t, m) => t + m.inCents, 0);
+  const spendCents = flows.reduce((t, m) => t + m.outCents, 0);
+  let reserveCents = 0;
+  for (const e of c.ledger) {
+    if (e.category !== "Reserve transfer" || e.amountCents >= 0) continue;
+    if (yearOf(e.date) !== year || monthOf(e.date) > throughMonth) continue;
+    reserveCents -= e.amountCents;
+  }
+  const withData = flows.map((m, i) => (m.inCents > 0 || m.outCents > 0 ? i + 1 : 0)).filter(Boolean);
+  return {
+    year,
+    incomeCents,
+    spendCents,
+    netCents: incomeCents - spendCents,
+    reserveCents,
+    netAfterReserveCents: incomeCents - spendCents - reserveCents,
+    monthsWithData: withData.length,
+    /** Last month with a transaction, or 0 for a year with nothing. */
+    throughMonth: withData.length ? withData[withData.length - 1] : 0,
+    months: flows,
+  };
+}
+
+export interface Delta {
+  cents: number;
+  /** Undefined when the earlier side is zero, because a change from nothing has no percent. */
+  percent?: number;
+}
+
+export function delta(from: number, to: number): Delta {
+  return { cents: to - from, percent: from ? (to - from) / Math.abs(from) : undefined };
+}
+
+/** Every spending category for one year, reserve funding included as its own line. */
+function spendAllCategories(c: Community, year: number, throughMonth: number) {
+  const totals = new Map<string, number>();
+  for (const e of c.ledger) {
+    if (e.amountCents >= 0) continue;
+    if (yearOf(e.date) !== year || monthOf(e.date) > throughMonth) continue;
+    const label = e.category === "Reserve transfer" ? "Reserve contributions" : e.category;
+    totals.set(label, (totals.get(label) ?? 0) - e.amountCents);
+  }
+  return totals;
+}
+
+/**
+ * Two years, side by side, like for like.
+ *
+ * When either year is partial, both are cut at the same month, so a treasurer
+ * in August is reading January to August of each. The full-year figures stay
+ * available on each side for the footnote.
+ */
+export function compareYears(c: Community, a: number, b: number) {
+  const fullA = yearSummary(c, a);
+  const fullB = yearSummary(c, b);
+  const throughMonth = Math.min(fullA.throughMonth || 12, fullB.throughMonth || 12);
+  const partial = throughMonth < 12;
+  const left = yearSummary(c, a, throughMonth);
+  const right = yearSummary(c, b, throughMonth);
+
+  const months = Array.from({ length: throughMonth }, (_, i) => ({
+    month: i + 1,
+    label: SHORT_MONTHS[i],
+    aIn: left.months[i].inCents,
+    aOut: left.months[i].outCents,
+    bIn: right.months[i].inCents,
+    bOut: right.months[i].outCents,
+  }));
+
+  const catA = spendAllCategories(c, a, throughMonth);
+  const catB = spendAllCategories(c, b, throughMonth);
+  const categories = [...new Set([...catA.keys(), ...catB.keys()])]
+    .map((category) => {
+      const aCents = catA.get(category) ?? 0;
+      const bCents = catB.get(category) ?? 0;
+      return { category, aCents, bCents, change: delta(aCents, bCents) };
+    })
+    .sort((x, y) => y.bCents - x.bCents);
+
+  return {
+    a: left,
+    b: right,
+    fullA,
+    fullB,
+    throughMonth,
+    partial,
+    income: delta(left.incomeCents, right.incomeCents),
+    spend: delta(left.spendCents, right.spendCents),
+    net: delta(left.netCents, right.netCents),
+    reserve: delta(left.reserveCents, right.reserveCents),
+    months,
+    categories,
+    peakCategoryCents: categories.reduce((m, r) => Math.max(m, r.aCents, r.bCents), 0),
+  };
+}
+
+/** Net by calendar year, oldest first, with each year's income and spend beside it. */
+export function netByYear(c: Community) {
+  return ledgerYears(c)
+    .sort((x, y) => x - y)
+    .map((year) => {
+      const s = yearSummary(c, year);
+      return {
+        year,
+        incomeCents: s.incomeCents,
+        spendCents: s.spendCents,
+        netCents: s.netCents,
+        reserveCents: s.reserveCents,
+        throughMonth: s.throughMonth,
+        partial: s.throughMonth < 12,
+      };
+    });
+}
+
+/** One spending category across every year the ledger covers, oldest first. */
+export function categoryTrend(c: Community, category: string) {
+  return ledgerYears(c)
+    .sort((x, y) => x - y)
+    .map((year) => ({ year, cents: spendAllCategories(c, year, 12).get(category) ?? 0 }));
+}
+
+/**
+ * Dues billed against dues collected, month by month.
+ *
+ * Expected is what the association bills: every unit at its dues, converted
+ * to a monthly figure whatever the cadence. Collected is the positive side of
+ * the Assessments category; the card fee pass-through sits in that category
+ * as a negative and is left out, since it is a cost and not a shortfall.
+ * Only months with any transaction at all are rated, so a future month does
+ * not read as zero collected.
+ */
+export function duesCollection(c: Community, year: number) {
+  const { unitCount, duesCents, duesCadence } = c.association;
+  const perMonth =
+    duesCadence === "monthly" ? duesCents : duesCadence === "quarterly" ? duesCents / 3 : duesCents / 12;
+  const expectedCents = Math.round(unitCount * perMonth);
+  const collected = Array.from({ length: 12 }, () => 0);
+  const active = Array.from({ length: 12 }, () => false);
+  for (const e of c.ledger) {
+    if (yearOf(e.date) !== year) continue;
+    active[monthOf(e.date) - 1] = true;
+    if (e.category === "Assessments" && e.amountCents > 0) collected[monthOf(e.date) - 1] += e.amountCents;
+  }
+  const months = collected
+    .map((collectedCents, i) => ({
+      month: i + 1,
+      label: SHORT_MONTHS[i],
+      expectedCents,
+      collectedCents,
+      rate: expectedCents ? Math.min(1, collectedCents / expectedCents) : 0,
+    }))
+    .filter((_, i) => active[i]);
+  const collectedYtd = months.reduce((t, m) => t + m.collectedCents, 0);
+  const expectedYtd = expectedCents * months.length;
+  return {
+    months,
+    expectedCents,
+    collectedYtd,
+    expectedYtd,
+    rate: expectedYtd ? Math.min(1, collectedYtd / expectedYtd) : 0,
+    /** False when there are no dues to measure against, or nothing collected yet. */
+    measurable: expectedCents > 0 && months.length > 0,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Collections: how far behind, in the four buckets every auditor asks for.    */
+/* -------------------------------------------------------------------------- */
+
+export type AgingKey = "current" | "1-30" | "31-60" | "61+";
+
+/**
+ * Every household's balance, in one of four buckets by days past due.
+ *
+ * The buckets partition the roster: every owner lands in exactly one, so the
+ * counts sum to the roster and the cents sum to every balance on it. Current
+ * means not past due, which still includes balances that are simply not due
+ * yet.
+ */
+export function agingBuckets(c: Community) {
+  const spec: { key: AgingKey; label: string; test: (days: number) => boolean }[] = [
+    { key: "current", label: "Current", test: (d) => d <= 0 },
+    { key: "1-30", label: "1 to 30 days", test: (d) => d >= 1 && d <= 30 },
+    { key: "31-60", label: "31 to 60 days", test: (d) => d >= 31 && d <= 60 },
+    { key: "61+", label: "Over 60 days", test: (d) => d > 60 },
+  ];
+  const buckets = spec.map((b) => {
+    const owners = c.owners.filter((o) => b.test(o.daysPastDue));
+    return {
+      key: b.key,
+      label: b.label,
+      owners,
+      count: owners.length,
+      cents: owners.reduce((t, o) => t + o.balanceCents, 0),
+    };
+  });
+  const totalCents = buckets.reduce((t, b) => t + b.cents, 0);
+  const pastDueCents = buckets.filter((b) => b.key !== "current").reduce((t, b) => t + b.cents, 0);
+  return {
+    buckets: buckets.map((b) => ({ ...b, share: totalCents ? b.cents / totalCents : 0 })),
+    totalCents,
+    pastDueCents,
+    pastDueCount: buckets.filter((b) => b.key !== "current").reduce((t, b) => t + b.count, 0),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Budget: each line against the share of the year that has gone.             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Budget against actual, line by line.
+ *
+ * Pace is the share of the annual figure used so far. A line is over pace
+ * when it has used more of its budget than the year has used of itself, with
+ * two points of slack so a bill that landed a day early is not a flag.
+ * Variance is signed the way a treasurer reads it: positive is good news,
+ * spending under the to-date allowance or income above it.
+ */
+export function budgetVariance(c: Community) {
+  const elapsed = c.yearElapsed;
+  const rows = c.budget.map((line) => {
+    const pace = line.annualCents > 0 ? line.ytdActualCents / line.annualCents : 0;
+    const toDateCents = Math.round(line.annualCents * elapsed);
+    const varianceCents =
+      line.kind === "expense" ? toDateCents - line.ytdActualCents : line.ytdActualCents - toDateCents;
+    return {
+      ...line,
+      pace,
+      toDateCents,
+      varianceCents,
+      overPace: line.kind === "expense" && pace > elapsed + 0.02,
+      behind: line.kind === "income" && pace < elapsed - 0.02,
+      remainingCents: line.annualCents - line.ytdActualCents,
+    };
+  });
+  const total = (kind: "income" | "expense") => {
+    const lines = rows.filter((r) => r.kind === kind);
+    const annualCents = lines.reduce((t, r) => t + r.annualCents, 0);
+    const ytdActualCents = lines.reduce((t, r) => t + r.ytdActualCents, 0);
+    const toDateCents = lines.reduce((t, r) => t + r.toDateCents, 0);
+    return {
+      annualCents,
+      ytdActualCents,
+      toDateCents,
+      pace: annualCents ? ytdActualCents / annualCents : 0,
+      varianceCents: lines.reduce((t, r) => t + r.varianceCents, 0),
+    };
+  };
+  return {
+    income: rows.filter((r) => r.kind === "income"),
+    expense: rows.filter((r) => r.kind === "expense"),
+    incomeTotal: total("income"),
+    expenseTotal: total("expense"),
+    flagged: rows.filter((r) => r.overPace || r.behind),
+    yearElapsed: elapsed,
+    hasBudget: rows.length > 0,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Transactions: the ledger through a filter, and the totals of what is left.  */
+/* -------------------------------------------------------------------------- */
+
+export type PeriodPreset = "this-month" | "last-month" | "this-year" | "last-year" | "custom";
+
+export const PERIOD_LABEL: Record<PeriodPreset, string> = {
+  "this-month": "This month",
+  "last-month": "Last month",
+  "this-year": "This year",
+  "last-year": "Last year",
+  custom: "Custom",
+};
+
+/** The first and last day a preset covers, measured from the given day. */
+export function periodRange(preset: PeriodPreset, asOf: string): { from: string; to: string } {
+  const year = yearOf(asOf);
+  const month = monthOf(asOf);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  switch (preset) {
+    case "this-month":
+      return { from: `${year}-${pad(month)}-01`, to: `${year}-${pad(month)}-${pad(lastDay(year, month))}` };
+    case "last-month": {
+      const y = month === 1 ? year - 1 : year;
+      const m = month === 1 ? 12 : month - 1;
+      return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(lastDay(y, m))}` };
+    }
+    case "this-year":
+      return { from: `${year}-01-01`, to: `${year}-12-31` };
+    case "last-year":
+      return { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` };
+    case "custom":
+      return { from: `${year}-01-01`, to: asOf };
+  }
+}
+
+export interface LedgerFilter {
+  from?: string;
+  to?: string;
+  accountId?: string;
+  category?: string;
+  status?: "cleared" | "pending" | "needs-review";
+  direction?: "in" | "out";
+  search?: string;
+}
+
+/** The rows a filter keeps, newest first, in the ledger's own order. */
+export function filterLedger(ledger: Community["ledger"], f: LedgerFilter) {
+  const q = f.search?.trim().toLowerCase();
+  return ledger.filter((e) => {
+    if (f.from && e.date < f.from) return false;
+    if (f.to && e.date > f.to) return false;
+    if (f.accountId && e.accountId !== f.accountId) return false;
+    if (f.category && e.category !== f.category) return false;
+    if (f.status && e.status !== f.status) return false;
+    if (f.direction === "in" && e.amountCents < 0) return false;
+    if (f.direction === "out" && e.amountCents >= 0) return false;
+    if (q && !`${e.description} ${e.counterparty} ${e.category}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+/**
+ * Totals for a filtered set, plus a running balance per row.
+ *
+ * The running figure accumulates from the oldest row up, so the newest row at
+ * the top of the table carries the total: the number a treasurer checks the
+ * bank statement against.
+ */
+export function ledgerTotals(rows: Community["ledger"]) {
+  const inCents = rows.reduce((t, e) => t + (e.amountCents > 0 ? e.amountCents : 0), 0);
+  const outCents = rows.reduce((t, e) => t + (e.amountCents < 0 ? -e.amountCents : 0), 0);
+  const running = new Map<string, number>();
+  let sum = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    sum += rows[i].amountCents;
+    running.set(rows[i].id, sum);
+  }
+  return {
+    inCents,
+    outCents,
+    netCents: inCents - outCents,
+    count: rows.length,
+    needsReview: rows.filter((e) => e.status === "needs-review").length,
+    running,
+  };
+}
+
+/** Every category the ledger uses, alphabetical, for a filter's options. */
+export function ledgerCategories(ledger: Community["ledger"]): LedgerCategory[] {
+  return [...new Set(ledger.map((e) => e.category))].sort() as LedgerCategory[];
+}
+
+/**
+ * The payment and invoice behind a ledger line, when it is a vendor payment.
+ *
+ * Links are followed in both directions: the payout names its invoice, or the
+ * invoice names its payout, and either is enough to open the file.
+ */
+export function ledgerAttachment(c: Community, entry: Community["ledger"][number]) {
+  if (!entry.payoutId) return null;
+  const payout = c.payouts.find((p) => p.id === entry.payoutId);
+  if (!payout) return null;
+  const invoice =
+    (payout.invoiceId ? c.invoices.find((i) => i.id === payout.invoiceId) : undefined) ??
+    c.invoices.find((i) => i.payoutId === payout.id);
+  return { payout, invoice };
+}
+
 export function interestSummary(c: Community) {
   const reserveAccounts = c.bankAccounts.filter((a) => a.kind !== "operating");
   const balance = reserveAccounts.reduce((t, a) => t + a.balanceCents, 0);

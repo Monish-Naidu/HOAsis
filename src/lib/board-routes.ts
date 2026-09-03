@@ -163,6 +163,43 @@ export const BOARD_ROUTES: BoardRoute[] = [
     key: "documents",
     need: ["documents"],
   },
+  /**
+   * The Finances tabs. Each is its own route so a link or a bookmark lands on
+   * the right view, hidden because the segmented control on the money pages is
+   * their navigation, and listed because listing is what gates them.
+   */
+  {
+    href: "/board/money/transactions",
+    hidden: true,
+    label: "Transactions",
+    icon: Banknote,
+    key: "money-transactions",
+    need: ["finances"],
+  },
+  {
+    href: "/board/money/budget",
+    hidden: true,
+    label: "Budget",
+    icon: Banknote,
+    key: "money-budget",
+    need: ["finances"],
+  },
+  {
+    href: "/board/money/trends",
+    hidden: true,
+    label: "Trends",
+    icon: Banknote,
+    key: "money-trends",
+    need: ["finances"],
+  },
+  {
+    href: "/board/money/collections",
+    hidden: true,
+    label: "Collections",
+    icon: Banknote,
+    key: "money-collections",
+    need: ["finances"],
+  },
   {
     href: "/board/shared-costs",
     hidden: true,

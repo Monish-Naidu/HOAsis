@@ -1,11 +1,17 @@
 import type { ChargeLine, LedgerEntry, PaymentMethod, Payout, Vendor } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
-/* Association ledger, May through August 2026: the association's first four   */
-/* months on the platform. Newest first.                                       */
+/* Association ledger. Newest first.                                           */
+/*                                                                             */
+/* May through August 2026 are written by hand: the association's first four   */
+/* months on the platform, with the review queue, the duplicate and the        */
+/* pending check that the screens and tests lean on. Everything before that,   */
+/* January 2024 through April 2026, is the imported history, built from a      */
+/* monthly template at the bottom of this file so a year comparison has two    */
+/* full years to compare.                                                      */
 /* -------------------------------------------------------------------------- */
 
-export const ledgerEntries: LedgerEntry[] = [
+const recentEntries: LedgerEntry[] = [
   {
     id: "le-140",
     date: "2026-08-20",
@@ -27,6 +33,7 @@ export const ledgerEntries: LedgerEntry[] = [
     amountCents: -285_000,
     status: "cleared",
     matchedBy: "auto",
+    payoutId: "po-2",
   },
   {
     id: "le-138",
@@ -60,6 +67,7 @@ export const ledgerEntries: LedgerEntry[] = [
     amountCents: -64_500,
     status: "cleared",
     matchedBy: "auto",
+    payoutId: "po-3",
   },
   {
     id: "le-135",
@@ -193,6 +201,7 @@ export const ledgerEntries: LedgerEntry[] = [
     amountCents: -47_500,
     status: "pending",
     matchedBy: "manual",
+    payoutId: "po-4",
   },
   {
     id: "le-123",
@@ -698,6 +707,272 @@ export const ledgerEntries: LedgerEntry[] = [
 ];
 
 /* -------------------------------------------------------------------------- */
+/* Imported history, January 2024 through April 2026.                          */
+/*                                                                             */
+/* The same association, earlier. Same vendors, same dues batches on the same  */
+/* days, the same paired reserve transfer on the 15th, so `monthlyFlows` and   */
+/* `spendingByCategory` treat these rows exactly as they treat the hand        */
+/* written ones. Built from a template rather than written out, because four   */
+/* hundred literals drift the first time somebody edits one of them.           */
+/*                                                                             */
+/* Dues and the big contracts step up a little each year, so 2025 runs above   */
+/* 2024 and 2026 is on pace above 2025: a comparison of identical years shows  */
+/* nothing. Small deterministic wobble on the utility bills and batch counts   */
+/* keeps twelve months from reading as one month twelve times.                 */
+/* -------------------------------------------------------------------------- */
+
+interface YearPlan {
+  /** Monthly assessment per unit that year. */
+  duesCents: number;
+  /** One twelfth of the master policy premium. */
+  insuranceCents: number;
+  /** What the budget sent to reserves each month. */
+  reserveCents: number;
+  /** Utilities and small contracts, relative to 2026. */
+  priceLevel: number;
+  /** Households on autopay, which grew as the association nudged people on. */
+  autopay: number;
+}
+
+const YEAR_PLAN: Record<number, YearPlan> = {
+  2024: { duesCents: 26_500, insuranceCents: 668_100, reserveCents: 564_000, priceLevel: 0.91, autopay: 31 },
+  2025: { duesCents: 27_500, insuranceCents: 705_900, reserveCents: 588_000, priceLevel: 0.96, autopay: 34 },
+  2026: { duesCents: 28_500, insuranceCents: 742_300, reserveCents: 612_000, priceLevel: 1, autopay: 36 },
+};
+
+/** Common area electric, by month, at 2026 prices. Summer irrigation pumps show. */
+const ELECTRIC_BY_MONTH = [
+  104_200, 98_400, 92_100, 88_600, 91_530, 98_120,
+  124_860, 118_240, 106_300, 96_700, 101_900, 108_500,
+];
+/** Water and sewer for the common areas, same shape, smaller swing. */
+const WATER_BY_MONTH = [
+  80_200, 79_400, 81_300, 84_900, 88_600, 92_410,
+  101_340, 96_780, 90_200, 85_100, 81_700, 80_900,
+];
+/** Counsel bills quarterly. The third quarter carries the annual meeting prep. */
+const LEGAL_BY_QUARTER = [120_000, 85_000, 210_000, 140_000];
+const QUARTER_MONTHS = [2, 5, 8, 11];
+
+/** The repairs that came up, in the order they came up. Blank months happen. */
+const REPAIRS: ({ counterparty: string; description: string; cents: number } | null)[] = [
+  { counterparty: "Ace Gate & Access", description: "Ace Gate & Access, south gate keypad", cents: 72_000 },
+  null,
+  { counterparty: "Summit Roofing", description: "Summit Roofing, clubhouse gutter repair", cents: 89_400 },
+  { counterparty: "WaterWorks Irrigation", description: "WaterWorks Irrigation, backflow test and valve", cents: 61_500 },
+  null,
+  { counterparty: "Ace Gate & Access", description: "Ace Gate & Access, north gate motor", cents: 138_000 },
+  null,
+  { counterparty: "WaterWorks Irrigation", description: "WaterWorks Irrigation, main line repair", cents: 156_200 },
+  { counterparty: "Summit Roofing", description: "Summit Roofing, mail kiosk roof", cents: 43_800 },
+];
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** A stable fraction in [0, 1) from a string, so the same month always wobbles the same way. */
+function unit(key: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10_000) / 10_000;
+}
+
+/** `cents` nudged up to `pct` either way, to whole dimes. */
+function wobble(cents: number, key: string, pct: number): number {
+  const factor = 1 + (unit(key) * 2 - 1) * pct;
+  return Math.round((cents * factor) / 10) * 10;
+}
+
+function buildMonth(year: number, month: number): LedgerEntry[] {
+  const plan = YEAR_PLAN[year];
+  const mm = String(month + 1).padStart(2, "0");
+  const day = (d: number) => `${year}-${mm}-${String(d).padStart(2, "0")}`;
+  const key = (tag: string) => `${year}-${mm}-${tag}`;
+  const monthIndex = (year - 2024) * 12 + month;
+  const rows: Omit<LedgerEntry, "id">[] = [];
+  const operating = (row: Omit<LedgerEntry, "id" | "accountId" | "status" | "matchedBy"> & { matchedBy?: "auto" | "manual" }) =>
+    rows.push({ accountId: "acct-operating", status: "cleared", matchedBy: "auto", ...row });
+
+  // Dues, in the same three batches the platform still pays out: autopay on
+  // the 5th, the bulk of the rest mid month, the stragglers after the 20th.
+  const autopay = plan.autopay + (unit(key("autopay")) < 0.4 ? 1 : 0);
+  const mid = 29 + Math.floor(unit(key("mid")) * 5);
+  const late = 11 + Math.floor(unit(key("late")) * 5);
+  operating({
+    date: day(5),
+    description: `Assessment payments, autopay batch (${autopay} owners)`,
+    counterparty: "ExpressHOA Payments",
+    category: "Assessments",
+    amountCents: autopay * plan.duesCents,
+  });
+  operating({
+    date: day(14),
+    description: `Assessment payments, batch (${mid} owners)`,
+    counterparty: "ExpressHOA Payments",
+    category: "Assessments",
+    amountCents: mid * plan.duesCents,
+  });
+  operating({
+    date: day(21 + Math.floor(unit(key("lateday")) * 3)),
+    description: `Assessment payments, batch (${late} owners)`,
+    counterparty: "ExpressHOA Payments",
+    category: "Assessments",
+    amountCents: late * plan.duesCents,
+  });
+  operating({
+    date: day(27),
+    description: `Card fee pass-through, ${MONTH_NAMES[month]}`,
+    counterparty: "ExpressHOA Payments",
+    category: "Assessments",
+    amountCents: -wobble(3_800, key("cardfee"), 0.12),
+  });
+  const lateAccounts = 2 + Math.floor(unit(key("latefee")) * 3);
+  operating({
+    date: day(8),
+    description: `Late fee assessed, ${lateAccounts} accounts`,
+    counterparty: "Mehr Meadows",
+    category: "Late fees",
+    amountCents: lateAccounts * 2_500,
+    matchedBy: "manual",
+  });
+
+  // The contracts.
+  operating({
+    date: day(19),
+    description: `Cascade Grounds, ${MONTH_NAMES[month]} grounds contract`,
+    counterparty: "Cascade Grounds Co.",
+    category: "Landscaping",
+    amountCents: -Math.round((285_000 * (0.88 + 0.06 * (year - 2024))) / 100) * 100,
+  });
+  operating({
+    date: day(13),
+    description: `Evergreen Insurance property & liability, installment ${month + 1}/12`,
+    counterparty: "Evergreen Insurance Group",
+    category: "Insurance",
+    amountCents: -plan.insuranceCents,
+  });
+  operating({
+    date: day(20),
+    description: "Snohomish PUD common area electric",
+    counterparty: "Snohomish County PUD",
+    category: "Utilities",
+    amountCents: -wobble(ELECTRIC_BY_MONTH[month] * plan.priceLevel, key("pud"), 0.03),
+  });
+  operating({
+    date: day(6),
+    description: "Alderwood Water District water & sewer, common areas",
+    counterparty: "Alderwood Water & Wastewater District",
+    category: "Utilities",
+    amountCents: -wobble(WATER_BY_MONTH[month] * plan.priceLevel, key("water"), 0.03),
+  });
+
+  // The pool runs June through October.
+  if (month >= 5 && month <= 9) {
+    const service = Math.round((64_500 * plan.priceLevel) / 100) * 100;
+    operating({
+      date: day(17),
+      description:
+        month === 5
+          ? "Northsound Pool Service, season opening service"
+          : month === 9
+            ? "Northsound Pool Service, season closing service"
+            : "Northsound Pool Service, monthly maintenance",
+      counterparty: "Northsound Pool Service",
+      category: "Repairs & maintenance",
+      amountCents: -(month === 5 ? service + 20_400 : month === 9 ? service - 12_500 : service),
+    });
+  }
+
+  // Quarterly: counsel and pest control.
+  const quarter = QUARTER_MONTHS.indexOf(month + 1);
+  if (quarter >= 0) {
+    operating({
+      date: day(7),
+      description: `Kestrel & Boyd LLP, quarterly retainer and ${["annual filing", "records requests", "annual meeting prep", "covenant review"][quarter]}`,
+      counterparty: "Kestrel & Boyd LLP",
+      category: "Legal & professional",
+      amountCents: -Math.round((LEGAL_BY_QUARTER[quarter] * (1 + 0.06 * (year - 2024))) / 100) * 100,
+    });
+    operating({
+      date: day(3),
+      description: "Cedar River Pest Control, quarterly service",
+      counterparty: "Cedar River Pest Control",
+      category: "Repairs & maintenance",
+      amountCents: -[45_000, 46_200, 47_500][year - 2024],
+      matchedBy: "manual",
+    });
+  }
+
+  // Whatever broke that month.
+  const repair = REPAIRS[monthIndex % REPAIRS.length];
+  if (repair) {
+    operating({
+      date: day(10 + Math.floor(unit(key("repairday")) * 14)),
+      description: repair.description,
+      counterparty: repair.counterparty,
+      category: "Repairs & maintenance",
+      amountCents: -wobble(repair.cents * plan.priceLevel, key("repair"), 0.05),
+    });
+  }
+
+  // Reserve funding on the 15th, both sides, so the transfer nets to nothing.
+  rows.push({
+    date: day(15),
+    description: "Reserve transfer, monthly funding",
+    counterparty: "Internal transfer",
+    category: "Reserve transfer",
+    accountId: "acct-operating",
+    amountCents: -plan.reserveCents,
+    status: "cleared",
+    matchedBy: "manual",
+  });
+  rows.push({
+    date: day(15),
+    description: "Reserve transfer, monthly funding",
+    counterparty: "Internal transfer",
+    category: "Reserve transfer",
+    accountId: "acct-reserve",
+    amountCents: plan.reserveCents,
+    status: "cleared",
+    matchedBy: "manual",
+  });
+  // Interest on the reserve savings, creeping up as the balance does.
+  rows.push({
+    date: day(1),
+    description: "Interest, reserve savings",
+    counterparty: "BECU",
+    category: "Interest income",
+    accountId: "acct-reserve",
+    amountCents: 31_000 + monthIndex * 260,
+    status: "cleared",
+    matchedBy: "auto",
+  });
+
+  return rows
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .map((row, i) => ({ id: `le-h${year}${mm}-${String(i + 1).padStart(2, "0")}`, ...row }));
+}
+
+/** January 2024 through April 2026, newest first. */
+export function buildLedgerHistory(): LedgerEntry[] {
+  const months: { year: number; month: number }[] = [];
+  for (let year = 2024; year <= 2026; year++) {
+    for (let month = 0; month < 12; month++) {
+      if (year === 2026 && month > 3) break;
+      months.push({ year, month });
+    }
+  }
+  return months.reverse().flatMap(({ year, month }) => buildMonth(year, month));
+}
+
+export const ledgerEntries: LedgerEntry[] = [...recentEntries, ...buildLedgerHistory()];
+
+/* -------------------------------------------------------------------------- */
 /* One owner's account history (Monish Naidu, unit 42)                   */
 /* -------------------------------------------------------------------------- */
 
@@ -961,6 +1236,8 @@ export const payouts: Payout[] = [
     status: "in-transit",
     issuedDate: "2026-08-12",
     expectedDate: "2026-08-24",
+    invoiceId: "inv-1",
+    notes: "Quarterly perimeter treatment. Mailed a check; Cedar River is not on ACH yet.",
     approvals: [
       { name: "Dana Whitcomb", at: "2026-08-11" },
       { name: "Arya Mehr", at: "2026-08-12" },

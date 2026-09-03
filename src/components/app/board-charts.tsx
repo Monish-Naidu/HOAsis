@@ -280,3 +280,266 @@ export function SpendingDonut({
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Two years, month by month.                                                  */
+/* -------------------------------------------------------------------------- */
+
+export interface CompareMonth {
+  label: string;
+  a: number;
+  b: number;
+}
+
+/**
+ * Grouped bars: the earlier year in the neutral tone, the later in the
+ * primary, so the eye reads "this against the baseline" rather than two
+ * equal series. Same scale rules as the flow chart.
+ */
+export function YearCompareChart({
+  months,
+  aLabel,
+  bLabel,
+  caption,
+}: {
+  months: CompareMonth[];
+  aLabel: string;
+  bLabel: string;
+  /** What the bars measure, for the screen reader table. */
+  caption: string;
+}) {
+  const peak = niceCeil(Math.max(0, ...months.map((m) => Math.max(m.a, m.b))));
+  const h = (cents: number) => (peak ? Math.max(cents > 0 ? 1.5 : 0, (cents / peak) * 100) : 0);
+
+  return (
+    <div>
+      <div className="flex items-center gap-4 px-5 pt-4" aria-hidden>
+        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+          <span className="size-2.5 rounded-sm bg-chart-other" />
+          {aLabel}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+          <span className="size-2.5 rounded-sm bg-chart-1" />
+          {bLabel}
+        </span>
+      </div>
+
+      <div className="px-5 pb-4 pt-3" aria-hidden>
+        <div className="relative h-48">
+          {[0, 1 / 3, 2 / 3, 1].map((t) => (
+            <div key={t} className="absolute inset-x-0 flex items-end" style={{ bottom: `${t * 100}%` }}>
+              <span className="tnum w-10 shrink-0 translate-y-[0.4em] pr-2 text-right text-[11px] text-fg-subtle">
+                {t === 0 ? "$0" : shortMoney(peak * t)}
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          ))}
+          <div className="absolute inset-y-0 left-10 right-0 flex items-end justify-around">
+            {months.map((m) => (
+              <div
+                key={m.label}
+                className="group relative flex h-full flex-1 items-end justify-center gap-[2px]"
+              >
+                <div className="w-2 rounded-t-[3px] bg-chart-other sm:w-2.5" style={{ height: `${h(m.a)}%` }} />
+                <div className="w-2 rounded-t-[3px] bg-chart-1 sm:w-2.5" style={{ height: `${h(m.b)}%` }} />
+                <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-surface px-3 py-2 text-left shadow-float group-hover:block">
+                  <p className="text-[12px] font-semibold text-fg">{m.label}</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-[12px] text-fg-muted">
+                    <span className="size-2 rounded-full bg-chart-other" />
+                    {aLabel}
+                    <span className="tnum ml-auto pl-3 font-semibold text-fg">{money(m.a, { cents: false })}</span>
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-fg-muted">
+                    <span className="size-2 rounded-full bg-chart-1" />
+                    {bLabel}
+                    <span className="tnum ml-auto pl-3 font-semibold text-fg">{money(m.b, { cents: false })}</span>
+                  </p>
+                  <p className="tnum mt-1 border-t border-border pt-1 text-right text-[12px] font-medium text-fg-muted">
+                    {money(m.b - m.a, { sign: true, cents: false })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="ml-10 flex justify-around pt-1.5">
+          {months.map((m) => (
+            <span key={m.label} className="flex-1 text-center text-[11px] text-fg-subtle">
+              {m.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <table className="sr-only">
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Month</th>
+            <th scope="col">{aLabel}</th>
+            <th scope="col">{bLabel}</th>
+            <th scope="col">Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          {months.map((m) => (
+            <tr key={m.label}>
+              <th scope="row">{m.label}</th>
+              <td>{money(m.a)}</td>
+              <td>{money(m.b)}</td>
+              <td>{money(m.b - m.a, { sign: true })}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Net by year.                                                                */
+/* -------------------------------------------------------------------------- */
+
+export interface YearNet {
+  year: number;
+  netCents: number;
+  partial: boolean;
+  throughMonth: number;
+}
+
+/**
+ * One bar per year around a zero line. A few years are a handful of bars,
+ * not a line: a line through three points invents a trend. The year still
+ * in progress is drawn lighter and labelled with the month it runs to.
+ */
+export function NetTrendChart({ years }: { years: YearNet[] }) {
+  const peak = niceCeil(Math.max(0, ...years.map((y) => Math.abs(y.netCents))));
+  const hasNegative = years.some((y) => y.netCents < 0);
+  const h = (cents: number) => (peak ? (Math.abs(cents) / peak) * (hasNegative ? 50 : 100) : 0);
+  const zero = hasNegative ? 50 : 0;
+
+  return (
+    <div className="px-5 pb-4 pt-4">
+      <div className="relative h-40" aria-hidden>
+        {[1, zero / 100, ...(hasNegative ? [0] : [])].map((t) => (
+          <div key={t} className="absolute inset-x-0 flex items-end" style={{ bottom: `${t * 100}%` }}>
+            <span className="tnum w-12 shrink-0 translate-y-[0.4em] pr-2 text-right text-[11px] text-fg-subtle">
+              {t === zero / 100 ? "$0" : t === 1 ? shortMoney(peak) : `-${shortMoney(peak)}`}
+            </span>
+            <span className={cn("h-px flex-1", t === zero / 100 ? "bg-border-2" : "bg-border")} />
+          </div>
+        ))}
+        <div className="absolute inset-y-0 left-12 right-0 flex justify-around">
+          {years.map((y) => (
+            <div key={y.year} className="group relative h-full flex-1">
+              <div
+                className={cn(
+                  "absolute left-1/2 w-8 max-w-[40%] -translate-x-1/2 rounded-[3px]",
+                  y.netCents >= 0 ? "bg-chart-1" : "bg-chart-2",
+                  y.partial && "opacity-60",
+                )}
+                style={
+                  y.netCents >= 0
+                    ? { bottom: `${zero}%`, height: `${h(y.netCents)}%` }
+                    : { top: `${100 - zero}%`, height: `${h(y.netCents)}%` }
+                }
+              />
+              <div className="pointer-events-none absolute left-1/2 top-0 z-10 hidden -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-border bg-surface px-3 py-2 shadow-float group-hover:block">
+                <p className="text-[12px] font-semibold text-fg">
+                  {y.year}
+                  {y.partial ? ` through ${MONTH_NAMES[y.throughMonth - 1]}` : ""}
+                </p>
+                <p className="tnum mt-0.5 text-[12px] font-semibold text-fg">
+                  {money(y.netCents, { sign: true, cents: false })}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="ml-12 flex justify-around pt-1.5" aria-hidden>
+        {years.map((y) => (
+          <span key={y.year} className="flex-1 text-center text-[11px] text-fg-subtle">
+            {y.year}
+            {y.partial ? <span className="block text-[10px]">to {MONTH_NAMES[y.throughMonth - 1]}</span> : null}
+          </span>
+        ))}
+      </div>
+
+      <table className="sr-only">
+        <caption>Net income by year, before reserve funding</caption>
+        <thead>
+          <tr>
+            <th scope="col">Year</th>
+            <th scope="col">Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          {years.map((y) => (
+            <tr key={y.year}>
+              <th scope="row">
+                {y.year}
+                {y.partial ? ` (through ${MONTH_NAMES[y.throughMonth - 1]})` : ""}
+              </th>
+              <td>{money(y.netCents, { sign: true })}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Aging.                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export interface AgingSegment {
+  key: string;
+  label: string;
+  cents: number;
+  count: number;
+  share: number;
+}
+
+const AGING_CHIP: Record<string, string> = {
+  current: "bg-chart-3",
+  "1-30": "bg-chart-4",
+  "31-60": "bg-chart-2",
+  "61+": "bg-chart-5",
+};
+
+/** One bar, four segments: how much of what is owed is how old. */
+export function AgingBar({ buckets }: { buckets: AgingSegment[] }) {
+  const shown = buckets.filter((b) => b.cents > 0);
+  return (
+    <div className="px-5 pb-5 pt-4">
+      <div className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full" aria-hidden>
+        {shown.map((b) => (
+          <span
+            key={b.key}
+            title={`${b.label}: ${money(b.cents)}`}
+            className={cn("block h-full", AGING_CHIP[b.key] ?? "bg-chart-other")}
+            style={{ width: `${b.share * 100}%` }}
+          />
+        ))}
+      </div>
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        {buckets.map((b) => (
+          <div key={b.key}>
+            <dt className="flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+              <span className={cn("size-2.5 rounded-sm", AGING_CHIP[b.key] ?? "bg-chart-other")} aria-hidden />
+              {b.label}
+            </dt>
+            <dd className="tnum mt-1 text-[17px] font-semibold tracking-[-0.02em] text-fg">
+              {money(b.cents, { cents: false })}
+            </dd>
+            <dd className="text-[12px] text-fg-subtle">
+              {b.count} {b.count === 1 ? "household" : "households"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}

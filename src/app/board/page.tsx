@@ -21,6 +21,7 @@ import {
   spendingByCategory,
 } from "@/lib/metrics";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
+import { SectionLink, YearControl } from "@/components/app/finance-ui";
 import {
   useAppState,
   usePendingApprovals,
@@ -66,28 +67,6 @@ export default function BoardDashboard() {
   const role =
     account && account.role !== "resident" ? ROLE_LABEL[account.role] : "Board member";
 
-  // TODO(ui-spec): year-over-year comparison (deltas, trends) is an open
-  // item from the huddle; the dropdown below only switches years.
-  const yearSelect =
-    years.length > 1 ? (
-      <select
-        value={year}
-        onChange={(e) => setYear(Number(e.target.value))}
-        aria-label="Year"
-        className="h-8 rounded-lg border border-border-2 bg-surface px-2 text-[13px] font-medium text-fg"
-      >
-        {years.map((y) => (
-          <option key={y} value={y}>
-            {y === thisYear ? "This Year" : y}
-          </option>
-        ))}
-      </select>
-    ) : (
-      <span className="inline-flex h-8 items-center rounded-lg border border-border px-2.5 text-[13px] font-medium text-fg-muted">
-        This Year
-      </span>
-    );
-
   return (
     <>
       <PageHeader
@@ -119,24 +98,40 @@ export default function BoardDashboard() {
       {running ? (
         <>
           {hasFlows || spending.rows.length > 0 ? (
-            <div className="grid gap-5 xl:grid-cols-5">
-              {hasFlows ? (
-                <Card className={cn(spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
-                  <CardHeader title="Monthly Financial Overview" action={yearSelect} />
-                  <MoneyFlowChart months={flows} />
-                </Card>
-              ) : null}
-              {spending.rows.length > 0 ? (
-                <Card className={cn(hasFlows ? "xl:col-span-2" : "xl:col-span-5")}>
-                  <CardHeader title="Spending by Category" action={yearSelect} />
-                  <SpendingDonut
-                    rows={spending.rows}
-                    totalCents={spending.totalCents}
-                    reportHref="/board/money"
-                  />
-                </Card>
-              ) : null}
-            </div>
+            <section>
+              {/* One year control for both charts, and the way into the
+                  comparison. Two dropdowns off one piece of state read as
+                  two settings, and a board member changed one expecting
+                  the other to stay. */}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                {years.length > 1 ? (
+                  <YearControl years={years} value={year} onChange={setYear} thisYear={thisYear} />
+                ) : (
+                  <span className="text-[13px] font-medium text-fg-muted">This year</span>
+                )}
+                {years.length > 1 ? (
+                  <SectionLink href="/board/money/trends">Compare years</SectionLink>
+                ) : null}
+              </div>
+              <div className="grid gap-5 xl:grid-cols-5">
+                {hasFlows ? (
+                  <Card className={cn(spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
+                    <CardHeader title="Monthly Financial Overview" />
+                    <MoneyFlowChart months={flows} />
+                  </Card>
+                ) : null}
+                {spending.rows.length > 0 ? (
+                  <Card className={cn(hasFlows ? "xl:col-span-2" : "xl:col-span-5")}>
+                    <CardHeader title="Spending by Category" />
+                    <SpendingDonut
+                      rows={spending.rows}
+                      totalCents={spending.totalCents}
+                      reportHref="/board/money"
+                    />
+                  </Card>
+                ) : null}
+              </div>
+            </section>
           ) : null}
 
           <StatTiles />

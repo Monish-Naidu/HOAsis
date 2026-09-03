@@ -9,27 +9,21 @@ import { cn } from "@/lib/utils";
 /**
  * The money questions, as one place.
  *
- * Money and Reserves were separate tabs, and the distinction was ours rather
- * than theirs: everything on both is money. What separates them is the
- * horizon: this month, and the things that wear out over years. The reserves
- * tab used to be called "Next 30 years" after the projection it carried; the
- * projection is out for now and the tab says what is left, which is the
- * reserves themselves.
+ * One segmented control across every finance view. Overview is the page a
+ * treasurer opens on a Tuesday; Transactions, Budget, Trends and Collections
+ * are the questions they came to answer; Reserves is the same money over a
+ * longer horizon. Each view keeps its own route so a link lands on it.
  *
  * Shared costs only appears for an association that has any, so a board
- * billing one flat due still sees two tabs and no explaining.
+ * billing one flat due never sees an empty tab.
  */
 const VIEWS = [
-  {
-    href: "/board/money",
-    label: "This month",
-    detail: "Cash, and anything waiting on you",
-  },
-  {
-    href: "/board/reserves",
-    label: "Reserves",
-    detail: "What wears out, when, and what is set aside",
-  },
+  { href: "/board/money", label: "Overview", detail: "Where the money stands today" },
+  { href: "/board/money/transactions", label: "Transactions", detail: "Every line, filtered and exportable" },
+  { href: "/board/money/budget", label: "Budget", detail: "Each line against the share of the year gone" },
+  { href: "/board/money/trends", label: "Trends", detail: "One year beside another" },
+  { href: "/board/money/collections", label: "Collections", detail: "Who is behind, and by how much" },
+  { href: "/board/reserves", label: "Reserves", detail: "What wears out, when, and what is set aside" },
 ] as const;
 
 export function MoneyTabs() {
@@ -55,7 +49,7 @@ export function MoneyTabs() {
     <div className="mb-6">
       <TabPill
         activeKey={active.href}
-        className="inline-flex gap-1 rounded-xl bg-surface-2 p-1"
+        className="no-scrollbar inline-flex max-w-full gap-1 overflow-x-auto rounded-xl bg-surface-2 p-1"
         pillClassName="bg-surface shadow-card rounded-lg"
       >
         {views.map((view) => (
@@ -65,7 +59,7 @@ export function MoneyTabs() {
             data-tab-key={view.href}
             aria-current={pathname === view.href ? "page" : undefined}
             className={cn(
-              "relative z-10 rounded-lg px-4 py-2 text-[15px] font-medium transition-colors duration-200",
+              "relative z-10 shrink-0 rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors duration-200",
               pathname === view.href ? "text-fg" : "text-fg-muted hover:text-fg",
             )}
           >
