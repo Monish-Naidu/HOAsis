@@ -30,6 +30,12 @@ async function found(page: Page, name: string, property: Kind) {
   await clearOnce(page);
   await waitForHydration(page);
 
+  // The account step comes first when signed out. Not creating one here,
+  // because that is a Supabase row per run; looking around is the labelled
+  // way past it and ends in a browser only copy.
+  await page.getByRole("button", { name: "Look around first" }).click();
+  await page.waitForTimeout(300);
+
   await page.getByLabel(/Association name/i).fill(name);
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: "Washington" });
@@ -67,12 +73,6 @@ async function found(page: Page, name: string, property: Kind) {
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
   await page.waitForTimeout(900);
-
-  const explore = page.getByRole("button", { name: "Look around first" });
-  if (await explore.isVisible().catch(() => false)) {
-    await explore.click();
-    await page.waitForTimeout(900);
-  }
   await page.getByRole("button", { name: /See what is next/ }).click();
   await page.waitForTimeout(900);
 }

@@ -2,14 +2,12 @@ import { PersistedStore } from "@/lib/core/store";
 import { emptyDraft, type CommunityDraft } from "@/lib/data/new-community";
 
 /**
- * Setup a visitor completed before they had an account.
+ * Setup a visitor completed before their email was confirmed.
  *
- * The "Get started" button used to build the whole association in the browser
- * and never mention signing up. Four steps, a roster of eighty-eight
- * households typed by hand, and a board that reasonably believed their
- * association was set up. It was not: none of it existed anywhere but that one
- * browser, and it was silently stranded the moment they later created an
- * account.
+ * The account is created on the first step of the wizard and the confirmation
+ * link is left until the end, so the work is never blocked on an inbox. That
+ * leaves a gap: a finished draft, an account that exists, and no session yet
+ * to create the association under.
  *
  * So the draft is held here while they confirm their email, and offered back
  * the moment they return signed in. Nothing is lost, and nobody is asked to

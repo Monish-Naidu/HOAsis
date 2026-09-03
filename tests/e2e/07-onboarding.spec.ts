@@ -20,6 +20,21 @@ async function clearOnce(page: import("@playwright/test").Page) {
 }
 
 /**
+ * Past the account step, without an account.
+ *
+ * Signed out, the wizard opens on an account form so the lead exists before
+ * any of the work does. These tests never create one, because that would put
+ * a row in Supabase for every run. Looking around is the labelled way past
+ * it, and ends in a browser only copy.
+ */
+async function lookAround(page: import("@playwright/test").Page) {
+  await clearOnce(page);
+  await waitForHydration(page);
+  await page.getByRole("button", { name: "Look around first" }).click();
+  await page.waitForTimeout(300);
+}
+
+/**
  * Onboarding a community that is still being built.
  *
  * There is no roster to import here and no prior association to move. The
@@ -48,10 +63,10 @@ type Answers = {
 
 /** Walks the wizard end to end and lands on the dashboard. */
 async function onboard(page: import("@playwright/test").Page, a: Answers) {
-  await clearOnce(page);
-  await waitForHydration(page);
+  // Step 1, the account, skipped.
+  await lookAround(page);
 
-  // Step 1, who you are.
+  // Step 2, who you are.
   await page.getByLabel(/Association name/i).fill(a.name);
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: a.state });
@@ -59,7 +74,7 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await page.getByRole("button", { name: /^Continue/ }).click();
   await page.waitForTimeout(300);
 
-  // Step 2, the three questions.
+  // Step 3, the three questions.
   await page.getByRole("button", { name: new RegExp(a.property) }).click();
   for (const space of a.spaces ?? []) {
     await page.getByRole("button", { name: new RegExp(`^${space}$`) }).click();
@@ -71,7 +86,7 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await page.getByRole("button", { name: /^Continue/ }).click();
   await page.waitForTimeout(300);
 
-  // Step 3, the homes in the plat.
+  // Step 4, the homes in the plat.
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
   await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
@@ -85,24 +100,16 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await page.getByRole("button", { name: /^Continue/ }).click();
   await page.waitForTimeout(300);
 
-  // Step 4, bank. Skipping is a supported path.
+  // Step 5, bank. Skipping is a supported path.
   await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
   await page.waitForTimeout(900);
-  // Signed out, the wizard now asks for an account rather than silently
-  // building a browser only copy. Exploring is the labelled way past it.
-  const explore = page.getByRole("button", { name: "Look around first" });
-  if (await explore.isVisible().catch(() => false)) {
-    await explore.click();
-    await page.waitForTimeout(900);
-  }
   await page.getByRole("button", { name: /See what is next/ }).click();
   await page.waitForTimeout(900);
 }
 
 test.describe("the three questions", () => {
   test("both single answer questions are required before moving on", async ({ page }) => {
-    await clearOnce(page);
-    await waitForHydration(page);
+    await lookAround(page);
 
     await page.getByLabel(/Association name/i).fill("Gate Check HOA");
     await page.getByLabel(/City/i).fill("Bothell");
@@ -124,8 +131,7 @@ test.describe("the three questions", () => {
   test("names the two situations it supports, and what each one changes", async ({
     page,
   }) => {
-    await clearOnce(page);
-    await waitForHydration(page);
+    await lookAround(page);
 
     await page.getByLabel(/Association name/i).fill("Three Ways HOA");
     await page.getByLabel(/City/i).fill("Bothell");
@@ -574,13 +580,69 @@ test.describe("what kind of homes changes the plan", () => {
 });
 
 test.describe("get started and signing up are the same flow", () => {
-  test("finishing without an account asks for one instead of quietly building a copy", async ({
-    page,
-  }) => {
+  test("the account comes first, and the email can wait", async ({ page }) => {
     await clearOnce(page);
     await waitForHydration(page);
 
-    await page.getByLabel(/Association name/i).fill("Account Gate HOA");
+    const health = await inspect(page);
+    // The account used to be the last screen, and a board that typed a roster
+    // and left rather than pick a password was nobody. Now it is the first,
+    // so whoever leaves on step three still exists.
+    expect(health.text, "the account is not the first step").toContain("Start with an account");
+    expect(health.text, "the step count hides the account step").toContain("Step 1 of 5");
+    // And the confirmation email is deferred, said in so many words, so
+    // nobody goes to their inbox before the work.
+    expect(health.text, "the email is not deferred").toContain(
+      "Confirming your email can wait until the end",
+    );
+    // Looking around is still allowed, and says what it is.
+    expect(health.text, "exploring is not offered as a real choice").toContain(
+      "Look around first",
+    );
+    expect(health.text, "the browser only copy is not explained").toContain(
+      "builds a copy in this browser only",
+    );
+
+    // Nothing reaches Supabase until all three fields are filled.
+    const next = page.getByRole("button", { name: /^Continue/ });
+    await expect(next, "an empty account form let the board through").toBeDisabled();
+    await page.getByLabel("Your name").fill("Pat Founder");
+    await page.getByLabel("Your email").fill("pat@example.com");
+    await expect(next, "no password was enough").toBeDisabled();
+    await page.getByLabel("Pick a password").fill("long enough");
+    await expect(next, "a complete form is still blocked").toBeEnabled();
+
+    // Not creating the account in a test, so look around instead. The name
+    // and email typed here still carry to the homes step, so nobody enters
+    // them twice. Read from the field, since a value is not part of innerText.
+    await page.getByRole("button", { name: "Look around first" }).click();
+    await page.waitForTimeout(300);
+    expect((await inspect(page)).text, "looking around lost the step count").toContain(
+      "Step 2 of 5",
+    );
+    await page.getByLabel(/Association name/i).fill("Account First HOA");
+    await page.getByLabel(/City/i).fill("Bothell");
+    await page.getByLabel(/State/i).selectOption({ label: "Washington" });
+    await page.getByLabel(/Each home pays/i).fill("120");
+    await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.waitForTimeout(300);
+    await page.getByRole("button", { name: /Detached homes/ }).click();
+    await page.getByRole("button", { name: /We are building the community/ }).click();
+    await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.waitForTimeout(300);
+    await expect(page.getByLabel("Your name"), "the name was not carried forward").toHaveValue(
+      "Pat Founder",
+    );
+    await expect(
+      page.getByLabel("Your email"),
+      "the email was not carried forward",
+    ).toHaveValue("pat@example.com");
+  });
+
+  test("looking around ends in a copy that says it is one", async ({ page }) => {
+    await lookAround(page);
+
+    await page.getByLabel(/Association name/i).fill("Browser Copy HOA");
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
     await page.getByLabel(/Each home pays/i).fill("120");
@@ -601,20 +663,11 @@ test.describe("get started and signing up are the same flow", () => {
     const health = await inspect(page);
     // It used to build the association silently, and a board reasonably
     // believed they had set it up. They had not: it lived in one browser.
-    expect(health.text, "no account was ever asked for").toContain("Last thing: an account");
-    // Carried from the founder they already typed, so nobody enters it twice.
-    // Read from the field rather than the text, since an input's value is not
-    // part of innerText.
-    await expect(
-      page.getByLabel(/Your email/i),
-      "the email was not carried forward",
-    ).toHaveValue("pat@example.com");
-    // Looking around is still allowed, and now says what it is.
-    expect(health.text, "exploring is not offered as a real choice").toContain(
-      "Look around first",
+    expect(health.text, "the copy passes itself off as the association").toContain(
+      "is set up in this browser",
     );
-    expect(health.text, "the browser only copy is not explained").toContain(
-      "builds a copy in this browser only",
+    expect(health.text, "the copy does not say where it lives").toContain(
+      "copy in this browser only",
     );
   });
 

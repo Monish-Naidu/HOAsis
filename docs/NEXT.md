@@ -319,6 +319,27 @@ owed and each one is a drop-in:
 
 Remember `rm -rf .next/cache/images` when any of them lands.
 
+## The account comes first, the email comes last
+
+Changed 2026-09-03. The account used to be the last screen of `/start`, after
+the roster and the bank. People who had typed eighty homes left rather than
+pick a password, and a lead who leaves at the end is nobody. Monish's call: ask
+for name, email and password first, verify after the rest is in.
+
+- **Step 1 is "Account"** when nobody is signed in. `signUp` runs on Continue,
+  so the row exists in Supabase whether or not they finish. Signed in people
+  never see the step, and "Step N of M" counts only what is shown.
+- **The confirmation email never blocks a step.** With confirmation pending the
+  wizard notes it and carries on. At the end the draft goes to
+  `savePendingDraft` and the "Check your email" panel shows; the "Pick up where
+  you left off" callout hands it back when they return through the link.
+- **"Look around first" still exists**, quiet, on the account step. It ends in
+  a browser only copy and the finished screen says so in the heading.
+- **An email that already has an account** gets the provider's message and a
+  "Sign in instead" link.
+- Specs `07-onboarding` and `08-complete-setup` click "Look around first" up
+  front rather than at the end, so no test creates a Supabase user.
+
 ## Setting up reads the answers it was already given
 
 Fixed 2026-08-27. The second screen of `/start` asks what kind of homes these

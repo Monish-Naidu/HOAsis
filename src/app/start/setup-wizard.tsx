@@ -24,11 +24,12 @@ import {
 } from "@/lib/lots";
 import { BankStep } from "./bank-step";
 import { SituationStep } from "./situation-step";
-import { AccountStep } from "./account-step";
+import { AccountStep, CheckEmailPanel } from "./account-step";
 import {
   clearPendingDraft,
   pendingDraftStore,
   restoreDraft,
+  savePendingDraft,
 } from "@/lib/pending-draft";
 import { cn, money } from "@/lib/utils";
 import { wordingFor } from "@/lib/wording";
@@ -36,11 +37,14 @@ import { wordingFor } from "@/lib/wording";
 /**
  * Setting up an association.
  *
- * Three questions, because an association needs exactly three things before it
- * can take a dollar: who it is and what a home owes, which homes there are, and
+ * An account first, so the person exists before any of the work does and a
+ * board that leaves halfway is a lead rather than nothing. Then three
+ * questions, because an association needs exactly three things before it can
+ * take a dollar: who it is and what a home owes, which homes there are, and
  * where the money lands. Officers, documents, budgets, reserves and amenities
  * are all real, and every one of them can wait until somebody is logged in and
- * already collecting.
+ * already collecting. Confirming the email waits until the end, so nothing
+ * here is ever blocked on an inbox.
  *
  * The homes step is the one that has to be fast, and it is not a roster: in a
  * community still being built there are no residents to import, and in an
@@ -51,13 +55,26 @@ import { wordingFor } from "@/lib/wording";
  */
 
 /**
- * Cheap questions first, the long one third, the highest friction one last.
+ * The account first, then cheap questions, the long one, and the highest
+ * friction one last.
+ *
+ * The account used to be the last screen, and people who had typed a roster
+ * left rather than pick a password, so the lead only existed if they
+ * finished. Now it is the first screen, so somebody who abandons setup on
+ * step three still exists in Supabase. Confirming the email is deferred to
+ * the very end, so the work is never blocked on an inbox.
  *
  * "Situation" sits before "Homes" because it takes twenty seconds and it
  * changes what the rest of setup contains. Connecting a bank is the one people
  * leave to go and fetch a statement for, so it stays at the end where leaving
  * does the least damage.
  */
+const ACCOUNT_STEP = {
+  id: "account",
+  label: "Account",
+  blurb: "So nothing you enter is lost",
+} as const;
+
 const STEPS = [
   { id: "association", label: "Association", blurb: "Who you are and what a home pays" },
   { id: "situation", label: "Your place", blurb: "What kind of community this is" },
@@ -65,13 +82,12 @@ const STEPS = [
   { id: "bank", label: "Bank", blurb: "Where dues land" },
 ] as const;
 
-/**
- * Whether the last screen asks for an account.
- *
- * Somebody already signed in has one. Everybody else used to reach the end,
- * press a button, and get an association that existed in their browser and
- * nowhere else, with nothing on screen to suggest otherwise.
- */
+type StepId = (typeof ACCOUNT_STEP)["id"] | (typeof STEPS)[number]["id"];
+
+/** Somebody already signed in has an account, so they never see that step. */
+function stepsFor(signedIn: boolean) {
+  return signedIn ? [...STEPS] : [ACCOUNT_STEP, ...STEPS];
+}
 
 const CADENCES = [
   { id: "monthly", label: "Monthly" },
@@ -83,7 +99,10 @@ export function SetupWizard() {
   const { createCommunity, createRemoteAssociation } = useAppState();
   const auth = useAuth();
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  // Steps are tracked by id rather than index, because the account step can
+  // leave the list mid-wizard: a session arriving from another tab after the
+  // confirmation link is opened must not shift everybody one step forward.
+  const [stepId, setStepId] = useState<StepId>(auth.user ? "association" : "account");
   const [draft, setDraft] = useState<CommunityDraft>(emptyDraft);
   // Setup finished before they had an account, held through the round trip
   // to their email. Offered back rather than resumed silently, because
@@ -95,15 +114,31 @@ export function SetupWizard() {
   );
   const [resumeDismissed, setResumeDismissed] = useState(false);
 
-  const [done, setDone] = useState<{ id: string } | null>(null);
+  const [done, setDone] = useState<{ id: string; local: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const [askingForAccount, setAskingForAccount] = useState(false);
+  // Account created on the first step, email not yet confirmed. The account
+  // step stays in the list so they can look back at it, but never asks twice.
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  // Chose to look around without an account. Ends in a browser-only copy.
+  const [exploring, setExploring] = useState(false);
+  // Finished with the confirmation still outstanding; the draft is held.
+  const [sentToEmail, setSentToEmail] = useState(false);
 
-  const canResume = Boolean(auth.user) && Boolean(pending) && !resumeDismissed && step === 0;
+  const steps = useMemo(() => stepsFor(Boolean(auth.user)), [auth.user]);
+  // The account step vanishes when a session arrives; land on the first
+  // real step rather than on nothing.
+  const step = Math.max(0, steps.findIndex((s) => s.id === stepId));
+  const current = steps[step];
+
+  const canResume =
+    Boolean(auth.user) && Boolean(pending) && !resumeDismissed && current.id === "association";
 
   const patch = (next: Partial<CommunityDraft>) => setDraft((d) => ({ ...d, ...next }));
-  const complete = useMemo(() => stepComplete(draft), [draft]);
+  const complete = useMemo(() => {
+    const base = stepComplete(draft);
+    return steps[0].id === "account" ? [awaitingConfirmation || exploring, ...base] : base;
+  }, [draft, steps, awaitingConfirmation, exploring]);
 
   /**
    * Every step change goes through here so the transition is one motion:
@@ -113,28 +148,40 @@ export function SetupWizard() {
    */
   const top = useRef<HTMLDivElement>(null);
   const goTo = (next: number) => {
-    setStep(next);
+    const target = steps[Math.min(Math.max(0, next), steps.length - 1)];
+    setStepId(target.id);
     requestAnimationFrame(() => {
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
   };
 
   /**
-   * A signed in person founds a real association. Anyone else builds one in
-   * their own browser, which is what makes the product explorable without an
-   * account and keeps evaluation data out of the database.
+   * Who founds what, at the end.
+   *
+   * Signed in: a real association. Account made this session but the email
+   * not yet confirmed: the draft is held on the device and created the moment
+   * they come back through the link. Looking around: a copy in this browser,
+   * and the finished screen says so. Nobody reaches this without one of the
+   * three, and if they somehow do, the account step asks again.
    */
   async function finish(withDraft: CommunityDraft) {
     setFailure(null);
     if (!auth.user) {
-      // Not an account yet. Ask, rather than quietly building a copy that
-      // only this browser will ever see.
-      setAskingForAccount(true);
+      if (awaitingConfirmation) {
+        savePendingDraft(withDraft, withDraft.founder.email.trim());
+        setSentToEmail(true);
+        return;
+      }
+      if (exploring) {
+        setDone({ id: createCommunity(withDraft).id, local: true });
+        return;
+      }
+      setStepId("account");
       return;
     }
     setBusy(true);
     try {
-      setDone({ id: await createRemoteAssociation(withDraft) });
+      setDone({ id: await createRemoteAssociation(withDraft), local: false });
     } catch (error) {
       setFailure(
         error instanceof Error ? error.message : "Could not create the association",
@@ -147,30 +194,20 @@ export function SetupWizard() {
   // Straight to the plan rather than the dashboard. A board that lands on an
   // empty workspace has to work out what to do next; one that lands on a plan
   // is told, in the order that gets money moving first.
-  if (done) return <FinishedPanel draft={draft} onOpen={() => router.push("/start/plan")} />;
-
-  if (askingForAccount) {
+  if (done) {
     return (
-      <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
-        <AccountStep
-          draft={draft}
-          onExplore={() => {
-            setAskingForAccount(false);
-            setDone({ id: createCommunity(draft).id });
-          }}
-          onSignedIn={() => {
-            setAskingForAccount(false);
-            void finish(draft);
-          }}
-        />
-      </div>
+      <FinishedPanel draft={draft} local={done.local} onOpen={() => router.push("/start/plan")} />
     );
+  }
+
+  if (sentToEmail && !auth.user) {
+    return <CheckEmailPanel draft={draft} email={draft.founder.email.trim()} />;
   }
 
   return (
     <div ref={top} className="mx-auto w-full max-w-xl scroll-mt-6 px-5 py-10 sm:py-14">
       <ol className="flex items-stretch gap-2" aria-label="Setup progress">
-        {STEPS.map((s, index) => (
+        {steps.map((s, index) => (
           <li key={s.id} className="flex-1">
             <button
               type="button"
@@ -213,7 +250,7 @@ export function SetupWizard() {
                 onClick={() => {
                   setDraft(restoreDraft(pending));
                   clearPendingDraft();
-                  setStep(STEPS.length - 1);
+                  setStepId("bank");
                 }}
               >
                 Restore it
@@ -237,15 +274,34 @@ export function SetupWizard() {
       ) : null}
 
       <p className="mt-6 text-[13px] font-semibold text-fg-muted">
-        Step {step + 1} of {STEPS.length} · {STEPS[step].blurb}
+        Step {step + 1} of {steps.length} · {current.blurb}
       </p>
 
       {/* Keyed by step so each section mounts fresh and rises in. */}
-      <div key={step} className="animate-rise mt-4">
-        {step === 0 ? <AssociationStep draft={draft} patch={patch} /> : null}
-        {step === 1 ? <SituationStep draft={draft} patch={patch} /> : null}
-        {step === 2 ? <HomesStep draft={draft} patch={patch} /> : null}
-        {step === 3 ? (
+      <div key={current.id} className="animate-rise mt-4">
+        {current.id === "account" ? (
+          <AccountStep
+            draft={draft}
+            patch={patch}
+            status={awaitingConfirmation ? "awaiting" : "none"}
+            onExplore={() => {
+              setExploring(true);
+              goTo(step + 1);
+            }}
+            onCreated={(confirmationPending) => {
+              setExploring(false);
+              setAwaitingConfirmation(confirmationPending);
+              // Signed in straight away: the session arrives through the auth
+              // store and the account step drops out of the list on its own.
+              goTo(step + 1);
+            }}
+            onContinue={() => goTo(step + 1)}
+          />
+        ) : null}
+        {current.id === "association" ? <AssociationStep draft={draft} patch={patch} /> : null}
+        {current.id === "situation" ? <SituationStep draft={draft} patch={patch} /> : null}
+        {current.id === "homes" ? <HomesStep draft={draft} patch={patch} /> : null}
+        {current.id === "bank" ? (
           <BankStep
             associationName={draft.name}
             account={draft.bankAccount}
@@ -261,44 +317,48 @@ export function SetupWizard() {
         </p>
       ) : null}
 
-      <div className="mt-8 flex items-center justify-between gap-3">
-        <Button
-          variant="ghost"
-          size="md"
-          onClick={() => goTo(Math.max(0, step - 1))}
-          disabled={step === 0}
-        >
-          <ArrowLeft className="size-4" />
-          Back
-        </Button>
-
-        {step === STEPS.length - 1 ? (
-          <div className="flex items-center gap-2">
-            {!draft.bankAccount ? (
-              // Connecting a bank is the point of this screen, but refusing to
-              // let a board finish without one strands anybody whose treasurer
-              // holds the account details. The checklist asks again.
-              <Button variant="ghost" size="md" onClick={() => void finish(draft)} disabled={busy}>
-                Skip for now
-              </Button>
-            ) : null}
-            <Button variant="primary" size="md" onClick={() => void finish(draft)} disabled={busy}>
-              <Check className="size-4" />
-              {busy ? "Creating" : "Create the association"}
-            </Button>
-          </div>
-        ) : (
+      {/* The account step carries its own buttons: Continue there creates
+          the account, and Back has nowhere to go. */}
+      {current.id === "account" ? null : (
+        <div className="mt-8 flex items-center justify-between gap-3">
           <Button
-            variant="primary"
+            variant="ghost"
             size="md"
-            onClick={() => goTo(step + 1)}
-            disabled={!complete[step]}
+            onClick={() => goTo(Math.max(0, step - 1))}
+            disabled={step === 0}
           >
-            Continue
-            <ArrowRight className="size-4" />
+            <ArrowLeft className="size-4" />
+            Back
           </Button>
-        )}
-      </div>
+  
+          {step === steps.length - 1 ? (
+            <div className="flex items-center gap-2">
+              {!draft.bankAccount ? (
+                // Connecting a bank is the point of this screen, but refusing to
+                // let a board finish without one strands anybody whose treasurer
+                // holds the account details. The checklist asks again.
+                <Button variant="ghost" size="md" onClick={() => void finish(draft)} disabled={busy}>
+                  Skip for now
+                </Button>
+              ) : null}
+              <Button variant="primary" size="md" onClick={() => void finish(draft)} disabled={busy}>
+                <Check className="size-4" />
+                {busy ? "Creating" : "Create the association"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => goTo(step + 1)}
+              disabled={!complete[step]}
+            >
+              Continue
+              <ArrowRight className="size-4" />
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -783,7 +843,19 @@ function HomesStep({ draft, patch }: StepProps) {
 /* Finished                                                                   */
 /* -------------------------------------------------------------------------- */
 
-function FinishedPanel({ draft, onOpen }: { draft: CommunityDraft; onOpen: () => void }) {
+/**
+ * The last screen. `local` is the looking-around copy, which is said plainly
+ * here because it used to be indistinguishable from the real thing.
+ */
+function FinishedPanel({
+  draft,
+  local,
+  onOpen,
+}: {
+  draft: CommunityDraft;
+  local: boolean;
+  onOpen: () => void;
+}) {
   const homes = unitCount(draft);
   return (
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-14">
@@ -791,14 +863,24 @@ function FinishedPanel({ draft, onOpen }: { draft: CommunityDraft; onOpen: () =>
         <Check className="size-6" strokeWidth={2.5} />
       </span>
       <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg">
-        {draft.name} is ready to collect.
+        {local ? `${draft.name} is set up in this browser.` : `${draft.name} is ready to collect.`}
       </h1>
       <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
         {pluralHomes(homes)} on the register, {money(draft.duesCents)} {draft.duesCadence} each.
       </p>
 
+      {local ? (
+        <Callout tone="warn" className="mt-6" title="This is a copy in this browser only">
+          It is not saved anywhere else and nobody else can sign in to it. Create an account when
+          you are ready and the real one takes three minutes.
+        </Callout>
+      ) : null}
+
       <Card className="mt-6 divide-y divide-border overflow-hidden">
-        <Done label={`${pluralHomes(homes)} added`} detail="Each has a balance and a login" />
+        <Done
+          label={`${pluralHomes(homes)} added`}
+          detail={local ? "Each has a balance" : "Each has a balance and a login"}
+        />
         <Done
           label={`${money(draft.duesCents)} ${draft.duesCadence} assessment`}
           detail={`Billed on the ${ordinal(draft.dueDay)}`}
