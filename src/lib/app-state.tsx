@@ -61,11 +61,13 @@ import type {
   Announcement,
   Capability,
   ForumPost,
+  ForumReply,
   HomeRequest,
   Owner,
   BankAccount,
   AccountRole,
   Violation,
+  VendorInvoice,
   ViolationReport,
 } from "@/lib/types";
 import { canRaiseNotice } from "@/lib/violations";
@@ -104,6 +106,7 @@ interface AppState {
   instruments: Community["instruments"];
   ledger: Community["ledger"];
   payouts: Community["payouts"];
+  invoices: Community["invoices"];
   vendors: Community["vendors"];
   threads: Community["threads"];
   documents: Community["documents"];
@@ -261,6 +264,38 @@ interface AppState {
   castVote: (ballotId: string, optionId: string) => string;
   updateRequestStatus: (requestId: string, status: HomeRequest["status"], note?: string) => void;
   likePost: (postId: string) => void;
+  /**
+   * A neighbour answering a post. Returns false when nothing was kept, which
+   * is the case for a real association until replies have a table.
+   */
+  replyToPost: (postId: string, body: string) => boolean;
+  /** A bill attached by hand. Email-in lands the same way once it is wired. */
+  addInvoice: (invoice: Omit<VendorInvoice, "id" | "status" | "via">) => VendorInvoice;
+  /**
+   * Pays an invoice by ACH from the operating account. One call writes the
+   * payout, the ledger entry and the invoice's paid state, so the three
+   * cannot disagree.
+   */
+  payInvoice: (invoiceId: string, notes?: string) => void;
+  approveInvoice: (invoiceId: string) => void;
+  rejectInvoice: (invoiceId: string, reason: string) => void;
+  /** What the board wrote on a payment. Any payment, not only invoices. */
+  setPayoutNotes: (payoutId: string, notes: string) => void;
+  /** Moves a notice along, or closes it. Cured is how a notice is resolved. */
+  setViolationStage: (violationId: string, stage: Violation["stage"]) => void;
+  /**
+   * A notice from a city or county agency, logged by the board. Not hearsay,
+   * so it needs nobody to go and look; the deadline is the whole point.
+   */
+  addCityNotice: (input: {
+    agency: string;
+    caseNumber: string;
+    deadline: string;
+    rule: string;
+    ownerId?: string;
+    ownerName?: string;
+    unit?: string;
+  }) => Violation;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -341,6 +376,7 @@ const MUTABLE_SLICES = [
   "instruments",
   "ledger",
   "payouts",
+  "invoices",
   "vendors",
   "threads",
   "documents",
@@ -525,6 +561,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const instruments = useStore(sliceStore(communityId, "instruments"));
   const ledger = useStore(sliceStore(communityId, "ledger"));
   const payouts = useStore(sliceStore(communityId, "payouts"));
+  const invoices = useStore(sliceStore(communityId, "invoices"));
   const vendors = useStore(sliceStore(communityId, "vendors"));
   const threads = useStore(sliceStore(communityId, "threads"));
   const documents = useStore(sliceStore(communityId, "documents"));
@@ -1504,6 +1541,97 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
+  const setViolationStage = useCallback(
+    (violationId: string, stage: Violation["stage"]) => {
+      const today = todayIsoDate();
+      const nextActionDate = stage === "cured" ? today : addDays(today, 14);
+      const patch: Partial<Violation> =
+        stage === "cured"
+          ? { stage, nextActionDate, resolvedDate: today }
+          : { stage, nextActionDate };
+      if (remote.community) {
+        void remoteWrite(stage === "cured" ? "Resolving the notice" : "Updating the notice", () =>
+          supabaseBrowser()
+            .from("violations")
+            .update({ stage, next_action_on: nextActionDate })
+            .eq("id", violationId),
+        );
+        return;
+      }
+      sliceStore(communityId, "violations").update((all) =>
+        all.map((v) => (v.id === violationId ? { ...v, ...patch } : v)),
+      );
+    },
+    [remote.community, communityId],
+  );
+
+  const addCityNotice = useCallback(
+    (input: {
+      agency: string;
+      caseNumber: string;
+      deadline: string;
+      rule: string;
+      ownerId?: string;
+      ownerName?: string;
+      unit?: string;
+    }) => {
+      const agency = input.agency.trim();
+      const caseNumber = input.caseNumber.trim();
+      if (!agency || !input.rule.trim() || !input.deadline) {
+        throw new ValidationError("A city notice needs the agency, what it says, and the deadline", {});
+      }
+      const existing = remote.community
+        ? remote.community.violations
+        : sliceStore(communityId, "violations").getSnapshot();
+      const sequence = existing.length + 1;
+      const violation: Violation = {
+        id: remote.community ? newId() : `vio-${communityId}-${sequence}`,
+        reference: `CITY-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
+        ownerId: input.ownerId ?? "",
+        // Against the association itself unless a home is named.
+        ownerName: input.ownerName?.trim() || "The association",
+        unit: input.unit?.trim() || "Common area",
+        rule: input.rule.trim(),
+        // The agency and case number ride the citation too, so they survive a
+        // database that has no column for them yet.
+        ruleCitation: caseNumber ? `${agency}, case ${caseNumber}` : agency,
+        stage: "first-notice",
+        openedDate: todayIsoDate(),
+        nextActionDate: input.deadline,
+        photos: [],
+        fineCents: 0,
+        source: "city",
+        agency,
+        caseNumber: caseNumber || undefined,
+      };
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Logging the notice", () =>
+          supabaseBrowser().from("violations").insert({
+            id: violation.id,
+            association_id: rc.id,
+            reference: violation.reference,
+            unit_id: isUuid(violation.ownerId) ? violation.ownerId : null,
+            unit_label: violation.unit,
+            owner_name: violation.ownerName,
+            rule: violation.rule,
+            rule_citation: violation.ruleCitation,
+            stage: violation.stage,
+            opened_on: violation.openedDate,
+            next_action_on: violation.nextActionDate,
+            photos: [],
+            fine_cents: 0,
+            report_id: null,
+          }),
+        );
+        return violation;
+      }
+      sliceStore(communityId, "violations").update((all) => [violation, ...all]);
+      return violation;
+    },
+    [remote.community, communityId],
+  );
+
   /** Removes a household and its account together, returning one undo for both. */
   const removeOwner = useCallback(
     (ownerId: string) => {
@@ -1848,6 +1976,43 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       sliceStore(communityId, "posts").update((all) =>
         all.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)),
       );
+    },
+    [remote.community, communityId],
+  );
+
+  const replyToPost = useCallback(
+    (postId: string, body: string) => {
+      const text = body.trim();
+      if (!text) return false;
+      // Posts in Postgres carry no replies yet, so nothing is written and the
+      // screen is told so rather than shown a reply that vanishes on reload.
+      if (remote.community) return false;
+      const me = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      const owner = me
+        ? sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === me.ownerId)
+        : undefined;
+      const roleLabel: Record<string, string> = {
+        president: "Board President",
+        "vice-president": "Vice President",
+        treasurer: "Treasurer",
+        secretary: "Secretary",
+      };
+      const reply: ForumReply = {
+        id: `fr-${postId}-${Date.now().toString(36)}`,
+        author: me?.name ?? "Neighbor",
+        unit: owner?.unit ?? "",
+        authorRole: me ? roleLabel[me.role] : undefined,
+        at: todayIsoDate(),
+        body: text,
+      };
+      sliceStore(communityId, "posts").update((all) =>
+        all.map((post) =>
+          post.id === postId ? { ...post, replies: [...post.replies, reply] } : post,
+        ),
+      );
+      return true;
     },
     [remote.community, communityId],
   );
@@ -2451,6 +2616,139 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
+  /* -------------------------------------------------------------- invoices */
+
+  /**
+   * Invoices have no table yet, so a real association is refused plainly
+   * rather than given a record that lives in one browser and looks saved.
+   */
+  const invoicesLocalOnly = useCallback(() => {
+    if (remote.community) {
+      throw new ValidationError("Invoices are not saved for real associations yet", {});
+    }
+  }, [remote.community]);
+
+  const addInvoice = useCallback(
+    (input: Omit<VendorInvoice, "id" | "status" | "via">) => {
+      invoicesLocalOnly();
+      const invoice: VendorInvoice = {
+        ...input,
+        id: `inv-${communityId}-${Date.now().toString(36)}`,
+        status: "new",
+        via: "upload",
+      };
+      sliceStore(communityId, "invoices").update((all) => [invoice, ...all]);
+      return invoice;
+    },
+    [invoicesLocalOnly, communityId],
+  );
+
+  const approveInvoice = useCallback(
+    (invoiceId: string) => {
+      invoicesLocalOnly();
+      sliceStore(communityId, "invoices").update((all) =>
+        all.map((i) => (i.id === invoiceId && i.status === "new" ? { ...i, status: "approved" } : i)),
+      );
+    },
+    [invoicesLocalOnly, communityId],
+  );
+
+  const rejectInvoice = useCallback(
+    (invoiceId: string, reason: string) => {
+      invoicesLocalOnly();
+      sliceStore(communityId, "invoices").update((all) =>
+        all.map((i) =>
+          i.id === invoiceId ? { ...i, status: "rejected", rejectedReason: reason.trim() } : i,
+        ),
+      );
+    },
+    [invoicesLocalOnly, communityId],
+  );
+
+  const payInvoice = useCallback(
+    (invoiceId: string, notes?: string) => {
+      invoicesLocalOnly();
+      const invoice = sliceStore(communityId, "invoices")
+        .getSnapshot()
+        .find((i) => i.id === invoiceId);
+      if (!invoice) throw new ValidationError("That invoice is not on file", { invoiceId });
+      if (invoice.status === "paid") return;
+      const vendor = sliceStore(communityId, "vendors")
+        .getSnapshot()
+        .find((v) => v.id === invoice.vendorId);
+      const operating =
+        sliceStore(communityId, "bankAccounts")
+          .getSnapshot()
+          .find((a) => a.kind === "operating") ?? sliceStore(communityId, "bankAccounts").getSnapshot()[0];
+      if (!operating) {
+        throw new ValidationError("Connect the association's bank account before paying a bill", {});
+      }
+      const me = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      const today = todayIsoDate();
+      const stamp = Date.now().toString(36);
+      const payout: Community["payouts"][number] = {
+        id: `po-${communityId}-${stamp}`,
+        vendorId: invoice.vendorId,
+        vendor: invoice.vendor,
+        invoiceNumber: invoice.number,
+        amountCents: invoice.amountCents,
+        method: "ach",
+        status: "scheduled",
+        issuedDate: today,
+        expectedDate: addDays(today, 2),
+        approvals: [{ name: me?.name ?? "The board", at: today }],
+        approvalsRequired: 1,
+        notes: notes?.trim() || undefined,
+        invoiceId,
+      };
+      const entry: Community["ledger"][number] = {
+        id: `le-${communityId}-${stamp}`,
+        date: today,
+        description: `${invoice.vendor}, ${invoice.description}`,
+        counterparty: invoice.vendor,
+        category: vendor?.defaultCategory ?? "Repairs & maintenance",
+        accountId: operating.id,
+        amountCents: -invoice.amountCents,
+        status: "pending",
+        matchedBy: "manual",
+        payoutId: payout.id,
+      };
+      sliceStore(communityId, "payouts").update((all) =>
+        [payout, ...all].sort((a, b) => b.issuedDate.localeCompare(a.issuedDate)),
+      );
+      sliceStore(communityId, "ledger").update((all) => [entry, ...all]);
+      sliceStore(communityId, "invoices").update((all) =>
+        all.map((i) =>
+          i.id === invoiceId
+            ? { ...i, status: "paid", payoutId: payout.id, notes: notes?.trim() || i.notes }
+            : i,
+        ),
+      );
+      if (vendor) {
+        sliceStore(communityId, "vendors").update((all) =>
+          all.map((v) =>
+            v.id === vendor.id ? { ...v, ytdPaidCents: v.ytdPaidCents + invoice.amountCents } : v,
+          ),
+        );
+      }
+    },
+    [invoicesLocalOnly, communityId],
+  );
+
+  const setPayoutNotes = useCallback(
+    (payoutId: string, notes: string) => {
+      // The payouts table has no notes column yet; a real association keeps
+      // the note in this browser, and the screen says so.
+      if (remote.community) return;
+      sliceStore(communityId, "payouts").update((all) =>
+        all.map((p) => (p.id === payoutId ? { ...p, notes: notes.trim() || undefined } : p)),
+      );
+    },
+    [remote.community, communityId],
+  );
+
   const addBallot = useCallback(
     (ballot: Community["ballots"][number]) => {
       if (remote.community) {
@@ -2771,6 +3069,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       instruments,
       ledger,
       payouts,
+      invoices,
       vendors,
       threads,
       documents,
@@ -2800,6 +3099,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       instruments,
       ledger,
       payouts,
+      invoices,
       vendors,
       threads,
       documents,
@@ -2845,6 +3145,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     instruments: community_.instruments,
     ledger: community_.ledger,
     payouts: community_.payouts,
+    invoices: community_.invoices,
     vendors: community_.vendors,
     threads: community_.threads,
     documents: community_.documents,
@@ -2912,6 +3213,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     castVote,
     updateRequestStatus,
     likePost,
+    replyToPost,
+    addInvoice,
+    payInvoice,
+    approveInvoice,
+    rejectInvoice,
+    setPayoutNotes,
+    setViolationStage,
+    addCityNotice,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -2944,12 +3253,21 @@ export function useOwnerCharges() {
   return owner ? (community.ownerCharges[owner.id] ?? []) : [];
 }
 
-/** The signed-in owner's photo of their home, with a setter. Null clears it. */
+/**
+ * The signed-in owner's photo of their home, with a setter. Null clears it.
+ *
+ * `photo` is always the best image we hold, in this order: what the owner
+ * uploaded in this browser, then the photo on their record, then the
+ * community's cover. `uploaded` says whether the first of those is in play,
+ * which is the only case "Remove photo" makes sense for.
+ */
 export function useHomePhoto(): {
   photo: string | null;
+  uploaded: boolean;
   setPhoto: (dataUrl: string | null) => void;
 } {
   const owner = useCurrentOwner();
+  const { settings } = useAppState();
   const all = useStore(homePhotoStore);
   const ownerId = owner?.id;
   const setPhoto = useCallback(
@@ -2964,7 +3282,12 @@ export function useHomePhoto(): {
     },
     [ownerId],
   );
-  return { photo: ownerId ? (all[ownerId] ?? null) : null, setPhoto };
+  const own = ownerId ? (all[ownerId] ?? null) : null;
+  return {
+    photo: own ?? owner?.photoUrl ?? settings.photoUrl ?? null,
+    uploaded: Boolean(own),
+    setPhoto,
+  };
 }
 
 export function useMyRequests() {

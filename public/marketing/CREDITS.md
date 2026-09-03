@@ -22,14 +22,16 @@ desktop display is drawn in code instead, Apple-style, with the capture on
 the glass. The screen content is always a real capture from
 `scripts/product-shots.mjs`, never drawn.
 
-## Greg
+## Clarence
 
-`greg-story.jpg` is Greg, the board member on slide three of the deck of
-2026-08-28, cropped from the slide above the player controls. The slide had a
-play button drawn into the picture; it is painted out here with a patch of the
-sweater beside it, because a play button that opens nothing is the surest way
-to tell a visitor the page is a mock-up. There is no video coming; a clean
-render of the same frame would still be an improvement on the patch.
+`clarence-story.jpg` is Clarence, the board member on slide three. Until
+2026-09-03 this was a render lifted from the deck ("Greg"), with a play button
+painted out. Monish asked for a real, free photograph of a real person who
+looks the way a new board member feels, so it is now
+[Pexels photo 7926668](https://www.pexels.com/photo/stressed-old-man-reading-paperwork-at-home-7926668/)
+by Nicola Barts, under the [Pexels license](https://www.pexels.com/license/)
+(free to use, no attribution required, credited anyway). Cropped to 4:5 and
+resized to 1200px wide.
 
 ## Photographs
 
@@ -46,6 +48,11 @@ without attribution. Credited anyway, because the photographers did the work.
 | `neighborhood.jpg` | unsplash.com/photos/1592595896551-12b371d546d5 |
 | `aerial.jpg` | unsplash.com/photos/1524813686514-a57563d77965 |
 | `evening.jpg` | unsplash.com/photos/1494526585095-c41746248156 |
+
+Two of these are copied into `public/community` as the seeded photos of two
+homes, so the attribution above covers them too:
+`community/home-1428-mehr-meadows-lane.jpg` is `evening.jpg`, and
+`community/home-1302-mehr-meadows-lane.jpg` is `homes.jpg`.
 
 Library photography, one per group rather than one per article. A photograph
 for each of thirty-three pages would be filler on the twenty-four state

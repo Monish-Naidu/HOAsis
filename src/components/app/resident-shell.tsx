@@ -12,6 +12,7 @@ import { residentTabs } from "@/components/app/resident-nav";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero } from "@/components/app/community-hero";
+import { HomeBadge } from "@/components/app/home-badge";
 import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
 import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -163,12 +164,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   /* -------------------------------------------------------------- website */
   return (
     <RequireSession>
-    <div className="min-h-dvh bg-bg lg:pl-56">
-      {/* The sidebar from the design comps, as drawn: flush left, full
-          viewport height, fixed while the page scrolls. No community name or
-          unit here; the banner already carries both, and the huddle called
-          the sidebar copy redundant. */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col bg-navy-950 lg:flex">
+    <div className="min-h-dvh bg-bg lg:pl-[15.5rem]">
+      {/* The sidebar floats: inset from the edges with a large radius, so it
+          reads as a panel rather than a slab welded to the viewport. No
+          community name or unit here; the banner carries both. */}
+      <aside className="fixed inset-y-3 left-3 z-40 hidden w-56 flex-col overflow-hidden rounded-[26px] bg-navy-950 shadow-float lg:flex">
         <Link href="/resident" className="flex items-center px-5 pb-1 pt-5">
           <RailWordmark />
         </Link>
@@ -179,13 +179,13 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <Link
           href="/resident/account"
           aria-label="Your home"
-          className="group mx-3 mt-3 block overflow-hidden rounded-lg ring-1 ring-navy-700/60"
+          className="group mx-3 mt-3 block overflow-hidden rounded-2xl ring-1 ring-navy-700/60"
         >
           <span
             className="block h-20 bg-cover bg-center transition-transform duration-300 group-hover:scale-[1.03]"
-            style={{ backgroundImage: `url(${homePhoto ?? settings.photoUrl})` }}
+            style={{ backgroundImage: `url(${homePhoto})` }}
           />
-          <span className="block bg-navy-900/80 px-2.5 py-1.5 text-[12px] font-medium text-navy-200">
+          <span className="block bg-navy-900/80 px-2.5 py-2 text-[12px] font-medium text-navy-200">
             Unit {unit} · your home
           </span>
         </Link>
@@ -202,7 +202,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             // Rows share the leftover height, per the huddle: evenly spaced
             // down the column, not packed at the top.
             className="flex min-h-full w-full flex-col justify-evenly gap-1"
-            pillClassName="bg-royal"
+            pillClassName="bg-royal rounded-2xl"
           >
             {tabs.map(({ href, label, icon: Icon, webLabel }) => {
               const active =
@@ -214,7 +214,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   data-tab-key={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative z-10 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
+                    "relative z-10 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-[15px] font-medium transition-colors duration-200",
                     active
                       ? "text-white"
                       : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
@@ -230,7 +230,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       </aside>
       {topBar}
       {appHeader}
-      <CommunityHero subtitle={`Unit ${unit} · ${address}`} />
+      <CommunityHero overlay={<HomeBadge />} />
       <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
         {/* The home screen runs the full width for its dashboard grid; every
             other screen keeps the phone-width column both modes share. The

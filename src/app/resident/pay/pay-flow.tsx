@@ -9,6 +9,7 @@ import {
   CreditCard,
   Info,
   Landmark,
+  MoreHorizontal,
   Plus,
   Repeat,
   ShieldCheck,
@@ -56,7 +57,9 @@ export function PayFlow() {
   const [autopay, setAutopay] = useState(owner?.autopay ?? false);
   const [autopayDay, setAutopayDay] = useState(1);
   const [adding, setAdding] = useState(false);
-  const [managing, setManaging] = useState(false);
+  // Which row has its small actions menu open. One at a time, and closing is
+  // the same press that opened it.
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const [paid, setPaid] = useState<{ amountCents: number; instrument: PaymentInstrument } | null>(
     null,
   );
@@ -280,21 +283,10 @@ export function PayFlow() {
 
       {/* Instruments */}
       <section>
-        <SectionTitle
-          action={
-            instruments.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setManaging((v) => !v)}
-                className="text-[13px] font-medium text-accent"
-              >
-                {managing ? "Done" : "Manage"}
-              </button>
-            ) : null
-          }
-        >
-          Pay from
-        </SectionTitle>
+        {/* A "Manage" toggle used to swap this whole list into an edit mode
+            and back with a "Done" link, which is a mode nobody asked to enter.
+            Each row now carries its own small menu instead. */}
+        <SectionTitle>Pay from</SectionTitle>
 
         {instruments.length === 0 ? (
           <Card className="p-5 text-center">
@@ -316,7 +308,7 @@ export function PayFlow() {
                   className={cn(
                     "flex w-full items-center gap-3 px-4 py-3",
                     index > 0 && "border-t border-border",
-                    active && !managing && "bg-brand-soft/60",
+                    active && "bg-brand-soft/60",
                   )}
                 >
                   <button
@@ -356,36 +348,64 @@ export function PayFlow() {
                             )}`}
                       </span>
                     </span>
-                    {active && !managing ? <Check className="size-4 shrink-0 text-fg" /> : null}
+                    {active ? <Check className="size-4 shrink-0 text-fg" /> : null}
                   </button>
 
-                  {managing ? (
-                    <span className="flex shrink-0 gap-1">
-                      <button
-                        type="button"
-                        aria-label={`Make ${instrument.label} the default`}
-                        disabled={instrument.isDefault}
-                        onClick={() => setDefaultInstrument(instrument.id)}
-                        className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-2 hover:text-fg disabled:opacity-30"
-                      >
-                        <Star className={cn("size-3.5", instrument.isDefault && "fill-current")} />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${instrument.label}`}
-                        onClick={() => {
-                          const undo = removeInstrument(instrument.id);
-                          notify(`Removed ${instrument.label} ••${instrument.mask}`, "warn", {
-                            label: "Undo",
-                            onClick: undo,
-                          });
-                        }}
-                        className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </span>
-                  ) : null}
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      aria-label={`Options for ${instrument.label}`}
+                      aria-expanded={menuFor === instrument.id}
+                      onClick={() =>
+                        setMenuFor(menuFor === instrument.id ? null : instrument.id)
+                      }
+                      className="flex size-8 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </button>
+                    {menuFor === instrument.id ? (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Close"
+                          className="fixed inset-0 z-20 cursor-default"
+                          onClick={() => setMenuFor(null)}
+                        />
+                        <div className="absolute right-0 top-9 z-30 w-48 overflow-hidden rounded-2xl border border-border bg-surface shadow-float">
+                          <button
+                            type="button"
+                            disabled={instrument.isDefault}
+                            onClick={() => {
+                              setDefaultInstrument(instrument.id);
+                              setMenuFor(null);
+                              notify(`${instrument.label} is now the default`);
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[15px] text-fg hover:bg-surface-2 disabled:opacity-40"
+                          >
+                            <Star
+                              className={cn("size-3.5", instrument.isDefault && "fill-current")}
+                            />
+                            {instrument.isDefault ? "Already default" : "Make default"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const undo = removeInstrument(instrument.id);
+                              setMenuFor(null);
+                              notify(`Removed ${instrument.label} ••${instrument.mask}`, "warn", {
+                                label: "Undo",
+                                onClick: undo,
+                              });
+                            }}
+                            className="flex w-full items-center gap-2.5 border-t border-border px-3.5 py-2.5 text-left text-[15px] text-danger hover:bg-danger-soft"
+                          >
+                            <Trash2 className="size-3.5" />
+                            Remove
+                          </button>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
               );
             })}

@@ -358,6 +358,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
 
     vendors: [],
     payouts: [],
+    invoices: [],
 
     requests: [],
     violations: [],

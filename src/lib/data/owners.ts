@@ -17,6 +17,7 @@ export const owners: Owner[] = [
     autopay: false,
     standing: "current",
     daysPastDue: 0,
+    photoUrl: "/community/home-1428-mehr-meadows-lane.jpg",
   },
   {
     id: "own-007",
@@ -33,6 +34,7 @@ export const owners: Owner[] = [
     standing: "current",
     daysPastDue: 0,
     boardRole: "President",
+    photoUrl: "/community/home-1302-mehr-meadows-lane.jpg",
   },
   {
     id: "own-019",

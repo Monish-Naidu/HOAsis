@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Camera, Check, ChevronDown, Plus } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
@@ -99,12 +99,18 @@ export function CommunityHero({
   className,
   compact,
   withLocation,
+  overlay,
 }: {
   subtitle?: string;
   className?: string;
   compact?: boolean;
   /** Derives the subtitle from the association rather than taking one. */
   withLocation?: boolean;
+  /**
+   * A card inlaid on the photo, bottom left. The name moves to the top so the
+   * two never collide, and the banner grows to give the card room.
+   */
+  overlay?: ReactNode;
 }) {
   const { settings, community } = useAppState();
   const line =
@@ -116,10 +122,12 @@ export function CommunityHero({
   return (
     <section
       className={cn(
-        "relative isolate flex items-end overflow-hidden",
+        "relative isolate flex overflow-hidden",
+        overlay ? "flex-col justify-between" : "items-end",
         // Taller per the 2026-09-01 huddle: the banner was leaving too much
         // white space beneath it, so it carries more of the viewport now.
-        compact ? "h-28" : "h-44 sm:h-56",
+        // Taller again with an overlay, which needs its own band of photo.
+        compact ? "h-28" : overlay ? "h-64 sm:h-72" : "h-44 sm:h-56",
         className,
       )}
       aria-label={settings.displayName}
@@ -134,7 +142,12 @@ export function CommunityHero({
         className="absolute inset-0 -z-10 bg-gradient-to-t from-black/70 via-black/35 to-black/10"
         aria-hidden
       />
-      <div className={cn("w-full px-4 pb-3.5 sm:px-6", compact && "pb-3")}>
+      <div
+        className={cn(
+          "w-full px-4 sm:px-6",
+          compact ? "pb-3" : overlay ? "pt-4 pr-16 sm:pt-5" : "pb-3.5",
+        )}
+      >
         <h1
           className={cn(
             "font-semibold tracking-[-0.03em] text-white drop-shadow-sm",
@@ -145,6 +158,7 @@ export function CommunityHero({
         </h1>
         {line ? <p className="mt-0.5 text-[13px] text-white/85 sm:text-[15px]">{line}</p> : null}
       </div>
+      {overlay ? <div className="w-full px-4 pb-4 sm:px-6 sm:pb-5">{overlay}</div> : null}
 
       <CoverPhotoButton />
     </section>

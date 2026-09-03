@@ -11,6 +11,10 @@ this file is the short version of what to keep true when editing.
 
 ## Rules that matter
 
+- **UI changes follow `docs/design/ui-baseline.md`.** Apple HIG applied to this product:
+  one primary action per surface, semantic tokens, progressive disclosure, quiet
+  interaction, 4pt spacing. Read it before touching a screen.
+
 - **Screens import from `@/lib/data` only.** Never import a fixture file (`data/ledger.ts`,
   `data/owners.ts`, …) directly from a page. The repository layer in `data/index.ts` is the
   seam where Supabase will land.

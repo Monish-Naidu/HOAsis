@@ -6,6 +6,7 @@ import {
   Briefcase,
   CalendarDays,
   ChartNoAxesColumn,
+  Check,
   ChevronRight,
   CircleCheck,
   CircleDollarSign,
@@ -21,15 +22,22 @@ import {
   Zap,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { Avatar } from "@/components/ui/primitives";
+import { Avatar, Card } from "@/components/ui/primitives";
 import {
+  articleBySlug,
+  association,
+  communitySettings,
   liveMeeting,
   openRequests,
+  reserveComponents,
+  reserveSummary,
   upcomingMeetings,
   vendorGaps,
+  vendors,
 } from "@/lib/data";
+import { computePaymentCost, FEE_SCHEDULE } from "@/lib/payments/instruments";
 import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
-import { cn, daysFromToday, formatDate, money } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 
 export const metadata = {
   title: "ExpressHOA. Moving your community forward.",
@@ -39,7 +47,7 @@ export const metadata = {
 
 /*
  * The page follows the deck Monish brought on 2026-08-28, slide for slide:
- * hero, "Run your HOA", Greg, the five feature cards, the phone. Copy is the
+ * hero, "Run your HOA", Clarence, the five feature cards, the phone. Copy is the
  * deck's, with em dashes replaced. `docs/design/landing-page.md` records the
  * mapping and the few places this departs from the slides.
  */
@@ -207,43 +215,261 @@ function PhoneFrame({ src, alt }: { src: string; alt: string }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* The feature cards' miniature screens                                        */
+/* Slide four's tiles and their miniature screens                              */
 /*                                                                             */
-/* Each one is drawn from the same records the demo runs on, so the card and   */
-/* the product a visitor opens next agree with each other.                     */
+/* Each mini is drawn from the same records the demo runs on, so the tile and  */
+/* the product a visitor opens next agree with each other. The tiles are not   */
+/* links, and nothing inside them is: a visitor who clicks one wants that      */
+/* feature, and every destination we had was the sign-in wall or a page about  */
+/* something adjacent. The section's call to action is the one in the top bar. */
+/* -------------------------------------------------------------------------- */
+
+function Mini({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div className={cn("rounded-xl border border-border bg-surface p-3 shadow-raised", className)}>
+      {children}
+    </div>
+  );
+}
+
+function Pill({ tone, children }: { tone: "ok" | "info"; children: React.ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
+        tone === "ok" ? "bg-ok-soft text-ok" : "bg-info-soft text-info",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ComplianceMini() {
+  const update = articleBySlug("washington-recent-changes");
+  return (
+    <Mini>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[12px] font-semibold text-fg">Washington updates</p>
+        <Pill tone="ok">New</Pill>
+      </div>
+      <p className="mt-2 text-[11px] leading-snug text-fg-muted">
+        {update?.summary ?? "Bill numbers and effective dates, in plain words."}
+      </p>
+      {update ? (
+        <p className="tnum mt-2 text-[10px] text-fg-subtle">
+          {update.readMinutes} min read · {formatDate(update.publishedDate)}
+        </p>
+      ) : null}
+    </Mini>
+  );
+}
+
+function Ring({ percent }: { percent: number }) {
+  const r = 17;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg viewBox="0 0 44 44" className="size-12 shrink-0 -rotate-90" aria-hidden>
+      <circle cx="22" cy="22" r={r} fill="none" strokeWidth="5" className="stroke-surface-3" />
+      <circle
+        cx="22"
+        cy="22"
+        r={r}
+        fill="none"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeDasharray={`${(c * percent) / 100} ${c}`}
+        className="stroke-accent"
+      />
+    </svg>
+  );
+}
+
+function ReserveMini() {
+  const percent = Math.round(reserveSummary().percentFunded * 100);
+  const onTrack = percent >= 70;
+  const year = today().getUTCFullYear();
+  const soonest = [...reserveComponents]
+    .sort((a, b) => a.remainingLifeYears - b.remainingLifeYears)
+    .slice(0, 3);
+  return (
+    <Mini>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-medium text-fg-muted">Reserve health</p>
+          <p className="tnum mt-0.5 text-[22px] font-semibold leading-none tracking-[-0.02em] text-fg">
+            {percent}%
+          </p>
+          <p className={cn("mt-1 text-[11px] font-semibold", onTrack ? "text-ok" : "text-warn")}>
+            {onTrack ? "On track" : "Behind the study"}
+          </p>
+        </div>
+        <Ring percent={percent} />
+      </div>
+      <ul className="mt-3 space-y-2 border-t border-border pt-3">
+        {soonest.map((component) => {
+          const funded = Math.round((component.fundedCents / component.replacementCostCents) * 100);
+          return (
+            <li key={component.id}>
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="truncate text-fg">{component.name.split(",")[0]}</span>
+                <span className="tnum shrink-0 text-fg-muted">
+                  {year + component.remainingLifeYears} · {funded}%
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
+                <div
+                  className={cn(
+                    "h-full rounded-full",
+                    funded >= 80 ? "bg-ok" : funded >= 50 ? "bg-info" : "bg-warn",
+                  )}
+                  style={{ width: `${funded}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Mini>
+  );
+}
+
+function VendorMini() {
+  return (
+    <Mini className="p-2">
+      <ul className="divide-y divide-border">
+        {vendors.slice(0, 3).map((vendor) => {
+          const active =
+            vendor.w9OnFile && (!vendor.coiExpires || daysFromToday(vendor.coiExpires) >= 0);
+          return (
+            <li key={vendor.id} className="px-1 py-1.5">
+              <p className="truncate text-[11px] font-semibold leading-tight text-fg">
+                {vendor.name}
+              </p>
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <p className="truncate text-[10px] text-fg-muted">{vendor.service}</p>
+                <Pill tone={active ? "ok" : "info"}>{active ? "Active" : "Review"}</Pill>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Mini>
+  );
+}
+
+/**
+ * The rails on the demo association's own dues, priced by the same
+ * computePaymentCost the product runs, so the tile and the pay screen agree.
+ */
+function PaymentsMini() {
+  const policy = {
+    flatCents: communitySettings.paymentFeeCents,
+    paidBy: communitySettings.paymentFeePaidBy,
+    waiveOnAch: communitySettings.paymentFeeWaivedOnAch,
+  };
+  const dues = association.duesCents;
+  return (
+    <Mini className="p-2">
+      <ul className="divide-y divide-border">
+        {(
+          [
+            { kind: "ach", label: "Bank transfer" },
+            { kind: "card", label: "Card" },
+          ] as const
+        ).map(({ kind, label }) => {
+          const cost = computePaymentCost(kind, dues, policy);
+          return (
+            <li key={kind} className="px-1 py-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold text-fg">{label}</p>
+                <span className="tnum text-[11px] text-fg-muted">
+                  {money(cost.residentPaysCents)}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <p className="text-[10px] text-fg-muted">{FEE_SCHEDULE[kind].settlement}</p>
+                {/* Under a flat owner fee both rails cost the owner the same;
+                    the saving lands on the association, and the pay screen
+                    says so in the same words. */}
+                {kind === "ach" ? <Pill tone="ok">Saves the HOA</Pill> : null}
+              </div>
+            </li>
+          );
+        })}
+        <li className="flex items-center justify-between gap-2 px-1 py-1.5">
+          <p className="text-[11px] font-semibold text-fg">Autopay</p>
+          <Pill tone="info">On the 1st</Pill>
+        </li>
+      </ul>
+    </Mini>
+  );
+}
+
+/** Everything the four tiles left out: a list, not a grid. */
+function MoreList() {
+  return (
+    <Mini>
+      <ul className="grid gap-y-1.5">
+        {[
+          "Violations",
+          "Architectural requests",
+          "Documents",
+          "Communication",
+          "Meetings",
+          "Voting",
+          "Reporting",
+          "Directory",
+          "Knowledge center",
+          "Board transitions",
+        ].map((item) => (
+          <li key={item} className="flex items-center gap-1.5 text-[12px] font-medium text-fg">
+            <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </Mini>
+  );
+}
+
 const FEATURES = [
   {
     icon: ShieldCheck,
     tone: "bg-ok-soft text-ok",
     title: "Compliance updates",
     line: "Stay ahead of changing laws.",
-    href: "/library",
+    mini: <ComplianceMini />,
   },
   {
     icon: ChartNoAxesColumn,
     tone: "bg-info-soft text-info",
     title: "Reserve tracking",
     line: "Know if you're on track.",
-    href: "/signin",
+    mini: <ReserveMini />,
   },
   {
     icon: Briefcase,
     tone: "bg-ok-soft text-ok",
     title: "Vendor management",
     line: "Contracts and invoices, one place.",
-    href: "/signin",
+    mini: <VendorMini />,
   },
   {
     icon: CreditCard,
     tone: "bg-info-soft text-info",
     title: "Payments & dues",
     line: "Collected, posted, reconciled.",
-    href: "/signin",
+    mini: <PaymentsMini />,
+  },
+  {
+    icon: Sparkles,
+    tone: "bg-warn-soft text-warn",
+    title: "...and more",
+    line: "One price, every feature.",
+    mini: <MoreList />,
   },
 ];
-
-/** The and-more tile names a few, then hands off to the full list. */
-const MORE_ITEMS = ["Violations", "Architectural requests", "Meetings", "Voting", "Documents"];
 
 /* -------------------------------------------------------------------------- */
 /* The cards floating beside the phone                                         */
@@ -403,10 +629,12 @@ export default function MarketingHome() {
             sizes="58vw"
             className="hidden object-cover object-[left_top] dark:block"
           />
-          {/* A shorter fade than before, so more of the render reads as
-              photograph rather than as wash. */}
-          <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[5%] via-hero-field/35 via-[34%] to-transparent to-[72%]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-hero-field/65 via-transparent via-[38%] to-hero-field/55" />
+          {/* The fade covers only the strip the headline column overlaps
+              (its left fifth or so), then lets go. The right half is the
+              photograph as shot. Monish asked on 2026-09-03 for less
+              white-out; the earlier wash ran to 72% of the width. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[10%] via-hero-field/55 via-[24%] to-transparent to-[46%]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-hero-field/55 via-transparent via-[26%] to-hero-field/30" />
         </div>
 
         <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[42rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-start lg:pb-24 lg:pt-24">
@@ -524,7 +752,7 @@ export default function MarketingHome() {
                 Sound familiar?
               </h2>
               <p className="mt-3 text-[24px] font-semibold tracking-[-0.02em] text-hero-accent">
-                Meet Greg.
+                Meet Clarence.
               </p>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
                 He just wanted to enjoy his home. Then someone asked him to join the HOA board.
@@ -545,16 +773,19 @@ export default function MarketingHome() {
             </Reveal>
           </div>
           <Reveal delay={160}>
-            {/* A still, on purpose. The deck drew this as a video player, and
-                Monish decided on 2026-08-28 that there is no video to make. A
-                play button that opens nothing would say "mock-up". */}
-            <div className="overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
+            {/* A photograph, on purpose. The deck drew this as a video player
+                and Monish decided on 2026-08-28 that there is no video to make.
+                On 2026-09-03 the slide's render gave way to a real photo of a
+                real person, because a render reads as fake to exactly the
+                people we are asking to trust us. Portrait, so it stands beside
+                the copy rather than under it. */}
+            <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float lg:ml-auto lg:mr-0">
               <Image
-                src="/marketing/greg-story.jpg"
-                alt="Greg at his kitchen table, head in hand, surrounded by binders and the things pulling at a new board member: endless emails, confusing spreadsheets, unhappy neighbors, vendor headaches, compliance confusion"
-                width={1038}
-                height={640}
-                sizes="(max-width: 1024px) 100vw, 660px"
+                src="/marketing/clarence-story.jpg"
+                alt="Clarence on his couch at home, head in hand, reading a letter, with a past due notice and a crumpled page on the coffee table in front of him"
+                width={1200}
+                height={1500}
+                sizes="(max-width: 1024px) 100vw, 420px"
                 className="h-auto w-full"
               />
             </div>
@@ -581,51 +812,35 @@ export default function MarketingHome() {
           {/* Five across on a wide screen. Under that they keep their width
               and scroll sideways, because five cards squeezed into three
               columns leaves two orphans on a second row and a card at 180px
-              cannot hold a screen anyone can read. */}
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {FEATURES.map(({ icon: Icon, tone, title, line, href }, index) => (
-              <Reveal key={title} delay={index * 70}>
-                <Link
-                  href={href}
-                  className="group flex h-full flex-col items-center rounded-card border border-border bg-surface p-6 text-center shadow-card transition-all duration-200 hover:-translate-y-1 hover:shadow-float"
-                >
-                  <span
-                    className={cn(
-                      "flex size-14 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105",
-                      tone,
-                    )}
-                  >
-                    <Icon className="size-6" strokeWidth={1.9} />
-                  </span>
-                  <h3 className="mt-4 text-[18px] font-semibold tracking-[-0.02em] text-fg">
-                    {title}
-                  </h3>
-                  <p className="mt-1.5 text-[14px] leading-relaxed text-fg-muted">{line}</p>
-                </Link>
+              cannot hold a screen anyone can read. Each card sits at its own
+              height: the minis differ, and stretching the short ones to the
+              tallest left them with empty floors. */}
+          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-2 xl:mx-0 xl:grid xl:grid-cols-5 xl:overflow-visible xl:px-0">
+            {FEATURES.map(({ icon: Icon, tone, title, line, mini }, index) => (
+              <Reveal
+                key={title}
+                delay={index * 70}
+                className="w-[272px] shrink-0 snap-start xl:w-auto"
+              >
+                <Card className="p-5">
+                  <div className="flex flex-col items-center text-center">
+                    <span
+                      className={cn(
+                        "flex size-12 items-center justify-center rounded-full",
+                        tone,
+                      )}
+                    >
+                      <Icon className="size-5" strokeWidth={1.9} />
+                    </span>
+                    <h3 className="mt-3 text-[17px] font-semibold tracking-[-0.02em] text-fg">
+                      {title}
+                    </h3>
+                    <p className="mt-1 text-[14px] leading-snug text-fg-muted">{line}</p>
+                  </div>
+                  <div className="mt-4">{mini}</div>
+                </Card>
               </Reveal>
             ))}
-            <Reveal delay={4 * 70}>
-              <Link
-                href="/pricing#included"
-                className="group flex h-full flex-col items-center rounded-card border border-border bg-surface p-6 text-center shadow-card transition-all duration-200 hover:-translate-y-1 hover:shadow-float"
-              >
-                <span className="flex size-14 items-center justify-center rounded-full bg-warn-soft text-warn transition-transform duration-200 group-hover:scale-105">
-                  <Sparkles className="size-6" strokeWidth={1.9} />
-                </span>
-                <h3 className="mt-4 text-[18px] font-semibold tracking-[-0.02em] text-fg">
-                  …and more
-                </h3>
-                <ul className="mt-2 space-y-0.5 text-[14px] leading-relaxed text-fg-muted">
-                  {MORE_ITEMS.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-                <span className="mt-2 inline-flex items-center gap-1 text-[14px] font-semibold text-accent group-hover:underline">
-                  Explore all features
-                  <ArrowRight className="size-3.5" />
-                </span>
-              </Link>
-            </Reveal>
           </div>
 
         </div>

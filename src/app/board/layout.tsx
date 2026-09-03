@@ -14,12 +14,11 @@ export const metadata = { title: { default: "Board", template: "%s · ExpressHOA
 export default function BoardLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireSession>
-      <div className="min-h-dvh bg-bg lg:pl-56">
-        {/* The sidebar from the design comps, finally as drawn: flush to the
-            left edge, full viewport height, fixed while the page scrolls. The
-            community's name deliberately is not here; the banner already says
-            it, and the huddle called the sidebar copy redundant. */}
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col bg-navy-950 lg:flex">
+      <div className="min-h-dvh bg-bg lg:pl-[15.5rem]">
+        {/* The sidebar floats: inset from the edges with a large radius, to
+            match the resident shell. The community's name is not here; the
+            banner already says it. */}
+        <aside className="fixed inset-y-3 left-3 z-40 hidden w-56 flex-col overflow-hidden rounded-[26px] bg-navy-950 shadow-float lg:flex">
           <Link href="/board" className="flex items-center px-5 pb-1 pt-5">
             <RailWordmark />
           </Link>

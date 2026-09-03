@@ -88,6 +88,13 @@ export interface Owner {
   daysPastDue: number;
   boardRole?: string;
   isCorporateOwner?: boolean;
+  /**
+   * A photograph of the home, where the association holds one.
+   *
+   * Falls behind anything the owner uploads in their own browser and ahead of
+   * the community cover photo. Seeded for the demo households only.
+   */
+  photoUrl?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -157,6 +164,8 @@ export interface LedgerEntry {
   matchedBy?: "auto" | "manual";
   ownerId?: ID;
   duplicateOfId?: ID;
+  /** The vendor payment this line is, when it is one. Opens the invoice. */
+  payoutId?: ID;
 }
 
 /** One owner's line-item history: what was charged, what a payment paid off. */
@@ -186,6 +195,10 @@ export interface Payout {
   expectedDate: ISODate;
   approvals: { name: string; at: ISODate }[];
   approvalsRequired: number;
+  /** What the board wrote on this payment. Any payment, not only invoices. */
+  notes?: string;
+  /** The invoice this paid, so the transaction can open the attachment. */
+  invoiceId?: ID;
 }
 
 export interface Vendor {
@@ -197,6 +210,33 @@ export interface Vendor {
   coiExpires?: ISODate;
   ytdPaidCents: Cents;
   defaultCategory: LedgerCategory;
+}
+
+export type InvoiceStatus = "new" | "approved" | "paid" | "rejected";
+
+/**
+ * A bill a vendor sent the association.
+ *
+ * Arrives by email to the association's forwarding address or is attached by
+ * hand. Paying it creates a Payout and a ledger entry; the invoice keeps the
+ * payout id so the transaction can open the file it settled.
+ */
+export interface VendorInvoice {
+  id: ID;
+  vendorId: ID;
+  vendor: string;
+  number: string;
+  amountCents: Cents;
+  receivedDate: ISODate;
+  dueDate: ISODate;
+  description: string;
+  status: InvoiceStatus;
+  /** How it arrived. Email is the normal path; upload is the fallback. */
+  via: "email" | "upload";
+  file?: { name: string; size: string; src?: string };
+  notes?: string;
+  payoutId?: ID;
+  rejectedReason?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -310,6 +350,16 @@ export interface Violation {
   fineCents: Cents;
   /** The resident report this started from, when it started from one. */
   reportId?: ID;
+  /**
+   * Where this started. A neighbour's report, the board's own observation, or
+   * a city or county agency. Absent means board. A city notice is not hearsay
+   * and needs nobody to go and look; it has a deadline instead.
+   */
+  source?: "neighbor" | "board" | "city";
+  agency?: string;
+  caseNumber?: string;
+  /** The day it was marked resolved, when it has been. */
+  resolvedDate?: ISODate;
 }
 
 /* -------------------------------------------------------------------------- */

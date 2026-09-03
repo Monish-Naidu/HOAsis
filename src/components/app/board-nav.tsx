@@ -103,7 +103,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
           // the huddle: evenly spaced, not packed at the top of the column.
           rail && "min-h-full w-full flex-col justify-evenly",
         )}
-        pillClassName={rail ? "bg-royal" : "bg-brand-soft"}
+        pillClassName={rail ? "bg-royal rounded-2xl" : "bg-brand-soft rounded-xl"}
       >
       {visible.map(({ href, label, icon: Icon, key }) => {
         const active = href === "/board" ? pathname === href : pathname.startsWith(href);
@@ -117,7 +117,8 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
             className={cn(
               // The selected background is the travelling pill behind the row,
               // not a class on the link, so it slides rather than cuts.
-              "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200",
+              "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-[15px] font-medium transition-colors duration-200",
+              rail && "rounded-2xl px-3.5 py-2.5",
               rail
                 ? active
                   ? "text-white"

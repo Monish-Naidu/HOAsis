@@ -516,6 +516,8 @@ export const testCommunityOne: Community = {
     },
   ],
 
+  invoices: [],
+
   violations: [],
 
   violationReports: [],

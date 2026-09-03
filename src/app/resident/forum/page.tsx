@@ -1,7 +1,10 @@
 import { ForumBoard } from "@/components/app/forum-board";
 
-export const metadata = { title: "Forum" };
+export const metadata = {
+  title: "Community",
+  description: "What your neighbors are posting.",
+};
 
-export default function ResidentForum() {
+export default function ResidentCommunity() {
   return <ForumBoard />;
 }

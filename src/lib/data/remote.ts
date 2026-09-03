@@ -440,6 +440,9 @@ export async function loadCommunity(
       fineCents: v.fine_cents,
       reportId: v.report_id ?? undefined,
     })),
+    // No table yet. Real associations keep invoices in the browser for now and
+    // the Vendors screen says so.
+    invoices: [],
     violationReports: (reportRows.data ?? []).map((r) => ({
       id: r.id,
       reference: r.reference,

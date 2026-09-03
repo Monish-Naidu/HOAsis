@@ -15,6 +15,7 @@ import {
 } from "./governing";
 import { documents as mmDocuments } from "./documents";
 import { forumPosts as mmPosts } from "./forum";
+import { invoices as mmInvoices } from "./invoices";
 import { ledgerEntries as mmLedger, ownerCharges as mmCharges, payouts as mmPayouts, vendors as mmVendors } from "./ledger";
 import { buildOwnerLedgers } from "./owner-ledger";
 import { createdCommunities } from "./created-communities";
@@ -63,6 +64,7 @@ export const mehrMeadows: Community = {
   specialAssessments: mmAssessments,
   vendors: mmVendors,
   payouts: mmPayouts,
+  invoices: mmInvoices,
   requests: mmRequests,
   violations: mmViolations,
   violationReports: mmViolationReports,

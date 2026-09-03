@@ -26,6 +26,7 @@ import type {
   SharedCostBill,
   SpecialAssessment,
   Vendor,
+  VendorInvoice,
   Violation,
   ViolationReport,
 } from "@/lib/types";
@@ -98,6 +99,8 @@ export interface Community {
 
   vendors: Vendor[];
   payouts: Payout[];
+  /** Bills vendors have sent that the board has not yet paid, and the ones it has. */
+  invoices: VendorInvoice[];
 
   requests: HomeRequest[];
   violations: Violation[];

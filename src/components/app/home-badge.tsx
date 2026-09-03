@@ -3,30 +3,26 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { Camera, ChevronRight } from "lucide-react";
-import { Card } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
 import { shrinkImage } from "@/lib/home-photo";
 import { useToast } from "@/components/app/toast";
 
 /**
- * The My Home card: the photograph, the address, the association.
+ * The resident's home, inlaid on the community banner.
  *
- * Lived on the dashboard until the 2026-09-01 huddle slimmed that page down
- * to "what do I owe and how do I pay"; it moved here to Account, the page the
- * dashboard's "view home details" always pointed at, rather than dying.
- *
- * The owner can add a photo of their own home; until they do, the seeded
- * photo of their home stands in, and failing that the community's cover, the
- * closest true image we hold. `useHomePhoto` resolves that order. An upload
- * lives in this browser, so losing it costs a picture, never a record.
+ * A floating card with the home photo in a ring, the way a profile avatar
+ * sits on a cover photo. The photo resolves through `useHomePhoto`: what the
+ * owner uploaded in this browser, then the seeded photo of their home, then
+ * the community's cover. Uploading here stores the same picture the Account
+ * card shows; the two never disagree.
  */
-export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
+export function HomeBadge() {
   const { settings } = useAppState();
   const owner = useCurrentOwner();
   const { photo, uploaded, setPhoto } = useHomePhoto();
   const { notify } = useToast();
   const input = useRef<HTMLInputElement>(null);
-  if (!owner) return null;
+  if (!owner || !photo) return null;
 
   async function choose(file: File) {
     try {
@@ -38,12 +34,13 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
   }
 
   return (
-    <Card className="flex items-stretch overflow-hidden">
-      <div className="relative w-28 shrink-0">
+    <div className="flex max-w-sm items-center gap-3.5 rounded-2xl bg-surface p-3 pr-5 shadow-float">
+      <div className="relative shrink-0">
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="size-16 rounded-full bg-cover bg-center ring-2 ring-white"
           style={{ backgroundImage: `url(${photo})` }}
-          aria-hidden
+          role="img"
+          aria-label={uploaded ? "Your home" : "Your home, community photo"}
         />
         <input
           ref={input}
@@ -61,25 +58,23 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
           onClick={() => input.current?.click()}
           aria-label={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
           title={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
-          className="absolute bottom-1.5 right-1.5 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
+          className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full bg-surface text-fg-muted shadow-raised ring-1 ring-border transition-colors hover:text-fg"
         >
           <Camera className="size-3.5" />
         </button>
       </div>
-      <div className="min-w-0 flex-1 p-4">
-        <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">My Home</p>
-        <p className="mt-0.5 truncate text-[15px] text-fg-muted">{owner.address}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-fg-subtle">My Home</p>
+        <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-fg">{owner.address}</p>
         <p className="truncate text-[13px] text-fg-subtle">{settings.displayName}</p>
-        <div className="mt-1.5 flex items-center gap-3">
-          {detailsLink ? (
-            <Link
-              href="/resident/account"
-              className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
-            >
-              View home details
-              <ChevronRight className="size-3.5" />
-            </Link>
-          ) : null}
+        <div className="mt-1 flex items-center gap-3">
+          <Link
+            href="/resident/account"
+            className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
+          >
+            View home details
+            <ChevronRight className="size-3.5" />
+          </Link>
           {uploaded ? (
             <button
               type="button"
@@ -94,6 +89,6 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
           ) : null}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
