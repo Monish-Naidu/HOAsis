@@ -104,8 +104,8 @@ test.describe("board actions", () => {
     await page.getByRole("button", { name: "Save" }).click();
     await page.waitForTimeout(800);
 
-    // The roster pages at 25 and sorts by unit, so a new unit 999 lands
-    // several pages down. Search rather than scroll.
+    // The roster pages at 50 and sorts by unit, so a new unit 999 lands
+    // on a later page. Search rather than scroll.
     const search = page.getByPlaceholder(/Search owners/i);
     await search.fill("E2E Probe");
     await page.waitForTimeout(500);
@@ -114,6 +114,8 @@ test.describe("board actions", () => {
       "the household was not added",
     ).toContain("E2E Probe Household");
 
+    // Remove lives in the household's panel, so open the row first.
+    await page.getByRole("button", { name: "E2E Probe Household, unit 999" }).click();
     await page
       .getByRole("button", { name: "Remove E2E Probe Household from the roster" })
       .click();
@@ -150,7 +152,7 @@ test.describe("board actions", () => {
     await page.goto("/board/homeowners");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "Message past due" }).click();
+    await page.getByRole("button", { name: "Message everyone behind" }).click();
     await page.waitForTimeout(500);
     await page.getByRole("button", { name: "Late notice with fee" }).click();
     await page.waitForTimeout(400);
@@ -169,7 +171,7 @@ test.describe("board actions", () => {
     await page.waitForLoadState("networkidle");
 
     const download = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Export roster" }).click();
+    await page.getByRole("button", { name: "Export CSV" }).click();
     const file = await download;
 
     expect(file.suggestedFilename()).toMatch(/\.csv$/);

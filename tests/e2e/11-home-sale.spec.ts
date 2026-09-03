@@ -16,11 +16,13 @@ test.describe("recording a sale", () => {
     await page.goto("/board/homeowners");
     await expectHealthy(page, "homeowners");
 
-    // Somebody who owes something and is not on the board.
-    const sale = page.getByRole("button", { name: /^Record the sale of .*'s home$/ }).nth(3);
-    const label = (await sale.getAttribute("aria-label")) ?? "";
-    const seller = label.replace("Record the sale of ", "").replace("'s home", "");
-    await sale.click();
+    // Somebody who owes something. The roster puts those first, and the sale
+    // button lives in the household's panel, so open the row and then press it.
+    const row = page.getByRole("button", { name: /^.+, unit \d+$/ }).nth(3);
+    const label = (await row.getAttribute("aria-label")) ?? "";
+    const seller = label.replace(/, unit \d+$/, "");
+    await row.click();
+    await page.getByRole("button", { name: `Record the sale of ${seller}'s home` }).click();
 
     await expect(page.getByText(/^Record the sale of unit/)).toBeVisible();
     await page.getByLabel("Buyer name").fill("Priya Nair");
