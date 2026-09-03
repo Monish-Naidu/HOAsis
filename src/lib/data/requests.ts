@@ -241,7 +241,8 @@ export const requests: HomeRequest[] = [
  * Two of these started as a report from a neighbour and two did not, which is
  * the ordinary mix and the reason the distinction is modelled at all. In both
  * cases the notice rests on a board member's own observation: the report is
- * what made somebody go and look, and nothing more than that.
+ * what made somebody go and look, and nothing more than that. The last one is
+ * from the county, which is the third source and the one with a deadline.
  *
  * The photographs are described rather than shown. We do not have enforcement
  * photographs of a fictional community and generating them would be inventing
@@ -380,6 +381,7 @@ export const violations: Violation[] = [
     stage: "cured",
     openedDate: "2026-05-30",
     nextActionDate: "2026-06-20",
+    resolvedDate: "2026-06-18",
     photos: [
       {
         id: "vio-4-p1",
@@ -394,6 +396,35 @@ export const violations: Violation[] = [
         takenOn: "2026-06-18",
         takenBy: "Sofia Bergman, Secretary",
         vantage: "street",
+      },
+    ],
+    fineCents: 0,
+  },
+  {
+    // A notice from the county rather than from a neighbour. Not hearsay, so
+    // nobody has to go and look; it has a deadline instead, and the citation
+    // is the agency's case rather than a section of the governing documents.
+    id: "vio-5",
+    reference: "CITY-2026-007",
+    ownerId: "",
+    ownerName: "The association",
+    unit: "Common area",
+    rule: "Retention pond fence on the east common area has two leaning panels and one missing. Repair or replace to code before the compliance date.",
+    ruleCitation: "Snohomish County Code Enforcement, case CE-26-01187",
+    stage: "first-notice",
+    openedDate: "2026-08-13",
+    nextActionDate: "2026-09-12",
+    source: "city",
+    agency: "Snohomish County Code Enforcement",
+    caseNumber: "CE-26-01187",
+    photos: [
+      {
+        id: "vio-5-p1",
+        brief:
+          "The east fence of the retention pond from the common area path, two panels leaning inward and the gap where the third was.",
+        takenOn: "2026-08-14",
+        takenBy: "Sofia Bergman, Secretary",
+        vantage: "common-area",
       },
     ],
     fineCents: 0,

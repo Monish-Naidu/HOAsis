@@ -3,10 +3,12 @@ import {
   canRaiseNotice,
   evidenceIsClean,
   photoConcerns,
+  queueBuckets,
   redactReporter,
   reportingPatterns,
   unencumberedPhotos,
   unverifiedReports,
+  violationSource,
 } from "@/lib/violations";
 import { violationReports, violations } from "@/lib/data/requests";
 import type { Violation, ViolationPhoto, ViolationReport } from "@/lib/types";
@@ -297,5 +299,70 @@ describe("the seeded enforcement file", () => {
       const source = violationReports.find((r) => r.id === violation.reportId)!;
       expect(source.status).toBe("verified");
     }
+  });
+});
+
+describe("queueBuckets", () => {
+  // TODAY is pinned to 2026-08-20. The seeded notices are all more than five
+  // days out and the county deadline more than fourteen, so the first tab is
+  // exactly the reports nobody has looked at.
+  const buckets = queueBuckets({ violations, violationReports });
+
+  it("puts every unlooked-at report on the first tab and nothing else", () => {
+    expect(buckets.needsYou.map((i) => i.id).sort()).toEqual(
+      ["rep-2026-020", "rep-2026-021", "rep-2026-022"].sort(),
+    );
+  });
+
+  it("does not list a report that became a notice as its own row", () => {
+    // It rides inside the violation it became, so the board sees who
+    // reported it without the complaint appearing twice.
+    const ids = new Set(buckets.open.map((i) => i.id));
+    expect(ids.has("rep-2026-018")).toBe(false);
+    expect(ids.has("rep-2026-012")).toBe(false);
+    expect(ids.has("vio-1")).toBe(true);
+  });
+
+  it("keeps the county notice open with its deadline, and not yet asking", () => {
+    const city = buckets.open.find((i) => i.id === "vio-5");
+    expect(city?.source).toBe("city");
+    expect(city?.date).toBe("2026-09-12");
+    expect(buckets.needsYou.some((i) => i.id === "vio-5")).toBe(false);
+  });
+
+  it("asks once a notice is due this week", () => {
+    const soon = queueBuckets({
+      violations: violations.map((v) =>
+        v.id === "vio-2" ? { ...v, nextActionDate: "2026-08-24" } : v,
+      ),
+      violationReports,
+    });
+    expect(soon.needsYou.some((i) => i.id === "vio-2")).toBe(true);
+  });
+
+  it("asks for a confirmed report that has no notice yet", () => {
+    const confirmed = queueBuckets({
+      violations,
+      violationReports: violationReports.map((r) =>
+        r.id === "rep-2026-022"
+          ? {
+              ...r,
+              status: "verified" as const,
+              verification: { by: "Arya Mehr", on: "2026-08-19", note: "Saw it." },
+            }
+          : r,
+      ),
+    });
+    expect(confirmed.needsYou.some((i) => i.id === "rep-2026-022")).toBe(true);
+  });
+
+  it("resolves cured notices and dismissed reports, newest first", () => {
+    expect(buckets.resolved.map((i) => i.id)).toEqual(["rep-2026-019", "vio-4"]);
+  });
+
+  it("infers a source for notices written before the field existed", () => {
+    expect(violationSource(violations.find((v) => v.id === "vio-1")!)).toBe("neighbor");
+    expect(violationSource(violations.find((v) => v.id === "vio-2")!)).toBe("board");
+    expect(violationSource(violations.find((v) => v.id === "vio-5")!)).toBe("city");
   });
 });

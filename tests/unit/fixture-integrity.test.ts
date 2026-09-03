@@ -178,6 +178,8 @@ describe("the governing documents", () => {
     // A citation that does not resolve is a notice resting on a provision
     // nobody can find, which is the thing that loses at a hearing.
     for (const violation of violations) {
+      // A city notice cites the agency's case, not an article of ours.
+      if (violation.source === "city") continue;
       const match = resolveCitation(violation.ruleCitation, governingArticles);
       expect(
         match.article?.number,

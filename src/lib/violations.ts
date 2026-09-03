@@ -4,6 +4,7 @@ import type {
   ViolationPhoto,
   ViolationReport,
 } from "@/lib/types";
+import { daysFromToday } from "@/lib/utils";
 
 /**
  * Enforcement, and the rules about how it is allowed to start.
@@ -201,4 +202,137 @@ export function evidenceIsClean(violation: Violation): boolean {
 /** Open matters, which is what a board is actually managing. */
 export function openViolations(violations: Violation[]): Violation[] {
   return violations.filter((v) => v.stage !== "cured");
+}
+
+/* -------------------------------------------------------------------------- */
+/* The queue                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export type ViolationSource = NonNullable<Violation["source"]>;
+
+/**
+ * Where a notice started, for rows written before `source` existed.
+ *
+ * One that carries a report id came from a neighbour. Anything else without a
+ * source is the board's own observation, which is the default and the common
+ * case.
+ */
+export function violationSource(violation: Violation): ViolationSource {
+  return violation.source ?? (violation.reportId ? "neighbor" : "board");
+}
+
+/** A notice from a city or county agency. Not hearsay; has a deadline. */
+export function isCityNotice(violation: Violation): boolean {
+  return violationSource(violation) === "city";
+}
+
+/** How close a board's next step has to be before the queue asks for it. */
+export const NEXT_ACTION_WINDOW_DAYS = 5;
+/** A city deadline needs more warning: the fix usually involves a vendor. */
+export const CITY_DEADLINE_WINDOW_DAYS = 14;
+
+/**
+ * One row in the enforcement queue.
+ *
+ * Reports and violations stay separate records, deliberately, and the queue
+ * is where a board sees them side by side. A report that became a notice is
+ * not its own row: it rides inside the violation it became, so the board sees
+ * who reported it without the complaint appearing twice.
+ */
+export type QueueItem =
+  | { kind: "report"; id: string; source: "neighbor"; date: string; report: ViolationReport }
+  | { kind: "violation"; id: string; source: ViolationSource; date: string; violation: Violation };
+
+export interface QueueBuckets {
+  needsYou: QueueItem[];
+  open: QueueItem[];
+  resolved: QueueItem[];
+}
+
+/** The date a row is ordered by: the next deadline, or when it came in. */
+function itemDate(item: QueueItem): string {
+  return item.date;
+}
+
+function byDateAsc(a: QueueItem, b: QueueItem): number {
+  return itemDate(a).localeCompare(itemDate(b));
+}
+
+function byDateDesc(a: QueueItem, b: QueueItem): number {
+  return itemDate(b).localeCompare(itemDate(a));
+}
+
+/** Every report and every violation as a queue row, converted reports folded away. */
+export function queueItems(input: {
+  violations: Violation[];
+  violationReports: ViolationReport[];
+}): QueueItem[] {
+  const reports: QueueItem[] = input.violationReports
+    .filter((r) => !r.violationId)
+    .map((report) => ({
+      kind: "report",
+      id: report.id,
+      source: "neighbor",
+      date: report.submittedOn,
+      report,
+    }));
+  const violations: QueueItem[] = input.violations.map((violation) => ({
+    kind: "violation",
+    id: violation.id,
+    source: violationSource(violation),
+    date:
+      violation.stage === "cured"
+        ? (violation.resolvedDate ?? violation.nextActionDate)
+        : violation.nextActionDate,
+    violation,
+  }));
+  return [...reports, ...violations];
+}
+
+/** Whether a row is finished: cured, or looked at and closed. */
+export function isResolved(item: QueueItem): boolean {
+  return item.kind === "report"
+    ? item.report.status === "dismissed"
+    : item.violation.stage === "cured";
+}
+
+/**
+ * Whether a row is waiting on the board rather than on anybody else.
+ *
+ * A report nobody has looked at. A confirmed report with no notice yet. A
+ * notice whose next step is this week or overdue. A city deadline inside two
+ * weeks. Everything else is open but not asking.
+ */
+export function needsAttention(item: QueueItem): boolean {
+  if (isResolved(item)) return false;
+  if (item.kind === "report") {
+    const { report } = item;
+    if (report.status === "new" || report.status === "verifying") return true;
+    return canRaiseNotice(report) && !report.violationId;
+  }
+  const { violation } = item;
+  const window = isCityNotice(violation) ? CITY_DEADLINE_WINDOW_DAYS : NEXT_ACTION_WINDOW_DAYS;
+  return daysFromToday(violation.nextActionDate) <= window;
+}
+
+/**
+ * The three tabs, derived in one place so the counts on the tabs, the stats
+ * and the dashboard cannot disagree.
+ */
+export function queueBuckets(input: {
+  violations: Violation[];
+  violationReports: ViolationReport[];
+}): QueueBuckets {
+  const items = queueItems(input);
+  const open = items.filter((item) => !isResolved(item)).sort(byDateAsc);
+  return {
+    needsYou: open.filter(needsAttention),
+    open,
+    resolved: items.filter(isResolved).sort(byDateDesc),
+  };
+}
+
+/** Matters closed in a given year: cured notices and dismissed reports. */
+export function resolvedInYear(items: QueueItem[], year: string): QueueItem[] {
+  return items.filter((item) => isResolved(item) && itemDate(item).startsWith(year));
 }

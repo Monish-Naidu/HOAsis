@@ -15,21 +15,34 @@ import { SEATS, expectHealthy, inspect, seedSession } from "./helpers";
  * notice without somebody having gone to look.
  */
 
+/**
+ * The queue opens on "Needs you", which is reports nobody has looked at and
+ * notices due this week. The seeded notices are further out than that, so the
+ * tests that want a notice switch to "Open" first.
+ */
+async function openTab(page: import("@playwright/test").Page, name: "Needs you" | "Open" | "Resolved") {
+  await page.getByRole("tab", { name: new RegExp(`^${name}`) }).click();
+  await page.waitForTimeout(300);
+}
+
 test.describe("evidence", () => {
   test("the board opens the photographs rather than reading a count", async ({ page }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
-    await page.goto("/board/requests");
+    await page.goto("/board/violations");
     await expectHealthy(page, "violations with evidence");
 
     // "3 photos" told a board how many existed and told the household
-    // nothing. Both sides now open the same viewer.
-    // Named exactly rather than by position: the page has other counts on it
-    // and .first() was picking one of them up.
-    await page.getByRole("button", { name: "3 photos", exact: true }).click();
+    // nothing. Both sides now open the same viewer, and on the board's side
+    // it is inside the row rather than behind a count.
+    await openTab(page, "Open");
+    await page
+      .getByRole("button", { name: /Commercial vehicle parked overnight/ })
+      .first()
+      .click();
     await page.waitForTimeout(700);
 
     const opened = await inspect(page);
-    expect(opened.text, "no photograph opened").toContain("Photograph 1 of");
+    expect(opened.text, "no photograph opened").toContain("Photograph 1 of 3");
     expect(opened.text, "the vantage is not recorded").toContain("From the street");
   });
 
@@ -37,11 +50,13 @@ test.describe("evidence", () => {
     page,
   }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
-    await page.goto("/board/requests");
+    await page.goto("/board/violations");
     await page.waitForLoadState("networkidle");
+    await openTab(page, "Open");
 
     // The hearing file carries one. Finding it at the hearing is the failure
-    // this exists to stop.
+    // this exists to stop, so the flag sits on the collapsed row rather than
+    // waiting for somebody to expand it.
     const health = await inspect(page);
     expect(health.text, "the contestable photograph is not surfaced").toContain(
       "worth checking before this goes further",
@@ -85,12 +100,18 @@ test.describe("reports from residents", () => {
 
   test("the board sees who reported, and the pattern of who reports whom", async ({ page }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
-    await page.goto("/board/requests");
-    const health = await expectHealthy(page, "report queue");
+    await page.goto("/board/violations");
+    const health = await expectHealthy(page, "enforcement queue");
 
-    expect(health.text, "the queue is missing").toContain("Reported by residents");
+    // Unlooked-at reports are the first thing on the first tab.
+    expect(health.text, "the queue is missing").toContain("Nobody has looked yet");
+    // The reporter is named once the row is opened, and nowhere else.
+    await page.getByRole("button", { name: /table saw/ }).first().click();
+    await page.waitForTimeout(300);
+    const opened = await inspect(page);
+    expect(opened.text).toContain("Reported by Colette Prieto");
     // Board side only, and said explicitly so nobody wires it to the resident.
-    expect(health.text).toContain("Not shown to unit");
+    expect(opened.text).toContain("Not shown to unit");
     // Two reports, same reporter, same neighbour, neither confirmed. The
     // pattern is the finding rather than either report.
     expect(health.text, "the reporting pattern is not surfaced").toContain(
@@ -102,13 +123,21 @@ test.describe("reports from residents", () => {
     page,
   }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
-    await page.goto("/board/requests");
+    await page.goto("/board/violations");
     await page.waitForLoadState("networkidle");
 
     const health = await inspect(page);
     // The refusal this whole area is built around. There is no button that
-    // promotes a complaint, and the queue says what there is instead.
+    // promotes a complaint, and the page says what there is instead.
     expect(health.text).toContain("never the basis for a notice");
+
+    // An unlooked-at report offers a walk down the street and nothing else.
+    await page.getByRole("button", { name: /table saw/ }).first().click();
+    await page.waitForTimeout(300);
+    await expect(
+      page.getByRole("button", { name: "Send notice" }),
+      "a notice was offered before anybody looked",
+    ).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "I went and looked" }).first(),
       "the only route to a notice is missing",
@@ -121,6 +150,77 @@ test.describe("reports from residents", () => {
       page.getByRole("button", { name: "Save" }),
       "an empty verification could be saved",
     ).toBeDisabled();
+  });
+
+  test("a notice becomes possible only after the board writes what it saw", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/violations");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: /table saw/ }).first().click();
+    await page.waitForTimeout(300);
+    await page.getByRole("button", { name: "I went and looked" }).first().click();
+    await page.getByLabel("What you saw at unit 29").fill(
+      "Walked past at 8:50pm on the 19th. Table saw running on the driveway, audible from the street.",
+    );
+    await page.getByRole("button", { name: "Save" }).click();
+    await page.waitForTimeout(500);
+
+    // Now, and only now, a notice can rest on it. It still needs a citation.
+    const row = page.getByRole("button", { name: /table saw/ }).first();
+    if ((await row.getAttribute("aria-expanded")) !== "true") await row.click();
+    await page.getByRole("button", { name: "Send notice" }).first().click();
+    await page.waitForTimeout(300);
+    await expect(
+      page.getByRole("button", { name: "Send notice" }).last(),
+      "a notice could be sent without a rule and a citation",
+    ).toBeDisabled();
+  });
+});
+
+test.describe("notices from the city", () => {
+  test("a county notice carries its case and deadline, and nobody is asked to go and look", async ({
+    page,
+  }) => {
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/violations");
+    await page.waitForLoadState("networkidle");
+    await openTab(page, "Open");
+
+    // Filter to the city and the queue is one row: the county's.
+    await page.getByRole("button", { name: "City", exact: true }).click();
+    await page.waitForTimeout(300);
+    const health = await expectHealthy(page, "city notices");
+    expect(health.text).toContain("Snohomish County Code Enforcement");
+    expect(health.text).toContain("CE-26-01187");
+    expect(health.text).toContain("Deadline");
+
+    await page.getByRole("button", { name: /Retention pond fence/ }).first().click();
+    await page.waitForTimeout(300);
+    // A city notice is not hearsay. The verification step does not exist for it.
+    await expect(page.getByRole("button", { name: "I went and looked" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Mark resolved" })).toBeVisible();
+  });
+
+  test("the board can log one with the agency, the case and the deadline", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/violations");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Log a city notice" }).click();
+    await page.getByLabel("Agency").fill("City of Everett Code Enforcement");
+    await page.getByLabel("Case number").fill("CE-26-02210");
+    await page.getByLabel("Deadline").fill("2026-08-28");
+    await page.getByLabel("What the notice says").fill(
+      "Sidewalk lifted by the maple at the entrance. Grind or replace.",
+    );
+    await page.getByRole("button", { name: "Log notice" }).click();
+    await page.waitForTimeout(500);
+
+    // Inside two weeks, so it lands on the first tab.
+    const health = await expectHealthy(page, "after logging a city notice");
+    expect(health.text).toContain("City of Everett Code Enforcement");
+    expect(health.text).toContain("CE-26-02210");
   });
 });
 
