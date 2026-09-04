@@ -265,10 +265,20 @@ const PHASE_META: { id: PlanPhaseId; title: string; outcome: string }[] = [
   },
 ];
 
-export function buildPlan(community: Community, profile: AssociationProfile) {
+/**
+ * `dismissed` is what the board itself said does not apply ("we do not pay
+ * any vendors"). Those leave the plan the same way a task that never applied
+ * does: silently, and counted among what was left out.
+ */
+export function buildPlan(
+  community: Community,
+  profile: AssociationProfile,
+  dismissed: Set<string> = new Set(),
+) {
   const phases: PlanPhase[] = PHASE_META.map((meta) => {
     const tasks: PlanTask[] = SETUP_TASKS.filter(
-      (task) => PHASE_OF[task.key] === meta.id && applies(task, profile),
+      (task) =>
+        PHASE_OF[task.key] === meta.id && applies(task, profile) && !dismissed.has(task.key),
     ).map((task) => ({
       ...task,
       complete: task.done(community),

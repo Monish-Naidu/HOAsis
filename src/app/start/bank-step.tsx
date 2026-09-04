@@ -4,14 +4,14 @@ import { Check, ShieldCheck } from "lucide-react";
 import { Badge, Button, Callout, Card } from "@/components/ui/primitives";
 import { BankConnect } from "@/components/app/bank-connect";
 import type { BankAccount } from "@/lib/types";
-import { Section } from "./setup-wizard";
 
 /**
  * Connecting the account dues land in.
  *
  * The one thing an association genuinely cannot operate without, which is why
- * it is the last thing setup asks and the first thing the dashboard asks again
- * if it was skipped.
+ * it is the last thing setup asks and the first thing the plan asks again if
+ * it was skipped. The question's title lives with the other questions; this
+ * is only the answer.
  */
 export function BankStep({
   associationName,
@@ -26,7 +26,7 @@ export function BankStep({
 }) {
   if (account) {
     return (
-      <Section title="Where dues land" detail="Connected. You can change this any time in Money.">
+      <div className="flex flex-col gap-4">
         <Card className="p-5">
           <div className="flex items-start gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
@@ -48,15 +48,12 @@ export function BankStep({
         <Button variant="ghost" size="sm" className="self-start" onClick={onClear}>
           Use a different account
         </Button>
-      </Section>
+      </div>
     );
   }
 
   return (
-    <Section
-      title="Where should dues land?"
-      detail="An account in the association's name. Not a board member's personal account, which most states prohibit."
-    >
+    <div className="flex flex-col gap-5">
       <BankConnect kind="operating" onConnect={onConnect} />
 
       <Callout
@@ -68,6 +65,6 @@ export function BankStep({
         require reserves to sit in a second account, which you can add from Money once the first
         assessment has landed.
       </Callout>
-    </Section>
+    </div>
   );
 }

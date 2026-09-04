@@ -36,23 +36,33 @@ async function found(page: Page, name: string, property: Kind) {
   await page.getByRole("button", { name: "Look around first" }).click();
   await page.waitForTimeout(300);
 
+  const next = async () => {
+    await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.waitForTimeout(400);
+  };
+
   await page.getByLabel(/Association name/i).fill(name);
+  await next();
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: "Washington" });
+  await next();
   await page.getByLabel(/Each home pays/i).fill("250");
-  await page.getByRole("button", { name: /^Continue/ }).click();
-  await page.waitForTimeout(300);
+  await next();
 
   await page.getByRole("button", { name: new RegExp(property) }).click();
+  await next();
   await page.getByRole("button", { name: /^Pool$/ }).click();
+  await next();
   await page.getByRole("button", { name: /We are building the community/ }).click();
-  await page.getByRole("button", { name: /^Continue/ }).click();
-  await page.waitForTimeout(300);
+  await next();
+  await next();
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
   await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
+  await next();
   await page.getByLabel("Builder name").fill("Ridgeline Homes");
+  await next();
   await page.getByLabel("Phase 1 first lot").fill("1");
   await page.getByLabel("Phase 1 last lot").fill("3");
   await page.waitForTimeout(400);
@@ -64,17 +74,14 @@ async function found(page: Page, name: string, property: Kind) {
   await page.getByLabel(/^Email for /).fill("marcus@example.com");
   await page.getByRole("button", { name: "Save" }).click();
   await page.waitForTimeout(300);
-  await page.getByRole("button", { name: /^Continue/ }).click();
-  await page.waitForTimeout(300);
+  await next();
 
   // Connect a bank, so the collect phase can actually finish. Picking an
   // institution then an account, which is the real two step flow.
   await page.getByRole("button", { name: /^BECU/ }).click();
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
-  await page.waitForTimeout(900);
-  await page.getByRole("button", { name: /See what is next/ }).click();
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(1200);
 }
 
 /** Uploads a document with the given name, which several tasks key off. */
@@ -102,8 +109,8 @@ async function completeEverything(page: Page, property: Kind) {
     await uploadDoc(page, "Structural inspection report.pdf");
   }
 
-  // Budget: one expense line.
-  await page.goto("/board/money");
+  // Budget: one expense line, on the Budget tab of Finances.
+  await page.goto("/board/money/budget");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Add a budget line" }).click();
   await page.getByLabel("Annual amount").fill("18000");

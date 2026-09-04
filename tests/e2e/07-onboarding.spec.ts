@@ -61,50 +61,64 @@ type Answers = {
   builder?: string;
 };
 
-/** Walks the wizard end to end and lands on the dashboard. */
+/** The next question. */
+async function step(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.waitForTimeout(400);
+}
+
+/**
+ * Walks the founding questions end to end and lands on the plan's welcome
+ * screen. One question per screen, so this reads as the questions do.
+ */
 async function onboard(page: import("@playwright/test").Page, a: Answers) {
-  // Step 1, the account, skipped.
+  // The account, skipped.
   await lookAround(page);
 
-  // Step 2, who you are.
+  // The association: name, place, dues.
   await page.getByLabel(/Association name/i).fill(a.name);
+  await step(page);
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: a.state });
+  await step(page);
   await page.getByLabel(/Each home pays/i).fill(a.dues);
-  await page.getByRole("button", { name: /^Continue/ }).click();
-  await page.waitForTimeout(300);
+  await step(page);
 
-  // Step 3, the three questions.
+  // The community: kind of homes, what is shared, who is setting up, what
+  // else is billed. The two multi-selects are legitimately empty.
   await page.getByRole("button", { name: new RegExp(a.property) }).click();
+  await step(page);
   for (const space of a.spaces ?? []) {
     await page.getByRole("button", { name: new RegExp(`^${space}$`) }).click();
   }
+  await step(page);
   await page.getByRole("button", { name: new RegExp(a.origin) }).click();
+  await step(page);
   for (const collect of a.collects ?? []) {
     await page.getByRole("button", { name: new RegExp(collect) }).click();
   }
-  await page.getByRole("button", { name: /^Continue/ }).click();
-  await page.waitForTimeout(300);
+  await step(page);
 
-  // Step 4, the homes in the plat.
+  // The homes: which is yours, who built it, and the plat.
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
   await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
-  if (a.builder) await page.getByLabel("Builder name").fill(a.builder);
+  await step(page);
+  if ((await page.getByLabel("Builder name").count()) > 0) {
+    if (a.builder) await page.getByLabel("Builder name").fill(a.builder);
+    await step(page);
+  }
   if (a.lots) {
     // A builder's homes come in phases; an established association's in groups.
     await page.getByLabel(/^(Phase|Group) 1 first lot$/).fill(String(a.lots.from));
     await page.getByLabel(/^(Phase|Group) 1 last lot$/).fill(String(a.lots.to));
     await page.waitForTimeout(300);
   }
-  await page.getByRole("button", { name: /^Continue/ }).click();
-  await page.waitForTimeout(300);
+  await step(page);
 
-  // Step 5, bank. Skipping is a supported path.
+  // Bank. Skipping is a supported path, and either button founds it.
   await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
-  await page.waitForTimeout(900);
-  await page.getByRole("button", { name: /See what is next/ }).click();
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(1200);
 }
 
 test.describe("the three questions", () => {
@@ -112,20 +126,26 @@ test.describe("the three questions", () => {
     await lookAround(page);
 
     await page.getByLabel(/Association name/i).fill("Gate Check HOA");
+    await step(page);
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
+    await step(page);
     await page.getByLabel(/Each home pays/i).fill("120");
-    await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(300);
+    await step(page);
 
-    const next = page.getByRole("button", { name: /^Continue/ });
-    await expect(next, "an unanswered situation step let the board through").toBeDisabled();
-
+    const go = page.getByRole("button", { name: /^Continue/ });
+    await expect(go, "an unanswered kind of homes let the board through").toBeDisabled();
     await page.getByRole("button", { name: /Detached homes/ }).click();
-    await expect(next, "one answer was enough").toBeDisabled();
+    await expect(go, "the kind of homes was answered and still blocked").toBeEnabled();
+    await step(page);
 
+    // Shared spaces are legitimately empty, and say so.
+    await expect(page.getByRole("button", { name: "Nothing shared" })).toBeVisible();
+    await step(page);
+
+    await expect(go, "an unanswered origin let the board through").toBeDisabled();
     await page.getByRole("button", { name: /We are building the community/ }).click();
-    await expect(next, "both answered and still blocked").toBeEnabled();
+    await expect(go, "the origin was answered and still blocked").toBeEnabled();
   });
 
   test("names the two situations it supports, and what each one changes", async ({
@@ -134,11 +154,15 @@ test.describe("the three questions", () => {
     await lookAround(page);
 
     await page.getByLabel(/Association name/i).fill("Three Ways HOA");
+    await step(page);
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
+    await step(page);
     await page.getByLabel(/Each home pays/i).fill("120");
-    await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(300);
+    await step(page);
+    await page.getByRole("button", { name: /Detached homes/ }).click();
+    await step(page);
+    await step(page);
 
     const health = await inspect(page);
     // Two doors: the builder, or the owners. A person who is neither should
@@ -298,7 +322,9 @@ test.describe("the plan is its own screen", () => {
     expect(page.url(), "onboarding did not land on the plan").toContain("/start/plan");
     const health = await inspect(page);
     expect(health.crashed).toBe(false);
-    expect(health.text, "the plan does not name the association").toContain("Landing HOA is live");
+    expect(health.text, "the plan does not name the association").toMatch(
+      /Landing HOA is (live|set up in this browser)/,
+    );
   });
 
   test("the plan is leavable, from the header and from the foot", async ({ page }) => {
@@ -311,9 +337,9 @@ test.describe("the plan is its own screen", () => {
     });
 
     // A plan that has to be finished before the product opens is a plan people
-    // abandon, so both exits are asserted.
+    // abandon, so both exits are asserted: the header, and the welcome's own.
     await expect(page.getByRole("link", { name: "Skip for now" })).toBeVisible();
-    await page.getByRole("link", { name: /Go to the dashboard/ }).click();
+    await page.getByRole("link", { name: /Go to the dashboard/ }).first().click();
     await page.waitForTimeout(900);
 
     expect(page.url(), "the dashboard link did not leave the plan").toContain("/board");
@@ -589,7 +615,7 @@ test.describe("get started and signing up are the same flow", () => {
     // and left rather than pick a password was nobody. Now it is the first,
     // so whoever leaves on step three still exists.
     expect(health.text, "the account is not the first step").toContain("Start with an account");
-    expect(health.text, "the step count hides the account step").toContain("Step 1 of 5");
+    expect(health.text, "the step count hides the account step").toMatch(/Step 1 of \d+/);
     // And the confirmation email is deferred, said in so many words, so
     // nobody goes to their inbox before the work.
     expect(health.text, "the email is not deferred").toContain(
@@ -617,19 +643,22 @@ test.describe("get started and signing up are the same flow", () => {
     // them twice. Read from the field, since a value is not part of innerText.
     await page.getByRole("button", { name: "Look around first" }).click();
     await page.waitForTimeout(300);
-    expect((await inspect(page)).text, "looking around lost the step count").toContain(
-      "Step 2 of 5",
+    expect((await inspect(page)).text, "looking around lost the step count").toMatch(
+      /Step 2 of \d+/,
     );
     await page.getByLabel(/Association name/i).fill("Account First HOA");
+    await step(page);
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
+    await step(page);
     await page.getByLabel(/Each home pays/i).fill("120");
-    await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(300);
+    await step(page);
     await page.getByRole("button", { name: /Detached homes/ }).click();
+    await step(page);
+    await step(page);
     await page.getByRole("button", { name: /We are building the community/ }).click();
-    await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(300);
+    await step(page);
+    await step(page);
     await expect(page.getByLabel("Your name"), "the name was not carried forward").toHaveValue(
       "Pat Founder",
     );
@@ -640,25 +669,13 @@ test.describe("get started and signing up are the same flow", () => {
   });
 
   test("looking around ends in a copy that says it is one", async ({ page }) => {
-    await lookAround(page);
-
-    await page.getByLabel(/Association name/i).fill("Browser Copy HOA");
-    await page.getByLabel(/City/i).fill("Bothell");
-    await page.getByLabel(/State/i).selectOption({ label: "Washington" });
-    await page.getByLabel(/Each home pays/i).fill("120");
-    await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: /Detached homes/ }).click();
-    await page.getByRole("button", { name: /We are building the community/ }).click();
-    await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(300);
-    await page.getByLabel("Your name").fill("Pat Founder");
-    await page.getByLabel("Your email").fill("pat@example.com");
-    await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
-    await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
-    await page.waitForTimeout(700);
+    await onboard(page, {
+      name: "Browser Copy HOA",
+      state: "Washington",
+      dues: "120",
+      property: "Detached homes",
+      origin: "We are building the community",
+    });
 
     const health = await inspect(page);
     // It used to build the association silently, and a board reasonably
@@ -681,6 +698,7 @@ test.describe("get started and signing up are the same flow", () => {
     });
     expect(page.url()).toContain("/start/plan");
     const health = await inspect(page);
-    expect(health.text).toContain("Explore Only HOA is live");
+    // A browser-only copy says so in the heading rather than claiming to be live.
+    expect(health.text).toMatch(/Explore Only HOA is (live|set up in this browser)/);
   });
 });

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { PlanScreen } from "./plan-screen";
 import { Wordmark } from "@/components/app/logo";
@@ -23,7 +24,10 @@ export default function PlanPage() {
         </div>
       </header>
       <main className="flex-1">
-        <PlanScreen />
+        {/* The flow reads ?task= to open at one question. */}
+        <Suspense>
+          <PlanScreen />
+        </Suspense>
       </main>
     </div>
   );

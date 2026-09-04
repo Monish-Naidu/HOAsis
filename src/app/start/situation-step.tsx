@@ -11,7 +11,8 @@ import type {
 import { cn } from "@/lib/utils";
 
 /**
- * Three questions of fact, which decide what the plan contains.
+ * Four questions of fact, one to a screen, which decide what the plan
+ * contains.
  *
  * Every one of these is something a builder or a board member simply knows.
  * None of them asks what they would like to configure, because a person
@@ -120,184 +121,154 @@ const COLLECTS: { id: ExtraCollection; label: string; detail: string }[] = [
   },
 ];
 
-export function SituationStep({
-  draft,
-  patch,
-}: {
-  draft: CommunityDraft;
-  patch: (next: Partial<CommunityDraft>) => void;
-}) {
-  const toggle = <T,>(list: T[], value: T): T[] =>
-    list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+type Patch = (next: Partial<CommunityDraft>) => void;
 
+function toggle<T>(list: T[], value: T): T[] {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
+
+/** What kind of homes. One answer, and it changes the plan the most. */
+export function PropertyPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
-          Tell us about the community
-        </h2>
-        <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
-          Three questions. They decide what we set up, so you are never handed a list of
-          things that do not apply to you.
-        </p>
-      </div>
+    <div className="grid gap-2 sm:grid-cols-3">
+      {PROPERTY.map(({ id, label, detail, icon: Icon }) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={draft.propertyType === id}
+          onClick={() => patch({ propertyType: id })}
+          className={cn(
+            "rounded-card border p-4 text-left transition-colors",
+            draft.propertyType === id
+              ? "border-brand bg-brand-soft"
+              : "border-border-2 hover:bg-surface-2",
+          )}
+        >
+          <Icon className="size-5 text-fg-muted" />
+          <span className="mt-2 block text-[15px] font-semibold text-fg">{label}</span>
+          <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">{detail}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
-      <fieldset>
-        <legend className="text-[15px] font-semibold text-fg">What kind of homes?</legend>
-        <p className="mt-1 text-[13px] text-fg-muted">
-          This decides whether the association insures the buildings and whether a reserve
-          study is a legal duty rather than good practice.
-        </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          {PROPERTY.map(({ id, label, detail, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={draft.propertyType === id}
-              onClick={() => patch({ propertyType: id })}
+/** Anything shared. Legitimately empty for plenty of associations. */
+export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {SPACES.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={draft.sharedSpaces.includes(id)}
+          onClick={() => patch({ sharedSpaces: toggle(draft.sharedSpaces, id) })}
+          className={cn(
+            "rounded-full border px-4 py-2 text-[15px] font-medium transition-colors",
+            draft.sharedSpaces.includes(id)
+              ? "border-brand bg-brand text-brand-fg"
+              : "border-border-2 text-fg-muted hover:text-fg",
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Who is setting this up. Two doors, one of them with a follow-up inside. */
+export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
+  const owners = draft.origin === "handover" || draft.origin === "existing";
+  return (
+    <div>
+      <div className="space-y-2">
+        <OriginCard
+          option={BUILDER}
+          picked={draft.origin === "builder"}
+          onPick={() => patch({ origin: "builder" })}
+        />
+
+        <div
+          className={cn(
+            "rounded-card border p-4 transition-colors",
+            owners ? "border-brand bg-brand-soft/40" : "border-border-2",
+          )}
+        >
+          <div className="flex items-start gap-3.5">
+            <span
               className={cn(
-                "rounded-card border p-4 text-left transition-colors",
-                draft.propertyType === id
-                  ? "border-brand bg-brand-soft"
-                  : "border-border-2 hover:bg-surface-2",
+                "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg",
+                owners ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
               )}
+              aria-hidden
             >
-              <Icon className="size-5 text-fg-muted" />
-              <span className="mt-2 block text-[15px] font-semibold text-fg">{label}</span>
-              <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">
-                {detail}
+              <Home className="size-4.5" strokeWidth={1.9} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold text-fg">We are the owners</span>
+              <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
+                The owners run the association. One more thing decides your first month:
               </span>
-            </button>
-          ))}
-        </div>
-
-        <p className="mt-4 text-[13px] font-medium text-fg-muted">
-          Anything shared that owners use?
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {SPACES.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={draft.sharedSpaces.includes(id)}
-              onClick={() => patch({ sharedSpaces: toggle(draft.sharedSpaces, id) })}
-              className={cn(
-                "rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
-                draft.sharedSpaces.includes(id)
-                  ? "border-brand bg-brand text-brand-fg"
-                  : "border-border-2 text-fg-muted hover:text-fg",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="text-[15px] font-semibold text-fg">Who is setting this up?</legend>
-        <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-          Two situations. A builder standing the association up before the homes sell, or the
-          owners running it. Neither asks you to export anything from wherever you are now.
-        </p>
-        <div className="mt-3 space-y-2">
-          <OriginCard
-            option={BUILDER}
-            picked={draft.origin === "builder"}
-            onPick={() => patch({ origin: "builder" })}
-          />
-
-          {/* The owners' door, with its one follow-up inside it. */}
-          <div
-            className={cn(
-              "rounded-card border p-4 transition-colors",
-              draft.origin === "handover" || draft.origin === "existing"
-                ? "border-brand bg-brand-soft/40"
-                : "border-border-2",
-            )}
-          >
-            <div className="flex items-start gap-3.5">
-              <span
-                className={cn(
-                  "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg",
-                  draft.origin === "handover" || draft.origin === "existing"
-                    ? "bg-brand text-brand-fg"
-                    : "bg-surface-3 text-fg-muted",
-                )}
-                aria-hidden
-              >
-                <Home className="size-4.5" strokeWidth={1.9} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold text-fg">
-                  We are the owners
-                </span>
-                <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
-                  The owners run the association. One more thing decides your first month:
-                </span>
-              </span>
-            </div>
-            <div className="mt-3 space-y-2 sm:pl-12">
-              {OWNERS.map((option) => (
-                <OriginCard
-                  key={option.id}
-                  option={option}
-                  picked={draft.origin === option.id}
-                  onPick={() => patch({ origin: option.id })}
-                  compact
-                />
-              ))}
-            </div>
+            </span>
+          </div>
+          <div className="mt-3 space-y-2 sm:pl-12">
+            {OWNERS.map((option) => (
+              <OriginCard
+                key={option.id}
+                option={option}
+                picked={draft.origin === option.id}
+                onPick={() => patch({ origin: option.id })}
+                compact
+              />
+            ))}
           </div>
         </div>
-        <p className="mt-2.5 text-[13px] leading-relaxed text-fg-subtle">
-          Not sure? If the builder still owns homes here, you are taking over. If they left
-          years ago, you already run it.
-        </p>
-      </fieldset>
+      </div>
+      <p className="mt-3 text-[13px] leading-relaxed text-fg-subtle">
+        Not sure? If the builder still owns homes here, you are taking over. If they left years
+        ago, you already run it.
+      </p>
+    </div>
+  );
+}
 
-      <fieldset>
-        <legend className="text-[15px] font-semibold text-fg">
-          Anything billed besides dues?
-        </legend>
-        <p className="mt-1 text-[13px] text-fg-muted">
-          Most associations bill one flat amount. Pick nothing if that is you.
-        </p>
-        <div className="mt-3 space-y-2">
-          {COLLECTS.map(({ id, label, detail }) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={draft.collects.includes(id)}
-              onClick={() => patch({ collects: toggle(draft.collects, id) })}
-              className={cn(
-                "flex w-full items-start gap-3 rounded-card border p-4 text-left transition-colors",
-                draft.collects.includes(id)
-                  ? "border-brand bg-brand-soft"
-                  : "border-border-2 hover:bg-surface-2",
-              )}
-            >
-              <span
-                className={cn(
-                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2",
-                  draft.collects.includes(id)
-                    ? "border-brand bg-brand text-brand-fg"
-                    : "border-border-2",
-                )}
-                aria-hidden
-              >
-                {draft.collects.includes(id) ? (
-                  <span className="block size-1.5 rounded-[1px] bg-current" />
-                ) : null}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[15px] font-semibold text-fg">{label}</span>
-                <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </fieldset>
+/** Anything billed besides dues. Most associations pick nothing. */
+export function CollectsPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
+  return (
+    <div className="space-y-2">
+      {COLLECTS.map(({ id, label, detail }) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={draft.collects.includes(id)}
+          onClick={() => patch({ collects: toggle(draft.collects, id) })}
+          className={cn(
+            "flex w-full items-start gap-3 rounded-card border p-4 text-left transition-colors",
+            draft.collects.includes(id)
+              ? "border-brand bg-brand-soft"
+              : "border-border-2 hover:bg-surface-2",
+          )}
+        >
+          <span
+            className={cn(
+              "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2",
+              draft.collects.includes(id)
+                ? "border-brand bg-brand text-brand-fg"
+                : "border-border-2",
+            )}
+            aria-hidden
+          >
+            {draft.collects.includes(id) ? (
+              <span className="block size-1.5 rounded-[1px] bg-current" />
+            ) : null}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[15px] font-semibold text-fg">{label}</span>
+            <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

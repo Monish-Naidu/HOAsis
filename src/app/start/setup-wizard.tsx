@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Map as MapIcon, Plus, Trash2, Users } from "lucide-react";
+import { Check, Map as MapIcon, Plus, Trash2, Users } from "lucide-react";
 import { Button, Callout, Card } from "@/components/ui/primitives";
+import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/app/question-flow";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
 import { STATES } from "@/lib/data/library";
@@ -23,7 +24,7 @@ import {
   type LotPhase,
 } from "@/lib/lots";
 import { BankStep } from "./bank-step";
-import { SituationStep } from "./situation-step";
+import { CollectsPicker, OriginPicker, PropertyPicker, SpacesPicker } from "./situation-step";
 import { AccountStep, CheckEmailPanel } from "./account-step";
 import {
   clearPendingDraft,
@@ -35,18 +36,23 @@ import { cn, money } from "@/lib/utils";
 import { wordingFor } from "@/lib/wording";
 
 /**
- * Setting up an association.
+ * Setting up an association, one question at a time.
  *
  * An account first, so the person exists before any of the work does and a
- * board that leaves halfway is a lead rather than nothing. Then three
- * questions, because an association needs exactly three things before it can
- * take a dollar: who it is and what a home owes, which homes there are, and
- * where the money lands. Officers, documents, budgets, reserves and amenities
- * are all real, and every one of them can wait until somebody is logged in and
- * already collecting. Confirming the email waits until the end, so nothing
- * here is ever blocked on an inbox.
+ * board that leaves halfway is a lead rather than nothing. Then a dozen short
+ * questions, each on its own screen: what the association is called, where
+ * it is, what a home pays, what kind of homes, what is shared, who is setting
+ * it up, which homes exist, where the money lands. An association needs
+ * exactly those things before it can take a dollar. Officers, documents,
+ * budgets, reserves and amenities are all real, and every one of them can
+ * wait until somebody is logged in and already collecting; the plan asks
+ * for them afterwards, the same way.
  *
- * The homes step is the one that has to be fast, and it is not a roster: in a
+ * Anything that legitimately has no answer (nothing shared, nothing billed
+ * besides dues, no builder to name, no bank statement to hand) has a
+ * labelled way past it. Nobody is made to invent an answer to move on.
+ *
+ * The homes question is the long one, and it is not a roster: in a
  * community still being built there are no residents to import, and in an
  * established one there is no reason to retype a list that already exists
  * somewhere. Either way the homes are generated from numbered ranges, which
@@ -54,40 +60,19 @@ import { wordingFor } from "@/lib/wording";
  * time afterwards.
  */
 
-/**
- * The account first, then cheap questions, the long one, and the highest
- * friction one last.
- *
- * The account used to be the last screen, and people who had typed a roster
- * left rather than pick a password, so the lead only existed if they
- * finished. Now it is the first screen, so somebody who abandons setup on
- * step three still exists in Supabase. Confirming the email is deferred to
- * the very end, so the work is never blocked on an inbox.
- *
- * "Situation" sits before "Homes" because it takes twenty seconds and it
- * changes what the rest of setup contains. Connecting a bank is the one people
- * leave to go and fetch a statement for, so it stays at the end where leaving
- * does the least damage.
- */
-const ACCOUNT_STEP = {
-  id: "account",
-  label: "Account",
-  blurb: "So nothing you enter is lost",
-} as const;
-
-const STEPS = [
-  { id: "association", label: "Association", blurb: "Who you are and what a home pays" },
-  { id: "situation", label: "Your place", blurb: "What kind of community this is" },
-  { id: "homes", label: "Homes", blurb: "Every home and its number" },
-  { id: "bank", label: "Bank", blurb: "Where dues land" },
-] as const;
-
-type StepId = (typeof ACCOUNT_STEP)["id"] | (typeof STEPS)[number]["id"];
-
-/** Somebody already signed in has an account, so they never see that step. */
-function stepsFor(signedIn: boolean) {
-  return signedIn ? [...STEPS] : [ACCOUNT_STEP, ...STEPS];
-}
+type QuestionId =
+  | "account"
+  | "name"
+  | "place"
+  | "dues"
+  | "property"
+  | "spaces"
+  | "origin"
+  | "collects"
+  | "you"
+  | "builder"
+  | "homes"
+  | "bank";
 
 const CADENCES = [
   { id: "monthly", label: "Monthly" },
@@ -95,15 +80,44 @@ const CADENCES = [
   { id: "annually", label: "Annually" },
 ] as const;
 
+/**
+ * Which questions exist, in order, for this reader.
+ *
+ * Somebody already signed in has an account, so they never see that screen.
+ * Somebody who said the owners run the place has no builder to name.
+ */
+function questionIds(signedIn: boolean, draft: CommunityDraft): QuestionId[] {
+  const w = wordingFor(draft.propertyType, draft.origin);
+  return [
+    ...(signedIn ? [] : (["account"] as const)),
+    "name",
+    "place",
+    "dues",
+    "property",
+    "spaces",
+    "origin",
+    "collects",
+    "you",
+    ...(w.fromBuilder ? (["builder"] as const) : []),
+    "homes",
+    "bank",
+  ];
+}
+
 export function SetupWizard() {
   const { createCommunity, createRemoteAssociation } = useAppState();
   const auth = useAuth();
   const router = useRouter();
-  // Steps are tracked by id rather than index, because the account step can
-  // leave the list mid-wizard: a session arriving from another tab after the
-  // confirmation link is opened must not shift everybody one step forward.
-  const [stepId, setStepId] = useState<StepId>(auth.user ? "association" : "account");
   const [draft, setDraft] = useState<CommunityDraft>(emptyDraft);
+  const signedIn = Boolean(auth.user);
+  const ids = questionIds(signedIn, draft);
+
+  const flow = useFlowPosition(signedIn ? "name" : "account");
+  // The account question vanishes when a session arrives; land on the first
+  // real question rather than on nothing.
+  const current = (ids.includes(flow.current as QuestionId) ? flow.current : ids[0]) as QuestionId;
+  const index = ids.indexOf(current);
+
   // Setup finished before they had an account, held through the round trip
   // to their email. Offered back rather than resumed silently, because
   // quietly restoring somebody's half-finished work is its own surprise.
@@ -114,46 +128,40 @@ export function SetupWizard() {
   );
   const [resumeDismissed, setResumeDismissed] = useState(false);
 
-  const [done, setDone] = useState<{ id: string; local: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   // Account created on the first step, email not yet confirmed. The account
-  // step stays in the list so they can look back at it, but never asks twice.
+  // question stays in the list so they can look back at it, but never asks
+  // twice.
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   // Chose to look around without an account. Ends in a browser-only copy.
   const [exploring, setExploring] = useState(false);
   // Finished with the confirmation still outstanding; the draft is held.
   const [sentToEmail, setSentToEmail] = useState(false);
 
-  const steps = useMemo(() => stepsFor(Boolean(auth.user)), [auth.user]);
-  // The account step vanishes when a session arrives; land on the first
-  // real step rather than on nothing.
-  const step = Math.max(0, steps.findIndex((s) => s.id === stepId));
-  const current = steps[step];
-
-  const canResume =
-    Boolean(auth.user) && Boolean(pending) && !resumeDismissed && current.id === "association";
+  const canResume = signedIn && Boolean(pending) && !resumeDismissed && current === "name";
 
   const patch = (next: Partial<CommunityDraft>) => setDraft((d) => ({ ...d, ...next }));
-  const complete = useMemo(() => {
-    const base = stepComplete(draft);
-    return steps[0].id === "account" ? [awaitingConfirmation || exploring, ...base] : base;
-  }, [draft, steps, awaitingConfirmation, exploring]);
 
-  /**
-   * Every step change goes through here so the transition is one motion:
-   * the new section rises in (the `key` below remounts it through
-   * `animate-rise`) and the page returns to the top of the wizard, which
-   * matters after the homes step has been scrolled three phases deep.
-   */
-  const top = useRef<HTMLDivElement>(null);
-  const goTo = (next: number) => {
-    const target = steps[Math.min(Math.max(0, next), steps.length - 1)];
-    setStepId(target.id);
-    requestAnimationFrame(() => {
-      top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-    });
-  };
+  function forward() {
+    const next = ids[Math.min(index + 1, ids.length - 1)];
+    // Somebody signed in never typed their name here. Carry it over from the
+    // session so the "you" question opens already knowing who they are.
+    if (next === "you" && auth.user) {
+      const meta = auth.user.user_metadata as { full_name?: string } | undefined;
+      patch({
+        founder: {
+          ...draft.founder,
+          name: draft.founder.name || meta?.full_name || "",
+          email: draft.founder.email || auth.user.email || "",
+        },
+      });
+    }
+    flow.go(next, "forward");
+  }
+  function back() {
+    flow.go(ids[Math.max(index - 1, 0)], "back");
+  }
 
   /**
    * Who founds what, at the end.
@@ -161,210 +169,383 @@ export function SetupWizard() {
    * Signed in: a real association. Account made this session but the email
    * not yet confirmed: the draft is held on the device and created the moment
    * they come back through the link. Looking around: a copy in this browser,
-   * and the finished screen says so. Nobody reaches this without one of the
-   * three, and if they somehow do, the account step asks again.
+   * and the plan says so. Nobody reaches this without one of the three, and
+   * if they somehow do, the account question asks again.
    */
-  async function finish(withDraft: CommunityDraft) {
+  async function finish() {
     setFailure(null);
     if (!auth.user) {
       if (awaitingConfirmation) {
-        savePendingDraft(withDraft, withDraft.founder.email.trim());
+        savePendingDraft(draft, draft.founder.email.trim());
         setSentToEmail(true);
         return;
       }
       if (exploring) {
-        setDone({ id: createCommunity(withDraft).id, local: true });
+        createCommunity(draft);
+        router.push("/start/plan");
         return;
       }
-      setStepId("account");
+      flow.jump("account");
       return;
     }
     setBusy(true);
     try {
-      setDone({ id: await createRemoteAssociation(withDraft), local: false });
+      await createRemoteAssociation(draft);
+      // Straight to the plan rather than the dashboard. A board that lands on
+      // an empty workspace has to work out what to do next; one that lands
+      // on a plan is asked, in the order that gets money moving first.
+      router.push("/start/plan");
     } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : "Could not create the association",
-      );
-    } finally {
+      setFailure(error instanceof Error ? error.message : "Could not create the association");
       setBusy(false);
     }
   }
 
-  // Straight to the plan rather than the dashboard. A board that lands on an
-  // empty workspace has to work out what to do next; one that lands on a plan
-  // is told, in the order that gets money moving first.
-  if (done) {
-    return (
-      <FinishedPanel draft={draft} local={done.local} onOpen={() => router.push("/start/plan")} />
-    );
-  }
+  const w = wordingFor(draft.propertyType, draft.origin);
 
-  if (sentToEmail && !auth.user) {
-    return <CheckEmailPanel draft={draft} email={draft.founder.email.trim()} />;
-  }
-
-  return (
-    <div ref={top} className="mx-auto w-full max-w-xl scroll-mt-6 px-5 py-10 sm:py-14">
-      <ol className="flex items-stretch gap-2" aria-label="Setup progress">
-        {steps.map((s, index) => (
-          <li key={s.id} className="flex-1">
-            <button
-              type="button"
-              disabled={index > step && !complete.slice(0, index).every(Boolean)}
-              onClick={() => goTo(index)}
-              className="flex w-full flex-col gap-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span
-                className={cn(
-                  "h-1 w-full rounded-full transition-colors",
-                  index <= step ? "bg-brand" : "bg-border-2",
-                )}
-              />
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 text-[13px] font-medium",
-                  index === step ? "text-fg" : "text-fg-subtle",
-                )}
-              >
-                {index < step && complete[index] ? (
-                  <Check className="size-3 text-ok" strokeWidth={3} />
-                ) : null}
-                {s.label}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ol>
-
-      {canResume && pending ? (
-        <Callout
-          tone="ok"
-          className="mt-6"
-          icon={<Check className="size-4" />}
-          title={`Pick up where you left off with ${pending.draft.name || "your association"}`}
-          action={
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={() => {
-                  setDraft(restoreDraft(pending));
-                  clearPendingDraft();
-                  setStepId("bank");
-                }}
-              >
-                Restore it
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  clearPendingDraft();
-                  setResumeDismissed(true);
-                }}
-              >
-                Start over
-              </Button>
-            </div>
-          }
-        >
-          Everything you entered before confirming your email is still here, including{" "}
-          {pending.draft.households.length + 1} homes.
-        </Callout>
-      ) : null}
-
-      <p className="mt-6 text-[13px] font-semibold text-fg-muted">
-        Step {step + 1} of {steps.length} · {current.blurb}
-      </p>
-
-      {/* Keyed by step so each section mounts fresh and rises in. */}
-      <div key={current.id} className="animate-rise mt-4">
-        {current.id === "account" ? (
+  const questions = useMemo(() => {
+    const byId: Record<QuestionId, FlowQuestion> = {
+      account: {
+        id: "account",
+        group: "You",
+        ownsFooter: true,
+        body: (
           <AccountStep
             draft={draft}
             patch={patch}
             status={awaitingConfirmation ? "awaiting" : "none"}
             onExplore={() => {
               setExploring(true);
-              goTo(step + 1);
+              forward();
             }}
             onCreated={(confirmationPending) => {
               setExploring(false);
               setAwaitingConfirmation(confirmationPending);
-              // Signed in straight away: the session arrives through the auth
-              // store and the account step drops out of the list on its own.
-              goTo(step + 1);
+              forward();
             }}
-            onContinue={() => goTo(step + 1)}
+            onContinue={forward}
           />
-        ) : null}
-        {current.id === "association" ? <AssociationStep draft={draft} patch={patch} /> : null}
-        {current.id === "situation" ? <SituationStep draft={draft} patch={patch} /> : null}
-        {current.id === "homes" ? <HomesStep draft={draft} patch={patch} /> : null}
-        {current.id === "bank" ? (
+        ),
+      },
+      name: {
+        id: "name",
+        group: "Your association",
+        title: "What is your association called?",
+        detail: "The name residents see when they sign in, and the one on every notice.",
+        enterContinues: true,
+        canContinue: Boolean(draft.name.trim()),
+        body: (
+          <Field label="Association name">
+            <input
+              value={draft.name}
+              onChange={(e) => patch({ name: e.target.value })}
+              placeholder="Oak Ridge Homeowners Association"
+              className={cn(input, "h-12 text-[17px]")}
+              autoFocus
+            />
+          </Field>
+        ),
+      },
+      place: {
+        id: "place",
+        group: "Your association",
+        title: "Where is it?",
+        detail: "The state decides which rules apply to you, so the library can show the right ones.",
+        enterContinues: true,
+        canContinue: Boolean(draft.city.trim() && draft.state),
+        body: (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="City">
+              <input
+                value={draft.city}
+                onChange={(e) => patch({ city: e.target.value })}
+                placeholder="Brier"
+                className={input}
+                autoFocus
+              />
+            </Field>
+            <Field label="State">
+              <select
+                value={draft.state}
+                onChange={(e) => {
+                  const found = STATES.find((st) => st.code === e.target.value);
+                  patch({ state: e.target.value, stateName: found?.name ?? "" });
+                }}
+                className={input}
+              >
+                <option value="">Select a state</option>
+                {STATES.map((st) => (
+                  <option key={st.code} value={st.code}>
+                    {st.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        ),
+      },
+      dues: {
+        id: "dues",
+        group: "Your association",
+        title: "What does each home pay?",
+        detail: "The regular assessment. Special assessments and anything else come later.",
+        enterContinues: true,
+        canContinue: draft.duesCents > 0,
+        body: (
+          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
+            <Field label="Each home pays">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+                  $
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={draft.duesCents ? draft.duesCents / 100 : ""}
+                  onChange={(e) => patch({ duesCents: Math.round(Number(e.target.value) * 100) })}
+                  placeholder="45.00"
+                  className={cn(input, "pl-7")}
+                  autoFocus
+                />
+              </div>
+            </Field>
+            <Field label="How often">
+              <select
+                value={draft.duesCadence}
+                onChange={(e) =>
+                  patch({ duesCadence: e.target.value as CommunityDraft["duesCadence"] })
+                }
+                className={input}
+              >
+                {CADENCES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Due on">
+              <select
+                value={draft.dueDay}
+                onChange={(e) => patch({ dueDay: Number(e.target.value) })}
+                className={input}
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {ordinal(d)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        ),
+      },
+      property: {
+        id: "property",
+        group: "Your community",
+        title: "What kind of homes?",
+        detail:
+          "This decides whether the association insures the buildings and whether a reserve study is a legal duty rather than good practice.",
+        canContinue: Boolean(draft.propertyType),
+        body: <PropertyPicker draft={draft} patch={patch} />,
+      },
+      spaces: {
+        id: "spaces",
+        group: "Your community",
+        title: "Anything shared that owners use?",
+        detail: "Pick what you have. Owners can reserve these once they are listed, and each one is something the reserves will one day replace.",
+        skipLabel: "Nothing shared",
+        onSkip: () => patch({ sharedSpaces: [] }),
+        body: <SpacesPicker draft={draft} patch={patch} />,
+      },
+      origin: {
+        id: "origin",
+        group: "Your community",
+        title: "Who is setting this up?",
+        detail:
+          "A builder standing the association up before the homes sell, or the owners running it. Neither asks you to export anything from wherever you are now.",
+        canContinue: Boolean(draft.origin),
+        body: <OriginPicker draft={draft} patch={patch} />,
+      },
+      collects: {
+        id: "collects",
+        group: "Your community",
+        title: "Anything billed besides dues?",
+        detail: "Most associations bill one flat amount.",
+        skipLabel: "Just dues",
+        onSkip: () => patch({ collects: [] }),
+        body: <CollectsPicker draft={draft} patch={patch} />,
+      },
+      you: {
+        id: "you",
+        group: "Homes",
+        title: `Which ${w.home} is yours?`,
+        detail: "You become President and can appoint the rest of the board later.",
+        enterContinues: true,
+        canContinue: Boolean(
+          draft.founder.name.trim() && draft.founder.email.trim() && draft.founder.unit.trim(),
+        ),
+        body: (
+          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_6rem]">
+            <Field label="Your name">
+              <input
+                value={draft.founder.name}
+                onChange={(e) => patch({ founder: { ...draft.founder, name: e.target.value } })}
+                placeholder="Pat Founder"
+                autoComplete="name"
+                className={input}
+              />
+            </Field>
+            <Field label="Your email">
+              <input
+                type="email"
+                value={draft.founder.email}
+                onChange={(e) => patch({ founder: { ...draft.founder, email: e.target.value } })}
+                placeholder="you@example.com"
+                autoComplete="email"
+                className={input}
+              />
+            </Field>
+            <Field label={`Your ${w.home}`}>
+              <input
+                value={draft.founder.unit}
+                onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
+                placeholder={w.Home}
+                className={input}
+                autoFocus
+              />
+            </Field>
+          </div>
+        ),
+      },
+      builder: {
+        id: "builder",
+        group: "Homes",
+        title: draft.origin === "builder" ? "Who is building it?" : "Who built it?",
+        detail: `Put against every ${w.home} that has not sold yet, because whoever owns it still owes the assessment on it.`,
+        enterContinues: true,
+        skipLabel: "Not sure yet",
+        onSkip: () => patch({ builderName: "" }),
+        body: (
+          <Field label="Builder name">
+            <input
+              value={draft.builderName ?? ""}
+              onChange={(e) => patch({ builderName: e.target.value })}
+              placeholder="Ridgeline Homes"
+              className={cn(input, "h-12 text-[17px]")}
+              autoFocus
+            />
+          </Field>
+        ),
+      },
+      homes: {
+        id: "homes",
+        group: "Homes",
+        title:
+          draft.origin === "builder"
+            ? "Which homes will be in the community?"
+            : "Which homes are in the community?",
+        detail:
+          draft.origin === "builder"
+            ? `Give the number ranges from your site plan. Every ${w.home} gets a balance and a vote from day one, whether or not it has sold.`
+            : draft.origin === "handover"
+              ? `Give the number ranges, including any the builder still owns. Every ${w.home} gets a balance and a vote.`
+              : `Give the number ranges you already use. Every ${w.home} gets a balance and a vote, and owner names can come now or later.`,
+        body: <HomesStep draft={draft} patch={patch} />,
+      },
+      bank: {
+        id: "bank",
+        group: "Money",
+        title: draft.bankAccount ? "Where dues land" : "Where should dues land?",
+        detail: draft.bankAccount
+          ? "Connected. You can change this any time in Money."
+          : "An account in the association's name. Not a board member's personal account, which most states prohibit.",
+        continueLabel: busy ? "Creating" : "Create the association",
+        onContinue: () => void finish(),
+        // Connecting a bank is the point of this screen, but refusing to let
+        // a board finish without one strands anybody whose treasurer holds
+        // the account details. The plan asks again.
+        skipLabel: draft.bankAccount ? undefined : "Skip for now",
+        onSkip: () => void finish(),
+        body: (
           <BankStep
             associationName={draft.name}
             account={draft.bankAccount}
             onConnect={(bankAccount) => patch({ bankAccount })}
             onClear={() => patch({ bankAccount: undefined })}
           />
-        ) : null}
-      </div>
+        ),
+      },
+    };
+    return byId;
+    // Bodies close over the draft and the handlers; rebuilding them on every
+    // render is the honest dependency, and cheap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, awaitingConfirmation, busy, signedIn, w.home, w.Home]);
 
-      {failure ? (
-        <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger" role="status">
-          {failure}
-        </p>
-      ) : null}
+  if (sentToEmail && !auth.user) {
+    return <CheckEmailPanel draft={draft} email={draft.founder.email.trim()} />;
+  }
 
-      {/* The account step carries its own buttons: Continue there creates
-          the account, and Back has nowhere to go. */}
-      {current.id === "account" ? null : (
-        <div className="mt-8 flex items-center justify-between gap-3">
-          <Button
-            variant="ghost"
-            size="md"
-            onClick={() => goTo(Math.max(0, step - 1))}
-            disabled={step === 0}
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-  
-          {step === steps.length - 1 ? (
-            <div className="flex items-center gap-2">
-              {!draft.bankAccount ? (
-                // Connecting a bank is the point of this screen, but refusing to
-                // let a board finish without one strands anybody whose treasurer
-                // holds the account details. The checklist asks again.
-                <Button variant="ghost" size="md" onClick={() => void finish(draft)} disabled={busy}>
-                  Skip for now
+  return (
+    <QuestionFlow
+      question={questions[current]}
+      index={index}
+      total={ids.length}
+      direction={flow.direction}
+      leaving={flow.leaving}
+      onBack={index > 0 ? back : undefined}
+      onContinue={forward}
+      onSkip={() => {
+        // Skipping the bank finishes; every other skip just moves on.
+        if (current !== "bank") forward();
+      }}
+      busy={busy}
+      failure={failure}
+      above={
+        canResume && pending ? (
+          <Callout
+            tone="ok"
+            className="mt-6"
+            icon={<Check className="size-4" />}
+            title={`Pick up where you left off with ${pending.draft.name || "your association"}`}
+            action={
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setDraft(restoreDraft(pending));
+                    clearPendingDraft();
+                    flow.jump("bank");
+                  }}
+                >
+                  Restore it
                 </Button>
-              ) : null}
-              <Button variant="primary" size="md" onClick={() => void finish(draft)} disabled={busy}>
-                <Check className="size-4" />
-                {busy ? "Creating" : "Create the association"}
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => goTo(step + 1)}
-              disabled={!complete[step]}
-            >
-              Continue
-              <ArrowRight className="size-4" />
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    clearPendingDraft();
+                    setResumeDismissed(true);
+                  }}
+                >
+                  Start over
+                </Button>
+              </div>
+            }
+          >
+            Everything you entered before confirming your email is still here, including{" "}
+            {pending.draft.households.length + 1} homes.
+          </Callout>
+        ) : null
+      }
+    />
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Step 1: the association                                                    */
+/* The homes                                                                  */
 /* -------------------------------------------------------------------------- */
 
 interface StepProps {
@@ -372,101 +553,8 @@ interface StepProps {
   patch: (next: Partial<CommunityDraft>) => void;
 }
 
-function AssociationStep({ draft, patch }: StepProps) {
-  return (
-    <Section title="Your association" detail="The name residents see, and what each home pays.">
-      <Field label="Association name">
-        <input
-          value={draft.name}
-          onChange={(e) => patch({ name: e.target.value })}
-          placeholder="Oak Ridge Homeowners Association"
-          className={input}
-          autoFocus
-        />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="City">
-          <input
-            value={draft.city}
-            onChange={(e) => patch({ city: e.target.value })}
-            placeholder="Brier"
-            className={input}
-          />
-        </Field>
-        <Field label="State">
-          <select
-            value={draft.state}
-            onChange={(e) => {
-              const found = STATES.find((s) => s.code === e.target.value);
-              patch({ state: e.target.value, stateName: found?.name ?? "" });
-            }}
-            className={input}
-          >
-            <option value="">Select a state</option>
-            {STATES.map((s) => (
-              <option key={s.code} value={s.code}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-
-      <hr className="border-border" />
-
-      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
-        <Field label="Each home pays">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
-              $
-            </span>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={draft.duesCents ? draft.duesCents / 100 : ""}
-              onChange={(e) => patch({ duesCents: Math.round(Number(e.target.value) * 100) })}
-              placeholder="45.00"
-              className={cn(input, "pl-7")}
-            />
-          </div>
-        </Field>
-        <Field label="How often">
-          <select
-            value={draft.duesCadence}
-            onChange={(e) =>
-              patch({ duesCadence: e.target.value as CommunityDraft["duesCadence"] })
-            }
-            className={input}
-          >
-            {CADENCES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Due on">
-          <select
-            value={draft.dueDay}
-            onChange={(e) => patch({ dueDay: Number(e.target.value) })}
-            className={input}
-          >
-            {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={d}>
-                {ordinal(d)}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-    </Section>
-  );
-}
-
 /* -------------------------------------------------------------------------- */
-/* Step 2: the roster                                                         */
+/* Ranges                                                         */
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -539,69 +627,7 @@ function HomesStep({ draft, patch }: StepProps) {
   const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
 
   return (
-    <Section
-      title={
-        draft.origin === "builder"
-          ? "Which homes will be in the community?"
-          : "Which homes are in the community?"
-      }
-      detail={
-        draft.origin === "builder"
-          ? `Give the number ranges from your site plan. Every ${w.home} gets a balance and a vote from day one, whether or not it has sold.`
-          : draft.origin === "handover"
-            ? `Give the number ranges, including any the builder still owns. Every ${w.home} gets a balance and a vote.`
-            : `Give the number ranges you already use. Every ${w.home} gets a balance and a vote, and owner names can come now or later.`
-      }
-    >
-      <div className="rounded-card border border-border bg-surface-2 p-4">
-        <p className="mb-3 text-[13px] font-semibold text-fg-muted">You</p>
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_5.5rem]">
-          <input
-            value={draft.founder.name}
-            onChange={(e) => patch({ founder: { ...draft.founder, name: e.target.value } })}
-            placeholder="Your name"
-            aria-label="Your name"
-            className={input}
-          />
-          <input
-            type="email"
-            value={draft.founder.email}
-            onChange={(e) => patch({ founder: { ...draft.founder, email: e.target.value } })}
-            placeholder="Your email"
-            aria-label="Your email"
-            className={input}
-          />
-          <input
-            value={draft.founder.unit}
-            onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
-            placeholder={w.Home}
-            aria-label={`Your ${w.home}`}
-            className={input}
-          />
-        </div>
-        <p className="mt-2 text-[13px] text-fg-subtle">
-          You become President and can appoint the rest of the board later.
-        </p>
-      </div>
-
-      {/* Only asked where there is one. An association that has run itself
-          since 2004 has no builder to name, and being asked for one is what
-          made this screen feel like somebody else's product. */}
-      {w.fromBuilder ? (
-        <Field
-          label={draft.origin === "builder" ? "Who is building it?" : "Who built it?"}
-          hint={`Put against every ${w.home} that has not sold yet, because whoever owns it still owes the assessment on it.`}
-        >
-          <input
-            value={draft.builderName ?? ""}
-            onChange={(e) => patch({ builderName: e.target.value })}
-            placeholder="Ridgeline Homes"
-            aria-label="Builder name"
-            className={input}
-          />
-        </Field>
-      ) : null}
-
+    <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <Field
@@ -835,100 +861,6 @@ function HomesStep({ draft, patch }: StepProps) {
           </>
         )}
       </Callout>
-    </Section>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Finished                                                                   */
-/* -------------------------------------------------------------------------- */
-
-/**
- * The last screen. `local` is the looking-around copy, which is said plainly
- * here because it used to be indistinguishable from the real thing.
- */
-function FinishedPanel({
-  draft,
-  local,
-  onOpen,
-}: {
-  draft: CommunityDraft;
-  local: boolean;
-  onOpen: () => void;
-}) {
-  const homes = unitCount(draft);
-  return (
-    <div className="animate-rise mx-auto w-full max-w-xl px-5 py-14">
-      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
-        <Check className="size-6" strokeWidth={2.5} />
-      </span>
-      <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg">
-        {local ? `${draft.name} is set up in this browser.` : `${draft.name} is ready to collect.`}
-      </h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
-        {pluralHomes(homes)} on the register, {money(draft.duesCents)} {draft.duesCadence} each.
-      </p>
-
-      {local ? (
-        <Callout tone="warn" className="mt-6" title="This is a copy in this browser only">
-          It is not saved anywhere else and nobody else can sign in to it. Create an account when
-          you are ready and the real one takes three minutes.
-        </Callout>
-      ) : null}
-
-      <Card className="mt-6 divide-y divide-border overflow-hidden">
-        <Done
-          label={`${pluralHomes(homes)} added`}
-          detail={local ? "Each has a balance" : "Each has a balance and a login"}
-        />
-        <Done
-          label={`${money(draft.duesCents)} ${draft.duesCadence} assessment`}
-          detail={`Billed on the ${ordinal(draft.dueDay)}`}
-        />
-        {draft.bankAccount ? (
-          <Done
-            label={`${draft.bankAccount.institution} ••${draft.bankAccount.mask} connected`}
-            detail="Dues land here"
-          />
-        ) : (
-          <div className="flex items-start gap-3 px-4 py-3">
-            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-warn" />
-            <span className="min-w-0">
-              <span className="block text-[15px] font-medium text-fg">No bank connected yet</span>
-              <span className="block text-[13px] text-fg-muted">
-                Dues have nowhere to land until you add one. It is the first item on your dashboard.
-              </span>
-            </span>
-          </div>
-        )}
-      </Card>
-
-      <Card className="mt-4 p-4">
-        <p className="text-[15px] font-semibold text-fg">Next: invite your neighbors</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-          Every household has an invitation link on the Homeowners tab. Copy it and send it
-          however you already reach people.
-        </p>
-      </Card>
-
-      <Button variant="primary" size="lg" className="mt-6 w-full" onClick={onOpen}>
-        See what is next
-        <ArrowRight className="size-4" />
-      </Button>
-    </div>
-  );
-}
-
-function Done({ label, detail }: { label: string; detail: string }) {
-  return (
-    <div className="flex items-start gap-3 px-4 py-3">
-      <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
-        <Check className="size-2.5" strokeWidth={3} />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[15px] font-medium text-fg">{label}</span>
-        <span className="block text-[13px] text-fg-muted">{detail}</span>
-      </span>
     </div>
   );
 }
@@ -939,28 +871,6 @@ function Done({ label, detail }: { label: string; detail: string }) {
 
 const input =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
-
-export function Section({
-  title,
-  detail,
-  children,
-}: {
-  title: string;
-  detail: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="animate-rise flex flex-col gap-5">
-      <div>
-        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.028em] text-fg">
-          {title}
-        </h1>
-        <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{detail}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
 
 function Field({
   label,
@@ -978,25 +888,6 @@ function Field({
       {hint ? <span className="mt-1 block text-[13px] text-fg-subtle">{hint}</span> : null}
     </label>
   );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Validation                                                                 */
-/* -------------------------------------------------------------------------- */
-
-/** Which steps hold enough to move past. Index matches STEPS. */
-function stepComplete(draft: CommunityDraft): boolean[] {
-  return [
-    Boolean(draft.name.trim() && draft.city.trim() && draft.state && draft.duesCents > 0),
-    // Both single-answer questions. The two multi-selects are legitimately
-    // empty for plenty of associations, so they are not required.
-    Boolean(draft.propertyType && draft.origin),
-    Boolean(
-      draft.founder.name.trim() && draft.founder.email.trim() && draft.founder.unit.trim(),
-    ),
-    // A board can finish without a bank, and is asked again on the plan.
-    true,
-  ];
 }
 
 function pluralHomes(n: number): string {

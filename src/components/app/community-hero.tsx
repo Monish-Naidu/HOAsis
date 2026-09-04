@@ -172,13 +172,17 @@ export function CommunityHero({
  * somebody is standing when they decide they do not like it. Only shown to
  * whoever can change settings; everybody else sees a picture.
  */
-function CoverPhotoButton() {
-  const { community, can, isRemote, updateSettings } = useAppState();
+/**
+ * Uploading a cover photograph, wherever the button lives.
+ *
+ * On the banner for a board that does not like the picture, and in the setup
+ * plan for one that has not chosen yet. The same shrinking, the same storage
+ * path, so the two can never disagree about what is on file.
+ */
+export function useCoverPhotoUpload() {
+  const { community, isRemote, updateSettings } = useAppState();
   const { notify } = useToast();
   const [busy, setBusy] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-
-  if (!can("settings")) return null;
 
   async function choose(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -235,6 +239,16 @@ function CoverPhotoButton() {
       setBusy(false);
     }
   }
+
+  return { busy, choose };
+}
+
+function CoverPhotoButton() {
+  const { can, community } = useAppState();
+  const { busy, choose } = useCoverPhotoUpload();
+  const input = useRef<HTMLInputElement>(null);
+
+  if (!can("settings")) return null;
 
   return (
     <>

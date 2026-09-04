@@ -258,6 +258,31 @@
 }
 .animate-rise { animation: hoasis-rise var(--dur-base) var(--ease-out-soft) both; }
 
+/* One question at a time. The answered question slips away in the direction
+   of travel and the next one rises in from the other side, so going back
+   reads as going back. Leaving is quick and entering settles, per the note
+   above. */
+@keyframes hoasis-q-enter-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes hoasis-q-enter-down {
+  from { opacity: 0; transform: translateY(-28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes hoasis-q-leave-up {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-18px); }
+}
+@keyframes hoasis-q-leave-down {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(18px); }
+}
+.q-enter-up   { animation: hoasis-q-enter-up   var(--dur-base) var(--ease-out-soft) both; }
+.q-enter-down { animation: hoasis-q-enter-down var(--dur-base) var(--ease-out-soft) both; }
+.q-leave-up   { animation: hoasis-q-leave-up   var(--dur-fast) ease-in both; }
+.q-leave-down { animation: hoasis-q-leave-down var(--dur-fast) ease-in both; }
+
 /* The scroll reveal. Held at the start position until the observer marks the
    element visible, so content below the fold actually animates when the reader
    arrives rather than finishing before they get there. */
@@ -288,6 +313,10 @@
    state immediately, not a slower version of the same movement. */
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
+  .q-enter-up,
+  .q-enter-down,
+  .q-leave-up,
+  .q-leave-down,
   .reveal,
   .tab-pill {
     animation: none !important;
