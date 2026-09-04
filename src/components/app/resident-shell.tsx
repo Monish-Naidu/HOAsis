@@ -13,7 +13,7 @@ import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero } from "@/components/app/community-hero";
 import { HomeBadge } from "@/components/app/home-badge";
-import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
+import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,6 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { settings } = useAppState();
   const owner = useCurrentOwner();
-  const { photo: homePhoto } = useHomePhoto();
   const associationName = settings.displayName;
   const tabs = visibleTabs(settings);
   const ownerName = owner?.members[0] ?? "";
@@ -172,23 +171,6 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <Link href="/resident" className="flex items-center px-5 pb-1 pt-5">
           <RailWordmark />
         </Link>
-        {/* The resident's own home, small, above the nav. Their photo when
-            they have added one on Account; the community's photo until then,
-            the closest true image we hold. Opens Account, where the photo is
-            managed. */}
-        <Link
-          href="/resident/account"
-          aria-label="Your home"
-          className="group mx-3 mt-3 block overflow-hidden rounded-2xl ring-1 ring-navy-700/60"
-        >
-          <span
-            className="block h-20 bg-cover bg-center transition-transform duration-300 group-hover:scale-[1.03]"
-            style={{ backgroundImage: `url(${homePhoto})` }}
-          />
-          <span className="block bg-navy-900/80 px-2.5 py-2 text-[12px] font-medium text-navy-200">
-            Unit {unit} · your home
-          </span>
-        </Link>
         <nav
           aria-label="Resident sections"
           className="no-scrollbar flex flex-1 overflow-y-auto px-3 py-3"
@@ -231,14 +213,15 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       {topBar}
       {appHeader}
       <CommunityHero overlay={<HomeBadge />} />
-      <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
+      <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
         {/* The home screen runs the full width for its dashboard grid; every
-            other screen keeps the phone-width column both modes share. The
-            container query context is what lets the same page collapse to one
-            column inside the phone frame. */}
+            other screen keeps the phone-width column both modes share, centred
+            under the banner rather than hugging the rail. The container query
+            context is what lets the same page collapse to one column inside
+            the phone frame. */}
         <main
           className={cn(
-            "min-w-0 flex-1 @container",
+            "mx-auto min-w-0 @container",
             pathname === "/resident" ? "" : "lg:max-w-2xl",
           )}
         >

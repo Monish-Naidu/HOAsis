@@ -63,7 +63,8 @@ export async function seedSession(
     ({ seat, view, community, residentMode, theme }) => {
       localStorage.setItem("hoasis-session", JSON.stringify({ accountId: seat, view }));
       localStorage.setItem("hoasis-community", JSON.stringify(community));
-      localStorage.setItem("hoasis-theme", JSON.stringify(theme));
+      // Raw, not JSON: the theme script compares the stored string directly.
+      localStorage.setItem("hoasis-theme", theme);
       if (residentMode) {
         localStorage.setItem("hoasis-resident-mode", JSON.stringify(residentMode));
       }

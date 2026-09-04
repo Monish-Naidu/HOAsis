@@ -100,7 +100,7 @@ test.describe("public site", () => {
     await clearState(page);
     for (const theme of ["light", "dark"] as const) {
       await page.addInitScript((t) => {
-        localStorage.setItem("hoasis-theme", JSON.stringify(t));
+        localStorage.setItem("hoasis-theme", t);
       }, theme);
       await page.goto("/");
       await page.waitForTimeout(300);

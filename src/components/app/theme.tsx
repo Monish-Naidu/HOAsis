@@ -1,17 +1,32 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sun, SunMoon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Mode = "light" | "dark" | "system";
+/**
+ * Four ways to pick a theme, and one of them is a clock.
+ *
+ * - `auto` (the default): light by day, dark from 8pm to 7am on the
+ *   reader's own clock, wherever they are. Nobody has to set it.
+ * - `system`: follow the operating system, for people whose Mac or phone
+ *   already switches at sunset.
+ * - `light` and `dark`: fixed.
+ */
+type Mode = "light" | "dark" | "system" | "auto";
 
 const STORAGE_KEY = "hoasis-theme";
+const DEFAULT_MODE: Mode = "auto";
+
+/** Night runs from 8pm up to 7am, local time. */
+export const NIGHT_STARTS = 20;
+export const NIGHT_ENDS = 7;
 
 /**
  * Runs before paint so the navy never flashes white on a dark-mode reload.
+ * Mirrors `resolveDark` below; keep the two in step.
  */
-export const themeScript = `(function(){try{var m=localStorage.getItem("${STORAGE_KEY}")||"system";var d=m==="dark"||(m==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
+export const themeScript = `(function(){try{var m=localStorage.getItem("${STORAGE_KEY}")||"${DEFAULT_MODE}";var h=new Date().getHours();var n=h>=${NIGHT_STARTS}||h<${NIGHT_ENDS};var d=m==="dark"||(m==="auto"&&n)||(m==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
 
 /* -------------------------------------------------------------------------- */
 /* A tiny external store. The theme lives in localStorage and on <html>, not   */
@@ -21,11 +36,14 @@ export const themeScript = `(function(){try{var m=localStorage.getItem("${STORAG
 let listeners: (() => void)[] = [];
 let cached: Mode | null = null;
 
+const MODES: Mode[] = ["light", "dark", "system", "auto"];
+
 function read(): Mode {
   try {
-    return (localStorage.getItem(STORAGE_KEY) as Mode) || "system";
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return MODES.includes(stored as Mode) ? (stored as Mode) : DEFAULT_MODE;
   } catch {
-    return "system";
+    return DEFAULT_MODE;
   }
 }
 
@@ -35,11 +53,41 @@ function getSnapshot(): Mode {
 }
 
 function getServerSnapshot(): Mode {
-  return "system";
+  return DEFAULT_MODE;
+}
+
+export function isNight(date: Date): boolean {
+  const h = date.getHours();
+  return h >= NIGHT_STARTS || h < NIGHT_ENDS;
+}
+
+/** Milliseconds until the clock next crosses 8pm or 7am. */
+function msUntilNextBoundary(now: Date): number {
+  const next = new Date(now);
+  next.setSeconds(0, 0);
+  next.setMinutes(0);
+  next.setHours(isNight(now) ? NIGHT_ENDS : NIGHT_STARTS);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
+function resolveDark(mode: Mode): boolean {
+  return (
+    mode === "dark" ||
+    (mode === "auto" && isNight(new Date())) ||
+    (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+  );
+}
+
+function applyToDocument(mode: Mode) {
+  const dark = resolveDark(mode);
+  document.documentElement.classList.toggle("dark", dark);
+  document.documentElement.style.colorScheme = dark ? "dark" : "light";
 }
 
 function subscribe(onChange: () => void) {
   listeners.push(onChange);
+
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
   const onSystemChange = () => {
     if (getSnapshot() === "system") {
@@ -48,18 +96,32 @@ function subscribe(onChange: () => void) {
     }
   };
   mq.addEventListener("change", onSystemChange);
+
+  // The schedule. A timer to the next 8pm or 7am, re-armed each time it
+  // fires; and a re-check whenever the tab comes back, since a laptop lid
+  // closed at six and opened at nine has slept through the timer.
+  let timer: number | undefined;
+  const arm = () => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      if (getSnapshot() === "auto") applyToDocument("auto");
+      arm();
+    }, msUntilNextBoundary(new Date()) + 1000);
+  };
+  const onVisible = () => {
+    if (document.visibilityState !== "visible") return;
+    if (getSnapshot() === "auto") applyToDocument("auto");
+    arm();
+  };
+  arm();
+  document.addEventListener("visibilitychange", onVisible);
+
   return () => {
     listeners = listeners.filter((l) => l !== onChange);
     mq.removeEventListener("change", onSystemChange);
+    document.removeEventListener("visibilitychange", onVisible);
+    window.clearTimeout(timer);
   };
-}
-
-function applyToDocument(mode: Mode) {
-  const dark =
-    mode === "dark" ||
-    (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.classList.toggle("dark", dark);
-  document.documentElement.style.colorScheme = dark ? "dark" : "light";
 }
 
 function setMode(mode: Mode) {
@@ -75,10 +137,11 @@ function setMode(mode: Mode) {
 
 /* -------------------------------------------------------------------------- */
 
-const options: { value: Mode; icon: typeof Sun; label: string }[] = [
-  { value: "light", icon: Sun, label: "Light" },
-  { value: "system", icon: Monitor, label: "System" },
-  { value: "dark", icon: Moon, label: "Dark" },
+const options: { value: Mode; icon: typeof Sun; label: string; hint: string }[] = [
+  { value: "light", icon: Sun, label: "Light", hint: "Always light" },
+  { value: "auto", icon: SunMoon, label: "Evenings", hint: "Dark from 8pm to 7am" },
+  { value: "system", icon: Monitor, label: "System", hint: "Follow this device" },
+  { value: "dark", icon: Moon, label: "Dark", hint: "Always dark" },
 ];
 
 export function ThemeToggle({ className }: { className?: string }) {
@@ -93,14 +156,14 @@ export function ThemeToggle({ className }: { className?: string }) {
       role="radiogroup"
       aria-label="Color theme"
     >
-      {options.map(({ value, icon: Icon, label }) => (
+      {options.map(({ value, icon: Icon, label, hint }) => (
         <button
           key={value}
           type="button"
           role="radio"
           aria-checked={mode === value}
           aria-label={label}
-          title={label}
+          title={hint}
           onClick={() => setMode(value)}
           className={cn(
             "flex size-7 items-center justify-center rounded-md transition-colors",
