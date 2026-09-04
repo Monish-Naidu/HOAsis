@@ -1,3 +1,4 @@
+import type { PreviousSetup } from "@/lib/data/new-community";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Community } from "./community";
 import type { Account, Capability, ChargeLine, CommunitySettings, Owner } from "@/lib/types";
@@ -373,6 +374,7 @@ export async function loadCommunity(
       origin: a.origin ?? undefined,
       collects: a.collects ?? [],
       sharedSpaces: a.shared_spaces ?? [],
+      previously: (a.previously ?? undefined) as PreviousSetup | undefined,
     },
     governingDocs: (articleRows.data ?? []).map((g) => ({
       id: g.id,

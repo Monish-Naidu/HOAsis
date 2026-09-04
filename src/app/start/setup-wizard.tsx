@@ -364,8 +364,10 @@ export function SetupWizard() {
         group: "Your community",
         title: "Who is setting this up?",
         detail:
-          "A builder standing the association up before the homes sell, or the owners running it. Neither asks you to export anything from wherever you are now.",
-        canContinue: Boolean(draft.origin),
+          "A builder standing the association up, owners taking it over from the builder, or owners who already run it. None of them asks you to export anything from wherever you are now.",
+        canContinue: Boolean(
+          draft.origin && (draft.origin !== "existing" || draft.previously),
+        ),
         body: <OriginPicker draft={draft} patch={patch} />,
       },
       collects: {
@@ -373,8 +375,6 @@ export function SetupWizard() {
         group: "Your community",
         title: "Anything billed besides dues?",
         detail: "Most associations bill one flat amount.",
-        skipLabel: "Just dues",
-        onSkip: () => patch({ collects: [] }),
         body: <CollectsPicker draft={draft} patch={patch} />,
       },
       you: {
@@ -384,10 +384,13 @@ export function SetupWizard() {
         detail: "You become President and can appoint the rest of the board later.",
         enterContinues: true,
         canContinue: Boolean(
-          draft.founder.name.trim() && draft.founder.email.trim() && draft.founder.unit.trim(),
+          draft.founder.name.trim() &&
+            draft.founder.email.trim() &&
+            draft.founder.unit.trim() &&
+            draft.founder.address?.trim(),
         ),
         body: (
-          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_6rem]">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Your name">
               <input
                 value={draft.founder.name}
@@ -407,13 +410,27 @@ export function SetupWizard() {
                 className={input}
               />
             </Field>
-            <Field label={`Your ${w.home}`}>
+            <Field label="Your home address">
+              <input
+                value={draft.founder.address ?? ""}
+                onChange={(e) =>
+                  patch({ founder: { ...draft.founder, address: e.target.value } })
+                }
+                placeholder="1428 Mehr Meadows Lane"
+                autoComplete="street-address"
+                className={input}
+                autoFocus
+              />
+            </Field>
+            <Field
+              label={`${w.Home} number`}
+              hint={`As it appears on the ${draft.origin === "builder" ? "site plan" : "register"}. The homes on the next screen are numbered the same way.`}
+            >
               <input
                 value={draft.founder.unit}
                 onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
-                placeholder={w.Home}
+                placeholder="12"
                 className={input}
-                autoFocus
               />
             </Field>
           </div>
@@ -452,6 +469,10 @@ export function SetupWizard() {
             : draft.origin === "handover"
               ? `Give the number ranges, including any the builder still owns. Every ${w.home} gets a balance and a vote.`
               : `Give the number ranges you already use. Every ${w.home} gets a balance and a vote, and owner names can come now or later.`,
+        // At least one range that produces homes. Without it the plan asks
+        // for the register again on the next screen, which reads as the same
+        // question twice.
+        canContinue: expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0,
         body: <HomesStep draft={draft} patch={patch} />,
       },
       bank: {
@@ -881,12 +902,16 @@ function Field({
   hint?: string;
   children: React.ReactNode;
 }) {
+  // The hint sits outside the label so it never becomes part of the field's
+  // accessible name.
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-fg">{label}</span>
-      {children}
+    <div>
+      <label className="block">
+        <span className="mb-1.5 block text-[13px] font-medium text-fg">{label}</span>
+        {children}
+      </label>
       {hint ? <span className="mt-1 block text-[13px] text-fg-subtle">{hint}</span> : null}
-    </label>
+    </div>
   );
 }
 

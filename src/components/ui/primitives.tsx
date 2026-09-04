@@ -16,7 +16,10 @@ export function Card({
   return (
     <As
       className={cn(
-        "rounded-card border border-border bg-surface shadow-card",
+        // min-w-0 so a card in a grid or flex row can shrink below the
+        // width of a scrolling table inside it. Without it the table's
+        // minimum leaks out and the whole page scrolls sideways on a phone.
+        "min-w-0 rounded-card border border-border bg-surface shadow-card",
         className,
       )}
       {...props}
@@ -42,7 +45,9 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 border-b border-border px-5 py-4",
+        // Wraps, so on a phone the action drops under the title instead of
+        // pushing the card wider than the screen.
+        "flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4",
         className,
       )}
     >
@@ -61,7 +66,9 @@ export function CardHeader({
           ) : null}
         </div>
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? (
+        <div className="flex min-w-0 max-w-full flex-wrap gap-2 [&>div]:flex-wrap">{action}</div>
+      ) : null}
     </div>
   );
 }
@@ -111,7 +118,9 @@ export function PageHeader({
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-fg-muted">{description}</p>
         ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? (
+        <div className="flex min-w-0 max-w-full flex-wrap gap-2 [&>div]:flex-wrap">{action}</div>
+      ) : null}
     </header>
   );
 }
@@ -432,7 +441,9 @@ export function Callout({
             <div className="mt-1 text-[15px] leading-relaxed opacity-90">{children}</div>
           ) : null}
         </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
+        {action ? (
+        <div className="flex min-w-0 max-w-full flex-wrap gap-2 [&>div]:flex-wrap">{action}</div>
+      ) : null}
       </div>
     </div>
   );

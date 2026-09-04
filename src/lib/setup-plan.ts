@@ -2,6 +2,7 @@ import type { Community } from "@/lib/data/community";
 import type {
   AssociationOrigin,
   CommunityDraft,
+  PreviousSetup,
   PropertyType,
 } from "@/lib/data/new-community";
 import { SETUP_TASKS, type SetupTask } from "@/lib/setup";
@@ -52,6 +53,7 @@ export interface PlanTask extends SetupTask {
 export interface AssociationProfile {
   propertyType?: PropertyType;
   origin?: AssociationOrigin;
+  previously?: PreviousSetup;
   collects: string[];
   sharedSpaces: string[];
   homes: number;
@@ -71,6 +73,7 @@ export function profileFromCommunity(community: Community): AssociationProfile {
   return {
     propertyType: answers?.propertyType,
     origin: answers?.origin,
+    previously: answers?.previously,
     collects: answers?.collects ?? [],
     // Without answers we cannot know, so amenities stay in the plan if the
     // association has any recorded, and drop out only when it truly has none.
@@ -84,6 +87,7 @@ export function profileFromDraft(draft: CommunityDraft): AssociationProfile {
   return {
     propertyType: draft.propertyType,
     origin: draft.origin,
+    previously: draft.previously,
     collects: draft.collects,
     sharedSpaces: draft.sharedSpaces,
     homes: draft.households.length + 1,

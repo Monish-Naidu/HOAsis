@@ -22,7 +22,7 @@ import { profileFromCommunity } from "@/lib/setup-plan";
 export function PortingCard() {
   const { community } = useAppState();
   const profile = profileFromCommunity(community);
-  const plan = portingPlan(profile.origin);
+  const plan = portingPlan(profile.origin, profile.previously);
 
   if (!plan) return null;
 

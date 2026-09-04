@@ -59,7 +59,8 @@ async function found(page: Page, name: string, property: Kind) {
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
-  await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
+  await page.getByLabel("Your home address").fill("1 Founder Way");
+  await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("1");
   await next();
   await page.getByLabel("Builder name").fill("Ridgeline Homes");
   await next();

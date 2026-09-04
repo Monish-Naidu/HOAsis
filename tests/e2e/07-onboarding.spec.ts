@@ -59,6 +59,8 @@ type Answers = {
   /** Lots to generate from the plat, as the builder would type them. */
   lots?: { from: number; to: number };
   builder?: string;
+  /** For an established association: where it is coming from. */
+  previously?: "A management company" | "Another platform" | "Nothing yet";
 };
 
 /** The next question. */
@@ -93,6 +95,10 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   }
   await step(page);
   await page.getByRole("button", { name: new RegExp(a.origin) }).click();
+  // Owners who already run it are asked where they are coming from.
+  if (a.origin === "We already run our association") {
+    await page.getByRole("button", { name: new RegExp(a.previously ?? "Another platform") }).click();
+  }
   await step(page);
   for (const collect of a.collects ?? []) {
     await page.getByRole("button", { name: new RegExp(collect) }).click();
@@ -102,18 +108,20 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   // The homes: which is yours, who built it, and the plat.
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
-  await page.getByLabel(/^Your (lot|home|unit)$/).fill("1");
+  await page.getByLabel("Your home address").fill("1 Founder Way");
+  await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("1");
   await step(page);
   if ((await page.getByLabel("Builder name").count()) > 0) {
     if (a.builder) await page.getByLabel("Builder name").fill(a.builder);
     await step(page);
   }
-  if (a.lots) {
-    // A builder's homes come in phases; an established association's in groups.
-    await page.getByLabel(/^(Phase|Group) 1 first lot$/).fill(String(a.lots.from));
-    await page.getByLabel(/^(Phase|Group) 1 last lot$/).fill(String(a.lots.to));
-    await page.waitForTimeout(300);
-  }
+  // A builder's homes come in phases; an established association's in
+  // groups. At least one range is required, so a test that names none gets
+  // a small default.
+  const lots = a.lots ?? { from: 1, to: 3 };
+  await page.getByLabel(/^(Phase|Group) 1 first lot$/).fill(String(lots.from));
+  await page.getByLabel(/^(Phase|Group) 1 last lot$/).fill(String(lots.to));
+  await page.waitForTimeout(300);
   await step(page);
 
   // Bank. Skipping is a supported path, and either button founds it.
@@ -146,6 +154,14 @@ test.describe("the three questions", () => {
     await expect(go, "an unanswered origin let the board through").toBeDisabled();
     await page.getByRole("button", { name: /We are building the community/ }).click();
     await expect(go, "the origin was answered and still blocked").toBeEnabled();
+    await step(page);
+
+    // Just dues is an answer, and the default one, so this screen never blocks.
+    await expect(page.getByRole("button", { name: /^Just dues/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(go).toBeEnabled();
   });
 
   test("names the two situations it supports, and what each one changes", async ({
@@ -170,16 +186,11 @@ test.describe("the three questions", () => {
     expect(health.text, "the question is not asked").toContain("Who is setting this up?");
     for (const option of [
       "We are building the community",
-      "We are the owners",
       "We are taking over from the builder",
       "We already run our association",
     ]) {
       expect(health.text, `${option} is missing`).toContain(option);
     }
-    // The two answers behind the owners' door are told apart explicitly.
-    expect(health.text, "no help telling the owners' two answers apart").toContain(
-      "If the builder still owns homes here",
-    );
 
     // Picking one says what it will actually do, so the choice is made on
     // consequences rather than on which description sounds closest.
@@ -190,6 +201,15 @@ test.describe("the three questions", () => {
     expect(picked.text, "the established path still implies an export").toContain(
       "Nothing has to be exported",
     );
+    // The third door asks where they are coming from, and will not move on
+    // without an answer: the first weeks differ for each.
+    expect(picked.text, "the follow-up is missing").toContain("Where are you coming from?");
+    for (const option of ["A management company", "Another platform", "Nothing yet"]) {
+      expect(picked.text, `${option} is missing`).toContain(option);
+    }
+    await expect(page.getByRole("button", { name: /^Continue/ })).toBeDisabled();
+    await page.getByRole("button", { name: /Nothing yet/ }).click();
+    await expect(page.getByRole("button", { name: /^Continue/ })).toBeEnabled();
 
     // The builder is told the handover happens inside the product.
     await page.getByRole("button", { name: /We are building the community/ }).click();
@@ -491,8 +511,9 @@ test.describe("an association that already runs itself", () => {
     });
 
     const health = await inspect(page);
-    expect(health.text, "no plan for an established association").toContain(
-      "Open your books here",
+    // Titled by where they are coming from; the steps are the same books.
+    expect(health.text, "no plan for an established association").toMatch(
+      /Open your books here|Move the books here|Take the work in house/,
     );
     // The claim that makes a switch tractable: history stays where it is, and
     // one figure per home on one date is enough to be correct from there.

@@ -123,6 +123,16 @@ export function SetupFlow({ welcome = false }: { welcome?: boolean }) {
   const index = Math.max(0, tasks.findIndex((task) => task.key === flow.current));
   const task = tasks[index];
 
+  // The count shown is of questions actually being asked this visit: the
+  // ones open when the flow started. Counting the finished ones too made
+  // the number jump from 2 to 4 as the flow stepped over them.
+  const [asked] = useState(() => tasks.filter((t) => !t.complete).map((t) => t.key));
+  const askedIndex = asked.indexOf(flow.current);
+  const shownIndex =
+    askedIndex >= 0
+      ? askedIndex
+      : Math.max(0, asked.findIndex((key) => tasks.findIndex((t) => t.key === key) > index));
+
   // Forward lands on the next question still open. Nobody should have to
   // click through things the records already answer; Back still reaches them.
   function forward() {
@@ -206,8 +216,8 @@ export function SetupFlow({ welcome = false }: { welcome?: boolean }) {
   return (
     <QuestionFlow
       question={question}
-      index={index}
-      total={tasks.length}
+      index={shownIndex}
+      total={Math.max(asked.length, 1)}
       direction={flow.direction}
       leaving={flow.leaving}
       onBack={index > 0 || welcome ? back : undefined}
@@ -344,7 +354,9 @@ function Finished({ plan, leftOpen }: { plan: Plan; leftOpen: PlanTask[] }) {
           : `${plan.done} of ${plan.total} done. ${
               plan.canCollect
                 ? "You can take payments."
-                : `${pluralize(plan.phases[0].total - plan.phases[0].done, "thing")} still stand between you and taking a payment.`
+                : `${pluralize(plan.phases[0].total - plan.phases[0].done, "thing")} still ${
+                    plan.phases[0].total - plan.phases[0].done === 1 ? "stands" : "stand"
+                  } between you and taking a payment.`
             }`}
       </p>
 
@@ -1042,9 +1054,11 @@ export function SetupPlanSummary() {
   const next = plan.phases.flatMap((phase) => phase.tasks).find((task) => !task.complete);
   const toCollect = plan.phases[0].total - plan.phases[0].done;
 
+  // Straight into the next question. The overview stays one click away
+  // under Getting started in the sidebar for anyone who wants the whole list.
   return (
     <Link
-      href="/board/setup"
+      href={next ? `/start/plan?task=${next.key}` : "/board/setup"}
       className="mb-5 flex items-center gap-4 rounded-card border border-border bg-surface px-5 py-4 transition-colors hover:bg-surface-2"
     >
       <Ring percent={plan.percent} done={plan.done} total={plan.total} />

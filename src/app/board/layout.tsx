@@ -19,8 +19,8 @@ export default function BoardLayout({ children }: { children: React.ReactNode })
             match the resident shell. The community's name is not here; the
             banner already says it. */}
         <aside className="fixed inset-y-3 left-3 z-40 hidden w-56 flex-col overflow-hidden rounded-[26px] bg-navy-950 shadow-float lg:flex">
-          <Link href="/board" className="flex items-center px-5 pb-1 pt-5">
-            <RailWordmark />
+          <Link href="/board" className="flex items-center justify-center px-4 pb-2 pt-6">
+            <RailWordmark size={34} />
           </Link>
           <div className="no-scrollbar flex flex-1 overflow-y-auto px-3 py-3">
             <BoardNav variant="rail" />

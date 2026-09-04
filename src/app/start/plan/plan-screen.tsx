@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/primitives";
 import { SetupFlow } from "@/components/app/setup-plan";
 import { useAppState } from "@/lib/app-state";
@@ -20,6 +20,7 @@ import { useAppState } from "@/lib/app-state";
 export function PlanScreen() {
   const { communities } = useAppState();
   const router = useRouter();
+  const task = useSearchParams().get("task");
 
   // Somebody who has not founded anything has no plan to look at.
   if (communities.length === 0) {
@@ -36,5 +37,8 @@ export function PlanScreen() {
     );
   }
 
-  return <SetupFlow welcome />;
+  // Keyed on the requested task, so a link to another question from inside
+  // the flow (the closing list, the overview) opens that question rather than
+  // changing the address under a finished flow.
+  return <SetupFlow key={task ?? ""} welcome />;
 }

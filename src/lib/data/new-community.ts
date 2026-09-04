@@ -74,6 +74,16 @@ export type PropertyType = "single-family" | "townhomes" | "condos";
  */
 export type AssociationOrigin = "builder" | "handover" | "existing";
 
+/**
+ * Where an established association is coming from.
+ *
+ * Three answers, none of them a migration: a manager ran it and the board is
+ * taking the work in house; another platform held the books and the board
+ * is moving; or nothing did, because the association is new and the owners
+ * are starting it themselves. The plan's first weeks differ for each.
+ */
+export type PreviousSetup = "manager" | "platform" | "fresh";
+
 /** Anything the association bills beyond a flat due. */
 export type ExtraCollection = "special-assessment" | "utilities";
 
@@ -84,6 +94,7 @@ export type SharedSpace = "pool" | "clubhouse" | "gym" | "playground" | "gate" |
 export interface AssociationProfileAnswers {
   propertyType?: PropertyType;
   origin?: AssociationOrigin;
+  previously?: PreviousSetup;
   collects: ExtraCollection[];
   sharedSpaces: SharedSpace[];
 }
@@ -99,7 +110,7 @@ export interface CommunityDraft {
   /** Day of the month an assessment is billed. */
   dueDay: number;
   /** The person setting this up. They become President. */
-  founder: { name: string; email: string; unit: string };
+  founder: { name: string; email: string; unit: string; address?: string };
   /** Every home in the community, not counting the founder's own. */
   households: DraftHousehold[];
   /**
@@ -127,6 +138,8 @@ export interface CommunityDraft {
    */
   propertyType?: PropertyType;
   origin?: AssociationOrigin;
+  /** Only asked of an established association. */
+  previously?: PreviousSetup;
   collects: ExtraCollection[];
   sharedSpaces: SharedSpace[];
 }
@@ -226,7 +239,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     email: draft.founder.email,
     phone: "",
     unit: draft.founder.unit,
-    address: `Unit ${draft.founder.unit}`,
+    address: draft.founder.address?.trim() || `Unit ${draft.founder.unit}`,
     moveInDate: asOf,
     balanceCents: 0,
     autopay: false,
@@ -297,6 +310,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     profile: {
       propertyType: draft.propertyType,
       origin: draft.origin,
+      previously: draft.previously,
       collects: draft.collects,
       sharedSpaces: draft.sharedSpaces,
     },

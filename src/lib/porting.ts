@@ -1,4 +1,4 @@
-import type { AssociationOrigin } from "@/lib/data/new-community";
+import type { AssociationOrigin, PreviousSetup } from "@/lib/data/new-community";
 
 /**
  * The first weeks, whichever way an association arrives.
@@ -217,6 +217,93 @@ const PLANS: Record<AssociationOrigin, PortingPlan> = {
   },
 };
 
-export function portingPlan(origin: AssociationOrigin | undefined): PortingPlan | null {
-  return origin ? PLANS[origin] : null;
+/**
+ * An established association, by where it is coming from.
+ *
+ * The books plan above assumes there are books. A board taking the work in
+ * house from a manager has one more step before it: getting its own records
+ * back. A board leaving another platform runs the same steps under a title
+ * that says so. A brand new association has no books at all, and gets the
+ * standing-up steps a builder gets, minus the unsold lots.
+ */
+const FROM_MANAGER: PortingStep = {
+  key: "records",
+  title: "Get your records back from the manager",
+  detail:
+    "The register, the ledger as of your last statement, the bank signatories, the contracts, and the recorded documents. Ask in writing, with a date.",
+  because:
+    "The records belong to the association, not the firm, and they are easiest to get while the contract is still ending rather than after.",
+};
+
+const FRESH: PortingPlan = {
+  title: "Start it properly",
+  lede: "There is nothing to move, which is the easy part. What a new association gets wrong is existing properly on paper before it takes a dollar.",
+  steps: [
+    {
+      key: "ein",
+      title: "Get an Employer Identification Number",
+      detail:
+        "Free from the IRS on Form SS-4, in about fifteen minutes. Never pay anyone for one.",
+      because:
+        "A bank will not open an account in the association's name without it, so this comes first.",
+    },
+    {
+      key: "register",
+      title: "Register the association and name a registered agent",
+      detail:
+        "A nonprofit corporation with your state, and a person or service at a real address who accepts legal papers for it.",
+      because:
+        "Until it is registered the board members are personally on the hook for everything it does.",
+    },
+    {
+      key: "bank",
+      title: "Open the account in the association's name",
+      detail: "Operating first. Reserves get their own account once the first assessment lands.",
+      because:
+        "Collecting into a board member's personal account is prohibited in most states, and every insurer and auditor will ask.",
+      href: "/board/money",
+    },
+    {
+      key: "documents",
+      title: "Put the governing documents in as text",
+      detail: "The declaration, the bylaws, and the rules the owners have agreed to.",
+      because:
+        "Owners can then search them in plain words instead of asking a board member, which is where most disputes in a self-run association start.",
+      href: "/board/documents/import",
+    },
+    {
+      key: "budget",
+      title: "Adopt a budget and send the first assessment",
+      detail: "What the year costs, divided across the homes, with a due date.",
+      because:
+        "The assessment is what makes it an association rather than a group chat, and most states want the budget out before the year it covers.",
+      href: "/board/money/budget",
+    },
+  ],
+};
+
+export function portingPlan(
+  origin: AssociationOrigin | undefined,
+  previously?: PreviousSetup,
+): PortingPlan | null {
+  if (!origin) return null;
+  if (origin !== "existing") return PLANS[origin];
+  if (previously === "fresh") return FRESH;
+  const books = PLANS.existing;
+  if (previously === "manager") {
+    return {
+      ...books,
+      title: "Take the work in house",
+      lede: "Your manager held the records; now you do. Get them back, set what each home owes on the day you switch, and you are correct from there.",
+      steps: [FROM_MANAGER, ...books.steps],
+    };
+  }
+  if (previously === "platform") {
+    return {
+      ...books,
+      title: "Move the books here",
+      lede: "Nothing has to be exported except one number per home: what each owes on the day you switch. The history stays where it is, and you are correct from there.",
+    };
+  }
+  return books;
 }

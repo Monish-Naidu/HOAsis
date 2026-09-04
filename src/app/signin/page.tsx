@@ -35,14 +35,14 @@ export default function AuthLanding() {
               className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg"
             >
               <ArrowLeft className="size-3.5" />
-              Home
+              <span className="hidden sm:inline">Home</span>
             </Link>
             <ThemeToggle />
           </div>
         </header>
 
         <main className="flex flex-1 items-center justify-center px-5 pb-12 sm:px-8">
-          <div className="w-full max-w-[26rem]">
+          <div className="w-full min-w-0 max-w-[26rem]">
             <div className="mb-8 hidden lg:block">
               <Link href="/">
                 <Wordmark size={36} />

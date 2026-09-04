@@ -87,7 +87,7 @@ export default function ResidentHome() {
       <AccountSummary />
       <QuickActions />
 
-      <div className="grid gap-5 @3xl:grid-cols-2 @3xl:items-start">
+      <div className="grid gap-5 @3xl:grid-cols-2 @3xl:items-start [&>*]:min-w-0">
         <RecentActivity />
         <div className="space-y-5">
           <HomeSchedule entries={calendarEntries(community)} />

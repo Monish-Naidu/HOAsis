@@ -49,7 +49,7 @@ export function ViewSwitcher({ className }: { className?: string }) {
           )}
         >
           <Icon className="size-3.5" />
-          {label}
+          <span className="hidden sm:inline">{label}</span>
         </button>
       ))}
     </div>

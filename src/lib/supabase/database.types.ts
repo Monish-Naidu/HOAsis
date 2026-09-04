@@ -154,6 +154,7 @@ export type Database = {
           settings: Json
           setup_completed_at: string | null
           shared_spaces: string[]
+          previously: string | null
           software_fee_cents_per_home: number
           state: string
           stripe_account_id: string | null
@@ -188,6 +189,7 @@ export type Database = {
           settings?: Json
           setup_completed_at?: string | null
           shared_spaces?: string[]
+          previously?: string | null
           software_fee_cents_per_home?: number
           state: string
           stripe_account_id?: string | null
@@ -222,6 +224,7 @@ export type Database = {
           settings?: Json
           setup_completed_at?: string | null
           shared_spaces?: string[]
+          previously?: string | null
           software_fee_cents_per_home?: number
           state?: string
           stripe_account_id?: string | null
@@ -2311,6 +2314,8 @@ export type Database = {
           p_origin?: Database["public"]["Enums"]["association_origin"]
           p_property_type?: Database["public"]["Enums"]["property_type"]
           p_shared_spaces?: string[]
+          p_previously?: string
+          p_founder_address?: string
           p_state: string
         }
         Returns: string

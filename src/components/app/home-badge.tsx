@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { Camera, ChevronRight } from "lucide-react";
+import { Camera, ChevronRight, Home as HomeIcon } from "lucide-react";
 import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
 import { shrinkImage } from "@/lib/home-photo";
 import { useToast } from "@/components/app/toast";
@@ -10,8 +10,9 @@ import { useToast } from "@/components/app/toast";
 /**
  * The resident's home, inlaid on the community banner.
  *
- * A floating card with the home photo in a ring, the way a profile avatar
- * sits on a cover photo. The photo resolves through `useHomePhoto`: what the
+ * A dark translucent card on the banner with the home photo as a rounded
+ * square, per Monish's reference of 2026-09-03: the picture is the card's
+ * subject, and the rest is a caption. The photo resolves through `useHomePhoto`: what the
  * owner uploaded in this browser, then the seeded photo of their home, then
  * the community's cover. Uploading here stores the same picture the Account
  * card shows; the two never disagree.
@@ -22,7 +23,7 @@ export function HomeBadge() {
   const { photo, uploaded, setPhoto } = useHomePhoto();
   const { notify } = useToast();
   const input = useRef<HTMLInputElement>(null);
-  if (!owner || !photo) return null;
+  if (!owner) return null;
 
   async function choose(file: File) {
     try {
@@ -34,14 +35,26 @@ export function HomeBadge() {
   }
 
   return (
-    <div className="flex max-w-sm items-center gap-3.5 rounded-2xl bg-surface p-3 pr-5 shadow-float">
+    <div className="flex max-w-md items-center gap-4 rounded-2xl bg-navy-950/55 p-3 pr-5 text-white shadow-float ring-1 ring-white/10 backdrop-blur-md">
       <div className="relative shrink-0">
-        <div
-          className="size-16 rounded-full bg-cover bg-center ring-2 ring-white"
-          style={{ backgroundImage: `url(${photo})` }}
-          role="img"
-          aria-label={uploaded ? "Your home" : "Your home, community photo"}
-        />
+        {photo ? (
+          <div
+            className="size-24 rounded-xl bg-cover bg-center ring-1 ring-white/20 sm:size-28"
+            style={{ backgroundImage: `url(${photo})` }}
+            role="img"
+            aria-label={uploaded ? "Your home" : "Your home, community photo"}
+          />
+        ) : (
+          // No photo of the home and none of the community yet: a tile that
+          // says so, with the camera button as the invitation.
+          <div
+            className="flex size-24 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 sm:size-28"
+            role="img"
+            aria-label="No photo of your home yet"
+          >
+            <HomeIcon className="size-8 text-white/60" strokeWidth={1.6} />
+          </div>
+        )}
         <input
           ref={input}
           type="file"
@@ -58,19 +71,19 @@ export function HomeBadge() {
           onClick={() => input.current?.click()}
           aria-label={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
           title={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
-          className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full bg-surface text-fg-muted shadow-raised ring-1 ring-border transition-colors hover:text-fg"
+          className="absolute -bottom-1.5 -right-1.5 flex size-7 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/30 backdrop-blur transition-colors hover:bg-black/80"
         >
           <Camera className="size-3.5" />
         </button>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-medium uppercase tracking-[0.06em] text-fg-subtle">My Home</p>
-        <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-fg">{owner.address}</p>
-        <p className="truncate text-[13px] text-fg-subtle">{settings.displayName}</p>
-        <div className="mt-1 flex items-center gap-3">
+        <p className="text-[17px] font-semibold tracking-[-0.015em] sm:text-[19px]">My Home</p>
+        <p className="mt-0.5 truncate text-[15px] text-white/90">{owner.address}</p>
+        <p className="truncate text-[13px] text-white/70">{settings.displayName}</p>
+        <div className="mt-2 flex items-center gap-3">
           <Link
             href="/resident/account"
-            className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
+            className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-[#8fc0ff] hover:underline"
           >
             View home details
             <ChevronRight className="size-3.5" />
@@ -82,7 +95,7 @@ export function HomeBadge() {
                 setPhoto(null);
                 notify("Photo removed");
               }}
-              className="text-[13px] font-medium text-fg-subtle hover:text-fg-muted hover:underline"
+              className="text-[13px] font-medium text-white/60 hover:text-white hover:underline"
             >
               Remove photo
             </button>

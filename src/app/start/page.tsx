@@ -22,7 +22,7 @@ export default function StartPage() {
             className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[15px] font-medium text-fg-muted hover:text-fg"
           >
             <ArrowLeft className="size-3.5" />
-            Home
+            <span className="hidden sm:inline">Home</span>
           </Link>
           <ThemeToggle />
         </div>

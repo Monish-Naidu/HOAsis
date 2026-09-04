@@ -1,10 +1,11 @@
 "use client";
 
-import { Building2, HardHat, Home, KeyRound, Rows3, Truck } from "lucide-react";
+import { Building2, HardHat, Home, KeyRound, Rows3 } from "lucide-react";
 import type {
   AssociationOrigin,
   CommunityDraft,
   ExtraCollection,
+  PreviousSetup,
   PropertyType,
   SharedSpace,
 } from "@/lib/data/new-community";
@@ -44,37 +45,19 @@ const PROPERTY: { id: PropertyType; label: string; detail: string; icon: typeof 
 ];
 
 /**
- * Two situations, said plainly: a builder standing the association up, or the
- * owners running it.
+ * Three situations, said plainly.
  *
- * The owners' door has one more answer inside it, because a board that took
- * over from the builder last month and a board that has run the place since
- * 2004 get a different first month: one gets the turnover checklist, the
- * other sets what each home owed on the day it switched. Three answers are
- * still stored; the screen just stops presenting the last two as a choice
- * between strangers.
+ * A builder standing the association up; owners taking it over from the
+ * builder; or owners who already run it. The third door has one more answer
+ * inside it, because "we run it ourselves" is three different first months:
+ * a manager ran it until now, another platform held the books, or nothing
+ * did because the association is new.
  *
  * The line that matters on each card is `changes`: it says what picking it
  * will actually do, so the choice is made on consequences rather than on
  * which description sounds most like them.
  */
-const BUILDER: {
-  id: AssociationOrigin;
-  label: string;
-  detail: string;
-  changes: string;
-  icon: typeof Home;
-} = {
-  id: "builder",
-  label: "We are building the community",
-  detail:
-    "You are the builder or developer. The association has to exist before the first home closes.",
-  changes:
-    "Homes come straight from your site plan, the ones that have not sold are billed to you, and reserves get funded from the first assessment. When the owners elect their board, you hand them the presidency from Settings. Nothing is set up twice.",
-  icon: HardHat,
-};
-
-const OWNERS: {
+const ORIGINS: {
   id: AssociationOrigin;
   label: string;
   detail: string;
@@ -82,9 +65,18 @@ const OWNERS: {
   icon: typeof Home;
 }[] = [
   {
+    id: "builder",
+    label: "We are building the community",
+    detail:
+      "You are the builder or developer. The association has to exist before the first home closes.",
+    changes:
+      "Homes come straight from your site plan, the ones that have not sold are billed to you, and reserves get funded from the first assessment. When the owners elect their board, you hand them the presidency from Settings. Nothing is set up twice.",
+    icon: HardHat,
+  },
+  {
     id: "handover",
     label: "We are taking over from the builder",
-    detail: "The builder still owns homes here, or left within the last year.",
+    detail: "The owners have elected a board. The builder still owns homes here, or left within the last year.",
     changes:
       "You get the turnover checklist: what to check before you sign a release, and what the builder owed on the lots it still held.",
     icon: KeyRound,
@@ -92,11 +84,17 @@ const OWNERS: {
   {
     id: "existing",
     label: "We already run our association",
-    detail: "An established community moving here. However long you have been going, and whoever you were using.",
+    detail: "The owners run it. Whether a manager did until now, another platform held the books, or it is brand new.",
     changes:
       "Nothing has to be exported. You set what each home owed on the day you switch, and you are correct from there.",
-    icon: Truck,
+    icon: Home,
   },
+];
+
+const PREVIOUSLY: { id: PreviousSetup; label: string; detail: string }[] = [
+  { id: "manager", label: "A management company", detail: "You are taking the work in house" },
+  { id: "platform", label: "Another platform", detail: "PayHOA, a spreadsheet, whatever held the books" },
+  { id: "fresh", label: "Nothing yet", detail: "The association is new and you are starting it" },
 ];
 
 const SPACES: { id: SharedSpace; label: string }[] = [
@@ -177,98 +175,116 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
   );
 }
 
-/** Who is setting this up. Two doors, one of them with a follow-up inside. */
+/** Who is setting this up. Three doors, one of them with a follow-up inside. */
 export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
-  const owners = draft.origin === "handover" || draft.origin === "existing";
   return (
-    <div>
-      <div className="space-y-2">
-        <OriginCard
-          option={BUILDER}
-          picked={draft.origin === "builder"}
-          onPick={() => patch({ origin: "builder" })}
-        />
-
-        <div
-          className={cn(
-            "rounded-card border p-4 transition-colors",
-            owners ? "border-brand bg-brand-soft/40" : "border-border-2",
-          )}
-        >
-          <div className="flex items-start gap-3.5">
-            <span
-              className={cn(
-                "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg",
-                owners ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
-              )}
-              aria-hidden
-            >
-              <Home className="size-4.5" strokeWidth={1.9} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold text-fg">We are the owners</span>
-              <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
-                The owners run the association. One more thing decides your first month:
-              </span>
-            </span>
-          </div>
-          <div className="mt-3 space-y-2 sm:pl-12">
-            {OWNERS.map((option) => (
-              <OriginCard
-                key={option.id}
-                option={option}
-                picked={draft.origin === option.id}
-                onPick={() => patch({ origin: option.id })}
-                compact
-              />
-            ))}
-          </div>
+    <div className="space-y-2">
+      {ORIGINS.map((option) => (
+        <div key={option.id}>
+          <OriginCard
+            option={option}
+            picked={draft.origin === option.id}
+            onPick={() => patch({ origin: option.id })}
+          />
+          {/* The follow-up, shown only once the third door is picked, so the
+              three cards stay comparable until then. */}
+          {option.id === "existing" && draft.origin === "existing" ? (
+            <div className="animate-rise mt-2 rounded-card border border-border-2 bg-surface-2/60 p-4 sm:ml-12">
+              <p className="text-[15px] font-semibold text-fg">Where are you coming from?</p>
+              <div className="mt-2.5 space-y-2">
+                {PREVIOUSLY.map(({ id, label, detail }) => {
+                  const picked = draft.previously === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={picked}
+                      onClick={() => patch({ previously: id })}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-card border px-3.5 py-2.5 text-left transition-colors",
+                        picked
+                          ? "border-brand bg-brand-soft"
+                          : "border-border-2 bg-surface hover:bg-surface-2",
+                      )}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] font-semibold text-fg">{label}</span>
+                        <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
+                      </span>
+                      <span
+                        className={cn(
+                          "size-4 shrink-0 rounded-full border-2",
+                          picked ? "border-brand bg-brand" : "border-border-2",
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
-      </div>
-      <p className="mt-3 text-[13px] leading-relaxed text-fg-subtle">
-        Not sure? If the builder still owns homes here, you are taking over. If they left years
-        ago, you already run it.
-      </p>
+      ))}
     </div>
   );
 }
 
-/** Anything billed besides dues. Most associations pick nothing. */
+/**
+ * Anything billed besides dues. "Just dues" is the first card rather than a
+ * way past the question, because for most associations it is the answer,
+ * and an answer should look like one.
+ */
 export function CollectsPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
+  const justDues = draft.collects.length === 0;
+  const card = (picked: boolean) =>
+    cn(
+      "flex w-full items-start gap-3 rounded-card border p-4 text-left transition-colors",
+      picked ? "border-brand bg-brand-soft" : "border-border-2 hover:bg-surface-2",
+    );
+  const box = (picked: boolean) =>
+    cn(
+      "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2",
+      picked ? "border-brand bg-brand text-brand-fg" : "border-border-2",
+    );
   return (
     <div className="space-y-2">
-      {COLLECTS.map(({ id, label, detail }) => (
-        <button
-          key={id}
-          type="button"
-          aria-pressed={draft.collects.includes(id)}
-          onClick={() => patch({ collects: toggle(draft.collects, id) })}
-          className={cn(
-            "flex w-full items-start gap-3 rounded-card border p-4 text-left transition-colors",
-            draft.collects.includes(id)
-              ? "border-brand bg-brand-soft"
-              : "border-border-2 hover:bg-surface-2",
-          )}
-        >
-          <span
-            className={cn(
-              "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2",
-              draft.collects.includes(id)
-                ? "border-brand bg-brand text-brand-fg"
-                : "border-border-2",
-            )}
-            aria-hidden
+      <button
+        type="button"
+        aria-pressed={justDues}
+        onClick={() => patch({ collects: [] })}
+        className={card(justDues)}
+      >
+        <span className={cn(box(justDues), "rounded-full")} aria-hidden>
+          {justDues ? <span className="block size-1.5 rounded-full bg-current" /> : null}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[15px] font-semibold text-fg">Just dues</span>
+          <span className="block text-[13px] leading-snug text-fg-muted">
+            One flat amount per home, and nothing else
+          </span>
+        </span>
+      </button>
+      {COLLECTS.map(({ id, label, detail }) => {
+        const picked = draft.collects.includes(id);
+        return (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={picked}
+            onClick={() => patch({ collects: toggle(draft.collects, id) })}
+            className={card(picked)}
           >
-            {draft.collects.includes(id) ? (
-              <span className="block size-1.5 rounded-[1px] bg-current" />
-            ) : null}
-          </span>
-          <span className="min-w-0">
-            <span className="block text-[15px] font-semibold text-fg">{label}</span>
-            <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
-          </span>
-        </button>
-      ))}
+            <span className={box(picked)} aria-hidden>
+              {picked ? <span className="block size-1.5 rounded-[1px] bg-current" /> : null}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-semibold text-fg">{label}</span>
+              <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

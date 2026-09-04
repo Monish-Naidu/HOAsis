@@ -168,8 +168,8 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           reads as a panel rather than a slab welded to the viewport. No
           community name or unit here; the banner carries both. */}
       <aside className="fixed inset-y-3 left-3 z-40 hidden w-56 flex-col overflow-hidden rounded-[26px] bg-navy-950 shadow-float lg:flex">
-        <Link href="/resident" className="flex items-center px-5 pb-1 pt-5">
-          <RailWordmark />
+        <Link href="/resident" className="flex items-center justify-center px-4 pb-2 pt-6">
+          <RailWordmark size={34} />
         </Link>
         <nav
           aria-label="Resident sections"

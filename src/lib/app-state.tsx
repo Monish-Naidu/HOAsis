@@ -886,6 +886,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       p_origin: draft.origin ?? null,
       p_collects: draft.collects,
       p_shared_spaces: draft.sharedSpaces,
+      p_previously: draft.previously ?? undefined,
+      p_founder_address: draft.founder.address?.trim() || undefined,
     });
     if (error) throw new Error(error.message);
 
