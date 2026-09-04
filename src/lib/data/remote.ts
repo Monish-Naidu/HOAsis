@@ -256,10 +256,21 @@ export async function loadCommunity(
       insuranceCarrier: a.insurance_carrier ?? undefined,
       insurancePolicyNo: a.insurance_policy_no ?? undefined,
       insuranceExpiresOn: a.insurance_expires_on ?? undefined,
-      subscriptionStatus: (a.subscription_status ?? "active") as
+      subscriptionStatus: (a.subscription_status ?? "trialing") as
+        | "trialing"
         | "active"
         | "past_due"
-        | "canceled",
+        | "canceled"
+        | "ended",
+      trialEndsOn: (a.trial_ends_at ?? "").slice(0, 10) || undefined,
+      billing: a.billing_subscription_id
+        ? {
+            subscriptionId: a.billing_subscription_id,
+            brand: a.billing_brand ?? undefined,
+            last4: a.billing_last4 ?? undefined,
+            email: a.billing_email ?? undefined,
+          }
+        : undefined,
       stripeAccountId: a.stripe_account_id ?? undefined,
     },
 

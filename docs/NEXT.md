@@ -8,6 +8,29 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-04: the trial is real, and the wall between associations is proven
+
+- **Ninety days, then billing.** Migration 0025 gives every association a
+  `trial_ends_at` (founding + 90 days) and a `subscription_status` of
+  `trialing | active | past_due | canceled | ended`. `src/lib/billing.ts`
+  turns those into a phase; the board sees a banner (quiet, then amber in
+  the last two weeks, then red), Settings has the "Add a card" row, and a
+  billing wall closes board pages two weeks after an unpaid trial ends.
+  Stripe Checkout carries the remaining free days as a `trial_end`; a
+  separate billing webhook writes the result; `/api/billing/sweep` runs
+  daily from `vercel.json` to send the three notices and mark ended trials.
+  Full write-up in `docs/design/billing.md`. **Still blocked on Stripe
+  keys** plus `STRIPE_BILLING_WEBHOOK_SECRET` and `CRON_SECRET`.
+- **Isolation.** `scripts/verify-isolation.mjs` (in `db:verify`) reads the
+  generated types and, as one President, tries every association-scoped
+  table and view against another association. 71 checks green.
+  `tables_without_rls()` is the database's own answer on coverage.
+- **Seed.** `pnpm db:seed` wipes the project (needs `ALLOW_TEST_RESET=true`)
+  and founds Oakview Commons (Bellevue, Monish president, 5 homes, fresh
+  trial) and Cedar Hollow (Bothell, builder, 12 lots, trial ending in five
+  days so the closing banner shows) through the wizard's own RPC. One shared
+  password, printed at the end.
+
 ## Who this is for, as of 2026-08-26
 
 **New communities.** A builder standing an association up before the homes

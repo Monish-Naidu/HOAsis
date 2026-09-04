@@ -3,6 +3,8 @@ import { BoardNav } from "@/components/app/board-nav";
 import { RequireCapability } from "@/components/app/require-capability";
 import { SetupReturnBar } from "@/components/app/setup-return-bar";
 import { LocalCopyBanner } from "@/components/app/local-copy-banner";
+import { TrialBanner } from "@/components/app/trial-banner";
+import { BillingGate } from "@/components/app/billing-gate";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
@@ -53,8 +55,11 @@ export default function BoardLayout({ children }: { children: React.ReactNode })
         <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-6 lg:py-8">
           <main className="min-w-0">
             <LocalCopyBanner />
+            <TrialBanner />
             <SetupReturnBar />
-            <RequireCapability>{children}</RequireCapability>
+            <BillingGate>
+              <RequireCapability>{children}</RequireCapability>
+            </BillingGate>
           </main>
         </div>
       </div>

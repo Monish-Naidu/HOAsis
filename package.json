@@ -12,10 +12,11 @@
     "check": "pnpm lint && tsc --noEmit && vitest run && next build",
     "db:link": "supabase link --project-ref",
     "db:push": "supabase db push",
+    "db:seed": "node scripts/seed-demo.mjs",
     "db:types": "supabase gen types typescript --linked > src/lib/supabase/database.types.ts",
     "email:setup": "node scripts/setup-resend.mjs",
     "email:test": "node scripts/send-test-email.mjs",
-    "db:verify": "node scripts/verify-rls.mjs && node scripts/verify-onboarding.mjs && node scripts/verify-money.mjs && node scripts/verify-stripe.mjs && node scripts/verify-community-life.mjs && node scripts/verify-email.mjs && node scripts/verify-signin-routing.mjs && node scripts/verify-safety.mjs && node scripts/verify-scale.mjs && node scripts/verify-a-year.mjs && node scripts/verify-three-years.mjs && node scripts/verify-profile.mjs && node scripts/verify-board-actions.mjs",
+    "db:verify": "node scripts/verify-rls.mjs && node scripts/verify-isolation.mjs && node scripts/verify-onboarding.mjs && node scripts/verify-money.mjs && node scripts/verify-stripe.mjs && node scripts/verify-community-life.mjs && node scripts/verify-email.mjs && node scripts/verify-signin-routing.mjs && node scripts/verify-safety.mjs && node scripts/verify-scale.mjs && node scripts/verify-a-year.mjs && node scripts/verify-three-years.mjs && node scripts/verify-profile.mjs && node scripts/verify-board-actions.mjs",
     "shots": "node scripts/product-shots.mjs",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui"

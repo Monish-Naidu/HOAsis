@@ -159,6 +159,14 @@ export type Database = {
           state: string
           stripe_account_id: string | null
           subscription_status: string
+          trial_ends_at: string
+          billing_customer_id: string | null
+          billing_subscription_id: string | null
+          billing_brand: string | null
+          billing_last4: string | null
+          billing_email: string | null
+          past_due_since: string | null
+          billing_notices: string[]
         }
         Insert: {
           cancel_reason?: string | null
@@ -194,6 +202,14 @@ export type Database = {
           state: string
           stripe_account_id?: string | null
           subscription_status?: string
+          trial_ends_at?: string
+          billing_customer_id?: string | null
+          billing_subscription_id?: string | null
+          billing_brand?: string | null
+          billing_last4?: string | null
+          billing_email?: string | null
+          past_due_since?: string | null
+          billing_notices?: string[]
         }
         Update: {
           cancel_reason?: string | null
@@ -229,6 +245,14 @@ export type Database = {
           state?: string
           stripe_account_id?: string | null
           subscription_status?: string
+          trial_ends_at?: string
+          billing_customer_id?: string | null
+          billing_subscription_id?: string | null
+          billing_brand?: string | null
+          billing_last4?: string | null
+          billing_email?: string | null
+          past_due_since?: string | null
+          billing_notices?: string[]
         }
         Relationships: [
           {
@@ -2379,6 +2403,12 @@ export type Database = {
         Returns: string
       }
       like_post: { Args: { p_post_id: string }; Returns: number }
+      tables_without_rls: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          table_name: string
+        }[]
+      }
       my_associations: {
         Args: never
         Returns: {
@@ -2482,6 +2512,7 @@ export type Database = {
       doc_visibility: "public" | "owners" | "board"
       dues_cadence: "monthly" | "quarterly" | "annually"
       email_category:
+        | "billing"
         | "assessment"
         | "delinquency"
         | "meeting"

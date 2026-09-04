@@ -27,6 +27,7 @@ import {
   Toggle,
 } from "@/components/ui/primitives";
 import { DangerZone } from "@/components/app/danger-zone";
+import { BillingRow } from "@/components/app/billing-row";
 import { useAppState } from "@/lib/app-state";
 import { AmenityRules } from "@/components/app/amenity-rules";
 import { useToast } from "@/components/app/toast";
@@ -245,6 +246,7 @@ export function SettingsScreen() {
             </div>
           ) : null}
 
+          {isRemote ? <BillingRow /> : null}
           {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
 
           <SettingRow

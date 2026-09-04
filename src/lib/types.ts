@@ -42,8 +42,21 @@ export interface Association {
   insuranceCarrier?: string;
   insurancePolicyNo?: string;
   insuranceExpiresOn?: ISODate;
-  /** active, past_due or canceled. Cancelling stops billing and nothing else. */
-  subscriptionStatus?: "active" | "past_due" | "canceled";
+  /**
+   * Where the association stands with us. Trialing until ninety days after
+   * founding, active once a card is on file, ended when the trial ran out
+   * with nothing on file. Cancelling stops billing and nothing else.
+   */
+  subscriptionStatus?: "trialing" | "active" | "past_due" | "canceled" | "ended";
+  /** The day the free period ends. Absent for the demo, which has no clock. */
+  trialEndsOn?: ISODate;
+  /** The platform subscription, once a card is on file. */
+  billing?: {
+    subscriptionId?: string;
+    brand?: string;
+    last4?: string;
+    email?: string;
+  };
   /**
    * The association's Stripe connected account. Its presence is what turns the
    * resident pay screen from a demo into real money movement; dues settle to
