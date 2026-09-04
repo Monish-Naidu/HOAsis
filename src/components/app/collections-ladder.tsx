@@ -5,7 +5,7 @@ import { AlertTriangle, ArrowRight, Mail, Scale } from "lucide-react";
 import { Badge, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import {
-  DEFAULT_COLLECTION_POLICY,
+  policyFor,
   STAGE_ACTION,
   STAGE_LABEL,
   collectionsLadder,
@@ -31,7 +31,7 @@ const TONE: Record<CollectionStage, "neutral" | "warn" | "danger"> = {
  */
 export function CollectionsLadder() {
   const { community } = useAppState();
-  const policy = DEFAULT_COLLECTION_POLICY;
+  const policy = policyFor(community.settings);
   const ladder = collectionsLadder(community, policy);
 
   if (ladder.rows.length === 0) {
@@ -115,7 +115,7 @@ export function CollectionsLadder() {
           {policy.minimumPlanMonths} months is offered before anything is recorded.
         </p>
         <Link
-          href="/board/settings"
+          href="#collections-policy"
           className="inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-brand hover:underline"
         >
           Change

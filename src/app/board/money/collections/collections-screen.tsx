@@ -3,6 +3,7 @@
 import { Badge, Card, CardHeader, Meter, PageHeader } from "@/components/ui/primitives";
 import { MoneyTabs } from "@/components/app/money-tabs";
 import { CollectionsLadder } from "@/components/app/collections-ladder";
+import { CollectionPolicyCard } from "@/components/app/collection-policy";
 import { AgingBar } from "@/components/app/board-charts";
 import { SectionLink, StatTile } from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
@@ -74,6 +75,8 @@ export function CollectionsScreen() {
       </Card>
 
       <CollectionsLadder />
+
+      <CollectionPolicyCard />
 
       <div className="mt-5 grid gap-5 xl:grid-cols-5">
         <Card className="xl:col-span-3">

@@ -33,6 +33,7 @@ import { cn, formatDate, money, ordinal, relativeDays, today } from "@/lib/utils
 import { AddMethod } from "./add-method";
 import { StripePayPanel } from "./stripe-pay-panel";
 import { useToast } from "@/components/app/toast";
+import { policyFor } from "@/lib/collections";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
@@ -47,6 +48,7 @@ export function PayFlow() {
   const instruments = useMyInstruments();
   const { settings, community, isRemote, removeInstrument, setDefaultInstrument, recordPayment } =
     useAppState();
+  const collections = policyFor(settings);
   const duesCents = community.association.duesCents;
   const nextCharge = community.nextChargeDate;
   const { notify } = useToast();
@@ -543,6 +545,9 @@ export function PayFlow() {
                 <p className="mt-2 text-[13px] leading-snug text-fg-subtle">
                   The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
                   an assessment is late.
+                  {collections.lateFeeCents > 0
+                    ? ` A ${money(collections.lateFeeCents)} late fee applies from ${collections.lateNoticeDay} days past due.`
+                    : ""}
                 </p>
               </div>
               <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">

@@ -669,6 +669,33 @@ export interface Account {
   capabilities: Capabilities;
 }
 
+/**
+ * The collections ladder, in days past the due date.
+ *
+ * A written policy, the same for everybody, every step dated: that is the
+ * defence when a lien is challenged. The board sets the days and the fee;
+ * the ladder runs from the balance and the calendar.
+ */
+export interface CollectionPolicy {
+  /** Days past due before a friendly reminder goes out. */
+  reminderDay: number;
+  /** Days before the formal notice, which is the one that carries the late fee. */
+  lateNoticeDay: number;
+  /** Days before a demand letter offering a payment plan. */
+  demandDay: number;
+  /** Days before the file goes to counsel. */
+  counselDay: number;
+  /** Charged once, when the account reaches the formal notice. */
+  lateFeeCents: Cents;
+  /**
+   * The shortest payment plan the board will accept.
+   *
+   * Several states require one be offered before a lien, and offering it up
+   * front settles far more accounts than a demand letter alone.
+   */
+  minimumPlanMonths: number;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Community settings, owned by the admins                                     */
 /* -------------------------------------------------------------------------- */
@@ -824,6 +851,11 @@ export interface CommunitySettings {
   /** Waiving it on ACH pushes volume to the cheapest rail. */
   paymentFeeWaivedOnAch: boolean;
   forumEnabled: boolean;
+  /**
+   * How the board chases what is owed. Unset means the default ladder in
+   * `lib/collections.ts`; the board edits it on Finances > Collections.
+   */
+  collectionPolicy?: CollectionPolicy;
 }
 
 /* -------------------------------------------------------------------------- */

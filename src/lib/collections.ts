@@ -1,5 +1,7 @@
 import type { Community } from "@/lib/data/community";
-import type { Owner } from "@/lib/types";
+import type { CollectionPolicy, CommunitySettings, Owner } from "@/lib/types";
+
+export type { CollectionPolicy };
 
 /**
  * Chasing money without losing a neighbour.
@@ -25,26 +27,6 @@ export type CollectionStage =
   | "demand"
   | "counsel";
 
-export interface CollectionPolicy {
-  /** Days past due before a friendly reminder goes out. */
-  reminderDay: number;
-  /** Days before the formal notice, which is the one that carries the late fee. */
-  lateNoticeDay: number;
-  /** Days before a demand letter offering a payment plan. */
-  demandDay: number;
-  /** Days before the file goes to counsel. */
-  counselDay: number;
-  /** Charged once, when the account reaches the formal notice. */
-  lateFeeCents: number;
-  /**
-   * The shortest payment plan the board will accept.
-   *
-   * Several states require one be offered before a lien, and offering it up
-   * front settles far more accounts than a demand letter alone.
-   */
-  minimumPlanMonths: number;
-}
-
 export const DEFAULT_COLLECTION_POLICY: CollectionPolicy = {
   reminderDay: 15,
   lateNoticeDay: 30,
@@ -53,6 +35,42 @@ export const DEFAULT_COLLECTION_POLICY: CollectionPolicy = {
   lateFeeCents: 25_00,
   minimumPlanMonths: 12,
 };
+
+/** The board's own ladder where it set one, the default where it did not. */
+export function policyFor(settings: Pick<CommunitySettings, "collectionPolicy">): CollectionPolicy {
+  return { ...DEFAULT_COLLECTION_POLICY, ...(settings.collectionPolicy ?? {}) };
+}
+
+/**
+ * What is wrong with a policy, in the board's words. Empty when nothing is.
+ *
+ * The rungs have to climb: a demand before the notice would send the harder
+ * letter first, and a ladder like that is the selective enforcement the
+ * policy exists to rule out.
+ */
+export function policyProblems(policy: CollectionPolicy): string[] {
+  const problems: string[] = [];
+  const days = [policy.reminderDay, policy.lateNoticeDay, policy.demandDay, policy.counselDay];
+  if (days.some((d) => !Number.isFinite(d) || d < 1)) {
+    problems.push("Every step needs a day past due, starting at 1.");
+  }
+  if (!(policy.reminderDay < policy.lateNoticeDay)) {
+    problems.push("The reminder has to come before the notice.");
+  }
+  if (!(policy.lateNoticeDay < policy.demandDay)) {
+    problems.push("The notice has to come before the demand.");
+  }
+  if (!(policy.demandDay < policy.counselDay)) {
+    problems.push("The demand has to come before counsel.");
+  }
+  if (!Number.isFinite(policy.lateFeeCents) || policy.lateFeeCents < 0) {
+    problems.push("The late fee cannot be negative. Zero means no fee.");
+  }
+  if (!Number.isFinite(policy.minimumPlanMonths) || policy.minimumPlanMonths < 1) {
+    problems.push("A payment plan needs at least one month.");
+  }
+  return problems;
+}
 
 const STAGE_ORDER: CollectionStage[] = [
   "current",

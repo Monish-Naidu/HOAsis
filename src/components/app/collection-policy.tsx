@@ -1,0 +1,208 @@
+"use client";
+
+import { useState } from "react";
+import { Pencil, Scale } from "lucide-react";
+import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { useToast } from "@/components/app/toast";
+import { useAppState } from "@/lib/app-state";
+import {
+  DEFAULT_COLLECTION_POLICY,
+  policyFor,
+  policyProblems,
+  type CollectionPolicy,
+} from "@/lib/collections";
+import { cn, money } from "@/lib/utils";
+
+/**
+ * The board's collections policy, where the board can change it.
+ *
+ * PayHOA and AppFolio both lead with a late fee engine the board configures;
+ * ours ran on a default nobody could edit. The ladder itself is unchanged.
+ * What the board sets here is the days each rung falls on, the fee the
+ * notice carries, and the shortest plan it will accept, and every screen
+ * that reads the policy (the ladder, the resident's pay page) reads this.
+ *
+ * Read-only by default. The numbers are shown as a sentence, because that is
+ * how the policy is written in the bylaws and how a treasurer checks it.
+ */
+export function CollectionPolicyCard() {
+  const { community, can, updateSettings } = useAppState();
+  const { notify } = useToast();
+  const saved = policyFor(community.settings);
+  const [draft, setDraft] = useState<CollectionPolicy>(saved);
+  const [editing, setEditing] = useState(false);
+  const problems = policyProblems(draft);
+  const isDefault = !community.settings.collectionPolicy;
+
+  const set = (patch: Partial<CollectionPolicy>) => setDraft((d) => ({ ...d, ...patch }));
+
+  function save() {
+    if (problems.length) return;
+    updateSettings({ collectionPolicy: draft });
+    setEditing(false);
+    notify("Collections policy saved", "ok");
+  }
+
+  return (
+    <Card id="collections-policy" className="mt-5 scroll-mt-24">
+      <CardHeader
+        icon={<Scale className="size-4" />}
+        title="Collections policy"
+        subtitle={
+          isDefault
+            ? "The default ladder. Change the days or the fee to match your bylaws."
+            : "Your ladder. Every household runs the same one."
+        }
+        action={
+          can("finances") && !editing ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDraft(saved);
+                setEditing(true);
+              }}
+            >
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+          ) : null
+        }
+      />
+
+      {editing ? (
+        <div className="px-5 pb-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <DayField label="Reminder" value={draft.reminderDay} onChange={(v) => set({ reminderDay: v })} />
+            <DayField label="Formal notice" value={draft.lateNoticeDay} onChange={(v) => set({ lateNoticeDay: v })} />
+            <DayField label="Demand" value={draft.demandDay} onChange={(v) => set({ demandDay: v })} />
+            <DayField label="Counsel" value={draft.counselDay} onChange={(v) => set({ counselDay: v })} />
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-medium text-fg">Late fee</span>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+                  $
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={draft.lateFeeCents / 100}
+                  onChange={(e) => set({ lateFeeCents: Math.round(Number(e.target.value) * 100) })}
+                  aria-label="Late fee"
+                  className={cn(field, "pl-7")}
+                />
+              </div>
+              <span className="mt-1 block text-[13px] text-fg-subtle">Charged once, with the notice</span>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-medium text-fg">Shortest plan</span>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={1}
+                  value={draft.minimumPlanMonths}
+                  onChange={(e) => set({ minimumPlanMonths: Number.parseInt(e.target.value, 10) })}
+                  aria-label="Shortest payment plan in months"
+                  className={cn(field, "pr-16")}
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-fg-subtle">
+                  months
+                </span>
+              </div>
+              <span className="mt-1 block text-[13px] text-fg-subtle">Offered with the demand</span>
+            </label>
+          </div>
+
+          {problems.length ? (
+            <ul className="mt-3 space-y-1 text-[13px] text-warn" role="alert">
+              {problems.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button variant="primary" size="md" onClick={save} disabled={problems.length > 0}>
+              Save policy
+            </Button>
+            <Button variant="ghost" size="md" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+            {!isDefault ? (
+              <Button
+                variant="ghost"
+                size="md"
+                className="ml-auto"
+                onClick={() => setDraft(DEFAULT_COLLECTION_POLICY)}
+              >
+                Back to the default
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <ol className="grid gap-x-6 gap-y-2 px-5 pb-5 sm:grid-cols-2">
+          <Rung day={saved.reminderDay} label="Friendly reminder" detail="The amount and how to pay" />
+          <Rung
+            day={saved.lateNoticeDay}
+            label="Formal notice"
+            detail={saved.lateFeeCents > 0 ? `Carries the ${money(saved.lateFeeCents)} late fee` : "No late fee"}
+          />
+          <Rung
+            day={saved.demandDay}
+            label="Demand"
+            detail={`Offers a plan of at least ${saved.minimumPlanMonths} months`}
+          />
+          <Rung day={saved.counselDay} label="Counsel" detail="With every notice attached" />
+        </ol>
+      )}
+    </Card>
+  );
+}
+
+const field =
+  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand tnum";
+
+function DayField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[13px] font-medium text-fg">{label}</span>
+      <div className="relative">
+        <input
+          type="number"
+          min={1}
+          value={Number.isFinite(value) ? value : ""}
+          onChange={(e) => onChange(Number.parseInt(e.target.value, 10))}
+          aria-label={`${label} day`}
+          className={cn(field, "pr-24")}
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-fg-subtle">
+          days past due
+        </span>
+      </div>
+    </label>
+  );
+}
+
+function Rung({ day, label, detail }: { day: number; label: string; detail: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="tnum mt-0.5 w-14 shrink-0 text-[13px] font-semibold text-fg-muted">
+        Day {day}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[15px] font-medium text-fg">{label}</span>
+        <span className="block text-[13px] text-fg-subtle">{detail}</span>
+      </span>
+    </li>
+  );
+}

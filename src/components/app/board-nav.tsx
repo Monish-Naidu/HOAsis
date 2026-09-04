@@ -117,7 +117,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
             className={cn(
               // The selected background is the travelling pill behind the row,
               // not a class on the link, so it slides rather than cuts.
-              "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-[15px] font-medium transition-colors duration-200",
+              "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors duration-200",
               rail && "rounded-2xl px-3.5 py-2.5",
               rail
                 ? active

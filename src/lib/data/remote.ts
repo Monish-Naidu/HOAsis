@@ -275,6 +275,7 @@ export async function loadCommunity(
       paymentFeePaidBy: (a.payment_fee_paid_by ?? "association") as "owner" | "association",
       paymentFeeWaivedOnAch: a.payment_fee_waived_on_ach ?? true,
       forumEnabled: stored.forumEnabled ?? true,
+      collectionPolicy: stored.collectionPolicy ?? undefined,
     },
 
     owners,

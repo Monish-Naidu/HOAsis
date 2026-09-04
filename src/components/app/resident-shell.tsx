@@ -196,7 +196,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   data-tab-key={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative z-10 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-[15px] font-medium transition-colors duration-200",
+                    "relative z-10 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-[14px] font-medium transition-colors duration-200",
                     active
                       ? "text-white"
                       : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
