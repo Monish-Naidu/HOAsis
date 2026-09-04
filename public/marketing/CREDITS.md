@@ -26,11 +26,16 @@ the glass. The screen content is always a real capture from
 
 `eric-story.jpg` is Eric, the board member on slide three. Until 2026-09-03
 this was a render lifted from the deck ("Greg"), with a play button painted
-out. Monish asked for a real, free photograph of a professional who looks the
-way a new board member feels, surrounded by paper, so it is now
-[Pexels photo 8428074](https://www.pexels.com/photo/8428074/) by Kampus
-Production, under the [Pexels license](https://www.pexels.com/license/) (free
-to use, no attribution required, credited anyway). Resized to 1400px wide.
+out. It then spent a day as Pexels photo 8428074 (a man in a suit at an office
+desk), which Monish sent back on 2026-09-04: the person we are talking to is a
+homeowner, not an executive, and a suit says the wrong thing. It is now
+[Pexels photo 8374281](https://www.pexels.com/photo/8374281/) by Antoni
+Shkraba: a man in a tan
+overshirt at his own table, laptop open, glasses set down, a notebook and a
+spread of printed reports in front of him, one hand at his temple. Casual, at
+home, buried in paper, which is the whole pitch. Under the
+[Pexels license](https://www.pexels.com/license/) (free to use, no attribution
+required, credited anyway). Resized to 1400px wide.
 
 ## Photographs
 

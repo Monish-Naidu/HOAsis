@@ -10,12 +10,14 @@ import {
   Landmark,
   Megaphone,
   Receipt,
+  ShieldAlert,
   Vote,
 } from "lucide-react";
-import { Card, CardHeader, PageHeader } from "@/components/ui/primitives";
+import { Callout, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
 import {
   cashPosition,
   delinquency,
+  insuranceExposure,
   ledgerYears,
   monthlyFlows,
   spendingByCategory,
@@ -63,6 +65,7 @@ export default function BoardDashboard() {
   const flows = monthlyFlows(community, year);
   const spending = spendingByCategory(community, year);
   const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
+  const exposure = insuranceExposure(community);
 
   const role =
     account && account.role !== "resident" ? ROLE_LABEL[account.role] : "Board member";
@@ -97,6 +100,24 @@ export default function BoardDashboard() {
 
       {running ? (
         <>
+          {/* The one finding on Finances that a president should not have
+              to click through to see. Money above the insured limit is a
+              decision, not a report. */}
+          {exposure.totalUninsured > 0 ? (
+            <Callout
+              tone="warn"
+              className="mb-5"
+              icon={<ShieldAlert className="size-4" />}
+              title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
+              action={<SectionLink href="/board/money">See where</SectionLink>}
+            >
+              {exposure.rows
+                .filter((row) => row.uninsured > 0)
+                .map((row) => `${row.institution} holds ${money(row.balance, { cents: false })} against a ${money(row.limit, { cents: false })} limit.`)
+                .join(" ")}
+            </Callout>
+          ) : null}
+
           {hasFlows || spending.rows.length > 0 ? (
             <section>
               {/* One year control for both charts, and the way into the

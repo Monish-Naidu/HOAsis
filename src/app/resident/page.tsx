@@ -116,6 +116,7 @@ function AccountSummary() {
   const past = owner.daysPastDue > 0;
   const nextCharge = community.nextChargeDate;
   const amount = owner.balanceCents > 0 ? owner.balanceCents : community.association.duesCents;
+  const covered = owner.autopay && owner.balanceCents <= 0;
 
   return (
     <Card>
@@ -171,12 +172,20 @@ function AccountSummary() {
         </div>
         {/* Present even at a zero balance: paying ahead of the next
             assessment is a real thing owners do, and the pay screen
-            handles it. */}
+            handles it. But when autopay is on and nothing is owed, a navy
+            "Pay $285" next to a $0.00 balance reads as two answers to one
+            question, so the button steps back to an outline and says what
+            it does. */}
         <Link
           href="/resident/pay"
-          className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-brand px-6 text-[16px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
+          className={cn(
+            "inline-flex h-11 shrink-0 items-center justify-center rounded-lg px-6 text-[16px] font-semibold transition-opacity hover:opacity-90",
+            covered
+              ? "border border-border-2 bg-surface text-fg"
+              : "bg-brand text-brand-fg",
+          )}
         >
-          Pay {money(amount, { cents: false })}
+          {covered ? "Pay early" : `Pay ${money(amount, { cents: false })}`}
         </Link>
       </div>
     </Card>

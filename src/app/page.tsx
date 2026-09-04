@@ -67,16 +67,19 @@ const ASSURANCES = [
 const BENEFITS = [
   {
     icon: Clock,
+    tone: "bg-info-soft text-info",
     title: "Save time",
     body: "Automate everyday HOA tasks and reduce busywork.",
   },
   {
     icon: CircleDollarSign,
+    tone: "bg-ok-soft text-ok",
     title: "Save money",
     body: "Get professional tools without professional management fees.",
   },
   {
     icon: ShieldCheck,
+    tone: "bg-warn-soft text-warn",
     title: "Stay compliant",
     body: "Keep records, deadlines, and requirements on track.",
   },
@@ -85,21 +88,25 @@ const BENEFITS = [
 const POCKET = [
   {
     icon: CircleCheck,
+    tone: "bg-ok-soft text-ok",
     title: "Approve",
     body: "Review requests, invoices, and documents on the go.",
   },
   {
     icon: MessagesSquare,
+    tone: "bg-info-soft text-info",
     title: "Communicate",
     body: "Message homeowners and vendors instantly.",
   },
   {
     icon: Bell,
+    tone: "bg-warn-soft text-warn",
     title: "Stay informed",
     body: "Get real-time updates on what matters most.",
   },
   {
     icon: Video,
+    tone: "bg-brand-soft text-brand-soft-fg",
     title: "Connect",
     body: "Hop on a secure video call with board members or vendors.",
   },
@@ -406,32 +413,19 @@ function PaymentsMini() {
   );
 }
 
-/** Everything the four tiles left out: a list, not a grid. */
-function MoreList() {
-  return (
-    <Mini>
-      <ul className="grid gap-y-1.5">
-        {[
-          "Violations",
-          "Architectural requests",
-          "Documents",
-          "Communication",
-          "Meetings",
-          "Voting",
-          "Reporting",
-          "Directory",
-          "Knowledge center",
-          "Board transitions",
-        ].map((item) => (
-          <li key={item} className="flex items-center gap-1.5 text-[12px] font-medium text-fg">
-            <Check className="size-3 shrink-0 text-ok" strokeWidth={3} />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </Mini>
-  );
-}
+/** Everything the four tiles leave out, as one strip under them. */
+const EVERYTHING_ELSE = [
+  "Violations",
+  "Architectural requests",
+  "Documents",
+  "Communication",
+  "Meetings",
+  "Voting",
+  "Reporting",
+  "Directory",
+  "Knowledge center",
+  "Board transitions",
+];
 
 const FEATURES = [
   {
@@ -461,13 +455,6 @@ const FEATURES = [
     title: "Payments & dues",
     line: "Collected, posted, reconciled.",
     mini: <PaymentsMini />,
-  },
-  {
-    icon: Sparkles,
-    tone: "bg-warn-soft text-warn",
-    title: "...and more",
-    line: "One price, every feature.",
-    mini: <MoreList />,
   },
 ];
 
@@ -578,22 +565,50 @@ function PocketNotices({ className }: { className?: string }) {
 
 function IconRow({
   icon: Icon,
+  tone,
   title,
   body,
 }: {
   icon: typeof Clock;
+  tone: string;
   title: string;
   body: string;
 }) {
   return (
     <li className="flex items-start gap-4 py-5">
-      <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
+      <span className={cn("flex size-14 shrink-0 items-center justify-center rounded-full", tone)}>
         <Icon className="size-6" strokeWidth={1.9} />
       </span>
       <div>
         <p className="text-[19px] font-semibold tracking-[-0.02em] text-fg">{title}</p>
         <p className="mt-1 text-[16px] leading-relaxed text-fg-muted">{body}</p>
       </div>
+    </li>
+  );
+}
+
+/**
+ * The pocket section's four verbs, as a 2x2 of bordered tiles rather than a
+ * third icon list down the page. Same words, a third of the height.
+ */
+function PocketTile({
+  icon: Icon,
+  tone,
+  title,
+  body,
+}: {
+  icon: typeof Clock;
+  tone: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="rounded-2xl border border-border bg-surface p-4">
+      <span className={cn("flex size-10 items-center justify-center rounded-full", tone)}>
+        <Icon className="size-5" strokeWidth={2} />
+      </span>
+      <p className="mt-3 text-[16px] font-semibold tracking-[-0.015em] text-fg">{title}</p>
+      <p className="mt-0.5 text-[14px] leading-snug text-fg-muted">{body}</p>
     </li>
   );
 }
@@ -637,7 +652,7 @@ export default function MarketingHome() {
           <div className="absolute inset-0 bg-gradient-to-b from-hero-field/55 via-transparent via-[26%] to-hero-field/30" />
         </div>
 
-        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[42rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-start lg:pb-24 lg:pt-24">
+        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[36rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-center lg:pb-20 lg:pt-16">
           <div className="lg:pr-8">
             <Reveal>
               <h1 className="text-balance text-[44px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[56px]">
@@ -781,9 +796,9 @@ export default function MarketingHome() {
             <div className="overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
               <Image
                 src="/marketing/eric-story.jpg"
-                alt="Eric at his desk in a suit, fingers pressed to his temples over an open binder, with shelves of files and paperwork behind him"
+                alt="Eric at his kitchen table in a tan overshirt, glasses set down, one hand at his temple, a laptop, a notebook and a spread of printed reports in front of him"
                 width={1400}
-                height={934}
+                height={933}
                 sizes="(max-width: 1024px) 100vw, 660px"
                 className="h-auto w-full"
               />
@@ -808,18 +823,18 @@ export default function MarketingHome() {
             </div>
           </Reveal>
 
-          {/* Five across on a wide screen. Under that they keep their width
-              and scroll sideways, because five cards squeezed into three
-              columns leaves two orphans on a second row and a card at 180px
-              cannot hold a screen anyone can read. Each card sits at its own
-              height: the minis differ, and stretching the short ones to the
-              tallest left them with empty floors. */}
-          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-2 xl:mx-0 xl:grid xl:grid-cols-5 xl:overflow-visible xl:px-0">
+          {/* Four across from a laptop width up. Under that they keep their
+              width and scroll sideways, because a card at 180px cannot hold
+              a screen anyone can read. It was five with a "...and more" card
+              that only showed on a 1280px viewport, so most laptops saw four
+              and a sliver; the fifth is the strip underneath now. Each card
+              sits at its own height: the minis differ. */}
+          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
             {FEATURES.map(({ icon: Icon, tone, title, line, mini }, index) => (
               <Reveal
                 key={title}
                 delay={index * 70}
-                className="w-[272px] shrink-0 snap-start xl:w-auto"
+                className="w-[272px] shrink-0 snap-start lg:w-auto"
               >
                 <Card className="p-5">
                   <div className="flex flex-col items-center text-center">
@@ -842,6 +857,23 @@ export default function MarketingHome() {
             ))}
           </div>
 
+          <Reveal delay={300}>
+            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border bg-surface-2 px-5 py-4">
+              <span className="mr-1 inline-flex items-center gap-2 text-[14px] font-semibold text-fg">
+                <Sparkles className="size-4 text-warn" strokeWidth={2.2} />
+                And everything else
+              </span>
+              {EVERYTHING_ELSE.map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[13px] font-medium text-fg-muted"
+                >
+                  <Check className="size-3 text-ok" strokeWidth={3} />
+                  {item}
+                </span>
+              ))}
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -861,12 +893,12 @@ export default function MarketingHome() {
               </p>
             </Reveal>
             <Reveal delay={90}>
-              <ul className="mt-4 divide-y divide-border">
+              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                 {POCKET.map((item) => (
-                  <IconRow key={item.title} {...item} />
+                  <PocketTile key={item.title} {...item} />
                 ))}
               </ul>
-              <p className="mt-2 text-[15px] text-fg-subtle">
+              <p className="mt-4 text-[15px] text-fg-subtle">
                 Works in any browser today. iPhone and Android apps are next.
               </p>
             </Reveal>
