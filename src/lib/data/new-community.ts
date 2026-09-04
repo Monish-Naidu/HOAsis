@@ -5,6 +5,7 @@ import { caps, GRANTABLE, NO_CAPABILITIES } from "./accounts";
 
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
+import { wordingFor } from "@/lib/wording";
 
 /**
  * Defaults nobody is asked about during setup.
@@ -230,6 +231,10 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
   const suffix = shortHash(`${draft.name}|${draft.city}|${draft.founder.email}`);
   const id = slugify(draft.name, suffix);
   const ownerId = (unit: string) => `${id}-own-${unit}`;
+  // A home without an address yet is shown by its number, in the community's
+  // own words: "Lot 12" on a subdivision, "Unit 12" anywhere attached.
+  const numbered = (unit: string) =>
+    `${wordingFor(draft.propertyType, draft.origin).numberExample} ${unit}`;
   const accountId = (unit: string) => `${id}-acct-${unit}`;
 
   const founderOwner: Owner = {
@@ -239,7 +244,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     email: draft.founder.email,
     phone: "",
     unit: draft.founder.unit,
-    address: draft.founder.address?.trim() || `Unit ${draft.founder.unit}`,
+    address: draft.founder.address?.trim() || numbered(draft.founder.unit),
     moveInDate: asOf,
     balanceCents: 0,
     autopay: false,
@@ -262,7 +267,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       email: household.email,
       phone: "",
       unit: household.unit,
-      address: `Unit ${household.unit}`,
+      address: numbered(household.unit),
       moveInDate: asOf,
       balanceCents: 0,
       autopay: false,

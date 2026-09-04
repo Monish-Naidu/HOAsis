@@ -33,7 +33,7 @@ import {
   savePendingDraft,
 } from "@/lib/pending-draft";
 import { cn, money } from "@/lib/utils";
-import { wordingFor } from "@/lib/wording";
+import { wordingFor, type Wording } from "@/lib/wording";
 
 /**
  * Setting up an association, one question at a time.
@@ -383,11 +383,16 @@ export function SetupWizard() {
         title: `Which ${w.home} is yours?`,
         detail: "You become President and can appoint the rest of the board later.",
         enterContinues: true,
+        // The number keys the register, so everybody gives one. The address
+        // is the other way round: an association that has been running for
+        // years has one for every home, and a builder's lots may not have
+        // theirs from the county yet. Requiring it there stalls the whole
+        // setup on a fact nobody has.
         canContinue: Boolean(
           draft.founder.name.trim() &&
             draft.founder.email.trim() &&
             draft.founder.unit.trim() &&
-            draft.founder.address?.trim(),
+            (w.fromBuilder || draft.founder.address?.trim()),
         ),
         body: (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -410,29 +415,18 @@ export function SetupWizard() {
                 className={input}
               />
             </Field>
-            <Field label="Your home address">
-              <input
-                value={draft.founder.address ?? ""}
-                onChange={(e) =>
-                  patch({ founder: { ...draft.founder, address: e.target.value } })
-                }
-                placeholder="1428 Mehr Meadows Lane"
-                autoComplete="street-address"
-                className={input}
-                autoFocus
-              />
-            </Field>
-            <Field
-              label={`${w.Home} number`}
-              hint={`As it appears on the ${draft.origin === "builder" ? "site plan" : "register"}. The homes on the next screen are numbered the same way.`}
-            >
-              <input
-                value={draft.founder.unit}
-                onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
-                placeholder="12"
-                className={input}
-              />
-            </Field>
+            {/* Whichever field the founder actually knows comes first. */}
+            {w.fromBuilder ? (
+              <>
+                <FounderNumber draft={draft} patch={patch} w={w} autoFocus />
+                <FounderAddress draft={draft} patch={patch} w={w} />
+              </>
+            ) : (
+              <>
+                <FounderAddress draft={draft} patch={patch} w={w} autoFocus />
+                <FounderNumber draft={draft} patch={patch} w={w} />
+              </>
+            )}
           </div>
         ),
       },
@@ -892,6 +886,66 @@ function HomesStep({ draft, patch }: StepProps) {
 
 const input =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+
+/**
+ * The founder's number and address, ordered and worded by who is asking.
+ *
+ * Both live on the home record either way. What changes is which one is
+ * required and which one can arrive later: a builder keys everything off the
+ * plat and the county assigns addresses closer to closing, while an
+ * association that is already running has addresses and may never have
+ * numbered anything except a condominium.
+ */
+function FounderNumber({
+  draft,
+  patch,
+  w,
+  autoFocus,
+}: StepProps & { w: Wording; autoFocus?: boolean }) {
+  const hint = w.fromBuilder
+    ? draft.origin === "builder"
+      ? `As it appears on the site plan. The ${w.homes} on the next screen are numbered the same way.`
+      : `As it appears on the plat or the register. The ${w.homes} on the next screen are numbered the same way.`
+    : `As it appears on your register. The ${w.homes} on the next screen are numbered the same way.`;
+  return (
+    <Field label={`${w.Home} number`} hint={hint}>
+      <input
+        value={draft.founder.unit}
+        onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
+        placeholder="12"
+        className={input}
+        autoFocus={autoFocus}
+      />
+    </Field>
+  );
+}
+
+function FounderAddress({
+  draft,
+  patch,
+  w,
+  autoFocus,
+}: StepProps & { w: Wording; autoFocus?: boolean }) {
+  return (
+    <Field
+      label={w.fromBuilder ? "Your home address, if it has one" : "Your home address"}
+      hint={
+        w.fromBuilder
+          ? "Optional until the county assigns it. Buyers can add theirs when they sign up."
+          : undefined
+      }
+    >
+      <input
+        value={draft.founder.address ?? ""}
+        onChange={(e) => patch({ founder: { ...draft.founder, address: e.target.value } })}
+        placeholder="1428 Mehr Meadows Lane"
+        autoComplete="street-address"
+        className={input}
+        autoFocus={autoFocus}
+      />
+    </Field>
+  );
+}
 
 function Field({
   label,

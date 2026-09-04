@@ -55,6 +55,27 @@ Monish walked it and asked for four things, all in:
   The dashboard's setup line opens the next open question directly; the
   overview stays under Getting started in the sidebar.
 
+## Number and address, 2026-09-04
+
+Monish asked whether a home should have an address or a unit number. Both,
+on the record; one required, by who is asking:
+
+- The number keys the register on every path, because the homes screen
+  builds the roster from number ranges and the founder's own home has to
+  match one of them. Condominiums keep a number forever; on a subdivision
+  it is the lot on the plat, which deeds and liens cite.
+- The address is required when the association is already running (every
+  home has one) and optional from a builder or a handover, because the
+  county assigns addresses closer to closing. Requiring it there stalls
+  setup on a fact nobody has.
+- Whichever field the founder knows comes first and takes focus.
+- Nothing migrates when the address arrives. It is a blank field filling
+  in; the number stays as the permanent key. Until then a home reads as
+  "Lot 12" or "Unit 12" in the community's own words.
+
+Still to do: let a buyer confirm or enter the address when they accept
+their invite, and let the board edit it on the home record.
+
 ## Not done
 
 - Skips within a visit are not remembered; the overview is the record.
