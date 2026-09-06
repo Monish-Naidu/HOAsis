@@ -51,6 +51,24 @@ demo and remote mode, on migration 0029 (`0029_ranked_list.sql`), proved by
 `database.types.ts` is hand-patched again for 0029: `gen types` needs
 either the access token or Docker, and neither is available here.
 
+**Still owed by Monish, as of 2026-09-06:**
+
+1. In the Resend dashboard, add a webhook pointed at
+   `https://expresshoa.com/api/email/webhook` (all `email.*` events) and
+   put its signing secret in Vercel as `RESEND_WEBHOOK_SECRET`. Until
+   then every sent email stays "on its way".
+2. Verify `expresshoa.com` in Resend and set `EMAIL_FROM` to an address
+   on it (in `.env.local` and Vercel). The shared `onboarding@resend.dev`
+   sender only delivers to Monish's own inbox, so signup and dues mail
+   cannot reach real residents yet.
+3. `supabase login` (fresh `SUPABASE_ACCESS_TOKEN`), then `pnpm db:types`
+   to replace the hand-patched `database.types.ts`. Also a fresh Vercel
+   CLI token.
+4. Stripe: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`,
+   `STRIPE_WEBHOOK_SECRET` (Connect endpoint), `STRIPE_BILLING_WEBHOOK_SECRET`
+   (plain endpoint) and `CRON_SECRET` in Vercel. Autopay is a stored
+   instruction until these exist.
+
 ## 2026-09-05: every screen driven in Chrome, both modes, and what it turned up
 
 Monish asked for the onboarding, every board tab and every resident tab to be
