@@ -31,7 +31,7 @@ import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
  * card links to the tab that has the rest.
  */
 export function OverviewScreen() {
-  const { community, confirmLedgerEntry, dismissLedgerEntry, addBankAccount } = useAppState();
+  const { community, confirmLedgerEntry, dismissLedgerEntry, addBankAccount, isRemote } = useAppState();
   const recon = useReconciliation();
   const { notify } = useToast();
   const router = useRouter();
@@ -148,6 +148,7 @@ export function OverviewScreen() {
             </p>
           </div>
           <BankConnect
+            linked={!isRemote}
             onConnect={(account) => {
               addBankAccount(account);
               notify(`${account.institution} ••${account.mask} connected`, "ok");

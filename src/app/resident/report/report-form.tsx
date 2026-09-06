@@ -123,7 +123,7 @@ export function ReportForm() {
         themselves before anything is sent to anyone.
       </Callout>
 
-      <Card className="space-y-4 px-4 py-4">
+      <Card as="form" onSubmit={(e) => e.preventDefault()} className="space-y-4 px-4 py-4">
         <label className="block">
           <span className="text-[13px] font-semibold text-fg-muted">Which home</span>
           <input
@@ -171,7 +171,7 @@ export function ReportForm() {
           />
         </label>
 
-        <Button onClick={submit} disabled={!ready}>
+        <Button type="submit" onClick={submit} disabled={!ready}>
           <Send className="size-4" />
           Send to the board
         </Button>

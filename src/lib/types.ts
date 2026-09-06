@@ -91,6 +91,8 @@ export interface Owner {
   members: string[];
   email: string;
   phone: string;
+  /** Where paper goes when it is not the home. Set by the owner. */
+  mailingAddress?: string;
   unit: string;
   address: string;
   moveInDate: ISODate;
@@ -869,6 +871,12 @@ export interface CommunitySettings {
    * `lib/collections.ts`; the board edits it on Finances > Collections.
    */
   collectionPolicy?: CollectionPolicy;
+  /**
+   * Obligations the board has marked done, by register key, with the day.
+   * We compute deadlines and never judge compliance, so this is the board's
+   * own word; an annual duty falls due again once the mark is a year old.
+   */
+  complianceDone?: Record<string, ISODate>;
 }
 
 /* -------------------------------------------------------------------------- */

@@ -18,11 +18,14 @@ export function BankStep({
   account,
   onConnect,
   onClear,
+  linked,
 }: {
   associationName: string;
   account?: BankAccount;
   onConnect: (account: BankAccount) => void;
   onClear: () => void;
+  /** The mocked "find your bank" list, for a browser-only copy. */
+  linked?: boolean;
 }) {
   if (account) {
     return (
@@ -54,7 +57,7 @@ export function BankStep({
 
   return (
     <div className="flex flex-col gap-5">
-      <BankConnect kind="operating" onConnect={onConnect} />
+      <BankConnect kind="operating" onConnect={onConnect} linked={linked} />
 
       <Callout
         tone="brand"

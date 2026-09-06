@@ -3,11 +3,9 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  AtSign,
   Inbox,
   MailCheck,
   Megaphone,
-  Paperclip,
   Pin,
   Send,
   Users,
@@ -41,10 +39,15 @@ const CATEGORIES: Announcement["category"][] = ["Notice", "Maintenance", "Event"
  * them here, they persist, and removing one takes it off every resident's
  * screen the same moment.
  */
-function AnnouncementsManager() {
+function AnnouncementsManager({
+  composing,
+  setComposing,
+}: {
+  composing: boolean;
+  setComposing: (open: boolean) => void;
+}) {
   const { community, addAnnouncement, removeAnnouncement } = useAppState();
   const { notify } = useToast();
-  const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<Announcement["category"]>("Notice");
@@ -69,7 +72,7 @@ function AnnouncementsManager() {
   }
 
   return (
-    <Card className="mt-5">
+    <Card id="announcements" className="mt-5 scroll-mt-24">
       <CardHeader
         title="Announcements"
         subtitle={'What residents see under "From the board" on their home screen.'}
@@ -84,7 +87,10 @@ function AnnouncementsManager() {
       />
 
       {composing ? (
-        <div className="space-y-3 border-b border-border bg-surface-2 px-5 py-4">
+        <form
+          className="space-y-3 border-b border-border bg-surface-2 px-5 py-4"
+          onSubmit={(e) => e.preventDefault()}
+        >
           <div className="flex flex-wrap gap-3">
             <input
               value={title}
@@ -128,12 +134,12 @@ function AnnouncementsManager() {
               <Button variant="ghost" size="sm" onClick={() => setComposing(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" size="sm" onClick={post}>
+              <Button type="submit" variant="primary" size="sm" onClick={post}>
                 Post announcement
               </Button>
             </div>
           </div>
-        </div>
+        </form>
       ) : null}
 
       {announcements.length === 0 && !composing ? (
@@ -185,7 +191,17 @@ export default function BoardCommunications() {
   const { notify } = useToast();
   const [activeId, setActiveId] = useState(threads[0]?.id);
   const [draft, setDraft] = useState("");
+  const [composing, setComposing] = useState(false);
   const active = threads.find((t) => t.id === activeId) ?? threads[0];
+  // Every board seat is copied on a reply, so the count is the roster's.
+  const boardSeats = community.accounts.filter((a) => a.role !== "resident").length;
+
+  // The page's one primary action writes to every resident's home screen.
+  // It used to show a toast about a composer that did not exist.
+  function startMessage() {
+    setComposing(true);
+    document.getElementById("announcements")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   function send() {
     if (!draft.trim() || !active) return;
@@ -199,11 +215,7 @@ export default function BoardCommunications() {
       <PageHeader
         title="Communications"
         action={
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => notify("Composer opens with the full owner list", "info")}
-          >
+          <Button variant="primary" size="md" onClick={startMessage}>
             <Send className="size-3.5" />
             New message
           </Button>
@@ -241,7 +253,7 @@ export default function BoardCommunications() {
 
       <DuesMailer />
 
-      <AnnouncementsManager />
+      <AnnouncementsManager composing={composing} setComposing={setComposing} />
 
       {!active ? (
         <Card className="mt-5">
@@ -336,16 +348,8 @@ export default function BoardCommunications() {
                 </span>
                 <span className="text-fg-subtle">Cc</span>
                 <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
-                  Board (4)
+                  Board ({boardSeats})
                 </span>
-                <button
-                  type="button"
-                  onClick={() => notify("Recipient picker opens here", "info")}
-                  className="inline-flex items-center gap-1 text-fg-muted hover:text-fg"
-                >
-                  <AtSign className="size-3" />
-                  Add
-                </button>
               </div>
               <textarea
                 rows={3}
@@ -357,14 +361,6 @@ export default function BoardCommunications() {
               />
               <div className="mt-2.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => notify("Attachment picker opens here", "info")}
-                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
-                  >
-                    <Paperclip className="size-3.5" />
-                    Attach
-                  </button>
                   <span className="text-[13px] text-fg-subtle">
                     {draft ? "Draft saved" : "No draft"}
                   </span>

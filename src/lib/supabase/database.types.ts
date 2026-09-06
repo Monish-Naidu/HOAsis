@@ -897,6 +897,8 @@ export type Database = {
           full_name: string
           id: string
           invited_email: string | null
+          mailing_address: string
+          phone: string
           profile_id: string | null
           role: Database["public"]["Enums"]["board_role"]
           starts_on: string
@@ -910,6 +912,8 @@ export type Database = {
           full_name: string
           id?: string
           invited_email?: string | null
+          mailing_address?: string
+          phone?: string
           profile_id?: string | null
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
@@ -923,6 +927,8 @@ export type Database = {
           full_name?: string
           id?: string
           invited_email?: string | null
+          mailing_address?: string
+          phone?: string
           profile_id?: string | null
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
@@ -1243,6 +1249,57 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_replies: {
+        Row: {
+          association_id: string
+          author_id: string | null
+          author_name: string
+          author_role: string | null
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          unit_label: string
+        }
+        Insert: {
+          association_id: string
+          author_id?: string | null
+          author_name: string
+          author_role?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          unit_label?: string
+        }
+        Update: {
+          association_id?: string
+          author_id?: string | null
+          author_name?: string
+          author_role?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          unit_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_replies_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_replies_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]
@@ -2037,7 +2094,9 @@ export type Database = {
       }
       violations: {
         Row: {
+          agency: string | null
           association_id: string
+          case_number: string | null
           created_at: string
           fine_cents: number
           id: string
@@ -2047,14 +2106,18 @@ export type Database = {
           photos: Json
           reference: string
           report_id: string | null
+          resolved_on: string | null
           rule: string
           rule_citation: string
+          source: string
           stage: string
           unit_id: string | null
           unit_label: string
         }
         Insert: {
+          agency?: string | null
           association_id: string
+          case_number?: string | null
           created_at?: string
           fine_cents?: number
           id?: string
@@ -2064,14 +2127,18 @@ export type Database = {
           photos?: Json
           reference: string
           report_id?: string | null
+          resolved_on?: string | null
           rule: string
           rule_citation?: string
+          source?: string
           stage?: string
           unit_id?: string | null
           unit_label?: string
         }
         Update: {
+          agency?: string | null
           association_id?: string
+          case_number?: string | null
           created_at?: string
           fine_cents?: number
           id?: string
@@ -2081,8 +2148,10 @@ export type Database = {
           photos?: Json
           reference?: string
           report_id?: string | null
+          resolved_on?: string | null
           rule?: string
           rule_citation?: string
+          source?: string
           stage?: string
           unit_id?: string | null
           unit_label?: string
@@ -2403,6 +2472,10 @@ export type Database = {
         Returns: string
       }
       like_post: { Args: { p_post_id: string }; Returns: number }
+      update_my_contact: {
+        Args: { p_association_id: string; p_mailing_address: string; p_phone: string }
+        Returns: undefined
+      }
       tables_without_rls: {
         Args: Record<PropertyKey, never>
         Returns: {

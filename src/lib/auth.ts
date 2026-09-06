@@ -92,6 +92,8 @@ function readable(message: string): string {
   if (text.includes("already registered")) return "There is already an account for that email.";
   if (text.includes("password")) return "Passwords need at least 8 characters.";
   if (text.includes("rate limit")) return "Too many attempts. Wait a minute and try again.";
+  if (text.includes("error sending confirmation email"))
+    return "We could not send the confirmation email just now. Try again in a minute.";
   return message;
 }
 
@@ -100,6 +102,26 @@ export async function signUp(
   password: string,
   fullName: string,
 ): Promise<AuthResult> {
+  // Our own route creates the user and sends the link through Resend, so a
+  // founder never sees Supabase's mailer fail on the first screen. A 503
+  // means no key is configured, and Supabase's mailer is the fallback.
+  try {
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), password, fullName: fullName.trim() }),
+    });
+    if (response.ok) {
+      return { ok: true, message: "Check your email to confirm the address, then sign in." };
+    }
+    if (response.status !== 503) {
+      const body = (await response.json().catch(() => ({}))) as { message?: string };
+      return { ok: false, message: readable(body.message ?? "That did not work.") };
+    }
+  } catch {
+    // Network trouble reaching our own route. Supabase's path is still there.
+  }
+
   const client = supabaseBrowser();
   const { data, error } = await client.auth.signUp({
     email: email.trim(),

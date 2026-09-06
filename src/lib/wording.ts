@@ -1,4 +1,8 @@
-import type { AssociationOrigin, PropertyType } from "@/lib/data/new-community";
+import type {
+  AssociationOrigin,
+  AssociationProfileAnswers,
+  PropertyType,
+} from "@/lib/data/new-community";
 
 /**
  * What to call a home, and what to call a run of them.
@@ -54,4 +58,25 @@ export function wordingFor(
     group: fromBuilder ? "Phase" : "Group",
     fromBuilder,
   };
+}
+
+/**
+ * The same words, for an association that already exists.
+ *
+ * Every screen that printed "Unit 12" did so for a detached subdivision
+ * whose founder had just been told their home was Lot 12. The profile
+ * answers are kept on the community so the vocabulary can follow them.
+ */
+export function homeWording(community: { profile?: AssociationProfileAnswers }): Wording {
+  return wordingFor(community.profile?.propertyType, community.profile?.origin);
+}
+
+/** "Lot 12", "Unit 4B", "Home 7": the home's number in the community's words. */
+export function homeLabel(
+  community: { profile?: AssociationProfileAnswers },
+  unit: string,
+): string {
+  const w = homeWording(community);
+  const word = community.profile?.propertyType ? w.numberExample : "Unit";
+  return `${word} ${unit}`;
 }

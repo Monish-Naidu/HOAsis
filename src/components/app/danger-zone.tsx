@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRightLeft, LogOut, Trash2 } from "lucide-react";
 import { Badge, Button, Callout, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { homeLabel } from "@/lib/wording";
 import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { loadRemote } from "@/lib/data/remote-store";
@@ -109,7 +110,7 @@ export function DangerZone() {
                 <option value="">Choose a household</option>
                 {others.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name} · Unit {a.unit}
+                    {a.name} · {homeLabel(community, a.unit)}
                   </option>
                 ))}
               </select>

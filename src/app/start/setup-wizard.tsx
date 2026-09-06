@@ -7,7 +7,7 @@ import { Button, Callout, Card } from "@/components/ui/primitives";
 import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/app/question-flow";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
-import { STATES } from "@/lib/data/library";
+import { US_STATES } from "@/lib/data/library";
 import {
   emptyDraft,
   otherHomes,
@@ -268,13 +268,13 @@ export function SetupWizard() {
               <select
                 value={draft.state}
                 onChange={(e) => {
-                  const found = STATES.find((st) => st.code === e.target.value);
+                  const found = US_STATES.find((st) => st.code === e.target.value);
                   patch({ state: e.target.value, stateName: found?.name ?? "" });
                 }}
                 className={input}
               >
                 <option value="">Select a state</option>
-                {STATES.map((st) => (
+                {US_STATES.map((st) => (
                   <option key={st.code} value={st.code}>
                     {st.name}
                   </option>
@@ -489,6 +489,7 @@ export function SetupWizard() {
             account={draft.bankAccount}
             onConnect={(bankAccount) => patch({ bankAccount })}
             onClear={() => patch({ bankAccount: undefined })}
+            linked={!auth.user}
           />
         ),
       },
@@ -801,7 +802,13 @@ function HomesStep({ draft, patch }: StepProps) {
               </div>
 
               {namingUnit === home.unit && !isMine ? (
-                <div className="mt-2.5 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <form
+                  className="mt-2.5 grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveBuyer(home.unit);
+                  }}
+                >
                   <input
                     value={buyer.name}
                     onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
@@ -818,10 +825,10 @@ function HomesStep({ draft, patch }: StepProps) {
                     aria-label={`Email for ${home.unit}`}
                     className={cn(input, "h-9")}
                   />
-                  <Button variant="secondary" size="sm" onClick={() => saveBuyer(home.unit)}>
+                  <Button type="submit" variant="secondary" size="sm">
                     Save
                   </Button>
-                </div>
+                </form>
               ) : null}
             </div>
             );

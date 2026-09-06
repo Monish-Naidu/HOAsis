@@ -47,7 +47,7 @@ import { signOutOfSupabase } from "@/lib/auth";
 function sessionUserId(): string | null {
   return remoteSnapshot().profileId;
 }
-import { buildCommunity, type CommunityDraft } from "@/lib/data/new-community";
+import { buildCommunity, type CommunityDraft, reservableSpaceNames } from "@/lib/data/new-community";
 import {
   isBudgetLines,
   isChargeLedger,
@@ -168,7 +168,7 @@ interface AppState {
   transferHome: (
     ownerId: string,
     input: { name: string; email: string; closingDate: string; settleBalance: boolean },
-  ) => void;
+  ) => boolean | Promise<boolean>;
   /** Connects an account the association can receive dues into. */
   /** Appoints a household to an office, or returns them to being a resident. */
   setAccountRole: (accountId: string, role: AccountRole) => void;
@@ -269,6 +269,8 @@ interface AppState {
    * is the case for a real association until replies have a table.
    */
   replyToPost: (postId: string, body: string) => boolean;
+  /** The signed in owner's own phone and mailing address. */
+  updateMyContact: (input: { phone: string; mailingAddress: string }) => Promise<boolean>;
   /** A bill attached by hand. Email-in lands the same way once it is wired. */
   addInvoice: (invoice: Omit<VendorInvoice, "id" | "status" | "via">) => VendorInvoice;
   /**
@@ -540,8 +542,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   // Each association's fixture data is written as of its own date, so the
   // pinned clock follows the community. Set before the slices are read so
-  // every derived figure below this line sees the same "today".
-  setToday(community.asOf);
+  // every derived figure below this line sees the same "today". A real
+  // association is read as of the actual date, so its clock is that date;
+  // a closing date defaulting to the demo's August would be refused by the
+  // database as earlier than the tenure it is closing.
+  setToday(remote.community?.asOf ?? community.asOf);
 
   // One hook per slice, in a fixed order, so the hook count never changes when
   // the community does.
@@ -892,6 +897,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
 
     const associationId = data as string;
+
+    // The shared spaces named during setup become the amenities owners can
+    // reserve. Without this the plan asked for them a second time.
+    const spaces = reservableSpaceNames(draft.sharedSpaces);
+    if (spaces.length) {
+      await supabase.from("amenities").insert(
+        spaces.map((name) => ({
+          association_id: associationId,
+          name,
+          detail: "",
+          reservable: true,
+          status: "open",
+        })),
+      );
+    }
 
     // The bank the founder connected during setup, if they got that far.
     if (draft.bankAccount) {
@@ -1524,6 +1544,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             photos: [],
             fine_cents: 0,
             report_id: reportId,
+            source: "neighbor",
           });
           if (error) throw new Error(error.message);
           return supabase
@@ -1555,7 +1576,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void remoteWrite(stage === "cured" ? "Resolving the notice" : "Updating the notice", () =>
           supabaseBrowser()
             .from("violations")
-            .update({ stage, next_action_on: nextActionDate })
+            .update({
+              stage,
+              next_action_on: nextActionDate,
+              resolved_on: stage === "cured" ? today : null,
+            })
             .eq("id", violationId),
         );
         return;
@@ -1624,6 +1649,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             photos: [],
             fine_cents: 0,
             report_id: null,
+            source: "city",
+            agency,
+            case_number: caseNumber,
           }),
         );
         return violation;
@@ -1683,7 +1711,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const rc = remote.community;
         const owner = rc.owners.find((o) => o.id === ownerId);
         const owed = owner?.balanceCents ?? 0;
-        void remoteWrite("Recording the sale", async () => {
+        return remoteWrite("Recording the sale", async () => {
           const supabase = supabaseBrowser();
           if (input.settleBalance && owed > 0) {
             // Paid out of escrow at closing: a payment line, so the statement
@@ -1705,12 +1733,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             p_closing_date: input.closingDate,
           });
         });
-        return;
       }
 
       const owners = sliceStore(communityId, "owners");
       const before = owners.getSnapshot().find((o) => o.id === ownerId);
-      if (!before) return;
+      if (!before) return false;
       const settle = input.settleBalance && before.balanceCents > 0;
       owners.update((all) =>
         all.map((o) =>
@@ -1760,6 +1787,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           capabilities: NO_CAPABILITIES,
         },
       ]);
+      // Synchronous on purpose: the demo path settles in one render, and a
+      // promise here would make every test's act() an async one.
+      return true;
     },
     [remote.community, communityId],
   );
@@ -1986,9 +2016,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (postId: string, body: string) => {
       const text = body.trim();
       if (!text) return false;
-      // Posts in Postgres carry no replies yet, so nothing is written and the
-      // screen is told so rather than shown a reply that vanishes on reload.
-      if (remote.community) return false;
+      if (remote.community) {
+        const rc = remote.community;
+        const me = rc.accounts.find((a) => a.id === remote.profileId);
+        const home = me ? rc.owners.find((o) => o.id === me.ownerId) : undefined;
+        const roleLabel: Record<string, string> = {
+          president: "Board President",
+          "vice-president": "Vice President",
+          treasurer: "Treasurer",
+          secretary: "Secretary",
+        };
+        void remoteWrite("Replying", () =>
+          supabaseBrowser().from("post_replies").insert({
+            association_id: rc.id,
+            post_id: postId,
+            author_id: remote.profileId,
+            author_name: me?.name ?? "Neighbor",
+            author_role: me ? (roleLabel[me.role] ?? null) : null,
+            unit_label: home?.unit ?? "",
+            body: text,
+          }),
+        );
+        return true;
+      }
       const me = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
@@ -2016,7 +2066,35 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       );
       return true;
     },
-    [remote.community, communityId],
+    [remote.community, remote.profileId, communityId],
+  );
+
+  const updateMyContact = useCallback(
+    (input: { phone: string; mailingAddress: string }) => {
+      if (remote.community) {
+        const rc = remote.community;
+        return remoteWrite("Saving your contact details", () =>
+          supabaseBrowser().rpc("update_my_contact", {
+            p_association_id: rc.id,
+            p_phone: input.phone,
+            p_mailing_address: input.mailingAddress,
+          }),
+        );
+      }
+      const me = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      if (!me) return Promise.resolve(false);
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) =>
+          o.id === me.ownerId
+            ? { ...o, phone: input.phone, mailingAddress: input.mailingAddress || undefined }
+            : o,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, remote.profileId, communityId],
   );
 
   /* -------------------------------------------------------------- requests */
@@ -3216,6 +3294,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     updateRequestStatus,
     likePost,
     replyToPost,
+    updateMyContact,
     addInvoice,
     payInvoice,
     approveInvoice,

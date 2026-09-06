@@ -35,6 +35,21 @@ export function AddBudgetLine() {
     "h-10 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
   const cents = Math.round((Number(annual) || 0) * 100);
 
+  function submit() {
+    addBudgetLine({
+      category,
+      annualCents: cents,
+      // Nothing spent against it yet. A board entering next year's budget
+      // has no actuals, and inventing one would be a lie in every report
+      // that reads this.
+      ytdActualCents: 0,
+      kind: "expense",
+    });
+    setAnnual("");
+    setOpen(false);
+    notify(`${category} added to the budget`);
+  }
+
   if (!open) {
     return (
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
@@ -56,7 +71,13 @@ export function AddBudgetLine() {
           </Button>
         }
       />
-      <div className="flex flex-wrap items-end gap-3 px-5 py-4">
+      <form
+        className="flex flex-wrap items-end gap-3 px-5 py-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (cents > 0) submit();
+        }}
+      >
         <label className="block">
           <span className="text-[13px] font-semibold text-fg-muted">Category</span>
           <select
@@ -85,26 +106,10 @@ export function AddBudgetLine() {
             className={`mt-1.5 w-40 ${field}`}
           />
         </label>
-        <Button
-          disabled={cents <= 0}
-          onClick={() => {
-            addBudgetLine({
-              category,
-              annualCents: cents,
-              // Nothing spent against it yet. A board entering next year's
-              // budget has no actuals, and inventing one would be a lie in
-              // every report that reads this.
-              ytdActualCents: 0,
-              kind: "expense",
-            });
-            setAnnual("");
-            setOpen(false);
-            notify(`${category} added to the budget`);
-          }}
-        >
+        <Button type="submit" disabled={cents <= 0}>
           Add it
         </Button>
-      </div>
+      </form>
     </Card>
   );
 }

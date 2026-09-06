@@ -126,10 +126,13 @@ export function SettingsScreen() {
         eyebrow="Community"
         title="Settings"
         action={
-          <Button variant="secondary" size="md" onClick={resetDemo}>
-            <RotateCcw className="size-3.5" />
-            Reset demo data
-          </Button>
+          // A real association has no demo to reset.
+          isRemote ? null : (
+            <Button variant="secondary" size="md" onClick={resetDemo}>
+              <RotateCcw className="size-3.5" />
+              Reset demo data
+            </Button>
+          )
         }
       />
 
@@ -347,7 +350,7 @@ export function SettingsScreen() {
 
         {/* Insurance. The setup plan sends a board here and there was nothing
             to fill in, so the task could never be completed. */}
-        <Card>
+        <Card id="insurance" className="scroll-mt-24">
           <CardHeader
             title="Insurance"
             subtitle="Recorded so the renewal date is a deadline you are told about, not one you discover"

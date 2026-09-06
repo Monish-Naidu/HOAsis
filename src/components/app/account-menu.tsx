@@ -2,20 +2,25 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Building2, LogOut, User } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { useAuth } from "@/lib/auth";
 import { useRemote } from "@/lib/data/remote-store";
 import { useAppState } from "@/lib/app-state";
+import { homeLabel } from "@/lib/wording";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** Role switch and sign out. Switching views never signs you out. */
 export function ViewSwitcher({ className }: { className?: string }) {
-  const { account, view, setView } = useAppState();
+  const { account, setView } = useAppState();
   const router = useRouter();
+  const pathname = usePathname();
   if (!account || account.role === "resident") return null;
+  // The page you are on is the truth, not the stored session. A board member
+  // who lands on /board from a link still saw "Resident" lit before this.
+  const view: "resident" | "board" = pathname.startsWith("/board") ? "board" : "resident";
 
   const go = (next: "resident" | "board") => {
     setView(next);
@@ -57,7 +62,7 @@ export function ViewSwitcher({ className }: { className?: string }) {
 }
 
 export function AccountMenu({ compact }: { compact?: boolean }) {
-  const { account, signOut } = useAppState();
+  const { account, community, signOut } = useAppState();
   const router = useRouter();
   if (!account) return null;
 
@@ -68,7 +73,7 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
         <div className="hidden leading-tight lg:block">
           <p className="text-[15px] font-medium text-fg">{account.name}</p>
           <p className="text-[13px] text-fg-muted">
-            {ROLE_LABEL[account.role]} · Unit {account.unit}
+            {ROLE_LABEL[account.role]} · {homeLabel(community, account.unit)}
           </p>
         </div>
       ) : null}

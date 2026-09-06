@@ -14,6 +14,7 @@ import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/acco
 import { CommunityHero } from "@/components/app/community-hero";
 import { HomeBadge } from "@/components/app/home-badge";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { homeLabel } from "@/lib/wording";
 import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -34,13 +35,15 @@ function visibleTabs(settings: CommunitySettings) {
 export function ResidentShell({ children }: { children: React.ReactNode }) {
   const [phonePreview, setPhonePreview] = useState(false);
   const pathname = usePathname();
-  const { settings } = useAppState();
+  const { settings, community } = useAppState();
   const owner = useCurrentOwner();
   const associationName = settings.displayName;
   const tabs = visibleTabs(settings);
   const ownerName = owner?.members[0] ?? "";
   const unit = owner?.unit ?? "";
   const address = owner?.address ?? "";
+  // "Lot 12" or "Unit 3", then the street only when one is on file.
+  const homeLine = `${homeLabel(community, unit)}${address ? ` · ${address}` : ""}`;
 
   const topBar = (
     <header className="hidden border-b border-border bg-surface lg:block">
@@ -102,9 +105,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <p className="truncate text-[17px] font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-[13px] text-fg-muted">
-          Unit {unit} · {address}
-        </p>
+        <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
       </div>
       <div className="flex items-center gap-1.5">
         <ResidentBell compact />
@@ -142,8 +143,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             <PhoneHeader
               associationName={associationName}
               ownerName={ownerName}
-              unit={unit}
-              address={address}
+              homeLine={homeLine}
             />
             <main className="no-scrollbar flex-1 overflow-y-auto pb-6">
               <CommunityHero compact />
@@ -239,13 +239,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
 function PhoneHeader({
   associationName,
   ownerName,
-  unit,
-  address,
+  homeLine,
 }: {
   associationName: string;
   ownerName: string;
-  unit: string;
-  address: string;
+  homeLine: string;
 }) {
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md">
@@ -253,9 +251,7 @@ function PhoneHeader({
         <p className="truncate text-[17px] font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-[13px] text-fg-muted">
-          Unit {unit} · {address}
-        </p>
+        <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
       </div>
       <div className="flex items-center gap-1.5">
         <ResidentBell compact />

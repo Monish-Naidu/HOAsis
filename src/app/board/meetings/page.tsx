@@ -1,8 +1,10 @@
 "use client";
 
-import { CalendarDays, Radio } from "lucide-react";
-import { Badge, Card, CardHeader, PageHeader, Stat } from "@/components/ui/primitives";
+import { useState } from "react";
+import { CalendarDays, CalendarPlus, Radio } from "lucide-react";
+import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Stat } from "@/components/ui/primitives";
 import { MeetingRoom } from "@/components/app/meeting-room";
+import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 
@@ -13,6 +15,7 @@ import { formatDate } from "@/lib/utils";
  */
 export default function BoardMeetings() {
   const { community } = useAppState();
+  const [scheduling, setScheduling] = useState(false);
   const live = community.meetings.find((m) => m.status === "live");
   const upcoming = [...community.meetings]
     .filter((m) => m.status !== "ended")
@@ -23,7 +26,20 @@ export default function BoardMeetings() {
 
   return (
     <>
-      <PageHeader eyebrow="Governance" title="Meetings" />
+      <PageHeader
+        eyebrow="Governance"
+        title="Meetings"
+        action={
+          scheduling ? null : (
+            <Button variant="primary" size="md" onClick={() => setScheduling(true)}>
+              <CalendarPlus className="size-3.5" />
+              Schedule a meeting
+            </Button>
+          )
+        }
+      />
+
+      {scheduling ? <ScheduleMeeting onClose={() => setScheduling(false)} /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
@@ -108,6 +124,13 @@ export default function BoardMeetings() {
 
       <Card className="mt-5">
         <CardHeader title="Upcoming" icon={<CalendarDays className="size-4" />} />
+        {upcoming.length === 0 ? (
+          <EmptyState
+            icon={<CalendarDays className="size-5" />}
+            title="Nothing scheduled"
+            description="Schedule one and it appears on every resident's calendar."
+          />
+        ) : null}
         {upcoming.map((m) => (
           <div
             key={m.id}

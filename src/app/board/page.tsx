@@ -31,6 +31,7 @@ import {
 import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { homeWording } from "@/lib/wording";
 import type { BoardRole } from "@/lib/types";
 
 /**
@@ -73,7 +74,7 @@ export default function BoardDashboard() {
   return (
     <>
       <PageHeader
-        eyebrow={`${association.name} · ${pluralize(association.unitCount, "unit")}`}
+        eyebrow={`${association.name} · ${pluralize(association.unitCount, homeWording(community).home)}`}
         title="Board Dashboard"
         description={role}
       />

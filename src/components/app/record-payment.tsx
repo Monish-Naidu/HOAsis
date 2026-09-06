@@ -35,7 +35,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
   const ready = Boolean(vendor) && cents > 0 && Boolean(paidOn);
 
   return (
-    <Card className="mb-5">
+    <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5">
       <CardHeader
         icon={<Receipt className="size-4" />}
         title="Record a payment"
@@ -150,6 +150,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
         </label>
 
         <Button
+          type="submit"
           size="lg"
           disabled={!ready}
           onClick={() => {

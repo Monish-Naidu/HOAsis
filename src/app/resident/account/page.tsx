@@ -6,6 +6,7 @@ import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { MyHomeCard } from "@/components/app/my-home-card";
+import { ContactCard } from "@/components/app/contact-card";
 import { formatDate, money, today } from "@/lib/utils";
 
 export default function ResidentAccount() {
@@ -167,6 +168,8 @@ export default function ResidentAccount() {
           })}
         </Card>
       </section>
+
+      <ContactCard />
 
       <Link
         href="/resident/finances"

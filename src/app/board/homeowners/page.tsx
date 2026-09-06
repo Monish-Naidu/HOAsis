@@ -30,6 +30,7 @@ import {
 import { TemplateComposer } from "@/components/app/template-composer";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
+import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { inviteUrl } from "@/lib/invitations";
 import { communitySlug, delinquency } from "@/lib/metrics";
@@ -160,13 +161,19 @@ export default function BoardHomeowners() {
   function recordSale() {
     const seller = owners.find((o) => o.id === sale.ownerId);
     if (!seller) return;
-    transferHome(seller.id, {
-      name: sale.name,
-      email: sale.email,
-      closingDate: sale.closingDate,
-      settleBalance: sale.settle,
+    const buyer = sale.name.trim();
+    void Promise.resolve(
+      transferHome(seller.id, {
+        name: sale.name,
+        email: sale.email,
+        closingDate: sale.closingDate,
+        settleBalance: sale.settle,
+      }),
+    ).then((ok) => {
+      // The database can refuse a closing date, and it says so itself. A
+      // success toast on top of that refusal would be two answers at once.
+      if (ok) notify(`${homeLabel(community, seller.unit)} is now ${buyer}'s`);
     });
-    notify(`Unit ${seller.unit} is now ${sale.name.trim()}'s`);
     setSale((s) => ({ ...s, open: false }));
     if (openId === seller.id) setOpenId(null);
   }
@@ -422,7 +429,7 @@ export default function BoardHomeowners() {
                   .sort((a, b) => Number(a.unit) - Number(b.unit))
                   .map((o) => (
                     <option key={o.id} value={o.id}>
-                      Unit {o.unit} · {o.displayName}
+                      {homeLabel(community, o.unit)} · {o.displayName}
                     </option>
                   ))}
               </select>
@@ -527,7 +534,8 @@ export default function BoardHomeowners() {
                           {o.boardRole ? <Badge tone="brand">{o.boardRole}</Badge> : null}
                         </span>
                         <span className="block truncate text-[13px] text-fg-muted">
-                          Unit {o.unit} · {o.address}
+                          {homeLabel(community, o.unit)}
+                          {o.address ? ` · ${o.address}` : ""}
                         </span>
                       </span>
                       <span className="hidden w-60 shrink-0 md:block">
@@ -684,6 +692,9 @@ function HouseholdDetail({
             </a>
           </KeyValue>
           <KeyValue label="Address">{owner.address}</KeyValue>
+          {owner.mailingAddress ? (
+            <KeyValue label="Mail goes to">{owner.mailingAddress}</KeyValue>
+          ) : null}
           {owner.members.length > 1 ? (
             <KeyValue label="On title">{owner.members.join(", ")}</KeyValue>
           ) : null}

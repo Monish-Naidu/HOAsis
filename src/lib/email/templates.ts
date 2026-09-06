@@ -231,3 +231,48 @@ export function trialEmail(kind: "14-days" | "3-days" | "ended", input: TrialEma
     text: `${input.presidentName},\n\n${heading}. ${input.associationName} is on ExpressHOA at ${price}. ${detail}\n\nAdd a card: ${input.billingUrl}\n\nExpressHOA`,
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Account                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The confirmation link, sent by us rather than by Supabase's own mailer.
+ *
+ * Supabase's built in sender is capped and not for production, and the first
+ * real founder to hit that cap saw "Error sending confirmation email" on the
+ * very first screen. So the account is created through the admin API and the
+ * link goes out on the same route as every other message we send.
+ */
+export function confirmSignupEmail(input: { name: string; confirmUrl: string }) {
+  const first = input.name.trim().split(/\s+/)[0] || "there";
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
+      Confirm your email
+    </h1>
+    <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
+      Hi ${escapeHtml(first)}. One tap below confirms this address and finishes creating your
+      account. Anything you entered during setup is waiting for you.
+    </p>`;
+  return {
+    subject: "Confirm your ExpressHOA email",
+    html: layout({
+      associationName: "ExpressHOA",
+      preheader: "One tap confirms your email and finishes your account.",
+      body,
+      cta: { label: "Confirm my email", url: input.confirmUrl },
+      footer:
+        "If you did not create an ExpressHOA account, ignore this message and nothing happens. " +
+        "The link expires in 24 hours.",
+    }),
+    text: `Hi ${first}. Confirm your ExpressHOA email by opening this link: ${input.confirmUrl}\n\nIf you did not create an account, ignore this message.`,
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}

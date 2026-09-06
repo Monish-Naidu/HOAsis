@@ -94,7 +94,7 @@ export default function BoardVendors() {
       {recording ? <RecordPayment onClose={() => setRecording(false)} /> : null}
 
       {adding ? (
-        <Card className="mb-5">
+        <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5">
           <CardHeader
             title="New vendor"
             subtitle="Over $600 a year, the IRS needs a W-9 from them in January"
@@ -142,7 +142,7 @@ export default function BoardVendors() {
               <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" size="sm" disabled={!draft.name.trim()} onClick={saveVendor}>
+              <Button type="submit" variant="primary" size="sm" disabled={!draft.name.trim()} onClick={saveVendor}>
                 Save vendor
               </Button>
             </div>

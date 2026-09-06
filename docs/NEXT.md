@@ -8,6 +8,98 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-05: every screen driven in Chrome, both modes, and what it turned up
+
+Monish asked for the onboarding, every board tab and every resident tab to be
+run from a real browser, deletes included, fixed where broken, and improved
+against the competitors. Done as a throwaway builder association (Quinn Ridge
+Estates, 24 lots, since deleted through its own Settings), then Oakview as a
+resident, then the browser-only demo. Everything below is pushed.
+
+**Fixed, in order of how much it mattered.**
+
+- **Dues email reached nobody.** `email_recipients()` gated on
+  `has_capability()`, which reads `auth.uid()`; the server sends with the
+  service role, which has no user, so every dues run "sent" zero emails and
+  reported success. Migration 0027 lets the service role through (the API
+  route already checks the capability itself). Preview and Send now count
+  the real list.
+- **Signup email.** Supabase's built-in mailer was refusing signups (it is
+  rate-limited and testing-only). `/api/auth/signup` now mints the confirm
+  link with the admin API and sends it through Resend from our own template,
+  rolling the user back if the send fails. **Delivery to anyone but Monish's
+  own address still needs `expresshoa.com` verified in Resend and
+  `EMAIL_FROM` set to it.** The key in `.env.local` is send-only.
+- **City notices lost their source.** The violations table had no column for
+  source, agency, case number or resolved date, so a logged city notice came
+  back as a board notice. Migration 0026 adds them; the mapper and the three
+  write sites carry them.
+- **Real associations ran on the demo clock.** `setToday()` was fed the demo
+  community's date even in remote mode, so a closing date defaulted to
+  August and the database refused it as earlier than the tenure. The clock
+  now follows the remote association. The sale toast also fired before the
+  write, so a refusal showed two answers; it waits now.
+- **Resident/Board switch lit the wrong side** (stored session view, not the
+  page). Derived from the pathname.
+- **A resident typing a board URL saw the board chrome.** `BoardOnly` in the
+  board layout sends them home.
+- **Enter did not submit** vendor, ballot, meeting, payment, shared cost,
+  city notice, announcement, report, request or signup panels. `Card` can be
+  a form (`as="form"`), and `Button` defaults to `type="button"` so a Cancel
+  inside a form no longer submits it.
+- **Stubs removed or made real:** Communications "New message" (opened
+  nothing, now opens the composer), recipient and attachment pickers
+  (toasts, gone), a hardcoded "Board (4)", the Documents callout claiming a
+  public records page was live, the sign-in card publishing a password for
+  an account that no longer existed (now "Look around first").
+- **Remote leaks:** demo "uploaded" forms and the Reset demo data button
+  showed on real associations; placeholder homes read "Unit 1 · Unit 1 ·
+  Unit 1" (now "Not yet sold" for a builder, "No owner yet" otherwise);
+  wizard amenities never reached the amenities table; the mocked bank
+  picker showed to real founders; Preview on the dues mailer lit the Send
+  button as "Sending".
+- **Compliance marks did not persist** in remote mode (jsonb key was not
+  read back). Fixed alongside the feature below.
+
+**Built from the competitor comparison** (PayHOA, AppFolio, Buildium,
+Condo Control; notes in `docs/research/`).
+
+- **Schedule a meeting** (`schedule-meeting.tsx`). The page could list and
+  show a live meeting but nobody could create one; `addMeeting` had no
+  caller. Residents see it on their calendar at once.
+- **Mark an obligation done** on Compliance, with undo, stored as
+  `settings.complianceDone` (jsonb, no migration). An annual duty falls due
+  again once the mark is a year old. **Insurance renewal** is an obligation
+  when Settings knows the date, as Settings always promised.
+- **Forum replies persist** (migration 0028, `post_replies`, RLS: members
+  read, members write their own, forum capability or author removes).
+- **Owners keep their own phone and mailing address** (0028 adds both to
+  `memberships`; `update_my_contact()` touches nothing else). Contact card
+  on Account, shown on the board roster.
+- Fifty states in the founder's state picker (`US_STATES`; the 12-state
+  `STATES` list still drives the library), and "Lot" versus "Unit" wording
+  follows the property type on the roster, account menu and dashboard.
+
+**Verified working, no change needed:** every board and resident route in
+remote and demo mode with no console errors; add, edit and delete on
+vendors, households (with undo), sale transfer, budget lines, reserve
+components, shared costs and bills, announcements, posts, documents
+(upload, visibility, remove), ballots and votes, requests and approvals,
+neighbour reports through to a notice, settings toggles, association
+delete (soft, thirty days), the `/join` page with a bad or missing token,
+capability refusal for a resident.
+
+**Still owed by Monish:** verify `expresshoa.com` in Resend and set
+`EMAIL_FROM`; refresh `SUPABASE_ACCESS_TOKEN` (then `pnpm db:types`, the
+types file was hand-patched for 0026 to 0028) and the Vercel CLI token;
+Stripe keys as before.
+
+**Not built, still on the list:** autopay cap and skip-a-month (autopay is
+still local state), owner marks a violation fixed, work orders from
+requests, amenity fees and blackouts, meeting RSVP, print a notice as a
+letter, email delivery tracking, board action items, request-to-join. Home
+photos and vendor invoices remain browser-only.
+
 ## 2026-09-04: the trial is real, and the wall between associations is proven
 
 - **Ninety days, then billing.** Migration 0025 gives every association a

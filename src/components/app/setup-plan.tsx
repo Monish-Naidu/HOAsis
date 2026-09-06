@@ -642,11 +642,12 @@ const field =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
 
 function BankInline({ task }: { task: PlanTask }) {
-  const { addBankAccount } = useAppState();
+  const { addBankAccount, isRemote } = useAppState();
   const { notify } = useToast();
   return (
     <div className="space-y-3">
       <BankConnect
+        linked={!isRemote}
         onConnect={(account) => {
           addBankAccount(account);
           notify(`${account.institution} ••${account.mask} connected`, "ok");
@@ -780,8 +781,22 @@ function InsuranceInline({ task }: { task: PlanTask }) {
   const [carrier, setCarrier] = useState(community.association.insuranceCarrier ?? "");
   const [policy, setPolicy] = useState(community.association.insurancePolicyNo ?? "");
   const [expires, setExpires] = useState(community.association.insuranceExpiresOn ?? "");
+  function save() {
+    updateAssociation({
+      insuranceCarrier: carrier.trim(),
+      insurancePolicyNo: policy.trim() || undefined,
+      insuranceExpiresOn: expires || undefined,
+    });
+    notify("Insurance recorded");
+  }
   return (
-    <div className="space-y-3">
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (carrier.trim()) save();
+      }}
+    >
       <div className="grid gap-2 sm:grid-cols-3">
         <input
           value={carrier}
@@ -806,24 +821,12 @@ function InsuranceInline({ task }: { task: PlanTask }) {
         />
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="primary"
-          size="md"
-          disabled={!carrier.trim()}
-          onClick={() => {
-            updateAssociation({
-              insuranceCarrier: carrier.trim(),
-              insurancePolicyNo: policy.trim() || undefined,
-              insuranceExpiresOn: expires || undefined,
-            });
-            notify("Insurance recorded");
-          }}
-        >
+        <Button type="submit" variant="primary" size="md" disabled={!carrier.trim()}>
           Save
         </Button>
         <GoThere task={task} secondary />
       </div>
-    </div>
+    </form>
   );
 }
 

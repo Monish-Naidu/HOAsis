@@ -1,4 +1,6 @@
-import type { Account, BankAccount, Owner, Cents, ISODate } from "@/lib/types";
+import type { Account, BankAccount, Owner, Cents, ISODate,
+  Amenity,
+} from "@/lib/types";
 import type { LotPhase } from "@/lib/lots";
 import type { Community } from "./community";
 import { caps, GRANTABLE, NO_CAPABILITIES } from "./accounts";
@@ -395,7 +397,9 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     announcements: [],
     posts: [],
 
-    amenities: [],
+    // The shared spaces named during setup are the amenities owners reserve,
+    // so they arrive listed rather than asked for a second time in the plan.
+    amenities: amenitiesFromSpaces(draft.sharedSpaces),
 
     amenityBookings: [],
     amenityStatus: [],
@@ -423,4 +427,27 @@ export function emptyDraft(): CommunityDraft {
     collects: [],
     sharedSpaces: [],
   };
+}
+
+/** Which shared spaces are things an owner can book. A gate is not. */
+const RESERVABLE_SPACES: Partial<Record<SharedSpace, string>> = {
+  pool: "Pool",
+  clubhouse: "Clubhouse",
+  gym: "Gym",
+  playground: "Playground",
+};
+
+/** Amenity records for the reservable spaces named during setup. */
+export function amenitiesFromSpaces(spaces: SharedSpace[]): (Amenity & { reservable: boolean })[] {
+  return spaces.flatMap((space) => {
+    const name = RESERVABLE_SPACES[space];
+    return name
+      ? [{ id: `amenity-${space}`, name, status: "open" as const, detail: "", reservable: true }]
+      : [];
+  });
+}
+
+/** Names only, for a database insert. */
+export function reservableSpaceNames(spaces: SharedSpace[]): string[] {
+  return amenitiesFromSpaces(spaces).map((a) => a.name);
 }

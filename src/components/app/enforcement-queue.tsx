@@ -978,7 +978,7 @@ function CityNoticeForm({
   );
 
   return (
-    <Card className="mb-5 p-5">
+    <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5 p-5">
       <div className="flex items-start gap-3">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
           <Landmark className="size-4" />
@@ -1053,6 +1053,7 @@ function CityNoticeForm({
       </div>
       <div className="mt-4 flex gap-2">
         <Button
+          type="submit"
           variant="primary"
           size="sm"
           disabled={!ready}

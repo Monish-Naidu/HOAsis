@@ -66,7 +66,33 @@ describe("complianceRegister", () => {
     const register = complianceRegister(withState("TX", "Texas"));
     expect(register.cited).toBe(false);
     expect(register.items.every((i) => !i.cited)).toBe(true);
-    expect(register.items.length).toBe(GENERAL_OBLIGATIONS.length);
+    // The insurance renewal is the association's own date, not a state duty.
+    const duties = register.items.filter((i) => i.key !== "insurance-renewal");
+    expect(duties.length).toBe(GENERAL_OBLIGATIONS.length);
+  });
+
+  it("carries the insurance renewal as a deadline once Settings knows the date", () => {
+    const register = complianceRegister(mehrMeadows);
+    const renewal = register.items.find((i) => i.key === "insurance-renewal");
+    expect(renewal?.dueDate).toBe(mehrMeadows.association.insuranceExpiresOn);
+    expect(renewal?.href).toBe("/board/settings#insurance");
+  });
+
+  it("takes the board's word that a duty was met, for one period", () => {
+    const first = complianceRegister(mehrMeadows).items.find((i) => i.dueDate && i.cadence === "annual")!;
+    const marked = {
+      ...mehrMeadows,
+      settings: { ...mehrMeadows.settings, complianceDone: { [first.key]: mehrMeadows.asOf } },
+    };
+    const row = complianceRegister(marked).items.find((i) => i.key === first.key)!;
+    expect(row.status).toBe("compliant");
+    expect(row.doneOn).toBe(mehrMeadows.asOf);
+    // A mark from two years ago no longer covers this year's due date.
+    const stale = {
+      ...mehrMeadows,
+      settings: { ...mehrMeadows.settings, complianceDone: { [first.key]: "2024-01-15" } },
+    };
+    expect(complianceRegister(stale).items.find((i) => i.key === first.key)!.doneOn).toBeUndefined();
   });
 
   it("never shows a general row next to the state row that replaces it", () => {

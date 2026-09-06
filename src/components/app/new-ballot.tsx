@@ -78,7 +78,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Card className="mb-5">
+    <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5">
       <CardHeader
         icon={<Vote className="size-4" />}
         title="New ballot"
@@ -243,7 +243,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
           {threshold.toLowerCase()}.
         </Callout>
 
-        <Button size="lg" disabled={!ready} onClick={open}>
+        <Button type="submit" size="lg" disabled={!ready} onClick={open}>
           Open the ballot
         </Button>
       </div>

@@ -34,7 +34,9 @@ interface Outcome {
 export function DuesMailer() {
   const { community, isRemote } = useAppState();
   const { notify } = useToast();
-  const [busy, setBusy] = useState<Category | null>(null);
+  // Which run is in flight, and whether it is the dry pass. A preview used
+  // to light the Send button up as "Sending", which read as an email going.
+  const [busy, setBusy] = useState<{ category: Category; dryRun: boolean } | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   const delinq = delinquency(community);
@@ -42,7 +44,7 @@ export function DuesMailer() {
   const unreachable = community.owners.length - withEmail;
 
   async function run(category: Category, dryRun: boolean) {
-    setBusy(category);
+    setBusy({ category, dryRun });
     setOutcome(null);
     try {
       const response = await fetch("/api/email/send", {
@@ -100,7 +102,7 @@ export function DuesMailer() {
           detail={`Everyone. ${money(community.association.duesCents)} due ${community.nextChargeDate}.`}
           count={withEmail}
           countLabel="households"
-          busy={busy === "assessment"}
+          busy={busy?.category === "assessment" ? (busy.dryRun ? "preview" : "send") : null}
           disabled={Boolean(busy) || withEmail === 0}
           onPreview={() => run("assessment", true)}
           onSend={() => run("assessment", false)}
@@ -115,7 +117,7 @@ export function DuesMailer() {
           count={delinq.past.length}
           countLabel="behind"
           tone="warn"
-          busy={busy === "delinquency"}
+          busy={busy?.category === "delinquency" ? (busy.dryRun ? "preview" : "send") : null}
           disabled={Boolean(busy) || delinq.past.length === 0}
           onPreview={() => run("delinquency", true)}
           onSend={() => run("delinquency", false)}
@@ -170,7 +172,7 @@ function Run({
   count: number;
   countLabel: string;
   tone?: "neutral" | "warn";
-  busy: boolean;
+  busy: "preview" | "send" | null;
   disabled: boolean;
   onPreview: () => void;
   onSend: () => void;
@@ -186,18 +188,24 @@ function Run({
       </div>
       <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{detail}</p>
       <div className="mt-3 flex gap-2">
-        <Button variant="secondary" size="sm" onClick={onPreview} disabled={disabled}>
-          Preview
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onPreview}
+          disabled={disabled}
+          className={cn(busy === "preview" && "opacity-70")}
+        >
+          {busy === "preview" ? "Checking" : "Preview"}
         </Button>
         <Button
           variant="primary"
           size="sm"
           onClick={onSend}
           disabled={disabled}
-          className={cn(busy && "opacity-70")}
+          className={cn(busy === "send" && "opacity-70")}
         >
           <Send className="size-3.5" />
-          {busy ? "Sending" : "Send"}
+          {busy === "send" ? "Sending" : "Send"}
         </Button>
       </div>
     </div>

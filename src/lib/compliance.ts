@@ -7,7 +7,7 @@ import {
   type Obligation,
 } from "@/lib/data/obligations";
 import type { ComplianceStatus } from "@/lib/types";
-import { daysFromToday } from "@/lib/utils";
+import { addDays, daysFromToday } from "@/lib/utils";
 
 /**
  * The compliance register, derived rather than hand written.
@@ -46,6 +46,8 @@ export interface RegisterItem {
   href?: string;
   /** Binds from the association's first day rather than from its first year. */
   fromDayOne: boolean;
+  /** The day the board marked it done, when the mark still covers this due date. */
+  doneOn?: string;
 }
 
 export interface ComplianceRegister {
@@ -122,8 +124,20 @@ export function complianceRegister(community: Community): ComplianceRegister {
   const covered = new Set(stateRows.map((o) => o.key.replace(/^[a-z]{2}-/, "")));
   const general = GENERAL_OBLIGATIONS.filter((o) => !covered.has(o.key));
 
+  // The board's own marks. A mark covers the due date it was made against:
+  // anything inside the year (or three, for a triennial study) before it.
+  const done = community.settings.complianceDone ?? {};
+  const covers = (key: string, dueDate: string | undefined, cadence: Obligation["cadence"]) => {
+    const on = done[key];
+    if (!on) return undefined;
+    if (!dueDate) return on;
+    const window = cadence === "triennial" ? 3 * 365 : 365;
+    return on > addDays(dueDate, -window) && on <= dueDate ? on : undefined;
+  };
+
   const items: RegisterItem[] = [...stateRows, ...general].map((obligation) => {
     const dueDate = nextDue(obligation, community);
+    const doneOn = covers(obligation.key, dueDate, obligation.cadence);
     return {
       key: obligation.key,
       label: obligation.label,
@@ -133,15 +147,37 @@ export function complianceRegister(community: Community): ComplianceRegister {
       cadence: obligation.cadence,
       dueDate,
       daysUntil: dueDate ? daysFromToday(dueDate) : undefined,
-      status: statusFor(dueDate, obligation.cadence),
+      status: doneOn ? "compliant" : statusFor(dueDate, obligation.cadence),
       clockDays: obligation.clockDays,
       article: obligation.article,
       href: obligation.href,
       fromDayOne: Boolean(obligation.fromDayOne),
+      doneOn,
     };
   });
 
-  const dated = items.filter((i) => i.dueDate);
+  // The master policy, when Settings knows its renewal date. Lapsed cover is
+  // the one deadline every director is personally exposed on, so it sits in
+  // the same list as the state's paperwork rather than on its own screen.
+  const renewal = community.association.insuranceExpiresOn;
+  if (renewal) {
+    const doneOn = covers("insurance-renewal", renewal, "annual");
+    items.unshift({
+      key: "insurance-renewal",
+      label: "Renew the master insurance policy",
+      evidence: `The renewed declarations page from ${community.association.insuranceCarrier || "the carrier"}, showing the new term.`,
+      cited: false,
+      cadence: "annual",
+      dueDate: renewal,
+      daysUntil: daysFromToday(renewal),
+      status: doneOn ? "compliant" : statusFor(renewal, "annual"),
+      href: "/board/settings#insurance",
+      fromDayOne: false,
+      doneOn,
+    });
+  }
+
+  const dated = items.filter((i) => i.dueDate && i.status !== "compliant");
 
   return {
     state: community.association.stateName,

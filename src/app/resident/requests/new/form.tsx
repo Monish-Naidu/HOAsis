@@ -157,7 +157,7 @@ export function NewRequestForm() {
   }
 
   return (
-    <div className="animate-rise space-y-6">
+    <form className="animate-rise space-y-6" onSubmit={(e) => e.preventDefault()}>
       <Link
         href="/resident/requests"
         className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
@@ -324,6 +324,7 @@ export function NewRequestForm() {
       </section>
 
       <Button
+        type="submit"
         variant="primary"
         size="lg"
         className="w-full"
@@ -332,7 +333,6 @@ export function NewRequestForm() {
       >
         Submit request
       </Button>
-      
-    </div>
+    </form>
   );
 }

@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import {
   Badge,
-  Button,
   Callout,
   Card,
   CardHeader,
@@ -236,23 +235,13 @@ export default function BoardDocuments() {
         </Link>
       </div>
 
-      <Callout
-        tone="ok"
-        className="mt-5"
-        icon={<Globe className="size-4" />}
-        title="Public records page is live"
-        action={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => notify("Public records page opens in a new tab", "info")}
-          >
-            <ExternalLink className="size-3.5" />
-            Open
-          </Button>
-        }
-      >
-        {publicRecordsUrl(community)} · {pluralize(publicDocs.length, "document")}, no account needed.
+      {/* The page itself is not built yet. Saying it was live, with a button
+          that only showed a toast, was the kind of claim this product is
+          against. The count is real; the address is where it will be. */}
+      <Callout tone="info" className="mt-5" icon={<Globe className="size-4" />} title="Public records page">
+        {pluralize(publicDocs.length, "document")} marked public will be readable without an account
+        at {publicRecordsUrl(community)} once that page ships. Owners can download them from their
+        portal today.
       </Callout>
 
       <Card className="mt-5">

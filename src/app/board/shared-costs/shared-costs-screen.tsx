@@ -383,7 +383,7 @@ function AddSharedCost({
     "mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors focus:border-brand";
 
   return (
-    <Card className="mt-5">
+    <Card as="form" onSubmit={(e) => e.preventDefault()} className="mt-5">
       <CardHeader
         icon={<Plus className="size-4" />}
         title="Add a shared cost"
@@ -505,6 +505,7 @@ function AddSharedCost({
         </label>
 
         <Button
+          type="submit"
           disabled={!name.trim()}
           onClick={() =>
             onSave({

@@ -88,7 +88,7 @@ export async function loadCommunity(
     posts, vendors, amenities, announcementRows,
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
-    paymentRows,
+    paymentRows, replyRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
@@ -126,6 +126,7 @@ export async function loadCommunity(
     // Money in flight. RLS scopes a resident to their own unit's rows; settled
     // payments already show as statement lines, so only the unfinished matter.
     supabase.from("payments").select("*").eq("association_id", associationId).in("state", ["pending", "failed"]).order("created_at", { ascending: false }),
+    supabase.from("post_replies").select("*").eq("association_id", associationId).order("created_at"),
   ]);
 
   // Files open through short lived signed links, made in one batch here so a
@@ -181,14 +182,20 @@ export async function loadCommunity(
       .map((m) => m.full_name)
       .filter(Boolean);
 
+    // A home with nobody on it yet still needs a name on the roster. For a
+    // builder that is a lot not yet sold; for everyone else it is a home
+    // whose owner has not been entered. Neither should echo the unit label,
+    // which the row already shows.
+    const placeholder = a.origin === "builder" ? "Not yet sold" : "No owner yet";
     return {
       id: unit.id,
-      displayName: holder?.full_name || `Unit ${unit.label}`,
-      members: members.length ? members : [holder?.full_name || `Unit ${unit.label}`],
+      displayName: holder?.full_name || placeholder,
+      members: members.length ? members : [holder?.full_name || placeholder],
       email: holder?.invited_email ?? "",
-      phone: "",
+      phone: holder?.phone ?? "",
+      mailingAddress: holder?.mailing_address || undefined,
       unit: unit.label,
-      address: unit.address || `Unit ${unit.label}`,
+      address: unit.address,
       moveInDate: holder?.starts_on ?? unit.created_at.slice(0, 10),
       balanceCents,
       autopay: false,
@@ -288,6 +295,7 @@ export async function loadCommunity(
       paymentFeeWaivedOnAch: a.payment_fee_waived_on_ach ?? true,
       forumEnabled: stored.forumEnabled ?? true,
       collectionPolicy: stored.collectionPolicy ?? undefined,
+      complianceDone: stored.complianceDone ?? undefined,
     },
 
     owners,
@@ -453,6 +461,10 @@ export async function loadCommunity(
       photos: (v.photos ?? []) as Community["violations"][number]["photos"],
       fineCents: v.fine_cents,
       reportId: v.report_id ?? undefined,
+      source: v.source as Community["violations"][number]["source"],
+      agency: v.agency ?? undefined,
+      caseNumber: v.case_number ?? undefined,
+      resolvedDate: v.resolved_on ?? undefined,
     })),
     // No table yet. Real associations keep invoices in the browser for now and
     // the Vendors screen says so.
@@ -607,7 +619,16 @@ export async function loadCommunity(
       postedDate: p.created_at.slice(0, 10),
       pinned: p.pinned,
       likes: p.likes,
-      replies: [],
+      replies: (replyRows.data ?? [])
+        .filter((r) => r.post_id === p.id)
+        .map((r) => ({
+          id: r.id,
+          author: r.author_name,
+          unit: r.unit_label,
+          authorRole: r.author_role ?? undefined,
+          at: r.created_at.slice(0, 10),
+          body: r.body,
+        })),
     })),
 
     amenities: (amenities.data ?? []).map((a) => ({
@@ -625,9 +646,12 @@ export async function loadCommunity(
       status: a.status as Community["amenityStatus"][number]["status"],
       detail: a.detail,
     })),
-    // The stock forms ship in code; what the board uploads is a row.
+    // The stock forms ship in code; what the board uploads is a row. The
+    // fixture's own "uploaded" examples are the demo board's, not this one's.
     forms: [
-      ...architecturalForms.map((f) => ({ ...f, updatedDate: today })),
+      ...architecturalForms
+        .filter((f) => f.source === "baseline")
+        .map((f) => ({ ...f, updatedDate: today })),
       ...(formRows.data ?? []).map((f) => ({
         id: f.id,
         label: f.label,

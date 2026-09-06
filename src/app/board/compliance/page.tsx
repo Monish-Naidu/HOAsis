@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   Badge,
+  Button,
   Card,
   CardHeader,
   EmptyState,
@@ -26,7 +27,8 @@ import { complianceRegister } from "@/lib/compliance";
 import type { ObligationCadence } from "@/lib/data/obligations";
 import { percentFunded } from "@/lib/reserves";
 import { useAppState } from "@/lib/app-state";
-import { formatDate, relativeDays, shortMoney } from "@/lib/utils";
+import { useToast } from "@/components/app/toast";
+import { formatDate, relativeDays, shortMoney, todayIsoDate } from "@/lib/utils";
 import type { ComplianceStatus } from "@/lib/types";
 
 /** How often, in words rather than in a slug. */
@@ -58,7 +60,20 @@ const statusMeta: Record<
 
 
 export default function BoardCompliance() {
-  const { community } = useAppState();
+  const { community, updateSettings } = useAppState();
+  const { notify } = useToast();
+
+  // The board's word that a duty was met. We hold the date and nothing else.
+  function markDone(key: string, label: string) {
+    const done = { ...(community.settings.complianceDone ?? {}), [key]: todayIsoDate() };
+    updateSettings({ complianceDone: done });
+    notify(`${label} marked done ${formatDate(todayIsoDate(), "long")}.`);
+  }
+  function unmark(key: string) {
+    const done = { ...(community.settings.complianceDone ?? {}) };
+    delete done[key];
+    updateSettings({ complianceDone: done });
+  }
 
   /**
    * The reserve schedule, read from this association's own documents.
@@ -236,6 +251,23 @@ export default function BoardCompliance() {
                           Read where this comes from
                         </Link>
                       ) : null}
+                      {item.cadence === "on-request" || item.cadence === "ongoing" ? null : item.doneOn ? (
+                        <span className="inline-flex h-8 items-center gap-2 text-[13px] text-fg-muted">
+                          Done {formatDate(item.doneOn, "long")}
+                          <button
+                            type="button"
+                            onClick={() => unmark(item.key)}
+                            className="font-semibold text-fg underline-offset-2 hover:underline"
+                          >
+                            Undo
+                          </button>
+                        </span>
+                      ) : (
+                        <Button variant="secondary" size="sm" onClick={() => markDone(item.key, item.label)}>
+                          <CheckCircle2 className="size-3.5" />
+                          Mark done
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </details>

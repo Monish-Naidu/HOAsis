@@ -3,26 +3,13 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Building2, Info, User } from "lucide-react";
-import { Button, Card } from "@/components/ui/primitives";
+import { Button, ButtonLink, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { requestPasswordReset, signInWithPassword, signUp } from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
-
-/**
- * A shared board account, for anyone evaluating the product.
- *
- * Publishing a password is only safe because row level security decides what
- * it can reach, and that has been tested from the other side: this account
- * cannot read a charge, a unit, or a balance belonging to any other
- * association. The worst somebody can do with it is edit the demo.
- */
-const DEMO = {
-  email: "dana@willowcreek.test",
-  password: "WillowCreek2026!",
-};
 
 /**
  * Where somebody goes once they are signed in.
@@ -210,34 +197,14 @@ export function SignInPanel() {
 
       {hasSupabase ? (
         <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg">Try a real association</p>
+          <p className="text-[13px] font-semibold text-fg">Just looking?</p>
           <p className="mt-1 text-[13px] leading-snug text-fg-muted">
-            A demo board, stored in the database rather than in this browser. It can only
-            reach its own association, which is enforced by the database rather than by
-            this screen.
+            Set up a community and look around before making an account. It is built in this
+            browser only, and nothing about it is saved anywhere else.
           </p>
-          <dl className="mt-3 space-y-1 font-mono text-[13px] text-fg-muted">
-            <div className="flex gap-2">
-              <dt className="w-16 shrink-0 text-fg-subtle">email</dt>
-              <dd className="min-w-0 truncate text-fg">{DEMO.email}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-16 shrink-0 text-fg-subtle">password</dt>
-              <dd className="min-w-0 truncate text-fg">{DEMO.password}</dd>
-            </div>
-          </dl>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="mt-3 w-full"
-            onClick={() => {
-              setMode("sign-in");
-              setEmail(DEMO.email);
-              setPassword(DEMO.password);
-            }}
-          >
-            Fill these in
-          </Button>
+          <ButtonLink href="/start" variant="secondary" size="sm" className="mt-3 w-full">
+            Look around first
+          </ButtonLink>
         </Card>
       ) : null}
 

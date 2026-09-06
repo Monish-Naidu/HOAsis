@@ -31,6 +31,23 @@ export function AddReserveComponent() {
     "h-10 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
   const cents = Math.round((Number(cost) || 0) * 100);
 
+  function submit() {
+        addReserveComponent({
+          id: `rc-${Date.now()}`,
+          name: name.trim(),
+          usefulLifeYears: Math.max(1, Number(life) || 1),
+          remainingLifeYears: Math.max(0, Number(remaining) || 0),
+          replacementCostCents: cents,
+          // Nothing saved against it yet. Assuming otherwise would flatter
+          // the funding figure, which is the one number that must not.
+          fundedCents: 0,
+        });
+        setName("");
+        setCost("");
+        setOpen(false);
+        notify(`${name.trim()} added to the reserve schedule`);
+  }
+
   if (!open) {
     return (
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
@@ -52,7 +69,13 @@ export function AddReserveComponent() {
           </Button>
         }
       />
-      <div className="flex flex-wrap items-end gap-3 px-5 py-4">
+      <form
+        className="flex flex-wrap items-end gap-3 px-5 py-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (name.trim() && cents > 0) submit();
+        }}
+      >
         <label className="block">
           <span className="text-[13px] font-semibold text-fg-muted">What it is</span>
           <input
@@ -97,28 +120,10 @@ export function AddReserveComponent() {
             className={`mt-1.5 w-36 ${field}`}
           />
         </label>
-        <Button
-          disabled={!name.trim() || cents <= 0}
-          onClick={() => {
-            addReserveComponent({
-              id: `rc-${Date.now()}`,
-              name: name.trim(),
-              usefulLifeYears: Math.max(1, Number(life) || 1),
-              remainingLifeYears: Math.max(0, Number(remaining) || 0),
-              replacementCostCents: cents,
-              // Nothing saved against it yet. Assuming otherwise would flatter
-              // the funding figure, which is the one number that must not.
-              fundedCents: 0,
-            });
-            setName("");
-            setCost("");
-            setOpen(false);
-            notify(`${name.trim()} added to the reserve schedule`);
-          }}
-        >
+        <Button type="submit" disabled={!name.trim() || cents <= 0}>
           Add it
         </Button>
-      </div>
+      </form>
     </Card>
   );
 }

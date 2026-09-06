@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, FormEventHandler, ReactNode } from "react";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,15 @@ export function Card({
   children,
   as: As = "div",
   ...props
-}: ComponentProps<"div"> & { as?: "div" | "section" | "article" }) {
+}: Omit<ComponentProps<"div">, "ref"> & {
+  as?: "div" | "section" | "article" | "form";
+  onSubmit?: FormEventHandler<HTMLFormElement>;
+}) {
+  // A card can be a form so Enter in any field submits it. The handlers
+  // are typed for a div; casting keeps one primitive rather than two.
+  const Tag = As as "div";
   return (
-    <As
+    <Tag
       className={cn(
         // min-w-0 so a card in a grid or flex row can shrink below the
         // width of a scrolling table inside it. Without it the table's
@@ -25,7 +31,7 @@ export function Card({
       {...props}
     >
       {children}
-    </As>
+    </Tag>
   );
 }
 
@@ -152,10 +158,14 @@ export function Button({
   variant = "secondary",
   size = "md",
   className,
+  type = "button",
   ...props
 }: ComponentProps<"button"> & { variant?: ButtonVariant; size?: ButtonSize }) {
+  // Native buttons default to submit, so a Cancel inside a form would post
+  // it. Submit buttons say so explicitly; everything else is just a button.
   return (
     <button
+      type={type}
       className={cn(
         buttonStyles.base,
         buttonStyles.variant[variant],

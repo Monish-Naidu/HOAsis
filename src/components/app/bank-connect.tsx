@@ -33,11 +33,21 @@ type Route = "link" | "manual";
 export function BankConnect({
   kind = "operating",
   onConnect,
+  linked = true,
 }: {
   kind?: AccountKind;
   onConnect: (account: BankAccount) => void;
+  /**
+   * Whether the "find your bank" handoff is offered.
+   *
+   * There is no live bank-linking provider yet; the institution list is a
+   * stand-in so a browser-only copy can be walked end to end. A real
+   * association must not be handed a pretend account, so it types its
+   * details and the last four are all that is kept.
+   */
+  linked?: boolean;
 }) {
-  const [route, setRoute] = useState<Route>("link");
+  const [route, setRoute] = useState<Route>(linked ? "link" : "manual");
   const [manual, setManual] = useState({ institution: "", routingNumber: "", accountNumber: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +79,7 @@ export function BankConnect({
 
   return (
     <div className="flex flex-col gap-4">
+      {linked ? (
       <div className="grid grid-cols-2 gap-2">
         {(
           [
@@ -92,8 +103,9 @@ export function BankConnect({
           </button>
         ))}
       </div>
+      ) : null}
 
-      {route === "link" ? (
+      {route === "link" && linked ? (
         <div className="flex flex-col gap-2">
           {supportedInstitutions.map((institution) => (
             <button

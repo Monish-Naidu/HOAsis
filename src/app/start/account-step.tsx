@@ -105,7 +105,7 @@ export function AccountStep({
   const alreadyHasAccount = failure ? /already/i.test(failure) : false;
 
   return (
-    <div className="space-y-6">
+    <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
       <div>
         <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.028em] text-fg">
           Start with an account
@@ -167,7 +167,7 @@ export function AccountStep({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button size="lg" disabled={busy || !ready} onClick={() => void create()}>
+        <Button type="submit" size="lg" disabled={busy || !ready} onClick={() => void create()}>
           {busy ? "One moment" : "Continue"}
           {busy ? null : <ArrowRight className="size-4" />}
         </Button>
@@ -182,7 +182,7 @@ export function AccountStep({
         nobody else can sign in to it, and it is not the association. Come back signed in
         when you are ready and it takes three minutes.
       </p>
-    </div>
+    </form>
   );
 }
 
