@@ -1,5 +1,5 @@
-import type { AmenityBooking, BookingRules, CommunityAmenity } from "@/lib/types";
-import { todayIsoDate } from "@/lib/utils";
+import type { AmenityBooking, Blackout, BookingRules, CommunityAmenity } from "@/lib/types";
+import { money, todayIsoDate } from "@/lib/utils";
 
 /**
  * Turning a board's rules into the slots a resident may actually pick.
@@ -73,6 +73,22 @@ function weekKey(iso: string): string {
 }
 
 /**
+ * The blackout covering a day, if one does.
+ *
+ * A blackout is a closed sign with a reason on it: the floor is being
+ * refinished, the board booked it for the annual meeting, it is Christmas.
+ * Inclusive on both ends, because "closed the 24th to the 26th" means the
+ * 26th too, in the words the board would use.
+ */
+export function blackoutFor(amenity: CommunityAmenity, date: string): Blackout | undefined {
+  return (amenity.rules?.blackouts ?? []).find((b) => b.from <= date && date <= b.to);
+}
+
+export function isBlackedOut(amenity: CommunityAmenity, date: string): boolean {
+  return Boolean(blackoutFor(amenity, date));
+}
+
+/**
  * Every slot on one day, marked with whether this home may take it.
  *
  * A slot is offered unless a specific rule stops it, and when one does the slot
@@ -98,6 +114,7 @@ export function slotsFor(
 
   const dayCapReached = minePerDay >= rules.maxPerDay;
   const weekCapReached = minePerWeek >= rules.maxPerWeek;
+  const closed = blackoutFor(amenity, date);
 
   const slots: Slot[] = [];
   for (
@@ -109,7 +126,8 @@ export function slotsFor(
     const taken = onThisDay.some((b) => start < b.endMinute && end > b.startMinute);
 
     let blockedBecause: string | undefined;
-    if (taken) blockedBecause = "Already booked";
+    if (closed) blockedBecause = `Closed: ${closed.reason || "not available"}`;
+    else if (taken) blockedBecause = "Already booked";
     else if (dayCapReached)
       blockedBecause =
         rules.maxPerDay === 1
@@ -158,6 +176,10 @@ export function describeRules(amenity: CommunityAmenity): string {
   );
   if (r.maxPerWeek < r.maxPerDay * 7) parts.push(`${r.maxPerWeek} times a week`);
   parts.push(`book up to ${r.advanceDays} days ahead`);
+  // Whole dollars in a sentence; a sign reads "$40", not "$40.00".
+  const whole = (cents: number) => money(cents, { cents: cents % 100 !== 0 });
+  if (r.feeCents && r.feeCents > 0) parts.push(`${whole(r.feeCents)} a booking`);
+  if (r.depositCents && r.depositCents > 0) parts.push(`${whole(r.depositCents)} deposit`);
 
   return `${parts.join(", ")}.`;
 }

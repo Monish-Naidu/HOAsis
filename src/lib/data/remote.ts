@@ -88,7 +88,7 @@ export async function loadCommunity(
     posts, vendors, amenities, announcementRows,
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
-    paymentRows, replyRows,
+    paymentRows, replyRows, actionRows, joinRows, emailRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
@@ -127,6 +127,11 @@ export async function loadCommunity(
     // payments already show as statement lines, so only the unfinished matter.
     supabase.from("payments").select("*").eq("association_id", associationId).in("state", ["pending", "failed"]).order("created_at", { ascending: false }),
     supabase.from("post_replies").select("*").eq("association_id", associationId).order("created_at"),
+    // Board-only rows. RLS hands a resident nothing here, and nothing is
+    // what their screens show, so the same query serves both.
+    supabase.from("action_items").select("*").eq("association_id", associationId).order("created_at"),
+    supabase.from("join_requests").select("*").eq("association_id", associationId).order("created_at", { ascending: false }),
+    supabase.from("email_log").select("*").eq("association_id", associationId).order("sent_at", { ascending: false }).limit(300),
   ]);
 
   // Files open through short lived signed links, made in one batch here so a
@@ -198,7 +203,8 @@ export async function loadCommunity(
       address: unit.address,
       moveInDate: holder?.starts_on ?? unit.created_at.slice(0, 10),
       balanceCents,
-      autopay: false,
+      autopay: Boolean(holder?.autopay),
+      autopayPlan: (holder?.autopay as Owner["autopayPlan"]) ?? undefined,
       standing: standingFor(daysPastDue, balanceCents),
       daysPastDue,
       boardRole:
@@ -279,6 +285,7 @@ export async function loadCommunity(
           }
         : undefined,
       stripeAccountId: a.stripe_account_id ?? undefined,
+      joinCode: a.join_code,
     },
 
     settings: {
@@ -388,6 +395,37 @@ export async function loadCommunity(
     // Reservations are not stored server side yet, so the picker offers every
     // slot rather than pretending a free hour is taken.
     amenityBookings: [],
+    joinRequests: (joinRows.data ?? []).map((j) => ({
+      id: j.id,
+      name: j.full_name,
+      email: j.email,
+      unit: j.unit_label,
+      note: j.note,
+      status: j.status as Community["joinRequests"][number]["status"],
+      requestedOn: j.created_at.slice(0, 10),
+      decidedOn: j.decided_on ?? undefined,
+      decidedBy: j.decided_by ?? undefined,
+    })),
+    actionItems: (actionRows.data ?? []).map((i) => ({
+      id: i.id,
+      title: i.title,
+      ownerName: i.owner_name,
+      meetingId: i.meeting_id ?? undefined,
+      dueOn: i.due_on ?? undefined,
+      doneOn: i.done_on ?? undefined,
+      createdOn: i.created_at.slice(0, 10),
+    })),
+    emailLog: (emailRows.data ?? []).map((e) => ({
+      id: e.id,
+      to: e.to_email,
+      unit: e.unit_id ? unitRows.find((u) => u.id === e.unit_id)?.label : undefined,
+      category: e.category,
+      subject: e.subject,
+      sentAt: e.sent_at,
+      status: (e.status as Community["emailLog"][number]["status"]) ?? undefined,
+      statusAt: e.status_at ?? undefined,
+      error: e.error ?? undefined,
+    })),
     profile: {
       propertyType: a.property_type ?? undefined,
       origin: a.origin ?? undefined,
@@ -465,6 +503,8 @@ export async function loadCommunity(
       agency: v.agency ?? undefined,
       caseNumber: v.case_number ?? undefined,
       resolvedDate: v.resolved_on ?? undefined,
+      ownerFixedDate: v.owner_fixed_on ?? undefined,
+      ownerFixedNote: v.owner_fixed_note ?? undefined,
     })),
     // No table yet. Real associations keep invoices in the browser for now and
     // the Vendors screen says so.
@@ -538,6 +578,7 @@ export async function loadCommunity(
       thread: (r.thread ?? []) as Community["requests"][number]["thread"],
       submission: r.submission ?? undefined,
       certificateId: r.certificate_id ?? undefined,
+      workOrder: (r.work_order as Community["requests"][number]["workOrder"]) ?? undefined,
     })),
 
     documents: (documents.data ?? []).map((d) => ({
@@ -566,6 +607,7 @@ export async function loadCommunity(
       ballotIds: (ballots.data ?? []).filter((b) => b.meeting_id === m.id).map((b) => b.id),
       attendees: [],
       noticeSentDate: m.notice_sent_on ?? undefined,
+      rsvps: (m.rsvps ?? []) as Community["meetings"][number]["rsvps"],
     })),
 
     ballots: (ballots.data ?? []).map((b) => {

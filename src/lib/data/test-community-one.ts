@@ -246,6 +246,7 @@ export const testCommunityOne: Community = {
     duesCadence: "monthly",
     addressLine: "Bothell, Washington",
     managedBy: "self",
+    joinCode: "TESTC1",
   },
 
   settings: {
@@ -663,6 +664,9 @@ export const testCommunityOne: Community = {
   // No shared amenities.
   amenities: [],
   amenityBookings: [],
+  joinRequests: [],
+  actionItems: [],
+  emailLog: [],
   amenityStatus: [],
 
   forms: [

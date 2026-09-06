@@ -9,11 +9,12 @@ import {
   Download,
   Mail,
   Paperclip,
+  Wrench,
 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { statusTone } from "@/lib/request-status";
-import { formatDate, relativeDays } from "@/lib/utils";
+import { formatDate, money, relativeDays } from "@/lib/utils";
 
 export default function RequestDetail({
   params,
@@ -115,6 +116,55 @@ export default function RequestDetail({
             </div>
           </div>
         </Card>
+      ) : null}
+
+      {request.workOrder ? (
+        <section>
+          <SectionTitle>Work order</SectionTitle>
+          <Card className="p-4">
+            <div className="flex items-start gap-3">
+              <Wrench className="mt-0.5 size-4 shrink-0 text-fg-muted" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-fg">
+                  {request.workOrder.completedOn
+                    ? `Done ${formatDate(request.workOrder.completedOn, "long")}`
+                    : request.workOrder.scheduledOn
+                      ? `Scheduled ${formatDate(request.workOrder.scheduledOn, "long")}`
+                      : `Opened ${formatDate(request.workOrder.openedOn, "long")}`}
+                </p>
+                <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
+                  {request.workOrder.vendorName || "Vendor not yet chosen"}
+                  {request.workOrder.scheduledOn && !request.workOrder.completedOn
+                    ? ` · ${relativeDays(request.workOrder.scheduledOn)}`
+                    : ""}
+                </p>
+              </div>
+            </div>
+            {request.workOrder.estimateCents || request.workOrder.costCents ? (
+              <dl className="mt-3 space-y-1 rounded-lg bg-surface-2 p-3">
+                {request.workOrder.estimateCents ? (
+                  <div className="flex justify-between text-[13px]">
+                    <dt className="text-fg-muted">Estimate</dt>
+                    <dd className="tnum font-medium text-fg">
+                      {money(request.workOrder.estimateCents)}
+                    </dd>
+                  </div>
+                ) : null}
+                {request.workOrder.costCents ? (
+                  <div className="flex justify-between text-[13px]">
+                    <dt className="text-fg-muted">Cost</dt>
+                    <dd className="tnum font-medium text-fg">{money(request.workOrder.costCents)}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : null}
+            {request.workOrder.notes ? (
+              <p className="mt-3 text-[13px] leading-relaxed text-fg-muted">
+                {request.workOrder.notes}
+              </p>
+            ) : null}
+          </Card>
+        </section>
       ) : null}
 
       {request.attachments.length ? (

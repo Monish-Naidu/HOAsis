@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Gavel, ShieldCheck } from "lucide-react";
-import { Badge, Callout, Card, EmptyState } from "@/components/ui/primitives";
+import { ArrowLeft, Check, Gavel, ShieldCheck } from "lucide-react";
+import { Badge, Button, Callout, Card, EmptyState } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
+import { useToast } from "@/components/app/toast";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { resolveCitation } from "@/lib/governing";
 import type { Violation } from "@/lib/types";
@@ -157,21 +159,7 @@ export function NoticesScreen() {
                   />
                 </div>
 
-                {violation.stage !== "cured" ? (
-                  <div className="border-t border-border bg-surface-2 px-4 py-3.5">
-                    <p className="text-[13px] leading-relaxed text-fg-muted">
-                      If you disagree, open a request and choose an appeal. It goes to the
-                      board, and it is answered on the record.
-                    </p>
-                    <Link
-                      href="/resident/requests/new"
-                      className="mt-2 inline-flex h-9 items-center gap-2 rounded-lg border border-border-2 bg-surface px-3.5 text-[15px] font-medium text-fg transition-colors hover:bg-surface-3"
-                    >
-                      <Gavel className="size-3.5" />
-                      Appeal this
-                    </Link>
-                  </div>
-                ) : null}
+                {violation.stage !== "cured" ? <OpenFooter violation={violation} /> : null}
               </Card>
             );
           })}
@@ -180,6 +168,91 @@ export function NoticesScreen() {
             The association does not tell you whether a neighbour raised this, and it does not
             tell any neighbour what came of it. Enforcement is between you and the board.
           </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The two answers an owner has to an open notice: it is fixed, or I disagree.
+ *
+ * Saying it is fixed is not the end of it; the board still closes the notice.
+ * But it puts the owner's word and date on the record and moves the notice to
+ * the top of the board's list, which is what the owner needed from it.
+ */
+function OpenFooter({ violation }: { violation: Violation }) {
+  const { markViolationFixed } = useAppState();
+  const { notify } = useToast();
+  const [saying, setSaying] = useState(false);
+  const [note, setNote] = useState("");
+
+  function send() {
+    void markViolationFixed(violation.id, note).then((ok) => {
+      if (!ok) return;
+      setSaying(false);
+      notify("The board has been told. They close the notice once they have checked.");
+    });
+  }
+
+  return (
+    <div className="border-t border-border bg-surface-2 px-4 py-3.5">
+      {violation.ownerFixedDate ? (
+        <p className="flex items-start gap-1.5 text-[13px] leading-relaxed text-fg-muted">
+          <Check className="mt-0.5 size-3.5 shrink-0 text-ok" />
+          <span>
+            You told the board this was fixed on {formatDate(violation.ownerFixedDate, "long")}
+            {violation.ownerFixedNote ? ` · ${violation.ownerFixedNote}` : ""}. They close it
+            once they have checked.
+          </span>
+        </p>
+      ) : saying ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
+          }}
+        >
+          <label className="block">
+            <span className="text-[13px] font-semibold text-fg-muted">
+              Anything the board should know (optional)
+            </span>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              autoFocus
+              placeholder="Replaced the fence boards on Saturday."
+              className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+            />
+          </label>
+          <div className="mt-2 flex gap-2">
+            <Button type="submit" variant="primary" size="sm">
+              Send
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSaying(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <p className="text-[13px] leading-relaxed text-fg-muted">
+            Fixed it? Tell the board and they will close this. If you disagree, open a request
+            and choose an appeal. It is answered on the record.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setSaying(true)}>
+              <Check className="size-3.5" />I have fixed this
+            </Button>
+            <Link
+              href="/resident/requests/new"
+              className="inline-flex h-8 items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg transition-colors hover:bg-surface-3"
+            >
+              <Gavel className="size-3.5" />
+              Appeal this
+            </Link>
+          </div>
         </>
       )}
     </div>

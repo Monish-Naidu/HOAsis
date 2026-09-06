@@ -1,10 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, SlidersHorizontal } from "lucide-react";
+import { CalendarOff, Clock, Plus, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/primitives";
 import { describeRules, formatMinute, rulesFor } from "@/lib/bookings";
-import type { BookingRules, CommunityAmenity } from "@/lib/types";
+import type { Blackout, BookingRules, CommunityAmenity } from "@/lib/types";
+import { formatDate, todayIsoDate } from "@/lib/utils";
+
+/** Dollars typed in a field, kept as integer cents. Blank or nonsense is zero. */
+function toCents(value: string): number {
+  const parsed = Number(value.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed * 100)) : 0;
+}
+
+function fromCents(cents: number | undefined): string {
+  if (!cents) return "";
+  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
+}
 
 /**
  * The rules a board sets on a bookable space.
@@ -28,6 +40,10 @@ export function AmenityRules({
   const [open, setOpen] = useState(false);
   const rules = rulesFor(amenity);
   const set = (patch: Partial<BookingRules>) => onChange({ ...amenity.rules, ...patch });
+  const blackouts = rules.blackouts ?? [];
+  const setBlackouts = (next: Blackout[]) => set({ blackouts: next.length ? next : undefined });
+  const patchBlackout = (index: number, patch: Partial<Blackout>) =>
+    setBlackouts(blackouts.map((b, i) => (i === index ? { ...b, ...patch } : b)));
 
   const field =
     "h-9 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand";
@@ -165,6 +181,119 @@ export function AmenityRules({
               </span>
             </span>
           </label>
+
+          {/* Money. A fee is what a booking costs; a deposit comes back. Both
+              are zero for most spaces, so the fields stay small. */}
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[13px] font-semibold text-fg-muted">Fee per booking</span>
+              <div className="relative mt-1.5">
+                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[15px] text-fg-subtle">
+                  $
+                </span>
+                <input
+                  inputMode="decimal"
+                  placeholder="0"
+                  defaultValue={fromCents(rules.feeCents)}
+                  onBlur={(e) => set({ feeCents: toCents(e.target.value) || undefined })}
+                  className={`w-full pl-6 ${field}`}
+                />
+              </div>
+              <span className="mt-1 block text-[13px] leading-snug text-fg-subtle">
+                Goes on the home&apos;s statement once the booking is confirmed.
+              </span>
+            </label>
+            <label className="block">
+              <span className="text-[13px] font-semibold text-fg-muted">Deposit</span>
+              <div className="relative mt-1.5">
+                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[15px] text-fg-subtle">
+                  $
+                </span>
+                <input
+                  inputMode="decimal"
+                  placeholder="0"
+                  defaultValue={fromCents(rules.depositCents)}
+                  onBlur={(e) => set({ depositCents: toCents(e.target.value) || undefined })}
+                  className={`w-full pl-6 ${field}`}
+                />
+              </div>
+              <span className="mt-1 block text-[13px] leading-snug text-fg-subtle">
+                Held and returned. For anything with a key or a kitchen.
+              </span>
+            </label>
+          </div>
+
+          {/* Closed days. A blackout is a sign on the door with the reason on
+              it, and the reason is what the resident reads on the picker. */}
+          <div className="mt-4">
+            <p className="flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
+              <CalendarOff className="size-3.5" />
+              Closed days
+            </p>
+            {blackouts.length === 0 ? (
+              <p className="mt-1 text-[13px] leading-snug text-fg-subtle">
+                None. Add one for a repair, a private event, or a holiday.
+              </p>
+            ) : null}
+            <div className="mt-2 space-y-2">
+              {blackouts.map((b, index) => (
+                <div
+                  key={index}
+                  className="grid gap-2 sm:grid-cols-[9.5rem_9.5rem_1fr_auto] sm:items-center"
+                >
+                  <input
+                    type="date"
+                    aria-label="Closed from"
+                    value={b.from}
+                    onChange={(e) =>
+                      patchBlackout(index, {
+                        from: e.target.value,
+                        to: b.to < e.target.value ? e.target.value : b.to,
+                      })
+                    }
+                    className={field}
+                  />
+                  <input
+                    type="date"
+                    aria-label="Closed until"
+                    value={b.to}
+                    min={b.from}
+                    onChange={(e) => patchBlackout(index, { to: e.target.value })}
+                    className={field}
+                  />
+                  <input
+                    aria-label="Reason"
+                    value={b.reason}
+                    placeholder="Floor refinishing"
+                    onChange={(e) => patchBlackout(index, { reason: e.target.value })}
+                    className={field}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remove the closure from ${formatDate(b.from, "medium")}`}
+                    onClick={() => setBlackouts(blackouts.filter((_, i) => i !== index))}
+                    className="flex size-9 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface hover:text-danger"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() =>
+                setBlackouts([
+                  ...blackouts,
+                  { from: todayIsoDate(), to: todayIsoDate(), reason: "" },
+                ])
+              }
+            >
+              <Plus className="size-3.5" />
+              Add a closed day
+            </Button>
+          </div>
 
           {/* What the resident will read, shown back to the board. */}
           <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-[13px] leading-relaxed text-fg-muted">

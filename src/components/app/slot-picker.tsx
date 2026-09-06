@@ -1,10 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays } from "lucide-react";
-import { bookableDays, describeRules, formatMinute, slotsFor } from "@/lib/bookings";
+import { CalendarDays, Receipt } from "lucide-react";
+import {
+  blackoutFor,
+  bookableDays,
+  describeRules,
+  formatMinute,
+  isBlackedOut,
+  rulesFor,
+  slotsFor,
+} from "@/lib/bookings";
 import type { AmenityBooking, CommunityAmenity } from "@/lib/types";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, money } from "@/lib/utils";
 
 /**
  * Picking a time, with the board's rules already applied.
@@ -35,6 +43,8 @@ export function SlotPicker({
   );
 
   const free = slots.filter((s) => s.allowed).length;
+  const closed = blackoutFor(amenity, date);
+  const rules = rulesFor(amenity);
 
   return (
     <div className="rounded-card border border-border bg-surface-2 p-4">
@@ -55,9 +65,14 @@ export function SlotPicker({
               onChange(null);
             }}
             aria-pressed={date === day}
+            // Closed days stay pressable so the reason can be read; they are
+            // dimmed rather than removed, because a gap in the strip reads as
+            // a bug rather than a closure.
+            title={blackoutFor(amenity, day)?.reason}
             className={cn(
               "shrink-0 rounded-lg px-3 py-2 text-center transition-colors",
               date === day ? "bg-brand text-brand-fg" : "bg-surface text-fg-muted hover:text-fg",
+              isBlackedOut(amenity, day) && date !== day && "opacity-40",
             )}
           >
             <span className="block text-[11px] font-medium uppercase tracking-wide opacity-75">
@@ -95,10 +110,30 @@ export function SlotPicker({
         })}
       </div>
 
-      {free === 0 ? (
+      {closed ? (
+        <p className="mt-3 text-[13px] text-warn">
+          Closed {formatDate(date, "medium")}
+          {closed.reason ? `: ${closed.reason}` : ""}. Try another day.
+        </p>
+      ) : free === 0 ? (
         <p className="mt-3 text-[13px] text-warn">
           {slots[0]?.blockedBecause ?? "Nothing free"} on{" "}
           {formatDate(date, "medium")}. Try another day.
+        </p>
+      ) : null}
+
+      {rules.feeCents || rules.depositCents ? (
+        <p className="mt-3 flex items-start gap-1.5 text-[13px] leading-snug text-fg-muted">
+          <Receipt className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            {rules.feeCents
+              ? `${money(rules.feeCents)} a booking, charged to your statement when the board confirms.`
+              : null}
+            {rules.feeCents && rules.depositCents ? " " : null}
+            {rules.depositCents
+              ? `${money(rules.depositCents)} deposit, returned after.`
+              : null}
+          </span>
         </p>
       ) : null}
 

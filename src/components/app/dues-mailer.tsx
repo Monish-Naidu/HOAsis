@@ -5,6 +5,7 @@ import { AlertTriangle, Mail, Send, Users } from "lucide-react";
 import { Badge, Button, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
+import { EmailDelivery } from "@/components/app/email-delivery";
 import { delinquency } from "@/lib/metrics";
 import { cn, money, pluralize } from "@/lib/utils";
 
@@ -89,6 +90,7 @@ export function DuesMailer() {
   }
 
   return (
+    <>
     <Card className="mt-5">
       <CardHeader
         title="Dues email"
@@ -153,6 +155,8 @@ export function DuesMailer() {
         </div>
       ) : null}
     </Card>
+      <EmailDelivery />
+    </>
   );
 }
 

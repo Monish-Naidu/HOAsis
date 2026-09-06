@@ -29,6 +29,7 @@ import {
   usePendingApprovals,
 } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
+import { ActionItems } from "@/components/app/action-items";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 import { homeWording } from "@/lib/wording";
@@ -163,6 +164,11 @@ export default function BoardDashboard() {
               admin-level only, and board members flip to the resident view
               for the rest. Quick Actions is what remains. */}
           <QuickActions />
+
+          {/* The last meeting's homework. Lives here rather than only on
+              Meetings because it is the thing a director should see on
+              arrival, not the thing they go looking for. */}
+          <ActionItems className="mt-5" />
         </>
       ) : null}
     </>

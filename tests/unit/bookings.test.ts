@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeRules, rulesFor, slotsFor, formatMinute } from "@/lib/bookings";
+import { blackoutFor, describeRules, rulesFor, slotsFor, formatMinute } from "@/lib/bookings";
 import type { AmenityBooking, CommunityAmenity } from "@/lib/types";
 
 const clubhouse: CommunityAmenity = {
@@ -90,6 +90,33 @@ describe("booking rules", () => {
   it("states the rules in a sentence a resident can read", () => {
     expect(describeRules(clubhouse)).toBe(
       "9 AM to 12 PM, one hour at a time, once a day, 2 times a week, book up to 30 days ahead.",
+    );
+  });
+
+  it("closes every slot on a blacked out day and says why", () => {
+    const closed: CommunityAmenity = {
+      ...clubhouse,
+      rules: {
+        ...clubhouse.rules,
+        blackouts: [{ from: "2026-09-01", to: "2026-09-03", reason: "Floor refinishing" }],
+      },
+    };
+    // Inclusive on both ends: the 3rd is closed, the 4th is open.
+    expect(blackoutFor(closed, "2026-09-03")?.reason).toBe("Floor refinishing");
+    expect(blackoutFor(closed, "2026-09-04")).toBeUndefined();
+    const slots = slotsFor(closed, "2026-09-02", [], "7");
+    expect(slots.every((s) => !s.allowed)).toBe(true);
+    expect(slots[0].blockedBecause).toBe("Closed: Floor refinishing");
+    expect(slotsFor(closed, "2026-09-04", [], "7")[0].allowed).toBe(true);
+  });
+
+  it("puts the fee and the deposit in the sentence", () => {
+    const paid = {
+      ...clubhouse,
+      rules: { ...clubhouse.rules, feeCents: 4_000, depositCents: 15_000 },
+    };
+    expect(describeRules(paid)).toBe(
+      "9 AM to 12 PM, one hour at a time, once a day, 2 times a week, book up to 30 days ahead, $40 a booking, $150 deposit.",
     );
   });
 

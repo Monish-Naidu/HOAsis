@@ -28,6 +28,7 @@ import {
   Stat,
 } from "@/components/ui/primitives";
 import { TemplateComposer } from "@/components/app/template-composer";
+import { JoinRequests } from "@/components/app/join-requests";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -289,6 +290,8 @@ export default function BoardHomeowners() {
           onClose={() => setComposer(null)}
         />
       ) : null}
+
+      {maySeeRoster ? <JoinRequests /> : null}
 
       <Card className="mt-5">
         {/* Toolbar */}

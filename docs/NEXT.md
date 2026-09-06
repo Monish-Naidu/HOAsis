@@ -8,6 +8,49 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-06: the ranked list, built
+
+The nine things the competitor comparison (`docs/research/`) said every
+serious product has and this one did not. All nine ship in this pass, in
+demo and remote mode, on migration 0029 (`0029_ranked_list.sql`), proved by
+`scripts/verify-ranked-list.mjs` (21 checks, in `db:verify`).
+
+- **Autopay with a cap and a skipped month.** The owner's plan lives on
+  their membership (`memberships.autopay`, `set_my_autopay()`); the pay
+  screen starts from it, saves every change, and derives the next run date
+  from the association's own next charge date. Still a standing instruction
+  until Stripe runs it, but one the roster can already see.
+- **Owner says fixed.** Two columns on the violation and
+  `mark_violation_fixed()`, which lets a home write only those two on its
+  own notices. The resident's notice gets "I have fixed this" with a note;
+  the board's queue shows "Owner says fixed" first.
+- **Work orders** hang off a maintenance request (`requests.work_order`):
+  vendor, scheduled date, estimate, actual cost, done. What changed is said
+  in the request thread, so the owner reads it too.
+- **Amenity fees, deposits and blackouts** are booking rules (jsonb, no
+  migration). A blacked-out day offers no slot and says why; the fee is on
+  the picker and in the request summary.
+- **Meeting RSVP.** `rsvp_meeting()` replaces the caller's own entry in
+  `meetings.rsvps`. Residents answer from the vote page; the board sees
+  counts and names under Upcoming.
+- **Print a notice as a letter.** `notice-letter.tsx`, a print-only sheet
+  from the violation and the association, opened from the violation detail.
+- **Email delivery tracking.** `/api/email/webhook` takes Resend's signed
+  events and writes `email_log.status`. The dues mailer shows what was
+  sent and what became of it. **Needs `RESEND_WEBHOOK_SECRET` and a
+  webhook in the Resend dashboard pointed at that route.**
+- **Board action items** (`action_items`, board members read, voting
+  capability writes): who agreed to do what, by when, from which meeting.
+  On the dashboard and under Meetings.
+- **Request to join.** Every association has a six-character `join_code`
+  (Settings shows it with a copy link). `/join` without a token is the ask
+  form, callable signed out through `request_to_join()`. The board's
+  Homeowners page has the queue; letting somebody in is `add_household`,
+  so nothing new can seat a person.
+
+`database.types.ts` is hand-patched again for 0029: `gen types` needs
+either the access token or Docker, and neither is available here.
+
 ## 2026-09-05: every screen driven in Chrome, both modes, and what it turned up
 
 Monish asked for the onboarding, every board tab and every resident tab to be

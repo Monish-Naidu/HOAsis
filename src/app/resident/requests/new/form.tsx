@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
-import { formatMinute } from "@/lib/bookings";
+import { formatMinute, rulesFor } from "@/lib/bookings";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { HomeRequest, RequestKind } from "@/lib/types";
-import { cn, formatDate, todayIsoDate } from "@/lib/utils";
+import { cn, formatDate, money, todayIsoDate } from "@/lib/utils";
 
 const kinds = [
   {
@@ -111,6 +111,12 @@ export function NewRequestForm() {
         ? `${selectedAmenity.name}${
             slot
               ? `, ${formatDate(slot.date, "medium")} at ${formatMinute(slot.startMinute)}`
+              : ""
+          }${
+            // The fee rides in the request itself, so the board's approval
+            // and the owner's statement line say the same number.
+            rulesFor(selectedAmenity).feeCents
+              ? `, ${money(rulesFor(selectedAmenity).feeCents!)} booking fee`
               : ""
           }. ${body.trim()}`
         : kind === "architectural" && selectedForm

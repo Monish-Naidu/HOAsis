@@ -5,8 +5,43 @@ import { CalendarDays, CalendarPlus, Radio } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Stat } from "@/components/ui/primitives";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
+import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
+import type { Meeting } from "@/lib/types";
+
+/**
+ * Who said they are coming. A headcount before the day is how a board knows
+ * whether to book the clubhouse or the President's kitchen, and whether an
+ * annual meeting will make quorum at all.
+ */
+function Rsvps({ meeting }: { meeting: Meeting }) {
+  const rsvps = meeting.rsvps ?? [];
+  if (rsvps.length === 0) return null;
+  const coming = rsvps.filter((r) => r.response === "yes");
+  const not = rsvps.filter((r) => r.response === "no");
+  return (
+    <details className="mt-1.5 text-[13px]">
+      <summary className="cursor-pointer select-none font-medium text-fg-muted hover:text-fg">
+        {coming.length} coming{not.length ? ` · ${not.length} can't` : ""}
+      </summary>
+      <ul className="mt-1.5 grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
+        {[...coming, ...not].map((r) => (
+          <li key={r.profileId ?? `${r.unit}-${r.name}`} className="flex items-center gap-2 text-fg-muted">
+            <span
+              className={`size-1.5 shrink-0 rounded-full ${r.response === "yes" ? "bg-ok" : "bg-fg-subtle"}`}
+            />
+            <span className="truncate">{r.name}</span>
+            <span className="ml-auto shrink-0 text-fg-subtle">
+              {r.unit ? `Unit ${r.unit}` : ""}
+              {r.response === "no" ? " · can't make it" : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 /**
  * Meetings, on their own page since the 2026-09-01 design. They lived inside
@@ -162,10 +197,13 @@ export default function BoardMeetings() {
                   : "Notice not sent"}
                 {m.ballotIds.length ? ` · ${m.ballotIds.length} ballot on the agenda` : ""}
               </p>
+              <Rsvps meeting={m} />
             </div>
           </div>
         ))}
       </Card>
+
+      <ActionItems className="mt-5" />
     </>
   );
 }

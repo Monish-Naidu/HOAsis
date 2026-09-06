@@ -334,6 +334,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       duesCadence: draft.duesCadence,
       addressLine: `${draft.city}, ${draft.stateName}`,
       managedBy: "self",
+      joinCode: draft.name.replace(/[^a-z0-9]/gi, "").slice(0, 6).toUpperCase() || "JOINUS",
     },
 
     settings: {
@@ -402,6 +403,9 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     amenities: amenitiesFromSpaces(draft.sharedSpaces),
 
     amenityBookings: [],
+    joinRequests: [],
+    actionItems: [],
+    emailLog: [],
     amenityStatus: [],
     // Baseline forms ship with the product, so the architectural request
     // dropdown is useful before the board has uploaded anything of their own.

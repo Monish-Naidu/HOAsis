@@ -38,6 +38,7 @@ import {
   specialAssessments as mmAssessments,
 } from "./shared-costs";
 import { amenityBookings as mmBookings } from "./bookings";
+import { actionItems as mmActionItems, joinRequests as mmJoinRequests } from "./board-items";
 import { messageTemplates as mmTemplates } from "./templates";
 import { ballots as mmBallots, meetings as mmMeetings } from "./voting";
 import { testCommunityOne } from "./test-community-one";
@@ -78,6 +79,9 @@ export const mehrMeadows: Community = {
   posts: mmPosts,
   amenities: mmAmenities,
   amenityBookings: mmBookings,
+  joinRequests: mmJoinRequests,
+  actionItems: mmActionItems,
+  emailLog: [],
   amenityStatus: mmAmenityStatus,
   forms: mmForms,
   templates: mmTemplates,

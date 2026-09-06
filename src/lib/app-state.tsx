@@ -32,6 +32,7 @@ import {
   remoteSnapshot,
 } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import type { Json } from "@/lib/supabase/database.types";
 import {
   documentTitle,
   formatSize,
@@ -58,8 +59,12 @@ import {
 } from "@/lib/core/guards";
 import type {
   Account,
+  ActionItem,
   Announcement,
+  AutopayPlan,
   Capability,
+  JoinRequest,
+  WorkOrder,
   ForumPost,
   ForumReply,
   HomeRequest,
@@ -271,6 +276,36 @@ interface AppState {
   replyToPost: (postId: string, body: string) => boolean;
   /** The signed in owner's own phone and mailing address. */
   updateMyContact: (input: { phone: string; mailingAddress: string }) => Promise<boolean>;
+  /** The signed in owner's autopay, or null to turn it off. */
+  setAutopay: (plan: AutopayPlan | null) => Promise<boolean>;
+  /** The owner's word that a notice about their home is fixed. */
+  markViolationFixed: (violationId: string, note: string) => Promise<boolean>;
+  /** The board's work order on a maintenance request; null takes it off. */
+  setWorkOrder: (requestId: string, workOrder: WorkOrder | null) => void;
+  /** Whether the signed in person is coming to a meeting. */
+  rsvpMeeting: (meetingId: string, response: "yes" | "no") => Promise<boolean>;
+  addActionItem: (input: {
+    title: string;
+    ownerName: string;
+    dueOn?: string;
+    meetingId?: string;
+  }) => void;
+  setActionItemDone: (itemId: string, done: boolean) => void;
+  removeActionItem: (itemId: string) => void;
+  /** Lets a person in: a household on the roster, invited at their address. */
+  approveJoinRequest: (requestId: string, unit: string) => Promise<boolean>;
+  declineJoinRequest: (requestId: string) => Promise<boolean>;
+  /**
+   * Somebody outside asking in. Works signed out: the code names the
+   * association and the board decides. Resolves to the association's name.
+   */
+  requestToJoin: (input: {
+    code: string;
+    name: string;
+    email: string;
+    unit: string;
+    note: string;
+  }) => Promise<{ ok: true; association: string } | { ok: false; error: string }>;
   /** A bill attached by hand. Email-in lands the same way once it is wired. */
   addInvoice: (invoice: Omit<VendorInvoice, "id" | "status" | "via">) => VendorInvoice;
   /**
@@ -404,6 +439,9 @@ const MUTABLE_SLICES = [
   // What the board tells everyone. Was fixture-only, which meant a real
   // association's residents were reading announcements nobody had written.
   "announcements",
+  // What the board agreed to do, and who is waiting to be let in.
+  "actionItems",
+  "joinRequests",
 ] as const;
 
 type MutableSlice = (typeof MUTABLE_SLICES)[number];
@@ -580,6 +618,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const sharedCostBills = useStore(sliceStore(communityId, "sharedCostBills"));
   const ballots = useStore(sliceStore(communityId, "ballots"));
   const templates = useStore(sliceStore(communityId, "templates"));
+  // Three slices that were mutable without being subscribed here, so a demo
+  // write landed in storage and the screen kept showing the seed until reload.
+  const announcementList = useStore(sliceStore(communityId, "announcements"));
+  const actionItemList = useStore(sliceStore(communityId, "actionItems"));
+  const joinRequestList = useStore(sliceStore(communityId, "joinRequests"));
 
   const account = useMemo(() => {
     if (remote.community) {
@@ -2094,7 +2137,305 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       );
       return Promise.resolve(true);
     },
+    [remote.community, communityId],
+  );
+
+
+  /* --------------------------------------------------------------- autopay */
+
+  const setAutopay = useCallback(
+    (plan: AutopayPlan | null) => {
+      if (remote.community) {
+        const rc = remote.community;
+        return remoteWrite(plan ? "Saving autopay" : "Turning autopay off", () =>
+          supabaseBrowser().rpc("set_my_autopay", {
+            p_association_id: rc.id,
+            p_autopay: plan as unknown as Json,
+          }),
+        );
+      }
+      const me = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      if (!me) return Promise.resolve(false);
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) =>
+          o.id === me.ownerId
+            ? { ...o, autopay: Boolean(plan), autopayPlan: plan ?? undefined }
+            : o,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, communityId],
+  );
+
+  /* ------------------------------------------------------ owner says fixed */
+
+  const markViolationFixed = useCallback(
+    (violationId: string, note: string) => {
+      const today = todayIsoDate();
+      if (remote.community) {
+        return remoteWrite("Telling the board", () =>
+          supabaseBrowser().rpc("mark_violation_fixed", {
+            p_violation_id: violationId,
+            p_note: note,
+          }),
+        );
+      }
+      sliceStore(communityId, "violations").update((all) =>
+        all.map((v) =>
+          v.id === violationId && v.stage !== "cured"
+            ? { ...v, ownerFixedDate: today, ownerFixedNote: note.trim() || undefined }
+            : v,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, communityId],
+  );
+
+  /* ------------------------------------------------------------ work orders */
+
+  const setWorkOrder = useCallback(
+    (requestId: string, workOrder: WorkOrder | null) => {
+      const existing = remote.community
+        ? remote.community.requests
+        : sliceStore(communityId, "requests").getSnapshot();
+      const request = existing.find((r) => r.id === requestId);
+      if (!request) return;
+      // The owner reads the same thread the board does, so what changed on
+      // the order is said there in words rather than left for them to diff.
+      const previous = request.workOrder;
+      let body: string | null = null;
+      if (!workOrder) body = "The work order was taken off this request.";
+      else if (!previous) body = `Work order opened${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
+      else if (workOrder.completedOn && !previous.completedOn) body = "The work is done.";
+      else if (workOrder.scheduledOn && workOrder.scheduledOn !== previous.scheduledOn)
+        body = `Scheduled for ${workOrder.scheduledOn}${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
+      const actorName = remote.community
+        ? (remote.community.accounts.find((a) => a.id === remote.profileId)?.name ?? "Board")
+        : (sliceStore(communityId, "accounts")
+            .getSnapshot()
+            .find((a) => a.id === sessionStore.getSnapshot().accountId)?.name ?? "Board");
+      const thread = body
+        ? [
+            ...request.thread,
+            {
+              id: `rt-${request.id}-${request.thread.length}`,
+              at: todayIsoDate(),
+              actor: actorName,
+              actorRole: "board" as const,
+              body,
+              kind: "status" as const,
+            },
+          ]
+        : request.thread;
+      if (remote.community) {
+        void remoteWrite("Saving the work order", () =>
+          supabaseBrowser()
+            .from("requests")
+            .update({ work_order: (workOrder as unknown as Json) ?? null, thread })
+            .eq("id", requestId),
+        );
+        return;
+      }
+      sliceStore(communityId, "requests").update((all) =>
+        all.map((r) =>
+          r.id === requestId ? { ...r, workOrder: workOrder ?? undefined, thread } : r,
+        ),
+      );
+    },
     [remote.community, remote.profileId, communityId],
+  );
+
+  /* ------------------------------------------------------------------ rsvps */
+
+  const rsvpMeeting = useCallback(
+    (meetingId: string, response: "yes" | "no") => {
+      if (remote.community) {
+        return remoteWrite("Saving your answer", () =>
+          supabaseBrowser().rpc("rsvp_meeting", { p_meeting_id: meetingId, p_response: response }),
+        );
+      }
+      const me = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      if (!me) return Promise.resolve(false);
+      sliceStore(communityId, "meetings").update((all) =>
+        all.map((m) =>
+          m.id === meetingId
+            ? {
+                ...m,
+                rsvps: [
+                  ...(m.rsvps ?? []).filter((r) => r.profileId !== me.id),
+                  { profileId: me.id, name: me.name, unit: me.unit, response, at: todayIsoDate() },
+                ],
+              }
+            : m,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, communityId],
+  );
+
+  /* ----------------------------------------------------------- action items */
+
+  const addActionItem = useCallback(
+    (input: { title: string; ownerName: string; dueOn?: string; meetingId?: string }) => {
+      const title = input.title.trim();
+      if (!title) throw new ValidationError("An action item needs to say what", { title });
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Adding the item", () =>
+          supabaseBrowser().from("action_items").insert({
+            association_id: rc.id,
+            title,
+            owner_name: input.ownerName.trim(),
+            due_on: input.dueOn || null,
+            meeting_id: input.meetingId && isUuid(input.meetingId) ? input.meetingId : null,
+            created_by: remote.profileId,
+          }),
+        );
+        return;
+      }
+      const item: ActionItem = {
+        id: `act-${Date.now()}`,
+        title,
+        ownerName: input.ownerName.trim(),
+        dueOn: input.dueOn || undefined,
+        meetingId: input.meetingId,
+        createdOn: todayIsoDate(),
+      };
+      sliceStore(communityId, "actionItems").update((all) => [...all, item]);
+    },
+    [remote.community, remote.profileId, communityId],
+  );
+
+  const setActionItemDone = useCallback(
+    (itemId: string, done: boolean) => {
+      const doneOn = done ? todayIsoDate() : undefined;
+      if (remote.community) {
+        void remoteWrite(done ? "Ticking it off" : "Reopening it", () =>
+          supabaseBrowser()
+            .from("action_items")
+            .update({ done_on: doneOn ?? null })
+            .eq("id", itemId),
+        );
+        return;
+      }
+      sliceStore(communityId, "actionItems").update((all) =>
+        all.map((i) => (i.id === itemId ? { ...i, doneOn } : i)),
+      );
+    },
+    [remote.community, communityId],
+  );
+
+  const removeActionItem = useCallback(
+    (itemId: string) => {
+      if (remote.community) {
+        void remoteWrite("Removing the item", () =>
+          supabaseBrowser().from("action_items").delete().eq("id", itemId),
+        );
+        return;
+      }
+      sliceStore(communityId, "actionItems").update((all) => all.filter((i) => i.id !== itemId));
+    },
+    [remote.community, communityId],
+  );
+
+  /* -------------------------------------------------------- request to join */
+
+  const decideJoin = useCallback(
+    (requestId: string, status: "approved" | "declined") => {
+      const today = todayIsoDate();
+      if (remote.community) {
+        const rc = remote.community;
+        const by = rc.accounts.find((a) => a.id === remote.profileId)?.name ?? "Board";
+        return remoteWrite(status === "approved" ? "Letting them in" : "Declining", () =>
+          supabaseBrowser()
+            .from("join_requests")
+            .update({ status, decided_on: today, decided_by: by })
+            .eq("id", requestId),
+        );
+      }
+      const by =
+        sliceStore(communityId, "accounts")
+          .getSnapshot()
+          .find((a) => a.id === sessionStore.getSnapshot().accountId)?.name ?? "Board";
+      sliceStore(communityId, "joinRequests").update((all) =>
+        all.map((j) =>
+          j.id === requestId ? { ...j, status, decidedOn: today, decidedBy: by } : j,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, remote.profileId, communityId],
+  );
+
+  const approveJoinRequest = useCallback(
+    async (requestId: string, unit: string) => {
+      const existing = remote.community
+        ? remote.community.joinRequests
+        : sliceStore(communityId, "joinRequests").getSnapshot();
+      const request = existing.find((j) => j.id === requestId);
+      if (!request) return false;
+      // The roster is the only door. Approving is adding the household with
+      // the address they gave, so the same rules apply as to any other add.
+      addOwner({ name: request.name, email: request.email, unit });
+      return decideJoin(requestId, "approved");
+    },
+    [remote.community, communityId, addOwner, decideJoin],
+  );
+
+  const declineJoinRequest = useCallback(
+    (requestId: string) => decideJoin(requestId, "declined"),
+    [decideJoin],
+  );
+
+  const requestToJoin = useCallback(
+    async (input: { code: string; name: string; email: string; unit: string; note: string }) => {
+      const code = input.code.trim().toUpperCase();
+      const name = input.name.trim();
+      const email = input.email.trim();
+      if (!code) return { ok: false as const, error: "Type the code from your board." };
+      if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return { ok: false as const, error: "A name and a working email address are needed." };
+      }
+      // A demo association answers from the browser, so the flow can be
+      // tried without an account. A real one goes to the database as anyone.
+      const local = allCommunities().find((c) => c.association.joinCode === code);
+      if (local) {
+        const request: JoinRequest = {
+          id: `join-${Date.now()}`,
+          name,
+          email,
+          unit: input.unit.trim(),
+          note: input.note.trim(),
+          status: "pending",
+          requestedOn: todayIsoDate(),
+        };
+        sliceStore(local.id, "joinRequests").update((all) =>
+          all.some((j) => j.email.toLowerCase() === email.toLowerCase() && j.status === "pending")
+            ? all
+            : [request, ...all],
+        );
+        return { ok: true as const, association: local.settings.displayName };
+      }
+      const { data, error } = await supabaseBrowser().rpc("request_to_join", {
+        p_code: code,
+        p_name: name,
+        p_email: email,
+        p_unit: input.unit.trim(),
+        p_note: input.note.trim(),
+      });
+      if (error || !data) {
+        return { ok: false as const, error: error?.message ?? "No association has that code." };
+      }
+      return { ok: true as const, association: data };
+    },
+    [],
   );
 
   /* -------------------------------------------------------------- requests */
@@ -3163,6 +3504,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       reserveComponents: reserveComponentList,
       sharedCosts,
       sharedCostBills,
+      announcements: announcementList,
+      actionItems: actionItemList,
+      joinRequests: joinRequestList,
     }),
     [
       community,
@@ -3193,6 +3537,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       reserveComponentList,
       sharedCosts,
       sharedCostBills,
+      announcementList,
+      actionItemList,
+      joinRequestList,
     ],
   );
 
@@ -3295,6 +3642,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     likePost,
     replyToPost,
     updateMyContact,
+    setAutopay,
+    markViolationFixed,
+    setWorkOrder,
+    rsvpMeeting,
+    addActionItem,
+    setActionItemDone,
+    removeActionItem,
+    approveJoinRequest,
+    declineJoinRequest,
+    requestToJoin,
     addInvoice,
     payInvoice,
     approveInvoice,

@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   CalendarDays,
   Check,
+  Copy,
   FileText,
   ImageIcon,
   Lock,
@@ -140,6 +141,32 @@ export function SettingsScreen() {
         {/* Identity */}
         <Card>
           <CardHeader title="Identity" icon={<ImageIcon className="size-4" />} />
+          <SettingRow
+            title="Join code"
+            description="Neighbours who type this at expresshoa.com/join land in your Homeowners queue."
+          >
+            <div className="flex items-center gap-2">
+              <span className="tnum rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-[15px] font-semibold tracking-[0.2em] text-fg">
+                {community.association.joinCode ?? "Not set"}
+              </span>
+              {community.association.joinCode ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const link = `${window.location.origin}/join?code=${community.association.joinCode}`;
+                    void navigator.clipboard?.writeText(link).then(
+                      () => notify("Join link copied", "ok"),
+                      () => notify(link, "info"),
+                    );
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                  Copy link
+                </Button>
+              ) : null}
+            </div>
+          </SettingRow>
           <SettingRow title="Community name" description="Shown on the banner and on sign in">
             <input
               value={settings.displayName}

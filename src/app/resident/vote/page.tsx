@@ -1,14 +1,16 @@
 "use client";
 
-import { Radio, Vote } from "lucide-react";
+import { Radio, Users, Vote } from "lucide-react";
 import { MeetingRoom } from "@/components/app/meeting-room";
-import { Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { useToast } from "@/components/app/toast";
+import { Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { BallotVote } from "./ballot-vote";
 
 export default function ResidentVote() {
-  const { community } = useAppState();
+  const { community, account, rsvpMeeting } = useAppState();
+  const { notify } = useToast();
   const live = community.meetings.find((m) => m.status === "live");
   const mine = community.ballots.filter((b) => b.audience === "owners");
   const open = mine.filter((b) => b.status === "open");
@@ -59,20 +61,62 @@ export default function ResidentVote() {
       <section>
         <SectionTitle>Meetings</SectionTitle>
         <Card>
-          {meetings.map((m, i) => (
-            <div
-              key={m.id}
-              className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
-            >
-              <p className="text-[15px] font-medium text-fg">{m.title}</p>
-              <p className="mt-0.5 text-[13px] text-fg-muted">
-                {formatDate(m.date, "long")} at {m.time} · {m.location}
-              </p>
-              <p className="mt-1 text-[13px] text-fg-subtle">
-                Dial in {m.dialIn} · passcode {m.passcode}
-              </p>
-            </div>
-          ))}
+          {meetings.map((m, i) => {
+            // The person's own answer, and how many neighbours said yes. The
+            // board sees the names; here a count is all a resident needs.
+            const mine = (m.rsvps ?? []).find((r) => r.profileId === account?.id)?.response;
+            const coming = (m.rsvps ?? []).filter((r) => r.response === "yes").length;
+            const askable = m.status === "scheduled" && m.date >= community.asOf;
+            return (
+              <div
+                key={m.id}
+                className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
+              >
+                <p className="text-[15px] font-medium text-fg">{m.title}</p>
+                <p className="mt-0.5 text-[13px] text-fg-muted">
+                  {formatDate(m.date, "long")} at {m.time} · {m.location}
+                </p>
+                <p className="mt-1 text-[13px] text-fg-subtle">
+                  Dial in {m.dialIn} · passcode {m.passcode}
+                </p>
+                {askable ? (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <Button
+                      variant={mine === "yes" ? "primary" : "secondary"}
+                      size="sm"
+                      aria-pressed={mine === "yes"}
+                      onClick={() =>
+                        void rsvpMeeting(m.id, "yes").then((ok) => {
+                          if (ok) notify(`See you at ${m.title}.`);
+                        })
+                      }
+                    >
+                      I&apos;m coming
+                    </Button>
+                    <Button
+                      variant={mine === "no" ? "secondary" : "ghost"}
+                      size="sm"
+                      aria-pressed={mine === "no"}
+                      className={cn(mine === "no" && "border-border-2")}
+                      onClick={() =>
+                        void rsvpMeeting(m.id, "no").then((ok) => {
+                          if (ok) notify("Noted. The board knows you cannot make it.", "info");
+                        })
+                      }
+                    >
+                      Can&apos;t make it
+                    </Button>
+                    {coming > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
+                        <Users className="size-3" />
+                        {coming} coming
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </Card>
       </section>
 

@@ -46,8 +46,15 @@ const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
 export function PayFlow() {
   const owner = useCurrentOwner();
   const instruments = useMyInstruments();
-  const { settings, community, isRemote, removeInstrument, setDefaultInstrument, recordPayment } =
-    useAppState();
+  const {
+    settings,
+    community,
+    isRemote,
+    removeInstrument,
+    setDefaultInstrument,
+    recordPayment,
+    setAutopay,
+  } = useAppState();
   const collections = policyFor(settings);
   const duesCents = community.association.duesCents;
   const nextCharge = community.nextChargeDate;
@@ -56,8 +63,14 @@ export function PayFlow() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [amountMode, setAmountMode] = useState<"balance" | "custom">("balance");
   const [custom, setCustom] = useState("");
-  const [autopay, setAutopay] = useState(owner?.autopay ?? false);
-  const [autopayDay, setAutopayDay] = useState(1);
+  // Autopay is the owner's standing instruction, so it starts from what they
+  // last saved rather than from a default that quietly forgets the cap.
+  const plan = owner?.autopayPlan;
+  const [autopay, setAutopayOn] = useState(owner?.autopay ?? false);
+  const [autopayDay, setAutopayDay] = useState(plan?.day ?? 1);
+  const [capCents, setCapCents] = useState<number | null>(plan?.capCents ?? null);
+  const [capText, setCapText] = useState(plan?.capCents ? String(plan.capCents / 100) : "");
+  const [skipMonth, setSkipMonth] = useState<string | null>(plan?.skipMonth ?? null);
   const [adding, setAdding] = useState(false);
   // Which row has its small actions menu open. One at a time, and closing is
   // the same press that opened it.
@@ -80,6 +93,47 @@ export function PayFlow() {
     const parsed = Math.round(Number(custom.replace(/[^0-9.]/g, "")) * 100);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [amountMode, custom, balanceCents, duesCents]);
+
+  // Months are arithmetic on the association's own next charge date, so the
+  // screen never drifts from the demo clock or a real one.
+  const chargeMonth = nextCharge.slice(0, 7);
+  const monthAfter = (ym: string, steps = 1) => {
+    const year = Number(ym.slice(0, 4));
+    const month = Number(ym.slice(5, 7)) - 1 + steps;
+    return `${year + Math.floor(month / 12)}-${String((month % 12) + 1).padStart(2, "0")}`;
+  };
+  const upcomingMonth = monthAfter(chargeMonth, 0);
+  const skipsUpcoming = skipMonth === upcomingMonth;
+  const autopayMonth = skipsUpcoming ? monthAfter(upcomingMonth) : upcomingMonth;
+  const autopayDate = `${autopayMonth}-${String(autopayDay).padStart(2, "0")}`;
+  const monthLabel = (ym: string) => formatDate(`${ym}-01`, "long").replace(/ 1,/, "");
+
+  function persistAutopay(next: {
+    on: boolean;
+    day?: number;
+    capCents?: number | null;
+    skipMonth?: string | null;
+  }) {
+    const day = next.day ?? autopayDay;
+    const cap = next.capCents === undefined ? capCents : next.capCents;
+    const skip = next.skipMonth === undefined ? skipMonth : next.skipMonth;
+    void setAutopay(
+      next.on
+        ? {
+            day,
+            capCents: cap ?? undefined,
+            skipMonth: skip ?? undefined,
+            instrumentId: selected?.id,
+          }
+        : null,
+    ).then((ok) => {
+      if (!ok) return;
+      if (!next.on) notify("Autopay is off. Nothing will be taken.", "info");
+      else if (next.skipMonth) notify(`${monthLabel(next.skipMonth)} will be skipped.`);
+      else if (next.skipMonth === null) notify("Nothing is skipped now.");
+      else notify(`Autopay ${money(duesCents)} on the ${ordinal(day)}.`);
+    });
+  }
 
   const policy: PlatformFeePolicy = {
     flatCents: settings.paymentFeeCents,
@@ -510,7 +564,10 @@ export function PayFlow() {
             </div>
             <Toggle
               checked={autopay}
-              onChange={setAutopay}
+              onChange={(on) => {
+                setAutopayOn(on);
+                persistAutopay({ on });
+              }}
               disabled={!selected}
               label="Enable autopay"
             />
@@ -527,7 +584,10 @@ export function PayFlow() {
                     <button
                       key={day}
                       type="button"
-                      onClick={() => setAutopayDay(day)}
+                      onClick={() => {
+                        setAutopayDay(day);
+                        persistAutopay({ on: true, day });
+                      }}
                       aria-pressed={autopayDay === day}
                       className={cn(
                         "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
@@ -550,8 +610,104 @@ export function PayFlow() {
                     : ""}
                 </p>
               </div>
+
+              {/* The cap. The one fear that keeps people off autopay is a
+                  special assessment or a fine draining the account on the
+                  first. Above the cap, the balance waits for them. */}
+              <div className="mt-3 border-t border-border pt-3">
+                <label className="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={capCents !== null}
+                    onChange={(e) => {
+                      const next = e.target.checked ? (capCents ?? duesCents) : null;
+                      setCapCents(next);
+                      setCapText(next ? String(next / 100) : "");
+                      persistAutopay({ on: true, capCents: next });
+                    }}
+                    className="mt-0.5 size-4 rounded border-border-2"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-medium text-fg">
+                      Only when my balance is at most
+                    </span>
+                    <span className="block text-[13px] leading-snug text-fg-muted">
+                      A special assessment or a fine that pushes the balance above this waits for
+                      you to pay it yourself. Regular dues still go out on the {ordinal(autopayDay)}.
+                    </span>
+                  </span>
+                </label>
+                {capCents !== null ? (
+                  <div className="mt-2 flex items-center gap-2 pl-6">
+                    <span className="text-[15px] text-fg-muted">$</span>
+                    <input
+                      inputMode="decimal"
+                      aria-label="Autopay cap in dollars"
+                      value={capText}
+                      onChange={(e) => setCapText(e.target.value)}
+                      onBlur={() => {
+                        const parsed = Math.round(
+                          Number(capText.replace(/[^0-9.]/g, "")) * 100,
+                        );
+                        const next = Number.isFinite(parsed) && parsed > 0 ? parsed : duesCents;
+                        setCapCents(next);
+                        setCapText(String(next / 100));
+                        if (next !== capCents) persistAutopay({ on: true, capCents: next });
+                      }}
+                      className="tnum h-9 w-28 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand"
+                    />
+                    <span className="text-[13px] text-fg-subtle">
+                      Dues are {money(duesCents)}.
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* A tight month, answered without turning the whole thing off
+                  and forgetting to turn it back on. */}
+              <div className="mt-3 border-t border-border pt-3">
+                {skipsUpcoming ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[15px] font-medium text-fg">
+                      Skipping {monthLabel(upcomingMonth)}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSkipMonth(null);
+                        persistAutopay({ on: true, skipMonth: null });
+                      }}
+                    >
+                      Undo
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-medium text-fg">Skip next month</p>
+                      <p className="text-[13px] leading-snug text-fg-muted">
+                        Autopay sits out {monthLabel(upcomingMonth)} and carries on after. The
+                        balance still shows here so you can pay it by hand.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setSkipMonth(upcomingMonth);
+                        persistAutopay({ on: true, skipMonth: upcomingMonth });
+                      }}
+                    >
+                      Skip {monthLabel(upcomingMonth).split(" ")[0]}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">
-                Next autopay: September {autopayDay}, 2026 · {relativeDays(`2026-09-${String(autopayDay).padStart(2, "0")}`)}
+                Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}
+                {skipsUpcoming ? ` · ${monthLabel(upcomingMonth)} skipped` : ""}
               </div>
             </>
           ) : null}

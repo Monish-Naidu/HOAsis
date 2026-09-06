@@ -167,6 +167,7 @@ export type Database = {
           billing_email: string | null
           past_due_since: string | null
           billing_notices: string[]
+          join_code: string
         }
         Insert: {
           cancel_reason?: string | null
@@ -210,6 +211,7 @@ export type Database = {
           billing_email?: string | null
           past_due_since?: string | null
           billing_notices?: string[]
+          join_code?: string
         }
         Update: {
           cancel_reason?: string | null
@@ -253,6 +255,7 @@ export type Database = {
           billing_email?: string | null
           past_due_since?: string | null
           billing_notices?: string[]
+          join_code?: string
         }
         Relationships: [
           {
@@ -571,6 +574,8 @@ export type Database = {
           subject: string
           to_email: string
           unit_id: string | null
+          status: string | null
+          status_at: string | null
         }
         Insert: {
           association_id: string
@@ -583,6 +588,8 @@ export type Database = {
           subject: string
           to_email: string
           unit_id?: string | null
+          status?: string | null
+          status_at?: string | null
         }
         Update: {
           association_id?: string
@@ -595,6 +602,8 @@ export type Database = {
           subject?: string
           to_email?: string
           unit_id?: string | null
+          status?: string | null
+          status_at?: string | null
         }
         Relationships: [
           {
@@ -847,6 +856,7 @@ export type Database = {
           passcode: string | null
           status: string
           title: string
+          rsvps: Json
         }
         Insert: {
           agenda?: Json
@@ -862,6 +872,7 @@ export type Database = {
           passcode?: string | null
           status?: string
           title: string
+          rsvps?: Json
         }
         Update: {
           agenda?: Json
@@ -877,6 +888,7 @@ export type Database = {
           passcode?: string | null
           status?: string
           title?: string
+          rsvps?: Json
         }
         Relationships: [
           {
@@ -903,6 +915,7 @@ export type Database = {
           role: Database["public"]["Enums"]["board_role"]
           starts_on: string
           unit_id: string
+          autopay: Json | null
         }
         Insert: {
           association_id: string
@@ -918,6 +931,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
           unit_id: string
+          autopay?: Json | null
         }
         Update: {
           association_id?: string
@@ -933,6 +947,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
           unit_id?: string
+          autopay?: Json | null
         }
         Relationships: [
           {
@@ -1253,6 +1268,104 @@ export type Database = {
           },
         ]
       }
+      action_items: {
+        Row: {
+          association_id: string
+          created_at: string
+          created_by: string | null
+          done_on: string | null
+          due_on: string | null
+          id: string
+          meeting_id: string | null
+          owner_name: string
+          title: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          created_by?: string | null
+          done_on?: string | null
+          due_on?: string | null
+          id?: string
+          meeting_id?: string | null
+          owner_name?: string
+          title: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          created_by?: string | null
+          done_on?: string | null
+          due_on?: string | null
+          id?: string
+          meeting_id?: string | null
+          owner_name?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_items_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      join_requests: {
+        Row: {
+          association_id: string
+          created_at: string
+          decided_by: string | null
+          decided_on: string | null
+          email: string
+          full_name: string
+          id: string
+          note: string
+          status: string
+          unit_label: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          decided_by?: string | null
+          decided_on?: string | null
+          email: string
+          full_name: string
+          id?: string
+          note?: string
+          status?: string
+          unit_label?: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          decided_by?: string | null
+          decided_on?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          note?: string
+          status?: string
+          unit_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "join_requests_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_replies: {
         Row: {
           association_id: string
@@ -1455,6 +1568,7 @@ export type Database = {
           thread: Json
           title: string
           unit_id: string
+          work_order: Json | null
         }
         Insert: {
           association_id: string
@@ -1477,6 +1591,7 @@ export type Database = {
           thread?: Json
           title: string
           unit_id: string
+          work_order?: Json | null
         }
         Update: {
           association_id?: string
@@ -1499,6 +1614,7 @@ export type Database = {
           thread?: Json
           title?: string
           unit_id?: string
+          work_order?: Json | null
         }
         Relationships: [
           {
@@ -2113,6 +2229,8 @@ export type Database = {
           stage: string
           unit_id: string | null
           unit_label: string
+          owner_fixed_on: string | null
+          owner_fixed_note: string | null
         }
         Insert: {
           agency?: string | null
@@ -2134,6 +2252,8 @@ export type Database = {
           stage?: string
           unit_id?: string | null
           unit_label?: string
+          owner_fixed_on?: string | null
+          owner_fixed_note?: string | null
         }
         Update: {
           agency?: string | null
@@ -2155,6 +2275,8 @@ export type Database = {
           stage?: string
           unit_id?: string | null
           unit_label?: string
+          owner_fixed_on?: string | null
+          owner_fixed_note?: string | null
         }
         Relationships: [
           {
@@ -2472,6 +2594,30 @@ export type Database = {
         Returns: string
       }
       like_post: { Args: { p_post_id: string }; Returns: number }
+      set_my_autopay: {
+        Args: { p_association_id: string; p_autopay: Json }
+        Returns: undefined
+      }
+      mark_violation_fixed: {
+        Args: { p_note: string; p_violation_id: string }
+        Returns: undefined
+      }
+      rsvp_meeting: {
+        Args: { p_meeting_id: string; p_response: string }
+        Returns: undefined
+      }
+      is_board_of: {
+        Args: { target: string }
+        Returns: boolean
+      }
+      association_by_join_code: {
+        Args: { p_code: string }
+        Returns: { city: string; name: string; state: string }[]
+      }
+      request_to_join: {
+        Args: { p_code: string; p_email: string; p_name: string; p_note: string; p_unit: string }
+        Returns: string
+      }
       update_my_contact: {
         Args: { p_association_id: string; p_mailing_address: string; p_phone: string }
         Returns: undefined

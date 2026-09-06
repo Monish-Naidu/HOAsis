@@ -63,6 +63,67 @@ export interface Association {
    * this account, never to the platform.
    */
   stripeAccountId?: string;
+  /** Six characters a neighbour types in to ask to join. */
+  joinCode?: string;
+}
+
+/**
+ * Somebody who typed the association's code and asked to be let in.
+ *
+ * The board's roster is the only thing that puts a person on it; this is a
+ * queue in front of that door, so a new owner does not have to find the
+ * President's email address to get started.
+ */
+export interface JoinRequest {
+  id: ID;
+  name: string;
+  email: string;
+  unit: string;
+  note: string;
+  status: "pending" | "approved" | "declined";
+  requestedOn: ISODate;
+  decidedOn?: ISODate;
+  decidedBy?: string;
+}
+
+/**
+ * Something a board member agreed to do.
+ *
+ * Minutes record decisions; nobody records the "I'll call the roofer" that
+ * follows them, and the roofer is not called. One line each, who and by when.
+ */
+export interface ActionItem {
+  id: ID;
+  title: string;
+  ownerName: string;
+  meetingId?: ID;
+  dueOn?: ISODate;
+  doneOn?: ISODate;
+  createdOn: ISODate;
+}
+
+export type EmailDeliveryStatus =
+  | "sent"
+  | "delivered"
+  | "delayed"
+  | "opened"
+  | "clicked"
+  | "bounced"
+  | "complained"
+  | "failed";
+
+/** One email the association sent, and what the provider said became of it. */
+export interface EmailLogEntry {
+  id: ID;
+  to: string;
+  unit?: string;
+  category: string;
+  subject: string;
+  /** Full timestamp, since two sends on one day are common. */
+  sentAt: string;
+  status?: EmailDeliveryStatus;
+  statusAt?: string;
+  error?: string;
 }
 
 /**
@@ -99,6 +160,8 @@ export interface Owner {
   balanceCents: Cents;
   autopay: boolean;
   autopayMethod?: string;
+  /** What the owner asked autopay to do, when it is on. */
+  autopayPlan?: AutopayPlan;
   standing: "current" | "grace" | "late" | "collections";
   daysPastDue: number;
   boardRole?: string;
@@ -110,6 +173,25 @@ export interface Owner {
    * the community cover photo. Seeded for the demo households only.
    */
   photoUrl?: string;
+}
+
+/**
+ * What autopay does, in the owner's own terms.
+ *
+ * A cap is the answer to the one fear that keeps people off autopay: that a
+ * special assessment or a fine drains the account on the first of the month.
+ * With a cap, a balance above it waits for the owner. A skipped month is the
+ * other fear, a tight month, answered without turning the whole thing off
+ * and forgetting to turn it back on.
+ */
+export interface AutopayPlan {
+  /** Day of the month, 1 to the board's late day. */
+  day: number;
+  /** Pay only when the balance is at most this. Absent means always. */
+  capCents?: Cents;
+  /** One month, as YYYY-MM, that autopay sits out. */
+  skipMonth?: string;
+  instrumentId?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -305,6 +387,28 @@ export interface HomeRequest {
   submission?: FormSubmission;
   /** Approved requests produce a shareable, verifiable certificate. */
   certificateId?: string;
+  /** For a maintenance request the board took on: who is doing it, when, for what. */
+  workOrder?: WorkOrder;
+}
+
+/**
+ * A maintenance request once the board has decided to act on it.
+ *
+ * Every product in the comparison turns a request into a work order, and
+ * every board without one ends up with the same thing in a text thread with
+ * the plumber. The order is the request's, so the owner who filed it sees
+ * the same dates the board does.
+ */
+export interface WorkOrder {
+  openedOn: ISODate;
+  vendorId?: ID;
+  vendorName: string;
+  scheduledOn?: ISODate;
+  estimateCents?: Cents;
+  /** What it actually cost, once the invoice is in. */
+  costCents?: Cents;
+  notes?: string;
+  completedOn?: ISODate;
 }
 
 /**
@@ -375,6 +479,13 @@ export interface Violation {
   caseNumber?: string;
   /** The day it was marked resolved, when it has been. */
   resolvedDate?: ISODate;
+  /**
+   * The owner's own word that it is fixed, with their note. Not a resolution;
+   * the board still closes it. But it moves the notice to the top of the
+   * board's list, which is what the owner needed.
+   */
+  ownerFixedDate?: ISODate;
+  ownerFixedNote?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -632,6 +743,16 @@ export interface Meeting {
   ballotIds: ID[];
   noticeSentDate?: ISODate;
   recordingAvailable?: boolean;
+  /** Who said they are coming, and who said they are not. */
+  rsvps?: MeetingRsvp[];
+}
+
+export interface MeetingRsvp {
+  profileId?: ID;
+  name: string;
+  unit: string;
+  response: "yes" | "no";
+  at: ISODate;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -741,6 +862,18 @@ export interface BookingRules {
   advanceDays?: number;
   /** Whether the board approves each one, or the slot is simply taken. */
   needsApproval?: boolean;
+  /** Charged per booking. Absent or zero means free. */
+  feeCents?: Cents;
+  /** Held and returned, for anything with a key or a kitchen. */
+  depositCents?: Cents;
+  /** Days nobody may book: a repair, a private event, a holiday. */
+  blackouts?: Blackout[];
+}
+
+export interface Blackout {
+  from: ISODate;
+  to: ISODate;
+  reason: string;
 }
 
 export interface CommunityAmenity {

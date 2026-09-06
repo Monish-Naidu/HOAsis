@@ -327,3 +327,23 @@
     transform: none;
   }
 }
+
+/* Printing a notice as a letter. The sheet sits inside the app shell, so
+   the page cannot be swapped for it; instead everything goes invisible and
+   the sheet alone is painted from the top of the paper. */
+@media print {
+  body[data-printing="letter"] * {
+    visibility: hidden;
+  }
+  body[data-printing="letter"] .print-letter,
+  body[data-printing="letter"] .print-letter * {
+    visibility: visible;
+  }
+  body[data-printing="letter"] .print-letter {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    background: white;
+    color: black;
+  }
+}

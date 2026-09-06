@@ -26,6 +26,7 @@ export const association: Association = {
   insuranceCarrier: "Farmers Insurance",
   insurancePolicyNo: "WA-CA-4471982",
   insuranceExpiresOn: "2027-04-30",
+  joinCode: "MEADOW",
 };
 
 export const bankAccounts: BankAccount[] = [

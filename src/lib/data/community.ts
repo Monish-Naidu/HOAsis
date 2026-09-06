@@ -1,6 +1,9 @@
 import type {
   Account,
+  ActionItem,
   AmenityBooking,
+  EmailLogEntry,
+  JoinRequest,
   GoverningAmendment,
   GoverningArticle,
   Amenity,
@@ -130,6 +133,12 @@ export interface Community {
   amenities: CommunityAmenity[];
   /** Held and confirmed reservations, so the picker can grey out what is gone. */
   amenityBookings: AmenityBooking[];
+  /** Who has asked to join and is waiting on the board. */
+  joinRequests: JoinRequest[];
+  /** What board members agreed to do, and whether they did. */
+  actionItems: ActionItem[];
+  /** What was emailed and what became of it. Empty for a demo association. */
+  emailLog: EmailLogEntry[];
   /** The legacy display list on the resident home. */
   amenityStatus: Amenity[];
   forms: ArchitecturalForm[];

@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Eye,
   Landmark,
+  Printer,
   Send,
   ShieldQuestion,
   Users,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/primitives";
 import type { Tone } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
+import { NoticeLetter } from "@/components/app/notice-letter";
 import { TabPill } from "@/components/app/tab-pill";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
@@ -166,8 +168,22 @@ export function EnforcementQueue() {
   const [noticeRule, setNoticeRule] = useState("");
   const [noticeCitation, setNoticeCitation] = useState("");
   const [logging, setLogging] = useState(false);
+  const [printing, setPrinting] = useState<Violation | null>(null);
 
-  const rows = buckets[tab].filter((item) => source === "all" || item.source === source);
+  // An owner's word that it is fixed is the board's next job: go and look,
+  // then close it. So it lands under Needs you and at the top of any list.
+  const ownerSaysFixed = (item: QueueItem) =>
+    item.kind === "violation" &&
+    item.violation.stage !== "cured" &&
+    Boolean(item.violation.ownerFixedDate);
+  const rows = [
+    ...(tab === "needsYou"
+      ? buckets.open.filter((item) => ownerSaysFixed(item) && !buckets.needsYou.includes(item))
+      : []),
+    ...buckets[tab],
+  ]
+    .filter((item) => source === "all" || item.source === source)
+    .sort((a, b) => Number(ownerSaysFixed(b)) - Number(ownerSaysFixed(a)));
 
   function switchTab(next: TabKey) {
     setTab(next);
@@ -403,6 +419,7 @@ export function EnforcementQueue() {
                 onSendNotice={sendNotice}
                 onAdvance={advance}
                 onResolve={resolve}
+                onPrint={setPrinting}
                 ownerFor={ownerFor}
                 reportFor={(id) => community.violationReports.find((r) => r.id === id)}
                 citationFor={(citation) => resolveCitation(citation, community.governingDocs)}
@@ -411,6 +428,8 @@ export function EnforcementQueue() {
           </div>
         )}
       </Card>
+
+      {printing ? <NoticeLetter violation={printing} onClose={() => setPrinting(null)} /> : null}
     </>
   );
 }
@@ -436,6 +455,7 @@ function QueueRow({
   onSendNotice,
   onAdvance,
   onResolve,
+  onPrint,
   ownerFor,
   reportFor,
   citationFor,
@@ -456,11 +476,16 @@ function QueueRow({
   onSendNotice: (report: ViolationReport) => void;
   onAdvance: (violation: Violation) => void;
   onResolve: (violation: Violation) => void;
+  onPrint: (violation: Violation) => void;
   ownerFor: (report: ViolationReport) => Owner | undefined;
   reportFor: (id: string) => ViolationReport | undefined;
   citationFor: (citation: string) => CitationMatch;
 }) {
   const src = SOURCE[item.source];
+  const saysFixed =
+    item.kind === "violation" &&
+    item.violation.stage !== "cured" &&
+    Boolean(item.violation.ownerFixedDate);
   const SourceIcon = src.icon;
   const city = item.kind === "violation" && isCityNotice(item.violation);
 
@@ -536,6 +561,12 @@ function QueueRow({
                 ? ` · case ${item.violation.caseNumber}`
                 : ""}
             </span>
+            {saysFixed ? (
+              <Badge tone="ok" className="px-1.5 py-0 text-[12px]">
+                <Check className="size-3" />
+                Owner says fixed
+              </Badge>
+            ) : null}
           </span>
           {/* Where a notice sits on contestable evidence, the board is told
               here rather than at the hearing. */}
@@ -596,6 +627,7 @@ function QueueRow({
               cited={city ? null : citationFor(item.violation.ruleCitation)}
               onAdvance={onAdvance}
               onResolve={onResolve}
+              onPrint={onPrint}
             />
           )}
         </div>
@@ -824,6 +856,7 @@ function ViolationDetail({
   cited,
   onAdvance,
   onResolve,
+  onPrint,
 }: {
   violation: Violation;
   /** The report it started from, when it started from one. Board only. */
@@ -832,6 +865,7 @@ function ViolationDetail({
   cited: CitationMatch | null;
   onAdvance: (violation: Violation) => void;
   onResolve: (violation: Violation) => void;
+  onPrint: (violation: Violation) => void;
 }) {
   const city = isCityNotice(violation);
   const openMatter = violation.stage !== "cured";
@@ -842,6 +876,23 @@ function ViolationDetail({
   return (
     <div className="space-y-3">
       <p className="text-[15px] leading-relaxed text-fg">{violation.rule}</p>
+
+      {/* The owner's word comes first, because it is what changed and what
+          the board does next: somebody goes to look, then closes it. */}
+      {openMatter && violation.ownerFixedDate ? (
+        <div className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2.5 text-[13px] leading-relaxed">
+          <p className="flex items-center gap-1.5 font-semibold text-ok">
+            <Check className="size-3.5" />
+            Owner says fixed {formatDate(violation.ownerFixedDate, "medium")}
+          </p>
+          <p className="mt-0.5 text-fg-muted">
+            {violation.ownerFixedNote
+              ? `"${violation.ownerFixedNote}"`
+              : "No note was left."}{" "}
+            Have somebody look, then mark it resolved if it is.
+          </p>
+        </div>
+      ) : null}
 
       {city ? (
         <div className="rounded-lg border border-info/25 bg-info-soft px-3 py-2.5 text-[13px] leading-relaxed">
@@ -926,6 +977,12 @@ function ViolationDetail({
             <Check className="size-3.5" />
             Mark resolved
           </Button>
+          {!city ? (
+            <Button variant="ghost" size="sm" onClick={() => onPrint(violation)}>
+              <Printer className="size-3.5" />
+              Print letter
+            </Button>
+          ) : null}
           <span className="text-[13px] text-fg-subtle">
             {city
               ? "Resolve once the agency has closed the case."
