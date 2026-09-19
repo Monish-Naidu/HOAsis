@@ -56,3 +56,19 @@ export function parseInvitation(params: URLSearchParams): Invitation | null {
   if (checkCode(communityId, ownerId) !== code) return null;
   return { communityId, ownerId, code };
 }
+
+/**
+ * The link a real association sends.
+ *
+ * Nothing in it is a secret, and that is deliberate. The board has already
+ * put the household on the register against this email address; the seat is
+ * claimed by proving control of that address at sign up, which is the
+ * confirmation email. The link only carries the person to the right door
+ * with their address filled in. Forwarding it to somebody else gets them a
+ * form they cannot finish.
+ */
+export function remoteInviteUrl(joinCode: string, email: string, origin: string): string {
+  const params = new URLSearchParams({ invite: joinCode });
+  if (email.trim()) params.set("email", email.trim());
+  return `${origin}/join?${params.toString()}`;
+}

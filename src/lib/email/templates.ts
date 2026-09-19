@@ -270,6 +270,60 @@ export function confirmSignupEmail(input: { name: string; confirmUrl: string }) 
   };
 }
 
+/**
+ * The invitation, and the note that says the board let somebody in.
+ *
+ * One template, two moments. "invite": the board put the household on the
+ * register and this is the door. "welcome": the person asked with a code,
+ * the board said yes, and the account they already made now opens on their
+ * home. Somebody who already has an account gets a link that signs them in;
+ * everybody else gets the join page with their address filled in.
+ */
+export function inviteEmail(input: {
+  kind: "invite" | "welcome";
+  associationName: string;
+  ownerName: string;
+  unitLabel: string;
+  url: string;
+  hasAccount: boolean;
+}) {
+  const first = input.ownerName.trim().split(/\s+/)[0] || "Neighbor";
+  const home = input.unitLabel ? ` at ${escapeHtml(input.unitLabel)}` : "";
+  const welcome = input.kind === "welcome";
+  const subject = welcome
+    ? `You're in: ${input.associationName}`
+    : `Your home${input.unitLabel ? ` at ${input.unitLabel}` : ""} is ready on Your HOAsis`;
+  const heading = welcome ? `The board let you in` : `${escapeHtml(input.associationName)} is on Your HOAsis`;
+  const line = welcome
+    ? `Hi ${escapeHtml(first)}. The board of ${escapeHtml(input.associationName)} confirmed your home${home}. Your dues, documents and requests are ready.`
+    : `Hi ${escapeHtml(first)}. Your board added your home${home} to ${escapeHtml(input.associationName)}. ${
+        input.hasAccount
+          ? "Your account already exists, so one tap opens it."
+          : "Create your account with this email address and your home opens on its own."
+      }`;
+  const cta = input.hasAccount ? "Open my account" : "Create my account";
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
+      ${heading}
+    </h1>
+    <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">${line}</p>`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: welcome
+        ? `Your home${input.unitLabel ? ` at ${input.unitLabel}` : ""} is confirmed.`
+        : `Create your account and your home opens on its own.`,
+      body,
+      cta: { label: cta, url: input.url },
+      footer:
+        "Sent by your association's board through Your HOAsis. If you do not know this " +
+        "association, ignore this message and nothing happens.",
+    }),
+    text: `${line.replace(/<[^>]+>/g, "")}\n\n${cta}: ${input.url}\n\n${input.associationName}`,
+  };
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

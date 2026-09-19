@@ -2630,6 +2630,19 @@ export type Database = {
           role: Database["public"]["Enums"]["board_role"]
         }[]
       }
+      my_join_requests: {
+        Args: never
+        Returns: {
+          association_id: string
+          city: string
+          created_at: string
+          decided_on: string
+          name: string
+          state: string
+          status: string
+          unit_label: string
+        }[]
+      }
       my_unit_ids: { Args: never; Returns: string[] }
       post_shared_cost_bill: {
         Args: {

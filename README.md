@@ -18,8 +18,12 @@ Two experiences share one system of record:
   each home pays, the roster, and who else sits on the board. It creates a working community
   with no ledger, no vendors, no documents, and no history, which is what a board's first day
   actually looks like.
-- **`/join`** redeems an invitation. The link carries a check code over the association and the
-  household, so editing a unit number in the address bar does not open somebody else's balance.
+- **`/join`** is how a person gets into an existing association. With a join code, typed or on
+  a link, they create their account inside the community and the board confirms their home
+  under Homeowners; until then the resident side says "Waiting on the board of X". With an
+  invitation link (`?invite=CODE&email=`) the board already put the household on the register,
+  and signing up with that email claims the seat when the address is confirmed. The demo's
+  `?c=&o=&k=` link signs a fixture household straight in.
 - **`/signin`** is sign in and create account. There is no real authentication: picking a seat
   selects one of the seeded accounts so you can see the product from that person's chair.
 

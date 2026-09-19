@@ -32,6 +32,7 @@ import {
   remoteSnapshot,
 } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { hasSupabase } from "@/lib/supabase/env";
 import type { Json } from "@/lib/supabase/database.types";
 import {
   documentTitle,
@@ -306,6 +307,10 @@ interface AppState {
    * Somebody outside asking in. Works signed out: the code names the
    * association and the board decides. Resolves to the association's name.
    */
+  /** The association behind a join code: its name and where it is, or null. */
+  lookupJoinCode: (code: string) => Promise<{ name: string; place: string } | null>;
+  /** Gives a home's holder an office, whether or not they have signed up yet. */
+  setHomeRole: (ownerId: string, role: AccountRole) => void;
   requestToJoin: (input: {
     code: string;
     name: string;
@@ -1035,6 +1040,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       );
     },
     [remote.community, communityId],
+  );
+
+  const setHomeRole = useCallback(
+    (ownerId: string, role: AccountRole) => {
+      if (!remote.community) {
+        const account = sliceStore(communityId, "accounts")
+          .getSnapshot()
+          .find((a) => a.ownerId === ownerId);
+        if (account) setAccountRole(account.id, role);
+        return;
+      }
+      const rc = remote.community;
+      // The presidency needs a person, not a home; that is a handover.
+      if (role === "president") {
+        const holder = rc.accounts.find((a) => a.ownerId === ownerId);
+        if (holder) setAccountRole(holder.id, role);
+        return;
+      }
+      // Keyed on the home, so an officer can be named before they have
+      // signed up. Their capabilities are waiting when they do.
+      void remoteWrite("Saving the role", () =>
+        supabaseBrowser()
+          .from("memberships")
+          .update({ role, capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [] })
+          .eq("association_id", rc.id)
+          .eq("unit_id", ownerId)
+          .is("ends_on", null)
+          .neq("role", "president"),
+      );
+    },
+    [remote.community, communityId, setAccountRole],
   );
 
   /**
@@ -2472,8 +2508,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!request) return false;
       // The roster is the only door. Approving is adding the household with
       // the address they gave, so the same rules apply as to any other add.
-      addOwner({ name: request.name, email: request.email, unit });
-      return decideJoin(requestId, "approved");
+      const owner = addOwner({ name: request.name, email: request.email, unit });
+      const decided = await decideJoin(requestId, "approved");
+      // They made an account when they asked, so the note that says "you're
+      // in" carries a link that opens it. Fire and forget: the roster is
+      // already right, and a failed email is logged on the server.
+      if (decided && remote.community) {
+        void fetch("/api/email/invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            associationId: remote.community.id,
+            unitIds: [owner.id],
+            kind: "welcome",
+          }),
+        }).catch(() => undefined);
+      }
+      return decided;
     },
     [remote.community, communityId, addOwner, decideJoin],
   );
@@ -2526,6 +2577,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const lookupJoinCode = useCallback(async (input: string) => {
+    const code = input.trim().toUpperCase();
+    if (!code) return null;
+    const local = allCommunities().find((c) => c.association.joinCode === code);
+    if (local) {
+      return { name: local.settings.displayName, place: local.association.addressLine };
+    }
+    if (!hasSupabase) return null;
+    const { data } = await supabaseBrowser().rpc("association_by_join_code", { p_code: code });
+    const row = ((data ?? []) as { name: string; city: string | null; state: string | null }[])[0];
+    if (!row) return null;
+    return { name: row.name, place: [row.city, row.state].filter(Boolean).join(", ") };
+  }, []);
 
   /* -------------------------------------------------------------- requests */
 
@@ -3748,6 +3813,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     approveJoinRequest,
     declineJoinRequest,
     requestToJoin,
+    lookupJoinCode,
+    setHomeRole,
     addInvoice,
     payInvoice,
     approveInvoice,

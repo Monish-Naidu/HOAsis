@@ -6,7 +6,7 @@ import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { homeLabel, homeWording } from "@/lib/wording";
 import type { JoinRequest } from "@/lib/types";
-import { formatDate, pluralize } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 /**
  * People at the door.
@@ -30,7 +30,7 @@ export function JoinRequests() {
         title="Asked to join"
         subtitle={
           pending.length
-            ? `${pluralize(pending.length, "person")} waiting on the board`
+            ? `${pending.length === 1 ? "1 person" : `${pending.length} people`} waiting on the board`
             : "Nobody waiting"
         }
       />
@@ -109,7 +109,7 @@ function PendingRow({
           <p className="text-[15px] font-semibold text-fg">{request.name}</p>
           <p className="text-[13px] text-fg-muted">
             {request.email} · asked {formatDate(request.requestedOn, "medium")}
-            {request.unit ? ` · says ${homeLabel(community, request.unit).toLowerCase()}` : ""}
+            {request.unit ? ` · says ${homeLabel(community, request.unit)}` : ""}
           </p>
           {request.note ? (
             <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-fg-muted">
@@ -125,7 +125,7 @@ function PendingRow({
               onChange={(e) => setUnit(e.target.value)}
               placeholder="12"
               aria-label="Unit or lot"
-              className="h-9 w-20 rounded-lg border border-border bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand"
+              className="h-9 w-24 min-w-0 rounded-lg border border-border bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand sm:w-48"
             />
           </label>
           <Button type="submit" variant="primary" size="sm" disabled={!unit.trim() || taken || busy}>

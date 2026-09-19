@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Building2, Info, User } from "lucide-react";
 import { Button, ButtonLink, Card } from "@/components/ui/primitives";
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { requestPasswordReset, signInWithPassword, signUp } from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
+import { fetchJoinStatus } from "@/lib/join-status";
 
 /**
  * Where somebody goes once they are signed in.
@@ -18,11 +20,17 @@ import { hasSupabase } from "@/lib/supabase/env";
  * confirmation email and arriving through this form should not put the same
  * person in two different places.
  */
-async function destinationAfterSignIn(): Promise<string> {
+async function destinationAfterSignIn(next: string | null): Promise<string> {
+  // An explicit destination wins, but only a path on this site.
+  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
   try {
     const { data } = await supabaseBrowser().rpc("my_associations");
     const rows = (data ?? []) as { role: string }[];
-    if (!rows.length) return "/start";
+    if (!rows.length) {
+      // Waiting on a board is its own state, shown on the resident side.
+      const pending = (await fetchJoinStatus()).some((j) => j.status === "pending");
+      return pending ? "/resident" : "/start";
+    }
     return rows.some((m) => m.role !== "resident") ? "/board" : "/resident";
   } catch {
     // If the lookup fails, the resident side is the safe landing: it shows
@@ -96,7 +104,7 @@ export function SignInPanel() {
     // The same question the confirmation link asks: what do they already
     // belong to? Sending every board member to the resident side and making
     // them find the switch was a small daily insult.
-    router.push(await destinationAfterSignIn());
+    router.push(await destinationAfterSignIn(params.get("next")));
   }
 
   return (
@@ -187,8 +195,12 @@ export function SignInPanel() {
             </p>
           ) : (
             <p className="text-center text-[13px] leading-snug text-fg-subtle">
-              If your board has already added your household, signing up with the email they
-              used puts you straight into your association.
+              If your board already added your home, sign up with the email they used and it
+              opens on its own. Have a join code?{" "}
+              <Link href="/join" className="font-medium text-fg hover:underline">
+                Join with the code
+              </Link>
+              .
             </p>
           )}
         </form>

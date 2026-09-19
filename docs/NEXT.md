@@ -8,6 +8,60 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19, night: the join code makes the account
+
+Monish: "when you use the join code, shouldn't it let you create an
+account in the community? The flow doesn't make sense." It did not: /join
+took a code and a name, put a row in the board's queue, and promised an
+email that never came; the person then had to find /signin and create an
+account with the same address and hope. Now:
+
+- **`/join` is two steps: the code, then the account.** The code names the
+  association (`association_by_join_code`), and the second screen creates
+  the account inside it: name, email, password, home. `signUp` then
+  `request_to_join`, one button. Signed in already, the form is just the
+  home. An invitation link (`/join?invite=CODE&email=`) is the same screen
+  with the address filled in and locked and no request, because the seat
+  already exists; the confirmation email is what claims it. The demo
+  `?c=&o=&k=` path is unchanged.
+- **Waiting is a state with a screen.** `my_join_requests()` (migration
+  0031) answers by the signed in email. The auth callback and
+  `destinationAfterSignIn` send somebody with no membership and a pending
+  request to `/resident`, where `NoAssociationYet` says "Waiting on the
+  board of X" with a Check again button (`loadRemote`, not `refreshRemote`,
+  which no-ops without an active association). Declined says so. Everybody
+  else gets Set up and "I have a join code".
+- **Letting them in seats them on the spot.** `add_household` already
+  linked a profile by email; `approveJoinRequest` now also posts to
+  `/api/email/invite` with `kind: "welcome"`, which sends a magic link to
+  `/resident`.
+- **Invitations, for real associations.** `remoteInviteUrl()` in
+  invitations.ts; Homeowners "Copy invite link" uses it when `isRemote`,
+  each household row has "Email invite" (or "Email sign-in link" once they
+  have an account), and the header offers "Invite N not signed up".
+  `/api/email/invite` checks `settings` or `communications`, mints a magic
+  link for people with accounts and the join link for everyone else, logs
+  every attempt under the new `invite` category (migration 0032).
+- **Officers can be named before they sign up.** Settings > Who is on the
+  board lists every home with a named owner, signed up or not (`setHomeRole`
+  updates the membership by `unit_id`); the presidency still needs a person.
+- **Proof.** `scripts/verify-join-flow.mjs` (in `db:verify`, 21 checks):
+  founder, thirteen households, three officers named blind, treasurer seated
+  as treasurer on sign up, added owner seated, newcomer asks with the code,
+  waits, is seated the moment the board adds the home, resident cannot
+  self-promote. And a Playwright walk of the whole thing in the browser
+  (founder through the wizard by address, officers in Settings, bulk
+  invite, copy link, six arrivals by link, five by sign up, two by code and
+  approval, treasurer sees Finances): 28 of 28 with one caveat below.
+
+**Caveat, still owed:** Resend's test sender refuses every address but the
+account owner's, plus-addressed ones included, so the bulk invite logged
+eleven failures ("Invalid `to` field"). The route, the log and the links are
+right; delivery needs the yourhoasis.com domain verified in Resend and
+`EMAIL_FROM` set on Vercel, as noted above. The browser walk simulated the
+confirmation email by intercepting `/api/auth/signup` and creating the user
+confirmed through the admin API, which fires the same trigger.
+
 ## 2026-09-19, late: the clean pass
 
 Monish, as principal designer: every tab, section and flow, make it look

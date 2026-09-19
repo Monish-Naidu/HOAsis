@@ -31,7 +31,7 @@ import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
-import { inviteUrl } from "@/lib/invitations";
+import { inviteUrl, remoteInviteUrl } from "@/lib/invitations";
 import { communitySlug, delinquency } from "@/lib/metrics";
 import type { MessageTemplate } from "@/lib/data/templates";
 import type { MessageThread, Owner } from "@/lib/types";
@@ -53,8 +53,17 @@ const input =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
 
 export default function BoardHomeowners() {
-  const { community, threads, addOwner, removeOwner, transferHome, replyToThread, can } =
-    useAppState();
+  const {
+    community,
+    threads,
+    accounts,
+    addOwner,
+    removeOwner,
+    transferHome,
+    replyToThread,
+    can,
+    isRemote,
+  } = useAppState();
   const { notify } = useToast();
 
   const owners = community.owners;
@@ -182,12 +191,62 @@ export default function BoardHomeowners() {
     notify(`Removed ${owner.displayName}`, "warn", { label: "Undo", onClick: undo });
   }
 
+  /**
+   * Who has not signed up yet.
+   *
+   * A real association knows: an account exists once the seat is claimed. A
+   * demo has an account for everybody, so nobody there is waiting.
+   */
+  const notSignedUp = isRemote
+    ? owners.filter((o) => o.email && !accounts.some((a) => a.ownerId === o.id))
+    : [];
+
+  function inviteLinkFor(owner: Owner): string {
+    return isRemote && community.association.joinCode
+      ? remoteInviteUrl(community.association.joinCode, owner.email, window.location.origin)
+      : inviteUrl(community.id, owner.id, window.location.origin);
+  }
+
   function copyInvite(owner: Owner) {
-    const url = inviteUrl(community.id, owner.id, window.location.origin);
+    const url = inviteLinkFor(owner);
     navigator.clipboard
       .writeText(url)
       .then(() => notify(`Invitation link for ${owner.displayName} copied`, "ok"))
       .catch(() => notify("Could not copy. Select the link and copy it manually.", "warn"));
+  }
+
+  /** Emails the invitation, to one household or to everyone still waiting. */
+  async function emailInvites(recipients: Owner[]) {
+    const withEmail = recipients.filter((o) => o.email.trim());
+    if (!withEmail.length) {
+      notify("Nobody here has an email address yet", "warn");
+      return;
+    }
+    try {
+      const response = await fetch("/api/email/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          associationId: community.id,
+          unitIds: withEmail.map((o) => o.id),
+          kind: "invite",
+        }),
+      });
+      const result = (await response.json()) as { sent?: number; failed?: number; error?: string };
+      if (!response.ok) {
+        notify(result.error ?? "Could not send the invitations", "warn");
+        return;
+      }
+      const sent = result.sent ?? 0;
+      notify(
+        sent === 1 && withEmail.length === 1
+          ? `Invitation sent to ${withEmail[0].displayName}`
+          : `${pluralize(sent, "invitation")} sent${result.failed ? `, ${result.failed} failed` : ""}`,
+        result.failed ? "warn" : "ok",
+      );
+    } catch {
+      notify("Could not send the invitations", "warn");
+    }
   }
 
   function send(owner: Owner, body: string) {
@@ -240,6 +299,17 @@ export default function BoardHomeowners() {
               <Plus className="size-3.5" />
               Add household
             </Button>
+            {notSignedUp.length > 0 ? (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => void emailInvites(notSignedUp)}
+                aria-label={`Email invitations to the ${notSignedUp.length} households not signed up`}
+              >
+                <Send className="size-3.5" />
+                Invite {notSignedUp.length} not signed up
+              </Button>
+            ) : null}
             {delinq.past.length > 0 ? (
               <Button
                 variant="primary"
@@ -513,7 +583,7 @@ export default function BoardHomeowners() {
                         </span>
                         <span className="block truncate text-[13px] text-fg-muted">
                           {homeLabel(community, o.unit)}
-                          {o.address ? ` · ${o.address}` : ""}
+                          {o.address && o.address !== o.unit ? ` · ${o.address}` : ""}
                         </span>
                         <span className="block truncate text-[13px] text-fg-subtle md:hidden">
                           {o.email}
@@ -564,6 +634,8 @@ export default function BoardHomeowners() {
                       onSend={(body) => send(o, body)}
                       onSale={() => startSale(o)}
                       onInvite={() => copyInvite(o)}
+                      onEmailInvite={isRemote && o.email ? () => void emailInvites([o]) : undefined}
+                      signedUp={!isRemote || accounts.some((a) => a.ownerId === o.id)}
                       onRemove={() => remove(o)}
                     />
                   ) : null}
@@ -648,6 +720,8 @@ function HouseholdDetail({
   onSend,
   onSale,
   onInvite,
+  onEmailInvite,
+  signedUp,
   onRemove,
 }: {
   owner: Owner;
@@ -659,6 +733,8 @@ function HouseholdDetail({
   onSend: (body: string) => void;
   onSale: () => void;
   onInvite: () => void;
+  onEmailInvite?: () => void;
+  signedUp: boolean;
   onRemove: () => void;
 }) {
   const [draft, setDraft] = useState("");
@@ -784,6 +860,17 @@ function HouseholdDetail({
           <LinkIcon className="size-3.5" />
           Copy invite link
         </Button>
+        {onEmailInvite ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onEmailInvite}
+            aria-label={`Email an invitation to ${owner.displayName}`}
+          >
+            <Send className="size-3.5" />
+            {signedUp ? "Email sign-in link" : "Email invite"}
+          </Button>
+        ) : null}
         <Button
           variant="ghost"
           size="sm"

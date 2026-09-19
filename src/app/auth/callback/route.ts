@@ -61,7 +61,12 @@ export async function GET(request: NextRequest) {
   const rows = (memberships ?? []) as { role: string }[];
 
   if (!rows.length) {
-    return NextResponse.redirect(new URL("/start", url.origin));
+    // Somebody who created their account through a join code is waiting on
+    // a board, and the resident side says so. Sending them to found an
+    // association would be answering a question they did not ask.
+    const { data: asked } = await supabase.rpc("my_join_requests");
+    const waiting = (asked ?? []).some((j: { status: string }) => j.status === "pending");
+    return NextResponse.redirect(new URL(waiting ? "/resident" : "/start", url.origin));
   }
 
   const runsSomething = rows.some((m) => m.role !== "resident");

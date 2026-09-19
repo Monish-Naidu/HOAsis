@@ -38,6 +38,7 @@ import {
   type CommunityAmenity,
 } from "@/lib/types";
 import { cn, formatDate, todayIsoDate } from "@/lib/utils";
+import { homeLabel } from "@/lib/wording";
 import { moduleOn } from "@/lib/modules";
 
 export function SettingsScreen() {
@@ -51,7 +52,7 @@ export function SettingsScreen() {
     forms,
     setForms,
     setCapability,
-    setAccountRole,
+    setHomeRole,
     updateAssociation,
     community,
     removeAmenity,
@@ -68,6 +69,23 @@ export function SettingsScreen() {
 
   const [newAmenity, setNewAmenity] = useState("");
   const [newFormLabel, setNewFormLabel] = useState("");
+
+  const roleFromLabel = (label?: string): AccountRole =>
+    ((Object.keys(ROLE_LABEL) as AccountRole[]).find((r) => ROLE_LABEL[r] === label) ??
+      "resident") as AccountRole;
+  const boardRows = community.owners
+    .filter((o) => o.email || accounts.some((a) => a.ownerId === o.id))
+    .map((o) => {
+      const holder = accounts.find((a) => a.ownerId === o.id);
+      return {
+        ownerId: o.id,
+        name: o.displayName,
+        unit: o.unit,
+        role: holder?.role ?? roleFromLabel(o.boardRole),
+        signedUp: Boolean(holder),
+      };
+    })
+    .sort((a, b) => (a.role === "president" ? -1 : b.role === "president" ? 1 : 0));
 
   if (!can("settings")) {
     return (
@@ -142,7 +160,7 @@ export function SettingsScreen() {
           <CardHeader title="Identity" subtitle="The join code, the name, and the photo" />
           <SettingRow
             title="Join code"
-            description="Neighbours who type this at yourhoasis.com/join land in your Homeowners queue."
+            description="Share it with owners. They create their account with it, and you confirm their home under Homeowners."
           >
             <div className="flex items-center gap-2">
               <span className="tnum rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-[15px] font-semibold tracking-[0.2em] text-fg">
@@ -427,22 +445,28 @@ export function SettingsScreen() {
             title="Who is on the board"
             subtitle="Assign roles. Each role comes with its own access."
           />
+          {/* Every home with a named owner, signed up or not. An officer can
+              be named the day the association is set up; their access is
+              waiting when they create their account. */}
           <div className="divide-y divide-border">
-            {accounts.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 px-5 py-3">
+            {boardRows.map((row) => (
+              <div key={row.ownerId} className="flex items-center gap-3 px-5 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
-                  <p className="truncate text-[13px] text-fg-muted">Unit {a.unit}</p>
+                  <p className="truncate text-[15px] font-medium text-fg">{row.name}</p>
+                  <p className="truncate text-[13px] text-fg-muted">
+                    {homeLabel(community, row.unit)}
+                    {row.signedUp ? "" : " · not signed up yet"}
+                  </p>
                 </div>
                 <select
-                  value={a.role}
-                  disabled={!isPresident || a.role === "president"}
-                  onChange={(e) => setAccountRole(a.id, e.target.value as AccountRole)}
-                  aria-label={`${a.name}'s role`}
+                  value={row.role}
+                  disabled={!isPresident || row.role === "president"}
+                  onChange={(e) => setHomeRole(row.ownerId, e.target.value as AccountRole)}
+                  aria-label={`${row.name}'s role`}
                   className="h-9 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand disabled:opacity-50"
                 >
                   {(["resident", "treasurer", "secretary", "vice-president", "president"] as const)
-                    .filter((r) => r !== "president" || a.role === "president")
+                    .filter((r) => r !== "president" || row.role === "president")
                     .map((r) => (
                       <option key={r} value={r}>
                         {ROLE_LABEL[r]}

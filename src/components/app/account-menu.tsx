@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Building2, LogOut, User } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { useAuth } from "@/lib/auth";
+import { NoAssociationYet } from "@/components/app/no-association";
 import { useRemote } from "@/lib/data/remote-store";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -125,23 +125,7 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
   // Signed in, belonging to nothing. Founding an association is the only
   // sensible next move, so say that rather than showing empty screens.
   if (!account && remote.status === "empty") {
-    return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 text-center">
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-fg">
-          You are not in an association yet
-        </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
-          Set one up, or ask your board to add your household and invite you with the email you
-          signed up with.
-        </p>
-        <Link
-          href="/start"
-          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-semibold text-brand-fg"
-        >
-          Set up your association
-        </Link>
-      </div>
-    );
+    return <NoAssociationYet />;
   }
 
   if (!account) return null;
