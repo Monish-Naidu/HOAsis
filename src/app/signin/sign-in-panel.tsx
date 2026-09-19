@@ -12,6 +12,7 @@ import { requestPasswordReset, signInWithPassword, signUp } from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 import { fetchJoinStatus } from "@/lib/join-status";
+import { useRemote } from "@/lib/data/remote-store";
 
 /**
  * Where somebody goes once they are signed in.
@@ -41,7 +42,12 @@ async function destinationAfterSignIn(next: string | null): Promise<string> {
 
 export function SignInPanel() {
   const router = useRouter();
-  const { signIn, accounts, communities, community, setCommunity } = useAppState();
+  const { signIn, signOut, account, accounts, communities, community, setCommunity } =
+    useAppState();
+  const remote = useRemote();
+  // Already in. A bookmark or the switcher used to land a signed in member on
+  // this form as if they were a stranger; say who they are and offer the door.
+  const signedIn = hasSupabase && remote.status === "ready" && remote.community !== null;
 
   // Seats come from whichever association is selected, so the front door
   // always offers the right people.
@@ -109,6 +115,29 @@ export function SignInPanel() {
 
   return (
     <div className="space-y-4">
+      {signedIn ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold text-fg">You are signed in</p>
+            <p className="truncate text-[13px] text-fg-muted">
+              {account?.name ? `${account.name} · ` : ""}
+              {remote.community?.settings.displayName}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => signOut()}>
+              Sign out
+            </Button>
+            <Button
+              size="sm"
+              onClick={async () => router.push(await destinationAfterSignIn(params.get("next")))}
+            >
+              Continue
+              <ArrowRight className="size-3.5" />
+            </Button>
+          </div>
+        </Card>
+      ) : null}
       <Card className="overflow-hidden">
         <div className="grid grid-cols-2 border-b border-border">
           {(["sign-in", "create"] as const).map((m) => (
@@ -219,7 +248,10 @@ export function SignInPanel() {
         </Card>
       ) : null}
 
-      {communities.length > 1 ? (
+      {/* The demo associations. Against a real project the chips only swap
+          the photograph on the left, and a real member's associations are
+          in the header once they are in, so the row is not offered there. */}
+      {!hasSupabase && communities.length > 1 ? (
         <div className="flex gap-1.5" role="radiogroup" aria-label="Association">
           {communities.map((option) => (
             <button

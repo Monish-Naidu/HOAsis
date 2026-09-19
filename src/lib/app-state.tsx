@@ -101,7 +101,12 @@ interface AppState {
   /** Which association is being viewed, and what else is available. */
   community: Community;
   communities: { id: string; label: string }[];
-  setCommunity: (communityId: string) => void;
+  /**
+   * Opens another association. A real member holding two switches in place
+   * and gets `"switched"`; picking a demo seat signs out and gets
+   * `"signed-out"`, so the caller knows whether to send them to the door.
+   */
+  setCommunity: (communityId: string) => "switched" | "signed-out";
 
   account: Account | null;
   accounts: Account[];
@@ -695,16 +700,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * safe move is to make the person sign in again on the other side.
    */
   const setCommunity = useCallback(
-    (nextId: string) => {
+    (nextId: string): "switched" | "signed-out" => {
       // A real member holding two associations switches between them without
       // signing out, because the database knows which they belong to. Demo
       // seats still sign out, since picking a seat is how you choose a person.
       if (remote.associations.some((a) => a.id === nextId)) {
         void setRemoteAssociation(nextId);
-        return;
+        return "switched";
       }
       sessionStore.set(NO_SESSION);
       communityStore.set(nextId);
+      return "signed-out";
     },
     [remote.associations],
   );

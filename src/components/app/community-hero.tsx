@@ -17,9 +17,10 @@ import { refreshRemote } from "@/lib/data/remote-store";
  * holding capabilities in another.
  */
 export function CommunityName() {
-  const { settings, community, communities, setCommunity } = useAppState();
+  const { settings, community, communities, setCommunity, isRemote } = useAppState();
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   if (communities.length < 2) {
     return (
@@ -63,8 +64,16 @@ export function CommunityName() {
                   onClick={() => {
                     setOpen(false);
                     if (option.id === community.id) return;
-                    setCommunity(option.id);
-                    router.push("/signin");
+                    // A real member switches in place and lands on the other
+                    // association's dashboard. A demo seat is a different
+                    // person, so that one goes back to the door. Sending both
+                    // to the sign-in page left a President staring at a form
+                    // and a demo chip that did nothing.
+                    if (setCommunity(option.id) === "switched") {
+                      router.push(pathname.startsWith("/resident") ? "/resident" : "/board");
+                    } else {
+                      router.push("/signin");
+                    }
                   }}
                   className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[15px] transition-colors hover:bg-surface-2"
                 >
@@ -78,11 +87,13 @@ export function CommunityName() {
                 </button>
               </li>
             ))}
-            <li className="border-t border-border px-3 py-2">
-              <p className="text-[13px] leading-snug text-fg-subtle">
-                Switching signs you out. Accounts belong to one association.
-              </p>
-            </li>
+            {!isRemote ? (
+              <li className="border-t border-border px-3 py-2">
+                <p className="text-[13px] leading-snug text-fg-subtle">
+                  Switching signs you out. Accounts belong to one association.
+                </p>
+              </li>
+            ) : null}
           </ul>
         </>
       ) : null}
