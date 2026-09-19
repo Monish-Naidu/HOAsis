@@ -100,8 +100,9 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
         activeKey={activeRoute?.key ?? ""}
         className={cn(
           "flex gap-1 lg:flex-col",
-          // In the full-height sidebar the rows share the leftover height, per
-          // the huddle: evenly spaced, not packed at the top of the column.
+          // A fixed rhythm in the sidebar. The rows used to share the leftover
+          // height, which read fine with thirteen tabs and fell apart with a
+          // treasurer's six spread over the whole column.
           rail && "w-full flex-col gap-1",
         )}
         pillClassName={
