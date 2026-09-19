@@ -61,19 +61,21 @@ export function PriceCalculator() {
   const managedHigh = MANAGEMENT_RANGE_PER_HOME.high * homes * 12;
 
   return (
-    <div className="rounded-[1.5rem] border border-border bg-hero-field p-3 sm:p-5">
+    <div className="relative isolate overflow-hidden rounded-[1.5rem] border border-border bg-hero-field p-3 sm:p-5">
+      {/* The stage: the aurora under everything, so the dial sits on colour. */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora" aria-hidden />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-5">
-        {/* The plan card: a navy band, the rate, the button. */}
+        {/* The plan card: a gradient band, the rate, the button. */}
         <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-float">
-          <div className="flex items-center justify-between gap-3 bg-navy-900 px-6 py-3 text-navy-50 dark:bg-navy-800">
+          <div className="flex items-center justify-between gap-3 bg-brand-gradient px-6 py-3 text-primary-fg">
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em]">One plan</p>
-            <p className="text-[13px] font-medium text-navy-200">
+            <p className="text-[13px] font-medium text-white/85">
               {TRIAL_DAYS} days free, no card
             </p>
           </div>
           <div className="px-6 pb-6 pt-5">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <p className="tnum text-[56px] font-semibold leading-none tracking-[-0.04em] text-fg">
+              <p className="tnum text-gradient text-[56px] font-semibold leading-none tracking-[-0.04em]">
                 {money(PRICE_PER_HOME_CENTS, { cents: false })}
               </p>
               <p className="text-[17px] font-medium text-fg-muted">per home, per month</p>
@@ -94,7 +96,7 @@ export function PriceCalculator() {
                     type="button"
                     aria-label="Fewer homes"
                     onClick={() => commit(homes - (homes > 50 ? 10 : 1))}
-                    className="flex size-10 items-center justify-center text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+                    className="press flex size-10 items-center justify-center text-fg-muted hover:bg-surface-2 hover:text-fg"
                   >
                     <Minus className="size-4" strokeWidth={2.4} />
                   </button>
@@ -113,7 +115,7 @@ export function PriceCalculator() {
                     type="button"
                     aria-label="More homes"
                     onClick={() => commit(homes + (homes >= 50 ? 10 : 1))}
-                    className="flex size-10 items-center justify-center text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+                    className="press flex size-10 items-center justify-center text-fg-muted hover:bg-surface-2 hover:text-fg"
                   >
                     <Plus className="size-4" strokeWidth={2.4} />
                   </button>
@@ -126,10 +128,10 @@ export function PriceCalculator() {
                     type="button"
                     onClick={() => commit(example.homes)}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-[13px] font-semibold transition-colors",
+                      "press rounded-full border px-3 py-1 text-[13px] font-semibold",
                       homes === example.homes
-                        ? "border-royal bg-royal text-royal-fg"
-                        : "border-border-2 bg-surface text-fg-muted hover:text-fg",
+                        ? "border-transparent bg-brand-gradient text-primary-fg shadow-raised"
+                        : "border-border-2 bg-surface text-fg-muted hover:border-fg-subtle hover:text-fg",
                     )}
                   >
                     {example.homes} homes
@@ -141,7 +143,7 @@ export function PriceCalculator() {
                   <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
                     A month
                   </p>
-                  <p className="tnum mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
+                  <p key={monthly} className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
                     {money(monthly, { cents: false })}
                   </p>
                 </div>
@@ -149,7 +151,7 @@ export function PriceCalculator() {
                   <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
                     A year
                   </p>
-                  <p className="tnum mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
+                  <p key={annual} className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
                     {money(annual, { cents: false })}
                   </p>
                 </div>
@@ -158,7 +160,7 @@ export function PriceCalculator() {
 
             <Link
               href="/start"
-              className="group mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-royal text-[16px] font-semibold text-royal-fg shadow-raised transition-all hover:-translate-y-0.5 hover:bg-royal-hover hover:shadow-float"
+              className="press shimmer group mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-gradient text-[16px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
             >
               Start free for {TRIAL_DAYS} days
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -185,11 +187,11 @@ export function PriceCalculator() {
           </div>
 
           {/* Computed from the same dial, so it cannot disagree with the price. */}
-          <div className="rounded-2xl border border-ok/25 bg-ok-soft p-6 text-ok">
+          <div className="rounded-2xl border border-tint-teal/25 bg-tint-teal-soft p-6 text-tint-teal-fg">
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em] opacity-80">
               Next to a management company
             </p>
-            <p className="tnum mt-2 text-[30px] font-semibold leading-none tracking-[-0.03em]">
+            <p key={homes} className="tnum pop-in mt-2 text-[30px] font-semibold leading-none tracking-[-0.03em]">
               {money(managedLow - annual, { cents: false })} to{" "}
               {money(managedHigh - annual, { cents: false })}
             </p>

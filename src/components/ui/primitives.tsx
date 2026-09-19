@@ -1,6 +1,6 @@
 import type { ComponentProps, FormEventHandler, ReactNode } from "react";
 import Link from "next/link";
-import { UserRound } from "lucide-react";
+import { UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* -------------------------------------------------------------------------- */
@@ -40,12 +40,15 @@ export function CardHeader({
   subtitle,
   action,
   icon,
+  tint,
   className,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
+  /** A glyph that aids recognition. Wears a soft tile; `tint` picks which. */
   icon?: ReactNode;
+  tint?: TintName;
   className?: string;
 }) {
   return (
@@ -59,9 +62,9 @@ export function CardHeader({
     >
       <div className="flex min-w-0 items-start gap-3">
         {icon ? (
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
+          <IconTile tint={tint ?? "blue"} size="sm" className="mt-0.5">
             {icon}
-          </span>
+          </IconTile>
         ) : null}
         <div className="min-w-0">
           <h2 className="truncate text-[17px] font-semibold tracking-[-0.01em] text-fg">
@@ -132,14 +135,133 @@ export function PageHeader({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Icon tile                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The five tints, plus a neutral for a tile that should not draw the eye.
+ *
+ * A tint is recognition, not meaning: the payments card wears blue every
+ * time so the eye finds it without reading, the way a well designed icon
+ * set does. Meaning still goes through `Tone` (ok, warn, danger).
+ */
+export type TintName = "blue" | "teal" | "amber" | "coral" | "violet" | "neutral";
+
+const TILE_SOFT: Record<TintName, string> = {
+  blue: "bg-tint-blue-soft text-tint-blue-fg",
+  teal: "bg-tint-teal-soft text-tint-teal-fg",
+  amber: "bg-tint-amber-soft text-tint-amber-fg",
+  coral: "bg-tint-coral-soft text-tint-coral-fg",
+  violet: "bg-tint-violet-soft text-tint-violet-fg",
+  neutral: "bg-surface-3 text-fg-muted",
+};
+
+const TILE_SIZE = {
+  xs: "size-6 rounded-md [&>svg]:size-3.5",
+  sm: "size-8 rounded-lg [&>svg]:size-4",
+  md: "size-10 rounded-xl [&>svg]:size-[18px]",
+  lg: "size-12 rounded-2xl [&>svg]:size-[22px]",
+  xl: "size-14 rounded-2xl [&>svg]:size-6",
+} as const;
+
+/**
+ * A finished icon: a rounded square with a tinted field and the glyph on it.
+ *
+ * `soft` is the in-product tile, a pale field with a saturated glyph, quiet
+ * enough to sit in a row of six. `solid` is the marketing tile, the hue lit
+ * from the top left with a white glyph, for a feature card or the assurance
+ * strip. Pass a lucide component as `icon` or anything as children.
+ */
+export function IconTile({
+  icon: Icon,
+  children,
+  tint = "blue",
+  variant = "soft",
+  size = "md",
+  ring = false,
+  className,
+  strokeWidth,
+}: {
+  icon?: LucideIcon;
+  children?: ReactNode;
+  tint?: TintName;
+  variant?: "soft" | "solid";
+  size?: keyof typeof TILE_SIZE;
+  /** A hairline of the tint around the tile, for a tile on a photograph or a busy field. */
+  ring?: boolean;
+  className?: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <span
+      data-tint={tint}
+      className={cn(
+        "icon-tile inline-flex shrink-0 items-center justify-center",
+        TILE_SIZE[size],
+        variant === "solid" ? "icon-tile-solid text-white" : TILE_SOFT[tint],
+        ring && "icon-tile-ring",
+        className,
+      )}
+      aria-hidden
+    >
+      {Icon ? <Icon strokeWidth={strokeWidth ?? (variant === "solid" ? 2.2 : 2)} /> : children}
+    </span>
+  );
+}
+
+/**
+ * The check that says it happened.
+ *
+ * Pops in, draws its tick, and sends one ring out. For the end of a pay
+ * flow, a request sent, a plan finished. Not for a toast; the toast has
+ * its own smaller pop.
+ */
+export function SuccessMark({
+  size = 56,
+  tone = "ok",
+  className,
+}: {
+  size?: number;
+  tone?: "ok" | "primary";
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "ring-pulse pop-in relative inline-flex items-center justify-center rounded-full",
+        tone === "ok" ? "bg-ok text-white" : "bg-brand-gradient text-primary-fg",
+        className,
+      )}
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label="Done"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: size * 0.5, height: size * 0.5 }}
+      >
+        <path className="check-draw" d="M5 12.5l4.5 4.5L19 7" />
+      </svg>
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Button                                                                      */
 /* -------------------------------------------------------------------------- */
 
 const buttonStyles = {
-  base: "inline-flex items-center justify-center gap-2 rounded-lg text-[15px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
+  base: "press inline-flex items-center justify-center gap-2 rounded-lg text-[15px] font-medium disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
   variant: {
-    primary: "bg-brand text-brand-fg hover:opacity-90",
-    secondary: "border border-border-2 bg-surface text-fg hover:bg-surface-2",
+    // The one filled button on a screen: the brand gradient, lit on hover.
+    primary:
+      "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow hover:brightness-[1.05]",
+    secondary: "border border-border-2 bg-surface text-fg hover:border-fg-subtle hover:bg-surface-2",
     ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
     danger: "border border-danger/30 bg-danger-soft text-danger hover:border-danger/50",
     quiet: "bg-surface-3 text-fg hover:opacity-80",
@@ -207,6 +329,11 @@ const tones = {
   warn: "bg-warn-soft text-warn",
   danger: "bg-danger-soft text-danger",
   info: "bg-info-soft text-info",
+  blue: "bg-tint-blue-soft text-tint-blue-fg",
+  teal: "bg-tint-teal-soft text-tint-teal-fg",
+  amber: "bg-tint-amber-soft text-tint-amber-fg",
+  coral: "bg-tint-coral-soft text-tint-coral-fg",
+  violet: "bg-tint-violet-soft text-tint-violet-fg",
 } as const;
 
 export type Tone = keyof typeof tones;
@@ -220,6 +347,7 @@ export function Badge({
   tone?: Tone;
   className?: string;
   children: ReactNode;
+  /** A status dot ahead of the word: the colour, then the word that names it. */
   dot?: boolean;
 }) {
   return (
@@ -230,7 +358,12 @@ export function Badge({
         className,
       )}
     >
-      {dot ? <span className="size-1.5 rounded-full bg-current" /> : null}
+      {dot ? (
+        <span className="relative flex size-1.5">
+          <span className="absolute inset-0 rounded-full bg-current opacity-40" style={{ transform: "scale(1.9)" }} />
+          <span className="relative size-1.5 rounded-full bg-current" />
+        </span>
+      ) : null}
       {children}
     </span>
   );
@@ -240,12 +373,22 @@ export function Badge({
 /* Data display                                                                */
 /* -------------------------------------------------------------------------- */
 
+const STAT_ACCENT: Record<TintName, string> = {
+  blue: "bg-tint-blue",
+  teal: "bg-tint-teal",
+  amber: "bg-tint-amber",
+  coral: "bg-tint-coral",
+  violet: "bg-tint-violet",
+  neutral: "bg-border-2",
+};
+
 export function Stat({
   label,
   value,
   hint,
   tone = "neutral",
   icon,
+  accent,
   className,
   href,
 }: {
@@ -254,6 +397,8 @@ export function Stat({
   hint?: ReactNode;
   tone?: Tone;
   icon?: ReactNode;
+  /** A coloured hairline along the top and a tile behind the icon, so four tiles in a row read as four things. */
+  accent?: TintName;
   className?: string;
   /** Makes the whole tile the way into its detail screen. */
   href?: string;
@@ -265,16 +410,27 @@ export function Stat({
       // the runtime is fine either way, so one cast keeps the union simple.
       {...({ href } as { href: string })}
       className={cn(
-        "block rounded-card border border-border bg-surface p-4 shadow-card",
-        href && "transition-colors hover:bg-surface-2",
+        "relative block overflow-hidden rounded-card border border-border bg-surface p-4 shadow-card",
+        href && "press transition-colors hover:border-border-2 hover:bg-surface-2",
         className,
       )}
     >
+      {accent ? (
+        <span className={cn("absolute inset-x-0 top-0 h-[3px]", STAT_ACCENT[accent])} aria-hidden />
+      ) : null}
       <div className="flex items-center justify-between gap-2">
         <p className="text-[13px] font-semibold text-fg-muted">
           {label}
         </p>
-        {icon ? <span className="text-fg-subtle">{icon}</span> : null}
+        {icon ? (
+          accent ? (
+            <IconTile tint={accent} size="sm">
+              {icon}
+            </IconTile>
+          ) : (
+            <span className="text-fg-subtle">{icon}</span>
+          )
+        ) : null}
       </div>
       <p
         className={cn(
@@ -307,12 +463,17 @@ export function Meter({
 }) {
   const pct = Math.max(0, Math.min(1, value)) * 100;
   const fill = {
-    brand: "bg-navy-700 dark:bg-navy-200",
+    brand: "bg-brand-gradient",
     ok: "bg-ok",
     warn: "bg-warn",
     danger: "bg-danger",
     info: "bg-info",
     neutral: "bg-fg-subtle",
+    blue: "bg-tint-blue",
+    teal: "bg-tint-teal",
+    amber: "bg-tint-amber",
+    coral: "bg-tint-coral",
+    violet: "bg-tint-violet",
   }[tone];
   return (
     <div
@@ -323,7 +484,10 @@ export function Meter({
       aria-valuemax={100}
       aria-label={ariaLabel}
     >
-      <div className={cn("h-full rounded-full transition-all", fill)} style={{ width: `${pct}%` }} />
+      <div
+        className={cn("h-full rounded-full transition-[width] duration-[640ms] ease-[cubic-bezier(0.16,1,0.3,1)]", fill)}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }
@@ -396,11 +560,14 @@ export function KeyValue({ label, children }: { label: string; children: ReactNo
 
 export function EmptyState({
   icon,
+  tint = "neutral",
   title,
   description,
   action,
 }: {
   icon?: ReactNode;
+  /** The tile behind the icon. Neutral by default; a tint when the empty state is an invitation rather than an absence. */
+  tint?: TintName;
   title: string;
   description?: string;
   /** The one thing that would fill this emptiness, when there is one. */
@@ -408,7 +575,11 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-      {icon ? <div className="mb-3 text-fg-subtle">{icon}</div> : null}
+      {icon ? (
+        <IconTile tint={tint} size="lg" className="pop-in mb-4">
+          {icon}
+        </IconTile>
+      ) : null}
       <p className="text-sm font-medium text-fg">{title}</p>
       {description ? (
         <p className="mt-1 max-w-sm text-[15px] text-fg-muted">{description}</p>
@@ -440,6 +611,11 @@ export function Callout({
     warn: "border-warn/30",
     danger: "border-danger/30",
     info: "border-info/25",
+    blue: "border-tint-blue/25",
+    teal: "border-tint-teal/25",
+    amber: "border-tint-amber/30",
+    coral: "border-tint-coral/30",
+    violet: "border-tint-violet/25",
   }[tone];
   return (
     <div className={cn("rounded-card border p-4", border, tones[tone], className)}>
@@ -479,13 +655,13 @@ export function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-        checked ? "bg-ok" : "bg-surface-3",
+        "press relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50",
+        checked ? "bg-brand-gradient shadow-[inset_0_1px_2px_rgb(0_0_0/0.15)]" : "bg-surface-3",
       )}
     >
       <span
         className={cn(
-          "absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
+          "knob absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.25)]",
           checked ? "translate-x-5" : "translate-x-0",
         )}
       />

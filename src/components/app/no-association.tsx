@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { loadJoinStatus, useJoinStatus } from "@/lib/join-status";
 import { loadRemote } from "@/lib/data/remote-store";
 import { formatDate } from "@/lib/utils";
+import { IconTile } from "@/components/ui/primitives";
 
 /**
  * Signed in, belonging to nothing.
@@ -24,9 +25,7 @@ export function NoAssociationYet() {
   if (pending) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 text-center">
-        <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-warn-soft text-warn">
-          <Clock className="size-5" />
-        </span>
+        <IconTile icon={Clock} tint="amber" size="lg" className="mx-auto mb-4 float" />
         <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-fg">
           Waiting on the board of {pending.name}
         </h1>
@@ -65,7 +64,7 @@ export function NoAssociationYet() {
       <div className="mt-6 flex flex-col items-center gap-3">
         <Link
           href="/start"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-semibold text-brand-fg"
+          className="press shimmer inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-gradient px-6 text-[15px] font-semibold text-primary-fg shadow-raised hover:shadow-glow"
         >
           Set up your association
         </Link>

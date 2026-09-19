@@ -13,12 +13,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import {
-  Badge,
-  Card,
-  CardHeader,
-  PageHeader,
-} from "@/components/ui/primitives";
+import { Badge, Card, CardHeader, IconTile, PageHeader } from "@/components/ui/primitives";
 import { useState } from "react";
 import Link from "next/link";
 import { recordsGaps } from "@/lib/metrics";
@@ -142,9 +137,7 @@ export default function BoardDocuments() {
           <div className="divide-y divide-border">
             {gaps.missing.map((record) => (
               <div key={record.key} className="flex items-start gap-3 px-5 py-3">
-                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-warn-soft text-warn">
-                  <AlertTriangle className="size-3.5" />
-                </span>
+                <IconTile icon={AlertTriangle} tint="amber" size="xs" className="mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-medium text-fg">{record.label}</p>
                   <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
@@ -162,9 +155,7 @@ export default function BoardDocuments() {
           href="/board/documents/governing"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
-            <BookOpen className="size-5" />
-          </span>
+          <IconTile icon={BookOpen} tint="violet" size="md" className="shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-fg">
               {docsInWords.length > 0
@@ -193,9 +184,7 @@ export default function BoardDocuments() {
           href="/board/documents/new-owner"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
-            <ShieldQuestion className="size-5" />
-          </span>
+          <IconTile icon={ShieldQuestion} tint="blue" size="md" className="shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-fg">
               What a new owner is told
@@ -217,9 +206,7 @@ export default function BoardDocuments() {
           href="/board/documents/import"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
-            <ScanLine className="size-5" />
-          </span>
+          <IconTile icon={ScanLine} tint="teal" size="md" className="shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-fg">
               Import the text of a document

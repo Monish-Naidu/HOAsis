@@ -137,9 +137,16 @@ export function CommunityHero({
         style={{ backgroundImage: `url(${settings.photoUrl})` }}
         aria-hidden
       />
-      {/* Scrim so white type stays legible on any photo the admin uploads. */}
+      {/* Scrim so white type stays legible on any photo the admin uploads:
+          navy from the bottom, so the photo and the sidebar share a family,
+          with a wash of the brand blue low left so the banner glows a little
+          instead of only darkening. */}
       <div
-        className="absolute inset-0 -z-10 bg-gradient-to-t from-black/70 via-black/35 to-black/10"
+        className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-950/85 via-navy-950/35 to-navy-950/5"
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0 -z-10 bg-[radial-gradient(60%_80%_at_0%_100%,rgb(63_130_242/0.35),transparent_70%)]"
         aria-hidden
       />
       <div
@@ -153,13 +160,18 @@ export function CommunityHero({
       >
         <h1
           className={cn(
-            "font-semibold tracking-[-0.03em] text-white drop-shadow-sm",
-            compact ? "text-[20px]" : "text-[28px] sm:text-[34px]",
+            "font-semibold tracking-[-0.03em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35),0_8px_24px_rgb(0_0_0/0.25)]",
+            compact ? "text-[22px]" : "text-[30px] sm:text-[36px]",
           )}
         >
           {settings.displayName}
         </h1>
-        {line ? <p className="mt-0.5 text-[13px] text-white/85 sm:text-[15px]">{line}</p> : null}
+        {line ? (
+          <p className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[12px] font-medium text-white/95 backdrop-blur-md sm:text-[13px]">
+            <Building2 className="size-3" strokeWidth={2.2} />
+            {line}
+          </p>
+        ) : null}
       </div>
       {overlay ? <div className="w-full px-4 pb-4 sm:px-6 sm:pb-5">{overlay}</div> : null}
 

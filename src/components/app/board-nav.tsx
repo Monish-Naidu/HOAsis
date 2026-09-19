@@ -102,9 +102,13 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
           "flex gap-1 lg:flex-col",
           // In the full-height sidebar the rows share the leftover height, per
           // the huddle: evenly spaced, not packed at the top of the column.
-          rail && "min-h-full w-full flex-col justify-evenly",
+          rail && "w-full flex-col gap-1",
         )}
-        pillClassName={rail ? "bg-royal rounded-2xl" : "bg-brand-soft rounded-xl"}
+        pillClassName={
+          rail
+            ? "bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
+            : "bg-primary-soft rounded-xl"
+        }
       >
       {visible.map(({ href, label, icon: Icon, key }) => {
         const active = href === "/board" ? pathname === href : pathname.startsWith(href);
@@ -125,11 +129,18 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
                   ? "text-white"
                   : "text-navy-200 hover:bg-navy-800/70 hover:text-white"
                 : active
-                  ? "text-brand-soft-fg"
+                  ? "text-primary"
                   : "text-fg-muted hover:bg-surface-2 hover:text-fg",
             )}
           >
-            <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+            <Icon
+              className={cn(
+                "size-[17px] shrink-0 transition-transform duration-200",
+                active && "scale-110",
+                !active && "group-hover:-translate-y-px",
+              )}
+              strokeWidth={active ? 2.2 : 1.8}
+            />
             <span className="truncate">{label}</span>
             {badge && badge.count > 0 ? (
               <span

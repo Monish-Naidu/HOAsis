@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Apple,
   Check,
-  CheckCircle2,
   CreditCard,
   Info,
   Landmark,
@@ -16,7 +15,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, SectionTitle, Toggle } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, IconTile, SectionTitle, SuccessMark, Toggle } from "@/components/ui/primitives";
+import { CountUp } from "@/components/ui/count-up";
 import { useAppState, useCurrentOwner, useMyInstruments } from "@/lib/app-state";
 import {
   FEE_SCHEDULE,
@@ -151,12 +151,15 @@ export function PayFlow() {
   if (paid) {
     return (
       <div className="animate-rise space-y-5">
-        <Card className="p-6 text-center">
-          <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
-            <CheckCircle2 className="size-6" />
-          </span>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
-          <p className="tnum mt-1 text-[17px] font-semibold text-fg">{money(paid.amountCents)}</p>
+        <Card className="relative overflow-hidden p-6 text-center">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-aurora opacity-80" aria-hidden />
+          <div className="relative mx-auto mb-4 flex justify-center">
+            <SuccessMark size={64} />
+          </div>
+          <h1 className="relative text-[22px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
+          <p className="tnum relative mt-1 text-[24px] font-semibold tracking-[-0.02em] text-fg">
+            <CountUp cents={paid.amountCents} showCents />
+          </p>
           <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
             {describeInstrument(paid.instrument)} · clears in{" "}
             {FEE_SCHEDULE[paid.instrument.kind].settlement.toLowerCase()}
@@ -167,7 +170,7 @@ export function PayFlow() {
             </Button>
             <Link
               href="/resident/account"
-              className="flex h-11 flex-1 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+              className="press shimmer flex h-11 flex-1 items-center justify-center rounded-lg bg-brand-gradient text-[15px] font-medium text-primary-fg shadow-raised hover:shadow-glow"
             >
               View account
             </Link>
@@ -199,9 +202,9 @@ export function PayFlow() {
             onClick={() => setAmountMode("balance")}
             aria-pressed={amountMode === "balance"}
             className={cn(
-              "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
+              "press flex-1 rounded-lg border px-3 py-3 text-left",
               amountMode === "balance"
-                ? "border-brand bg-brand-soft"
+                ? "border-primary bg-primary-soft shadow-[0_0_0_3px_var(--primary-soft)]"
                 : "border-border hover:bg-surface-2",
             )}
           >
@@ -217,9 +220,9 @@ export function PayFlow() {
             onClick={() => setAmountMode("custom")}
             aria-pressed={amountMode === "custom"}
             className={cn(
-              "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
+              "press flex-1 rounded-lg border px-3 py-3 text-left",
               amountMode === "custom"
-                ? "border-brand bg-brand-soft"
+                ? "border-primary bg-primary-soft shadow-[0_0_0_3px_var(--primary-soft)]"
                 : "border-border hover:bg-surface-2",
             )}
           >
@@ -368,14 +371,13 @@ export function PayFlow() {
                     onClick={() => setSelectedId(instrument.id)}
                     className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-50"
                   >
-                    <span
-                      className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                        active ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
+                    <IconTile
+                      icon={Icon}
+                      tint="blue"
+                      variant={active ? "solid" : "soft"}
+                      size="md"
+                      className={cn("transition-transform duration-200", active && "scale-105")}
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="truncate text-[15px] font-medium text-fg">
@@ -400,7 +402,11 @@ export function PayFlow() {
                           : "No fee to you"}
                       </span>
                     </span>
-                    {active ? <Check className="size-4 shrink-0 text-fg" /> : null}
+                    {active ? (
+                      <span className="pop-in flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-primary-fg">
+                        <Check className="size-3" strokeWidth={3} />
+                      </span>
+                    ) : null}
                   </button>
 
                   <div className="relative shrink-0">
@@ -530,9 +536,7 @@ export function PayFlow() {
         <SectionTitle>Autopay</SectionTitle>
         <Card className="p-4">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
-              <Repeat className="size-4" />
-            </span>
+            <IconTile icon={Repeat} tint="violet" size="md" className="mt-0.5" />
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-semibold text-fg">
                 Autopay {money(duesCents)} on the {ordinal(autopayDay)}
@@ -573,7 +577,7 @@ export function PayFlow() {
                       className={cn(
                         "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
                         autopayDay === day
-                          ? "bg-brand text-brand-fg"
+                          ? "bg-brand-gradient text-primary-fg shadow-raised"
                           : day === settings.autopayLateAfterDay
                             ? "border border-warn/40 bg-warn-soft text-warn"
                             : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",

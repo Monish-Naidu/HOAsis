@@ -13,7 +13,8 @@ import {
   Vote,
   Wrench,
 } from "lucide-react";
-import { Card, CardHeader, SectionTitle } from "@/components/ui/primitives";
+import { Card, CardHeader, IconTile, SectionTitle, type TintName } from "@/components/ui/primitives";
+import { CountUp } from "@/components/ui/count-up";
 import { calendarEntries } from "@/lib/metrics";
 import {
   useAppState,
@@ -39,7 +40,7 @@ export default function ResidentHome() {
   );
 
   return (
-    <div className="animate-rise space-y-6">
+    <div className="stagger space-y-6">
       {/* What expires today, in one card rather than a stack of banners. */}
       {live || toVote.length ? (
         <Card className="divide-y divide-border">
@@ -48,9 +49,7 @@ export default function ResidentHome() {
               href="/resident/calendar"
               className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
-                <Radio className="size-4" />
-              </span>
+              <IconTile icon={Radio} tint="teal" size="sm" className="ring-pulse text-ok" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-semibold text-fg">{live.title}</span>
                 <span className="block text-[13px] text-ok">
@@ -65,9 +64,7 @@ export default function ResidentHome() {
               href="/resident/vote"
               className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-warn-soft text-warn">
-                <Vote className="size-4" />
-              </span>
+              <IconTile icon={Vote} tint="violet" size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold text-fg">
                   {toVote.length === 1 ? "A ballot needs your vote" : `${toVote.length} ballots need your vote`}
@@ -136,9 +133,7 @@ function AccountSummary() {
       />
       <div className="flex flex-col gap-4 p-4 @xl:flex-row @xl:items-center @xl:gap-6 @xl:px-5">
         <div className="flex items-center gap-3.5 @xl:flex-1">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
-            <CreditCard className="size-5" strokeWidth={2} />
-          </span>
+          <IconTile icon={CreditCard} tint={past ? "coral" : "blue"} variant="solid" size="lg" />
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-fg-muted">
               {past ? "Past due" : "Current balance"}
@@ -149,7 +144,7 @@ function AccountSummary() {
                 past ? "text-danger" : "text-fg",
               )}
             >
-              {money(owner.balanceCents)}
+              <CountUp cents={owner.balanceCents} showCents />
             </p>
           </div>
         </div>
@@ -182,10 +177,10 @@ function AccountSummary() {
         <Link
           href="/resident/pay"
           className={cn(
-            "inline-flex h-11 shrink-0 items-center justify-center rounded-lg px-6 text-[16px] font-semibold transition-opacity hover:opacity-90",
+            "press inline-flex h-11 shrink-0 items-center justify-center rounded-lg px-6 text-[16px] font-semibold",
             covered
-              ? "border border-border-2 bg-surface text-fg"
-              : "bg-brand text-brand-fg",
+              ? "border border-border-2 bg-surface text-fg hover:bg-surface-2"
+              : "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow",
           )}
         >
           {covered ? "Pay early" : `Pay ${money(amount, { cents: false })}`}
@@ -200,35 +195,28 @@ function AccountSummary() {
 function QuickActions() {
   // Three, and each goes somewhere different. Five tiles used to resolve to
   // three destinations, two of them already in the tab bar.
-  const actions = [
-    {
-      href: "/resident/requests/new",
-      label: "Submit request",
-      icon: Wrench,
-      tone: "bg-brand-soft text-brand-soft-fg",
-    },
-    {
-      href: "/resident/documents",
-      label: "Documents",
-      icon: FileText,
-      tone: "bg-surface-3 text-fg-muted",
-    },
-    { href: "/resident/vote", label: "Vote", icon: Vote, tone: "bg-ok-soft text-ok" },
+  const actions: { href: string; label: string; icon: typeof Wrench; tint: TintName }[] = [
+    { href: "/resident/requests/new", label: "Submit request", icon: Wrench, tint: "blue" },
+    { href: "/resident/documents", label: "Documents", icon: FileText, tint: "violet" },
+    { href: "/resident/vote", label: "Vote", icon: Vote, tint: "teal" },
   ];
   return (
     <Card>
       <CardHeader title="Quick actions" />
       <div className="grid grid-cols-3 gap-1 p-3">
-        {actions.map(({ href, label, icon: Icon, tone }) => (
+        {actions.map(({ href, label, icon, tint }) => (
           <Link
             key={label}
             href={href}
-            className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-3 text-center transition-colors hover:bg-surface-2"
+            className="press group flex flex-col items-center gap-1.5 rounded-xl px-1 py-3 text-center hover:bg-surface-2"
           >
-            <span className={cn("flex size-10 items-center justify-center rounded-full", tone)}>
-              <Icon className="size-[18px]" strokeWidth={2} />
-            </span>
-            <span className="text-[13px] font-medium leading-tight text-fg-muted">{label}</span>
+            <IconTile
+              icon={icon}
+              tint={tint}
+              size="md"
+              className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
+            />
+            <span className="text-[13px] font-medium leading-tight text-fg">{label}</span>
           </Link>
         ))}
       </div>
@@ -253,7 +241,7 @@ function RecentActivity() {
     title: string;
     href: string;
     icon: typeof CircleDollarSign;
-    tone: string;
+    tint: TintName;
     amount?: string;
     amountTone?: string;
   }
@@ -269,7 +257,7 @@ function RecentActivity() {
       title: c.label,
       href: "/resident/account",
       icon: c.kind === "payment" ? CircleDollarSign : Receipt,
-      tone: c.kind === "payment" ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted",
+      tint: c.kind === "payment" ? "teal" : "neutral",
       amount: money(Math.abs(c.amountCents)),
       amountTone: c.kind === "payment" ? "text-ok" : "text-fg",
     }));
@@ -285,7 +273,7 @@ function RecentActivity() {
       title: `Request ${withUpdate.r.reference} updated`,
       href: "/resident/requests",
       icon: Wrench,
-      tone: "bg-brand-soft text-brand-soft-fg",
+      tint: "blue",
     });
   }
   // Announcements deliberately stay out of this feed: they live two cards
@@ -308,20 +296,13 @@ function RecentActivity() {
           </Link>
         }
       />
-      {feed.map(({ icon: Icon, ...row }) => (
+      {feed.map(({ icon, ...row }) => (
         <Link
           key={row.id}
           href={row.href}
-          className="flex min-h-14 items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-surface-2"
+          className="flex min-h-14 items-center gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2"
         >
-          <span
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full",
-              row.tone,
-            )}
-          >
-            <Icon className="size-4" strokeWidth={2} />
-          </span>
+          <IconTile icon={icon} tint={row.tint} size="sm" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[15px] font-medium text-fg">{row.title}</span>
             <span className="block text-[13px] text-fg-muted">{formatDate(row.date)}</span>
@@ -353,10 +334,11 @@ function Announcements() {
       <SectionTitle>From the board</SectionTitle>
       <div className="space-y-3">
         {pinned ? (
-          <Card className="border-l-2 border-l-navy-700 dark:border-l-navy-300">
-            <div className="p-4">
+          <Card className="relative overflow-hidden">
+            <span className="absolute inset-y-0 left-0 w-[3px] bg-brand-gradient" aria-hidden />
+            <div className="p-4 pl-5">
               <div className="mb-1.5 flex items-center gap-2">
-                <Megaphone className="size-3.5 text-fg-subtle" />
+                <IconTile icon={Megaphone} tint="coral" size="xs" />
                 <span className="text-[13px] font-semibold text-fg-muted">
                   Pinned · {pinned.category}
                 </span>

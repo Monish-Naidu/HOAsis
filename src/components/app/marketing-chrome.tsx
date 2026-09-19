@@ -91,16 +91,26 @@ export function MarketingHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle className="hidden sm:inline-flex" />
-          <Link
-            href="/signin"
-            className="hidden h-9 items-center rounded-lg px-3 text-[15px] font-medium text-fg-muted hover:text-fg sm:inline-flex"
+          {/* Over the hero photograph the muted ink vanished into the sky, so
+              the two quiet controls sit on a frosted pill until the bar goes
+              solid and can carry them itself. */}
+          <div
+            className={cn(
+              "hidden items-center gap-1 rounded-full p-0.5 transition-[background-color,box-shadow] duration-300 sm:flex",
+              !solid && "bg-surface/70 shadow-card backdrop-blur-md",
+            )}
           >
-            Log in
-          </Link>
+            <ThemeToggle className="rounded-full" />
+            <Link
+              href="/signin"
+              className="press inline-flex h-9 items-center rounded-full px-3 text-[15px] font-medium text-fg hover:bg-surface-2"
+            >
+              Log in
+            </Link>
+          </div>
           <Link
             href="/start"
-            className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-lg bg-royal px-4 text-[15px] font-semibold text-royal-fg transition-colors hover:bg-royal-hover"
+            className="press shimmer inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-lg bg-brand-gradient px-4 text-[15px] font-semibold text-primary-fg shadow-raised hover:shadow-glow"
           >
             Get started
           </Link>
@@ -185,6 +195,7 @@ export function Reveal({
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Milliseconds after the crossing. Siblings step by 60 to 90; more reads as waiting. */
   delay?: number;
 }) {
   const attach = useCallback((node: HTMLDivElement | null) => {
@@ -202,7 +213,7 @@ export function Reveal({
       },
       // Fires a little before the element reaches the bottom edge, so it is
       // settling as it arrives rather than starting once it is already there.
-      { rootMargin: "0px 0px -12% 0px", threshold: 0.05 },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.05 },
     );
     observer.observe(node);
   }, []);

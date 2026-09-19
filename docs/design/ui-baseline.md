@@ -1,6 +1,7 @@
 # UI baseline
 
-The rules every screen is held to, board and resident, from 2026-09-03 on.
+The rules every screen is held to, board and resident, from 2026-09-03 on,
+revised 2026-09-19 for the pop pass (`ui-pop-2026-09-19.md`).
 Read this before any UI change. It is short on purpose: a checklist, not an
 essay. The palette and tokens live in `src/app/globals.css` and
 `src/lib/tokens.ts`; the primitives in `src/components/ui/primitives.tsx`.
@@ -32,19 +33,63 @@ then depth. Clean and simple is the name of the game.
 ## Deference
 
 - **Content over chrome.** Cards are `bg-surface`, one border, `shadow-card`.
-  No gradients, no colored headers, no icons for decoration. An icon earns
-  its place by aiding recognition (a landmark for a bank, a paperclip for an
-  attachment).
+  A card is never a gradient and never has a coloured header. Colour goes on
+  the things inside it: the tile behind an icon, the hairline on a stat, the
+  one filled button.
+- **Gradients, three places only.** The primary button (`bg-brand-gradient`,
+  through `Button variant="primary"`), one accent word in a marketing
+  headline (`text-gradient`), and a marketing stage behind a section
+  (`bg-aurora`, or two blurred pools on a navy band). Nowhere else. Not on
+  a card, not on a row, not on text inside the product.
+- **Icons are tiles.** An icon aids recognition (a landmark for a bank, a
+  paperclip for an attachment) and wears an `IconTile`. In the product,
+  `soft`: a pale tinted field with a saturated glyph. On marketing pages,
+  `solid`: the tint lit from the top left with a white glyph. Never a bare
+  glyph on grey, never a coloured circle drawn inline.
+- **Tints are recognition, not meaning.** Five: blue, teal, amber, coral,
+  violet. An idea keeps its tint everywhere it appears: money is teal,
+  requests are blue, meetings and time are amber, notices and alerts are
+  coral, documents, voting and records are violet. A row of six tiles with
+  six different tints is right; six blue tiles is wrong.
 - **Semantic tokens only.** `bg-surface`, `text-fg-muted`, `border-border`,
-  `bg-brand`, `text-ok`, `bg-warn-soft`. A raw ramp value (`navy-900`) is
-  for deliberately fixed surfaces such as the phone bezel. Both themes,
-  always: if it cannot be read in dark, it is not done.
+  `bg-primary`, `bg-tint-teal-soft`, `text-ok`, `bg-warn-soft`. A raw ramp
+  value (`navy-900`) is for deliberately fixed surfaces such as the phone
+  bezel and the navy rail. Both themes, always: if it cannot be read in
+  dark, it is not done. A new colour goes in `globals.css` and `tokens.ts`
+  in the same commit.
 - **Color means something.** Green is settled or good. Amber is waiting or
-  soon. Red is late, owed, or a fine. Blue is informational. Brand is the
-  selected state. Nothing else is colored.
-- **Quiet interaction.** Hover is `hover:bg-surface-2`. Focus is a border
-  change, not a glow. Transitions are 150 to 200ms. No hover lifts on
-  content, only on marketing tiles.
+  soon. Red is late, owed, or a fine. Blue is informational. Primary is the
+  one thing to do. The five tints say "this is that thing again" and nothing
+  more.
+- **Interaction is felt, not announced.** Every button presses (`.press`,
+  120ms scale). The primary button glows on hover (`shadow-glow`) and a
+  sheen sweeps it once (`.shimmer`). Content rows hover to `bg-surface-2`.
+  Marketing tiles lift (`.lift`); product cards never lift. Focus is the
+  ring token, not a glow.
+
+## Motion
+
+Two easings, three durations, one pop.
+
+- `--ease-out-soft` for anything arriving or settling. `--ease-spring` for
+  a thing snapping into a position (the tab pill, the toggle knob).
+  `--ease-pop` only for a thing appearing from nothing (a check, a chip
+  landing).
+- `--dur-press` 120ms for a button under a finger. `--dur-fast` 180ms for
+  hover. `--dur-base` 320ms for a thing arriving. `--dur-slow` 640ms for a
+  section settling on scroll.
+- Page changes stagger: `PageTransition` is a `.stagger` parent, and each
+  direct child of the page lands 40ms after the one before, up to twelve.
+  A list that wants the same puts `.stagger` on its `ul`.
+- Figures count up once on first paint (`CountUp`), 800ms, never on a
+  re-render. Money stays integer cents through `money()`.
+- Done is one check that pops and one ring that pulses (`SuccessMark`).
+  Not confetti, not a second ring, not a sound.
+- Toasts spring up, the icon pops a beat later, and a hairline drains for
+  as long as the toast will stay.
+- Everything above is listed in the reduced-motion block in `globals.css`
+  and lands on its end state when the reader has asked for less motion. A
+  new animation is not done until it is in that list.
 
 ## Depth
 
@@ -62,14 +107,21 @@ then depth. Clean and simple is the name of the game.
 - **Segmented control** for switching views of one thing (All / Paid up /
   Behind; Overview / Transactions / Trends). Not tabs that load pages.
 - **Filter chips** in one row for categories. Never a stack of selects.
-- **Stat tiles** are `Stat`: label, value, one hint. Three to four across.
-  A delta chip beside the value where a comparison exists.
+- **Stat tiles** are `Stat` (or finance `StatTile`): label, value, one
+  hint, an `accent` tint for the hairline along the top and the tile behind
+  the icon. Three to four across, each a different tint. A delta chip beside
+  the value where a comparison exists.
 - **Row with a menu** (`MoreHorizontal`) instead of an edit mode. No
   "Manage" / "Done" toggles.
 - **Inline forms** open in place under the button that opened them, with
   their own Cancel. No modals for one or two fields.
 - **Callouts** for one thing the person must know, with the action on the
   right. One per screen at most.
+- **Status is a dot and a word** (`Badge dot`). The dot carries the colour,
+  the word carries the meaning, so nobody has to remember which colour is
+  which.
+- **Empty states** put their icon on a neutral tile, or a tinted one when
+  the emptiness is an invitation ("Send your first notice").
 
 ## Writing
 

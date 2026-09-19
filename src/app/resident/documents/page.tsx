@@ -10,7 +10,7 @@ import {
   PenLine,
   Search,
 } from "lucide-react";
-import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import type { DocumentRecord, GoverningDoc } from "@/lib/types";
@@ -117,9 +117,7 @@ export default function ResidentDocuments() {
           href="/resident/documents/governing"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
         >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
-            <BookOpen className="size-5" />
-          </span>
+          <IconTile icon={BookOpen} tint="violet" size="md" className="shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-fg">
               Read the rules you live under
@@ -143,9 +141,7 @@ export default function ResidentDocuments() {
                 href={`/resident/documents/forms/${form.id}`}
                 className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-ok-soft text-ok">
-                  <PenLine className="size-4" />
-                </span>
+                <IconTile icon={PenLine} tint="teal" size="sm" className="shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-semibold text-fg">
                     {form.label}

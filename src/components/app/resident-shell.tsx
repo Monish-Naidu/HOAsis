@@ -76,37 +76,41 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="flex items-center gap-2.5">
           {moduleOn("phone-preview") ? (
-          <div
-            className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5"
-            role="radiogroup"
-            aria-label="Resident layout"
-          >
-            <button
-              type="button"
-              role="radio"
-              aria-checked={!phonePreview}
-              onClick={() => setPhonePreview(false)}
-              className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
-                !phonePreview ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
-              )}
+          <div role="radiogroup" aria-label="Resident layout">
+            <TabPill
+              activeKey={phonePreview ? "app" : "web"}
+              className="inline-flex items-center gap-0.5 rounded-lg bg-surface-2 p-0.5 ring-1 ring-inset ring-border"
+              pillClassName="bg-surface shadow-raised rounded-md"
             >
-              <Monitor className="size-3.5" />
-              Website
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={phonePreview}
-              onClick={() => setPhonePreview(true)}
-              className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
-                phonePreview ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
-              )}
-            >
-              <Smartphone className="size-3.5" />
-              Mobile app
-            </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!phonePreview}
+                data-tab-key="web"
+                onClick={() => setPhonePreview(false)}
+                className={cn(
+                  "relative z-10 inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
+                  !phonePreview ? "text-fg" : "text-fg-subtle hover:text-fg-muted",
+                )}
+              >
+                <Monitor className="size-3.5" />
+                Website
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={phonePreview}
+                data-tab-key="app"
+                onClick={() => setPhonePreview(true)}
+                className={cn(
+                  "relative z-10 inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
+                  phonePreview ? "text-fg" : "text-fg-subtle hover:text-fg-muted",
+                )}
+              >
+                <Smartphone className="size-3.5" />
+                Mobile app
+              </button>
+            </TabPill>
           </div>
           ) : null}
           <ViewSwitcher />
@@ -205,7 +209,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             // Rows share the leftover height, per the huddle: evenly spaced
             // down the column, not packed at the top.
             className="flex min-h-full w-full flex-col justify-evenly gap-1"
-            pillClassName="bg-royal rounded-2xl"
+            pillClassName="bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
           >
             {tabs.map(({ href, label, icon: Icon, webLabel }) => {
               const active =
@@ -217,13 +221,19 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   data-tab-key={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative z-10 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-[14px] font-medium transition-colors duration-200",
+                    "group relative z-10 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-[14px] font-medium transition-colors duration-200",
                     active
                       ? "text-white"
                       : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
                   )}
                 >
-                  <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                  <Icon
+                    className={cn(
+                      "size-[17px] shrink-0 transition-transform duration-200",
+                      active ? "scale-110" : "group-hover:-translate-y-px",
+                    )}
+                    strokeWidth={active ? 2.2 : 1.8}
+                  />
                   {webLabel ?? label}
                 </Link>
               );
@@ -328,17 +338,18 @@ function TabBar({
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-1 pb-2 pt-2.5 transition-colors",
-                  active ? "text-fg" : "text-fg-subtle hover:text-fg-muted",
+                  "press flex flex-col items-center gap-1 px-1 pb-2 pt-2 transition-colors",
+                  active ? "text-primary" : "text-fg-subtle hover:text-fg-muted",
                 )}
               >
-                <Icon
+                <span
                   className={cn(
-                    "size-[19px] transition-transform duration-200 ease-out",
-                    active ? "scale-110" : "scale-100",
+                    "flex h-7 w-11 items-center justify-center rounded-full transition-[background-color,transform] duration-200 ease-out",
+                    active ? "bg-primary-soft scale-100" : "scale-95",
                   )}
-                  strokeWidth={active ? 2.3 : 1.8}
-                />
+                >
+                  <Icon className="size-[19px]" strokeWidth={active ? 2.3 : 1.8} />
+                </span>
                 <span className={cn("text-[12px]", active ? "font-semibold" : "font-medium")}>
                   {label}
                 </span>

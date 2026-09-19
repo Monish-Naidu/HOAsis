@@ -3,8 +3,8 @@
 import { Suspense, use, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowRight, Check, DoorOpen, MailCheck, ShieldCheck } from "lucide-react";
-import { Button, Card } from "@/components/ui/primitives";
+import { ArrowRight, DoorOpen, ShieldCheck } from "lucide-react";
+import { Button, Card, SuccessMark } from "@/components/ui/primitives";
 import { useAppState, useCommunityById, useStorageReady } from "@/lib/app-state";
 import { useAuth, signUp } from "@/lib/auth";
 import { parseInvitation } from "@/lib/invitations";
@@ -69,7 +69,7 @@ export function JoinPanel() {
         <div className="mt-5 flex flex-wrap gap-2">
           <Link
             href="/join"
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg hover:opacity-90"
+            className="press shimmer inline-flex h-10 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[15px] font-semibold text-primary-fg shadow-raised hover:shadow-glow"
           >
             Join with a code
           </Link>
@@ -312,9 +312,7 @@ function JoinForm({
   if (done) {
     return (
       <Card className="p-6">
-        <span className="mb-3 flex size-11 items-center justify-center rounded-full bg-ok-soft text-ok">
-          {done === "check-email" ? <MailCheck className="size-5" /> : <Check className="size-5" />}
-        </span>
+        <SuccessMark size={48} className="mb-3" />
         <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
           {done === "check-email" ? "Check your email" : `Sent to the board of ${found.name}`}
         </h1>

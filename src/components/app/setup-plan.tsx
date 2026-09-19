@@ -10,7 +10,7 @@ import {
   PartyPopper,
   Upload,
 } from "lucide-react";
-import { Button, ButtonLink, Callout, Card } from "@/components/ui/primitives";
+import { Button, ButtonLink, Callout, Card, SuccessMark } from "@/components/ui/primitives";
 import { BankConnect } from "@/components/app/bank-connect";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
@@ -343,11 +343,13 @@ function Done({ label, detail }: { label: string; detail: string }) {
 function Finished({ plan, leftOpen }: { plan: Plan; leftOpen: PlanTask[] }) {
   return (
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
-      <span className="mb-4 flex items-center gap-3">
+      <span className="mb-5 flex items-center gap-4">
         <HummingbirdArriving size={44} />
-        <span className="flex size-9 items-center justify-center rounded-full bg-ok-soft text-ok">
-          {plan.allDone ? <PartyPopper className="size-5" /> : <Check className="size-5" strokeWidth={2.5} />}
-        </span>
+        {plan.allDone ? (
+          <SuccessMark size={44} tone="primary" />
+        ) : (
+          <SuccessMark size={44} />
+        )}
       </span>
       <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg sm:text-[38px]">
         {plan.allDone ? "Everything is set up" : "That is everything for now"}

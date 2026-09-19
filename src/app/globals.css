@@ -4,9 +4,12 @@
 
 /* ---------------------------------------------------------------------------
    Your HOAsis design tokens
-   Navy carries brand + hierarchy; warm neutrals carry surfaces and text.
+   Navy carries structure and hierarchy; warm neutrals carry surfaces and
+   text; a vivid blue carries the one thing to do on a screen; five tinted
+   hues carry recognition (icon tiles, statuses) without shouting.
    Every value below is mirrored in src/lib/tokens.ts so a future React Native
-   app can consume the identical palette.
+   app can consume the identical palette. The 2026-09-19 pop pass is written
+   up in docs/design/ui-pop-2026-09-19.md.
 --------------------------------------------------------------------------- */
 
 :root {
@@ -52,43 +55,83 @@
   --accent:      #2c6cd1;
   --ring:        #2c6cd1;
 
+  /* The primary action. One saturated blue, painted, so the filled button
+     on a screen is the one thing that is not navy or neutral. The gradient
+     is the same hue lit from the top left, for primary buttons and the key
+     figure on a dashboard; never for a surface or a card. */
+  --primary:        #2b6be3;
+  --primary-hover:  #2160d6;
+  --primary-fg:     #ffffff;
+  --primary-soft:   #e8f0fd;
+  --brand-gradient: linear-gradient(135deg, #3f82f2 0%, #2b6be3 55%, #1f56c9 100%);
+  --brand-gradient-text: linear-gradient(100deg, #2b6be3 0%, #5f8ff5 60%, #7b5cf5 100%);
+  --aurora: radial-gradient(60% 60% at 20% 10%, rgb(63 130 242 / 0.28), transparent 60%),
+            radial-gradient(50% 50% at 85% 20%, rgb(123 92 245 / 0.22), transparent 60%),
+            radial-gradient(45% 45% at 60% 95%, rgb(31 191 143 / 0.18), transparent 60%);
+
+  /* The five tints. Each is a hue (for a solid tile, or a dot), a soft
+     field for a chip or a tinted tile, and a foreground that reads on that
+     field. Meaning stays with the semantic tokens below; these are for
+     recognition, so the fifth card in a row is not the same grey circle as
+     the first four. */
+  --tint-blue:        #2f6fe0;
+  --tint-blue-soft:   #e7effd;
+  --tint-blue-fg:     #1d4fb0;
+  --tint-teal:        #12a37a;
+  --tint-teal-soft:   #e0f5ec;
+  --tint-teal-fg:     #0b7553;
+  --tint-amber:       #f0a11a;
+  --tint-amber-soft:  #fdf1d8;
+  --tint-amber-fg:    #8f5a05;
+  --tint-coral:       #f1603f;
+  --tint-coral-soft:  #fee9e3;
+  --tint-coral-fg:    #b03a1b;
+  --tint-violet:      #7b5cf5;
+  --tint-violet-soft: #eee9fe;
+  --tint-violet-fg:   #5636cf;
+
   /* The landing hero, from the design on 2026-08-27.
      `royal` is the CTA blue: flatter and more purple than `brand`, and the
      same in both themes because it is a painted button, not a surface.
      `hero-field` and `hero-accent` do flip, so the section reads as day on
      the light theme and as the designed night on the dark one. */
-  --royal:       #1b3e8c;
-  --royal-hover: #21489e;
+  --royal:       #2456d6;
+  --royal-hover: #1f4dc4;
   --royal-fg:    #ffffff;
   --hero-field:  #eef2f9;
   --hero-accent: #2f68d8;
 
-  --ok:        #2e7d5b;
-  --ok-soft:   #e6f2ec;
+  --ok:        #1f8a5f;
+  --ok-soft:   #e2f4eb;
   --warn:      #a8710f;
   --warn-soft: #fbf1de;
-  --danger:    #b3453b;
+  --danger:    #c9463a;
   --danger-soft: #fbeae8;
   --info:      #2c6cd1;
   --info-soft: #e8f0fc;
 
   /* Chart series. Categorical identity only, assigned in this fixed order and
      validated for color-vision separation on both surfaces (2026-09-01, the
-     dataviz six-check validator). `chart-other` is the deliberate neutral for
-     an "everything else" slice, never a sixth series. Slot 5 and the neutral
-     sit in the CVD floor band on the dark surface, which is legal only with
-     the secondary encoding every chart here ships: 2px slice gaps and a
-     legend that names every value. */
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
-  --chart-3: #1baf7a;
-  --chart-4: #eda100;
-  --chart-5: #e87ba4;
+     dataviz six-check validator; hues re-stepped brighter 2026-09-19, same
+     order, same separation). `chart-other` is the deliberate neutral for an
+     "everything else" slice, never a sixth series. Slot 5 and the neutral sit
+     in the CVD floor band on the dark surface, which is legal only with the
+     secondary encoding every chart here ships: 2px slice gaps and a legend
+     that names every value. */
+  --chart-1: #2f7ae0;
+  --chart-2: #f06a34;
+  --chart-3: #17b57c;
+  --chart-4: #f2a600;
+  --chart-5: #ec7fab;
   --chart-other: #78766f;
 
   --shadow-sm: 0 1px 2px rgb(11 21 36 / 0.05);
   --shadow-md: 0 2px 4px -1px rgb(11 21 36 / 0.06), 0 6px 16px -4px rgb(11 21 36 / 0.08);
   --shadow-lg: 0 8px 32px -8px rgb(11 21 36 / 0.16);
+  /* Glows: a coloured shadow under a primary button on hover, and the halo a
+     marketing tile grows when the pointer arrives. Never on content cards. */
+  --glow-primary: 0 10px 28px -8px rgb(43 107 227 / 0.55), 0 2px 6px -2px rgb(43 107 227 / 0.35);
+  --glow-tile: 0 0 0 1px rgb(43 107 227 / 0.22), 0 18px 48px -18px rgb(43 107 227 / 0.35);
 }
 
 .dark {
@@ -108,32 +151,60 @@
   --accent:      #6ea0f0;
   --ring:        #6ea0f0;
 
-  --royal:       #1b3e8c;
-  --royal-hover: #2450ad;
+  --primary:        #3d7ff0;
+  --primary-hover:  #4d8bf5;
+  --primary-fg:     #ffffff;
+  --primary-soft:   #14284a;
+  --brand-gradient: linear-gradient(135deg, #4d8bf5 0%, #3d7ff0 55%, #2b63d6 100%);
+  --brand-gradient-text: linear-gradient(100deg, #6ea0f0 0%, #8fb6ff 55%, #b7a6ff 100%);
+  --aurora: radial-gradient(60% 60% at 20% 10%, rgb(77 139 245 / 0.30), transparent 60%),
+            radial-gradient(50% 50% at 85% 20%, rgb(143 118 255 / 0.24), transparent 60%),
+            radial-gradient(45% 45% at 60% 95%, rgb(31 191 143 / 0.16), transparent 60%);
+
+  --tint-blue:        #4d8bf5;
+  --tint-blue-soft:   #14284a;
+  --tint-blue-fg:     #9cc0ff;
+  --tint-teal:        #1fbf8f;
+  --tint-teal-soft:   #0f2f27;
+  --tint-teal-fg:     #6fe0bd;
+  --tint-amber:       #f5b342;
+  --tint-amber-soft:  #33270f;
+  --tint-amber-fg:    #f9cd78;
+  --tint-coral:       #f4735a;
+  --tint-coral-soft:  #3a1c16;
+  --tint-coral-fg:    #ffa08c;
+  --tint-violet:      #8f76ff;
+  --tint-violet-soft: #241b45;
+  --tint-violet-fg:   #c2b3ff;
+
+  --royal:       #2b63d6;
+  --royal-hover: #3671e6;
   --royal-fg:    #ffffff;
   --hero-field:  #001330;
   --hero-accent: #7dabf8;
 
-  --ok:        #5cbd92;
+  --ok:        #4ecb95;
   --ok-soft:   #122d24;
   --warn:      #dfa845;
   --warn-soft: #33270f;
-  --danger:    #e2837a;
+  --danger:    #e88a80;
   --danger-soft: #351b19;
   --info:      #6ea0f0;
   --info-soft: #12233d;
 
   /* Same hues re-stepped for the dark surface, not a lightness flip. */
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-4: #c98500;
-  --chart-5: #d55181;
+  --chart-1: #4a8ff0;
+  --chart-2: #e8653a;
+  --chart-3: #22b586;
+  --chart-4: #e0a020;
+  --chart-5: #e56597;
   --chart-other: #8d99ab;
 
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.35), 0 6px 16px -4px rgb(0 0 0 / 0.45);
   --shadow-lg: 0 8px 32px -8px rgb(0 0 0 / 0.6);
+  --glow-primary: 0 10px 28px -8px rgb(77 139 245 / 0.6), 0 2px 6px -2px rgb(77 139 245 / 0.4);
+  --glow-tile: 0 0 0 1px rgb(110 160 240 / 0.28), 0 18px 48px -18px rgb(77 139 245 / 0.45);
 }
 
 @theme inline {
@@ -163,11 +234,31 @@
   --color-brand-soft: var(--brand-soft);
   --color-brand-soft-fg: var(--brand-soft-fg);
   --color-accent:    var(--accent);
+  --color-primary:   var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
   --color-royal:     var(--royal);
   --color-royal-hover: var(--royal-hover);
   --color-royal-fg:  var(--royal-fg);
   --color-hero-field: var(--hero-field);
   --color-hero-accent: var(--hero-accent);
+
+  --color-tint-blue:        var(--tint-blue);
+  --color-tint-blue-soft:   var(--tint-blue-soft);
+  --color-tint-blue-fg:     var(--tint-blue-fg);
+  --color-tint-teal:        var(--tint-teal);
+  --color-tint-teal-soft:   var(--tint-teal-soft);
+  --color-tint-teal-fg:     var(--tint-teal-fg);
+  --color-tint-amber:       var(--tint-amber);
+  --color-tint-amber-soft:  var(--tint-amber-soft);
+  --color-tint-amber-fg:    var(--tint-amber-fg);
+  --color-tint-coral:       var(--tint-coral);
+  --color-tint-coral-soft:  var(--tint-coral-soft);
+  --color-tint-coral-fg:    var(--tint-coral-fg);
+  --color-tint-violet:      var(--tint-violet);
+  --color-tint-violet-soft: var(--tint-violet-soft);
+  --color-tint-violet-fg:   var(--tint-violet-fg);
 
   --color-ok:        var(--ok);
   --color-ok-soft:   var(--ok-soft);
@@ -188,11 +279,28 @@
   --shadow-card: var(--shadow-sm);
   --shadow-raised: var(--shadow-md);
   --shadow-float: var(--shadow-lg);
+  --shadow-glow: var(--glow-primary);
+  --shadow-glow-tile: var(--glow-tile);
 
   --radius-card: 0.875rem;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* Gradient utilities. Tailwind has no token type for a gradient, so these
+   are named utilities over the variables above. */
+@utility bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+@utility bg-aurora {
+  background-image: var(--aurora);
+}
+@utility text-gradient {
+  background-image: var(--brand-gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @layer base {
@@ -234,19 +342,22 @@
 
 /* ---------------------------------------------------------------------------
    Motion.
-   
+
    Two easings and three durations, used everywhere. Apple's interfaces feel
    the way they do partly because almost nothing eases linearly and almost
    nothing uses the same curve on the way in as on the way out: things enter
    fast and settle slowly, which reads as weight rather than as animation.
-   
+
    `--ease-out-soft` is that settle. `--ease-spring` overshoots very slightly
    and is only for things that snap into a position, like the pill behind a
-   selected tab.
+   selected tab. `--ease-pop` overshoots more and is only for a thing that
+   appears from nothing: a check mark, a chip landing on the hero.
 --------------------------------------------------------------------------- */
 :root {
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
+  --ease-pop: cubic-bezier(0.22, 1.6, 0.36, 1);
+  --dur-press: 120ms;
   --dur-fast: 180ms;
   --dur-base: 320ms;
   --dur-slow: 640ms;
@@ -257,6 +368,30 @@
   to   { opacity: 1; transform: none; }
 }
 .animate-rise { animation: hoasis-rise var(--dur-base) var(--ease-out-soft) both; }
+
+/* Rows arriving one after another. The parent gets `.stagger`; each direct
+   child rises a beat after the one before it, for the first dozen. Past
+   twelve everything lands together, because a list that takes a second to
+   finish arriving is a list somebody is waiting on. */
+@keyframes hoasis-rise-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.stagger > * {
+  animation: hoasis-rise-up var(--dur-base) var(--ease-out-soft) both;
+}
+.stagger > :nth-child(1)  { animation-delay: 0ms; }
+.stagger > :nth-child(2)  { animation-delay: 40ms; }
+.stagger > :nth-child(3)  { animation-delay: 80ms; }
+.stagger > :nth-child(4)  { animation-delay: 120ms; }
+.stagger > :nth-child(5)  { animation-delay: 160ms; }
+.stagger > :nth-child(6)  { animation-delay: 200ms; }
+.stagger > :nth-child(7)  { animation-delay: 240ms; }
+.stagger > :nth-child(8)  { animation-delay: 280ms; }
+.stagger > :nth-child(9)  { animation-delay: 320ms; }
+.stagger > :nth-child(10) { animation-delay: 360ms; }
+.stagger > :nth-child(11) { animation-delay: 400ms; }
+.stagger > :nth-child(12) { animation-delay: 440ms; }
 
 /* One question at a time. The answered question slips away in the direction
    of travel and the next one rises in from the other side, so going back
@@ -285,13 +420,14 @@
 
 /* The scroll reveal. Held at the start position until the observer marks the
    element visible, so content below the fold actually animates when the reader
-   arrives rather than finishing before they get there. */
+   arrives rather than finishing before they get there. A touch of scale so
+   the settle reads as arriving from behind the page, not sliding up it. */
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(22px) scale(0.985);
   transition:
     opacity var(--dur-slow) var(--ease-out-soft),
-    transform var(--dur-slow) var(--ease-out-soft);
+    transform 720ms var(--ease-out-soft);
   transition-delay: var(--reveal-delay, 0ms);
   will-change: opacity, transform;
 }
@@ -306,7 +442,208 @@
   transition:
     transform var(--dur-base) var(--ease-spring),
     width var(--dur-base) var(--ease-spring),
+    height var(--dur-base) var(--ease-spring),
     opacity var(--dur-fast) linear;
+}
+
+/* ---------------------------------------------------------------------------
+   Icon tiles.
+
+   `data-tint` picks the hue; the solid variant lights it from the top left
+   and darkens it toward the bottom right, with a hairline of light along
+   the top edge, which is what separates a designed icon from a coloured
+   circle. Both mixes are from the one tint variable, so a new tint is one
+   line in each theme and nothing here.
+--------------------------------------------------------------------------- */
+.icon-tile[data-tint="blue"]   { --tile: var(--tint-blue); }
+.icon-tile[data-tint="teal"]   { --tile: var(--tint-teal); }
+.icon-tile[data-tint="amber"]  { --tile: var(--tint-amber); }
+.icon-tile[data-tint="coral"]  { --tile: var(--tint-coral); }
+.icon-tile[data-tint="violet"] { --tile: var(--tint-violet); }
+.icon-tile[data-tint="neutral"] { --tile: var(--fg-subtle); }
+.icon-tile-solid {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tile) 78%, white) 0%,
+    var(--tile) 55%,
+    color-mix(in srgb, var(--tile) 84%, black) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(0 0 0 / 0.12),
+    0 6px 16px -6px color-mix(in srgb, var(--tile) 70%, transparent);
+}
+.icon-tile-ring {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--tile) 35%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--tile) 12%, transparent);
+}
+.icon-tile-solid.icon-tile-ring {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 0 0 4px color-mix(in srgb, var(--tile) 18%, transparent),
+    0 6px 16px -6px color-mix(in srgb, var(--tile) 70%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Actions.
+
+   Every button presses: a hair smaller under the pointer, back on release.
+   The primary button also carries a sheen that sweeps once when the pointer
+   arrives, which is what makes a gradient button read as lit rather than
+   printed. Both are pure CSS, both are off under reduced motion.
+--------------------------------------------------------------------------- */
+.press {
+  transition:
+    transform var(--dur-press) var(--ease-out-soft),
+    translate var(--dur-fast) var(--ease-out-soft),
+    scale var(--dur-fast) var(--ease-out-soft),
+    filter var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-fast) var(--ease-out-soft),
+    background-color var(--dur-fast) var(--ease-out-soft),
+    border-color var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    opacity var(--dur-fast) var(--ease-out-soft);
+}
+.press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+@keyframes hoasis-shimmer {
+  from { transform: translateX(-130%) skewX(-16deg); }
+  to   { transform: translateX(230%) skewX(-16deg); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  transform: translateX(-130%) skewX(-16deg);
+}
+.shimmer:hover::after,
+.shimmer:focus-visible::after {
+  animation: hoasis-shimmer 780ms var(--ease-out-soft) forwards;
+}
+
+/* A card that lifts to meet the pointer. Marketing surfaces only. */
+.lift {
+  transition:
+    transform var(--dur-base) var(--ease-out-soft),
+    box-shadow var(--dur-base) var(--ease-out-soft),
+    border-color var(--dur-base) var(--ease-out-soft);
+}
+.lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--glow-tile);
+}
+
+/* A framed screenshot that tilts toward the pointer. One fixed angle, not a
+   pointer-tracking one: CSS only, and a picture that follows the cursor is a
+   toy after the second pass. */
+.tilt-stage {
+  perspective: 1400px;
+}
+.tilt {
+  transition: transform var(--dur-slow) var(--ease-out-soft);
+  transform-style: preserve-3d;
+}
+.tilt-stage:hover .tilt {
+  transform: rotateX(3deg) rotateY(-4deg) translateY(-4px);
+}
+
+/* ---------------------------------------------------------------------------
+   Confirmation.
+
+   A check that pops in, and a ring that pulses out once around it. Used the
+   moment a payment is scheduled, a request is sent, or setup finishes.
+   Nothing rains from the top of the screen: this is a product for adults
+   on a Tuesday, and one pulse says "that happened" without saying "party".
+--------------------------------------------------------------------------- */
+@keyframes hoasis-pop {
+  0%   { opacity: 0; transform: scale(0.4); }
+  60%  { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pop-in {
+  animation: hoasis-pop 480ms var(--ease-pop) both;
+}
+@keyframes hoasis-check-draw {
+  from { stroke-dashoffset: 40; }
+  to   { stroke-dashoffset: 0; }
+}
+.check-draw {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: hoasis-check-draw 420ms var(--ease-out-soft) 220ms forwards;
+}
+@keyframes hoasis-ring-pulse {
+  0%   { opacity: 0.7; transform: scale(0.7); }
+  100% { opacity: 0; transform: scale(1.9); }
+}
+.ring-pulse::before,
+.ring-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  opacity: 0;
+  animation: hoasis-ring-pulse 1100ms var(--ease-out-soft) 200ms both;
+}
+.ring-pulse::after {
+  animation-delay: 420ms;
+}
+
+/* The toast: up from the bottom edge with a little overshoot, and a bar
+   along the bottom that drains for as long as the toast will stay. */
+@keyframes hoasis-toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+.toast-in {
+  animation: hoasis-toast-in var(--dur-base) var(--ease-spring) both;
+}
+@keyframes hoasis-drain {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+.toast-drain {
+  transform-origin: left;
+  animation: hoasis-drain var(--toast-ms, 4000ms) linear forwards;
+}
+
+/* A chip that floats: slow bob, for the two cards pinned on the hero. */
+@keyframes hoasis-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.float {
+  animation: hoasis-float 5s ease-in-out infinite;
+}
+.float-late {
+  animation: hoasis-float 6s ease-in-out 1.2s infinite;
+}
+
+/* The chips land, then float. Arrival is a pop with a delay; float is on a
+   wrapper, so the two transforms never fight. */
+@keyframes hoasis-land {
+  0%   { opacity: 0; transform: translateY(18px) scale(0.92); }
+  100% { opacity: 1; transform: none; }
+}
+.land {
+  animation: hoasis-land 720ms var(--ease-pop) both;
+  animation-delay: var(--land-delay, 0ms);
+}
+
+/* The toggle knob: a spring on the way across, and a squash mid-flight. */
+.knob {
+  transition: transform var(--dur-base) var(--ease-spring);
 }
 
 /* The hummingbird.
@@ -349,17 +686,44 @@
   .bird-arrive,
   .bird-lift svg,
   .animate-rise,
+  .stagger > *,
   .q-enter-up,
   .q-enter-down,
   .q-leave-up,
   .q-leave-down,
   .reveal,
-  .tab-pill {
+  .tab-pill,
+  .press,
+  .shimmer::after,
+  .lift,
+  .tilt,
+  .pop-in,
+  .check-draw,
+  .ring-pulse::before,
+  .ring-pulse::after,
+  .toast-in,
+  .toast-drain,
+  .float,
+  .float-late,
+  .land,
+  .knob {
     animation: none !important;
     transition: none !important;
   }
-  .reveal {
+  .reveal,
+  .land {
     opacity: 1;
+    transform: none;
+  }
+  .check-draw {
+    stroke-dashoffset: 0;
+  }
+  .ring-pulse::before,
+  .ring-pulse::after {
+    display: none;
+  }
+  .lift:hover,
+  .tilt-stage:hover .tilt {
     transform: none;
   }
 }

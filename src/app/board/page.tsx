@@ -8,12 +8,16 @@ import {
   ClipboardCheck,
   Home,
   Landmark,
+  ListChecks,
   Megaphone,
   Percent,
+  Receipt,
   ShieldAlert,
+  UserPlus,
   Vote,
 } from "lucide-react";
-import { Callout, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
+import { Callout, Card, CardHeader, IconTile, PageHeader, type TintName } from "@/components/ui/primitives";
+import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
 import {
   cashPosition,
@@ -204,60 +208,86 @@ function NeedsYou() {
     (a) => !a.doneOn && a.dueOn && a.dueOn < community.asOf,
   );
 
-  const rows = [
+  // Each row wears the tint of the tab it opens, so the eye learns "teal is
+  // money, blue is requests" here and finds the same colour on the tab.
+  type NeedRow = { count: number; label: string; href: string; icon: typeof Landmark; tint: TintName };
+  const all: NeedRow[] = [
     {
       count: recon.needsReview.length,
       label: pluralize(recon.needsReview.length, "transaction") + " to confirm",
       href: "/board/money/transactions",
+      icon: Landmark,
+      tint: "teal",
     },
     {
       count: openRequests.length,
       label: pluralize(openRequests.length, "request") + " waiting on an answer",
       href: "/board/requests",
+      icon: ClipboardCheck,
+      tint: "blue",
     },
     {
       count: approvals.length,
       label: pluralize(approvals.length, "invoice") + " awaiting approval",
       href: "/board/vendors",
+      icon: Receipt,
+      tint: "amber",
     },
     {
       count: joins.length,
       label: pluralize(joins.length, "person") + " asking to join",
       href: "/board/homeowners",
+      icon: UserPlus,
+      tint: "violet",
     },
     {
       count: saysFixed.length,
       label: pluralize(saysFixed.length, "notice") + " the owner says is fixed",
       href: "/board/violations",
+      icon: ShieldAlert,
+      tint: "coral",
     },
     {
       count: overdueItems.length,
       label: pluralize(overdueItems.length, "action item") + " overdue",
       href: "#action-items",
+      icon: ListChecks,
+      tint: "coral",
     },
-  ].filter((row) => row.count > 0);
+  ];
+  const rows = all.filter((row) => row.count > 0);
 
   return (
     <Card>
-      <CardHeader title="Needs you today" />
+      <CardHeader
+        title="Needs you today"
+        action={
+          rows.length ? (
+            <span className="tnum inline-flex h-6 items-center rounded-full bg-brand-gradient px-2.5 text-[12px] font-bold text-primary-fg">
+              {rows.reduce((n, row) => n + row.count, 0)}
+            </span>
+          ) : null
+        }
+      />
       {rows.length === 0 ? (
-        <p className="flex items-center gap-2 px-5 py-3.5 text-[15px] text-ok">
-          <ClipboardCheck className="size-4 shrink-0" />
+        <p className="flex items-center gap-3 px-5 py-3.5 text-[15px] text-ok">
+          <IconTile icon={ClipboardCheck} tint="teal" size="sm" className="pop-in" />
           Nothing needs you today.
         </p>
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="stagger divide-y divide-border">
           {rows.map((row) => (
             <li key={row.href}>
               <Link
                 href={row.href}
-                className="flex items-center gap-3 px-5 py-3 text-[15px] text-fg transition-colors hover:bg-surface-2"
+                className="group flex items-center gap-3 px-5 py-3 text-[15px] text-fg transition-colors hover:bg-surface-2"
               >
-                <span className="tnum flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-warn-soft px-1.5 text-[13px] font-semibold text-warn">
-                  {row.count}
+                <IconTile icon={row.icon} tint={row.tint} size="sm" />
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="tnum font-semibold">{row.count}</span>{" "}
+                  {row.label.replace(/^\d+\s/, "")}
                 </span>
-                <span className="min-w-0 flex-1 truncate">{row.label}</span>
-                <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+                <ChevronRight className="size-4 shrink-0 text-fg-subtle transition-transform group-hover:translate-x-0.5" />
               </Link>
             </li>
           ))}
@@ -269,8 +299,18 @@ function NeedsYou() {
 
 /* ------------------------------------------------------------------- tiles */
 
+const STAT_BAR: Record<TintName, string> = {
+  blue: "bg-tint-blue",
+  teal: "bg-tint-teal",
+  amber: "bg-tint-amber",
+  coral: "bg-tint-coral",
+  violet: "bg-tint-violet",
+  neutral: "bg-border-2",
+};
+
 function StatTile({
-  icon: Icon,
+  icon,
+  tint,
   label,
   value,
   valueTone,
@@ -279,25 +319,21 @@ function StatTile({
   action,
 }: {
   icon: typeof Landmark;
+  /** The tile's own colour: a hairline along the top and the field behind the icon. */
+  tint: TintName;
   label: string;
-  value: string;
+  value: React.ReactNode;
   valueTone?: "ok" | "warn";
   sub?: string;
   href: string;
   action: string;
 }) {
   return (
-    <Card className="flex items-start gap-3 p-4">
-      {/* The icon aids recognition and nothing else, so it wears the surface
-          colours. It only turns amber when the number under it is a problem. */}
-      <span
-        className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-full",
-          valueTone === "warn" ? "bg-warn-soft text-warn" : "bg-surface-2 text-fg-muted",
-        )}
-      >
-        <Icon className="size-[18px]" strokeWidth={2} />
-      </span>
+    <Card className="relative flex items-start gap-3 overflow-hidden p-4">
+      <span className={cn("absolute inset-x-0 top-0 h-[3px]", STAT_BAR[tint])} aria-hidden />
+      {/* The icon aids recognition: each tile keeps its tint, and only the
+          number changes colour when it is a problem. */}
+      <IconTile icon={icon} tint={valueTone === "warn" ? "amber" : tint} size="md" />
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-semibold text-fg-muted">{label}</p>
         <p
@@ -311,10 +347,10 @@ function StatTile({
         {sub ? <p className="mt-1 truncate text-[13px] text-fg-muted">{sub}</p> : null}
         <Link
           href={href}
-          className="mt-1.5 inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
+          className="group mt-1.5 inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
         >
           {action}
-          <ChevronRight className="size-3.5" />
+          <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
     </Card>
@@ -338,19 +374,21 @@ function StatTiles() {
   // bank, who is behind, how the year is collecting, and when the board
   // next sits. Requests and invoices are decisions, so they live above.
   return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="stagger mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatTile
         icon={Landmark}
+        tint="teal"
         label="Cash on hand"
-        value={money(cash.operating, { cents: false })}
+        value={<CountUp cents={cash.operating} />}
         sub="Operating account"
         href="/board/money"
         action="Open finances"
       />
       <StatTile
         icon={Home}
+        tint="coral"
         label="Past due"
-        value={String(delinq.past.length)}
+        value={<CountUp kind="number" value={delinq.past.length} />}
         valueTone={delinq.past.length > 0 ? "warn" : undefined}
         sub={delinq.past.length > 0 ? `${money(delinq.totalCents, { cents: false })} owed` : "Everyone is current"}
         href="/board/money/collections"
@@ -358,8 +396,9 @@ function StatTiles() {
       />
       <StatTile
         icon={Percent}
+        tint="blue"
         label={`Dues collected, ${thisYear}`}
-        value={dues.measurable ? `${Math.round(dues.rate * 100)}%` : "Not yet"}
+        value={dues.measurable ? <CountUp kind="percent" value={Math.round(dues.rate * 100)} /> : "Not yet"}
         valueTone={dues.measurable && dues.rate < 0.9 ? "warn" : undefined}
         sub={
           dues.measurable
@@ -371,6 +410,7 @@ function StatTiles() {
       />
       <StatTile
         icon={CalendarDays}
+        tint="violet"
         label="Next meeting"
         value={
           liveMeeting
@@ -392,28 +432,31 @@ function StatTiles() {
 
 /* ------------------------------------------------------------ quick actions */
 
-const ACTIONS = [
-  { href: "/board/voting", label: "New ballot", icon: Vote },
-  { href: "/board/meetings", label: "Schedule a meeting", icon: CalendarDays },
-  { href: "/board/requests", label: "Review requests", icon: ClipboardCheck },
-  { href: "/board/communications", label: "Send an announcement", icon: Megaphone },
+const ACTIONS: { href: string; label: string; icon: typeof Vote; tint: TintName }[] = [
+  { href: "/board/voting", label: "New ballot", icon: Vote, tint: "violet" },
+  { href: "/board/meetings", label: "Schedule a meeting", icon: CalendarDays, tint: "amber" },
+  { href: "/board/requests", label: "Review requests", icon: ClipboardCheck, tint: "blue" },
+  { href: "/board/communications", label: "Send an announcement", icon: Megaphone, tint: "coral" },
 ];
 
-/** The four things a board does most, one row, no colour. */
+/** The four things a board does most, one row, each wearing its tab's tint. */
 function QuickActions() {
   return (
     <Card className="mt-6">
       <CardHeader title="Quick actions" />
       <div className="grid grid-cols-2 gap-1 p-3 sm:grid-cols-4">
-        {ACTIONS.map(({ href, label, icon: Icon }) => (
+        {ACTIONS.map(({ href, label, icon, tint }) => (
           <Link
             key={label}
             href={href}
-            className="flex flex-col items-center gap-2 rounded-lg px-1 py-4 text-center transition-colors hover:bg-surface-2"
+            className="press group flex flex-col items-center gap-2 rounded-xl px-1 py-4 text-center hover:bg-surface-2"
           >
-            <span className="flex size-11 items-center justify-center rounded-full bg-surface-2 text-fg-muted">
-              <Icon className="size-5" strokeWidth={2} />
-            </span>
+            <IconTile
+              icon={icon}
+              tint={tint}
+              size="lg"
+              className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
+            />
             <span className="text-[13px] font-medium leading-tight text-fg">{label}</span>
           </Link>
         ))}

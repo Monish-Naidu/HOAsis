@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Landmark, Mail, Receipt, Scale } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
+import { IconTile, type TintName } from "@/components/ui/primitives";
 import { PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
 import { money } from "@/lib/utils";
 import { PriceCalculator } from "./price-calculator";
@@ -28,28 +29,28 @@ export const metadata = {
  * How a payment is priced. The processor's rates are its published card and
  * ACH costs, passed through untouched, so a board can check them anywhere.
  */
-const PAYMENT_TILES = [
+const PAYMENT_TILES: { icon: typeof Landmark; tint: TintName; label: string; body: string }[] = [
   {
     icon: Landmark,
-    tone: "bg-info-soft text-info",
+    tint: "blue",
     label: "Processor, at cost",
     body: "2.9% + 30¢ on cards, 35¢ on bank transfers. Never marked up.",
   },
   {
     icon: Receipt,
-    tone: "bg-ok-soft text-ok",
+    tint: "teal",
     label: `Ours, ${money(PRICE_PER_TRANSACTION_CENTS, { cents: false })} flat`,
     body: "Same on a $100 payment and a $1,000 one. Owner or association pays it, your call.",
   },
   {
     icon: Scale,
-    tone: "bg-brand-soft text-brand-soft-fg",
+    tint: "violet",
     label: "Two lines, never blended",
     body: "Every receipt shows the processor's cost and ours separately.",
   },
   {
     icon: Mail,
-    tone: "bg-warn-soft text-warn",
+    tint: "amber",
     label: "Only extra: postage",
     body: "Billed at cost when a notice has to go on paper. Nothing else.",
   },
@@ -63,7 +64,7 @@ export default function PricingPage() {
         <Reveal>
           <header className="mx-auto max-w-2xl text-center">
             <h1 className="text-balance text-[38px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[52px]">
-              One price. <span className="text-hero-accent">Every feature.</span>
+              One price. <span className="text-gradient">Every feature.</span>
             </h1>
             <p className="mt-4 text-[18px] leading-relaxed text-fg-muted">
               No tiers, no seats, no add-ons. Set the dial to your size and read the number.
@@ -82,14 +83,10 @@ export default function PricingPage() {
             </h2>
           </Reveal>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {PAYMENT_TILES.map(({ icon: Icon, tone, label, body }, index) => (
-              <Reveal key={label} delay={index * 60}>
-                <div className="h-full rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-raised">
-                  <span
-                    className={`flex size-11 items-center justify-center rounded-full ${tone}`}
-                  >
-                    <Icon className="size-5" strokeWidth={2} />
-                  </span>
+            {PAYMENT_TILES.map(({ icon, tint, label, body }, index) => (
+              <Reveal key={label} delay={index * 70}>
+                <div className="lift h-full rounded-2xl border border-border bg-surface p-5 shadow-card">
+                  <IconTile icon={icon} tint={tint} variant="solid" size="lg" />
                   <p className="mt-4 text-[16px] font-semibold tracking-[-0.015em] text-fg">
                     {label}
                   </p>
@@ -107,7 +104,15 @@ export default function PricingPage() {
         </section>
 
         <Reveal delay={160}>
-          <div className="mt-14 overflow-hidden rounded-[1.5rem] border border-border bg-navy-900 px-6 py-10 text-center text-navy-50 dark:bg-navy-800 sm:py-12">
+          <div className="relative isolate mt-14 overflow-hidden rounded-[1.5rem] border border-border bg-navy-900 px-6 py-10 text-center text-navy-50 dark:bg-navy-800 sm:py-12">
+            <div
+              className="pointer-events-none absolute -bottom-32 -left-20 -z-10 size-[26rem] rounded-full bg-[radial-gradient(closest-side,rgb(63_130_242/0.5),transparent)] blur-3xl"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -right-20 -top-32 -z-10 size-[24rem] rounded-full bg-[radial-gradient(closest-side,rgb(143_118_255/0.45),transparent)] blur-3xl"
+              aria-hidden
+            />
             <h2 className="text-[28px] font-semibold tracking-[-0.03em] sm:text-[34px]">
               Try it before anyone quotes you anything.
             </h2>
@@ -117,14 +122,14 @@ export default function PricingPage() {
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href="/start"
-                className="inline-flex h-12 items-center gap-2 rounded-xl bg-navy-50 px-6 text-[16px] font-semibold text-navy-950 transition-transform hover:-translate-y-0.5"
+                className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-white px-6 text-[16px] font-semibold text-navy-950 shadow-float hover:-translate-y-0.5"
               >
                 Set up your association
-                <ArrowRight className="size-4" />
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/signin"
-                className="inline-flex h-12 items-center rounded-xl border border-navy-50/30 px-6 text-[16px] font-semibold text-navy-50 transition-colors hover:bg-navy-50/10"
+                className="press inline-flex h-12 items-center rounded-xl border border-navy-50/30 px-6 text-[16px] font-semibold text-navy-50 hover:bg-navy-50/10"
               >
                 Open the demo
               </Link>

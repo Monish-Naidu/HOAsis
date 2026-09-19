@@ -69,6 +69,7 @@ export function StatTile({
   goodWhen,
   href,
   tone,
+  accent,
   className,
 }: {
   label: string;
@@ -78,10 +79,22 @@ export function StatTile({
   goodWhen?: "up" | "down" | "neither";
   href?: string;
   tone?: "ok" | "warn" | "danger";
+  /** A coloured hairline along the top, so a row of tiles reads as a row of different things. */
+  accent?: "blue" | "teal" | "amber" | "coral" | "violet";
   className?: string;
 }) {
+  const bar = accent
+    ? {
+        blue: "bg-tint-blue",
+        teal: "bg-tint-teal",
+        amber: "bg-tint-amber",
+        coral: "bg-tint-coral",
+        violet: "bg-tint-violet",
+      }[accent]
+    : null;
   const body = (
     <>
+      {bar ? <span className={cn("absolute inset-x-0 top-0 h-[3px]", bar)} aria-hidden /> : null}
       <div className="flex items-center justify-between gap-2">
         <p className="text-[13px] font-semibold text-fg-muted">{label}</p>
         {delta ? <DeltaChip delta={delta} goodWhen={goodWhen} /> : null}
@@ -98,8 +111,8 @@ export function StatTile({
     </>
   );
   const styles = cn(
-    "block rounded-card border border-border bg-surface p-4 shadow-card",
-    href && "transition-colors hover:bg-surface-2",
+    "relative block overflow-hidden rounded-card border border-border bg-surface p-4 shadow-card",
+    href && "press hover:border-border-2 hover:bg-surface-2",
     className,
   );
   return href ? (
@@ -142,8 +155,8 @@ export function Segmented<T extends string>({
     <div role="radiogroup" aria-label={ariaLabel} className={cn("inline-flex max-w-full", className)}>
       <TabPill
         activeKey={value}
-        className="no-scrollbar inline-flex gap-0.5 overflow-x-auto rounded-lg bg-surface-2 p-0.5"
-        pillClassName="bg-surface shadow-card rounded-md"
+        className="no-scrollbar inline-flex gap-0.5 overflow-x-auto rounded-lg bg-surface-2 p-0.5 ring-1 ring-inset ring-border"
+        pillClassName="bg-surface shadow-raised rounded-md"
       >
         {options.map((o) => (
           <button
@@ -315,7 +328,10 @@ export function InlineBar({
       aria-hidden
       className={cn("block h-1.5 w-full overflow-hidden rounded-full bg-surface-3", className)}
     >
-      <span className={cn("block h-full rounded-full", colorClass)} style={{ width: `${pct}%` }} />
+      <span
+        className={cn("block h-full rounded-full transition-[width] duration-[640ms] ease-[cubic-bezier(0.16,1,0.3,1)]", colorClass)}
+        style={{ width: `${pct}%` }}
+      />
     </span>
   );
 }
