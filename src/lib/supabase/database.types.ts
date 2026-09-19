@@ -39,6 +39,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_items: {
+        Row: {
+          association_id: string
+          created_at: string
+          created_by: string | null
+          done_on: string | null
+          due_on: string | null
+          id: string
+          meeting_id: string | null
+          owner_name: string
+          title: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          created_by?: string | null
+          done_on?: string | null
+          due_on?: string | null
+          id?: string
+          meeting_id?: string | null
+          owner_name?: string
+          title: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          created_by?: string | null
+          done_on?: string | null
+          due_on?: string | null
+          id?: string
+          meeting_id?: string | null
+          owner_name?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_items_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       amenities: {
         Row: {
           association_id: string
@@ -126,6 +184,12 @@ export type Database = {
       }
       associations: {
         Row: {
+          billing_brand: string | null
+          billing_customer_id: string | null
+          billing_email: string | null
+          billing_last4: string | null
+          billing_notices: string[]
+          billing_subscription_id: string | null
           cancel_reason: string | null
           canceled_at: string | null
           city: string
@@ -142,34 +206,34 @@ export type Database = {
           insurance_carrier: string | null
           insurance_expires_on: string | null
           insurance_policy_no: string | null
+          join_code: string
           late_after_day: number
           name: string
           origin: Database["public"]["Enums"]["association_origin"] | null
+          past_due_since: string | null
           payment_fee_cents: number
           payment_fee_paid_by: string
           payment_fee_waived_on_ach: boolean
           photo_credit: string | null
           photo_url: string | null
+          previously: string | null
           property_type: Database["public"]["Enums"]["property_type"] | null
           settings: Json
           setup_completed_at: string | null
           shared_spaces: string[]
-          previously: string | null
           software_fee_cents_per_home: number
           state: string
           stripe_account_id: string | null
           subscription_status: string
           trial_ends_at: string
-          billing_customer_id: string | null
-          billing_subscription_id: string | null
-          billing_brand: string | null
-          billing_last4: string | null
-          billing_email: string | null
-          past_due_since: string | null
-          billing_notices: string[]
-          join_code: string
         }
         Insert: {
+          billing_brand?: string | null
+          billing_customer_id?: string | null
+          billing_email?: string | null
+          billing_last4?: string | null
+          billing_notices?: string[]
+          billing_subscription_id?: string | null
           cancel_reason?: string | null
           canceled_at?: string | null
           city: string
@@ -186,34 +250,34 @@ export type Database = {
           insurance_carrier?: string | null
           insurance_expires_on?: string | null
           insurance_policy_no?: string | null
+          join_code?: string
           late_after_day?: number
           name: string
           origin?: Database["public"]["Enums"]["association_origin"] | null
+          past_due_since?: string | null
           payment_fee_cents?: number
           payment_fee_paid_by?: string
           payment_fee_waived_on_ach?: boolean
           photo_credit?: string | null
           photo_url?: string | null
+          previously?: string | null
           property_type?: Database["public"]["Enums"]["property_type"] | null
           settings?: Json
           setup_completed_at?: string | null
           shared_spaces?: string[]
-          previously?: string | null
           software_fee_cents_per_home?: number
           state: string
           stripe_account_id?: string | null
           subscription_status?: string
           trial_ends_at?: string
-          billing_customer_id?: string | null
-          billing_subscription_id?: string | null
-          billing_brand?: string | null
-          billing_last4?: string | null
-          billing_email?: string | null
-          past_due_since?: string | null
-          billing_notices?: string[]
-          join_code?: string
         }
         Update: {
+          billing_brand?: string | null
+          billing_customer_id?: string | null
+          billing_email?: string | null
+          billing_last4?: string | null
+          billing_notices?: string[]
+          billing_subscription_id?: string | null
           cancel_reason?: string | null
           canceled_at?: string | null
           city?: string
@@ -230,32 +294,26 @@ export type Database = {
           insurance_carrier?: string | null
           insurance_expires_on?: string | null
           insurance_policy_no?: string | null
+          join_code?: string
           late_after_day?: number
           name?: string
           origin?: Database["public"]["Enums"]["association_origin"] | null
+          past_due_since?: string | null
           payment_fee_cents?: number
           payment_fee_paid_by?: string
           payment_fee_waived_on_ach?: boolean
           photo_credit?: string | null
           photo_url?: string | null
+          previously?: string | null
           property_type?: Database["public"]["Enums"]["property_type"] | null
           settings?: Json
           setup_completed_at?: string | null
           shared_spaces?: string[]
-          previously?: string | null
           software_fee_cents_per_home?: number
           state?: string
           stripe_account_id?: string | null
           subscription_status?: string
           trial_ends_at?: string
-          billing_customer_id?: string | null
-          billing_subscription_id?: string | null
-          billing_brand?: string | null
-          billing_last4?: string | null
-          billing_email?: string | null
-          past_due_since?: string | null
-          billing_notices?: string[]
-          join_code?: string
         }
         Relationships: [
           {
@@ -571,11 +629,11 @@ export type Database = {
           profile_id: string | null
           provider_id: string | null
           sent_at: string
+          status: string | null
+          status_at: string | null
           subject: string
           to_email: string
           unit_id: string | null
-          status: string | null
-          status_at: string | null
         }
         Insert: {
           association_id: string
@@ -585,11 +643,11 @@ export type Database = {
           profile_id?: string | null
           provider_id?: string | null
           sent_at?: string
+          status?: string | null
+          status_at?: string | null
           subject: string
           to_email: string
           unit_id?: string | null
-          status?: string | null
-          status_at?: string | null
         }
         Update: {
           association_id?: string
@@ -599,11 +657,11 @@ export type Database = {
           profile_id?: string | null
           provider_id?: string | null
           sent_at?: string
+          status?: string | null
+          status_at?: string | null
           subject?: string
           to_email?: string
           unit_id?: string | null
-          status?: string | null
-          status_at?: string | null
         }
         Relationships: [
           {
@@ -777,6 +835,53 @@ export type Database = {
           },
         ]
       }
+      join_requests: {
+        Row: {
+          association_id: string
+          created_at: string
+          decided_by: string | null
+          decided_on: string | null
+          email: string
+          full_name: string
+          id: string
+          note: string
+          status: string
+          unit_label: string
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          decided_by?: string | null
+          decided_on?: string | null
+          email: string
+          full_name: string
+          id?: string
+          note?: string
+          status?: string
+          unit_label?: string
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          decided_by?: string | null
+          decided_on?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          note?: string
+          status?: string
+          unit_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "join_requests_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ledger_entries: {
         Row: {
           amount_cents: number
@@ -854,9 +959,9 @@ export type Database = {
           location: string
           notice_sent_on: string | null
           passcode: string | null
+          rsvps: Json
           status: string
           title: string
-          rsvps: Json
         }
         Insert: {
           agenda?: Json
@@ -870,9 +975,9 @@ export type Database = {
           location?: string
           notice_sent_on?: string | null
           passcode?: string | null
+          rsvps?: Json
           status?: string
           title: string
-          rsvps?: Json
         }
         Update: {
           agenda?: Json
@@ -886,9 +991,9 @@ export type Database = {
           location?: string
           notice_sent_on?: string | null
           passcode?: string | null
+          rsvps?: Json
           status?: string
           title?: string
-          rsvps?: Json
         }
         Relationships: [
           {
@@ -903,6 +1008,7 @@ export type Database = {
       memberships: {
         Row: {
           association_id: string
+          autopay: Json | null
           capabilities: Database["public"]["Enums"]["capability"][]
           created_at: string
           ends_on: string | null
@@ -915,10 +1021,10 @@ export type Database = {
           role: Database["public"]["Enums"]["board_role"]
           starts_on: string
           unit_id: string
-          autopay: Json | null
         }
         Insert: {
           association_id: string
+          autopay?: Json | null
           capabilities?: Database["public"]["Enums"]["capability"][]
           created_at?: string
           ends_on?: string | null
@@ -931,10 +1037,10 @@ export type Database = {
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
           unit_id: string
-          autopay?: Json | null
         }
         Update: {
           association_id?: string
+          autopay?: Json | null
           capabilities?: Database["public"]["Enums"]["capability"][]
           created_at?: string
           ends_on?: string | null
@@ -947,7 +1053,6 @@ export type Database = {
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
           unit_id?: string
-          autopay?: Json | null
         }
         Relationships: [
           {
@@ -1268,100 +1373,35 @@ export type Database = {
           },
         ]
       }
-      action_items: {
+      post_likes: {
         Row: {
-          association_id: string
-          created_at: string
-          created_by: string | null
-          done_on: string | null
-          due_on: string | null
-          id: string
-          meeting_id: string | null
-          owner_name: string
-          title: string
+          liked_at: string
+          post_id: string
+          profile_id: string
         }
         Insert: {
-          association_id: string
-          created_at?: string
-          created_by?: string | null
-          done_on?: string | null
-          due_on?: string | null
-          id?: string
-          meeting_id?: string | null
-          owner_name?: string
-          title: string
+          liked_at?: string
+          post_id: string
+          profile_id: string
         }
         Update: {
-          association_id?: string
-          created_at?: string
-          created_by?: string | null
-          done_on?: string | null
-          due_on?: string | null
-          id?: string
-          meeting_id?: string | null
-          owner_name?: string
-          title?: string
+          liked_at?: string
+          post_id?: string
+          profile_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "action_items_association_id_fkey"
-            columns: ["association_id"]
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
             isOneToOne: false
-            referencedRelation: "associations"
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "action_items_meeting_id_fkey"
-            columns: ["meeting_id"]
+            foreignKeyName: "post_likes_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      join_requests: {
-        Row: {
-          association_id: string
-          created_at: string
-          decided_by: string | null
-          decided_on: string | null
-          email: string
-          full_name: string
-          id: string
-          note: string
-          status: string
-          unit_label: string
-        }
-        Insert: {
-          association_id: string
-          created_at?: string
-          decided_by?: string | null
-          decided_on?: string | null
-          email: string
-          full_name: string
-          id?: string
-          note?: string
-          status?: string
-          unit_label?: string
-        }
-        Update: {
-          association_id?: string
-          created_at?: string
-          decided_by?: string | null
-          decided_on?: string | null
-          email?: string
-          full_name?: string
-          id?: string
-          note?: string
-          status?: string
-          unit_label?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "join_requests_association_id_fkey"
-            columns: ["association_id"]
-            isOneToOne: false
-            referencedRelation: "associations"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1409,43 +1449,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "post_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "post_replies_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      post_likes: {
-        Row: {
-          liked_at: string
-          post_id: string
-          profile_id: string
-        }
-        Insert: {
-          liked_at?: string
-          post_id: string
-          profile_id: string
-        }
-        Update: {
-          liked_at?: string
-          post_id?: string
-          profile_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_likes_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_likes_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2218,6 +2232,8 @@ export type Database = {
           id: string
           next_action_on: string | null
           opened_on: string
+          owner_fixed_note: string | null
+          owner_fixed_on: string | null
           owner_name: string
           photos: Json
           reference: string
@@ -2229,8 +2245,6 @@ export type Database = {
           stage: string
           unit_id: string | null
           unit_label: string
-          owner_fixed_on: string | null
-          owner_fixed_note: string | null
         }
         Insert: {
           agency?: string | null
@@ -2241,6 +2255,8 @@ export type Database = {
           id?: string
           next_action_on?: string | null
           opened_on?: string
+          owner_fixed_note?: string | null
+          owner_fixed_on?: string | null
           owner_name?: string
           photos?: Json
           reference: string
@@ -2252,8 +2268,6 @@ export type Database = {
           stage?: string
           unit_id?: string | null
           unit_label?: string
-          owner_fixed_on?: string | null
-          owner_fixed_note?: string | null
         }
         Update: {
           agency?: string | null
@@ -2264,6 +2278,8 @@ export type Database = {
           id?: string
           next_action_on?: string | null
           opened_on?: string
+          owner_fixed_note?: string | null
+          owner_fixed_on?: string | null
           owner_name?: string
           photos?: Json
           reference?: string
@@ -2275,8 +2291,6 @@ export type Database = {
           stage?: string
           unit_id?: string | null
           unit_label?: string
-          owner_fixed_on?: string | null
-          owner_fixed_note?: string | null
         }
         Relationships: [
           {
@@ -2503,6 +2517,14 @@ export type Database = {
         Args: { p_basis: number[]; p_total_cents: number }
         Returns: number[]
       }
+      association_by_join_code: {
+        Args: { p_code: string }
+        Returns: {
+          city: string
+          name: string
+          state: string
+        }[]
+      }
       cancel_association_deletion: {
         Args: { p_association_id: string }
         Returns: undefined
@@ -2522,15 +2544,15 @@ export type Database = {
           p_due_day: number
           p_dues_cadence: Database["public"]["Enums"]["dues_cadence"]
           p_dues_cents: number
+          p_founder_address?: string
           p_founder_name: string
           p_founder_unit: string
           p_households?: Json
           p_name: string
           p_origin?: Database["public"]["Enums"]["association_origin"]
+          p_previously?: string
           p_property_type?: Database["public"]["Enums"]["property_type"]
           p_shared_spaces?: string[]
-          p_previously?: string
-          p_founder_address?: string
           p_state: string
         }
         Returns: string
@@ -2567,6 +2589,7 @@ export type Database = {
           starts_on: string
         }[]
       }
+      is_board_of: { Args: { target: string }; Returns: boolean }
       is_member_of: { Args: { target: string }; Returns: boolean }
       is_statutory: {
         Args: { c: Database["public"]["Enums"]["email_category"] }
@@ -2594,39 +2617,9 @@ export type Database = {
         Returns: string
       }
       like_post: { Args: { p_post_id: string }; Returns: number }
-      set_my_autopay: {
-        Args: { p_association_id: string; p_autopay: Json }
-        Returns: undefined
-      }
       mark_violation_fixed: {
         Args: { p_note: string; p_violation_id: string }
         Returns: undefined
-      }
-      rsvp_meeting: {
-        Args: { p_meeting_id: string; p_response: string }
-        Returns: undefined
-      }
-      is_board_of: {
-        Args: { target: string }
-        Returns: boolean
-      }
-      association_by_join_code: {
-        Args: { p_code: string }
-        Returns: { city: string; name: string; state: string }[]
-      }
-      request_to_join: {
-        Args: { p_code: string; p_email: string; p_name: string; p_note: string; p_unit: string }
-        Returns: string
-      }
-      update_my_contact: {
-        Args: { p_association_id: string; p_mailing_address: string; p_phone: string }
-        Returns: undefined
-      }
-      tables_without_rls: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          table_name: string
-        }[]
       }
       my_associations: {
         Args: never
@@ -2669,9 +2662,33 @@ export type Database = {
         Args: { p_association_id: string; p_typed_name: string }
         Returns: string
       }
+      request_to_join: {
+        Args: {
+          p_code: string
+          p_email: string
+          p_name: string
+          p_note: string
+          p_unit: string
+        }
+        Returns: string
+      }
       resume_subscription: {
         Args: { p_association_id: string }
         Returns: undefined
+      }
+      rsvp_meeting: {
+        Args: { p_meeting_id: string; p_response: string }
+        Returns: undefined
+      }
+      set_my_autopay: {
+        Args: { p_association_id: string; p_autopay: Json }
+        Returns: undefined
+      }
+      tables_without_rls: {
+        Args: never
+        Returns: {
+          table_name: string
+        }[]
       }
       transfer_home: {
         Args: {
@@ -2684,6 +2701,14 @@ export type Database = {
       }
       transfer_presidency: {
         Args: { p_to_profile: string }
+        Returns: undefined
+      }
+      update_my_contact: {
+        Args: {
+          p_association_id: string
+          p_mailing_address: string
+          p_phone: string
+        }
         Returns: undefined
       }
     }
@@ -2731,13 +2756,13 @@ export type Database = {
       doc_visibility: "public" | "owners" | "board"
       dues_cadence: "monthly" | "quarterly" | "annually"
       email_category:
-        | "billing"
         | "assessment"
         | "delinquency"
         | "meeting"
         | "ballot"
         | "community"
         | "newsletter"
+        | "billing"
       payment_rail: "ach" | "card" | "apple-pay" | "google-pay"
       payment_state: "pending" | "settled" | "failed" | "refunded"
       post_status: "pending" | "published" | "rejected"
@@ -2770,12 +2795,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2799,11 +2824,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2824,11 +2849,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2849,11 +2874,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2866,11 +2891,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2939,6 +2964,7 @@ export const Constants = {
         "ballot",
         "community",
         "newsletter",
+        "billing",
       ],
       payment_rail: ["ach", "card", "apple-pay", "google-pay"],
       payment_state: ["pending", "settled", "failed", "refunded"],

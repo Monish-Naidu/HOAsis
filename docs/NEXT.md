@@ -43,21 +43,21 @@ chips.
   on the setup Finished screen; the sidebar mark lifts on hover. All
   respect reduced motion. Keyframes in globals.css.
 - **Migration 0030** (`0030_homes_by_address.sql`): `create_association`
-  reads `address` from each household. Same signature. **Not pushed:** the
-  Supabase project `lhplcojgoysfnltqlgfx` is gone (hostname NXDOMAIN, pooler
-  says tenant not found; Monish confirms it was deleted). Production sign-in
-  is down until it is rebuilt.
-- **Rebuilding the database is one command** once there is a fresh token:
-  put `SUPABASE_ACCESS_TOKEN=sbp_...` in `.env.local` (from
-  https://supabase.com/dashboard/account/tokens), then
-  `scripts/rebuild-supabase.sh`. It creates the project, pushes all 30
-  migrations, writes `.env.local`, regenerates types, sets the auth site
-  URL and redirect list for expresshoa.com, seeds Oakview and Cedar Hollow
-  with the known password, replaces the three Supabase keys on Vercel in
-  every environment, and runs `db:verify`. Then push or `vercel --prod`.
-  Still manual afterwards: Resend as the auth SMTP sender in the Supabase
-  dashboard (Authentication > SMTP), and re-adding `RESEND_WEBHOOK_SECRET`
-  is unaffected.
+  reads `address` from each household. Same signature. Pushed 2026-09-19
+  once the project was back.
+- **The project was paused, not deleted.** The free tier pauses a project
+  after a week without traffic; the hostname stops resolving and the
+  pooler says "tenant not found", which reads exactly like deletion. The
+  management API says `INACTIVE`, and `POST /v1/projects/<ref>/restore`
+  brings it back in about four minutes with every row intact. That is what
+  happened on 2026-09-19. Check status before assuming anything:
+  `npx supabase projects list`. The pause repeats until the project is on
+  a paid plan or gets weekly traffic; the daily billing cron on Vercel
+  hits it, so it should stay awake now that the deploys are current.
+- `scripts/rebuild-supabase.sh` exists for the day it really is gone:
+  create, link, push, seed, auth URLs, Vercel keys, verify, one command.
+  It needs a fresh `SUPABASE_ACCESS_TOKEN` in `.env.local`, which is also
+  what `db:push` and `db:types` need; the token from August had expired.
 - `homeLabel()` and the new `placeLabel()` in `lib/wording.ts` leave an
   address alone instead of printing "Lot 1 Alder Way".
 - Tests: `tests/unit/new-community.test.ts`; `07-onboarding` fills the
