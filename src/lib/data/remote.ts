@@ -175,10 +175,20 @@ export async function loadCommunity(
   const owners: Owner[] = unitRows.map((unit) => {
     const holder = holderByUnit.get(unit.id);
     const balanceCents = balanceByUnit.get(unit.id) ?? 0;
-    // Oldest unpaid charge sets how far past due a household is.
-    const oldestOpen = [...chargeRows]
+    // The oldest unpaid charge sets how far past due a household is. Money
+    // is applied oldest first, so what is still owed is the newest charges
+    // whose amounts add up to the balance; the oldest of those is the one
+    // the clock runs from. Reading the oldest charge of all, which this once
+    // did, said a home one month behind was a year late.
+    let uncovered = balanceCents;
+    let oldestOpen: (typeof chargeRows)[number] | undefined;
+    for (const c of [...chargeRows]
       .filter((c) => c.unit_id === unit.id && c.kind === "charge" && c.due_on <= today)
-      .sort((x, y) => (x.due_on < y.due_on ? -1 : 1))[0];
+      .sort((x, y) => (x.due_on > y.due_on ? -1 : 1))) {
+      if (uncovered <= 0) break;
+      oldestOpen = c;
+      uncovered -= c.amount_cents;
+    }
     const daysPastDue =
       balanceCents > 0 && oldestOpen ? Math.max(0, daysBetween(oldestOpen.due_on, today)) : 0;
 
@@ -334,7 +344,12 @@ export async function loadCommunity(
       institution: b.institution,
       mask: b.mask,
       kind: b.kind,
-      balanceCents: 0,
+      // What the books say is in the account. There is no bank feed yet, so
+      // the ledger is the only source; a fixed zero read as "broke" on the
+      // dashboard of an association with a year of dues behind it.
+      balanceCents: (ledger.data ?? [])
+        .filter((e) => e.bank_account_id === b.id)
+        .reduce((total, e) => total + e.amount_cents, 0),
       syncedMinutesAgo: 0,
       status: "live" as const,
       reconciledThroughDate: today,

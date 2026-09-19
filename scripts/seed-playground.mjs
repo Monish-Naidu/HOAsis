@@ -36,7 +36,6 @@ const DUES = 28_500;
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const now = new Date();
-const today = iso(now);
 const days = (n) => { const d = new Date(now); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
 const monthStart = (back) => { const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1)); return iso(d); };
 const monthName = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -202,9 +201,8 @@ for (const p of PEOPLE) {
     paidCount++;
   });
 }
-for (const rows of [payments, paymentCharges, allocations]) {
+for (const [table, rows] of [["payments", payments], ["charges", paymentCharges], ["payment_allocations", allocations], ["ledger_entries", ledger]]) {
   for (let i = 0; i < rows.length; i += 200) {
-    const table = rows === payments ? "payments" : rows === paymentCharges ? "charges" : "payment_allocations";
     await admin.from(table).insert(rows.slice(i, i + 200)).then(must(table));
   }
 }
