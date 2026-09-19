@@ -1,5 +1,6 @@
 "use client";
 
+import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
@@ -68,12 +69,7 @@ export default function ResidentDocuments() {
 
   return (
     <div className="animate-rise space-y-6">
-      <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Documents</h1>
-        <p className="mt-1 text-[15px] text-fg-muted">
-          Rules, financial records, and forms.
-        </p>
-      </div>
+      <ResidentTitle title="Documents" subtitle="Rules, financial records, and forms." />
 
       <label className="relative block">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" />

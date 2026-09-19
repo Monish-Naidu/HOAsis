@@ -13,6 +13,7 @@ import { BOARD_ROUTES, routeOn } from "@/lib/board-routes";
 import { complianceSummary, delinquency } from "@/lib/metrics";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { TabPill } from "@/components/app/tab-pill";
+import { RailIcon } from "@/components/app/rail";
 import { cn } from "@/lib/utils";
 
 export interface NavBadge {
@@ -102,8 +103,9 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
           "flex gap-1 lg:flex-col",
           // A fixed rhythm in the sidebar. The rows used to share the leftover
           // height, which read fine with thirteen tabs and fell apart with a
-          // treasurer's six spread over the whole column.
-          rail && "w-full flex-col gap-1",
+          // treasurer's six spread over the whole column. The rows arrive one
+          // after another on first paint.
+          rail && "stagger w-full flex-col gap-1",
         )}
         pillClassName={
           rail
@@ -111,7 +113,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
             : "bg-primary-soft rounded-xl"
         }
       >
-      {visible.map(({ href, label, icon: Icon, key }) => {
+      {visible.map(({ href, label, icon: Icon, key, tint }) => {
         const active = href === "/board" ? pathname === href : pathname.startsWith(href);
         const badge = badges[key];
         return (
@@ -124,7 +126,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
               // The selected background is the travelling pill behind the row,
               // not a class on the link, so it slides rather than cuts.
               "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors duration-200",
-              rail && "rounded-2xl px-3.5 py-2.5",
+              rail && "gap-3 rounded-2xl px-2.5 py-2",
               rail
                 ? active
                   ? "text-white"
@@ -134,14 +136,18 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
                   : "text-fg-muted hover:bg-surface-2 hover:text-fg",
             )}
           >
-            <Icon
-              className={cn(
-                "size-[17px] shrink-0 transition-transform duration-200",
-                active && "scale-110",
-                !active && "group-hover:-translate-y-px",
-              )}
-              strokeWidth={active ? 2.2 : 1.8}
-            />
+            {rail ? (
+              <RailIcon icon={Icon} tint={tint} active={active} />
+            ) : (
+              <Icon
+                className={cn(
+                  "size-[17px] shrink-0 transition-transform duration-200",
+                  active && "scale-110",
+                  !active && "group-hover:-translate-y-px",
+                )}
+                strokeWidth={active ? 2.2 : 1.8}
+              />
+            )}
             <span className="truncate">{label}</span>
             {badge && badge.count > 0 ? (
               <span

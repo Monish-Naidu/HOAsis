@@ -1,5 +1,6 @@
 "use client";
 
+import { ResidentTitle } from "@/components/app/resident-title";
 import { Vote } from "lucide-react";
 import { EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
@@ -24,7 +25,7 @@ export default function ResidentVote() {
 
   return (
     <div className="animate-rise space-y-6">
-      <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Vote</h1>
+      <ResidentTitle title="Vote" />
 
       {open.length ? (
         <section className="space-y-3">

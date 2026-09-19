@@ -2,6 +2,7 @@ import type { ComponentProps, FormEventHandler, ReactNode } from "react";
 import Link from "next/link";
 import { UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RouteTile } from "@/components/app/route-tile";
 
 /* -------------------------------------------------------------------------- */
 /* Surface                                                                     */
@@ -106,26 +107,35 @@ export function PageHeader({
   title,
   description,
   action,
+  icon,
 }: {
   eyebrow?: string;
   title: string;
   description?: ReactNode;
   action?: ReactNode;
+  /**
+   * The lit tile beside the title. Left out, it is the section's own icon
+   * from the route table; `false` for a header that should stand bare.
+   */
+  icon?: ReactNode | false;
 }) {
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        {eyebrow ? (
-          <p className="mb-1.5 text-[13px] font-semibold text-fg-muted">
-            {eyebrow}
-          </p>
-        ) : null}
-        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em] text-fg">
-          {title}
-        </h1>
-        {description ? (
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-fg-muted">{description}</p>
-        ) : null}
+      <div className="flex min-w-0 items-center gap-4">
+        {icon === false ? null : icon === undefined ? <RouteTile /> : icon}
+        <div className="min-w-0">
+          {eyebrow ? (
+            <p className="mb-1 text-[13px] font-semibold text-fg-muted">
+              {eyebrow}
+            </p>
+          ) : null}
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em] text-fg">
+            {title}
+          </h1>
+          {description ? (
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-fg-muted">{description}</p>
+          ) : null}
+        </div>
       </div>
       {action ? (
         <div className="flex min-w-0 max-w-full flex-wrap gap-2 [&>div]:flex-wrap">{action}</div>

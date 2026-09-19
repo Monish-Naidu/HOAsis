@@ -1,5 +1,6 @@
 "use client";
 
+import { ResidentTitle } from "@/components/app/resident-title";
 import { ChevronDown, ChevronRight, CircleDollarSign, Download, Landmark, Receipt } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
@@ -24,12 +25,10 @@ export default function ResidentAccount() {
 
   return (
     <div className="animate-rise space-y-6">
-      <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Account</h1>
-        <p className="mt-1 text-[15px] text-fg-muted">
-          {homeLabel(community, currentOwner.unit)} · {currentOwner.displayName}
-        </p>
-      </div>
+      <ResidentTitle
+        title="Account"
+        subtitle={`${homeLabel(community, currentOwner.unit)} · ${currentOwner.displayName}`}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">

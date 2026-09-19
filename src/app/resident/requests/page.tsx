@@ -1,5 +1,6 @@
 "use client";
 
+import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, Gavel, Plus } from "lucide-react";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
@@ -24,16 +25,18 @@ export default function ResidentRequests() {
 
   return (
     <div className="animate-rise space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Requests</h1>
-        <Link
-          href="/resident/requests/new"
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-fg transition-opacity hover:opacity-90"
-          aria-label="New request"
-        >
-          <Plus className="size-4" />
-        </Link>
-      </div>
+      <ResidentTitle
+        title="Requests"
+        action={
+          <Link
+            href="/resident/requests/new"
+            className="press flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-primary-fg shadow-glow"
+            aria-label="New request"
+          >
+            <Plus className="size-4" />
+          </Link>
+        }
+      />
 
       {notices.length > 0 ? (
         <Link

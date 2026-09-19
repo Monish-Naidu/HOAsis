@@ -14,7 +14,8 @@ import {
 import { BoardHero, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
-import { RailWordmark, Wordmark } from "@/components/app/logo";
+import { Wordmark } from "@/components/app/logo";
+import { Rail } from "@/components/app/rail";
 import { PageTransition } from "@/components/app/page-transition";
 
 export const metadata = {
@@ -29,21 +30,13 @@ export default function BoardLayout({
   return (
     <RequireSession>
       <BoardOnly>
-        <div className="min-h-dvh bg-bg lg:pl-[15.5rem]">
+        <div className="page-ground min-h-dvh bg-bg lg:pl-[16.5rem]">
           {/* The sidebar floats: inset from the edges with a large radius, to
             match the resident shell. The community's name is not here; the
             banner already says it. */}
-          <aside className="fixed inset-y-3 left-3 z-40 hidden w-56 flex-col overflow-hidden rounded-[26px] bg-navy-950 shadow-float lg:flex">
-            <Link
-              href="/board"
-              className="bird-lift flex items-center justify-center px-4 pb-2 pt-6"
-            >
-              <RailWordmark size={34} />
-            </Link>
-            <div className="no-scrollbar flex flex-1 overflow-y-auto px-3 py-3">
-              <BoardNav variant="rail" />
-            </div>
-          </aside>
+          <Rail home="/board" label="Board">
+            <BoardNav variant="rail" />
+          </Rail>
           <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md">
             <div className="flex items-center justify-between gap-4 px-4 py-2.5 lg:px-6">
               <div className="flex items-center gap-3">

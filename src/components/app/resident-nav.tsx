@@ -12,11 +12,14 @@ import {
 } from "lucide-react";
 import type { CommunitySettings } from "@/lib/types";
 import type { ModuleKey } from "@/lib/modules";
+import type { TintName } from "@/components/ui/primitives";
 
 interface ResidentTab {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** The colour on the icon's tile, in the rail and the tab bar. */
+  tint?: TintName;
   /** The sidebar has room for a longer name than a 63px tab does. */
   webLabel?: string;
   /** Sidebar only. The phone tab bar holds six. */
@@ -35,19 +38,21 @@ interface ResidentTab {
  * Community, Account.
  */
 export const residentTabs: ResidentTab[] = [
-  { href: "/resident", label: "Dashboard", icon: Home },
-  { href: "/resident/pay", label: "Payments", icon: CreditCard },
-  { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus },
+  { href: "/resident", label: "Dashboard", icon: Home, tint: "blue" },
+  { href: "/resident/pay", label: "Payments", icon: CreditCard, tint: "teal" },
+  { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus, tint: "blue" },
   {
     href: "/resident/documents",
     label: "Docs",
     icon: FileText,
+    tint: "violet",
     webLabel: "Documents",
   },
   {
     href: "/resident/forum",
     label: "Community",
     icon: MessageSquareText,
+    tint: "coral",
     visible: (s) => s.forumEnabled,
     module: "resident-forum",
   },
@@ -55,23 +60,25 @@ export const residentTabs: ResidentTab[] = [
     href: "/resident/calendar",
     label: "Meetings",
     icon: CalendarDays,
+    tint: "amber",
     webOnly: true,
     module: "resident-meetings",
   },
   // Sidebar only. Voting is occasional, and the dashboard banner already
   // points at an open ballot; the six phone tabs go to what people open weekly.
-  { href: "/resident/vote", label: "Vote", icon: Vote, webLabel: "Voting", webOnly: true },
+  { href: "/resident/vote", label: "Vote", icon: Vote, tint: "violet", webLabel: "Voting", webOnly: true },
   {
     href: "/resident/finances",
     label: "Funds",
     icon: Landmark,
+    tint: "teal",
     webLabel: "Association funds",
     webOnly: true,
     visible: (s) => s.showFundsToResidents,
     module: "resident-funds",
   },
   // Account closes the list, per the huddle's nav order.
-  { href: "/resident/account", label: "Account", icon: Receipt },
+  { href: "/resident/account", label: "Account", icon: Receipt, tint: "neutral" },
 ];
 
 /**

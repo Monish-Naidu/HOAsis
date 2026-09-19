@@ -1,5 +1,6 @@
 "use client";
 
+import { ResidentTitle } from "@/components/app/resident-title";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -182,12 +183,7 @@ export function PayFlow() {
 
   /* ---------------------------------------------------------------- form */
   const heading = (
-    <div>
-      <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
-      <p className="mt-1 text-[15px] text-fg-muted">
-        Dues due {formatDate(nextCharge, "long")}
-      </p>
-    </div>
+    <ResidentTitle title="Pay dues" subtitle={`Dues due ${formatDate(nextCharge, "long")}`} />
   );
 
   // Shared between the demo and Stripe branches, as a JSX value rather than a

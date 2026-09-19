@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BatteryFull, Monitor, Signal, Smartphone, Wifi } from "lucide-react";
-import { Avatar } from "@/components/ui/primitives";
+import { Avatar, type TintName } from "@/components/ui/primitives";
 import { ResidentBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
-import { RailWordmark, Wordmark } from "@/components/app/logo";
+import { Wordmark } from "@/components/app/logo";
+import { Rail, RailIcon } from "@/components/app/rail";
 import { residentModuleFor, residentTabs } from "@/components/app/resident-nav";
 import { ModuleOff } from "@/components/app/module-gate";
 import { PageTransition } from "@/components/app/page-transition";
@@ -188,18 +189,12 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   /* -------------------------------------------------------------- website */
   return (
     <RequireSession>
-    <div className="min-h-dvh bg-bg lg:pl-[15.5rem]">
+    <div className="page-ground min-h-dvh bg-bg lg:pl-[16.5rem]">
       {/* The sidebar floats: inset from the edges with a large radius, so it
           reads as a panel rather than a slab welded to the viewport. No
           community name or unit here; the banner carries both. */}
-      <aside className="fixed inset-y-3 left-3 z-40 hidden w-56 flex-col overflow-hidden rounded-[26px] bg-navy-950 shadow-float lg:flex">
-        <Link href="/resident" className="flex items-center justify-center px-4 pb-2 pt-6">
-          <RailWordmark size={34} />
-        </Link>
-        <nav
-          aria-label="Resident sections"
-          className="no-scrollbar flex flex-1 overflow-y-auto px-3 py-3"
-        >
+      <Rail home="/resident" label="Resident">
+        <nav aria-label="Resident sections" className="flex min-h-full w-full">
           <TabPill
             activeKey={
               tabs.find((t) =>
@@ -208,10 +203,10 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             }
             // Rows share the leftover height, per the huddle: evenly spaced
             // down the column, not packed at the top.
-            className="flex min-h-full w-full flex-col justify-evenly gap-1"
+            className="stagger flex min-h-full w-full flex-col justify-evenly gap-1"
             pillClassName="bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
           >
-            {tabs.map(({ href, label, icon: Icon, webLabel }) => {
+            {tabs.map(({ href, label, icon: Icon, webLabel, tint }) => {
               const active =
                 href === "/resident" ? pathname === href : pathname.startsWith(href);
               return (
@@ -221,26 +216,20 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   data-tab-key={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative z-10 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-[14px] font-medium transition-colors duration-200",
+                    "group relative z-10 flex items-center gap-3 rounded-2xl px-2.5 py-2 text-[14px] font-medium transition-colors duration-200",
                     active
                       ? "text-white"
                       : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      "size-[17px] shrink-0 transition-transform duration-200",
-                      active ? "scale-110" : "group-hover:-translate-y-px",
-                    )}
-                    strokeWidth={active ? 2.2 : 1.8}
-                  />
+                  <RailIcon icon={Icon} tint={tint} active={active} />
                   {webLabel ?? label}
                 </Link>
               );
             })}
           </TabPill>
         </nav>
-      </aside>
+      </Rail>
       {topBar}
       {appHeader}
       {/* The photo and the home card are the front door, not a masthead on
@@ -294,6 +283,28 @@ function PhoneHeader({
   );
 }
 
+/**
+ * The tab bar's selected state, in the tab's own tint. The soft field is
+ * the pill and the tint's foreground is the glyph and the label, so the
+ * bar says which section it is on in colour as well as in words.
+ */
+const TAB_PILL: Record<TintName, string> = {
+  blue: "bg-tint-blue-soft",
+  teal: "bg-tint-teal-soft",
+  amber: "bg-tint-amber-soft",
+  coral: "bg-tint-coral-soft",
+  violet: "bg-tint-violet-soft",
+  neutral: "bg-surface-3",
+};
+const TAB_ACTIVE: Record<TintName, string> = {
+  blue: "text-tint-blue-fg",
+  teal: "text-tint-teal-fg",
+  amber: "text-tint-amber-fg",
+  coral: "text-tint-coral-fg",
+  violet: "text-tint-violet-fg",
+  neutral: "text-fg",
+};
+
 function TabBar({
   pathname,
   tabs,
@@ -330,7 +341,7 @@ function TabBar({
       >
         {tabs
           .filter((t) => !t.webOnly)
-          .map(({ href, label, icon: Icon }) => {
+          .map(({ href, label, icon: Icon, tint = "blue" }) => {
           const active = href === "/resident" ? pathname === href : pathname.startsWith(href);
           return (
             <li key={href}>
@@ -339,13 +350,16 @@ function TabBar({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "press flex flex-col items-center gap-1 px-1 pb-2 pt-2 transition-colors",
-                  active ? "text-primary" : "text-fg-subtle hover:text-fg-muted",
+                  active ? TAB_ACTIVE[tint] : "text-fg-subtle hover:text-fg-muted",
                 )}
               >
+                {/* Remounts when it becomes selected, so the tab pops once
+                    under the thumb instead of only changing colour. */}
                 <span
+                  key={active ? "on" : "off"}
                   className={cn(
                     "flex h-7 w-11 items-center justify-center rounded-full transition-[background-color,transform] duration-200 ease-out",
-                    active ? "bg-primary-soft scale-100" : "scale-95",
+                    active ? cn("pop-in scale-100", TAB_PILL[tint]) : "scale-95",
                   )}
                 >
                   <Icon className="size-[19px]" strokeWidth={active ? 2.3 : 1.8} />

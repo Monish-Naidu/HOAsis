@@ -1,5 +1,6 @@
 "use client";
 
+import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { FundsGate } from "./guard";
 import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
@@ -22,11 +23,7 @@ export default function ResidentFinances() {
   return (
     <FundsGate>
     <div className="animate-rise space-y-6">
-      <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">
-          Association funds
-        </h1>
-      </div>
+      <ResidentTitle title="Association funds" />
 
       {/* Totals */}
       <div className="grid grid-cols-2 gap-3">

@@ -17,6 +17,7 @@ import {
   Vote,
 } from "lucide-react";
 import type { Capability } from "@/lib/types";
+import type { TintName } from "@/components/ui/primitives";
 import { moduleOn } from "@/lib/modules";
 import type { ModuleKey } from "@/lib/modules";
 import type { Community } from "@/lib/data/community";
@@ -44,6 +45,11 @@ export interface BoardRoute {
   label: string;
   icon: typeof Banknote;
   key: string;
+  /**
+   * The colour on the rail's icon tile. Recognition, not meaning: money is
+   * teal wherever it appears, notices coral, records violet, time amber.
+   */
+  tint?: TintName;
   /** Any one of these opens it. Absent means every member may look. */
   need?: Capability[];
   /**
@@ -79,12 +85,12 @@ export interface BoardRoute {
 
 export const BOARD_ROUTES: BoardRoute[] = [
 
-  { href: "/board", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+  { href: "/board", label: "Dashboard", icon: LayoutDashboard, key: "dashboard", tint: "blue" },
   {
     href: "/board/setup",
     label: "Setting up",
     icon: ListChecks,
-    key: "setup",
+    key: "setup", tint: "amber",
     module: "setup",
     // Second in the list while it exists, and gone the day it is finished.
     //
@@ -108,12 +114,12 @@ export const BOARD_ROUTES: BoardRoute[] = [
     need: ["settings", "finances"],
     present: (c) => !buildPlan(c, profileFromCommunity(c)).allDone,
   },
-  { href: "/board/money", label: "Finances", icon: Banknote, key: "money", need: ["finances"], module: "money" },
+  { href: "/board/money", label: "Finances", icon: Banknote, key: "money", tint: "teal", need: ["finances"], module: "money" },
   {
     href: "/board/homeowners",
     label: "Homeowners",
     icon: Users,
-    key: "homeowners",
+    key: "homeowners", tint: "violet",
     module: "homeowners",
     // Was ungated, which showed every household's balance, email and days past
     // due to any resident who reached the URL.
@@ -125,19 +131,19 @@ export const BOARD_ROUTES: BoardRoute[] = [
     // actions. The route keeps its name because links point at it.
     label: "Notices",
     icon: TriangleAlert,
-    key: "violations",
+    key: "violations", tint: "coral",
     module: "notices",
     // Enforcement rides the same capability as requests: both are the board
     // answering a household, and splitting the grant would strand one queue.
     need: ["requests"],
   },
-  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", need: ["vendors"], module: "vendors" },
-  { href: "/board/requests", label: "Requests", icon: Inbox, key: "requests", need: ["requests"], module: "requests" },
+  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", tint: "amber", need: ["vendors"], module: "vendors" },
+  { href: "/board/requests", label: "Requests", icon: Inbox, key: "requests", tint: "blue", need: ["requests"], module: "requests" },
   {
     href: "/board/reserves",
     label: "Reserve Study",
     icon: ChartPie,
-    key: "reserves",
+    key: "reserves", tint: "teal",
     module: "reserves",
     need: ["finances"],
   },
@@ -145,7 +151,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/compliance",
     label: "Compliance",
     icon: ShieldCheck,
-    key: "compliance",
+    key: "compliance", tint: "violet",
     module: "compliance",
     need: ["compliance"],
   },
@@ -153,7 +159,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/communications",
     label: "Communications",
     icon: MessagesSquare,
-    key: "communications",
+    key: "communications", tint: "coral",
     module: "communications",
     need: ["communications"],
   },
@@ -161,7 +167,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/forum",
     label: "Community",
     icon: MessageSquareText,
-    key: "forum",
+    key: "forum", tint: "blue",
     module: "forum",
     need: ["forum"],
   },
@@ -169,16 +175,16 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/meetings",
     label: "Meetings",
     icon: Video,
-    key: "meetings",
+    key: "meetings", tint: "amber",
     module: "meetings",
     need: ["voting"],
   },
-  { href: "/board/voting", label: "Voting", icon: Vote, key: "voting", need: ["voting"], module: "voting" },
+  { href: "/board/voting", label: "Voting", icon: Vote, key: "voting", tint: "violet", need: ["voting"], module: "voting" },
   {
     href: "/board/documents",
     label: "Documents",
     icon: FileText,
-    key: "documents",
+    key: "documents", tint: "violet",
     module: "documents",
     need: ["documents"],
   },
@@ -233,7 +239,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     need: ["finances"],
     present: (c) => c.sharedCosts.length > 0 || c.specialAssessments.length > 0,
   },
-  { href: "/board/settings", label: "Settings", icon: Settings, key: "settings", need: ["settings"], module: "settings" },
+  { href: "/board/settings", label: "Settings", icon: Settings, key: "settings", tint: "neutral", need: ["settings"], module: "settings" },
 ];
 
 /**

@@ -67,6 +67,19 @@ then depth. Clean and simple is the name of the game.
   Marketing tiles lift (`.lift`); product cards never lift. Focus is the
   ring token, not a glow.
 
+- **The rail is lit, and every row has a tile.** The navy rail (`Rail`) is
+  a fixed surface with a pool of brand blue behind the wordmark and a
+  hairline of light at its edge. Each row's icon sits on a small dark tile
+  (`RailIcon`) with the section's tint on the glyph; the pointer lights the
+  tile in that tint, and the selected row's tile goes frosted white on the
+  gradient pill. Tints come from the route table (`BOARD_ROUTES`,
+  `residentTabs`), never from the nav.
+- **A page title wears its section's lit tile.** `PageHeader` puts the
+  section's `solid` tile beside the title, looked up from the route by
+  path (`RouteTile`); resident pages do the same through `ResidentTitle`.
+  The one place a `solid` tile appears inside the product, and the glyph
+  and tint are the same as the rail row that opened the page.
+
 ## Motion
 
 Two easings, three durations, one pop.
@@ -87,6 +100,10 @@ Two easings, three durations, one pop.
   Not confetti, not a second ring, not a sound.
 - Toasts spring up, the icon pops a beat later, and a hairline drains for
   as long as the toast will stay.
+- Rail rows stagger in on first paint. A tab or rail tile pops once
+  (`pop-in`) when it becomes selected, by remounting on the change.
+- The sliding pill (`TabPill`) is never a `.stagger` child: an animation
+  would override its inline transform and park it on the first row.
 - Everything above is listed in the reduced-motion block in `globals.css`
   and lands on its end state when the reader has asked for less motion. A
   new animation is not done until it is in that list.
