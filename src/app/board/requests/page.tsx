@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Clock, Eye, Gavel, Inbox, Wrench } from "lucide-react";
+import { AlertTriangle, Eye, Inbox } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -14,8 +14,7 @@ import {
 import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { WorkOrderPanel } from "@/components/app/work-order";
-import { daysFromToday, money } from "@/lib/utils";
-import { formatDate, relativeDays } from "@/lib/utils";
+import { daysFromToday, formatDate } from "@/lib/utils";
 import type { RequestStatus } from "@/lib/types";
 
 const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
@@ -29,22 +28,16 @@ const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neu
 };
 
 export default function BoardRequests() {
-  const { community, requests, updateRequestStatus } = useAppState();
+  const { requests, updateRequestStatus } = useAppState();
   const { notify } = useToast();
   const { open, decided, history } = bucketRequests(requests);
   const clocks = requests
     .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
     .map((r) => ({ ...r, daysLeft: daysFromToday(r.dueDate!) }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
-  // Violations moved to their own page in the 2026-09-01 design; the stat
-  // below keeps the pointer so a board working the queue still sees them.
-  const openViolations = community.violations.filter((v) => v.stage !== "cured");
-  // Work the board has taken on and not finished, in scheduled order.
-  const inProgress = requests
-    .filter((r) => r.workOrder && !r.workOrder.completedOn)
-    .sort((a, b) =>
-      (a.workOrder?.scheduledOn ?? "9999").localeCompare(b.workOrder?.scheduledOn ?? "9999"),
-    );
+  // Work the board has taken on and not finished. Each one's panel sits in
+  // its own row below; this is only the count under the stat.
+  const inProgress = requests.filter((r) => r.workOrder && !r.workOrder.completedOn);
 
   return (
     <>
@@ -63,25 +56,12 @@ export default function BoardRequests() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Stat
           label="Open requests"
           value={String(open.length)}
           hint={inProgress.length ? `${inProgress.length} with work in progress` : undefined}
           icon={<Inbox className="size-4" />}
-        />
-        <Stat
-          label="Has a deadline"
-          value={String(clocks.length)}
-          tone="warn"
-          hint={clocks[0] ? `Soonest: ${relativeDays(clocks[0].dueDate!)}` : undefined}
-          icon={<Clock className="size-4" />}
-        />
-        <Stat
-          label="Open violations"
-          value={String(openViolations.length)}
-          icon={<Gavel className="size-4" />}
-          href="/board/violations"
         />
         <Stat
           label="Decided"
@@ -200,41 +180,6 @@ export default function BoardRequests() {
           ))}
         </Card>
 
-        {inProgress.length ? (
-          <Card className="mt-5">
-            <CardHeader
-              title="Work orders"
-              subtitle={`${inProgress.length} in progress`}
-              icon={<Wrench className="size-4" />}
-            />
-            {inProgress.map((r) => {
-              const w = r.workOrder!;
-              return (
-                <div
-                  key={r.id}
-                  className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-medium text-fg">{r.title}</p>
-                    <p className="mt-0.5 text-[13px] text-fg-muted">
-                      {r.reference} · Unit {r.unit} · {w.vendorName || "No vendor chosen yet"}
-                    </p>
-                  </div>
-                  <div className="text-right text-[13px]">
-                    <p className={w.scheduledOn ? "font-medium text-fg" : "text-fg-subtle"}>
-                      {w.scheduledOn
-                        ? `${formatDate(w.scheduledOn, "medium")} · ${relativeDays(w.scheduledOn)}`
-                        : "Not scheduled"}
-                    </p>
-                    <p className="tnum text-fg-muted">
-                      {w.estimateCents ? `Estimate ${money(w.estimateCents)}` : "No estimate"}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </Card>
-        ) : null}
       </div>
     </>
   );

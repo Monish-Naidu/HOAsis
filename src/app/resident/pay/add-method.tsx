@@ -3,9 +3,7 @@
 import { useState } from "react";
 import {
   AlertTriangle,
-  Apple,
   Building2,
-  Check,
   CreditCard,
   Landmark,
   Lock,
@@ -28,18 +26,18 @@ import { StripeSetupPanel } from "./stripe-setup-panel";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
-type Rail = "ach" | "card" | "apple-pay";
+type Rail = "ach" | "card";
 
 const RAILS: { id: Rail; label: string; icon: typeof Landmark; hint: string }[] = [
   { id: "ach", label: "Bank", icon: Landmark, hint: "Cheapest" },
-  { id: "card", label: "Card", icon: CreditCard, hint: "2.9% + 30¢" },
-  { id: "apple-pay", label: "Apple Pay", icon: Apple, hint: "2.9% + 30¢" },
+  { id: "card", label: "Card", icon: CreditCard, hint: "Small fee" },
 ];
 
 /**
  * Adds a payment instrument.
  *
- * Three rails, three very different security stories:
+ * Two rails, two very different security stories. Apple Pay had a tab here
+ * until the launch scope; it needs a merchant identifier nobody has yet.
  *
  *   Bank   modelled on Plaid Link. The resident authenticates with the bank
  *          and we receive an institution, a mask, and a token. No routing or
@@ -47,8 +45,6 @@ const RAILS: { id: Rail; label: string; icon: typeof Landmark; hint: string }[] 
  *   Card   in production this is a Stripe Elements iframe and the number never
  *          touches our code. Here the field is ours, so the number is checked
  *          and discarded inside `tokenizeCard` and never reaches state.
- *   Apple  requires a registered merchant identifier and a payment processor.
- *          Availability is detected honestly rather than faked.
  */
 export function AddMethod({ onDone }: { onDone: () => void }) {
   const [rail, setRail] = useState<Rail>("ach");
@@ -82,7 +78,7 @@ export function AddMethod({ onDone }: { onDone: () => void }) {
 
   return (
     <Card className="overflow-hidden">
-      <div className="grid grid-cols-3 border-b border-border">
+      <div className="grid grid-cols-2 border-b border-border">
         {RAILS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -104,7 +100,6 @@ export function AddMethod({ onDone }: { onDone: () => void }) {
 
       {rail === "ach" ? <LinkBank onDone={onDone} /> : null}
       {rail === "card" ? <AddCard onDone={onDone} /> : null}
-      {rail === "apple-pay" ? <AddApplePay onDone={onDone} /> : null}
     </Card>
   );
 }
@@ -326,68 +321,5 @@ function AddCard({ onDone }: { onDone: () => void }) {
         four, and the expiry are ever kept.
       </p>
     </form>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Apple Pay                                                                   */
-/* -------------------------------------------------------------------------- */
-
-/** Apple exposes this only on Safari, and only over HTTPS. */
-function applePayAvailable(): boolean {
-  if (typeof window === "undefined") return false;
-  const session = (window as { ApplePaySession?: { canMakePayments?: () => boolean } })
-    .ApplePaySession;
-  return Boolean(session?.canMakePayments?.());
-}
-
-function AddApplePay({ onDone }: { onDone: () => void }) {
-  const { addInstrument } = useAppState();
-  const owner = useCurrentOwner();
-  const available = applePayAvailable();
-
-  return (
-    <div className="space-y-3 p-4">
-      <div className="flex items-start gap-3 rounded-lg bg-surface-2 p-3">
-        <Apple className="mt-0.5 size-4 shrink-0 text-fg-muted" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-medium text-fg">
-            {available ? "Apple Pay is available on this device" : "Apple Pay is not available here"}
-          </p>
-          <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
-            {available
-              ? "Confirming would normally open the Apple Pay sheet. This prototype has no merchant identifier, so it records the card on file instead."
-              : "Apple Pay needs Safari on an Apple device, over HTTPS, with a registered merchant identifier. None of those are set up for this prototype."}
-          </p>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          if (!owner) return;
-          addInstrument({
-            ownerId: owner.id,
-            kind: "apple-pay",
-            label: "Apple Pay",
-            mask: "4402",
-            brand: "visa",
-            addedDate: todayIsoDate(),
-            token: `tok_applepay_${todayIsoDate().replace(/-/g, "")}`,
-          });
-          onDone();
-        }}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-black text-[17px] font-medium text-white transition-opacity hover:opacity-90"
-      >
-        <Apple className="size-4" />
-        Set up Apple Pay
-      </button>
-
-      <p className="flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
-        <Check className="mt-px size-3 shrink-0" />
-        Apple Pay costs the association the same as the card behind it. It is faster to use, not
-        cheaper to accept.
-      </p>
-    </div>
   );
 }

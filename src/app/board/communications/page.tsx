@@ -26,11 +26,11 @@ import { useState } from "react";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
 import { DeliveryPanel } from "@/components/app/delivery-panel";
 import { useToast } from "@/components/app/toast";
-import { formatDate, pluralize } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { communicationsSummary } from "@/lib/metrics";
 import { DuesMailer } from "@/components/app/dues-mailer";
+import { moduleOn } from "@/lib/modules";
 
-const CATEGORIES: Announcement["category"][] = ["Notice", "Maintenance", "Event", "Governance"];
 
 /**
  * What every resident's home screen carries under "From the board".
@@ -50,7 +50,9 @@ function AnnouncementsManager({
   const { notify } = useToast();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [category, setCategory] = useState<Announcement["category"]>("Notice");
+  // Every announcement is a notice until a board asks for kinds. The picker
+  // was the one field on this form nobody could answer.
+  const category: Announcement["category"] = "Notice";
   const [pinned, setPinned] = useState(false);
 
   const announcements = [...community.announcements].sort((a, b) =>
@@ -66,7 +68,6 @@ function AnnouncementsManager({
     setTitle("");
     setBody("");
     setPinned(false);
-    setCategory("Notice");
     setComposing(false);
     notify("Posted. Every resident's home screen carries it now.");
   }
@@ -99,18 +100,6 @@ function AnnouncementsManager({
               aria-label="Announcement title"
               className="h-9 min-w-52 flex-1 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg placeholder:text-fg-subtle"
             />
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as Announcement["category"])}
-              aria-label="Category"
-              className="h-9 rounded-lg border border-border-2 bg-surface px-2 text-[15px] text-fg"
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
           </div>
           <textarea
             value={body}
@@ -217,7 +206,7 @@ export default function BoardCommunications() {
         action={
           <Button variant="primary" size="md" onClick={startMessage}>
             <Send className="size-3.5" />
-            New message
+            New announcement
           </Button>
         }
       />
@@ -225,11 +214,13 @@ export default function BoardCommunications() {
       {/* Which ways a notice may actually go. It sits above the numbers
           because it governs them: a household counted as reachable by email is
           not reachable for a notice the statute says must go on paper. */}
-      <div className="mb-5">
-        <DeliveryPanel />
-      </div>
+      {moduleOn("delivery-panel") ? (
+        <div className="mb-5">
+          <DeliveryPanel />
+        </div>
+      ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Unread" value={String(unread)} tone="warn" icon={<Inbox className="size-4" />} />
         <Stat
           label="Reachable households"
@@ -243,12 +234,6 @@ export default function BoardCommunications() {
           icon={<MailCheck className="size-4" />}
         />
         <Stat label="Open threads" value={String(threads.length)} icon={<Users className="size-4" />} />
-        <Stat
-          label="Average reply time"
-          value={stats.avgReplyDays === undefined ? "No replies yet" : `${stats.avgReplyDays} days`}
-          tone={stats.avgReplyDays !== undefined && stats.avgReplyDays <= 2 ? "ok" : "neutral"}
-          hint={stats.sent ? `${pluralize(stats.sent, "reply", "replies")} sent` : undefined}
-        />
       </div>
 
       <DuesMailer />
@@ -373,10 +358,12 @@ export default function BoardCommunications() {
             </div>
           </Card>
 
-          <Callout tone="brand" icon={<MailCheck className="size-4" />} title="Delivery is evidence">
-            Every send records who got it, who opened it, and what bounced. That log is what proves
-            you noticed the membership.
-          </Callout>
+          {moduleOn("delivery-panel") ? (
+            <Callout tone="brand" icon={<MailCheck className="size-4" />} title="Delivery is evidence">
+              Every send records who got it, who opened it, and what bounced. That log is what proves
+              you noticed the membership.
+            </Callout>
+          ) : null}
         </div>
       </div>
       )}

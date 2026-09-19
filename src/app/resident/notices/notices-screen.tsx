@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Gavel, ShieldCheck } from "lucide-react";
-import { Badge, Button, Callout, Card, EmptyState } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { useToast } from "@/components/app/toast";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -63,7 +63,6 @@ export function NoticesScreen() {
   const mine = owner
     ? community.violations.filter((v) => v.ownerId === owner.id || v.unit === owner.unit)
     : [];
-  const open = mine.filter((v) => v.stage !== "cured");
 
   return (
     <div className="animate-rise space-y-5">
@@ -93,14 +92,6 @@ export function NoticesScreen() {
         </Card>
       ) : (
         <>
-          {open.length > 0 ? (
-            <Callout tone="info" title="You are entitled to see all of this">
-              A notice has to name the provision it relies on and give you a way to answer it
-              before any fine. Everything the board is relying on is below, including when
-              each photograph was taken and where from.
-            </Callout>
-          ) : null}
-
           {mine.map((violation) => {
             const stage = STAGE[violation.stage];
             const cited = resolveCitation(violation.ruleCitation, community.governingDocs);
@@ -238,8 +229,8 @@ function OpenFooter({ violation }: { violation: Violation }) {
       ) : (
         <>
           <p className="text-[13px] leading-relaxed text-fg-muted">
-            Fixed it? Tell the board and they will close this. If you disagree, open a request
-            and choose an appeal. It is answered on the record.
+            Fixed it? Tell the board and they will close this. If you disagree, ask the board.
+            It is answered on the record.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => setSaying(true)}>
@@ -250,7 +241,7 @@ function OpenFooter({ violation }: { violation: Violation }) {
               className="inline-flex h-8 items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg transition-colors hover:bg-surface-3"
             >
               <Gavel className="size-3.5" />
-              Appeal this
+              Ask the board
             </Link>
           </div>
         </>

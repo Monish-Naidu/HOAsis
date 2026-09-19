@@ -19,6 +19,7 @@ import { formatMinute, rulesFor } from "@/lib/bookings";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { HomeRequest, RequestKind } from "@/lib/types";
 import { cn, formatDate, money, todayIsoDate } from "@/lib/utils";
+import { moduleOn } from "@/lib/modules";
 
 const kinds = [
   {
@@ -41,6 +42,8 @@ const kinds = [
     hint: "Inspect association records",
     icon: FileSearch,
     clock: "Association policy: the board responds within 10 business days.",
+    // A statutory records request is not a month-one homeowner action.
+    module: "request-records" as const,
   },
   {
     id: "amenity",
@@ -180,7 +183,7 @@ export function NewRequestForm() {
       <section>
         <SectionTitle>Type</SectionTitle>
         <div className="grid grid-cols-2 gap-2.5">
-          {kinds.map(({ id, label, hint, icon: Icon }) => (
+          {kinds.filter((k) => moduleOn("module" in k ? k.module : undefined)).map(({ id, label, hint, icon: Icon }) => (
             <button
               key={id}
               type="button"

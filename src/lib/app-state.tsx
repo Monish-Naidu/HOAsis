@@ -321,6 +321,20 @@ interface AppState {
   /** Moves a notice along, or closes it. Cured is how a notice is resolved. */
   setViolationStage: (violationId: string, stage: Violation["stage"]) => void;
   /**
+   * The board's own notice to a home, from its own observation. The simple
+   * Notices page since the launch scope: one home, what was seen, optionally
+   * which rule. No report behind it and no stage ladder in front of it.
+   */
+  addNotice: (input: {
+    ownerId: string;
+    ownerName: string;
+    unit: string;
+    rule: string;
+    ruleCitation?: string;
+  }) => Violation;
+  /** Ends voting. The tally as it stands is the result. */
+  closeBallot: (ballotId: string) => void;
+  /**
    * A notice from a city or county agency, logged by the board. Not hearsay,
    * so it needs nobody to go and look; the deadline is the whole point.
    */
@@ -1603,6 +1617,74 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         all.map((r) => (r.id === reportId ? { ...r, violationId: violation.id } : r)),
       );
       return violation;
+    },
+    [remote.community, communityId],
+  );
+
+  const addNotice = useCallback(
+    (input: { ownerId: string; ownerName: string; unit: string; rule: string; ruleCitation?: string }) => {
+      if (!input.rule.trim() || !input.unit.trim()) {
+        throw new ValidationError("A notice needs a home and what was seen", {});
+      }
+      const existing = remote.community
+        ? remote.community.violations
+        : sliceStore(communityId, "violations").getSnapshot();
+      const sequence = existing.length + 1;
+      const violation: Violation = {
+        id: remote.community ? newId() : `vio-${communityId}-${sequence}`,
+        reference: `VIO-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
+        ownerId: input.ownerId,
+        ownerName: input.ownerName.trim(),
+        unit: input.unit.trim(),
+        rule: input.rule.trim(),
+        ruleCitation: (input.ruleCitation ?? "").trim(),
+        stage: "courtesy",
+        openedDate: todayIsoDate(),
+        nextActionDate: addDays(todayIsoDate(), 14),
+        photos: [],
+        fineCents: 0,
+        source: "board",
+      };
+      if (remote.community) {
+        const rc = remote.community;
+        void remoteWrite("Sending the notice", () =>
+          supabaseBrowser().from("violations").insert({
+            id: violation.id,
+            association_id: rc.id,
+            reference: violation.reference,
+            unit_id: isUuid(violation.ownerId) ? violation.ownerId : null,
+            unit_label: violation.unit,
+            owner_name: violation.ownerName,
+            rule: violation.rule,
+            rule_citation: violation.ruleCitation,
+            stage: violation.stage,
+            opened_on: violation.openedDate,
+            next_action_on: violation.nextActionDate,
+            photos: [],
+            fine_cents: 0,
+            report_id: null,
+            source: "board",
+          }),
+        );
+        return violation;
+      }
+      sliceStore(communityId, "violations").update((all) => [violation, ...all]);
+      return violation;
+    },
+    [remote.community, communityId],
+  );
+
+  const closeBallot = useCallback(
+    (ballotId: string) => {
+      if (remote.community) {
+        void remoteWrite("Closing the ballot", () =>
+          supabaseBrowser().from("ballots").update({ status: "closed" }).eq("id", ballotId),
+        );
+        return;
+      }
+      sliceStore(communityId, "ballots").update((all) =>
+        all.map((b) => (b.id === ballotId ? { ...b, status: "closed" as const } : b)),
+      );
     },
     [remote.community, communityId],
   );
@@ -3659,6 +3741,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setPayoutNotes,
     setViolationStage,
     addCityNotice,
+    addNotice,
+    closeBallot,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

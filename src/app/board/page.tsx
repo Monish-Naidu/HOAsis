@@ -14,6 +14,7 @@ import {
   Vote,
 } from "lucide-react";
 import { Callout, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
+import { moduleOn } from "@/lib/modules";
 import {
   cashPosition,
   delinquency,
@@ -68,6 +69,7 @@ export default function BoardDashboard() {
   const spending = spendingByCategory(community, year);
   const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
   const exposure = insuranceExposure(community);
+  const showDonut = moduleOn("money-compare") && spending.rows.length > 0;
 
   const role =
     account && account.role !== "resident" ? ROLE_LABEL[account.role] : "Board member";
@@ -105,7 +107,7 @@ export default function BoardDashboard() {
           {/* The one finding on Finances that a president should not have
               to click through to see. Money above the insured limit is a
               decision, not a report. */}
-          {exposure.totalUninsured > 0 ? (
+          {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
             <Callout
               tone="warn"
               className="mb-5"
@@ -120,7 +122,7 @@ export default function BoardDashboard() {
             </Callout>
           ) : null}
 
-          {hasFlows || spending.rows.length > 0 ? (
+          {hasFlows || showDonut ? (
             <section>
               {/* One year control for both charts, and the way into the
                   comparison. Two dropdowns off one piece of state read as
@@ -132,18 +134,18 @@ export default function BoardDashboard() {
                 ) : (
                   <span className="text-[13px] font-medium text-fg-muted">This year</span>
                 )}
-                {years.length > 1 ? (
+                {years.length > 1 && moduleOn("money-compare") ? (
                   <SectionLink href="/board/money/trends">Compare years</SectionLink>
                 ) : null}
               </div>
               <div className="grid gap-5 xl:grid-cols-5">
                 {hasFlows ? (
-                  <Card className={cn(spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
+                  <Card className={cn(showDonut ? "xl:col-span-3" : "xl:col-span-5")}>
                     <CardHeader title="Monthly Financial Overview" />
                     <MoneyFlowChart months={flows} />
                   </Card>
                 ) : null}
-                {spending.rows.length > 0 ? (
+                {showDonut ? (
                   <Card className={cn(hasFlows ? "xl:col-span-2" : "xl:col-span-5")}>
                     <CardHeader title="Spending by Category" />
                     <SpendingDonut
@@ -234,6 +236,9 @@ function StatTiles() {
   const openRequests = requests.filter(
     (r) => !["approved", "denied", "closed"].includes(r.status),
   );
+  // Waiting a week is the point at which a volunteer board starts to look
+  // slow to the person asking, so that is the number under the count.
+  const waitingAWeek = openRequests.filter((r) => daysFromToday(r.submittedDate) <= -7);
   const liveMeeting = community.meetings.find((m) => m.status === "live");
   const nextMeeting =
     liveMeeting ??
@@ -268,7 +273,13 @@ function StatTiles() {
         tone="bg-brand-soft text-brand-soft-fg"
         label="Open Requests"
         value={String(openRequests.length)}
-        sub={`${pluralize(community.violations.filter((v) => v.stage !== "cured").length, "open violation")}`}
+        sub={
+          openRequests.length === 0
+            ? "Nothing waiting"
+            : waitingAWeek.length > 0
+              ? `${waitingAWeek.length} waiting over a week`
+              : "All under a week old"
+        }
         href="/board/requests"
         action="View requests"
       />
@@ -292,7 +303,7 @@ function StatTiles() {
             : "Schedule one from Meetings"
         }
         href="/board/meetings"
-        action="Join meeting"
+        action={liveMeeting ? "Join meeting" : nextMeeting ? "Open meetings" : "Schedule one"}
       />
       <StatTile
         icon={Receipt}
@@ -307,25 +318,10 @@ function StatTiles() {
   );
 }
 
-/* ------------------------------------------------------------ bottom cards */
-
-
-/** The five bottom cards are narrow; the shared CardHeader's 17px truncates. */
-function DenseHeader({ title, action }: { title: string; action?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-      <h2 className="min-w-0 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
-        {title}
-      </h2>
-      {action}
-    </div>
-  );
-}
-
-
+/* ------------------------------------------------------------ quick actions */
 
 const ACTIONS = [
-  { href: "/board/voting", label: "Create Vote", icon: Vote, tone: "bg-ok-soft text-ok" },
+  { href: "/board/voting", label: "New Ballot", icon: Vote, tone: "bg-ok-soft text-ok" },
   {
     href: "/board/meetings",
     label: "Schedule Meeting",
@@ -347,66 +343,18 @@ const ACTIONS = [
 ];
 
 /**
- * The four actions the huddle confirmed, in two try-on layouts.
- *
- * Arya flagged that a five-item column under the five stat tiles reads
- * awkwardly, so this renders either a full-width action bar (A) or a two-by-
- * two list (B), switched by the small toggle in the corner. Temporary: once
- * Monish picks from the screenshots, the loser and the toggle both go.
+ * The four actions the huddle confirmed, as one full-width bar. A two-by-two
+ * list was tried beside it behind a toggle; the bar won and the toggle went
+ * with the 2026-09-19 launch scope.
  */
 function QuickActions() {
-  const [layout, setLayout] = useState<"a" | "b">("a");
-
-  const toggle = (
-    <div
-      className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5"
-      role="radiogroup"
-      aria-label="Quick actions layout"
-    >
-      {(["a", "b"] as const).map((option) => (
-        <button
-          key={option}
-          type="button"
-          role="radio"
-          aria-checked={layout === option}
-          onClick={() => setLayout(option)}
-          className={cn(
-            "inline-flex h-6 items-center rounded-md px-2 text-[12px] font-semibold uppercase transition-colors",
-            layout === option ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
-          )}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  );
-
-  if (layout === "b") {
-    return (
-      <Card className="mt-5">
-        <DenseHeader title="Quick Actions" action={toggle} />
-        <div className="grid gap-px bg-border sm:grid-cols-2">
-          {ACTIONS.map(({ href, label, icon: Icon, tone }) => (
-            <Link
-              key={label}
-              href={href}
-              className="flex items-center gap-3 bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2"
-            >
-              <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", tone)}>
-                <Icon className="size-4" strokeWidth={2} />
-              </span>
-              <span className="flex-1 text-[15px] font-medium text-fg">{label}</span>
-              <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-            </Link>
-          ))}
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <Card className="mt-5">
-      <DenseHeader title="Quick Actions" action={toggle} />
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <h2 className="min-w-0 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+          Quick Actions
+        </h2>
+      </div>
       <div className="grid grid-cols-2 gap-1 p-3 sm:grid-cols-4">
         {ACTIONS.map(({ href, label, icon: Icon, tone }) => (
           <Link

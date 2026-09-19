@@ -38,6 +38,7 @@ import {
 import { computePaymentCost, FEE_SCHEDULE } from "@/lib/payments/instruments";
 import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
 import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
+import { moduleOn } from "@/lib/modules";
 
 export const metadata = {
   title: "ExpressHOA. Moving your community forward.",
@@ -80,8 +81,8 @@ const BENEFITS = [
   {
     icon: ShieldCheck,
     tone: "bg-warn-soft text-warn",
-    title: "Stay compliant",
-    body: "Keep records, deadlines, and requirements on track.",
+    title: "Keep every record",
+    body: "Documents, decisions, and money in one place the next board inherits.",
   },
 ];
 
@@ -272,6 +273,30 @@ function ComplianceMini() {
   );
 }
 
+/** Two notices the way the board sees them: one waiting, one the owner says is fixed. */
+function NoticesMini() {
+  const rows = [
+    { home: "Unit 14", what: "Trash cans out front", state: "Owner says fixed", tone: "ok" as const },
+    { home: "Unit 3", what: "Fence paint peeling", state: "Sent 4 days ago", tone: "info" as const },
+  ];
+  return (
+    <Mini>
+      <p className="text-[12px] font-semibold text-fg">Open notices</p>
+      <ul className="mt-2 space-y-2">
+        {rows.map((row) => (
+          <li key={row.home} className="flex items-center justify-between gap-2">
+            <span className="min-w-0">
+              <span className="block truncate text-[11px] font-medium text-fg">{row.home}</span>
+              <span className="block truncate text-[11px] text-fg-muted">{row.what}</span>
+            </span>
+            <Pill tone={row.tone}>{row.state}</Pill>
+          </li>
+        ))}
+      </ul>
+    </Mini>
+  );
+}
+
 function Ring({ percent }: { percent: number }) {
   const r = 17;
   const c = 2 * Math.PI * r;
@@ -415,26 +440,33 @@ function PaymentsMini() {
 
 /** Everything the four tiles leave out, as one strip under them. */
 const EVERYTHING_ELSE = [
-  "Violations",
+  "Notices",
   "Architectural requests",
   "Documents",
   "Communication",
   "Meetings",
   "Voting",
-  "Reporting",
-  "Directory",
   "Knowledge center",
-  "Board transitions",
 ];
 
 const FEATURES = [
-  {
-    icon: ShieldCheck,
-    tone: "bg-ok-soft text-ok",
-    title: "Compliance updates",
-    line: "Stay ahead of changing laws.",
-    mini: <ComplianceMini />,
-  },
+  // Compliance leads only while that module is on; until then the first
+  // tile is the thing every board does in month one.
+  moduleOn("compliance")
+    ? {
+        icon: ShieldCheck,
+        tone: "bg-ok-soft text-ok",
+        title: "Compliance updates",
+        line: "Stay ahead of changing laws.",
+        mini: <ComplianceMini />,
+      }
+    : {
+        icon: ClipboardCheck,
+        tone: "bg-ok-soft text-ok",
+        title: "Notices",
+        line: "Send one, and see it fixed.",
+        mini: <NoticesMini />,
+      },
   {
     icon: ChartNoAxesColumn,
     tone: "bg-info-soft text-info",

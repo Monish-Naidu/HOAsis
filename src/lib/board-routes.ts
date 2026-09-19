@@ -17,6 +17,8 @@ import {
   Vote,
 } from "lucide-react";
 import type { Capability } from "@/lib/types";
+import { moduleOn } from "@/lib/modules";
+import type { ModuleKey } from "@/lib/modules";
 import type { Community } from "@/lib/data/community";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 
@@ -67,6 +69,12 @@ export interface BoardRoute {
    * screens once leaked an association's money.
    */
   hidden?: boolean;
+  /**
+   * Which launch module this belongs to. See `lib/modules.ts`. A route whose
+   * module is off is neither offered nor served; a route without one is
+   * always on.
+   */
+  module?: ModuleKey;
 }
 
 export const BOARD_ROUTES: BoardRoute[] = [
@@ -77,6 +85,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Setting up",
     icon: ListChecks,
     key: "setup",
+    module: "setup",
     // Second in the list while it exists, and gone the day it is finished.
     //
     // The plan used to live only on the dashboard, where it dropped to a
@@ -99,32 +108,37 @@ export const BOARD_ROUTES: BoardRoute[] = [
     need: ["settings", "finances"],
     present: (c) => !buildPlan(c, profileFromCommunity(c)).allDone,
   },
-  { href: "/board/money", label: "Finances", icon: Banknote, key: "money", need: ["finances"] },
+  { href: "/board/money", label: "Finances", icon: Banknote, key: "money", need: ["finances"], module: "money" },
   {
     href: "/board/homeowners",
     label: "Homeowners",
     icon: Users,
     key: "homeowners",
+    module: "homeowners",
     // Was ungated, which showed every household's balance, email and days past
     // due to any resident who reached the URL.
     need: ["finances", "communications"],
   },
   {
     href: "/board/violations",
-    label: "Violations",
+    // Called Notices since the 2026-09-19 launch scope: two states, three
+    // actions. The route keeps its name because links point at it.
+    label: "Notices",
     icon: TriangleAlert,
     key: "violations",
+    module: "notices",
     // Enforcement rides the same capability as requests: both are the board
     // answering a household, and splitting the grant would strand one queue.
     need: ["requests"],
   },
-  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", need: ["vendors"] },
-  { href: "/board/requests", label: "Requests", icon: Inbox, key: "requests", need: ["requests"] },
+  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", need: ["vendors"], module: "vendors" },
+  { href: "/board/requests", label: "Requests", icon: Inbox, key: "requests", need: ["requests"], module: "requests" },
   {
     href: "/board/reserves",
     label: "Reserve Study",
     icon: ChartPie,
     key: "reserves",
+    module: "reserves",
     need: ["finances"],
   },
   {
@@ -132,6 +146,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Compliance",
     icon: ShieldCheck,
     key: "compliance",
+    module: "compliance",
     need: ["compliance"],
   },
   {
@@ -139,6 +154,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Communications",
     icon: MessagesSquare,
     key: "communications",
+    module: "communications",
     need: ["communications"],
   },
   {
@@ -146,6 +162,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Community",
     icon: MessageSquareText,
     key: "forum",
+    module: "forum",
     need: ["forum"],
   },
   {
@@ -153,14 +170,16 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Meetings",
     icon: Video,
     key: "meetings",
+    module: "meetings",
     need: ["voting"],
   },
-  { href: "/board/voting", label: "Voting", icon: Vote, key: "voting", need: ["voting"] },
+  { href: "/board/voting", label: "Voting", icon: Vote, key: "voting", need: ["voting"], module: "voting" },
   {
     href: "/board/documents",
     label: "Documents",
     icon: FileText,
     key: "documents",
+    module: "documents",
     need: ["documents"],
   },
   /**
@@ -174,6 +193,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Transactions",
     icon: Banknote,
     key: "money-transactions",
+    module: "money",
     need: ["finances"],
   },
   {
@@ -182,6 +202,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Budget",
     icon: Banknote,
     key: "money-budget",
+    module: "money-budget",
     need: ["finances"],
   },
   {
@@ -190,6 +211,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Trends",
     icon: Banknote,
     key: "money-trends",
+    module: "money-trends",
     need: ["finances"],
   },
   {
@@ -198,6 +220,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Collections",
     icon: Banknote,
     key: "money-collections",
+    module: "money",
     need: ["finances"],
   },
   {
@@ -206,10 +229,11 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Shared costs",
     icon: Droplets,
     key: "shared-costs",
+    module: "shared-costs",
     need: ["finances"],
     present: (c) => c.sharedCosts.length > 0 || c.specialAssessments.length > 0,
   },
-  { href: "/board/settings", label: "Settings", icon: Settings, key: "settings", need: ["settings"] },
+  { href: "/board/settings", label: "Settings", icon: Settings, key: "settings", need: ["settings"], module: "settings" },
 ];
 
 /**
@@ -219,8 +243,22 @@ export const BOARD_ROUTES: BoardRoute[] = [
  * shortest match would gate nothing.
  */
 export function capabilitiesFor(pathname: string): Capability[] | undefined {
-  const match = [...BOARD_ROUTES]
+  return routeFor(pathname)?.need;
+}
+
+/** The route serving this path, longest match first. */
+export function routeFor(pathname: string): BoardRoute | undefined {
+  return [...BOARD_ROUTES]
     .sort((a, b) => b.href.length - a.href.length)
     .find((route) => pathname === route.href || pathname.startsWith(`${route.href}/`));
-  return match?.need;
+}
+
+/** The launch module this path belongs to, if it belongs to one. */
+export function boardModuleFor(pathname: string): ModuleKey | undefined {
+  return routeFor(pathname)?.module;
+}
+
+/** Whether the route is switched on at all. Capability is a separate question. */
+export function routeOn(route: BoardRoute): boolean {
+  return moduleOn(route.module);
 }

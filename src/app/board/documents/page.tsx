@@ -8,7 +8,6 @@ import {
   ExternalLink,
   FileSpreadsheet,
   FileText,
-  Globe,
   ScanLine,
   Search,
   ShieldQuestion,
@@ -17,20 +16,20 @@ import {
 } from "lucide-react";
 import {
   Badge,
-  Callout,
   Card,
   CardHeader,
   PageHeader,
 } from "@/components/ui/primitives";
 import { useState } from "react";
 import Link from "next/link";
-import { publicRecordsUrl, recordsGaps } from "@/lib/metrics";
+import { recordsGaps } from "@/lib/metrics";
 import { GOVERNING_DOCS, disclosureCoverage, documentsPresent } from "@/lib/governing";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { formatDate, pluralize } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { DOCUMENT_ACCEPT } from "@/lib/documents";
 import type { DocumentRecord } from "@/lib/types";
+import { moduleOn } from "@/lib/modules";
 
 
 const VISIBILITY_WORD: Record<DocumentRecord["visibility"], string> = {
@@ -54,7 +53,6 @@ export default function BoardDocuments() {
   const { notify } = useToast();
   const [query, setQuery] = useState("");
   const [uploading, setUploading] = useState(false);
-  const publicDocs = documents.filter((d) => d.visibility === "public");
   const gaps = recordsGaps({ ...community, documents });
   const governing = community.governingDocs;
   const docsInWords = documentsPresent(governing);
@@ -191,7 +189,8 @@ export default function BoardDocuments() {
         {/* The disclosure list is the one measure of these documents that a
             board can act on. A count of articles says nothing; "three of the
             eight things a buyer must be told have no answer on file" is a
-            morning's work with a clear finish. */}
+            morning's work with a clear finish. Resale season, so it waits. */}
+        {moduleOn("documents-disclosure") ? (
         <Link
           href="/board/documents/new-owner"
           className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
@@ -214,6 +213,7 @@ export default function BoardDocuments() {
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
         </Link>
+        ) : null}
 
         <Link
           href="/board/documents/import"
@@ -235,14 +235,6 @@ export default function BoardDocuments() {
         </Link>
       </div>
 
-      {/* The page itself is not built yet. Saying it was live, with a button
-          that only showed a toast, was the kind of claim this product is
-          against. The count is real; the address is where it will be. */}
-      <Callout tone="info" className="mt-5" icon={<Globe className="size-4" />} title="Public records page">
-        {pluralize(publicDocs.length, "document")} marked public will be readable without an account
-        at {publicRecordsUrl(community)} once that page ships. Owners can download them from their
-        portal today.
-      </Callout>
 
       <Card className="mt-5">
         <CardHeader

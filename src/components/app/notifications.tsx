@@ -114,7 +114,7 @@ function useResidentNotices(): Notice[] {
       id: "live",
       title: live.title,
       detail: `Live now · ${live.attendees.length} joined`,
-      href: "/resident/vote",
+      href: "/resident/calendar",
       icon: Radio,
       tone: "bg-ok-soft text-ok",
     });

@@ -1,43 +1,43 @@
 "use client";
 
-import Link from "next/link";
-import { ChevronRight, Radio, Vote } from "lucide-react";
+import { Vote } from "lucide-react";
 import { useState } from "react";
-import { BallotCard } from "@/components/app/ballot-card";
+import { BallotCard, resultLine } from "@/components/app/ballot-card";
 import { NewBallot } from "@/components/app/new-ballot";
-import { Button, PageHeader, Stat } from "@/components/ui/primitives";
-
-import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { BoardVote } from "@/components/app/board-vote";
+import { Button, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { useAppState } from "@/lib/app-state";
+import { formatDate } from "@/lib/utils";
 
 /**
- * Ballots only. Meetings moved to their own page in the 2026-09-01 design;
- * the live-meeting strip below is the one thing that still points across,
- * because a director opening Voting during a call is probably looking for it.
+ * Ask, count, close.
+ *
+ * Open ballots with their votes in, closed ballots with their result, and one
+ * button. The four stat tiles, the live-meeting strip, board-only resolutions,
+ * scheduled ballots and certification were all here and all went in the
+ * 2026-09-19 launch scope; a board that has never run a vote online needs to
+ * see a question and a number, not a governance console.
  */
 export default function BoardVoting() {
   const [creating, setCreating] = useState(false);
-  const { community, ballots, castVote } = useAppState();
-  const live = community.meetings.find((m) => m.status === "live");
+  const { ballots, closeBallot } = useAppState();
   const { notify } = useToast();
-  const open = ballots.filter((b) => b.status === "open");
-  const scheduled = ballots.filter((b) => b.status === "scheduled");
-  const decided = ballots.filter((b) => b.status === "certified" || b.status === "closed");
-  const totalCast = open.reduce(
-    (total, ballot) => total + ballot.options.reduce((sum, o) => sum + o.votes, 0),
-    0,
-  );
+  // Scheduled ballots from older fixtures count as open here: they are
+  // questions the board asked and nothing on this page schedules one.
+  const open = ballots
+    .filter((b) => b.status === "open" || b.status === "scheduled")
+    .sort((a, b) => a.closesDate.localeCompare(b.closesDate));
+  const closed = ballots
+    .filter((b) => b.status === "closed" || b.status === "certified")
+    .sort((a, b) => b.closesDate.localeCompare(a.closesDate));
 
   return (
     <>
       <PageHeader
         eyebrow="Governance"
         title="Voting"
-
+        description="Ask the homes a question. One vote per home, and the result is there when it ends."
         action={
-          // The form carries its own Cancel, so offering a second one up here
-          // just puts two of them on screen saying the same thing.
           creating ? undefined : (
             <Button variant="primary" size="md" onClick={() => setCreating(true)}>
               New ballot
@@ -48,70 +48,48 @@ export default function BoardVoting() {
 
       {creating ? <NewBallot onClose={() => setCreating(false)} /> : null}
 
-      {live ? (
-        <Link
-          href="/board/meetings"
-          className="mb-5 flex items-center gap-3 rounded-card border border-ok/30 bg-ok-soft px-4 py-3 transition-opacity hover:opacity-90"
-        >
-          <Radio className="size-4 shrink-0 text-ok" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-semibold text-ok">{live.title}</span>
-            <span className="block text-[13px] text-ok opacity-90">
-              Live now · {live.attendees.length} joined · open the meeting
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-ok" />
-        </Link>
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Open ballots" value={String(open.length)} icon={<Vote className="size-4" />} />
-        <Stat label="Votes cast" value={String(totalCast)} tone="ok" hint="Across open ballots" />
-        <Stat label="Scheduled" value={String(scheduled.length)} />
-        <Stat label="Decided" value={String(decided.length)} />
-      </div>
-
-      <section className="mt-5">
-        <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">
-          Open ballots
-        </h2>
-        <div className="grid gap-4 xl:grid-cols-2">
-          {open.map((b) => (
-            <div key={b.id} className="space-y-2">
-              <BallotCard ballot={b} />
-              {b.audience === "board" ? (
-                <BoardVote
-                  ballot={b}
-                  onCast={(optionId) => {
-                    castVote(b.id, optionId);
-                    const option = b.options.find((o) => o.id === optionId);
-                    notify(`Your vote was recorded: ${option?.label}`);
-                  }}
-                />
-              ) : null}
-            </div>
-          ))}
-          {open.length === 0 ? (
-            <p className="text-[15px] text-fg-muted">
-              Nothing is open for a vote. {scheduled.length > 0 ? "The next ballot below opens on schedule." : ""}
-            </p>
-          ) : null}
-        </div>
-      </section>
-
-      {scheduled.length > 0 || decided.length > 0 ? (
-        <section className="mt-5">
-          <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">
-            Scheduled and decided
-          </h2>
-          <div className="grid items-start gap-4 xl:grid-cols-2">
-            {scheduled.map((b) => (
-              <BallotCard key={b.id} ballot={b} />
-            ))}
-            {decided.map((b) => (
-              <BallotCard key={b.id} ballot={b} />
+      <section>
+        <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">Open</h2>
+        {open.length === 0 ? (
+          <EmptyState
+            icon={<Vote className="size-5" />}
+            title="Nothing is open for a vote"
+            description="A new ballot is a question, the choices, and the day voting ends."
+          />
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {open.map((b) => (
+              <BallotCard
+                key={b.id}
+                ballot={b}
+                onClose={(ballot) => {
+                  closeBallot(ballot.id);
+                  notify(`Closed. ${resultLine(ballot)}.`);
+                }}
+              />
             ))}
           </div>
+        )}
+      </section>
+
+      {closed.length > 0 ? (
+        <section className="mt-6">
+          <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">Closed</h2>
+          <Card>
+            <div className="divide-y divide-border">
+              {closed.map((b) => (
+                <div key={b.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-medium text-fg">{b.title}</p>
+                    <p className="text-[13px] text-fg-muted">{resultLine(b)}</p>
+                  </div>
+                  <span className="tnum text-[13px] text-fg-subtle">
+                    Ended {formatDate(b.closesDate)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
         </section>
       ) : null}
     </>

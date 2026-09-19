@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useAppState } from "@/lib/app-state";
 import { TabPill } from "@/components/app/tab-pill";
 import { cn } from "@/lib/utils";
+import { moduleOn } from "@/lib/modules";
+import type { ModuleKey } from "@/lib/modules";
 
 /**
  * The money questions, as one place.
@@ -17,14 +19,14 @@ import { cn } from "@/lib/utils";
  * Shared costs only appears for an association that has any, so a board
  * billing one flat due never sees an empty tab.
  */
-const VIEWS = [
+const VIEWS: { href: string; label: string; detail: string; module?: ModuleKey }[] = [
   { href: "/board/money", label: "Overview", detail: "Where the money stands today" },
   { href: "/board/money/transactions", label: "Transactions", detail: "Every line, filtered and exportable" },
-  { href: "/board/money/budget", label: "Budget", detail: "Each line against the share of the year gone" },
-  { href: "/board/money/trends", label: "Trends", detail: "One year beside another" },
+  { href: "/board/money/budget", label: "Budget", detail: "Each line against the share of the year gone", module: "money-budget" },
+  { href: "/board/money/trends", label: "Trends", detail: "One year beside another", module: "money-trends" },
   { href: "/board/money/collections", label: "Collections", detail: "Who is behind, and by how much" },
-  { href: "/board/reserves", label: "Reserves", detail: "What wears out, when, and what is set aside" },
-] as const;
+  { href: "/board/reserves", label: "Reserves", detail: "What wears out, when, and what is set aside", module: "reserves" },
+];
 
 export function MoneyTabs() {
   const pathname = usePathname();
@@ -32,16 +34,17 @@ export function MoneyTabs() {
 
   const views = [
     ...VIEWS,
-    ...(community.sharedCosts.length > 0 || community.specialAssessments.length > 0
+    ...(moduleOn("shared-costs") &&
+    (community.sharedCosts.length > 0 || community.specialAssessments.length > 0)
       ? [
           {
             href: "/board/shared-costs",
             label: "Shared costs",
             detail: "Bills the association passes on",
-          } as const,
+          },
         ]
       : []),
-  ];
+  ].filter((view) => moduleOn(view.module));
 
   const active = views.find((v) => pathname === v.href) ?? views[0];
 

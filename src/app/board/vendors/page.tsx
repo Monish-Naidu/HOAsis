@@ -20,6 +20,7 @@ import { RecordPayment } from "@/components/app/record-payment";
 import { useToast } from "@/components/app/toast";
 import type { Payout } from "@/lib/types";
 import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
+import { moduleOn } from "@/lib/modules";
 
 const payoutTone = {
   paid: "ok",
@@ -97,7 +98,11 @@ export default function BoardVendors() {
         <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5">
           <CardHeader
             title="New vendor"
-            subtitle="Over $600 a year, the IRS needs a W-9 from them in January"
+            subtitle={
+              moduleOn("vendor-tax-forms")
+                ? "Over $600 a year, the IRS needs a W-9 from them in January"
+                : "Who they are and what they do for you"
+            }
           />
           <div className="grid gap-3 px-5 py-4 sm:grid-cols-2">
             <label className="block">
@@ -120,24 +125,28 @@ export default function BoardVendors() {
             </label>
           </div>
           <div className="flex flex-wrap gap-4 border-t border-border px-5 py-3">
-            <label className="flex items-center gap-2 text-[15px] text-fg">
-              <input
-                type="checkbox"
-                checked={draft.achEnabled}
-                onChange={(e) => setDraft({ ...draft, achEnabled: e.target.checked })}
-                className="size-4 accent-navy-700"
-              />
-              Pays by ACH
-            </label>
-            <label className="flex items-center gap-2 text-[15px] text-fg">
-              <input
-                type="checkbox"
-                checked={draft.w9OnFile}
-                onChange={(e) => setDraft({ ...draft, w9OnFile: e.target.checked })}
-                className="size-4 accent-navy-700"
-              />
-              W-9 already on file
-            </label>
+            {moduleOn("vendor-tax-forms") ? (
+              <>
+                <label className="flex items-center gap-2 text-[15px] text-fg">
+                  <input
+                    type="checkbox"
+                    checked={draft.achEnabled}
+                    onChange={(e) => setDraft({ ...draft, achEnabled: e.target.checked })}
+                    className="size-4 accent-navy-700"
+                  />
+                  Pays by ACH
+                </label>
+                <label className="flex items-center gap-2 text-[15px] text-fg">
+                  <input
+                    type="checkbox"
+                    checked={draft.w9OnFile}
+                    onChange={(e) => setDraft({ ...draft, w9OnFile: e.target.checked })}
+                    className="size-4 accent-navy-700"
+                  />
+                  W-9 already on file
+                </label>
+              </>
+            ) : null}
             <div className="ml-auto flex gap-2">
               <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
                 Cancel
@@ -157,7 +166,7 @@ export default function BoardVendors() {
       {/* Two callouts, only when there is something to do. The count tiles
           that used to sit here restated these and added averages nobody could
           act on. */}
-      {gaps.missingW9.length ? (
+      {moduleOn("vendor-tax-forms") && gaps.missingW9.length ? (
         <Callout
           tone="danger"
           className="mt-5"
@@ -233,17 +242,19 @@ export default function BoardVendors() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {v.w9OnFile ? (
-                            <Badge tone="neutral">W-9</Badge>
-                          ) : (
-                            <Badge tone="danger">
-                              <AlertTriangle className="size-2.5" />
-                              No W-9
-                            </Badge>
-                          )}
+                          {moduleOn("vendor-tax-forms") ? (
+                            v.w9OnFile ? (
+                              <Badge tone="neutral">W-9</Badge>
+                            ) : (
+                              <Badge tone="danger">
+                                <AlertTriangle className="size-2.5" />
+                                No W-9
+                              </Badge>
+                            )
+                          ) : null}
                           {v.coiExpires ? (
                             <Badge tone={coiSoon ? "warn" : "neutral"}>
-                              COI {coiSoon ? relativeDays(v.coiExpires) : formatDate(v.coiExpires)}
+                              Insurance {coiSoon ? relativeDays(v.coiExpires) : formatDate(v.coiExpires)}
                             </Badge>
                           ) : null}
                         </div>
@@ -365,7 +376,6 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
       {p.method === "check" ? (
         <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-[13px] leading-snug text-warn">
           Check, {daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)} days in transit.
-          Ask this vendor to take ACH.
         </p>
       ) : null}
 

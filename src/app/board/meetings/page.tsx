@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, CalendarPlus, Radio } from "lucide-react";
+import { CalendarDays, CalendarPlus } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Stat } from "@/components/ui/primitives";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
@@ -55,9 +55,7 @@ export default function BoardMeetings() {
   const upcoming = [...community.meetings]
     .filter((m) => m.status !== "ended")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
-  const ended = community.meetings.filter((m) => m.status === "ended");
-  const scheduledMeetings = upcoming.filter((m) => m.status !== "live");
-  const nextMeeting = scheduledMeetings[0];
+  const nextMeeting = upcoming.find((m) => m.status !== "live");
 
   return (
     <>
@@ -76,29 +74,14 @@ export default function BoardMeetings() {
 
       {scheduling ? <ScheduleMeeting onClose={() => setScheduling(false)} /> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat
-          label="Live now"
-          value={live ? "1 meeting" : "None"}
-          tone={live ? "ok" : "neutral"}
-          hint={live ? `${live.attendees.length} joined` : undefined}
-          icon={<Radio className="size-4" />}
-        />
+      {/* One number. A board meets a handful of times a year, and counting
+          those in four tiles said less than the date of the next one. */}
+      <div className="grid gap-4 sm:max-w-xs">
         <Stat
           label="Next meeting"
-          value={nextMeeting ? formatDate(nextMeeting.date) : "None"}
+          value={nextMeeting ? formatDate(nextMeeting.date) : "None set"}
           hint={nextMeeting?.title}
           icon={<CalendarDays className="size-4" />}
-        />
-        <Stat label="Scheduled" value={String(scheduledMeetings.length)} />
-        <Stat
-          label="Held this year"
-          value={String(ended.length)}
-          hint={
-            ended.some((m) => m.recordingAvailable)
-              ? "Recordings on the meeting record"
-              : undefined
-          }
         />
       </div>
 
@@ -148,10 +131,6 @@ export default function BoardMeetings() {
                   </li>
                 ))}
               </ol>
-              <p className="mt-4 rounded-lg bg-surface-2 px-3 py-2 text-[13px] leading-snug text-fg-muted">
-                Item 3 is the open board ballot on the Voting tab. Directors can vote without
-                leaving the call.
-              </p>
             </div>
           </div>
         </Card>

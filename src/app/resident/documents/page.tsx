@@ -7,12 +7,10 @@ import {
   ChevronRight,
   FileSpreadsheet,
   FileText,
-  Globe,
   PenLine,
   Search,
 } from "lucide-react";
-import { Badge, Card, Callout, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { publicRecordsUrl } from "@/lib/metrics";
+import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import type { DocumentRecord, GoverningDoc } from "@/lib/types";
@@ -219,11 +217,6 @@ export default function ResidentDocuments() {
           </Card>
         </section>
       ))}
-
-      <Callout tone="brand" icon={<Globe className="size-4" />} title={publicRecordsUrl(community)}>
-        Anyone can read the public documents there, no account needed. Useful when you are
-        selling.
-      </Callout>
     </div>
   );
 }

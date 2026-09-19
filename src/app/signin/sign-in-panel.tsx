@@ -65,8 +65,7 @@ export function SignInPanel() {
    *
    * Without one this form has nothing to talk to, so it falls back to picking
    * the demo seat whose email was typed. That keeps the prototype clickable
-   * for anyone evaluating it, and is honest about which it is doing because
-   * the seat list below is visible either way.
+   * for anyone evaluating it. The seat list only renders in that case.
    */
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -230,6 +229,9 @@ export function SignInPanel() {
         </div>
       ) : null}
 
+      {/* Demo seats. Never rendered against a real project: picking one would
+          sign a real visitor into fixture data. */}
+      {!hasSupabase ? (
       <Card className="overflow-hidden">
         <div className="flex items-start gap-2 border-b border-border px-4 py-2.5">
           <Info className="mt-px size-3.5 shrink-0 text-fg-subtle" />
@@ -268,6 +270,7 @@ export function SignInPanel() {
           </button>
         ))}
       </Card>
+      ) : null}
     </div>
   );
 }

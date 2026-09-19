@@ -23,18 +23,12 @@ import {
 import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 type StatusFilter = "any" | "cleared" | "pending" | "needs-review";
-type DirectionFilter = "both" | "in" | "out";
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "any", label: "Any status" },
   { value: "cleared", label: "Cleared" },
   { value: "pending", label: "Pending" },
   { value: "needs-review", label: "Needs review" },
-];
-const DIRECTION_OPTIONS: { value: DirectionFilter; label: string }[] = [
-  { value: "both", label: "In and out" },
-  { value: "in", label: "Money in" },
-  { value: "out", label: "Money out" },
 ];
 
 /**
@@ -57,7 +51,6 @@ export function TransactionsScreen() {
   const [accountId, setAccountId] = useState("all");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState<StatusFilter>(fromLink ? "needs-review" : "any");
-  const [direction, setDirection] = useState<DirectionFilter>("both");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<string | null>(null);
 
@@ -69,11 +62,10 @@ export function TransactionsScreen() {
       accountId: accountId === "all" ? undefined : accountId,
       category: category === "all" ? undefined : category,
       status: status === "any" ? undefined : status,
-      direction: direction === "both" ? undefined : direction,
       search,
     };
     return filterLedger(ledger, filter);
-  }, [ledger, range.from, range.to, accountId, category, status, direction, search]);
+  }, [ledger, range.from, range.to, accountId, category, status, search]);
   const totals = ledgerTotals(rows);
   const categories = ledgerCategories(ledger);
   const accounts = community.bankAccounts;
@@ -86,11 +78,10 @@ export function TransactionsScreen() {
     const csv = toCsv(rows, [
       { header: "Date", value: (e) => e.date },
       { header: "Description", value: (e) => e.description },
-      { header: "Counterparty", value: (e) => e.counterparty },
+      { header: "Who", value: (e) => e.counterparty },
       { header: "Category", value: (e) => e.category },
       { header: "Account", value: (e) => accountName(e.accountId) },
       { header: "Amount", value: (e) => (e.amountCents / 100).toFixed(2) },
-      { header: "Running", value: (e) => ((totals.running.get(e.id) ?? 0) / 100).toFixed(2) },
       { header: "Status", value: (e) => e.status },
     ]);
     downloadCsv(`${communitySlug(community)}-transactions-${range.from}-to-${range.to}.csv`, csv);
@@ -134,7 +125,6 @@ export function TransactionsScreen() {
               options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
             />
             <SelectField label="Status" value={status} onChange={setStatus} options={STATUS_OPTIONS} />
-            <SelectField label="Direction" value={direction} onChange={setDirection} options={DIRECTION_OPTIONS} />
             <label className="relative ml-auto min-w-[12rem] flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-fg-subtle" />
               <input
@@ -181,7 +171,6 @@ export function TransactionsScreen() {
               onClick={() => {
                 setPreset("this-year");
                 setStatus("any");
-                setDirection("both");
                 setCategory("all");
                 setAccountId("all");
                 setSearch("");
@@ -200,7 +189,6 @@ export function TransactionsScreen() {
                   <th className="px-3 py-2.5 font-semibold">Category</th>
                   {accounts.length > 1 ? <th className="px-3 py-2.5 font-semibold">Account</th> : null}
                   <th className="px-3 py-2.5 text-right font-semibold">Amount</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Running</th>
                   <th className="px-5 py-2.5 font-semibold">Status</th>
                 </tr>
               </thead>
@@ -262,9 +250,6 @@ export function TransactionsScreen() {
                         >
                           {money(e.amountCents, { sign: e.amountCents > 0 })}
                         </td>
-                        <td className="tnum whitespace-nowrap px-3 py-2.5 text-right text-[13px] text-fg-muted">
-                          {money(totals.running.get(e.id) ?? 0)}
-                        </td>
                         <td className="px-5 py-2.5">
                           {e.status === "needs-review" ? (
                             <span className="flex gap-1.5">
@@ -296,7 +281,7 @@ export function TransactionsScreen() {
                       </tr>
                       {expanded && attachment ? (
                         <tr className="border-b border-border bg-surface-2">
-                          <td colSpan={accounts.length > 1 ? 7 : 6} className="px-5 pb-4 pt-0">
+                          <td colSpan={accounts.length > 1 ? 6 : 5} className="px-5 pb-4 pt-0">
                             <div className="ml-14 grid gap-4 rounded-xl border border-border bg-surface p-4 text-[13px] sm:grid-cols-[1fr_auto]">
                               <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
                                 <div>

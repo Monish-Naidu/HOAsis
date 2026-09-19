@@ -1,124 +1,102 @@
 "use client";
 
-import { CheckCircle2, Clock, Lock, Users } from "lucide-react";
-import { Badge, Card, Meter } from "@/components/ui/primitives";
-
+import { Check, Clock, Lock, Users } from "lucide-react";
+import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import type { Ballot } from "@/lib/types";
 import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
 
 /**
- * Turnout and standing for one ballot, derived from the ballot itself rather
- * than looked up in a frozen fixture, so a vote cast on this page is reflected
- * immediately.
+ * Where a ballot stands, for the board.
+ *
+ * Votes in, when it ends, the result once it has one. The tally is derived
+ * from the ballot itself so a vote cast a second ago is already counted.
  */
-function tally(ballot: Ballot) {
+export function tally(ballot: Ballot) {
   const votes = ballot.options.reduce((total, option) => total + option.votes, 0);
-  // Quorum is a count of households that voted, not of marks they made, so a
-  // multi seat election has to be divided back down before it is compared.
+  // Quorum counts households that voted, not marks they made, so a multi
+  // seat election divides back down before it is compared.
   const cast = Math.round(votes / Math.max(1, ballot.seats ?? 1));
   const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
+  const tied = ballot.options.filter((o) => o.votes === leading?.votes).length > 1;
   return {
     votes,
     cast,
     leading,
-    quorumMet: cast >= ballot.quorumRequired,
-    quorumProgress: ballot.quorumRequired ? Math.min(1, cast / ballot.quorumRequired) : 1,
+    tied,
     share: (optionVotes: number) => (votes ? optionVotes / votes : 0),
-    shareOfEligible: (optionVotes: number) => (ballot.eligible ? optionVotes / ballot.eligible : 0),
     daysLeft: daysFromToday(ballot.closesDate),
   };
 }
 
-const statusTone = {
-  open: "ok",
-  scheduled: "neutral",
-  closed: "warn",
-  certified: "brand",
-} as const;
+/** "Yes won, 41 of 60 homes voted", or why there is no winner yet. */
+export function resultLine(ballot: Ballot): string {
+  const t = tally(ballot);
+  const who = ballot.audience === "board" ? "directors" : "homes";
+  if (t.cast === 0) return "Nobody voted";
+  if (t.tied) return `Tied · ${t.cast} of ${ballot.eligible} ${who} voted`;
+  return `${t.leading.label} won · ${t.cast} of ${ballot.eligible} ${who} voted`;
+}
 
-const kindLabel = {
-  election: "Election",
-  budget: "Budget",
-  amendment: "Amendment",
-  "special-assessment": "Resolution",
-  poll: "Poll",
-} as const;
-
-/**
- * Results at a glance. The tally, quorum, and threshold all read from one
- * place, so nobody has to open each ballot to find out where a vote stands.
- */
-export function BallotCard({ ballot }: { ballot: Ballot }) {
+export function BallotCard({
+  ballot,
+  onClose,
+}: {
+  ballot: Ballot;
+  /** Ends voting now. Absent on a closed ballot. */
+  onClose?: (ballot: Ballot) => void;
+}) {
   const { settings } = useAppState();
   const t = tally(ballot);
-  // Sealed until close, unless the board turned live results on.
-  const showResults =
-    ballot.status === "certified" ||
-    ballot.status === "closed" ||
-    settings.showLiveVoteResults ||
-    t.daysLeft < 0;
+  const scheduled = ballot.status === "scheduled";
+  const open = ballot.status === "open";
+  const who = ballot.audience === "board" ? "directors" : "homes";
+  // Sealed until close, unless the board turned live results on in Settings.
+  const showResults = (!open && !scheduled) || settings.showLiveVoteResults || t.daysLeft < 0;
 
   return (
     <Card className="overflow-hidden">
       <div className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={statusTone[ballot.status]}>{ballot.status}</Badge>
-          <span className="text-[12px] font-semibold text-fg-subtle">
-            {kindLabel[ballot.kind]} · {ballot.audience === "board" ? "Board vote" : "Owner vote"}
+          <Badge tone={open ? "ok" : "neutral"}>
+            {open ? "Open" : scheduled ? "Opens soon" : "Closed"}
+          </Badge>
+          <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
+            <Clock className="size-3" />
+            {open
+              ? `Ends ${relativeDays(ballot.closesDate)}`
+              : scheduled
+                ? `Opens ${formatDate(ballot.opensDate, "long")}`
+                : `Ended ${formatDate(ballot.closesDate, "long")}`}
           </span>
-          <span className="text-[13px] text-fg-subtle">{ballot.reference}</span>
+          {scheduled ? null : (
+            <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
+              <Users className="size-3" />
+              {t.cast} of {ballot.eligible} {who} voted
+            </span>
+          )}
         </div>
         <h3 className="mt-1.5 text-[17px] font-semibold leading-snug tracking-[-0.015em] text-fg">
           {ballot.title}
         </h3>
-        <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
-          {ballot.body[0]}
-        </p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-fg-subtle">
-          <span className="inline-flex items-center gap-1">
-            <Clock className="size-3" />
-            {ballot.status === "scheduled"
-              ? `Opens ${formatDate(ballot.opensDate, "long")}`
-              : ballot.status === "open"
-                ? `Closes ${relativeDays(ballot.closesDate)}`
-                : `Closed ${formatDate(ballot.closesDate, "long")}`}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Users className="size-3" />
-            {t.cast} of {ballot.eligible} cast
-            {ballot.proxiesHeld ? ` · ${ballot.proxiesHeld} by proxy` : ""}
-          </span>
-          <span>{ballot.thresholdLabel}</span>
-        </div>
-      </div>
-
-      {!showResults && ballot.status === "open" ? (
-        <div className="flex items-start gap-2 border-t border-border px-5 py-3">
-          <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
-          <p className="text-[13px] leading-snug text-fg-muted">
-            Results are sealed until this closes on {formatDate(ballot.closesDate, "long")}.
-            Turnout and quorum stay visible.
+        {ballot.body[0] ? (
+          <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
+            {ballot.body[0]}
           </p>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {showResults && t.cast > 0 ? (
         <div className="space-y-2.5 border-t border-border px-5 py-4">
           {ballot.options.map((o) => {
             const share = t.share(o.votes);
-            const winning = o.id === t.leading.id && ballot.status !== "scheduled";
+            const winning = !open && !t.tied && o.id === t.leading.id;
             return (
               <div key={o.id}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-1.5 text-[15px] text-fg">
                     <span className="truncate">{o.label}</span>
-                    {o.detail ? (
-                      <span className="shrink-0 text-[13px] text-fg-subtle">{o.detail}</span>
-                    ) : null}
-                    {winning && ballot.status === "certified" ? (
-                      <CheckCircle2 className="size-3 shrink-0 text-ok" />
-                    ) : null}
+                    {winning ? <Check className="size-3.5 shrink-0 text-ok" /> : null}
                   </span>
                   <span className="tnum shrink-0 text-[13px] font-medium text-fg-muted">
                     {o.votes} · {Math.round(share * 100)}%
@@ -135,33 +113,23 @@ export function BallotCard({ ballot }: { ballot: Ballot }) {
         </div>
       ) : null}
 
-      {ballot.quorumRequired > 0 ? (
-        <div className="border-t border-border px-5 py-3">
-          <div className="mb-1.5 flex items-baseline justify-between gap-3">
-            <span className="text-[13px] font-semibold text-fg-muted">
-              Quorum
-            </span>
-            <span className="tnum text-[13px] font-medium text-fg-muted">
-              {t.cast} of {ballot.quorumRequired} needed
-            </span>
-          </div>
-          <Meter
-            value={t.quorumProgress}
-            tone={t.quorumMet ? "ok" : "warn"}
-            aria-label={`Quorum ${Math.round(t.quorumProgress * 100)} percent`}
-          />
-          {ballot.kind === "amendment" ? (
-            <p className="mt-2 text-[13px] leading-snug text-fg-muted">
-              {Math.round(t.shareOfEligible(ballot.options[0].votes) * 100)}% of all{" "}
-              {ballot.eligible} interests. A unit that does not vote counts against it.
-            </p>
-          ) : null}
+      {open && !showResults ? (
+        <div className="flex items-start gap-2 border-t border-border px-5 py-3">
+          <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
+          <p className="text-[13px] leading-snug text-fg-muted">
+            Results show when voting ends. Turn on live results in Settings to see them now.
+          </p>
         </div>
       ) : null}
 
-      {ballot.certifiedDate ? (
-        <div className="border-t border-border bg-surface-2 px-5 py-2.5 text-[13px] text-fg-muted">
-          Certified {formatDate(ballot.certifiedDate, "long")} by {ballot.certifiedBy}
+      {open && onClose ? (
+        <div className="flex items-center justify-between gap-3 border-t border-border bg-surface-2 px-5 py-2.5">
+          <span className="text-[13px] text-fg-muted">
+            Ends on its own {formatDate(ballot.closesDate, "long")}.
+          </span>
+          <Button variant="secondary" size="sm" onClick={() => onClose(ballot)}>
+            Close now
+          </Button>
         </div>
       ) : null}
     </Card>

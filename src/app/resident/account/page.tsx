@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Download, Info, Landmark, Receipt } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Landmark, Receipt } from "lucide-react";
 import Link from "next/link";
-import { Badge, Card, Callout, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { MyHomeCard } from "@/components/app/my-home-card";
@@ -15,7 +15,6 @@ export default function ResidentAccount() {
   const currentOwner = useCurrentOwner();
   const ownerCharges = useOwnerCharges();
   if (!currentOwner) return null;
-  const totalFees = ownerCharges.reduce((t, c) => t + (c.feeCents ?? 0), 0);
   // The year the ledger is actually in, not a constant.
   const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
   const paidThisYear = ownerCharges
@@ -72,8 +71,6 @@ export default function ResidentAccount() {
           </p>
         </Card>
       </div>
-
-      <Callout tone="info" icon={<Info className="size-4" />} title="Tap a payment to see what it paid off" />
 
       <section>
         <SectionTitle
@@ -157,11 +154,6 @@ export default function ResidentAccount() {
                       </li>
                     ))}
                   </ul>
-                  {line.feeCents ? (
-                    <p className="mt-2.5 border-t border-border pt-2 text-[13px] text-fg-subtle">
-                      Processing cost {money(line.feeCents)}, paid by the association.
-                    </p>
-                  ) : null}
                 </div>
               </details>
             );
@@ -179,10 +171,6 @@ export default function ResidentAccount() {
         <span className="flex-1 text-[15px] font-medium text-fg">Association funds</span>
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>
-
-      <p className="text-[13px] leading-relaxed text-fg-subtle">
-        {money(totalFees)} in processing costs absorbed by the association this year.
-      </p>
     </div>
   );
 }

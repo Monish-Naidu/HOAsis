@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  CalendarCheck,
   CheckCircle2,
   ChevronRight,
   CircleDollarSign,
@@ -11,7 +10,6 @@ import {
   Megaphone,
   Radio,
   Receipt,
-  Video,
   Vote,
   Wrench,
 } from "lucide-react";
@@ -45,7 +43,7 @@ export default function ResidentHome() {
       {/* Live meeting and open ballots outrank everything: they expire. */}
       {live ? (
         <Link
-          href="/resident/vote"
+          href="/resident/calendar"
           className="flex items-center gap-3 rounded-card border border-ok/30 bg-ok-soft px-4 py-3 transition-opacity hover:opacity-90"
         >
           <Radio className="size-4 shrink-0 text-ok" />
@@ -195,38 +193,27 @@ function AccountSummary() {
 /* ----------------------------------------------------------------- actions */
 
 function QuickActions() {
+  // Three, and each goes somewhere different. Five tiles used to resolve to
+  // three destinations, two of them already in the tab bar.
   const actions = [
-    { href: "/resident/vote", label: "Vote", icon: Vote, tone: "bg-ok-soft text-ok" },
-    {
-      // Meetings are joined from the voting page, where the room lives.
-      href: "/resident/vote",
-      label: "Join Meeting",
-      icon: Video,
-      tone: "bg-info-soft text-info",
-    },
     {
       href: "/resident/requests/new",
-      label: "Submit Request",
+      label: "Submit request",
       icon: Wrench,
       tone: "bg-brand-soft text-brand-soft-fg",
     },
     {
-      href: "/resident/requests/new",
-      label: "Reserve Amenity",
-      icon: CalendarCheck,
-      tone: "bg-warn-soft text-warn",
-    },
-    {
       href: "/resident/documents",
-      label: "View Documents",
+      label: "Documents",
       icon: FileText,
       tone: "bg-surface-3 text-fg-muted",
     },
+    { href: "/resident/vote", label: "Vote", icon: Vote, tone: "bg-ok-soft text-ok" },
   ];
   return (
     <Card>
       <CardHeader title="Quick actions" />
-      <div className="grid grid-cols-3 gap-1 p-3 @sm:grid-cols-5">
+      <div className="grid grid-cols-3 gap-1 p-3">
         {actions.map(({ href, label, icon: Icon, tone }) => (
           <Link
             key={label}

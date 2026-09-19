@@ -24,6 +24,7 @@ import {
   spendingByCategory,
 } from "@/lib/metrics";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { moduleOn } from "@/lib/modules";
 
 /**
  * Finances, the overview: where the money stands today, and the one or two
@@ -50,7 +51,11 @@ export function OverviewScreen() {
   const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
 
   const lastYear = years.find((y) => y < year);
-  const cmp = lastYear !== undefined ? compareYears(community, lastYear, year) : null;
+  const cmp =
+    moduleOn("money-compare") && lastYear !== undefined
+      ? compareYears(community, lastYear, year)
+      : null;
+  const showBudget = moduleOn("money-budget");
 
   const budget = budgetVariance(community);
   const dues = duesCollection(community, thisYear);
@@ -80,7 +85,7 @@ export function OverviewScreen() {
         }
       />
 
-      {exposure.totalUninsured > 0 ? (
+      {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
         <Callout
           tone="warn"
           className="mb-5"
@@ -274,8 +279,10 @@ export function OverviewScreen() {
         </section>
       ) : null}
 
-      {/* Budget pace and dues collection, each a glance and a link. */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      {/* Budget pace and dues collection, each a glance and a link. Budget
+          waits behind the launch switch; dues collection stands alone then. */}
+      <div className={showBudget ? "mt-5 grid gap-5 lg:grid-cols-2" : "mt-5 grid gap-5"}>
+        {showBudget ? (
         <Card>
           <CardHeader
             title="Budget pace"
@@ -319,6 +326,7 @@ export function OverviewScreen() {
             </div>
           )}
         </Card>
+        ) : null}
 
         <Card>
           <CardHeader

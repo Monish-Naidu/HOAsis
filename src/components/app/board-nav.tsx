@@ -9,7 +9,7 @@ import {
   useUnreadThreadCount,
   useVendorGaps,
 } from "@/lib/app-state";
-import { BOARD_ROUTES } from "@/lib/board-routes";
+import { BOARD_ROUTES, routeOn } from "@/lib/board-routes";
 import { complianceSummary, delinquency } from "@/lib/metrics";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { TabPill } from "@/components/app/tab-pill";
@@ -74,6 +74,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const visible = items.filter(
     (i) =>
       !i.hidden &&
+      routeOn(i) &&
       (!i.need || i.need.some((c) => can(c))) &&
       (!i.present || i.present(community)),
   );

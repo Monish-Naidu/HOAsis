@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { MODULES } from "../../src/lib/modules";
 import {
   ADMIN_TABS,
   SEATS,
@@ -210,6 +211,7 @@ test.describe("shared costs", () => {
   });
 
   test("what the community pays is shown next to who it pays", async ({ page }) => {
+    test.skip(!MODULES["shared-costs"].on, "Shared costs is off at launch, see lib/modules.ts");
     await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
     const health = await expectHealthy(page, "shared costs");
@@ -221,6 +223,7 @@ test.describe("shared costs", () => {
   });
 
   test("the history opens and reports a real bill", async ({ page }) => {
+    test.skip(!MODULES["shared-costs"].on, "Shared costs is off at launch, see lib/modules.ts");
     await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
 
@@ -276,6 +279,7 @@ test.describe("turning a layer on", () => {
       view: "board",
       community: "test-community-1",
     });
+    test.skip(!MODULES["shared-costs"].on, "Shared costs is off at launch, see lib/modules.ts");
     await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
 
@@ -318,6 +322,7 @@ test.describe("turning a layer on", () => {
       view: "board",
       community: "test-community-1",
     });
+    test.skip(!MODULES["shared-costs"].on, "Shared costs is off at launch, see lib/modules.ts");
     await page.goto("/board/shared-costs");
     await page.waitForLoadState("networkidle");
 
@@ -398,30 +403,23 @@ test.describe("a board can actually run a vote", () => {
     await page.goto("/board/voting");
     await page.waitForLoadState("networkidle");
 
-    const before = (await inspect(page)).text;
-    const openBefore = Number(before.match(/Open ballots\s*\n?\s*(\d+)/)?.[1] ?? "0");
-
     await page.getByRole("button", { name: "New ballot" }).click();
     await page.waitForTimeout(400);
 
+    // Three things since the launch scope: the question, the choices, the
+    // day it ends. Nothing about quorum stands between a volunteer and a vote.
     await page.getByLabel("Ballot title").fill("Replace the pool fence");
     await page.getByLabel("Ballot detail").fill("The current fence fails inspection.");
     await page.waitForTimeout(300);
-
-    // The three things that decide whether a result survives a challenge are
-    // stated back before the button is pressed.
     const preview = await inspect(page);
-    expect(preview.text, "the notice and quorum are not stated").toMatch(
-      /homes must vote for the result to count/,
-    );
+    expect(preview.text, "the form still asks about quorum").not.toMatch(/quorum/i);
 
     await page.getByRole("button", { name: "Open the ballot" }).click();
     await page.waitForTimeout(700);
 
     const after = await expectHealthy(page, "voting after opening a ballot");
-    const openAfter = Number(after.text.match(/Open ballots\s*\n?\s*(\d+)/)?.[1] ?? "0");
-    expect(openAfter, "the count did not move, so the ballot never opened").toBe(openBefore + 1);
     expect(after.text).toContain("Replace the pool fence");
+    expect(after.text, "the new ballot is not counted as open").toContain("0 of");
   });
 
   test("a ballot needs at least two choices before it can open", async ({ page }) => {

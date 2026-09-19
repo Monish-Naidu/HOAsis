@@ -4,7 +4,9 @@ import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { Callout } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
-import { capabilitiesFor } from "@/lib/board-routes";
+import { boardModuleFor, capabilitiesFor } from "@/lib/board-routes";
+import { ModuleOff } from "@/components/app/module-gate";
+import { moduleOn } from "@/lib/modules";
 import { CAPABILITY_LABEL } from "@/lib/data";
 
 /**
@@ -21,6 +23,11 @@ import { CAPABILITY_LABEL } from "@/lib/data";
 export function RequireCapability({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { can } = useAppState();
+
+  // Switched off comes before may-they-open-it: a page that is not on for
+  // anyone says so in the same words to everyone.
+  const mod = boardModuleFor(pathname);
+  if (mod && !moduleOn(mod)) return <ModuleOff module={mod} />;
 
   const needed = capabilitiesFor(pathname);
   if (!needed || needed.some((capability) => can(capability))) {

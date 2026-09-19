@@ -2,78 +2,61 @@
 
 import { useState } from "react";
 import { Plus, Vote, X } from "lucide-react";
-import { Button, Callout, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { addDays, todayIsoDate } from "@/lib/utils";
+import { addDays, formatDate, todayIsoDate } from "@/lib/utils";
 
 /**
- * Opening a ballot.
+ * Asking the homes a question.
  *
- * The button here used to raise a toast saying the builder "opens with the
- * notice requirements", and no builder existed. So a new association had no
- * way to run a vote, and the four counts at the top of this page could never
- * move off zero.
- *
- * The form is short on purpose. What actually decides whether a vote survives
- * a challenge is the notice period, the quorum and the threshold, so those are
- * the fields, and each says what it is for rather than assuming the reader has
- * run an election before.
+ * Three things: what is being decided, the choices, and the day voting ends.
+ * Notice periods, quorum, thresholds, the kind of vote and the meeting it
+ * belongs to all used to be on this form, and a volunteer who only wanted to
+ * ask about the pool fence gave up at "quorum". Those live in git history
+ * behind the launch scope until a board with bylaws that demand them arrives.
  */
 export function NewBallot({ onClose }: { onClose: () => void }) {
   const { community, addBallot, ballots } = useAppState();
   const { notify } = useToast();
 
   const homes = community.owners.length || community.association.unitCount;
+  const today = todayIsoDate();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [choices, setChoices] = useState(["For", "Against"]);
-  const [noticeDays, setNoticeDays] = useState(14);
-  const [openDays, setOpenDays] = useState(21);
-  const [quorumPercent, setQuorumPercent] = useState(20);
-  const [threshold, setThreshold] = useState("A majority of votes cast");
-  const [kind, setKind] = useState<"poll" | "budget" | "amendment" | "special-assessment">(
-    "amendment",
-  );
+  const [choices, setChoices] = useState(["Yes", "No"]);
+  const [closesOn, setClosesOn] = useState(addDays(today, 14));
 
   const field =
     "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
-
-  const opensOn = addDays(todayIsoDate(), noticeDays);
-  const closesOn = addDays(opensOn, openDays);
-  const quorum = Math.max(1, Math.ceil((homes * quorumPercent) / 100));
-  const ready = title.trim().length > 2 && choices.filter((c) => c.trim()).length >= 2;
+  const ready =
+    title.trim().length > 2 && choices.filter((c) => c.trim()).length >= 2 && closesOn > today;
 
   function open() {
     const seq = ballots.length + 1;
     addBallot({
-      id: `bal-${Date.now()}`,
-      reference: `BAL-${todayIsoDate().slice(0, 4)}-${String(seq).padStart(3, "0")}`,
+      id: `bal-${today}-${seq}`,
+      reference: `BAL-${today.slice(0, 4)}-${String(seq).padStart(3, "0")}`,
       title: title.trim(),
       body: body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
-      kind,
+      kind: "poll",
       audience: "owners",
       status: "open",
-      opensDate: opensOn,
+      opensDate: today,
       closesDate: closesOn,
       eligible: homes,
-      // A poll decides nothing, so requiring a quorum on one would be theatre.
-      // Anything binding without a quorum passes on a single vote.
-      quorumRequired: kind === "poll" ? 0 : quorum,
-      thresholdLabel: threshold,
-      // Running totals stay hidden while voting is open, which is the
-      // association's own setting and the default everywhere for a reason:
-      // a visible tally changes how the undecided vote.
+      quorumRequired: 0,
+      thresholdLabel: "Most votes wins",
       liveResultsVisible: community.settings.showLiveVoteResults,
       options: choices
         .filter((c) => c.trim())
         .map((label, index) => ({
-          id: `opt-${Date.now()}-${index}`,
+          id: `opt-${today}-${seq}-${index}`,
           label: label.trim(),
           votes: 0,
         })),
     });
-    notify(`${title.trim()} opens ${opensOn}. Owners get notice today.`);
+    notify(`Open. Homes can vote until ${formatDate(closesOn, "long")}.`);
     onClose();
   }
 
@@ -82,7 +65,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
       <CardHeader
         icon={<Vote className="size-4" />}
         title="New ballot"
-        subtitle="Owners vote one per home"
+        subtitle="One vote per home"
         action={
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="size-4" />
@@ -92,19 +75,21 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
       />
       <div className="space-y-4 px-5 py-4">
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">What are they voting on</span>
+          <span className="text-[13px] font-semibold text-fg-muted">The question</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Replace the pool fence"
+            placeholder="Replace the pool fence this fall?"
             aria-label="Ballot title"
+            autoFocus
             className={`mt-1.5 ${field}`}
           />
         </label>
 
         <label className="block">
           <span className="text-[13px] font-semibold text-fg-muted">
-            What owners should know before they vote
+            Anything homes should know first
+            <span className="font-normal text-fg-subtle"> (optional)</span>
           </span>
           <textarea
             value={body}
@@ -153,95 +138,17 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">Notice period</span>
-            <select
-              value={noticeDays}
-              onChange={(e) => setNoticeDays(Number(e.target.value))}
-              aria-label="Notice period"
-              className={`mt-1.5 ${field}`}
-            >
-              {[10, 14, 21, 30].map((d) => (
-                <option key={d} value={d}>
-                  {d} days
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">Open for</span>
-            <select
-              value={openDays}
-              onChange={(e) => setOpenDays(Number(e.target.value))}
-              aria-label="Voting window"
-              className={`mt-1.5 ${field}`}
-            >
-              {[7, 14, 21, 30].map((d) => (
-                <option key={d} value={d}>
-                  {d} days
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">Quorum</span>
-            <select
-              value={quorumPercent}
-              onChange={(e) => setQuorumPercent(Number(e.target.value))}
-              aria-label="Quorum percentage"
-              className={`mt-1.5 ${field}`}
-            >
-              {[10, 20, 25, 33, 50].map((p) => (
-                <option key={p} value={p}>
-                  {p}% of homes
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">What kind of vote</span>
-          <select
-            value={kind}
-            onChange={(e) => setKind(e.target.value as typeof kind)}
-            aria-label="Ballot kind"
+        <label className="block sm:max-w-xs">
+          <span className="text-[13px] font-semibold text-fg-muted">Voting ends</span>
+          <input
+            type="date"
+            value={closesOn}
+            min={addDays(today, 1)}
+            onChange={(e) => setClosesOn(e.target.value)}
+            aria-label="Voting ends"
             className={`mt-1.5 ${field}`}
-          >
-            <option value="amendment">A decision that binds the association</option>
-            <option value="budget">Ratifying the budget</option>
-            <option value="special-assessment">Approving a special assessment</option>
-            <option value="poll">A non-binding poll</option>
-          </select>
-          <span className="mt-1.5 block text-[13px] leading-snug text-fg-muted">
-            A poll gathers opinion and decides nothing, so it needs no quorum. Everything else
-            does, or it passes on a single vote.
-          </span>
+          />
         </label>
-
-        <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">What it takes to pass</span>
-          <select
-            value={threshold}
-            onChange={(e) => setThreshold(e.target.value)}
-            aria-label="Passing threshold"
-            className={`mt-1.5 ${field}`}
-          >
-            <option>A majority of votes cast</option>
-            <option>Two thirds of votes cast</option>
-            <option>A majority of all homes</option>
-            <option>Two thirds of all homes</option>
-          </select>
-        </label>
-
-        {/* The three things that decide whether a result survives a challenge,
-            stated back before anybody presses the button. */}
-        <Callout tone="info" title="What owners will be told">
-          Notice goes out today. Voting opens {opensOn} and closes {closesOn}. At least{" "}
-          {quorum} of {homes} homes must vote for the result to count, and it passes on{" "}
-          {threshold.toLowerCase()}.
-        </Callout>
 
         <Button type="submit" size="lg" disabled={!ready} onClick={open}>
           Open the ballot

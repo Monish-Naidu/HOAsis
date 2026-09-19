@@ -8,6 +8,78 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19: the launch scope, cut to what month one needs
+
+Monish, with customers about to onboard: simplify everything, grey out what
+is too complicated, keep Vendors, Reserves, Documents, Settings and Forum,
+lose Compliance, explain or simplify Shared costs, make Voting and
+Violations plain. Then, as principal PM: go through both sides and decide
+what truly needs to be there. Two audits (board, resident) drove the cuts.
+
+**One switch.** `src/lib/modules.ts` lists every module, whole pages and
+pieces of pages, with `on: true|false` and a note saying why it waits.
+Board routes carry a `module` key, resident tabs and `/resident/report`
+do too, and both navs filter through `moduleOn()`. A page whose module is
+off renders `ModuleOff` ("... is not switched on for this association yet")
+in both shells, so a typed URL gets the same answer as the sidebar. Turning
+something back on is one line. Per-association overrides are a settings
+column later.
+
+**Off at launch:** Compliance, Shared costs (utility bills the association
+pays on everyone's behalf and splits across homes, only for master-metered
+communities), Budget and Trends sub-tabs, the full enforcement queue, Report
+a neighbour, the phone-preview toggle, the deposit-insurance warning, year
+against year, the notice delivery panel, vendor tax paperwork (W-9, 1099),
+new-owner disclosure, the capability grid, autopay cap and skip, records
+requests.
+
+**Rebuilt simple:**
+
+- **Notices** (`notices-board.tsx`, route still `/board/violations`): Open
+  and Resolved, New notice (which home, what needs fixing, the rule if you
+  want to name it), Print letter, Mark resolved. Owner says fixed still
+  lands at the top. `addNotice()` writes a board-sourced violation at the
+  courtesy stage. The old `EnforcementQueue` is intact behind
+  `enforcement-full`.
+- **Voting**, board: ask, count, close. `new-ballot.tsx` is the question,
+  the choices and the day voting ends (kind poll, no quorum, "Most votes
+  wins"). `ballot-card.tsx` shows votes in, the result when it ends, and
+  Close now (`closeBallot()`). Closed ballots are one line each with
+  `resultLine()`.
+- **Voting**, resident: one card per open ballot, tapping a choice is the
+  vote, "You voted", change until it ends. Closed show the result line.
+  Meeting RSVPs moved to the Meetings tab (`meeting-rsvps.tsx`).
+- **Board trims:** dashboard ships Quick Actions layout A with no A/B
+  toggle, the donut and Compare years are behind `money-compare`, the
+  Requests tile no longer carries the notice count, the meeting tile says
+  Schedule one when there is nothing to join. Finances overview loses the
+  comparison and budget-pace cards. Transactions loses the Direction filter
+  and the Running column. Requests has two stats and no second work-order
+  card. Meetings has one stat and no fixture note. Communications: New
+  announcement, three stats, no category select. Vendors: insurance
+  certificate spelled out, tax paperwork behind a flag. Documents: no
+  "once that page ships" callout. Settings: capability grid and board-change
+  counts behind `settings-advanced`. `setup-hub.tsx` (dead) deleted.
+- **Resident trims:** three quick actions, Docs on the phone tab bar and
+  Vote web-only (the dashboard banner links an open ballot), no association
+  cost economics anywhere the owner reads, no "Tell the board about
+  something" link, Records category off, Appeal this is Ask the board.
+- **Landing page** no longer leads with Compliance and lists Notices, not
+  Violations.
+
+**Tests:** `tests/unit/modules.test.ts` proves nav and layout read the same
+switch and that the scope Monish set (Vendors, Reserves, Documents,
+Settings, Forum on; Compliance, shared costs off) holds.
+`tests/e2e/09-enforcement.spec.ts` covers the simple Notices page; the
+specs for the full queue, shared costs, compliance and the delivery panel
+skip themselves while those modules are off, naming the switch.
+
+**Not done, on purpose:** Setup checklist still has every task (cutting
+structural and maintenance-matrix touches `setup-plan.ts` and its tests;
+do it with the first customer's answers in hand). Collections ladder and
+policy card unchanged (Monish asked for them on 2026-09-03). Amenity rules
+editor unchanged.
+
 ## 2026-09-06: the ranked list, built
 
 The nine things the competitor comparison (`docs/research/`) said every

@@ -12,7 +12,6 @@ import {
   MoreHorizontal,
   Plus,
   Repeat,
-  ShieldCheck,
   Star,
   Trash2,
   X,
@@ -34,6 +33,7 @@ import { AddMethod } from "./add-method";
 import { StripePayPanel } from "./stripe-pay-panel";
 import { useToast } from "@/components/app/toast";
 import { policyFor } from "@/lib/collections";
+import { moduleOn } from "@/lib/modules";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
@@ -173,11 +173,6 @@ export function PayFlow() {
             </Link>
           </div>
         </Card>
-        <Callout
-          tone="ok"
-          icon={<ShieldCheck className="size-4" />}
-          title="Applied to your oldest charge first"
-        />
       </div>
     );
   }
@@ -388,9 +383,7 @@ export function PayFlow() {
                         </span>
                         {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
                         {cheapest?.instrument.id === instrument.id && !expired ? (
-                          <Badge tone="ok">
-                            {cheapest.saves === "owner" ? "Cheapest" : "Saves the HOA"}
-                          </Badge>
+                          <Badge tone="ok">Cheapest</Badge>
                         ) : null}
                         {expired ? <Badge tone="danger">Expired</Badge> : null}
                       </span>
@@ -399,9 +392,7 @@ export function PayFlow() {
                           ? instrumentCost.platformCents === 0
                             ? "No fee to you"
                             : `${money(instrumentCost.platformCents)} fee · ${money(instrumentCost.residentPaysCents)} total`
-                          : `Free to you · costs the association ${money(
-                              instrumentCost.processorCents + instrumentCost.platformCents,
-                            )}`}
+                          : "No fee to you"}
                       </span>
                     </span>
                     {active ? <Check className="size-4 shrink-0 text-fg" /> : null}
@@ -492,19 +483,12 @@ export function PayFlow() {
               <dt className="text-fg-muted">Assessment</dt>
               <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
             </div>
-            {policy.paidBy === "owner" ? (
+            {policy.paidBy === "owner" && cost.platformCents > 0 ? (
               <div className="flex justify-between text-[15px]">
-                <dt className="text-fg-muted">
-                  {cost.platformCents === 0 ? "Payment fee (waived)" : "Payment fee"}
-                </dt>
+                <dt className="text-fg-muted">Payment fee</dt>
                 <dd className="tnum font-medium text-fg">{money(cost.platformCents)}</dd>
               </div>
-            ) : (
-              <div className="flex justify-between text-[15px]">
-                <dt className="text-fg-muted">Processing (paid by the association)</dt>
-                <dd className="tnum font-medium text-fg">{money(0)}</dd>
-              </div>
-            )}
+            ) : null}
             <div className="mt-2 flex justify-between border-t border-border pt-2 text-[17px]">
               <dt className="font-semibold text-fg">You pay</dt>
               <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
@@ -533,14 +517,6 @@ export function PayFlow() {
           >
             Pay {money(cost.residentPaysCents)}
           </Button>
-          <p className="mt-2.5 flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
-            <Info className="mt-px size-3 shrink-0" />
-            {policy.paidBy === "owner"
-              ? `The card network takes ${money(cost.processorCents)} of this from the association. The ${money(
-                  policy.flatCents,
-                )} fee is ours, and it is the same on every rail.`
-              : `The association absorbs ${money(cost.processorCents + cost.platformCents)} on this payment.`}
-          </p>
         </Card>
       ) : null}
 
@@ -611,6 +587,8 @@ export function PayFlow() {
                 </p>
               </div>
 
+              {moduleOn("autopay-extras") ? (
+                <>
               {/* The cap. The one fear that keeps people off autopay is a
                   special assessment or a fine draining the account on the
                   first. Above the cap, the balance waits for them. */}
@@ -704,6 +682,9 @@ export function PayFlow() {
                   </div>
                 )}
               </div>
+
+                </>
+              ) : null}
 
               <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">
                 Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}

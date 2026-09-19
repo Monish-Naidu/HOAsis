@@ -8,7 +8,9 @@ import { Avatar } from "@/components/ui/primitives";
 import { ResidentBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { RailWordmark, Wordmark } from "@/components/app/logo";
-import { residentTabs } from "@/components/app/resident-nav";
+import { residentModuleFor, residentTabs } from "@/components/app/resident-nav";
+import { ModuleOff } from "@/components/app/module-gate";
+import { moduleOn } from "@/lib/modules";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero } from "@/components/app/community-hero";
@@ -19,7 +21,14 @@ import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function visibleTabs(settings: CommunitySettings) {
-  return residentTabs.filter((t) => !t.visible || t.visible(settings));
+  return residentTabs.filter((t) => moduleOn(t.module) && (!t.visible || t.visible(settings)));
+}
+
+/** Only for the pages of a module that is off: the same words for everyone. */
+function Gated({ pathname, children }: { pathname: string; children: React.ReactNode }) {
+  const mod = residentModuleFor(pathname);
+  if (mod && !moduleOn(mod)) return <ModuleOff module={mod} />;
+  return <>{children}</>;
 }
 
 /**
@@ -58,6 +67,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </div>
         <div className="flex items-center gap-2.5">
+          {moduleOn("phone-preview") ? (
           <div
             className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5"
             role="radiogroup"
@@ -90,6 +100,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               Mobile app
             </button>
           </div>
+          ) : null}
           <ViewSwitcher />
           <ResidentBell />
           <ThemeToggle />
@@ -147,7 +158,9 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             />
             <main className="no-scrollbar flex-1 overflow-y-auto pb-6">
               <CommunityHero compact />
-              <div className="@container px-4 pt-4">{children}</div>
+              <div className="@container px-4 pt-4">
+                <Gated pathname={pathname}>{children}</Gated>
+              </div>
             </main>
             <TabBar pathname={pathname} tabs={tabs} />
           </div>
@@ -225,7 +238,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             pathname === "/resident" ? "" : "lg:max-w-2xl",
           )}
         >
-          {children}
+          <Gated pathname={pathname}>{children}</Gated>
         </main>
       </div>
       <div className="lg:hidden">

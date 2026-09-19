@@ -40,6 +40,7 @@ import {
   type CommunityAmenity,
 } from "@/lib/types";
 import { cn, formatDate, todayIsoDate } from "@/lib/utils";
+import { moduleOn } from "@/lib/modules";
 
 export function SettingsScreen() {
   const {
@@ -458,6 +459,7 @@ export function SettingsScreen() {
         {/* What a board transition actually moves: nothing. The records are
             the association's, so changing who holds an office above is the
             entire handover. The counts are live so the claim stays checkable. */}
+        {moduleOn("settings-advanced") ? (
         <Card>
           <CardHeader
             title="When the board changes"
@@ -486,6 +488,7 @@ export function SettingsScreen() {
             in the outgoing treasurer&apos;s inbox, and nothing leaves when they do.
           </p>
         </Card>
+        ) : null}
 
         {/* Amenities */}
         <Card>
@@ -594,7 +597,9 @@ export function SettingsScreen() {
           </div>
         </Card>
 
-        {/* Permissions */}
+        {/* Permissions. Roles above cover month one; the per-person grid is
+            a second permission model and waits with the advanced settings. */}
+        {moduleOn("settings-advanced") ? (
         <Card className="xl:col-span-2">
           <CardHeader
             title="Admin capabilities"
@@ -655,6 +660,7 @@ export function SettingsScreen() {
             President of access has no way back in.
           </p>
         </Card>
+        ) : null}
       </div>
           <DangerZone />
 </>

@@ -11,6 +11,7 @@ import {
   Vote,
 } from "lucide-react";
 import type { CommunitySettings } from "@/lib/types";
+import type { ModuleKey } from "@/lib/modules";
 
 interface ResidentTab {
   href: string;
@@ -22,12 +23,16 @@ interface ResidentTab {
   webOnly?: boolean;
   /** Some sections are switched off by the admin. */
   visible?: (s: CommunitySettings) => boolean;
+  /** Some are switched off for everyone until launch. See `lib/modules.ts`. */
+  module?: ModuleKey;
 }
 
 /**
  * One nav definition, used by the phone tab bar and the website sidebar.
  * Names and order follow the 2026-09-01 dashboard design: Dashboard,
- * Payments, Requests, Documents, Community, Meetings, Voting, Account.
+ * Payments, Requests, Documents, Community, Meetings, Voting, Account. The
+ * phone tab bar shows six of them: Dashboard, Payments, Requests, Docs,
+ * Community, Account.
  */
 export const residentTabs: ResidentTab[] = [
   { href: "/resident", label: "Dashboard", icon: Home },
@@ -38,21 +43,24 @@ export const residentTabs: ResidentTab[] = [
     label: "Docs",
     icon: FileText,
     webLabel: "Documents",
-    webOnly: true,
   },
   {
     href: "/resident/forum",
     label: "Community",
     icon: MessageSquareText,
     visible: (s) => s.forumEnabled,
+    module: "resident-forum",
   },
   {
     href: "/resident/calendar",
     label: "Meetings",
     icon: CalendarDays,
     webOnly: true,
+    module: "resident-meetings",
   },
-  { href: "/resident/vote", label: "Vote", icon: Vote, webLabel: "Voting" },
+  // Sidebar only. Voting is occasional, and the dashboard banner already
+  // points at an open ballot; the six phone tabs go to what people open weekly.
+  { href: "/resident/vote", label: "Vote", icon: Vote, webLabel: "Voting", webOnly: true },
   {
     href: "/resident/finances",
     label: "Funds",
@@ -60,7 +68,24 @@ export const residentTabs: ResidentTab[] = [
     webLabel: "Association funds",
     webOnly: true,
     visible: (s) => s.showFundsToResidents,
+    module: "resident-funds",
   },
   // Account closes the list, per the huddle's nav order.
   { href: "/resident/account", label: "Account", icon: Receipt },
 ];
+
+/**
+ * Resident pages that are not tabs but still belong to a module. The shell
+ * refuses these the same way the board layout refuses a board route whose
+ * module is off.
+ */
+const RESIDENT_ROUTE_MODULES: { prefix: string; module: ModuleKey }[] = [
+  { prefix: "/resident/report", module: "resident-report" },
+  ...residentTabs.flatMap((t) => (t.module ? [{ prefix: t.href, module: t.module }] : [])),
+];
+
+export function residentModuleFor(pathname: string): ModuleKey | undefined {
+  return [...RESIDENT_ROUTE_MODULES]
+    .sort((a, b) => b.prefix.length - a.prefix.length)
+    .find((r) => pathname === r.prefix || pathname.startsWith(`${r.prefix}/`))?.module;
+}
