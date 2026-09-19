@@ -72,9 +72,8 @@ export function ReserveStudyCard() {
 
   if (!study) {
     return (
-      <Card className="mt-5">
+      <Card className="mt-6">
         <CardHeader
-          icon={<FileText className="size-4" />}
           title="The study itself"
           subtitle="Keep the file here so the next board can find it, and the page can say when the next one is due"
         />
@@ -100,7 +99,7 @@ export function ReserveStudyCard() {
   const overdue = due < todayIsoDate();
 
   return (
-    <Card className="mt-5">
+    <Card className="mt-6">
       <CardHeader
         icon={<FileText className="size-4" />}
         title="The study on file"

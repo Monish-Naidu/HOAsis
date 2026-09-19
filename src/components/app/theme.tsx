@@ -144,8 +144,44 @@ const options: { value: Mode; icon: typeof Sun; label: string; hint: string }[] 
   { value: "dark", icon: Moon, label: "Dark", hint: "Always dark" },
 ];
 
-export function ThemeToggle({ className }: { className?: string }) {
+/**
+ * One button, four moods.
+ *
+ * The four-way radio group sat in every top bar as a row of icons that
+ * nobody reads and everybody sees. The default is now a single button
+ * showing the current mode; a click moves to the next one and the tooltip
+ * names it. The full group is still there for a settings surface that wants
+ * to show the choices side by side.
+ */
+export function ThemeToggle({
+  className,
+  expanded = false,
+}: {
+  className?: string;
+  expanded?: boolean;
+}) {
   const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  if (!expanded) {
+    const index = options.findIndex((o) => o.value === mode);
+    const current = options[index === -1 ? 0 : index];
+    const next = options[(index + 1) % options.length];
+    const Icon = current.icon;
+    return (
+      <button
+        type="button"
+        aria-label={`Theme: ${current.label}. Switch to ${next.label}`}
+        title={`${current.label}. Click for ${next.label.toLowerCase()}`}
+        onClick={() => setMode(next.value)}
+        className={cn(
+          "inline-flex size-9 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg",
+          className,
+        )}
+      >
+        <Icon className="size-4" strokeWidth={2} />
+      </button>
+    );
+  }
 
   return (
     <div

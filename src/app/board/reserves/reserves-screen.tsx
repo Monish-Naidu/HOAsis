@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { AlertTriangle, PiggyBank } from "lucide-react";
-import { Callout, Card, CardHeader, Meter, PageHeader, Stat } from "@/components/ui/primitives";
+import { useMemo, useState } from "react";
+import { AlertTriangle, PiggyBank, Plus } from "lucide-react";
+import { Button, Callout, Card, CardHeader, Meter, PageHeader, Stat } from "@/components/ui/primitives";
 import { MoneyTabs } from "@/components/app/money-tabs";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
 import { ReserveStudyCard } from "@/components/app/reserve-study-card";
@@ -22,6 +22,14 @@ import { money, pluralize, shortMoney, today } from "@/lib/utils";
  */
 export function ReservesScreen() {
   const { community } = useAppState();
+  const [adding, setAdding] = useState(false);
+  const addButton = adding ? undefined : (
+    <Button variant="secondary" size="md" onClick={() => setAdding(true)}>
+      <Plus className="size-3.5" />
+      Add a component
+    </Button>
+  );
+  const addForm = adding ? <AddReserveComponent onClose={() => setAdding(false)} /> : null;
   const components = community.reserveComponents;
   const summary = reserveSummary(community);
   const band = fundingBand(summary.percentFunded);
@@ -48,8 +56,12 @@ export function ReservesScreen() {
     return (
       <>
         <MoneyTabs />
-        <PageHeader eyebrow="Reserves" title="Reserves" />
-        <AddReserveComponent />
+        <PageHeader
+          title="Reserves"
+          description="What wears out, when, and how much is set aside."
+          action={addButton}
+        />
+        {addForm}
         <Callout
           tone="warn"
           icon={<AlertTriangle className="size-4" />}
@@ -62,7 +74,7 @@ export function ReservesScreen() {
 
         <ReserveStudyCard />
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <Stat
             label="Set aside each month"
             value={money(monthlyCents, { cents: false })}
@@ -74,11 +86,8 @@ export function ReservesScreen() {
           <Stat label="Percent funded" value="Unknown" tone="warn" hint="Needs a study" />
         </div>
 
-        <Card className="mt-5">
-          <CardHeader
-            title="What to do about it"
-            subtitle="Three steps, in order, none of which need a vote to start"
-          />
+        <Card className="mt-6">
+          <CardHeader title="What to do about it" subtitle="Three steps, in order" />
           <ol className="px-5 py-4">
             {[
               community.settings.reserveStudy
@@ -125,11 +134,11 @@ export function ReservesScreen() {
     <>
       <MoneyTabs />
       <PageHeader
-        eyebrow="Reserves"
         title="Reserves"
-        description="What wears out, when, and how much of it is already set aside."
+        description="What wears out, when, and how much is set aside."
+        action={addButton}
       />
-      <AddReserveComponent />
+      {addForm}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
@@ -161,7 +170,7 @@ export function ReservesScreen() {
       {behind.length ? (
         <Callout
           tone="warn"
-          className="mt-5"
+          className="mt-6"
           icon={<AlertTriangle className="size-4" />}
           title={`${pluralize(behind.length, "component")} due within three years ${behind.length === 1 ? "is" : "are"} not fully set aside`}
         >
@@ -171,15 +180,12 @@ export function ReservesScreen() {
                 `${c.name} in ${year + c.remainingLifeYears}: ${shortMoney(c.fundedCents)} of ${shortMoney(c.replacementCostCents)}`,
             )
             .join(". ")}
-          . The gap is a special assessment unless the monthly transfer covers it first.
+          .
         </Callout>
       ) : null}
 
-      <Card className="mt-5">
-        <CardHeader
-          title="What the money is for"
-          subtitle="Each thing the association will replace, when, and how much is set aside"
-        />
+      <Card className="mt-6">
+        <CardHeader title="What the money is for" subtitle="Each thing to replace, when, and what is set aside" />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left">
             <thead>

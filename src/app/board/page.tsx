@@ -9,7 +9,7 @@ import {
   Home,
   Landmark,
   Megaphone,
-  Receipt,
+  Percent,
   ShieldAlert,
   Vote,
 } from "lucide-react";
@@ -18,6 +18,7 @@ import { moduleOn } from "@/lib/modules";
 import {
   cashPosition,
   delinquency,
+  duesCollection,
   insuranceExposure,
   ledgerYears,
   monthlyFlows,
@@ -25,11 +26,7 @@ import {
 } from "@/lib/metrics";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
 import { SectionLink, YearControl } from "@/components/app/finance-ui";
-import {
-  useAppState,
-  usePendingApprovals,
-  useReconciliation,
-} from "@/lib/app-state";
+import { useAppState, usePendingApprovals, useReconciliation } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { ActionItems } from "@/components/app/action-items";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
@@ -108,7 +105,7 @@ export default function BoardDashboard() {
           {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
             <Callout
               tone="warn"
-              className="mb-5"
+              className="mb-6"
               icon={<ShieldAlert className="size-4" />}
               title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
               action={<SectionLink href="/board/money">See where</SectionLink>}
@@ -123,15 +120,15 @@ export default function BoardDashboard() {
           <NeedsYou />
 
           {hasFlows || showDonut ? (
-            <section className="mt-5">
+            <section className="mt-6">
               {/* One year control for both charts, in the chart's own header
                   so it reads as the chart's control rather than a floating
                   row of pills. The donut follows the same year. */}
-              <div className="grid gap-5 xl:grid-cols-5">
+              <div className="grid gap-4 xl:grid-cols-5">
                 {hasFlows ? (
                   <Card className={cn(showDonut ? "xl:col-span-3" : "xl:col-span-5")}>
                     <CardHeader
-                      title="Monthly Financial Overview"
+                      title="Money in and out"
                       action={
                         <span className="flex flex-wrap items-center gap-3">
                           {years.length > 1 ? (
@@ -150,7 +147,7 @@ export default function BoardDashboard() {
                 ) : null}
                 {showDonut ? (
                   <Card className={cn(hasFlows ? "xl:col-span-2" : "xl:col-span-5")}>
-                    <CardHeader title="Spending by Category" />
+                    <CardHeader title="Spending by category" />
                     <SpendingDonut
                       rows={spending.rows}
                       totalCents={spending.totalCents}
@@ -174,7 +171,7 @@ export default function BoardDashboard() {
               Meetings because it is the thing a director should see on
               arrival, not the thing they go looking for. */}
           <div id="action-items">
-            <ActionItems className="mt-5" />
+            <ActionItems className="mt-6" />
           </div>
         </>
       ) : null}
@@ -254,7 +251,7 @@ function NeedsYou() {
             <li key={row.href}>
               <Link
                 href={row.href}
-                className="flex items-center gap-3 px-5 py-2.5 text-[15px] text-fg transition-colors hover:bg-surface-2"
+                className="flex items-center gap-3 px-5 py-3 text-[15px] text-fg transition-colors hover:bg-surface-2"
               >
                 <span className="tnum flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-warn-soft px-1.5 text-[13px] font-semibold text-warn">
                   {row.count}
@@ -274,7 +271,6 @@ function NeedsYou() {
 
 function StatTile({
   icon: Icon,
-  tone,
   label,
   value,
   valueTone,
@@ -283,7 +279,6 @@ function StatTile({
   action,
 }: {
   icon: typeof Landmark;
-  tone: string;
   label: string;
   value: string;
   valueTone?: "ok" | "warn";
@@ -293,8 +288,13 @@ function StatTile({
 }) {
   return (
     <Card className="flex items-start gap-3 p-4">
+      {/* The icon aids recognition and nothing else, so it wears the surface
+          colours. It only turns amber when the number under it is a problem. */}
       <span
-        className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", tone)}
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-full",
+          valueTone === "warn" ? "bg-warn-soft text-warn" : "bg-surface-2 text-fg-muted",
+        )}
       >
         <Icon className="size-[18px]" strokeWidth={2} />
       </span>
@@ -322,64 +322,56 @@ function StatTile({
 }
 
 function StatTiles() {
-  const { community, requests } = useAppState();
-  const approvals = usePendingApprovals();
+  const { community } = useAppState();
   const cash = cashPosition(community);
   const delinq = delinquency(community);
-  const openRequests = requests.filter(
-    (r) => !["approved", "denied", "closed"].includes(r.status),
-  );
-  // Waiting a week is the point at which a volunteer board starts to look
-  // slow to the person asking, so that is the number under the count.
-  const waitingAWeek = openRequests.filter((r) => daysFromToday(r.submittedDate) <= -7);
+  const thisYear = Number(todayIsoDate().slice(0, 4));
+  const dues = duesCollection(community, thisYear);
   const liveMeeting = community.meetings.find((m) => m.status === "live");
   const nextMeeting =
     liveMeeting ??
     [...community.meetings]
       .filter((m) => m.status === "scheduled" && daysFromToday(m.date) >= 0)
       .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
-  const approvalsCents = approvals.reduce((t, p) => t + p.amountCents, 0);
 
+  // Four numbers that are not already a row in Needs you: what is in the
+  // bank, who is behind, how the year is collecting, and when the board
+  // next sits. Requests and invoices are decisions, so they live above.
   return (
-    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatTile
         icon={Landmark}
-        tone="bg-info-soft text-info"
-        label="Total in Account"
-        value={money(cash.operating)}
+        label="Cash on hand"
+        value={money(cash.operating, { cents: false })}
         sub="Operating account"
         href="/board/money"
-        action="View financials"
+        action="Open finances"
       />
       <StatTile
         icon={Home}
-        tone="bg-warn-soft text-warn"
-        label="Past Due Homes"
+        label="Past due"
         value={String(delinq.past.length)}
         valueTone={delinq.past.length > 0 ? "warn" : undefined}
-        sub={money(delinq.totalCents)}
-        href="/board/homeowners"
-        action="View details"
+        sub={delinq.past.length > 0 ? `${money(delinq.totalCents, { cents: false })} owed` : "Everyone is current"}
+        href="/board/money/collections"
+        action="See who"
       />
       <StatTile
-        icon={ClipboardCheck}
-        tone="bg-brand-soft text-brand-soft-fg"
-        label="Open Requests"
-        value={String(openRequests.length)}
+        icon={Percent}
+        label={`Dues collected, ${thisYear}`}
+        value={dues.measurable ? `${Math.round(dues.rate * 100)}%` : "Not yet"}
+        valueTone={dues.measurable && dues.rate < 0.9 ? "warn" : undefined}
         sub={
-          openRequests.length === 0
-            ? "Nothing waiting"
-            : waitingAWeek.length > 0
-              ? `${waitingAWeek.length} waiting over a week`
-              : "All under a week old"
+          dues.measurable
+            ? `${money(dues.collectedYtd, { cents: false })} of ${money(dues.expectedYtd, { cents: false })}`
+            : "Nothing billed yet"
         }
-        href="/board/requests"
-        action="View requests"
+        href="/board/money/collections"
+        action="Collections"
       />
       <StatTile
         icon={CalendarDays}
-        tone="bg-ok-soft text-ok"
-        label="Next Board Meeting"
+        label="Next meeting"
         value={
           liveMeeting
             ? "Live now"
@@ -390,22 +382,9 @@ function StatTiles() {
               : "None set"
         }
         valueTone={liveMeeting ? "ok" : undefined}
-        sub={
-          nextMeeting
-            ? `${formatDate(nextMeeting.date)} · ${nextMeeting.time}`
-            : "Schedule one from Meetings"
-        }
+        sub={nextMeeting ? `${nextMeeting.title} · ${nextMeeting.time}` : "Schedule one from Meetings"}
         href="/board/meetings"
         action={liveMeeting ? "Join meeting" : nextMeeting ? "Open meetings" : "Schedule one"}
-      />
-      <StatTile
-        icon={Receipt}
-        tone="bg-warn-soft text-warn"
-        label="Invoices Awaiting Approval"
-        value={String(approvals.length)}
-        sub={approvals.length > 0 ? money(approvalsCents) : "Nothing waiting"}
-        href="/board/vendors"
-        action="Review invoices"
       />
     </div>
   );
@@ -414,51 +393,28 @@ function StatTiles() {
 /* ------------------------------------------------------------ quick actions */
 
 const ACTIONS = [
-  { href: "/board/voting", label: "New Ballot", icon: Vote, tone: "bg-ok-soft text-ok" },
-  {
-    href: "/board/meetings",
-    label: "Schedule Meeting",
-    icon: CalendarDays,
-    tone: "bg-info-soft text-info",
-  },
-  {
-    href: "/board/requests",
-    label: "Review Requests",
-    icon: ClipboardCheck,
-    tone: "bg-brand-soft text-brand-soft-fg",
-  },
-  {
-    href: "/board/communications",
-    label: "Send Announcement",
-    icon: Megaphone,
-    tone: "bg-warn-soft text-warn",
-  },
+  { href: "/board/voting", label: "New ballot", icon: Vote },
+  { href: "/board/meetings", label: "Schedule a meeting", icon: CalendarDays },
+  { href: "/board/requests", label: "Review requests", icon: ClipboardCheck },
+  { href: "/board/communications", label: "Send an announcement", icon: Megaphone },
 ];
 
-/**
- * The four actions the huddle confirmed, as one full-width bar. A two-by-two
- * list was tried beside it behind a toggle; the bar won and the toggle went
- * with the 2026-09-19 launch scope.
- */
+/** The four things a board does most, one row, no colour. */
 function QuickActions() {
   return (
-    <Card className="mt-5">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h2 className="min-w-0 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
-          Quick Actions
-        </h2>
-      </div>
+    <Card className="mt-6">
+      <CardHeader title="Quick actions" />
       <div className="grid grid-cols-2 gap-1 p-3 sm:grid-cols-4">
-        {ACTIONS.map(({ href, label, icon: Icon, tone }) => (
+        {ACTIONS.map(({ href, label, icon: Icon }) => (
           <Link
             key={label}
             href={href}
-            className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-4 text-center transition-colors hover:bg-surface-2"
+            className="flex flex-col items-center gap-2 rounded-lg px-1 py-4 text-center transition-colors hover:bg-surface-2"
           >
-            <span className={cn("flex size-11 items-center justify-center rounded-full", tone)}>
+            <span className="flex size-11 items-center justify-center rounded-full bg-surface-2 text-fg-muted">
               <Icon className="size-5" strokeWidth={2} />
             </span>
-            <span className="text-[13px] font-medium leading-tight text-fg-muted">{label}</span>
+            <span className="text-[13px] font-medium leading-tight text-fg">{label}</span>
           </Link>
         ))}
       </div>

@@ -163,7 +163,16 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
   return (
     <div className="animate-rise space-y-5">
       <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Community</h1>
+        {/* The board page sits beside 28px page titles; the resident page keeps
+            the phone scale. */}
+        <h1
+          className={cn(
+            "font-semibold tracking-[-0.025em] text-fg",
+            moderate ? "text-[28px]" : "text-[24px]",
+          )}
+        >
+          Community
+        </h1>
         <p className="mt-1 text-[15px] text-fg-muted">
           {pluralize(posts.length, "post")} from your neighbors
         </p>

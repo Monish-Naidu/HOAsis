@@ -155,19 +155,19 @@ export function PayFlow() {
           <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
             <CheckCircle2 className="size-6" />
           </span>
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
           <p className="tnum mt-1 text-[17px] font-semibold text-fg">{money(paid.amountCents)}</p>
           <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
             {describeInstrument(paid.instrument)} · clears in{" "}
             {FEE_SCHEDULE[paid.instrument.kind].settlement.toLowerCase()}
           </p>
           <div className="mt-5 flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setPaid(null)}>
+            <Button variant="secondary" size="lg" className="flex-1" onClick={() => setPaid(null)}>
               Back
             </Button>
             <Link
               href="/resident/account"
-              className="flex h-9 flex-1 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+              className="flex h-11 flex-1 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
             >
               View account
             </Link>
@@ -182,7 +182,7 @@ export function PayFlow() {
     <div>
       <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Pay dues</h1>
       <p className="mt-1 text-[15px] text-fg-muted">
-        Next assessment · due {formatDate(nextCharge, "long")}
+        Dues due {formatDate(nextCharge, "long")}
       </p>
     </div>
   );
@@ -201,12 +201,12 @@ export function PayFlow() {
             className={cn(
               "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
               amountMode === "balance"
-                ? "border-navy-700 bg-brand-soft dark:border-navy-300"
+                ? "border-brand bg-brand-soft"
                 : "border-border hover:bg-surface-2",
             )}
           >
             <span className="block text-[13px] font-medium text-fg-muted">
-              {balanceCents > 0 ? "Full balance" : "Next assessment"}
+              {balanceCents > 0 ? "Full balance" : "Next dues"}
             </span>
             <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
               {money(balanceCents > 0 ? balanceCents : duesCents)}
@@ -219,7 +219,7 @@ export function PayFlow() {
             className={cn(
               "flex-1 rounded-lg border px-3 py-3 text-left transition-colors",
               amountMode === "custom"
-                ? "border-navy-700 bg-brand-soft dark:border-navy-300"
+                ? "border-brand bg-brand-soft"
                 : "border-border hover:bg-surface-2",
             )}
           >
@@ -357,7 +357,7 @@ export function PayFlow() {
                 <div
                   key={instrument.id}
                   className={cn(
-                    "flex w-full items-center gap-3 px-4 py-3",
+                    "flex min-h-14 w-full items-center gap-3 px-4 py-3",
                     index > 0 && "border-t border-border",
                     active && "bg-brand-soft/60",
                   )}
@@ -485,7 +485,7 @@ export function PayFlow() {
         <Card className="p-4">
           <dl className="space-y-1">
             <div className="flex justify-between text-[15px]">
-              <dt className="text-fg-muted">Assessment</dt>
+              <dt className="text-fg-muted">Dues</dt>
               <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
             </div>
             {policy.paidBy === "owner" && cost.platformCents > 0 ? (
@@ -573,7 +573,7 @@ export function PayFlow() {
                       className={cn(
                         "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
                         autopayDay === day
-                          ? "bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950"
+                          ? "bg-brand text-brand-fg"
                           : day === settings.autopayLateAfterDay
                             ? "border border-warn/40 bg-warn-soft text-warn"
                             : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -585,7 +585,7 @@ export function PayFlow() {
                 </div>
                 <p className="mt-2 text-[13px] leading-snug text-fg-subtle">
                   The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
-                  an assessment is late.
+                  dues are late.
                   {collections.lateFeeCents > 0
                     ? ` A ${money(collections.lateFeeCents)} late fee applies from ${collections.lateNoticeDay} days past due.`
                     : ""}

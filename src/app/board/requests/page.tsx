@@ -5,10 +5,11 @@ import { Eye, Inbox } from "lucide-react";
 import {
   Avatar,
   Badge,
+  Button,
   Card,
   CardHeader,
+  EmptyState,
   PageHeader,
-  Stat,
 } from "@/components/ui/primitives";
 import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -37,9 +38,8 @@ export default function BoardRequests() {
   return (
     <>
       <PageHeader
-        eyebrow="Owner requests"
         title="Requests"
-        
+        description="What owners have asked for, and what the board owes an answer on."
         action={
           <Link
             href="/resident/requests"
@@ -51,26 +51,27 @@ export default function BoardRequests() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Stat
-          label="Open requests"
-          value={String(open.length)}
-          hint={inProgress.length ? `${inProgress.length} with work in progress` : undefined}
-          icon={<Inbox className="size-4" />}
+      {/* Two lists, not tiles and a list. The count sits in each header where
+          it belongs, and a decided request is still findable rather than gone. */}
+      <Card>
+        <CardHeader
+          title="Open"
+          subtitle={
+            open.length === 0
+              ? "Nothing waiting on the board"
+              : `${pluralize(open.length, "request")} awaiting a decision${
+                  inProgress.length ? `, ${inProgress.length} with work in progress` : ""
+                }`
+          }
         />
-        <Stat
-          label="Decided"
-          value={String(decided.length)}
-          tone="ok"
-          hint={history.length ? `${history.length} in history` : undefined}
-        />
-      </div>
-
-      <div className="mt-5">
-        {/* Queue */}
-        <Card>
-          <CardHeader title="Open queue" subtitle={`${open.length} awaiting a decision`} />
-          {open.map((r) => {
+        {open.length === 0 ? (
+          <EmptyState
+            icon={<Inbox className="size-5" />}
+            title="Nothing open"
+            description="Requests from owners land here the moment they send them."
+          />
+        ) : null}
+        {open.map((r) => {
             // A request the board owes an answer on wears the days it has
             // left where the avatar would be. One list, one place to look.
             const daysLeft = r.dueDate ? daysFromToday(r.dueDate) : null;
@@ -108,26 +109,27 @@ export default function BoardRequests() {
                     {r.attachments.length ? ` · ${pluralize(r.attachments.length, "file")}` : ""}
                   </span>
                   <span className="ml-auto flex gap-1.5">
-                    <button
-                      type="button"
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={() => {
                         updateRequestStatus(r.id, "approved", "Approved by the board.");
                         notify(`${r.reference} approved`);
                       }}
-                      className="h-7 rounded-md bg-brand px-2.5 text-[13px] font-medium text-brand-fg"
                     >
                       Approve
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger hover:bg-danger-soft"
                       onClick={() => {
                         updateRequestStatus(r.id, "denied", "Denied by the board.");
                         notify(`${r.reference} denied`, "warn");
                       }}
-                      className="h-7 rounded-md px-2.5 text-[13px] font-medium text-danger hover:bg-danger-soft"
                     >
                       Deny
-                    </button>
+                    </Button>
                   </span>
                 </div>
                 <WorkOrderPanel request={r} />
@@ -135,9 +137,33 @@ export default function BoardRequests() {
             </div>
             );
           })}
-        </Card>
+      </Card>
 
-      </div>
+      {decided.length > 0 ? (
+        <Card className="mt-6">
+          <CardHeader
+            title="Decided"
+            subtitle={`${pluralize(decided.length, "request")} answered${
+              history.length ? `, ${history.length} older in history` : ""
+            }`}
+          />
+          {decided.map((r) => (
+            <div
+              key={r.id}
+              className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+            >
+              <Avatar name={r.ownerName} tone="neutral" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-medium text-fg">{r.title}</p>
+                <p className="text-[13px] text-fg-muted">
+                  {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
+                </p>
+              </div>
+              <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
+            </div>
+          ))}
+        </Card>
+      ) : null}
     </>
   );
 }

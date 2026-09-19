@@ -8,8 +8,8 @@ import { useAppState } from "@/lib/app-state";
 export default function ResidentCalendar() {
   const { community } = useAppState();
   return (
-    <div className="animate-rise">
-      <h1 className="mb-4 text-[24px] font-semibold tracking-[-0.025em] text-fg">
+    <div className="animate-rise space-y-6">
+      <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">
         Meetings and events
       </h1>
       <LiveMeetingCard />

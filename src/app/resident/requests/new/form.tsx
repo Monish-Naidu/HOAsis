@@ -211,7 +211,7 @@ export function NewRequestForm() {
               value={amenityId}
               onChange={(e) => setAmenityId(e.target.value)}
               aria-label="Amenity"
-              className="h-10 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+              className="h-11 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               <option value="">Select an amenity</option>
               {reservable.map((a) => (
@@ -253,7 +253,7 @@ export function NewRequestForm() {
               value={formId}
               onChange={(e) => setFormId(e.target.value)}
               aria-label="Architectural form"
-              className="h-10 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+              className="h-11 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               <option value="">Select a form</option>
               {forms.map((f) => (

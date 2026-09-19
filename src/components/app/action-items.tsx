@@ -59,7 +59,6 @@ export function ActionItems({
               ? `${open.length} open${overdue ? `, ${overdue} overdue` : ""}`
               : "What the board agreed to do, and who took it"
         }
-        icon={<ListChecks className="size-4" />}
         action={
           adding ? null : (
             <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>

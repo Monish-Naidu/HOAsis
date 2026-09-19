@@ -1,17 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Mail, Scale } from "lucide-react";
+import { AlertTriangle, ArrowRight, Mail } from "lucide-react";
 import { Badge, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import {
   policyFor,
-  STAGE_ACTION,
-  STAGE_LABEL,
   collectionsLadder,
   type CollectionStage,
 } from "@/lib/collections";
 import { money, pluralize } from "@/lib/utils";
+import { placeLabel } from "@/lib/wording";
+
+/** The steps in the board's own words. The policy keeps its legal names. */
+const STEP: Record<CollectionStage, string> = {
+  current: "Current",
+  reminder: "Reminder due",
+  "late-notice": "Notice due",
+  demand: "Final notice due",
+  counsel: "Attorney next",
+};
+
+const ACTION: Record<CollectionStage, string> = {
+  current: "Nothing",
+  reminder: "Send a reminder with the amount and how to pay",
+  "late-notice": "Send the notice, with the late fee",
+  demand: "Send the final notice and offer a payment plan",
+  counsel: "Hand the file to the attorney, with every notice attached",
+};
 
 const TONE: Record<CollectionStage, "neutral" | "warn" | "danger"> = {
   current: "neutral",
@@ -36,7 +52,7 @@ export function CollectionsLadder() {
 
   if (ladder.rows.length === 0) {
     return (
-      <Card className="mt-5 p-5">
+      <Card className="mt-6 p-5">
         <p className="text-[15px] font-semibold text-fg">Everybody is current</p>
         <p className="mt-1 text-[15px] text-fg-muted">
           Nothing to chase. The ladder starts at {policy.reminderDay} days past due.
@@ -46,15 +62,14 @@ export function CollectionsLadder() {
   }
 
   return (
-    <Card className="mt-5">
+    <Card className="mt-6">
       <CardHeader
-        icon={<Scale className="size-4" />}
         title={
           ladder.dueNow.length
             ? `${pluralize(ladder.dueNow.length, "household")} need a notice today`
             : "Nothing owed today"
         }
-        subtitle={`${money(ladder.totalCents)} outstanding. Every account runs the same ladder, which is the part that holds up if a lien is challenged.`}
+        subtitle={`${money(ladder.totalCents)} outstanding. Every household runs the same steps.`}
         action={
           ladder.dueNow.length ? (
             <Link
@@ -75,14 +90,14 @@ export function CollectionsLadder() {
               <p className="truncate text-[15px] font-medium text-fg">
                 {row.owner.displayName}
                 <span className="ml-2 text-[13px] font-normal text-fg-muted">
-                  Unit {row.owner.unit}
+                  {placeLabel(row.owner.unit)}
                 </span>
               </p>
               <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
                 {row.actionDue
-                  ? STAGE_ACTION[row.stage]
+                  ? ACTION[row.stage]
                   : row.daysToNext !== undefined
-                    ? `${STAGE_LABEL[row.nextStage!]} in ${pluralize(row.daysToNext, "day")}`
+                    ? `${STEP[row.nextStage!]} in ${pluralize(row.daysToNext, "day")}`
                     : "Nothing due"}
               </p>
             </div>
@@ -92,7 +107,7 @@ export function CollectionsLadder() {
             <span className="shrink-0 text-[13px] text-fg-subtle">
               {pluralize(row.owner.daysPastDue, "day")} late
             </span>
-            <Badge tone={TONE[row.stage]}>{STAGE_LABEL[row.stage]}</Badge>
+            <Badge tone={TONE[row.stage]}>{STEP[row.stage]}</Badge>
           </div>
         ))}
       </div>
@@ -101,18 +116,17 @@ export function CollectionsLadder() {
         <div className="flex items-start gap-3 border-t border-border bg-warn-soft px-5 py-3">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" />
           <p className="text-[13px] leading-relaxed text-fg">
-            {pluralize(ladder.skipped.length, "account")} passed the demand stage. If a notice
-            was never sent at each rung, the gap in the record is what an owner&apos;s lawyer
-            points at, so send what is missing before going further.
+            {pluralize(ladder.skipped.length, "account")} passed the final notice step with no
+            notice on record. Send what is missing before going further.
           </p>
         </div>
       ) : null}
 
       <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
         <p className="text-[13px] text-fg-muted">
-          Reminder at {policy.reminderDay} days, notice at {policy.lateNoticeDay}, demand at{" "}
-          {policy.demandDay}, counsel at {policy.counselDay}. A payment plan of at least{" "}
-          {policy.minimumPlanMonths} months is offered before anything is recorded.
+          Reminder at {policy.reminderDay} days, notice at {policy.lateNoticeDay}, final notice
+          at {policy.demandDay}, attorney at {policy.counselDay}. A payment plan of at least{" "}
+          {policy.minimumPlanMonths} months is offered first.
         </p>
         <Link
           href="#collections-policy"

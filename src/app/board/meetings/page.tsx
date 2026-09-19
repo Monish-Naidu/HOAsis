@@ -61,8 +61,8 @@ export default function BoardMeetings() {
   return (
     <>
       <PageHeader
-        eyebrow="Governance"
         title="Meetings"
+        description="When the board meets, who is coming, and what was agreed to do."
         action={
           scheduling ? null : (
             <Button variant="primary" size="md" onClick={() => setScheduling(true)}>
@@ -78,7 +78,6 @@ export default function BoardMeetings() {
       {/* One line. A board meets a handful of times a year, and a tile for
           the date of the next one sat alone in a wide row looking unfinished. */}
       <p className="flex items-center gap-2 text-[15px] text-fg-muted">
-        <CalendarDays className="size-4 shrink-0 text-fg-subtle" />
         {nextMeeting ? (
           <span>
             Next meeting:{" "}
@@ -91,7 +90,7 @@ export default function BoardMeetings() {
       </p>
 
       {live ? (
-        <Card className="mt-5 overflow-hidden border-ok/30">
+        <Card className="mt-6 overflow-hidden border-ok/30">
           <div className="flex flex-wrap items-center gap-3 border-b border-border bg-ok-soft px-5 py-3">
             <Badge tone="ok" dot>
               Live
@@ -111,7 +110,7 @@ export default function BoardMeetings() {
                 <p className="text-[13px] font-semibold text-fg-muted">
                   In the room
                 </p>
-                <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                <ul className="mt-2 space-y-1">
                   {live.attendees.map((a) => (
                     <li key={a.name} className="flex items-center gap-2 text-[13px] text-fg-muted">
                       <span className="size-1.5 shrink-0 rounded-full bg-ok" />
@@ -141,8 +140,8 @@ export default function BoardMeetings() {
         </Card>
       ) : null}
 
-      <Card className="mt-5">
-        <CardHeader title="Upcoming" icon={<CalendarDays className="size-4" />} />
+      <Card className="mt-6">
+        <CardHeader title="Upcoming" subtitle="On every resident's calendar" />
         {upcoming.length === 0 ? (
           <EmptyState
             icon={<CalendarDays className="size-5" />}
@@ -187,7 +186,7 @@ export default function BoardMeetings() {
         ))}
       </Card>
 
-      <ActionItems className="mt-5" />
+      <ActionItems className="mt-6" />
     </>
   );
 }

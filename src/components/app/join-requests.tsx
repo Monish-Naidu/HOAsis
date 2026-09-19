@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { DoorOpen } from "lucide-react";
 import { Badge, Button, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -34,7 +33,6 @@ export function JoinRequests() {
             ? `${pluralize(pending.length, "person")} waiting on the board`
             : "Nobody waiting"
         }
-        icon={<DoorOpen className="size-4" />}
       />
       {pending.map((request) => (
         <PendingRow

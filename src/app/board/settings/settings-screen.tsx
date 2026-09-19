@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import {
   ArrowLeftRight,
-  CalendarDays,
   Check,
   Copy,
   FileText,
-  ImageIcon,
   Lock,
   Megaphone,
   Plus,
@@ -125,8 +123,8 @@ export function SettingsScreen() {
   return (
     <>
       <PageHeader
-        eyebrow="Community"
         title="Settings"
+        description="The association's name, who can see what, who is on the board, and billing."
         action={
           // A real association has no demo to reset.
           isRemote ? null : (
@@ -138,10 +136,10 @@ export function SettingsScreen() {
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* Identity */}
         <Card>
-          <CardHeader title="Identity" icon={<ImageIcon className="size-4" />} />
+          <CardHeader title="Identity" subtitle="The join code, the name, and the photo" />
           <SettingRow
             title="Join code"
             description="Neighbours who type this at yourhoasis.com/join land in your Homeowners queue."
@@ -179,7 +177,7 @@ export function SettingsScreen() {
           <div className="border-b border-border px-5 py-4">
             <p className="text-[15px] font-medium text-fg">Community photo</p>
             <p className="mt-0.5 text-[13px] text-fg-muted">
-              Sits behind the community name on every screen.
+              Shown on the dashboard and at sign in.
             </p>
             <div
               className="mt-3 h-28 rounded-lg bg-cover bg-center"
@@ -217,7 +215,7 @@ export function SettingsScreen() {
 
         {/* Resident home */}
         <Card>
-          <CardHeader title="Resident home" icon={<CalendarDays className="size-4" />} />
+          <CardHeader title="Resident home" subtitle="What owners see first when they sign in" />
           <div className="border-b border-border px-5 py-4">
             <p className="text-[15px] font-medium text-fg">Layout</p>
             <p className="mt-0.5 text-[13px] text-fg-muted">
@@ -276,7 +274,11 @@ export function SettingsScreen() {
               />
             </div>
           ) : null}
+        </Card>
 
+        {/* Payments: billing, the bank, and who carries the fee */}
+        <Card>
+          <CardHeader title="Payments" subtitle="Your plan, where dues land, and who pays the fee" />
           {isRemote ? <BillingRow /> : null}
           {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
 
@@ -346,7 +348,7 @@ export function SettingsScreen() {
 
         {/* Visibility */}
         <Card>
-          <CardHeader title="What residents can see" icon={<ShieldCheck className="size-4" />} />
+          <CardHeader title="What residents can see" subtitle="Switch a section on or off for every owner" />
           <SettingRow
             title="Association funds"
             description="Balances, interest, and the transaction list"

@@ -9,23 +9,21 @@ import {
   Lock,
   Mail,
   Plus,
-  Scale,
   Search,
   Send,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Avatar,
   Badge,
   Button,
-  ButtonLink,
   Callout,
   Card,
   EmptyState,
   KeyValue,
   PageHeader,
-  Stat,
 } from "@/components/ui/primitives";
 import { TemplateComposer } from "@/components/app/template-composer";
 import { JoinRequests } from "@/components/app/join-requests";
@@ -52,14 +50,13 @@ type Filter = "all" | "paid" | "behind";
 const PAGE = 50;
 
 const input =
-  "h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
+  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
 
 export default function BoardHomeowners() {
   const { community, threads, addOwner, removeOwner, transferHome, replyToThread, can } =
     useAppState();
   const { notify } = useToast();
 
-  const association = community.association;
   const owners = community.owners;
   const delinq = delinquency(community);
   const paidUp = owners.length - delinq.past.length;
@@ -228,8 +225,8 @@ export default function BoardHomeowners() {
   return (
     <>
       <PageHeader
-        eyebrow={`${pluralize(association.unitCount, "unit")} · ${pluralize(owners.length, "household")}`}
         title="Homeowners"
+        description="Who lives here, how to reach them, and whether they are paid up."
         action={
           <div className="flex gap-2">
             <Button
@@ -263,26 +260,6 @@ export default function BoardHomeowners() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat
-          label="Households"
-          value={String(owners.length)}
-          hint={`${owners.filter((o) => o.boardRole).length} on the board · ${owners.filter((o) => o.autopay).length} on autopay`}
-        />
-        <Stat
-          label="Paid up"
-          value={String(paidUp)}
-          tone="ok"
-          hint={`${Math.round(delinq.collectionRate * 100)}% of households`}
-        />
-        <Stat
-          label="Behind"
-          value={String(delinq.past.length)}
-          tone={delinq.past.length ? "warn" : "ok"}
-          hint={delinq.past.length ? `${money(delinq.totalCents)} owed` : "Nobody is behind"}
-        />
-      </div>
-
       {composer && !composer.ownerId ? (
         <TemplateComposer
           recipients={composer.recipients}
@@ -293,7 +270,7 @@ export default function BoardHomeowners() {
 
       {maySeeRoster ? <JoinRequests /> : null}
 
-      <Card className="mt-5">
+      <Card className="mt-6">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <div
@@ -323,7 +300,7 @@ export default function BoardHomeowners() {
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-1">
-            <div className="mr-1 flex h-8 items-center gap-2 rounded-lg border border-border px-2.5">
+            <div className="mr-1 flex h-9 items-center gap-2 rounded-lg border border-border px-2.5">
               <Search className="size-3.5 text-fg-subtle" />
               <input
                 value={query}
@@ -340,12 +317,6 @@ export default function BoardHomeowners() {
               <ArrowRightLeft className="size-3.5" />
               Record a sale
             </Button>
-            {showOpeningBalances ? (
-              <ButtonLink variant="ghost" size="sm" href="/board/homeowners/opening-balances">
-                <Scale className="size-3.5" />
-                Opening balances
-              </ButtonLink>
-            ) : null}
             <Button variant="ghost" size="sm" onClick={exportRoster}>
               <Download className="size-3.5" />
               Export CSV
@@ -622,6 +593,15 @@ export default function BoardHomeowners() {
               </Button>
             )}
           </div>
+        ) : null}
+        {showOpeningBalances ? (
+          <p className="border-t border-border px-5 py-3 text-[13px] text-fg-muted">
+            Switched from another system?{" "}
+            <Link href="/board/homeowners/opening-balances" className="font-medium text-accent hover:underline">
+              Enter what each home owed on day one
+            </Link>
+            .
+          </p>
         ) : null}
       </Card>
     </>

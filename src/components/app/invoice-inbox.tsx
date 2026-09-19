@@ -99,7 +99,6 @@ export function InvoiceInbox() {
   return (
     <Card>
       <CardHeader
-        icon={<Inbox className="size-4" />}
         title="Invoices"
         subtitle={
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">

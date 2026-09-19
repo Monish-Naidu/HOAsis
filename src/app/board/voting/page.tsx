@@ -34,7 +34,6 @@ export default function BoardVoting() {
   return (
     <>
       <PageHeader
-        eyebrow="Governance"
         title="Voting"
         description="Ask the homes a question. One vote per home, and the result is there when it ends."
         action={
@@ -78,7 +77,7 @@ export default function BoardVoting() {
           <Card>
             <div className="divide-y divide-border">
               {closed.map((b) => (
-                <div key={b.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3">
+                <div key={b.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3.5">
                   <div className="min-w-0">
                     <p className="text-[15px] font-medium text-fg">{b.title}</p>
                     <p className="text-[13px] text-fg-muted">{resultLine(b)}</p>

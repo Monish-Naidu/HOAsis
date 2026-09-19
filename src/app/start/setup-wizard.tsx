@@ -1125,7 +1125,7 @@ function RangesStep({ draft, patch }: StepProps) {
 /* -------------------------------------------------------------------------- */
 
 const input =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  "h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
 
 /**
  * The founder's number and address, ordered and worded by who is asking.

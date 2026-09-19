@@ -65,7 +65,7 @@ export function NoticesScreen() {
     : [];
 
   return (
-    <div className="animate-rise space-y-5">
+    <div className="animate-rise space-y-6">
       <div>
         <Link
           href="/resident/requests"
@@ -87,7 +87,7 @@ export function NoticesScreen() {
           <EmptyState
             icon={<ShieldCheck className="size-6" />}
             title="Nothing outstanding"
-            description="The association has not raised anything about your home. If it ever does, the notice and every photograph behind it appear here."
+            description="If the board ever raises something about your home, it appears here with every photograph behind it."
           />
         </Card>
       ) : (
@@ -155,10 +155,6 @@ export function NoticesScreen() {
             );
           })}
 
-          <p className="text-[13px] leading-relaxed text-fg-subtle">
-            The association does not tell you whether a neighbour raised this, and it does not
-            tell any neighbour what came of it. Enforcement is between you and the board.
-          </p>
         </>
       )}
     </div>

@@ -88,7 +88,7 @@ export function OverviewScreen() {
       {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
         <Callout
           tone="warn"
-          className="mb-5"
+          className="mb-6"
           icon={<ShieldAlert className="size-4" />}
           title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
         >
@@ -142,14 +142,14 @@ export function OverviewScreen() {
       </div>
 
       {!primary ? (
-        <Card className="mt-5 p-5">
+        <Card className="mt-6 p-5">
           <div className="mb-4">
             <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
               Connect the association&apos;s bank account
             </h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+            <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
               Dues have nowhere to land until an account in the association&apos;s name is
-              connected. One account is all it takes: money in and money out both show here.
+              connected.
             </p>
           </div>
           <BankConnect
@@ -165,7 +165,7 @@ export function OverviewScreen() {
       {/* The decisions, while there are any. Confirming here keeps the
           review out of the way of the books, one line per transaction. */}
       {needsReview.length > 0 ? (
-        <Card className="mt-5">
+        <Card className="mt-6">
           <CardHeader
             title={`${pluralize(needsReview.length, "transaction")} ${needsReview.length === 1 ? "needs" : "need"} a decision`}
             subtitle="Confirm what the feed guessed, or remove a line that should not be there."
@@ -216,7 +216,7 @@ export function OverviewScreen() {
 
       {/* This year against last, like for like. */}
       {cmp ? (
-        <Card className="mt-5">
+        <Card className="mt-6">
           <CardHeader
             title={`${year} against ${lastYear}`}
             subtitle={
@@ -258,7 +258,7 @@ export function OverviewScreen() {
               <YearControl years={years} value={year} onChange={setYear} thisYear={thisYear} />
             ) : null}
           </div>
-          <div className="grid gap-5 xl:grid-cols-5">
+          <div className="grid gap-4 xl:grid-cols-5">
             {hasFlows ? (
               <Card className={spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5"}>
                 <CardHeader title="Money in and out" />
@@ -281,7 +281,7 @@ export function OverviewScreen() {
 
       {/* Budget pace and dues collection, each a glance and a link. Budget
           waits behind the launch switch; dues collection stands alone then. */}
-      <div className={showBudget ? "mt-5 grid gap-5 lg:grid-cols-2" : "mt-5 grid gap-5"}>
+      <div className={showBudget ? "mt-6 grid gap-4 lg:grid-cols-2" : "mt-6 grid gap-4"}>
         {showBudget ? (
         <Card>
           <CardHeader

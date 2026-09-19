@@ -160,9 +160,6 @@ export default function ResidentDocuments() {
               </Link>
             ))}
           </Card>
-          <p className="mt-2 text-[13px] text-fg-subtle">
-            No printing, no scanning. You get a reference number and a copy of what you signed.
-          </p>
         </section>
       ) : null}
 
@@ -171,7 +168,7 @@ export default function ResidentDocuments() {
           <EmptyState
             icon={<Search className="size-6" />}
             title="Nothing matches"
-            description="The search covers the full text of all three governing documents as well as document names, so try a plainer word."
+            description="Try a plainer word. The search covers document names and the full text of the rules."
           />
         </Card>
       ) : null}

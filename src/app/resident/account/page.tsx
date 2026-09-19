@@ -1,12 +1,14 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Download, Landmark, Receipt } from "lucide-react";
+import { ChevronDown, ChevronRight, CircleDollarSign, Download, Landmark, Receipt } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { ContactCard } from "@/components/app/contact-card";
 import { formatDate, money, today } from "@/lib/utils";
+import { homeLabel } from "@/lib/wording";
+import { downloadCsv, toCsv } from "@/lib/core/export";
 
 export default function ResidentAccount() {
   const { community } = useAppState();
@@ -25,7 +27,7 @@ export default function ResidentAccount() {
       <div>
         <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Account</h1>
         <p className="mt-1 text-[15px] text-fg-muted">
-          Unit {currentOwner.unit} · {currentOwner.displayName}
+          {homeLabel(community, currentOwner.unit)} · {currentOwner.displayName}
         </p>
       </div>
 
@@ -48,12 +50,10 @@ export default function ResidentAccount() {
             className="mt-2"
           >
             {currentOwner.standing === "current"
-              ? "In good standing"
-              : currentOwner.standing === "grace"
-                ? `In grace, ${currentOwner.daysPastDue} days`
-                : currentOwner.standing === "late"
-                  ? `Late, ${currentOwner.daysPastDue} days`
-                  : "In collections"}
+              ? "Paid up"
+              : currentOwner.standing === "collections"
+                ? "In collections"
+                : `${currentOwner.daysPastDue} days past due`}
           </Badge>
         </Card>
         <Card className="p-4">
@@ -64,7 +64,7 @@ export default function ResidentAccount() {
             {money(paidThisYear, { cents: false })}
           </p>
           <p className="mt-2 text-[13px] text-fg-muted">
-            {money(association.duesCents, { cents: false })}/mo assessment
+            {money(association.duesCents, { cents: false })} a month in dues
           </p>
         </Card>
       </div>
@@ -72,7 +72,23 @@ export default function ResidentAccount() {
       <section>
         <SectionTitle
           action={
-            <button className="inline-flex items-center gap-1 text-[13px] font-medium text-accent">
+            <button
+              type="button"
+              onClick={() =>
+                // The ledger as a spreadsheet, for a tax return or a lender.
+                downloadCsv(
+                  `dues-${currentOwner.unit}-${paidYear}.csv`,
+                  toCsv(ownerCharges, [
+                    { header: "Date", value: (c) => c.date },
+                    { header: "Description", value: (c) => c.label },
+                    { header: "Method", value: (c) => c.method ?? "" },
+                    { header: "Amount", value: (c) => (c.amountCents / 100).toFixed(2) },
+                    { header: "Balance", value: (c) => (c.balanceAfterCents / 100).toFixed(2) },
+                  ]),
+                )
+              }
+              className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline"
+            >
               <Download className="size-3" />
               Statement
             </button>
@@ -87,11 +103,11 @@ export default function ResidentAccount() {
               <>
                 <div className="flex items-start gap-3">
                   <span
-                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${
                       isPayment ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted"
                     }`}
                   >
-                    <Receipt className="size-3.5" />
+                    {isPayment ? <CircleDollarSign className="size-4" /> : <Receipt className="size-4" />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-medium text-fg">{line.label}</p>
@@ -110,7 +126,7 @@ export default function ResidentAccount() {
                       {money(Math.abs(line.amountCents))}
                     </p>
                     <p className="tnum mt-0.5 text-[13px] text-fg-subtle">
-                      bal {money(line.balanceAfterCents)}
+                      Balance {money(line.balanceAfterCents)}
                     </p>
                   </div>
                   {line.appliedTo?.length ? (

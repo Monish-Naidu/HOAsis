@@ -75,9 +75,8 @@ export function NoticesBoard() {
   return (
     <>
       <PageHeader
-        eyebrow="Enforcement"
         title="Notices"
-        description="Something a home needs to fix. Send one, print it if the rules want paper, and mark it resolved when it is."
+        description="Something a home needs to fix. Send it, print it if the rules want paper, close it when done."
         action={
           creating ? undefined : (
             <Button variant="primary" onClick={() => setCreating(true)}>
@@ -132,7 +131,7 @@ export function NoticesBoard() {
         ))}
       </TabPill>
 
-      <Card className="mt-3">
+      <Card className="mt-4">
         {rows.length === 0 ? (
           <EmptyState
             icon={<ShieldQuestion className="size-6" />}

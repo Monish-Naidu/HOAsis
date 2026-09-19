@@ -3,7 +3,6 @@
 import {
   AlertTriangle,
   BookOpen,
-  Building2,
   ChevronRight,
   ExternalLink,
   FileSpreadsheet,
@@ -73,7 +72,7 @@ export default function BoardDocuments() {
     <>
       <PageHeader
         title="Documents"
-        
+        description="The association's records, and who may read each one."
         action={
           <label
             aria-busy={uploading}
@@ -121,9 +120,8 @@ export default function BoardDocuments() {
           board cannot do anything with a row count. What they can act on is
           the gap between what they hold and what they are expected to hold,
           so that is what the top of the page is now. */}
-      <Card className="mb-5">
+      <Card className="mb-6">
         <CardHeader
-          icon={<Building2 className="size-4" />}
           title={
             gaps.complete
               ? "Every record a board is expected to hold is on file"
@@ -236,7 +234,7 @@ export default function BoardDocuments() {
       </div>
 
 
-      <Card className="mt-5">
+      <Card className="mt-6">
         <CardHeader
           title="All documents"
           action={
@@ -316,7 +314,7 @@ export default function BoardDocuments() {
                       }
                     }}
                     aria-label={`Who can see ${d.name}`}
-                    className="h-7 rounded-md border border-border bg-surface-2 px-2 text-[13px] font-medium text-fg outline-none"
+                    className="h-8 shrink-0 rounded-lg border border-border bg-surface px-2 text-[13px] font-medium text-fg outline-none focus:border-brand"
                   >
                     <option value="public">Public</option>
                     <option value="members">Owners</option>

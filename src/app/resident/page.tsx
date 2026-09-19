@@ -39,42 +39,47 @@ export default function ResidentHome() {
   );
 
   return (
-    <div className="animate-rise space-y-5">
-      {/* Live meeting and open ballots outrank everything: they expire. */}
-      {live ? (
-        <Link
-          href="/resident/calendar"
-          className="flex items-center gap-3 rounded-card border border-ok/30 bg-ok-soft px-4 py-3 transition-opacity hover:opacity-90"
-        >
-          <Radio className="size-4 shrink-0 text-ok" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-semibold text-ok">{live.title}</span>
-            <span className="block text-[13px] text-ok opacity-90">
-              Live now · {live.attendees.length} joined · tap to join
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-ok" />
-        </Link>
-      ) : null}
-
-      {toVote.length ? (
-        <Link
-          href="/resident/vote"
-          className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
-        >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-warn-soft text-warn">
-            <Vote className="size-4" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-fg">
-              {toVote.length === 1 ? "A ballot needs your vote" : `${toVote.length} ballots need your vote`}
-            </span>
-            <span className="block truncate text-[13px] text-fg-muted">
-              {toVote[0].title} · closes {relativeDays(toVote[0].closesDate)}
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-        </Link>
+    <div className="animate-rise space-y-6">
+      {/* What expires today, in one card rather than a stack of banners. */}
+      {live || toVote.length ? (
+        <Card className="divide-y divide-border">
+          {live ? (
+            <Link
+              href="/resident/calendar"
+              className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok">
+                <Radio className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] font-semibold text-fg">{live.title}</span>
+                <span className="block text-[13px] text-ok">
+                  Live now · {live.attendees.length} joined
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+            </Link>
+          ) : null}
+          {toVote.length ? (
+            <Link
+              href="/resident/vote"
+              className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-warn-soft text-warn">
+                <Vote className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-fg">
+                  {toVote.length === 1 ? "A ballot needs your vote" : `${toVote.length} ballots need your vote`}
+                </span>
+                <span className="block truncate text-[13px] text-fg-muted">
+                  {toVote[0].title} · closes {relativeDays(toVote[0].closesDate)}
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+            </Link>
+          ) : null}
+        </Card>
       ) : null}
 
       {/* The huddle's layout: the center of the screen answers "what do I
@@ -85,9 +90,9 @@ export default function ResidentHome() {
       <AccountSummary />
       <QuickActions />
 
-      <div className="grid gap-5 @3xl:grid-cols-2 @3xl:items-start [&>*]:min-w-0">
+      <div className="grid gap-6 @3xl:grid-cols-2 @3xl:items-start [&>*]:min-w-0">
         <RecentActivity />
-        <div className="space-y-5">
+        <div className="space-y-6">
           <HomeSchedule entries={calendarEntries(community)} />
           <Announcements />
         </div>
@@ -165,7 +170,7 @@ function AccountSummary() {
           <p className="text-[13px] text-fg-muted">
             {past
               ? `${owner.daysPastDue} days past due`
-              : `Next assessment ${formatDate(nextCharge, "long")}`}
+              : `Next dues ${formatDate(nextCharge, "long")}`}
           </p>
         </div>
         {/* Present even at a zero balance: paying ahead of the next
@@ -223,7 +228,7 @@ function QuickActions() {
             <span className={cn("flex size-10 items-center justify-center rounded-full", tone)}>
               <Icon className="size-[18px]" strokeWidth={2} />
             </span>
-            <span className="text-[12px] font-medium leading-tight text-fg-muted">{label}</span>
+            <span className="text-[13px] font-medium leading-tight text-fg-muted">{label}</span>
           </Link>
         ))}
       </div>
@@ -286,7 +291,8 @@ function RecentActivity() {
   // Announcements deliberately stay out of this feed: they live two cards
   // down under "From the board", and a second copy pointing elsewhere reads
   // as a different item.
-  const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
+  // Four rows. The account page has the rest, one tap away.
+  const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4);
   if (feed.length === 0) return null;
 
   return (
@@ -306,7 +312,7 @@ function RecentActivity() {
         <Link
           key={row.id}
           href={row.href}
-          className="flex items-center gap-3 border-b border-border px-5 py-2.5 last:border-b-0 hover:bg-surface-2"
+          className="flex min-h-14 items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-surface-2"
         >
           <span
             className={cn(

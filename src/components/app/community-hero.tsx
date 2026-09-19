@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Building2, Camera, Check, ChevronDown, Plus } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
 import { cn, pluralize } from "@/lib/utils";
@@ -289,4 +289,18 @@ function CoverPhotoButton() {
       </button>
     </>
   );
+}
+
+/**
+ * The banner, on the dashboard only.
+ *
+ * It rode above every board page, which meant every page opened with the
+ * same photo, the same name and the same home count before its own title.
+ * The name is already in the top bar. The dashboard is the front door and
+ * keeps the photo; every other page gets its title at the top.
+ */
+export function BoardHero() {
+  const pathname = usePathname();
+  if (pathname !== "/board") return null;
+  return <CommunityHero withLocation compact />;
 }

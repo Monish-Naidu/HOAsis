@@ -8,6 +8,35 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19, late: the clean pass
+
+Monish, as principal designer: every tab, section and flow, make it look
+clean. Held to `docs/design/ui-baseline.md`. The structural moves:
+
+- **The photo banner is the front door, not a masthead.** It shows on the
+  board dashboard and the resident dashboard only (`BoardHero` in
+  community-hero.tsx, a pathname check in resident-shell.tsx). Every other
+  page opens with its own title. The resident top bar now names the
+  association and the home, since the banner no longer does on inner pages.
+- **One theme button.** The four-icon radio group in every top bar is a
+  single button that cycles light, evenings, system, dark, with the mode in
+  the tooltip. `ThemeToggle expanded` keeps the full group for a settings
+  surface.
+- **Every page header the same:** title, one line under 90 characters,
+  one primary action. Eyebrows that restated the sidebar label are gone.
+- **Rhythm on the 4pt grid:** mt-6 between cards, 16 or 20 inside, rows 12
+  to 14. Ad hoc type sizes folded into the 28/22/17/15/13/11 scale.
+- **Fewer tiles, no decorative icons.** Dashboard stats four not five;
+  Homeowners and Requests lose tiles that duplicated a count on the same
+  page; card headers lose icons that did not aid recognition.
+- **Plain words on screen:** collections ladder steps and standings
+  (Current, In grace, Late, In collections; Final notice, Attorney), "dues"
+  not "assessment" in resident copy, chart legend in sentence case.
+- **Resident:** the two dashboard banners are one "today" card; Recent
+  activity caps at four; the Statement button actually downloads a CSV;
+  inputs are 44px on phones; sign-in hides the two extra theme options
+  below sm.
+
 ## 2026-09-19, night: Your HOAsis at yourhoasis.com
 
 Monish took the name back. The product is Your HOAsis; the domain is

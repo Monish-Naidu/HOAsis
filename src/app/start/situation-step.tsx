@@ -222,12 +222,12 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
           onChange={(e) => setOwn(e.target.value)}
           placeholder="Something else, like a dog park"
           aria-label="Another shared space"
-          className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
+          className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
         />
         <button
           type="submit"
           disabled={!own.trim()}
-          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-border-2 px-3.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg disabled:opacity-50"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-2 px-3.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg disabled:opacity-50"
         >
           <Plus className="size-4" />
           Add

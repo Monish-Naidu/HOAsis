@@ -23,7 +23,7 @@ export function MeetingRsvps() {
   if (meetings.length === 0) return null;
 
   return (
-    <section className="mt-6">
+    <section>
       <SectionTitle>Are you coming?</SectionTitle>
       <Card>
         {meetings.map((m, i) => {
@@ -90,7 +90,7 @@ export function LiveMeetingCard() {
   const live = community.meetings.find((m) => m.status === "live");
   if (!live) return null;
   return (
-    <Card className="mb-4 overflow-hidden border-ok/30">
+    <Card className="overflow-hidden border-ok/30">
       <div className="flex items-center gap-2 bg-ok-soft px-4 py-2.5">
         <Radio className="size-3.5 shrink-0 text-ok" />
         <div className="min-w-0 flex-1">

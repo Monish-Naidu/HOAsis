@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
 import { Button, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -18,10 +17,10 @@ import { useToast } from "@/components/app/toast";
  * difference between a projection built on nothing and one built on the four
  * things everybody already knows about.
  */
-export function AddReserveComponent() {
+/** Without `onClose` the form stands alone, as it does inside a setup question. */
+export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
   const { addReserveComponent } = useAppState();
   const { notify } = useToast();
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [life, setLife] = useState("25");
   const [remaining, setRemaining] = useState("15");
@@ -44,29 +43,21 @@ export function AddReserveComponent() {
         });
         setName("");
         setCost("");
-        setOpen(false);
+        onClose?.();
         notify(`${name.trim()} added to the reserve schedule`);
   }
 
-  if (!open) {
-    return (
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        <Plus className="size-4" />
-        Add a component
-      </Button>
-    );
-  }
-
   return (
-    <Card className="mt-4">
+    <Card className="mb-6">
       <CardHeader
-        icon={<Plus className="size-4" />}
         title="Add something that wears out"
         subtitle="A starting list is not a reserve study, but it beats projecting from nothing"
         action={
-          <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
+          onClose ? (
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+          ) : undefined
         }
       />
       <form
@@ -77,7 +68,7 @@ export function AddReserveComponent() {
         }}
       >
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">What it is</span>
+          <span className="text-[13px] font-medium text-fg">What it is</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -87,7 +78,7 @@ export function AddReserveComponent() {
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Lasts</span>
+          <span className="text-[13px] font-medium text-fg">Lasts</span>
           <input
             type="number"
             min="1"
@@ -98,7 +89,7 @@ export function AddReserveComponent() {
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Years left</span>
+          <span className="text-[13px] font-medium text-fg">Years left</span>
           <input
             type="number"
             min="0"
@@ -109,7 +100,7 @@ export function AddReserveComponent() {
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Costs to replace</span>
+          <span className="text-[13px] font-medium text-fg">Costs to replace</span>
           <input
             type="number"
             min="0"

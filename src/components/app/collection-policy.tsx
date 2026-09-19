@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Scale } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Button, Card, CardHeader } from "@/components/ui/primitives";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
@@ -44,14 +44,13 @@ export function CollectionPolicyCard() {
   }
 
   return (
-    <Card id="collections-policy" className="mt-5 scroll-mt-24">
+    <Card id="collections-policy" className="mt-6 scroll-mt-24">
       <CardHeader
-        icon={<Scale className="size-4" />}
         title="Collections policy"
         subtitle={
           isDefault
-            ? "The default ladder. Change the days or the fee to match your bylaws."
-            : "Your ladder. Every household runs the same one."
+            ? "The default steps. Change the days or the fee to match your bylaws."
+            : "Your steps. Every household runs the same ones."
         }
         action={
           can("finances") && !editing ? (
@@ -75,8 +74,8 @@ export function CollectionPolicyCard() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <DayField label="Reminder" value={draft.reminderDay} onChange={(v) => set({ reminderDay: v })} />
             <DayField label="Formal notice" value={draft.lateNoticeDay} onChange={(v) => set({ lateNoticeDay: v })} />
-            <DayField label="Demand" value={draft.demandDay} onChange={(v) => set({ demandDay: v })} />
-            <DayField label="Counsel" value={draft.counselDay} onChange={(v) => set({ counselDay: v })} />
+            <DayField label="Final notice" value={draft.demandDay} onChange={(v) => set({ demandDay: v })} />
+            <DayField label="Attorney" value={draft.counselDay} onChange={(v) => set({ counselDay: v })} />
             <label className="block">
               <span className="mb-1.5 block text-[13px] font-medium text-fg">Late fee</span>
               <div className="relative">
@@ -110,7 +109,7 @@ export function CollectionPolicyCard() {
                   months
                 </span>
               </div>
-              <span className="mt-1 block text-[13px] text-fg-subtle">Offered with the demand</span>
+              <span className="mt-1 block text-[13px] text-fg-subtle">Offered with the final notice</span>
             </label>
           </div>
 
@@ -151,10 +150,10 @@ export function CollectionPolicyCard() {
           />
           <Rung
             day={saved.demandDay}
-            label="Demand"
+            label="Final notice"
             detail={`Offers a plan of at least ${saved.minimumPlanMonths} months`}
           />
-          <Rung day={saved.counselDay} label="Counsel" detail="With every notice attached" />
+          <Rung day={saved.counselDay} label="Attorney" detail="With every notice attached" />
         </ol>
       )}
     </Card>

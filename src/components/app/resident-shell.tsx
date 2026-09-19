@@ -60,12 +60,19 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3">
         {/* In website mode the sidebar carries the logo; showing it twice on
             one edge of the screen reads as a mistake. */}
-        <div>
+        <div className="min-w-0">
           {phonePreview ? (
             <Link href="/">
               <Wordmark />
             </Link>
-          ) : null}
+          ) : (
+            // The banner no longer rides above every page, so the bar says
+            // whose portal this is and which home.
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold text-fg">{associationName}</p>
+              <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2.5">
           {moduleOn("phone-preview") ? (
@@ -158,7 +165,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               homeLine={homeLine}
             />
             <main className="no-scrollbar flex-1 overflow-y-auto pb-6">
-              <CommunityHero compact />
+              {pathname === "/resident" ? <CommunityHero compact /> : null}
               <div className="@container px-4 pt-4">
                 <Gated pathname={pathname}>{children}</Gated>
               </div>
@@ -226,7 +233,9 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
       </aside>
       {topBar}
       {appHeader}
-      <CommunityHero overlay={<HomeBadge />} />
+      {/* The photo and the home card are the front door, not a masthead on
+          every page. Elsewhere the page title comes first. */}
+      {pathname === "/resident" ? <CommunityHero overlay={<HomeBadge />} /> : null}
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
         {/* The home screen runs the full width for its dashboard grid; every
             other screen keeps the phone-width column both modes share, centred

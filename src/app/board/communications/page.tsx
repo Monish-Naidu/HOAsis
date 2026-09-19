@@ -5,10 +5,8 @@ import {
   ArrowUpRight,
   Inbox,
   MailCheck,
-  Megaphone,
   Pin,
   Send,
-  Users,
 } from "lucide-react";
 import type { Announcement } from "@/lib/types";
 import {
@@ -26,7 +24,7 @@ import { useState } from "react";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
 import { DeliveryPanel } from "@/components/app/delivery-panel";
 import { useToast } from "@/components/app/toast";
-import { formatDate } from "@/lib/utils";
+import { formatDate, pluralize } from "@/lib/utils";
 import { communicationsSummary } from "@/lib/metrics";
 import { DuesMailer } from "@/components/app/dues-mailer";
 import { moduleOn } from "@/lib/modules";
@@ -74,11 +72,10 @@ function AnnouncementsManager({
   }
 
   return (
-    <Card id="announcements" className="mt-5 scroll-mt-24">
+    <Card id="announcements" className="mt-6 scroll-mt-24">
       <CardHeader
         title="Announcements"
-        subtitle={'What residents see under "From the board" on their home screen.'}
-        icon={<Megaphone className="size-4" />}
+        subtitle="What every home sees under From the board"
       />
 
       {composing ? (
@@ -197,6 +194,7 @@ export default function BoardCommunications() {
     <>
       <PageHeader
         title="Communications"
+        description="Announcements every home sees, and the messages owners send the board."
         action={
           <Button variant="primary" size="md" onClick={startMessage}>
             <Send className="size-3.5" />
@@ -209,13 +207,13 @@ export default function BoardCommunications() {
           because it governs them: a household counted as reachable by email is
           not reachable for a notice the statute says must go on paper. */}
       {moduleOn("delivery-panel") ? (
-        <div className="mb-5">
+        <div className="mb-6">
           <DeliveryPanel />
         </div>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Unread" value={String(unread)} tone="warn" icon={<Inbox className="size-4" />} />
+        <Stat label="Unread" value={String(unread)} tone={unread ? "warn" : "neutral"} hint="Owner messages waiting on a reply" />
         <Stat
           label="Reachable households"
           value={String(stats.reachable)}
@@ -225,9 +223,8 @@ export default function BoardCommunications() {
               ? "Every household has an email on file"
               : `${stats.households - stats.reachable} with no email on file`
           }
-          icon={<MailCheck className="size-4" />}
         />
-        <Stat label="Open threads" value={String(threads.length)} icon={<Users className="size-4" />} />
+        <Stat label="Open threads" value={String(threads.length)} hint="Conversations with owners" />
       </div>
 
       <DuesMailer />
@@ -235,7 +232,7 @@ export default function BoardCommunications() {
       <AnnouncementsManager composing={composing} setComposing={setComposing} />
 
       {!active ? (
-        <Card className="mt-5">
+        <Card className="mt-6">
           <EmptyState
             icon={<Inbox className="size-5" />}
             title="No owner messages yet"
@@ -243,10 +240,10 @@ export default function BoardCommunications() {
           />
         </Card>
       ) : (
-      <div className="mt-5 grid gap-5 lg:grid-cols-5">
+      <div className="mt-6 grid items-stretch gap-6 lg:grid-cols-5">
         {/* Thread list */}
         <Card className="lg:col-span-2">
-          <CardHeader title="Inbox" />
+          <CardHeader title="Inbox" subtitle={pluralize(threads.length, "conversation")} />
           {threads.map((t) => (
             <button
               key={t.id}
@@ -281,15 +278,15 @@ export default function BoardCommunications() {
           ))}
         </Card>
 
-        {/* Reading pane */}
-        <div className="space-y-5 lg:col-span-3">
-          <Card>
+        {/* Reading pane, as tall as the inbox beside it */}
+        <div className="flex flex-col gap-6 lg:col-span-3">
+          <Card className="flex flex-1 flex-col">
             <CardHeader
               title={active.subject}
               subtitle={`${active.participants.join(", ")}${active.unit ? ` · ${placeLabel(active.unit)}` : ""}`}
               action={<Badge tone="neutral">{active.tag}</Badge>}
             />
-            <div className="space-y-4 px-5 py-4">
+            <div className="flex-1 space-y-4 px-5 py-4">
               {active.messages.map((m) => (
                 <div key={m.id} className="flex gap-3">
                   <span
@@ -334,16 +331,11 @@ export default function BoardCommunications() {
                 rows={3}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Write a reply…"
+                placeholder="Write a reply"
                 aria-label="Reply"
-                className="w-full resize-none rounded-lg border border-border bg-surface-2 px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
+                className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
               />
-              <div className="mt-2.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-[13px] text-fg-subtle">
-                    {draft ? "Draft saved" : "No draft"}
-                  </span>
-                </div>
+              <div className="mt-2 flex justify-end">
                 <Button variant="primary" size="sm" disabled={!draft.trim()} onClick={send}>
                   <Send className="size-3.5" />
                   Send

@@ -25,13 +25,10 @@ export default function ResidentRequests() {
   return (
     <div className="animate-rise space-y-6">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Requests</h1>
-          
-        </div>
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Requests</h1>
         <Link
           href="/resident/requests/new"
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-fg"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-fg transition-opacity hover:opacity-90"
           aria-label="New request"
         >
           <Plus className="size-4" />
@@ -109,7 +106,7 @@ export default function ResidentRequests() {
       {!mine.length ? (
         <EmptyState
           title="No requests yet"
-          description="Repairs, approvals, records."
+          description="Something broken, or a change to your home. Tap plus to start one."
         />
       ) : null}
     </div>
@@ -132,12 +129,12 @@ function RequestRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-[12px] font-semibold text-fg-subtle">
+          <span className="text-[13px] font-medium text-fg-subtle">
             {kindLabel[request.kind]}
           </span>
           {request.dueDate && !["approved", "denied", "closed"].includes(request.status) ? (
-            <span className="text-[12px] font-medium text-warn">
-              board must respond {relativeDays(request.dueDate)}
+            <span className="text-[13px] font-medium text-warn">
+              answer due {relativeDays(request.dueDate)}
             </span>
           ) : null}
         </div>

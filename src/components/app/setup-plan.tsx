@@ -414,7 +414,7 @@ export function SetupOverview() {
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
           <PartyPopper className="size-6" />
         </span>
-        <p className="mt-3 text-[19px] font-semibold tracking-[-0.015em] text-fg">
+        <p className="mt-3 text-[17px] font-semibold tracking-[-0.015em] text-fg">
           Everything is set up
         </p>
         <p className="mx-auto mt-1.5 max-w-md text-[15px] leading-relaxed text-fg-muted">
@@ -433,7 +433,7 @@ export function SetupOverview() {
   const remaining = plan.total - plan.done;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <Card className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">

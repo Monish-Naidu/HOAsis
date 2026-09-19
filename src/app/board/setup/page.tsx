@@ -10,14 +10,11 @@ export default function SetupPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Getting started"
         title={`Set up ${community.settings.displayName}`}
-        description="Built from what you told us about the association, so nothing here is a step you have to decline. Each one is a question, asked one at a time."
+        description="A short list, in the order that gets money moving first."
       />
-      <div className="mt-5">
-        <SetupOverview />
-        <PortingCard />
-      </div>
+      <SetupOverview />
+      <PortingCard />
     </>
   );
 }

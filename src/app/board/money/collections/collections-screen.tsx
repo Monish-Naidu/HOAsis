@@ -9,12 +9,20 @@ import { SectionLink, StatTile } from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
 import { agingBuckets, delinquency, duesCollection } from "@/lib/metrics";
 import { money, pluralize, todayIsoDate } from "@/lib/utils";
+import { placeLabel } from "@/lib/wording";
 
 const STANDING_TONE = {
   current: "ok",
   grace: "neutral",
   late: "warn",
   collections: "danger",
+} as const;
+
+const STANDING_LABEL = {
+  current: "Current",
+  grace: "In grace",
+  late: "Late",
+  collections: "In collections",
 } as const;
 
 /**
@@ -34,7 +42,7 @@ export function CollectionsScreen() {
       <MoneyTabs />
       <PageHeader
         title="Collections"
-        description="Who is behind, by how much, and the next step the policy owes each of them."
+        description="Who is behind, by how much, and what to send next."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -53,7 +61,7 @@ export function CollectionsScreen() {
         <StatTile
           label="On autopay"
           value={`${Math.round(delinq.autopayRate * 100)}%`}
-          hint="Autopay is the collection policy that never needs enforcing"
+          hint="Households paying automatically"
         />
         <StatTile
           label={`Dues collected, ${thisYear}`}
@@ -66,11 +74,8 @@ export function CollectionsScreen() {
         />
       </div>
 
-      <Card className="mt-5">
-        <CardHeader
-          title="How old it is"
-          subtitle="Every balance on the roster, by days past due. Current includes what is not due yet."
-        />
+      <Card className="mt-6">
+        <CardHeader title="Past due by age" subtitle="Every balance, by days past due" />
         <AgingBar buckets={aging.buckets} />
       </Card>
 
@@ -78,7 +83,7 @@ export function CollectionsScreen() {
 
       <CollectionPolicyCard />
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-5">
+      <div className="mt-6 grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3">
           <CardHeader
             title="Past-due households"
@@ -99,18 +104,18 @@ export function CollectionsScreen() {
                 <tbody>
                   {pastDue.map((o) => (
                     <tr key={o.id} className="border-b border-border text-[15px] last:border-b-0 hover:bg-surface-2">
-                      <td className="px-5 py-2.5">
+                      <td className="px-5 py-3">
                         <span className="block font-medium text-fg">{o.displayName}</span>
                         <span className="text-[13px] text-fg-subtle">
-                          Unit {o.unit}
+                          {placeLabel(o.unit)}
                           {o.autopay ? " · autopay" : ""}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5">
-                        <Badge tone={STANDING_TONE[o.standing]}>{o.standing}</Badge>
+                      <td className="px-3 py-3">
+                        <Badge tone={STANDING_TONE[o.standing]}>{STANDING_LABEL[o.standing]}</Badge>
                       </td>
-                      <td className="tnum px-3 py-2.5 text-right text-fg-muted">{o.daysPastDue}</td>
-                      <td className="tnum px-5 py-2.5 text-right font-semibold text-fg">{money(o.balanceCents)}</td>
+                      <td className="tnum px-3 py-3 text-right text-fg-muted">{o.daysPastDue}</td>
+                      <td className="tnum px-5 py-3 text-right font-semibold text-fg">{money(o.balanceCents)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -126,7 +131,7 @@ export function CollectionsScreen() {
           {dues.measurable ? (
             <ul className="divide-y divide-border">
               {[...dues.months].reverse().map((m) => (
-                <li key={m.month} className="px-5 py-2.5">
+                <li key={m.month} className="px-5 py-3">
                   <div className="flex items-center justify-between gap-3 text-[13px]">
                     <span className="font-medium text-fg">{m.label}</span>
                     <span className="tnum text-fg-muted">

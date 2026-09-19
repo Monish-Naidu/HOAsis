@@ -115,7 +115,7 @@ export function JoinPanel() {
 }
 
 const field =
-  "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
+  "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
 const label = "mb-1 block text-[13px] font-semibold text-fg-muted";
 
 function AskToJoin({ code: initialCode }: { code: string }) {

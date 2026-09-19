@@ -37,7 +37,7 @@ export default function AuthLanding() {
               <ArrowLeft className="size-3.5" />
               <span className="hidden sm:inline">Home</span>
             </Link>
-            <ThemeToggle />
+            <ThemeToggle className="max-sm:[&>button:nth-child(2)]:hidden max-sm:[&>button:nth-child(3)]:hidden" />
           </div>
         </header>
 

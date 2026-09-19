@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Copy, Download, FileText, Paperclip, Search } from "lucide-react";
-import { Badge, Button, Card, PageHeader } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { MoneyTabs } from "@/components/app/money-tabs";
 import { PeriodPicker, SelectField } from "@/components/app/finance-ui";
 import { useToast } from "@/components/app/toast";
@@ -93,7 +93,7 @@ export function TransactionsScreen() {
       <MoneyTabs />
       <PageHeader
         title="Transactions"
-        description="Every line in the books, filtered, totalled, and ready for a spreadsheet."
+        description="Every line in the books, with the totals of whatever you filter to."
         action={
           <Button variant="secondary" size="md" onClick={exportRows} disabled={rows.length === 0}>
             <Download className="size-3.5" />
@@ -133,7 +133,7 @@ export function TransactionsScreen() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search description or payee"
                 aria-label="Search transactions"
-                className="h-8 w-full rounded-lg border border-border-2 bg-surface pl-8 pr-2 text-[13px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+                className="h-9 w-full rounded-lg border border-border-2 bg-surface pl-8 pr-2 text-[13px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
               />
             </label>
           </div>
@@ -152,33 +152,32 @@ export function TransactionsScreen() {
             { label: "Lines", value: String(totals.count), tone: "text-fg" },
           ].map((s) => (
             <div key={s.label} className="bg-surface px-5 py-3">
-              <dt className="text-[12px] font-semibold text-fg-muted">{s.label}</dt>
+              <dt className="text-[13px] font-medium text-fg-muted">{s.label}</dt>
               <dd className={cn("tnum mt-0.5 text-[17px] font-semibold tracking-[-0.02em]", s.tone)}>{s.value}</dd>
             </div>
           ))}
         </dl>
 
         {rows.length === 0 ? (
-          <div className="px-5 py-12 text-center">
-            <p className="text-[15px] font-semibold text-fg">Nothing matches</p>
-            <p className="mt-1 text-[13px] text-fg-muted">
-              No transactions in this period with these filters.
-            </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-4"
-              onClick={() => {
-                setPreset("this-year");
-                setStatus("any");
-                setCategory("all");
-                setAccountId("all");
-                setSearch("");
-              }}
-            >
-              Show this year
-            </Button>
-          </div>
+          <EmptyState
+            title="Nothing matches"
+            description="No transactions in this period with these filters."
+            action={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setPreset("this-year");
+                  setStatus("any");
+                  setCategory("all");
+                  setAccountId("all");
+                  setSearch("");
+                }}
+              >
+                Show this year
+              </Button>
+            }
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[840px] text-left">
@@ -205,8 +204,8 @@ export function TransactionsScreen() {
                           expanded && "border-b-0 bg-surface-2",
                         )}
                       >
-                        <td className="tnum whitespace-nowrap px-5 py-2.5 text-fg-muted">{formatDate(e.date)}</td>
-                        <td className="px-3 py-2.5">
+                        <td className="tnum whitespace-nowrap px-5 py-3 text-fg-muted">{formatDate(e.date)}</td>
+                        <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-fg">{e.description}</span>
                             {attachment ? (
@@ -232,7 +231,7 @@ export function TransactionsScreen() {
                           </div>
                           <span className="text-[13px] text-fg-subtle">{e.counterparty}</span>
                         </td>
-                        <td className="px-3 py-2.5 text-[13px] text-fg-muted">
+                        <td className="px-3 py-3 text-[13px] text-fg-muted">
                           {e.status === "needs-review" && e.suggestedCategory ? (
                             <span className="italic">{e.suggestedCategory}?</span>
                           ) : (
@@ -240,17 +239,17 @@ export function TransactionsScreen() {
                           )}
                         </td>
                         {accounts.length > 1 ? (
-                          <td className="px-3 py-2.5 text-[13px] text-fg-muted">{accountName(e.accountId)}</td>
+                          <td className="px-3 py-3 text-[13px] text-fg-muted">{accountName(e.accountId)}</td>
                         ) : null}
                         <td
                           className={cn(
-                            "tnum whitespace-nowrap px-3 py-2.5 text-right font-semibold",
+                            "tnum whitespace-nowrap px-3 py-3 text-right font-semibold",
                             e.amountCents >= 0 ? "text-ok" : "text-fg",
                           )}
                         >
                           {money(e.amountCents, { sign: e.amountCents > 0 })}
                         </td>
-                        <td className="px-5 py-2.5">
+                        <td className="px-5 py-3">
                           {e.status === "needs-review" ? (
                             <span className="flex gap-1.5">
                               <button

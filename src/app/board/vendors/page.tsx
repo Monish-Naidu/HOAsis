@@ -10,7 +10,6 @@ import {
   ShieldAlert,
   StickyNote,
   Trash2,
-  Truck,
 } from "lucide-react";
 import { Badge, Button, Callout, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
 import { useState } from "react";
@@ -30,7 +29,7 @@ const payoutTone = {
 } as const;
 
 const field =
-  "h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none";
+  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
 
 export default function BoardVendors() {
   const gaps = useVendorGaps();
@@ -69,6 +68,7 @@ export default function BoardVendors() {
     <>
       <PageHeader
         title="Vendors"
+        description="Who does work for the association, what they sent, and what they were paid."
         action={
           // Each form carries its own Cancel, so the header offers the two
           // ways in and gets out of the way once one is open.
@@ -95,7 +95,7 @@ export default function BoardVendors() {
       {recording ? <RecordPayment onClose={() => setRecording(false)} /> : null}
 
       {adding ? (
-        <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5">
+        <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-6">
           <CardHeader
             title="New vendor"
             subtitle={
@@ -106,7 +106,7 @@ export default function BoardVendors() {
           />
           <div className="grid gap-3 px-5 py-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">Name</span>
+              <span className="mb-1.5 block text-[13px] font-medium text-fg">Name</span>
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -115,7 +115,7 @@ export default function BoardVendors() {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">Service</span>
+              <span className="mb-1.5 block text-[13px] font-medium text-fg">Service</span>
               <input
                 value={draft.service}
                 onChange={(e) => setDraft({ ...draft, service: e.target.value })}
@@ -132,7 +132,7 @@ export default function BoardVendors() {
                     type="checkbox"
                     checked={draft.achEnabled}
                     onChange={(e) => setDraft({ ...draft, achEnabled: e.target.checked })}
-                    className="size-4 accent-navy-700"
+                    className="size-4 accent-current text-brand"
                   />
                   Pays by ACH
                 </label>
@@ -141,7 +141,7 @@ export default function BoardVendors() {
                     type="checkbox"
                     checked={draft.w9OnFile}
                     onChange={(e) => setDraft({ ...draft, w9OnFile: e.target.checked })}
-                    className="size-4 accent-navy-700"
+                    className="size-4 accent-current text-brand"
                   />
                   W-9 already on file
                 </label>
@@ -169,7 +169,7 @@ export default function BoardVendors() {
       {moduleOn("vendor-tax-forms") && gaps.missingW9.length ? (
         <Callout
           tone="danger"
-          className="mt-5"
+          className="mt-6"
           icon={<ShieldAlert className="size-4" />}
           title={`${gaps.missingW9[0].name} has no W-9 on file`}
           action={
@@ -193,7 +193,7 @@ export default function BoardVendors() {
       {gaps.expiringCoi.length ? (
         <Callout
           tone="warn"
-          className="mt-5"
+          className="mt-6"
           icon={<Landmark className="size-4" />}
           title={
             gaps.expiringCoi.length === 1
@@ -207,9 +207,9 @@ export default function BoardVendors() {
         </Callout>
       ) : null}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-5">
+      <div className="mt-6 grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <CardHeader title="Vendor list" icon={<Truck className="size-4" />} />
+          <CardHeader title="Vendor list" subtitle="Everyone the association pays" />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-left">
               <thead>
@@ -348,7 +348,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
         <Button
           variant="primary"
           size="sm"
-          className="mt-2 h-7 px-2.5 text-[13px]"
+          className="mt-2"
           onClick={() => {
             approvePayout(p.id);
             notify(`Approved ${p.vendor}`);

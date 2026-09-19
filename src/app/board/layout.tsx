@@ -11,7 +11,7 @@ import {
   RequireSession,
   ViewSwitcher,
 } from "@/components/app/account-menu";
-import { CommunityHero, CommunityName } from "@/components/app/community-hero";
+import { BoardHero, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { RailWordmark, Wordmark } from "@/components/app/logo";
@@ -66,7 +66,7 @@ export default function BoardLayout({
             </div>
           </header>
 
-          <CommunityHero withLocation compact />
+          <BoardHero />
 
           <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-6 lg:py-8">
             <main className="min-w-0">
