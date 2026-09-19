@@ -121,6 +121,7 @@ function AccountSummary() {
   return (
     <Card>
       <CardHeader
+        accent="teal"
         title="Account summary"
         action={
           <Link
@@ -202,7 +203,7 @@ function QuickActions() {
   ];
   return (
     <Card>
-      <CardHeader title="Quick actions" />
+      <CardHeader accent="blue" title="Quick actions" />
       <div className="grid grid-cols-3 gap-1 p-3">
         {actions.map(({ href, label, icon, tint }) => (
           <Link
@@ -286,6 +287,7 @@ function RecentActivity() {
   return (
     <Card>
       <CardHeader
+        accent="teal"
         title="Recent activity"
         action={
           <Link

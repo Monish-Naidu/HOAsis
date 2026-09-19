@@ -30,7 +30,9 @@ function visibleTabs(settings: CommunitySettings) {
 function Gated({ pathname, children }: { pathname: string; children: React.ReactNode }) {
   const mod = residentModuleFor(pathname);
   if (mod && !moduleOn(mod)) return <ModuleOff module={mod} />;
-  return <PageTransition>{children}</PageTransition>;
+  return (
+    <PageTransition order={residentTabs.map((t) => t.href)}>{children}</PageTransition>
+  );
 }
 
 /**
@@ -116,7 +118,8 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           ) : null}
           <ViewSwitcher />
           <ResidentBell />
-          <ThemeToggle />
+          {/* In website mode the rail's card carries the toggle. */}
+          {phonePreview ? <ThemeToggle /> : null}
           <AccountMenu compact />
         </div>
       </div>

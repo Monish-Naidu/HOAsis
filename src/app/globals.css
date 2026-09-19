@@ -397,6 +397,32 @@
    the first row, so it sits out of the stagger. */
 .stagger > .tab-pill { animation: none; }
 
+/* A page arriving from the side it came from. The rail is a column of
+   rooms: a section further down enters from the right, one further up from
+   the left. The children still stagger; this is the wrapper's own settle. */
+@keyframes hoasis-page-from-right {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes hoasis-page-from-left {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: none; }
+}
+.page-from-right { animation: hoasis-page-from-right var(--dur-base) var(--ease-out-soft) both; }
+.page-from-left  { animation: hoasis-page-from-left  var(--dur-base) var(--ease-out-soft) both; }
+
+/* The dashboard photograph drifts. Forty seconds out and back, a few percent
+   of scale and a little travel, so it is felt rather than watched. */
+@keyframes hoasis-ken-burns {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.08) translate(-1.5%, 1%); }
+}
+.ken-burns {
+  animation: hoasis-ken-burns 40s ease-in-out infinite alternate;
+  transform-origin: 60% 40%;
+  will-change: transform;
+}
+
 /* One question at a time. The answered question slips away in the direction
    of travel and the next one rises in from the other side, so going back
    reads as going back. Leaving is quick and entering settles, per the note
@@ -516,6 +542,17 @@
 }
 .dark .page-ground {
   background-image: radial-gradient(70% 420px at 50% 0%, rgb(77 139 245 / 0.12), transparent 100%);
+}
+
+/* The card at the foot of the rail: frosted on the navy, edged with light. */
+.rail-you {
+  background: rgb(255 255 255 / 0.06);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.08),
+    inset 0 1px 0 rgb(255 255 255 / 0.1);
+}
+.rail-you-avatar {
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.12);
 }
 
 .rail-tile[data-tint="blue"]    { --tile: #6ea0f0; }
@@ -773,7 +810,10 @@
   .float-late,
   .land,
   .knob,
-  .rail-tile {
+  .rail-tile,
+  .page-from-right,
+  .page-from-left,
+  .ken-burns {
     animation: none !important;
     transition: none !important;
   }

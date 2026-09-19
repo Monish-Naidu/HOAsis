@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { Rail } from "@/components/app/rail";
 import { PageTransition } from "@/components/app/page-transition";
+import { BOARD_ROUTES } from "@/lib/board-routes";
 
 export const metadata = {
   title: { default: "Board", template: "%s · Your HOAsis" },
@@ -49,8 +50,9 @@ export default function BoardLayout({
               <div className="flex items-center gap-2 sm:gap-3">
                 <ViewSwitcher />
                 <BoardBell />
-                <ThemeToggle className="hidden sm:inline-flex" />
-                <AccountMenu />
+                {/* At lg the rail's own card carries both. */}
+                <ThemeToggle className="hidden sm:inline-flex lg:hidden" />
+                <AccountMenu compact />
               </div>
             </div>
             {/* Horizontal nav on narrow screens */}
@@ -68,7 +70,9 @@ export default function BoardLayout({
               <SetupReturnBar />
               <BillingGate>
                 <RequireCapability>
-                  <PageTransition>{children}</PageTransition>
+                  <PageTransition order={BOARD_ROUTES.filter((r) => !r.hidden).map((r) => r.href)}>
+                    {children}
+                  </PageTransition>
                 </RequireCapability>
               </BillingGate>
             </main>

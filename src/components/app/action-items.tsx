@@ -51,6 +51,7 @@ export function ActionItems({
   return (
     <Card className={className}>
       <CardHeader
+        accent="amber"
         title="Action items"
         subtitle={
           compact

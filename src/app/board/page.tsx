@@ -132,6 +132,7 @@ export default function BoardDashboard() {
                 {hasFlows ? (
                   <Card className={cn(showDonut ? "xl:col-span-3" : "xl:col-span-5")}>
                     <CardHeader
+                      accent="teal"
                       title="Money in and out"
                       action={
                         <span className="flex flex-wrap items-center gap-3">
@@ -151,7 +152,7 @@ export default function BoardDashboard() {
                 ) : null}
                 {showDonut ? (
                   <Card className={cn(hasFlows ? "xl:col-span-2" : "xl:col-span-5")}>
-                    <CardHeader title="Spending by category" />
+                    <CardHeader accent="teal" title="Spending by category" />
                     <SpendingDonut
                       rows={spending.rows}
                       totalCents={spending.totalCents}
@@ -260,6 +261,7 @@ function NeedsYou() {
   return (
     <Card>
       <CardHeader
+        accent="blue"
         title="Needs you today"
         action={
           rows.length ? (
@@ -443,7 +445,7 @@ const ACTIONS: { href: string; label: string; icon: typeof Vote; tint: TintName 
 function QuickActions() {
   return (
     <Card className="mt-6">
-      <CardHeader title="Quick actions" />
+      <CardHeader accent="violet" title="Quick actions" />
       <div className="grid grid-cols-2 gap-1 p-3 sm:grid-cols-4">
         {ACTIONS.map(({ href, label, icon, tint }) => (
           <Link

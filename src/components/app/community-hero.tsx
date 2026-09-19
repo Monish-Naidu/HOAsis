@@ -144,7 +144,9 @@ export function CommunityHero({
       aria-label={settings.displayName}
     >
       <div
-        className="absolute inset-0 -z-10 bg-cover bg-center"
+        // A slow drift across the photograph. The hero only sits on the two
+        // dashboards, so nothing else moves.
+        className="ken-burns absolute inset-0 -z-10 bg-cover bg-center"
         style={{ backgroundImage: `url(${settings.photoUrl})` }}
         aria-hidden
       />

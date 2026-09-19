@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { RailWordmark } from "@/components/app/logo";
+import { RailYou } from "@/components/app/rail-you";
 import type { TintName } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ export function Rail({
         <RailWordmark size={34} />
       </Link>
       <div className="no-scrollbar relative flex flex-1 overflow-y-auto px-3 py-3">{children}</div>
+      <RailYou />
     </aside>
   );
 }

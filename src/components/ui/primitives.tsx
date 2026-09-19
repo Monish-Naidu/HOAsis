@@ -42,6 +42,7 @@ export function CardHeader({
   action,
   icon,
   tint,
+  accent,
   className,
 }: {
   title: ReactNode;
@@ -50,6 +51,11 @@ export function CardHeader({
   /** A glyph that aids recognition. Wears a soft tile; `tint` picks which. */
   icon?: ReactNode;
   tint?: TintName;
+  /**
+   * A hairline of the tint along the top of the card, the same one the
+   * stat tiles wear, for a dashboard card that should be found by colour.
+   */
+  accent?: TintName;
   className?: string;
 }) {
   return (
@@ -58,9 +64,15 @@ export function CardHeader({
         // Wraps, so on a phone the action drops under the title instead of
         // pushing the card wider than the screen.
         "flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4",
+        // Clipped to the card's own corner radius, less its border, so the
+        // hairline follows the curve instead of poking past it.
+        accent && "relative overflow-hidden rounded-t-[13px]",
         className,
       )}
     >
+      {accent ? (
+        <span className={cn("absolute inset-x-0 top-0 h-[3px]", ACCENT_BAR[accent])} aria-hidden />
+      ) : null}
       <div className="flex min-w-0 items-start gap-3">
         {icon ? (
           <IconTile tint={tint ?? "blue"} size="sm" className="mt-0.5">
@@ -156,6 +168,16 @@ export function PageHeader({
  * set does. Meaning still goes through `Tone` (ok, warn, danger).
  */
 export type TintName = "blue" | "teal" | "amber" | "coral" | "violet" | "neutral";
+
+/** The hairline along the top of a card or a stat tile. */
+export const ACCENT_BAR: Record<TintName, string> = {
+  blue: "bg-tint-blue",
+  teal: "bg-tint-teal",
+  amber: "bg-tint-amber",
+  coral: "bg-tint-coral",
+  violet: "bg-tint-violet",
+  neutral: "bg-border-2",
+};
 
 const TILE_SOFT: Record<TintName, string> = {
   blue: "bg-tint-blue-soft text-tint-blue-fg",
