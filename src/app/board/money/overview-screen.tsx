@@ -67,7 +67,7 @@ export function OverviewScreen() {
       <MoneyTabs />
       <PageHeader
         title="Finances"
-        description="Where the money stands, and anything waiting on you."
+        description="Balances, recent activity, and items to review."
         action={
           <Button
             variant="primary"
@@ -168,7 +168,7 @@ export function OverviewScreen() {
         <Card className="mt-6">
           <CardHeader
             title={`${pluralize(needsReview.length, "transaction")} ${needsReview.length === 1 ? "needs" : "need"} a decision`}
-            subtitle="Confirm what the feed guessed, or remove a line that should not be there."
+            subtitle="Confirm each category, or remove the line."
             action={<SectionLink href="/board/money/transactions?status=needs-review">Open in Transactions</SectionLink>}
           />
           <ul className="divide-y divide-border">

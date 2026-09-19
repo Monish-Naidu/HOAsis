@@ -75,7 +75,7 @@ export function ReserveStudyCard() {
       <Card className="mt-6">
         <CardHeader
           title="The study itself"
-          subtitle="Keep the file here so the next board can find it, and the page can say when the next one is due"
+          subtitle="Keep the file here and see when the next study is due"
         />
         <div className="flex flex-wrap items-end gap-3 px-5 py-4">
           <label className="block">

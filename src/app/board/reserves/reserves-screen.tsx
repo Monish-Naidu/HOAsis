@@ -58,7 +58,7 @@ export function ReservesScreen() {
         <MoneyTabs />
         <PageHeader
           title="Reserves"
-          description="What wears out, when, and how much is set aside."
+          description="Components, replacement dates, and funds set aside."
           action={addButton}
         />
         {addForm}
@@ -135,7 +135,7 @@ export function ReservesScreen() {
       <MoneyTabs />
       <PageHeader
         title="Reserves"
-        description="What wears out, when, and how much is set aside."
+        description="Components, replacement dates, and funds set aside."
         action={addButton}
       />
       {addForm}
@@ -185,7 +185,7 @@ export function ReservesScreen() {
       ) : null}
 
       <Card className="mt-6">
-        <CardHeader title="What the money is for" subtitle="Each thing to replace, when, and what is set aside" />
+        <CardHeader title="What the money is for" subtitle="Each component, when it is due, and what is set aside" />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left">
             <thead>

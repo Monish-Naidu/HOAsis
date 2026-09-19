@@ -658,23 +658,17 @@ export default function MarketingHome() {
           className="pointer-events-none absolute inset-y-0 right-0 hidden w-[66%] lg:block"
           aria-hidden
         >
-          {/* The same neighborhood rendered twice, 2026-08-31: day for the
-              light theme, night for the dark one. The filter hack that used
-              to fake the day version is gone. */}
+          {/* The oasis: homes on a ring road around a lake, one lit house on
+              the island in the middle. Monish asked for it back on 2026-09-19;
+              it is the picture the name comes from. One night render, lifted
+              and softened on the light theme, as shot on the dark one. */}
           <Image
-            src="/marketing/hero-day.jpg"
+            src="/marketing/hero-oasis.jpg"
             alt=""
             fill
             priority
             sizes="58vw"
-            className="object-cover object-[left_top] dark:hidden"
-          />
-          <Image
-            src="/marketing/hero-night.jpg"
-            alt=""
-            fill
-            sizes="58vw"
-            className="hidden object-cover object-[left_top] dark:block"
+            className="object-cover object-[center_top] brightness-[1.22] saturate-[.9] dark:brightness-100 dark:saturate-100"
           />
           {/* The fade covers only the strip the headline column overlaps
               (its left fifth or so), then lets go. The right half is the
@@ -720,19 +714,12 @@ export default function MarketingHome() {
 
         <div className="relative -mb-px aspect-[16/11] w-full lg:hidden">
           <Image
-            src="/marketing/hero-day.jpg"
-            alt="An illustrated lakeside neighborhood: white cottages on a green hill, a path winding between them down to the water"
+            src="/marketing/hero-oasis.jpg"
+            alt="An illustrated neighborhood at night: homes on a ring road around a lake, with one lit house on the island in the middle"
             fill
             priority
             sizes="100vw"
-            className="object-cover dark:hidden"
-          />
-          <Image
-            src="/marketing/hero-night.jpg"
-            alt=""
-            fill
-            sizes="100vw"
-            className="hidden object-cover dark:block"
+            className="object-cover brightness-[1.22] saturate-[.9] dark:brightness-100 dark:saturate-100"
           />
           <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-hero-field to-transparent" />
         </div>

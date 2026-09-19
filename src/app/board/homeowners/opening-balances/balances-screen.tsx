@@ -89,7 +89,7 @@ export function BalancesScreen() {
           <EmptyState
             icon={<Scale className="size-6" />}
             title="No homes on the register yet"
-            description="Add the homes first. A balance needs somewhere to sit."
+            description="Add homes first, then enter their balances."
             action={
               <Link
                 href="/board/homeowners"
@@ -109,7 +109,7 @@ export function BalancesScreen() {
       <PageHeader
         eyebrow="Homeowners"
         title="Opening balances"
-        description="What each home owed on the day you switched. One figure each, and you are correct from there."
+        description="What each home owed on the day you switched. One amount per home."
       />
 
       <Callout tone="info" icon={<Scale className="size-4" />} title="Nothing before this date moves">
@@ -121,7 +121,7 @@ export function BalancesScreen() {
       <Card className="mt-5">
         <CardHeader
           title="As of"
-          subtitle="The day you switched. Every balance below is dated to it on the owner's statement."
+          subtitle="Balances are dated to this day on each statement"
           action={
             <input
               type="date"

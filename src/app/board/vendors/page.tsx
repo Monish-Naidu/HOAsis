@@ -68,7 +68,7 @@ export default function BoardVendors() {
     <>
       <PageHeader
         title="Vendors"
-        description="Who does work for the association, what they sent, and what they were paid."
+        description="Vendors, their invoices, and payments."
         action={
           // Each form carries its own Cancel, so the header offers the two
           // ways in and gets out of the way once one is open.

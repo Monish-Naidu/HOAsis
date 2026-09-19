@@ -153,7 +153,7 @@ export function CalendarView({
             <EmptyState
               icon={<CalendarOff className="size-5" />}
               title="Nothing scheduled"
-              description="The board posts meetings and events here as they are set."
+              description="Meetings and events appear here once scheduled."
             />
           )}
         </Card>

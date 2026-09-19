@@ -226,7 +226,7 @@ export default function BoardHomeowners() {
     <>
       <PageHeader
         title="Homeowners"
-        description="Who lives here, how to reach them, and whether they are paid up."
+        description="Every home, its owner, contact details, and balance."
         action={
           <div className="flex gap-2">
             <Button

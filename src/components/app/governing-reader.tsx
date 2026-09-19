@@ -165,7 +165,7 @@ export function GoverningReader({
           <EmptyState
             icon={<BookOpen className="size-6" />}
             title="Nothing matches"
-            description="Try a plainer word. The search reads the full legal text of all three documents, so a term from a letter you were sent should find it."
+            description="Try a different word. Search covers the full text of all three documents."
           />
         </Card>
       ) : (

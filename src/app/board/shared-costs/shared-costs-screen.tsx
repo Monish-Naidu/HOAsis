@@ -93,7 +93,7 @@ export function SharedCostsScreen() {
         <PageHeader
           eyebrow="Shared costs"
           title="Bills the association passes on"
-          description="Most associations bill one flat amount and never need this. Turn it on if the association pays a bill on everyone's behalf, like a shared water meter or one trash contract."
+          description="Turn this on if the association pays a bill on everyone's behalf, like a shared water meter or a trash contract."
           action={
             <Button size="sm" onClick={() => setAdding(true)}>
               <Plus className="size-4" />
@@ -105,7 +105,7 @@ export function SharedCostsScreen() {
           <EmptyState
             icon={<Droplets className="size-6" />}
             title="Nothing shared yet"
-            description="Add a provider and the amount each home owes is worked out for you, added to their statement, and shown to them alongside what the community paid."
+            description="Add a provider and each home's share is calculated and added to its statement."
           />
         </Card>
       </>
@@ -136,7 +136,7 @@ export function SharedCostsScreen() {
       <PageHeader
         eyebrow="Shared costs"
         title="Bills the association passes on"
-        description="What the community actually pays each provider, how it is split, and what that works out to per home. Owners see the same figures."
+        description="What the association pays each provider, how it is split, and the amount per home."
         action={
           <div className="flex gap-2">
             {shared.enabled ? (

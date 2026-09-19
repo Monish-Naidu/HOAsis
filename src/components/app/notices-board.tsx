@@ -76,7 +76,7 @@ export function NoticesBoard() {
     <>
       <PageHeader
         title="Notices"
-        description="Something a home needs to fix. Send it, print it if the rules want paper, close it when done."
+        description="Notices to homes. Send, print, and close them here."
         action={
           creating ? undefined : (
             <Button variant="primary" onClick={() => setCreating(true)}>

@@ -51,7 +51,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
     <Card className="mb-6">
       <CardHeader
         title="Add something that wears out"
-        subtitle="A starting list is not a reserve study, but it beats projecting from nothing"
+        subtitle="A starting list until you have a reserve study"
         action={
           onClose ? (
             <Button variant="ghost" size="sm" onClick={onClose}>

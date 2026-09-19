@@ -62,7 +62,7 @@ export default function BoardMeetings() {
     <>
       <PageHeader
         title="Meetings"
-        description="When the board meets, who is coming, and what was agreed to do."
+        description="Upcoming meetings, attendance, and action items."
         action={
           scheduling ? null : (
             <Button variant="primary" size="md" onClick={() => setScheduling(true)}>
@@ -146,7 +146,7 @@ export default function BoardMeetings() {
           <EmptyState
             icon={<CalendarDays className="size-5" />}
             title="Nothing scheduled"
-            description="Schedule one and it appears on every resident's calendar."
+            description="Scheduled meetings appear on every resident's calendar."
           />
         ) : null}
         {upcoming.map((m) => (

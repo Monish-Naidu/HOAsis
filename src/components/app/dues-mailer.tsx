@@ -91,7 +91,7 @@ export function DuesMailer() {
     <Card className="mt-5">
       <CardHeader
         title="Dues email"
-        subtitle="Notices about money reach every owner. They carry no unsubscribe link, because a board is required to send them."
+        subtitle="Sent to every owner. Required notices have no unsubscribe link."
         icon={<Mail className="size-4" />}
       />
 

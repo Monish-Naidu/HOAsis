@@ -88,7 +88,7 @@ export function ActionItems({
         <EmptyState
           icon={<ListChecks className="size-5" />}
           title="Nothing owed"
-          description="When a meeting ends with somebody saying they will do something, write it here so it is still true next month."
+          description="Tasks agreed at meetings, with an owner and a due date."
         />
       ) : null}
 

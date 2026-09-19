@@ -106,7 +106,7 @@ export default function ResidentRequests() {
       {!mine.length ? (
         <EmptyState
           title="No requests yet"
-          description="Something broken, or a change to your home. Tap plus to start one."
+          description="Repairs, approvals, and other requests. Tap plus to start one."
         />
       ) : null}
     </div>

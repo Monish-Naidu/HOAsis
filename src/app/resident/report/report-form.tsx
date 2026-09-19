@@ -62,7 +62,7 @@ export function ReportForm() {
       <Card>
         <EmptyState
           title="Sign in to report something"
-          description="A report carries your name to the board, so it needs an account behind it."
+          description="Sign in to send a report to the board."
         />
       </Card>
     );

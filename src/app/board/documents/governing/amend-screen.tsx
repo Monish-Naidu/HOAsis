@@ -167,13 +167,13 @@ export function AmendScreen() {
         <PageHeader
           eyebrow="Documents"
           title="Governing documents"
-          description="Import the text of your declaration, bylaws and rules and owners can search them, read a plain summary of each article, and vote on changes with the exact wording in front of them."
+          description="Import the text of your governing documents so owners can search them and vote on changes."
         />
         <Card>
           <EmptyState
             icon={<FileText className="size-6" />}
             title="Only the files are here"
-            description="The documents are uploaded as files, so owners can download them but cannot search them or see what an amendment would change."
+            description="These are files, so owners can download them but not search them."
             action={
               <Link
                 href="/board/documents/import"
@@ -193,7 +193,7 @@ export function AmendScreen() {
       <PageHeader
         eyebrow="Documents"
         title="Governing documents"
-        description="What owners see, and where a change starts."
+        description="What owners see, and how to propose a change."
         action={
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => startDraft("amend")}>
@@ -261,7 +261,7 @@ export function AmendScreen() {
           <CardHeader
             icon={<FilePlus2 className="size-4" />}
             title="Policies most associations are expected to have"
-            subtitle="Starters you edit and adopt. Loading one changes nothing until the board votes."
+            subtitle="Templates to edit and adopt. Nothing changes until the board votes."
           />
           <div className="divide-y divide-border">
             {policyTemplates.map((template) => {

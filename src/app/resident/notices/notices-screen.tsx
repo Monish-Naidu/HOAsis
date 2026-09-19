@@ -87,7 +87,7 @@ export function NoticesScreen() {
           <EmptyState
             icon={<ShieldCheck className="size-6" />}
             title="Nothing outstanding"
-            description="If the board ever raises something about your home, it appears here with every photograph behind it."
+            description="Notices about your home appear here, with any photos attached."
           />
         </Card>
       ) : (

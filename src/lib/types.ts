@@ -578,7 +578,8 @@ export interface DocumentRecord {
     | "Meetings"
     | "Insurance"
     | "Notices"
-    | "Forms";
+    | "Forms"
+    | "Other";
   updatedDate: ISODate;
   size: string;
   /** Public = reachable with no login, which is what FL 720/718 actually requires. */

@@ -194,7 +194,7 @@ export default function BoardCommunications() {
     <>
       <PageHeader
         title="Communications"
-        description="Announcements every home sees, and the messages owners send the board."
+        description="Announcements to the community and messages from owners."
         action={
           <Button variant="primary" size="md" onClick={startMessage}>
             <Send className="size-3.5" />
@@ -236,7 +236,7 @@ export default function BoardCommunications() {
           <EmptyState
             icon={<Inbox className="size-5" />}
             title="No owner messages yet"
-            description="Anything a resident sends the board arrives here."
+            description="Messages from residents appear here."
           />
         </Card>
       ) : (

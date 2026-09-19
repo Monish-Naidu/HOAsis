@@ -41,7 +41,7 @@ export default function WhatYouAgreedTo() {
           <EmptyState
             icon={<FileText className="size-6" />}
             title="The documents are here only as files"
-            description="Nobody has put the text of your governing documents into words that can be searched, so these eight questions cannot be answered from them yet."
+            description="The text of your governing documents has not been imported yet."
           />
         </Card>
       ) : (

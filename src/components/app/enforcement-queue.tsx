@@ -264,7 +264,7 @@ export function EnforcementQueue() {
       <PageHeader
         eyebrow="Enforcement"
         title="Violations"
-        description="What neighbours reported, what the board has opened, and what the city has sent. A report is somewhere to start looking. It is never the basis for a notice."
+        description="Reports from neighbors, open notices, and letters from the city."
         action={
           <Button
             variant="secondary"

@@ -39,7 +39,7 @@ export default function BoardRequests() {
     <>
       <PageHeader
         title="Requests"
-        description="What owners have asked for, and what the board owes an answer on."
+        description="Requests from owners and where each one stands."
         action={
           <Link
             href="/resident/requests"
@@ -68,7 +68,7 @@ export default function BoardRequests() {
           <EmptyState
             icon={<Inbox className="size-5" />}
             title="Nothing open"
-            description="Requests from owners land here the moment they send them."
+            description="New requests from owners appear here."
           />
         ) : null}
         {open.map((r) => {

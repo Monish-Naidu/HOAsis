@@ -124,7 +124,7 @@ export function SettingsScreen() {
     <>
       <PageHeader
         title="Settings"
-        description="The association's name, who can see what, who is on the board, and billing."
+        description="Name, visibility, board members, and billing."
         action={
           // A real association has no demo to reset.
           isRemote ? null : (
@@ -284,7 +284,7 @@ export function SettingsScreen() {
 
           <SettingRow
             title="Payment fee"
-            description="Flat platform fee per payment, on top of the processor's cost"
+            description="Flat fee per payment, added to the processor's cost"
           >
             <select
               value={settings.paymentFeeCents}
@@ -301,7 +301,7 @@ export function SettingsScreen() {
           </SettingRow>
           <SettingRow
             title="Who pays it"
-            description="The owner pays it, or the association does"
+            description="Paid by the owner or by the association"
           >
             <select
               value={settings.paymentFeePaidBy}
@@ -329,7 +329,7 @@ export function SettingsScreen() {
           </SettingRow>
           <SettingRow
             title="Autopay late day"
-            description="Autopay cannot be set later than this day"
+            description="The latest day of the month autopay can run"
           >
             <select
               value={settings.autopayLateAfterDay}
@@ -361,7 +361,7 @@ export function SettingsScreen() {
           </SettingRow>
           <SettingRow
             title="Live vote results"
-            description="Off means tallies stay sealed until a ballot closes"
+            description="When off, results stay hidden until the ballot closes"
           >
             <Toggle
               checked={settings.showLiveVoteResults}
@@ -383,7 +383,7 @@ export function SettingsScreen() {
         <Card id="insurance" className="scroll-mt-24">
           <CardHeader
             title="Insurance"
-            subtitle="Recorded so the renewal date is a deadline you are told about, not one you discover"
+            subtitle="The policy and its renewal date"
           />
           <div className="grid gap-4 px-5 py-4 sm:grid-cols-3">
             <label className="block">
@@ -425,7 +425,7 @@ export function SettingsScreen() {
         <Card>
           <CardHeader
             title="Who is on the board"
-            subtitle="Give a neighbour an office and they get that office's access"
+            subtitle="Assign roles. Each role comes with its own access."
           />
           <div className="divide-y divide-border">
             {accounts.map((a) => (
@@ -465,7 +465,7 @@ export function SettingsScreen() {
         <Card>
           <CardHeader
             title="When the board changes"
-            subtitle="The records belong to the association, so there is nothing to hand over"
+            subtitle="Records stay with the association"
             icon={<ArrowLeftRight className="size-4" />}
           />
           <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">

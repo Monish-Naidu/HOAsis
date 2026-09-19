@@ -71,7 +71,7 @@ export default function ResidentDocuments() {
       <div>
         <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">Documents</h1>
         <p className="mt-1 text-[15px] text-fg-muted">
-          The rules, the money, and the forms you can fill in here.
+          Rules, financial records, and forms.
         </p>
       </div>
 
@@ -168,7 +168,7 @@ export default function ResidentDocuments() {
           <EmptyState
             icon={<Search className="size-6" />}
             title="Nothing matches"
-            description="Try a plainer word. The search covers document names and the full text of the rules."
+            description="Try a different word. Search covers document names and the text of the rules."
           />
         </Card>
       ) : null}

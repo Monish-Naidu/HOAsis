@@ -105,7 +105,7 @@ export function toDocumentRecord(
   return {
     id,
     name: documentTitle(file.name),
-    category: "Notices",
+    category: "Other",
     updatedDate: today,
     size: formatSize(file.size),
     // Board only until somebody decides otherwise: a document nobody has

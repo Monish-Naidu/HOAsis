@@ -36,7 +36,7 @@ export default function ResidentVote() {
         <EmptyState
           icon={<Vote className="size-5" />}
           title="Nothing to vote on right now"
-          description="When the board asks the homes a question, it shows up here."
+          description="Open ballots appear here."
         />
       )}
 

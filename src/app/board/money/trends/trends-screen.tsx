@@ -12,7 +12,7 @@ import { money, todayIsoDate } from "@/lib/utils";
 type Measure = "income" | "spend";
 
 /**
- * One year beside another.
+ * Year over year.
  *
  * Two pickers, three figures with how they moved, the months as grouped
  * bars, every category with its change, and the run of years underneath.
@@ -35,7 +35,7 @@ export function TrendsScreen() {
     return (
       <>
         <MoneyTabs />
-        <PageHeader title="Trends" description="One year beside another." />
+        <PageHeader title="Trends" description="Year over year." />
         <Card className="p-6">
           <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">One year of history so far</p>
           <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-fg-muted">
@@ -61,7 +61,7 @@ export function TrendsScreen() {
       <MoneyTabs />
       <PageHeader
         title="Trends"
-        description={`${span} of each year. Reserve funding is shown on its own, not as spending.`}
+        description={`${span} of each year. Reserve funding is shown separately.`}
         action={
           <div className="flex items-center gap-2 text-[13px] text-fg-muted">
             <SelectField label="Earlier year" value={String(a)} onChange={(v) => setA(Number(v))} options={options} />

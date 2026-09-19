@@ -93,7 +93,7 @@ export function TransactionsScreen() {
       <MoneyTabs />
       <PageHeader
         title="Transactions"
-        description="Every line in the books, with the totals of whatever you filter to."
+        description="All transactions, with totals for the current filter."
         action={
           <Button variant="secondary" size="md" onClick={exportRows} disabled={rows.length === 0}>
             <Download className="size-3.5" />

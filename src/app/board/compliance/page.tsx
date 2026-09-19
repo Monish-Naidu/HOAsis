@@ -128,7 +128,7 @@ export default function BoardCompliance() {
             : `${association.stateName} · general obligations`
         }
         title="Deadlines"
-        description="What this association owes and when it falls due. Whether it was done is yours to mark, because we cannot see the filed report."
+        description="Filings and deadlines for the association. Mark each one done when it is."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -314,7 +314,7 @@ export default function BoardCompliance() {
               <EmptyState
                 icon={<GraduationCap className="size-6" />}
                 title="No reserve study on file"
-                description="Percent funded compares what you have saved against what you should have saved by now. Without a study there is no second number, so nobody knows."
+                description="Percent funded compares savings to the reserve study target. Add a study to see it."
               />
             )}
           </Card>
@@ -353,7 +353,7 @@ export default function BoardCompliance() {
             <Card>
               <CardHeader
                 title="Owed from day one"
-                subtitle="Not a first year problem. These bind a community from the day it exists."
+                subtitle="Ongoing obligations for every community"
               />
               <div className="divide-y divide-border">
                 {register.dayOne.map((item) => (

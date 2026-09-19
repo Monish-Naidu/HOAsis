@@ -11,7 +11,7 @@ export default function SetupPage() {
     <>
       <PageHeader
         title={`Set up ${community.settings.displayName}`}
-        description="A short list, in the order that gets money moving first."
+        description="The steps to get your community running."
       />
       <SetupOverview />
       <PortingCard />

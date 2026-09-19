@@ -42,7 +42,7 @@ export function CollectionsScreen() {
       <MoneyTabs />
       <PageHeader
         title="Collections"
-        description="Who is behind, by how much, and what to send next."
+        description="Past due balances and the next notice for each."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -83,7 +83,7 @@ export function DangerZone() {
     <Card className="mt-5 border-danger/30">
       <CardHeader
         title="Leaving and closing"
-        subtitle="Nothing here happens by accident, and only the last one destroys anything."
+        subtitle="Each action asks for confirmation first"
         icon={<AlertTriangle className="size-4" />}
       />
 

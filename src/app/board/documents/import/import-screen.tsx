@@ -186,7 +186,7 @@ export function ImportScreen() {
       <PageHeader
         eyebrow="Documents"
         title="Import the text of a document"
-        description="Turns an uploaded declaration, bylaws or rule set into text an owner can search. Everything it reads is a draft until you confirm it."
+        description="Turns an uploaded document into searchable text. Review each section before confirming."
       />
 
       <Callout tone="info" icon={<ScanLine className="size-4" />} title="What this does and does not do">
@@ -327,7 +327,7 @@ export function ImportScreen() {
               <EmptyState
                 icon={<FileSearch className="size-6" />}
                 title="No headings were found"
-                description="The text needs ARTICLE or Section headings on their own lines for the split to work. A scanned document usually needs its text layer restored first."
+                description="Headings like ARTICLE or Section need to be on their own lines. Scanned documents may need a text layer first."
               />
             ) : (
               <div className="divide-y divide-border">

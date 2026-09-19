@@ -49,7 +49,7 @@ export function DeliveryPanel() {
       <CardHeader
         icon={<MessageSquare className="size-4" />}
         title="How a notice reaches people"
-        subtitle="Pick what you are sending. Not every notice may go every way."
+        subtitle="Choose how this notice is delivered"
       />
 
       <div className="border-b border-border px-5 py-4">

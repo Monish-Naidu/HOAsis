@@ -2,6 +2,12 @@
 
 ## The hero illustration
 
+`hero-oasis.jpg` is the hero from 2026-09-19: the ring-road neighborhood
+around a lake with one lit house on the island, the picture the name comes
+from. It is the 2026-08-27 render (then `hero-community.jpg`) brought back at
+Monish's ask; the lakeside pair below stays in the folder for the other
+sections. A night render, lifted with a CSS filter on the light theme.
+
 `hero-day.jpg` and `hero-night.jpg` are the same lakeside neighborhood rendered
 twice, and they are the one set of images here that is not photography and is
 not pretending to be: an illustration says "this is how we see it" where a fake

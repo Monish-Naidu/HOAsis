@@ -79,7 +79,7 @@ export function NewOwnerScreen() {
       <PageHeader
         eyebrow="Documents"
         title="What a new owner is told"
-        description="The eight things a buyer must be warned about, answered from your own documents or left blank."
+        description="The eight disclosures a buyer receives, answered from your documents."
         action={
           <Button
             variant="secondary"
@@ -108,7 +108,7 @@ export function NewOwnerScreen() {
           <EmptyState
             icon={<FileText className="size-6" />}
             title="Your documents are files, not text"
-            description="Nothing here can be answered until the text of your declaration and rules has been imported, because every answer has to name the provision it came from."
+            description="Import the text of your declaration and rules to answer these."
             action={
               <Link
                 href="/board/documents/import"

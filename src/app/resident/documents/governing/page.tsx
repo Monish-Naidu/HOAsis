@@ -38,7 +38,7 @@ export default function ResidentGoverningDocuments() {
           <EmptyState
             icon={<FileText className="size-6" />}
             title="The documents are here as files"
-            description="Your board has uploaded them but has not added the text yet, so they cannot be searched. You can still download them from Documents."
+            description="The text has not been added yet. You can download the files from Documents."
           />
         </Card>
       ) : (

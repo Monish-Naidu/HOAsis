@@ -72,7 +72,7 @@ export default function BoardDocuments() {
     <>
       <PageHeader
         title="Documents"
-        description="The association's records, and who may read each one."
+        description="Files for the association, and who can see each one."
         action={
           <label
             aria-busy={uploading}
@@ -124,13 +124,13 @@ export default function BoardDocuments() {
         <CardHeader
           title={
             gaps.complete
-              ? "Every record a board is expected to hold is on file"
+              ? "All expected records are on file"
               : `${gaps.missing.length} of ${gaps.total} expected records are not on file`
           }
           subtitle={
             gaps.complete
-              ? "Nothing outstanding. An owner or a buyer's lender can be answered the same day."
-              : "These are the ones an owner may inspect and a buyer's lender asks for by name."
+              ? "Nothing missing."
+              : "Records owners can inspect and lenders ask for."
           }
           action={
             <span className="tnum text-[15px] font-semibold text-fg">
@@ -225,8 +225,7 @@ export default function BoardDocuments() {
               Import the text of a document
             </span>
             <span className="block text-[13px] leading-snug text-fg-muted">
-              Reads an uploaded declaration or rule set into articles owners can search. You
-              confirm every one of them.
+              Turn an uploaded declaration or rule set into searchable articles.
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />

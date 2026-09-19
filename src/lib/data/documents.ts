@@ -1,5 +1,16 @@
 import type { DocumentRecord } from "@/lib/types";
 
+/**
+ * The demo's document library.
+ *
+ * Nine files, and each one is a record an association is expected to hold:
+ * the four governing documents, the money (budget, statements, reserve
+ * study), the latest minutes, and the insurance certificate. Nothing else.
+ * The earlier list carried inspection reports, vendor contracts, notices and
+ * blank forms, and a visitor could not tell the library from a shared drive.
+ * Forms live under Forms, notices under Communications, contracts under
+ * Vendors.
+ */
 export const documents: DocumentRecord[] = [
   {
     id: "doc-1",
@@ -13,7 +24,7 @@ export const documents: DocumentRecord[] = [
   },
   {
     id: "doc-2",
-    name: "Bylaws (as amended 2024)",
+    name: "Bylaws",
     category: "Governing",
     updatedDate: "2024-03-18",
     size: "880 KB",
@@ -33,7 +44,7 @@ export const documents: DocumentRecord[] = [
   },
   {
     id: "doc-4",
-    name: "Rules & Regulations (2026 edition)",
+    name: "Rules & Regulations",
     category: "Governing",
     updatedDate: "2026-01-15",
     size: "540 KB",
@@ -43,7 +54,7 @@ export const documents: DocumentRecord[] = [
   },
   {
     id: "doc-5",
-    name: "2026 Adopted Operating Budget",
+    name: "2026 Budget",
     category: "Financial",
     updatedDate: "2025-10-22",
     size: "196 KB",
@@ -53,7 +64,7 @@ export const documents: DocumentRecord[] = [
   },
   {
     id: "doc-6",
-    name: "FY2025 Reviewed Financial Statements",
+    name: "2025 Financial Statements",
     category: "Financial",
     updatedDate: "2026-03-24",
     size: "1.1 MB",
@@ -63,21 +74,12 @@ export const documents: DocumentRecord[] = [
   },
   {
     id: "doc-7",
-    name: "Reserve Study, Cardinal Reserve Advisors",
+    name: "Reserve Study",
     category: "Financial",
     updatedDate: "2025-03-11",
     size: "3.6 MB",
     visibility: "members",
     requiredBy: "RCW 64.38, reserve study",
-    fileType: "pdf",
-  },
-  {
-    id: "doc-8",
-    name: "Deck & Railing Inspection Report",
-    category: "Financial",
-    updatedDate: "2026-01-09",
-    size: "5.2 MB",
-    visibility: "members",
     fileType: "pdf",
   },
   {
@@ -91,76 +93,12 @@ export const documents: DocumentRecord[] = [
     fileType: "pdf",
   },
   {
-    id: "doc-10",
-    name: "Board Meeting Minutes, June 17, 2026",
-    category: "Meetings",
-    updatedDate: "2026-06-24",
-    size: "138 KB",
-    visibility: "public",
-    fileType: "pdf",
-  },
-  {
-    id: "doc-11",
-    name: "Annual Meeting Minutes, Jan 21, 2026",
-    category: "Meetings",
-    updatedDate: "2026-01-28",
-    size: "205 KB",
-    visibility: "public",
-    fileType: "pdf",
-  },
-  {
     id: "doc-12",
-    name: "Certificate of Insurance, Evergreen Group",
+    name: "Certificate of Insurance",
     category: "Insurance",
     updatedDate: "2026-01-02",
     size: "420 KB",
     visibility: "members",
     fileType: "pdf",
-  },
-  {
-    id: "doc-13",
-    name: "Notice of Budget Meeting, Oct 21, 2026",
-    category: "Notices",
-    updatedDate: "2026-08-19",
-    size: "96 KB",
-    visibility: "public",
-    requiredBy: "RCW 64.38, budget ratification",
-    fileType: "pdf",
-  },
-  {
-    id: "doc-14",
-    name: "Architectural Change Request form",
-    category: "Forms",
-    updatedDate: "2026-01-15",
-    size: "78 KB",
-    visibility: "public",
-    fileType: "pdf",
-  },
-  {
-    id: "doc-15",
-    name: "Resale Certificate request form",
-    category: "Forms",
-    updatedDate: "2026-01-15",
-    size: "64 KB",
-    visibility: "public",
-    fileType: "pdf",
-  },
-  {
-    id: "doc-16",
-    name: "Vendor contract, Cascade Grounds Co.",
-    category: "Financial",
-    updatedDate: "2026-01-08",
-    size: "720 KB",
-    visibility: "board",
-    fileType: "pdf",
-  },
-  {
-    id: "doc-17",
-    name: "Delinquency & collections worksheet",
-    category: "Financial",
-    updatedDate: "2026-08-01",
-    size: "44 KB",
-    visibility: "board",
-    fileType: "xlsx",
   },
 ];

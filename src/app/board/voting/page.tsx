@@ -35,7 +35,7 @@ export default function BoardVoting() {
     <>
       <PageHeader
         title="Voting"
-        description="Ask the homes a question. One vote per home, and the result is there when it ends."
+        description="Ballots for the community. One vote per home."
         action={
           creating ? undefined : (
             <Button variant="primary" size="md" onClick={() => setCreating(true)}>
@@ -53,7 +53,7 @@ export default function BoardVoting() {
           <EmptyState
             icon={<Vote className="size-5" />}
             title="Nothing is open for a vote"
-            description="A new ballot is a question, the choices, and the day voting ends."
+            description="A question, the choices, and a closing date."
           />
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
