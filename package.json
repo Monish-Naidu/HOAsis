@@ -19,7 +19,8 @@
     "db:verify": "node scripts/verify-rls.mjs && node scripts/verify-isolation.mjs && node scripts/verify-onboarding.mjs && node scripts/verify-money.mjs && node scripts/verify-stripe.mjs && node scripts/verify-community-life.mjs && node scripts/verify-email.mjs && node scripts/verify-signin-routing.mjs && node scripts/verify-safety.mjs && node scripts/verify-scale.mjs && node scripts/verify-a-year.mjs && node scripts/verify-three-years.mjs && node scripts/verify-profile.mjs && node scripts/verify-board-actions.mjs && node scripts/verify-ranked-list.mjs && node scripts/verify-join-flow.mjs",
     "shots": "node scripts/product-shots.mjs",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "db:playground": "node scripts/seed-playground.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.8.2",
