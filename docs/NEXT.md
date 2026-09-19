@@ -32,10 +32,21 @@ chips.
   and `amenitiesFromSpaces(spaces, custom)` makes each one a reservable
   amenity in demo and remote alike.
 - **Migration 0030** (`0030_homes_by_address.sql`): `create_association`
-  reads `address` from each household. Same signature. **Not pushed yet:**
-  the Supabase project did not answer on 2026-09-19 (REST and pooler both
-  unreachable, "tenant not found"), which looks like a paused project.
-  Unpause it, then `npx supabase db push --password "$SUPABASE_DB_PASSWORD"`.
+  reads `address` from each household. Same signature. **Not pushed:** the
+  Supabase project `lhplcojgoysfnltqlgfx` is gone (hostname NXDOMAIN, pooler
+  says tenant not found; Monish confirms it was deleted). Production sign-in
+  is down until it is rebuilt.
+- **Rebuilding the database is one command** once there is a fresh token:
+  put `SUPABASE_ACCESS_TOKEN=sbp_...` in `.env.local` (from
+  https://supabase.com/dashboard/account/tokens), then
+  `scripts/rebuild-supabase.sh`. It creates the project, pushes all 30
+  migrations, writes `.env.local`, regenerates types, sets the auth site
+  URL and redirect list for expresshoa.com, seeds Oakview and Cedar Hollow
+  with the known password, replaces the three Supabase keys on Vercel in
+  every environment, and runs `db:verify`. Then push or `vercel --prod`.
+  Still manual afterwards: Resend as the auth SMTP sender in the Supabase
+  dashboard (Authentication > SMTP), and re-adding `RESEND_WEBHOOK_SECRET`
+  is unaffected.
 - `homeLabel()` and the new `placeLabel()` in `lib/wording.ts` leave an
   address alone instead of printing "Lot 1 Alder Way".
 - Tests: `tests/unit/new-community.test.ts`; `07-onboarding` fills the
