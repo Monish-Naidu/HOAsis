@@ -64,7 +64,7 @@ export function MarketingHeader() {
       <div className="mx-auto flex h-[68px] w-full max-w-6xl items-center justify-between gap-4 px-5">
         <Link
           href="/"
-          aria-label="ExpressHOA home"
+          aria-label="Your HOAsis home"
           className="transition-transform duration-200 ease-out hover:scale-[1.02] active:scale-[0.99]"
         >
           <Wordmark size={40} />

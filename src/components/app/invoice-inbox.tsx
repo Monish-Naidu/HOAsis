@@ -62,7 +62,7 @@ export function InvoiceInbox() {
   const [panel, setPanel] = useState<Panel>(null);
   const [attaching, setAttaching] = useState(false);
 
-  const address = `invoices@${communitySlug(community)}.expresshoa.com`;
+  const address = `invoices@${communitySlug(community)}.yourhoasis.com`;
   const waiting = invoices.filter(isWaiting);
   const paid = invoices.filter((i) => i.status === "paid");
 

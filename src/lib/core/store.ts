@@ -225,7 +225,7 @@ export class PersistedStore<T> extends Store<T> {
   private report(error: Error): void {
     this.onError?.(error);
     if (process.env.NODE_ENV !== "production") {
-      console.warn(`[expresshoa] ${toError(error).message}`);
+      console.warn(`[hoasis] ${toError(error).message}`);
     }
   }
 }

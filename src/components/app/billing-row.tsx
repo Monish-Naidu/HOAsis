@@ -100,7 +100,7 @@ export function BillingRow() {
 
   return (
     <div id="billing">
-      <SettingRow title="Your ExpressHOA subscription" description={description}>
+      <SettingRow title="Your subscription" description={description}>
         <div className="flex items-center gap-2">
           {status}
           {button}

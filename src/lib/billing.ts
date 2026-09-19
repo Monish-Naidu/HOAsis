@@ -135,7 +135,7 @@ export function subscriptionLine(homes: number) {
       currency: "usd",
       unit_amount: PRICE_PER_HOME_CENTS,
       recurring: { interval: "month" as const },
-      product_data: { name: "ExpressHOA, per home per month" },
+      product_data: { name: "Your HOAsis, per home per month" },
     },
   };
 }

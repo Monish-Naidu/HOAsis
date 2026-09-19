@@ -42,7 +42,7 @@ export function BankStep({
               </div>
               <p className="mt-0.5 text-[15px] text-fg-muted">Account ending {account.mask}</p>
               <p className="mt-2 text-[13px] leading-relaxed text-fg-subtle">
-                Assessments paid through ExpressHOA are deposited here and appear in your ledger
+                Assessments paid through Your HOAsis are deposited here and appear in your ledger
                 already categorized.
               </p>
             </div>

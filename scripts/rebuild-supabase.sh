@@ -13,9 +13,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-NAME="${1:-expresshoa}"
+NAME="${1:-yourhoasis}"
 REGION="${2:-us-west-1}"
-SITE_URL="${SITE_URL:-https://expresshoa.com}"
+SITE_URL="${SITE_URL:-https://yourhoasis.com}"
 # The seed accounts keep the password everybody already has written down.
 export SEED_PASSWORD="${SEED_PASSWORD:-Expresshoa-2026-xfpa8v}"
 

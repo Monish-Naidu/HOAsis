@@ -1,5 +1,5 @@
 /**
- * Domain model for ExpressHOA.
+ * Domain model for Your HOAsis.
  *
  * These types are the contract between UI and data. Today they're satisfied by
  * fixtures in src/lib/data; swapping in Supabase means reimplementing the
@@ -557,7 +557,7 @@ export interface ComplianceItem {
   dueDate?: ISODate;
   cadence: string;
   owner: string;
-  /** Deep-link into the part of ExpressHOA that satisfies this obligation. */
+  /** Deep-link into the part of Your HOAsis that satisfies this obligation. */
   actionLabel?: string;
   actionHref?: string;
   completedDate?: ISODate;
@@ -929,7 +929,7 @@ export interface ArchitecturalForm {
   description: string;
   fileName: string;
   size: string;
-  /** Baseline forms ship with ExpressHOA. Uploaded ones come from the admin. */
+  /** Baseline forms ship with Your HOAsis. Uploaded ones come from the admin. */
   source: "baseline" | "uploaded";
   updatedDate: ISODate;
   /**
@@ -992,7 +992,7 @@ export interface CommunitySettings {
   showLiveVoteResults: boolean;
   /** The day of the month after which an assessment is late. */
   autopayLateAfterDay: number;
-  /** Flat ExpressHOA fee per payment, in cents. */
+  /** Flat platform fee per payment, in cents. */
   paymentFeeCents: number;
   /** Whether the owner or the association carries that fee. */
   paymentFeePaidBy: "owner" | "association";

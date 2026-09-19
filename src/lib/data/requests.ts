@@ -35,7 +35,7 @@ export const requests: HomeRequest[] = [
       {
         id: "rt-2",
         at: "2026-07-29",
-        actor: "ExpressHOA",
+        actor: "Your HOAsis",
         actorRole: "system",
         body: "Routed to the Architectural Review Committee. 30-day response clock expires Aug 27, 2026.",
         kind: "status",
@@ -91,7 +91,7 @@ export const requests: HomeRequest[] = [
       {
         id: "rt-7",
         at: "2026-08-18",
-        actor: "ExpressHOA",
+        actor: "Your HOAsis",
         actorRole: "system",
         body: "Assigned to Cascade Grounds Co. under the grounds contract.",
         kind: "status",
@@ -133,7 +133,7 @@ export const requests: HomeRequest[] = [
       {
         id: "rt-10",
         at: "2026-08-11",
-        actor: "ExpressHOA",
+        actor: "Your HOAsis",
         actorRole: "system",
         body: "Records clock started. Response due Aug 25, 2026, 10 business days under association policy. Board notified.",
         kind: "status",

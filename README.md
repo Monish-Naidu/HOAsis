@@ -1,4 +1,4 @@
-# ExpressHOA
+# Your HOAsis
 
 Community management for self-managed HOAs. This repo is a **clickable prototype**: real
 screens, real navigation, real derived numbers, backed by fixture data rather than a

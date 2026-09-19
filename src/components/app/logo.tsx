@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The ExpressHOA hummingbird, traced from the flat mark Monish brought on
+ * The Your HOAsis hummingbird, traced from the flat mark Monish brought on
  * 2026-09-01 (superseding the low-poly render from earlier the same day).
  * A hummingbird is small, fast, and precise, and it hovers exactly as long
  * as the task takes, which is the brand's whole argument
- * (docs/design/brand-expresshoa.md).
+ * (docs/design/brand-yourhoasis.md).
  *
  * The mark is one path filled with currentColor and defaults to `text-brand`,
  * so it wears palette navy-800 on light surfaces and navy-100 on dark ones.
@@ -31,7 +31,7 @@ export function Logo({ className, size = 28 }: { className?: string; size?: numb
  * The standard Wordmark wears theme tokens (`text-fg`, `text-accent`), which
  * disappear against navy-950 in the light theme. The rail is a deliberately
  * fixed surface, so this variant wears fixed colors the same way the rail's
- * own nav does: white ink, and the dark theme's accent blue for "HOA".
+ * own nav does: white ink, and the dark theme's accent blue for "HOAsis".
  */
 export function RailWordmark({ size = 26 }: { size?: number }) {
   return (
@@ -41,7 +41,7 @@ export function RailWordmark({ size = 26 }: { size?: number }) {
         className="font-semibold"
         style={{ fontSize: size * 0.58, letterSpacing: "-0.02em", lineHeight: 1 }}
       >
-        Express<span className="text-[#6ea0f0]">HOA</span>
+        Your <span className="text-[#6ea0f0]">HOAsis</span>
       </span>
     </span>
   );
@@ -54,8 +54,9 @@ export function RailWordmark({ size = 26 }: { size?: number }) {
  * that looks right on a 16px word looks loose at 24px, which is the single
  * most common reason a scaled up wordmark reads as amateur.
  *
- * "Express" wears the ink and "HOA" wears the accent, per the 2026-09-01
- * brand concept. One weight throughout: the color split carries the rhythm,
+ * "Your" wears the ink and "HOAsis" wears the accent, since the 2026-09-19
+ * rename to Your HOAsis (the 2026-09-01 concept split "Express" and "HOA"
+ * the same way). One weight throughout: the color split carries the rhythm,
  * and adding a weight change on top would be two voices saying one word.
  */
 export function Wordmark({ className, size = 28 }: { className?: string; size?: number }) {
@@ -71,7 +72,7 @@ export function Wordmark({ className, size = 28 }: { className?: string; size?: 
           lineHeight: 1,
         }}
       >
-        Express<span className="text-accent">HOA</span>
+        Your <span className="text-accent">HOAsis</span>
       </span>
     </span>
   );

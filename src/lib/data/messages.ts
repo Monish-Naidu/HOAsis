@@ -85,7 +85,7 @@ export const threads: MessageThread[] = [
       {
         id: "m-6",
         at: "2026-08-15",
-        from: "ExpressHOA",
+        from: "Your HOAsis",
         fromRole: "system",
         direction: "outbound",
         channel: "email",

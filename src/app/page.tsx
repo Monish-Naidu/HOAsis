@@ -41,7 +41,7 @@ import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 
 export const metadata = {
-  title: "ExpressHOA. Moving your community forward.",
+  title: "Your HOAsis. Moving your community forward.",
   description:
     "Everything your HOA needs to get things done quickly, all in one place. Set up in minutes, no card to start, and the first 90 days are free.",
 };
@@ -784,7 +784,7 @@ export default function MarketingHome() {
           <Reveal delay={160}>
             <MonitorFrame
               src="/marketing/product-dashboard.png"
-              alt="The ExpressHOA board dashboard: money in and out by month, spending by category, cash on hand, and transactions waiting for review"
+              alt="The Your HOAsis board dashboard: money in and out by month, spending by category, cash on hand, and transactions waiting for review"
             />
           </Reveal>
         </div>
@@ -806,7 +806,7 @@ export default function MarketingHome() {
                 Suddenly, it felt like a second job.
               </p>
               <p className="mt-6 text-[19px] font-semibold tracking-[-0.015em] text-fg">
-                ExpressHOA was built to change that.
+                Your HOAsis was built to change that.
               </p>
             </Reveal>
             <Reveal delay={90}>
@@ -920,7 +920,7 @@ export default function MarketingHome() {
                 <span className="text-hero-accent">In your pocket.</span>
               </h2>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                ExpressHOA keeps you informed, connected, and in control from any phone.
+                Your HOAsis keeps you informed, connected, and in control from any phone.
                 Anytime, anywhere.
               </p>
             </Reveal>

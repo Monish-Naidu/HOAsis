@@ -42,7 +42,7 @@ describe("unsubscribe links", () => {
   });
 
   it("builds a URL carrying the person, the category, and the signature", () => {
-    const url = new URL(unsubscribeUrl("https://expresshoa.app", PERSON, "community"));
+    const url = new URL(unsubscribeUrl("https://yourhoasis.com", PERSON, "community"));
     expect(url.pathname).toBe("/unsubscribe");
     expect(url.searchParams.get("p")).toBe(PERSON);
     expect(url.searchParams.get("c")).toBe("community");

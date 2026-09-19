@@ -285,7 +285,7 @@ export interface PaymentCost {
   amountCents: Cents;
   /** What the processor takes. Never ours. */
   processorCents: Cents;
-  /** What ExpressHOA takes. */
+  /** What Your HOAsis takes. */
   platformCents: Cents;
   /** What the resident is billed in total. */
   residentPaysCents: Cents;

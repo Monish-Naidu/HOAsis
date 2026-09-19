@@ -481,7 +481,7 @@ test.describe("vendors", () => {
     await page.waitForTimeout(400);
 
     await page.getByLabel("Amount paid").fill("500");
-    await page.getByText("Send this payment through ExpressHOA").click();
+    await page.getByText("Send this payment through Your HOAsis").click();
     await page.waitForTimeout(300);
 
     // Money that has already gone needs no approval; money that has not, does.

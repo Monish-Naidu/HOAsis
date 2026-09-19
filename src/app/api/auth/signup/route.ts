@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
   const mail = confirmSignupEmail({ name: fullName, confirmUrl: confirm.toString() });
   const { error: sendError } = await new Resend(key).emails.send({
-    from: process.env.EMAIL_FROM ?? "ExpressHOA <onboarding@resend.dev>",
+    from: process.env.EMAIL_FROM ?? "Your HOAsis <onboarding@resend.dev>",
     to: email,
     subject: mail.subject,
     html: mail.html,
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   if (sendError) {
     // Undo, so the next attempt is not told the address is taken.
     await admin.auth.admin.deleteUser(data.user.id).catch(() => undefined);
-    console.error("[expresshoa] signup email failed", sendError);
+    console.error("[hoasis] signup email failed", sendError);
     return NextResponse.json(
       { message: "We could not send the confirmation email. Check the address and try again." },
       { status: 502 },

@@ -136,7 +136,7 @@ function LinkBank({ onDone }: { onDone: () => void }) {
         </div>
         <p className="mt-3 flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
           <ShieldCheck className="mt-px size-3 shrink-0" />
-          You sign in with your bank, not with us. ExpressHOA receives an account mask and a token,
+          You sign in with your bank, not with us. Your HOAsis receives an account mask and a token,
           never your account number and never your bank password.
         </p>
       </div>

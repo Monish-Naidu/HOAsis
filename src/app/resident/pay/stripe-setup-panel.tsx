@@ -184,7 +184,7 @@ function SetupForm({
       </Button>
       <p className="mt-2.5 flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
         <ShieldCheck className="mt-px size-3 shrink-0" />
-        Handled by Stripe. Your card number or bank login never reaches ExpressHOA.
+        Handled by Stripe. Your card number or bank login never reaches Your HOAsis.
       </p>
     </Card>
   );

@@ -35,7 +35,7 @@ function sender(): string {
   // Falls back to Resend's shared testing sender, which only delivers to the
   // account owner. Better than a silent failure to an address that will never
   // receive it.
-  return process.env.EMAIL_FROM ?? "ExpressHOA <onboarding@resend.dev>";
+  return process.env.EMAIL_FROM ?? "Your HOAsis <onboarding@resend.dev>";
 }
 
 /**

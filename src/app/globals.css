@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ---------------------------------------------------------------------------
-   ExpressHOA design tokens
+   Your HOAsis design tokens
    Navy carries brand + hierarchy; warm neutrals carry surfaces and text.
    Every value below is mirrored in src/lib/tokens.ts so a future React Native
    app can consume the identical palette.

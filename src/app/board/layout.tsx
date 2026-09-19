@@ -18,7 +18,7 @@ import { RailWordmark, Wordmark } from "@/components/app/logo";
 import { PageTransition } from "@/components/app/page-transition";
 
 export const metadata = {
-  title: { default: "Board", template: "%s · ExpressHOA" },
+  title: { default: "Board", template: "%s · Your HOAsis" },
 };
 
 export default function BoardLayout({

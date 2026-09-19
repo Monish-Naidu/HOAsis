@@ -30,7 +30,7 @@ export async function sendTrialNotice(input: {
       error = "RESEND_API_KEY is missing, so nothing can be sent.";
     } else {
       const sent = await new Resend(key).emails.send({
-        from: process.env.EMAIL_FROM ?? "ExpressHOA <onboarding@resend.dev>",
+        from: process.env.EMAIL_FROM ?? "Your HOAsis <onboarding@resend.dev>",
         to: input.to,
         subject: built.subject,
         html: built.html,

@@ -1,9 +1,10 @@
 @AGENTS.md
 
-# ExpressHOA, working notes
+# Your HOAsis, working notes
 
-Renamed from HOAsis on 2026-09-01 (the domain was taken); brand system in
-`docs/design/brand-expresshoa.md`. Internal storage keys keep the `hoasis-`
+Renamed from HOAsis to ExpressHOA on 2026-09-01 (the domain was taken), and
+to Your HOAsis at yourhoasis.com on 2026-09-19; brand system in
+`docs/design/brand-yourhoasis.md`. Internal storage keys keep the `hoasis-`
 prefix on purpose: renaming them signs every browser out.
 
 Clickable prototype of an HOA management product. See `README.md` for the full architecture;

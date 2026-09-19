@@ -18,7 +18,7 @@ if (!to) {
   process.exit(1);
 }
 
-const from = env.EMAIL_FROM ?? "ExpressHOA <onboarding@resend.dev>";
+const from = env.EMAIL_FROM ?? "Your HOAsis <hello@yourhoasis.com>";
 
 const response = await fetch("https://api.resend.com/emails", {
   method: "POST",
@@ -29,7 +29,7 @@ const response = await fetch("https://api.resend.com/emails", {
   body: JSON.stringify({
     from,
     to,
-    subject: "ExpressHOA email is wired up",
+    subject: "Your HOAsis email is wired up",
     text:
       "If you are reading this, Resend is connected and Supabase Auth will use " +
       "the same route for signup confirmations.\n\n" +

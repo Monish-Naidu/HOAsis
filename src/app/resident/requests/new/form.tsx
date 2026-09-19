@@ -149,7 +149,7 @@ export function NewRequestForm() {
         {
           id: `rt-${seq}-2`,
           at: todayIsoDate(),
-          actor: "ExpressHOA",
+          actor: "Your HOAsis",
           actorRole: "system",
           body: chosen ? chosen.clock : "Routed to the board.",
           kind: "status",

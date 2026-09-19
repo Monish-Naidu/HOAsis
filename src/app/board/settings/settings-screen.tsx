@@ -144,7 +144,7 @@ export function SettingsScreen() {
           <CardHeader title="Identity" icon={<ImageIcon className="size-4" />} />
           <SettingRow
             title="Join code"
-            description="Neighbours who type this at expresshoa.com/join land in your Homeowners queue."
+            description="Neighbours who type this at yourhoasis.com/join land in your Homeowners queue."
           >
             <div className="flex items-center gap-2">
               <span className="tnum rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-[15px] font-semibold tracking-[0.2em] text-fg">
@@ -282,7 +282,7 @@ export function SettingsScreen() {
 
           <SettingRow
             title="Payment fee"
-            description="Flat ExpressHOA fee per payment, on top of the processor's cost"
+            description="Flat platform fee per payment, on top of the processor's cost"
           >
             <select
               value={settings.paymentFeeCents}

@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: {
-    default: "ExpressHOA",
-    template: "%s · ExpressHOA",
+    default: "Your HOAsis",
+    template: "%s · Your HOAsis",
   },
   description:
     "Books that reconcile, an app residents use, and compliance handled.",

@@ -46,8 +46,8 @@ describe("invitations", () => {
   });
 
   it("builds an absolute link for pasting into an email", () => {
-    expect(inviteUrl(COMMUNITY, OWNER, "https://expresshoa.app")).toMatch(
-      /^https:\/\/expresshoa\.app\/join\?/,
+    expect(inviteUrl(COMMUNITY, OWNER, "https://yourhoasis.com")).toMatch(
+      /^https:\/\/yourhoasis\.com\/join\?/,
     );
   });
 });

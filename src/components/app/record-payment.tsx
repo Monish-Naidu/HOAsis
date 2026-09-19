@@ -140,7 +140,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
           />
           <span className="min-w-0">
             <span className="block text-[15px] font-medium text-fg">
-              Send this payment through ExpressHOA
+              Send this payment through Your HOAsis
             </span>
             <span className="block text-[13px] leading-snug text-fg-muted">
               Leave it off to record a payment you already made yourself. The books are the

@@ -1,4 +1,10 @@
-# ExpressHOA: the rebrand, and how to talk
+# Your HOAsis: the rebrand, and how to talk
+
+2026-09-19. ExpressHOA becomes Your HOAsis at yourhoasis.com. The
+hummingbird, the palette and the voice below carry over unchanged; the
+wordmark is now "Your" in ink and "HOAsis" in the accent. Everything below
+that says ExpressHOA describes the 2026-09-01 rebrand it replaces, and
+reads the same with the new name.
 
 2026-09-01. HOAsis becomes ExpressHOA. The domain forced the name, but the
 name is better than the accident: it says what the product does instead of
@@ -24,8 +30,8 @@ Monish brought on 2026-09-01 (superseding the low-poly render from earlier
 that day), traced to a single SVG path in `src/components/app/logo.tsx`.
 In the app it fills with currentColor and defaults to the `brand` token:
 palette navy-800 (#1b2b45) on light surfaces, navy-100 on dark. Standalone
-copies for use anywhere else live at `public/brand/expresshoa-mark-navy.svg`
-and `public/brand/expresshoa-mark-white.svg`.
+copies for use anywhere else live at `public/brand/yourhoasis-mark-navy.svg`
+and `public/brand/yourhoasis-mark-white.svg`.
 
 ## Voice rules
 
@@ -41,9 +47,9 @@ and `public/brand/expresshoa-mark-white.svg`.
    slower to read.
 4. **The oasis line is the closer, not the opener.** Lead with speed, close
    with what it buys: "Fast for the board. Calm for the neighborhood."
-5. **The name is one word, ExpressHOA**, set as "Express" in ink and "HOA"
-   in accent blue with the hummingbird ahead of it. Never "Express HOA" in
-   prose, never "EHOA".
+5. **The name is Your HOAsis**, set as "Your" in ink and "HOAsis"
+   in accent blue with the hummingbird ahead of it. Never "YourHOAsis" in
+   prose, never "HOAsis" alone as the product name.
 
 ## The copy map (old → new)
 

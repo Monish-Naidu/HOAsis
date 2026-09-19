@@ -749,7 +749,7 @@ export function communitySlug(c: Community): string {
 
 /** Where an association publishes the records it has to make available. */
 export function publicRecordsUrl(c: Community): string {
-  return `${communitySlug(c).replace(/-/g, "")}.expresshoa.app/records`;
+  return `${communitySlug(c).replace(/-/g, "")}.yourhoasis.com/records`;
 }
 
 /* -------------------------------------------------------------------------- */

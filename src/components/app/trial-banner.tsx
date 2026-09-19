@@ -100,7 +100,7 @@ export function TrialBanner() {
         tone="danger"
         className="mb-5"
         icon={<CreditCard className="size-4" />}
-        title="The last payment for ExpressHOA did not go through"
+        title="The last payment for Your HOAsis did not go through"
         action={
           <Link
             href="/board/settings#billing"

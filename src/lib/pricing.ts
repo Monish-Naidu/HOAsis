@@ -1,5 +1,5 @@
 /**
- * What ExpressHOA charges, in one place.
+ * What Your HOAsis charges, in one place.
  *
  * The pricing page and the front page both quote a figure, and they drifted
  * once already: the front page went on selling a per door rate months after

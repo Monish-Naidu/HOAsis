@@ -159,7 +159,7 @@ export function pastDueEmail(input: DuesEmailInput) {
  * than leaving somebody to conclude we ignored one.
  */
 function footerFor(input: DuesEmailInput): string {
-  const sender = `Sent by ${input.associationName} through ExpressHOA.`;
+  const sender = `Sent by ${input.associationName} through Your HOAsis.`;
   if (!input.unsubscribeUrl) {
     return `${sender} This is a notice about your account, so it is sent to every owner and cannot be turned off. You can still turn off community updates and newsletters in your account settings.`;
   }
@@ -215,10 +215,10 @@ export function trialEmail(kind: "14-days" | "3-days" | "ended", input: TrialEma
       ${heading}
     </h1>
     <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
-      ${input.presidentName}, ${input.associationName} is on ExpressHOA at ${price}. ${detail}
+      ${input.presidentName}, ${input.associationName} is on Your HOAsis at ${price}. ${detail}
     </p>`;
 
-  const footer = `Sent to the President of ${input.associationName} by ExpressHOA. This is about the association's subscription, so it goes to whoever runs the board and cannot be turned off.`;
+  const footer = `Sent to the President of ${input.associationName} by Your HOAsis. This is about the association's subscription, so it goes to whoever runs the board and cannot be turned off.`;
 
   return {
     subject,
@@ -229,7 +229,7 @@ export function trialEmail(kind: "14-days" | "3-days" | "ended", input: TrialEma
       cta: { label: "Add a card", url: input.billingUrl },
       footer,
     }),
-    text: `${input.presidentName},\n\n${heading}. ${input.associationName} is on ExpressHOA at ${price}. ${detail}\n\nAdd a card: ${input.billingUrl}\n\nExpressHOA`,
+    text: `${input.presidentName},\n\n${heading}. ${input.associationName} is on Your HOAsis at ${price}. ${detail}\n\nAdd a card: ${input.billingUrl}\n\nYour HOAsis`,
   };
 }
 
@@ -256,17 +256,17 @@ export function confirmSignupEmail(input: { name: string; confirmUrl: string }) 
       account. Anything you entered during setup is waiting for you.
     </p>`;
   return {
-    subject: "Confirm your ExpressHOA email",
+    subject: "Confirm your email for Your HOAsis",
     html: layout({
-      associationName: "ExpressHOA",
+      associationName: "Your HOAsis",
       preheader: "One tap confirms your email and finishes your account.",
       body,
       cta: { label: "Confirm my email", url: input.confirmUrl },
       footer:
-        "If you did not create an ExpressHOA account, ignore this message and nothing happens. " +
+        "If you did not create an account with Your HOAsis, ignore this message and nothing happens. " +
         "The link expires in 24 hours.",
     }),
-    text: `Hi ${first}. Confirm your ExpressHOA email by opening this link: ${input.confirmUrl}\n\nIf you did not create an account, ignore this message.`,
+    text: `Hi ${first}. Confirm your email for Your HOAsis by opening this link: ${input.confirmUrl}\n\nIf you did not create an account, ignore this message.`,
   };
 }
 

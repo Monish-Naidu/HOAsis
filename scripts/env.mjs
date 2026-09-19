@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
  * Reads .env.local the way a shell and Next.js both would.
  *
  * The hand rolled split on "=" that these scripts used kept surrounding quotes
- * as part of the value, so EMAIL_FROM="ExpressHOA <x@y.com>" arrived with literal
+ * as part of the value, so EMAIL_FROM="Your HOAsis <x@y.com>" arrived with literal
  * quote characters and every send was rejected as a malformed address. Quoting
  * that line is not optional either: an unquoted < and > are redirections when
  * the file is sourced by a shell.
