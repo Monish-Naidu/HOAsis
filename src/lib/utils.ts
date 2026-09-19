@@ -94,6 +94,13 @@ export function daysFromToday(iso: string) {
   return Math.round((parseDate(iso).getTime() - today().getTime()) / DAY);
 }
 
+/** The same calendar day, some years on. A study dated Feb 29 comes due Mar 1. */
+export function addYears(iso: string, years: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(y + years, m - 1, d));
+  return date.toISOString().slice(0, 10);
+}
+
 export function relativeDays(iso: string) {
   const d = daysFromToday(iso);
   if (d === 0) return "today";

@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/app/theme";
 import { RailWordmark, Wordmark } from "@/components/app/logo";
 import { residentModuleFor, residentTabs } from "@/components/app/resident-nav";
 import { ModuleOff } from "@/components/app/module-gate";
+import { PageTransition } from "@/components/app/page-transition";
 import { moduleOn } from "@/lib/modules";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
@@ -28,7 +29,7 @@ function visibleTabs(settings: CommunitySettings) {
 function Gated({ pathname, children }: { pathname: string; children: React.ReactNode }) {
   const mod = residentModuleFor(pathname);
   if (mod && !moduleOn(mod)) return <ModuleOff module={mod} />;
-  return <>{children}</>;
+  return <PageTransition>{children}</PageTransition>;
 }
 
 /**

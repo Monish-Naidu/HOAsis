@@ -31,6 +31,17 @@ chips.
 - **Amenities:** `customSpaces` on the draft, a text box under the chips,
   and `amenitiesFromSpaces(spaces, custom)` makes each one a reservable
   amenity in demo and remote alike.
+- **Reserve study as a file** (`reserve-study-card.tsx`, on the Reserve
+  Study tab in both states): the date on the study plus an upload; the file
+  lands under Documents as Financial, `settings.reserveStudy` (jsonb, no
+  migration) points at it, and the card says when the next one is due
+  (three years). Extraction of components from the PDF was discussed and
+  parked: a reviewed Claude extraction is a day behind an API key.
+- **The bird moves.** `page-transition.tsx` rises every board and resident
+  page in on route change; `hummingbird.tsx` gives a hovering-bird loader
+  (used while a session resolves, in place of a blank) and an arriving bird
+  on the setup Finished screen; the sidebar mark lifts on hover. All
+  respect reduced motion. Keyframes in globals.css.
 - **Migration 0030** (`0030_homes_by_address.sql`): `create_association`
   reads `address` from each household. Same signature. **Not pushed:** the
   Supabase project `lhplcojgoysfnltqlgfx` is gone (hostname NXDOMAIN, pooler

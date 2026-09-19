@@ -303,6 +303,7 @@ export async function loadCommunity(
       forumEnabled: stored.forumEnabled ?? true,
       collectionPolicy: stored.collectionPolicy ?? undefined,
       complianceDone: stored.complianceDone ?? undefined,
+      reserveStudy: stored.reserveStudy ?? undefined,
     },
 
     owners,

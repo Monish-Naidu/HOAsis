@@ -1010,6 +1010,19 @@ export interface CommunitySettings {
    * own word; an annual duty falls due again once the mark is a year old.
    */
   complianceDone?: Record<string, ISODate>;
+  /**
+   * The reserve study itself, as a file on the Documents tab, with the date
+   * it was done. The components are typed in by hand; this is the paper
+   * they came from, so the next board can find it.
+   */
+  reserveStudy?: ReserveStudyFile;
+}
+
+export interface ReserveStudyFile {
+  documentId: ID;
+  name: string;
+  /** The date on the study, not the day it was uploaded. */
+  studyDate: ISODate;
 }
 
 /* -------------------------------------------------------------------------- */

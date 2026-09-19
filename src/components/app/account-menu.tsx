@@ -11,6 +11,7 @@ import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { HummingbirdLoader } from "@/components/app/hummingbird";
 
 /** Role switch and sign out. Switching views never signs you out. */
 export function ViewSwitcher({ className }: { className?: string }) {
@@ -116,7 +117,10 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
     if (ready && !settling && !signedIn) router.replace("/signin");
   }, [ready, settling, signedIn, router]);
 
-  if (!ready || settling) return null;
+  // The bird holds the page while the session resolves, instead of a blank.
+  if (!ready || settling) {
+    return <HummingbirdLoader className="min-h-dvh" label="Finding your association" />;
+  }
 
   // Signed in, belonging to nothing. Founding an association is the only
   // sensible next move, so say that rather than showing empty screens.

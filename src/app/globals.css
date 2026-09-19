@@ -309,9 +309,45 @@
     opacity var(--dur-fast) linear;
 }
 
+/* The hummingbird.
+
+   Hovering is a slow bob with a little tilt, the way the bird holds a
+   position rather than sits in one. Arriving is a swoop in from the left
+   that overshoots by a hair and settles. Both are on the mark alone, never
+   on the wordmark, so the name stays put. */
+@keyframes hoasis-bird-hover {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-4px) rotate(-4deg); }
+}
+.bird-hover {
+  animation: hoasis-bird-hover 1.6s ease-in-out infinite;
+  transform-origin: 60% 60%;
+}
+@keyframes hoasis-bird-arrive {
+  0%   { opacity: 0; transform: translate(-36px, 10px) rotate(-14deg) scale(0.9); }
+  70%  { opacity: 1; transform: translate(3px, -2px) rotate(2deg) scale(1.02); }
+  100% { opacity: 1; transform: none; }
+}
+.bird-arrive {
+  animation: hoasis-bird-arrive var(--dur-slow) var(--ease-out-soft) both;
+  transform-origin: 60% 60%;
+}
+/* The mark in the sidebar lifts when the wordmark is hovered, like a bird
+   that noticed you. */
+.bird-lift svg {
+  transition: transform var(--dur-base) var(--ease-spring);
+  transform-origin: 60% 60%;
+}
+.bird-lift:hover svg {
+  transform: translateY(-3px) rotate(-8deg);
+}
+
 /* Somebody who has asked their operating system for less motion gets the end
    state immediately, not a slower version of the same movement. */
 @media (prefers-reduced-motion: reduce) {
+  .bird-hover,
+  .bird-arrive,
+  .bird-lift svg,
   .animate-rise,
   .q-enter-up,
   .q-enter-down,

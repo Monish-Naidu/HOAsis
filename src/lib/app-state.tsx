@@ -58,6 +58,7 @@ import {
   isSession,
 } from "@/lib/core/guards";
 import type {
+  DocumentRecord,
   Account,
   ActionItem,
   Announcement,
@@ -91,6 +92,8 @@ export type View = "resident" | "board";
 export interface UploadOutcome {
   uploaded: string[];
   rejected: { name: string; reason: string }[];
+  /** The records made, so a caller can point at one of them afterwards. */
+  filed: { id: string; name: string }[];
 }
 
 interface AppState {
@@ -234,7 +237,10 @@ interface AppState {
    * association keeps the bytes in Storage and the rest in a row. Resolves
    * with what landed and what was refused, so the screen can say both.
    */
-  uploadDocuments: (files: File[]) => Promise<UploadOutcome>;
+  uploadDocuments: (
+    files: File[],
+    options?: { category?: DocumentRecord["category"] },
+  ) => Promise<UploadOutcome>;
   /** Text confirmed out of an uploaded declaration, bylaws or rule set. */
   addGoverningArticles: (articles: Community["governingDocs"]) => void;
   /**
@@ -2955,8 +2961,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const uploadDocuments = useCallback(
-    async (files: File[]): Promise<UploadOutcome> => {
-      const outcome: UploadOutcome = { uploaded: [], rejected: [] };
+    async (
+      files: File[],
+      options?: { category?: DocumentRecord["category"] },
+    ): Promise<UploadOutcome> => {
+      const outcome: UploadOutcome = { uploaded: [], rejected: [], filed: [] };
+      const category = options?.category ?? "Notices";
       const accepted: File[] = [];
       for (const file of files) {
         const reason = rejectReason(file);
@@ -2966,13 +2976,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       if (!remote.community) {
         // A demo has nowhere to put the bytes, so it keeps everything else.
-        const filed = accepted.map((file, index) =>
-          toDocumentRecord(file, `doc-upload-${Date.now()}-${index}`, todayIsoDate()),
-        );
+        const filed = accepted.map((file, index) => ({
+          ...toDocumentRecord(file, `doc-upload-${Date.now()}-${index}`, todayIsoDate()),
+          category,
+        }));
         if (filed.length) {
           sliceStore(communityId, "documents").update((all) => [...filed, ...all]);
         }
         outcome.uploaded.push(...accepted.map((file) => file.name));
+        outcome.filed.push(...filed.map((d) => ({ id: d.id, name: d.name })));
         return outcome;
       }
 
@@ -2992,7 +3004,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           id,
           association_id: associationId,
           name: documentTitle(file.name),
-          category: "Notices",
+          category,
           visibility: "board",
           storage_path: path,
           size_label: formatSize(file.size),
@@ -3005,6 +3017,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           continue;
         }
         outcome.uploaded.push(file.name);
+        outcome.filed.push({ id, name: documentTitle(file.name) });
       }
       if (outcome.uploaded.length) await refreshRemote();
       return outcome;

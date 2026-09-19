@@ -5,6 +5,7 @@ import { AlertTriangle, PiggyBank } from "lucide-react";
 import { Callout, Card, CardHeader, Meter, PageHeader, Stat } from "@/components/ui/primitives";
 import { MoneyTabs } from "@/components/app/money-tabs";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
+import { ReserveStudyCard } from "@/components/app/reserve-study-card";
 import { reserveSummary } from "@/lib/metrics";
 import { fundingBand } from "@/lib/reserves";
 import { useAppState } from "@/lib/app-state";
@@ -59,6 +60,8 @@ export function ReservesScreen() {
           answer is that nobody knows.
         </Callout>
 
+        <ReserveStudyCard />
+
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <Stat
             label="Set aside each month"
@@ -78,10 +81,15 @@ export function ReservesScreen() {
           />
           <ol className="px-5 py-4">
             {[
-              {
-                title: "Get a quote for a reserve study",
-                body: "For a community this size it is usually a few hundred dollars, and it is the input everything else needs.",
-              },
+              community.settings.reserveStudy
+                ? {
+                    title: "Open the study on file",
+                    body: "It is above, and under Documents. Everything below comes out of it.",
+                  }
+                : {
+                    title: "Get a quote for a reserve study",
+                    body: "For a community this size it is usually a few hundred dollars, and it is the input everything else needs.",
+                  },
               {
                 title: "Put a reserve line in the budget",
                 body: "A number picked from a study beats a number picked from a surplus, but any transfer beats none.",
@@ -235,6 +243,8 @@ export function ReservesScreen() {
           </table>
         </div>
       </Card>
+
+      <ReserveStudyCard />
     </>
   );
 }

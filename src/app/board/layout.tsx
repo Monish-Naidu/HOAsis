@@ -15,6 +15,7 @@ import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { RailWordmark, Wordmark } from "@/components/app/logo";
+import { PageTransition } from "@/components/app/page-transition";
 
 export const metadata = {
   title: { default: "Board", template: "%s · ExpressHOA" },
@@ -35,7 +36,7 @@ export default function BoardLayout({
           <aside className="fixed inset-y-3 left-3 z-40 hidden w-56 flex-col overflow-hidden rounded-[26px] bg-navy-950 shadow-float lg:flex">
             <Link
               href="/board"
-              className="flex items-center justify-center px-4 pb-2 pt-6"
+              className="bird-lift flex items-center justify-center px-4 pb-2 pt-6"
             >
               <RailWordmark size={34} />
             </Link>
@@ -73,7 +74,9 @@ export default function BoardLayout({
               <TrialBanner />
               <SetupReturnBar />
               <BillingGate>
-                <RequireCapability>{children}</RequireCapability>
+                <RequireCapability>
+                  <PageTransition>{children}</PageTransition>
+                </RequireCapability>
               </BillingGate>
             </main>
           </div>

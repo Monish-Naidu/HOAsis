@@ -28,6 +28,7 @@ import {
 } from "@/lib/setup-plan";
 import { ADMIN_ROLES, ROLE_LABEL, type AccountRole } from "@/lib/types";
 import { cn, money, pluralize } from "@/lib/utils";
+import { HummingbirdArriving } from "@/components/app/hummingbird";
 
 /**
  * Finishing setup, one question at a time.
@@ -342,8 +343,11 @@ function Done({ label, detail }: { label: string; detail: string }) {
 function Finished({ plan, leftOpen }: { plan: Plan; leftOpen: PlanTask[] }) {
   return (
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
-      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
-        {plan.allDone ? <PartyPopper className="size-6" /> : <Check className="size-6" strokeWidth={2.5} />}
+      <span className="mb-4 flex items-center gap-3">
+        <HummingbirdArriving size={44} />
+        <span className="flex size-9 items-center justify-center rounded-full bg-ok-soft text-ok">
+          {plan.allDone ? <PartyPopper className="size-5" /> : <Check className="size-5" strokeWidth={2.5} />}
+        </span>
       </span>
       <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg sm:text-[38px]">
         {plan.allDone ? "Everything is set up" : "That is everything for now"}
