@@ -145,7 +145,20 @@ export interface CommunityDraft {
   previously?: PreviousSetup;
   collects: ExtraCollection[];
   sharedSpaces: SharedSpace[];
+  /**
+   * Shared things the picker did not list: a dog park, a boat ramp, a
+   * community garden. Named by the board, reservable like the rest.
+   */
+  customSpaces?: string[];
+  /**
+   * How homes are told apart. Numbered ranges suit a plat or a condominium;
+   * a subdivision of detached houses goes by street address and has no
+   * numbers to give. Unset means whichever the wording suggests.
+   */
+  homeNaming?: HomeNaming;
 }
+
+export type HomeNaming = "numbers" | "addresses";
 
 export interface DraftHousehold {
   /**
@@ -157,7 +170,10 @@ export interface DraftHousehold {
    */
   name: string;
   email: string;
+  /** The register key. A number, or the address itself where there is none. */
   unit: string;
+  /** The street address, when the board has it. */
+  address?: string;
 }
 
 /** A URL-safe id from a name, with a suffix so two "Oak Ridge"s do not collide. */
@@ -213,8 +229,49 @@ function annualDues(draft: CommunityDraft): Cents {
  * fills the screen in, the founder's own lot belongs to the founder.
  */
 export function otherHomes(draft: CommunityDraft): DraftHousehold[] {
-  const mine = draft.founder.unit.trim();
-  return draft.households.filter((h) => h.unit.trim() !== mine);
+  const mine = founderUnit(draft);
+  return draft.households.filter((h) => h.unit.trim() !== "" && h.unit.trim() !== mine);
+}
+
+/**
+ * What keys the founder's home on the register.
+ *
+ * The number when they gave one. Where a community goes by address and has
+ * no numbers, the address is the key, so a home that was never numbered is
+ * still one row with one balance and one vote.
+ */
+export function founderUnit(draft: CommunityDraft): string {
+  return draft.founder.unit.trim() || draft.founder.address?.trim() || "";
+}
+
+/** Which way this draft names its homes, when the board has not said. */
+export function defaultHomeNaming(draft: CommunityDraft): HomeNaming {
+  const w = wordingFor(draft.propertyType, draft.origin);
+  return w.fromBuilder || draft.propertyType === "condos" ? "numbers" : "addresses";
+}
+
+/**
+ * The draft as it is handed to whichever thing creates the association.
+ *
+ * Blank rows from the address list are dropped, the founder's key is settled,
+ * and everything is trimmed once here rather than in two creators.
+ */
+export function finalizeDraft(draft: CommunityDraft): CommunityDraft {
+  const unit = founderUnit(draft);
+  return {
+    ...draft,
+    founder: { ...draft.founder, unit },
+    households: draft.households
+      .map((h) => ({
+        ...h,
+        name: h.name.trim(),
+        email: h.email.trim(),
+        unit: h.unit.trim(),
+        address: h.address?.trim() || undefined,
+      }))
+      .filter((h) => h.unit !== "" && h.unit !== unit),
+    customSpaces: (draft.customSpaces ?? []).map((c) => c.trim()).filter(Boolean),
+  };
 }
 
 export function unitCount(draft: CommunityDraft): number {
@@ -269,7 +326,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       email: household.email,
       phone: "",
       unit: household.unit,
-      address: numbered(household.unit),
+      address: household.address?.trim() || numbered(household.unit),
       moveInDate: asOf,
       balanceCents: 0,
       autopay: false,
@@ -400,7 +457,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
 
     // The shared spaces named during setup are the amenities owners reserve,
     // so they arrive listed rather than asked for a second time in the plan.
-    amenities: amenitiesFromSpaces(draft.sharedSpaces),
+    amenities: amenitiesFromSpaces(draft.sharedSpaces, draft.customSpaces),
 
     amenityBookings: [],
     joinRequests: [],
@@ -442,16 +499,32 @@ const RESERVABLE_SPACES: Partial<Record<SharedSpace, string>> = {
 };
 
 /** Amenity records for the reservable spaces named during setup. */
-export function amenitiesFromSpaces(spaces: SharedSpace[]): (Amenity & { reservable: boolean })[] {
-  return spaces.flatMap((space) => {
+export function amenitiesFromSpaces(
+  spaces: SharedSpace[],
+  custom: string[] = [],
+): (Amenity & { reservable: boolean })[] {
+  const listed = spaces.flatMap((space) => {
     const name = RESERVABLE_SPACES[space];
     return name
       ? [{ id: `amenity-${space}`, name, status: "open" as const, detail: "", reservable: true }]
       : [];
   });
+  // Anything the board named itself is something owners can book too; that
+  // is why they bothered to name it.
+  const own = custom
+    .map((c) => c.trim())
+    .filter(Boolean)
+    .map((name) => ({
+      id: `amenity-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+      name,
+      status: "open" as const,
+      detail: "",
+      reservable: true,
+    }));
+  return [...listed, ...own];
 }
 
 /** Names only, for a database insert. */
-export function reservableSpaceNames(spaces: SharedSpace[]): string[] {
-  return amenitiesFromSpaces(spaces).map((a) => a.name);
+export function reservableSpaceNames(spaces: SharedSpace[], custom: string[] = []): string[] {
+  return amenitiesFromSpaces(spaces, custom).map((a) => a.name);
 }

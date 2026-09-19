@@ -89,7 +89,7 @@ export function profileFromDraft(draft: CommunityDraft): AssociationProfile {
     origin: draft.origin,
     previously: draft.previously,
     collects: draft.collects,
-    sharedSpaces: draft.sharedSpaces,
+    sharedSpaces: [...draft.sharedSpaces, ...(draft.customSpaces ?? [])],
     homes: draft.households.length + 1,
     stateName: draft.stateName || draft.state,
   };

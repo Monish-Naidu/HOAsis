@@ -30,6 +30,7 @@ import { formatDate } from "@/lib/utils";
 import { communicationsSummary } from "@/lib/metrics";
 import { DuesMailer } from "@/components/app/dues-mailer";
 import { moduleOn } from "@/lib/modules";
+import { placeLabel } from "@/lib/wording";
 
 
 /**
@@ -276,7 +277,7 @@ export default function BoardCommunications() {
                 </div>
                 <p className="mt-0.5 truncate text-[13px] text-fg-muted">
                   {t.participants.join(", ")}
-                  {t.unit ? ` · Unit ${t.unit}` : ""}
+                  {t.unit ? ` · ${placeLabel(t.unit)}` : ""}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <Badge tone="neutral">{t.tag}</Badge>
@@ -292,7 +293,7 @@ export default function BoardCommunications() {
           <Card>
             <CardHeader
               title={active.subject}
-              subtitle={`${active.participants.join(", ")}${active.unit ? ` · Unit ${active.unit}` : ""}`}
+              subtitle={`${active.participants.join(", ")}${active.unit ? ` · ${placeLabel(active.unit)}` : ""}`}
               action={<Badge tone="neutral">{active.tag}</Badge>}
             />
             <div className="space-y-4 px-5 py-4">

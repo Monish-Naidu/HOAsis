@@ -71,12 +71,29 @@ export function homeWording(community: { profile?: AssociationProfileAnswers }):
   return wordingFor(community.profile?.propertyType, community.profile?.origin);
 }
 
+/**
+ * Whether a register key is a number that wants a word in front of it.
+ *
+ * "12", "4B" and "A-12" do. "1 Alder Way" is already the whole name of the
+ * home, because a community that never numbered its houses keys them on
+ * the address, and "Lot 1 Alder Way" is nobody's home.
+ */
+export function isNumbered(unit: string): boolean {
+  return /^[a-z]?-?\d+[a-z]?$/i.test(unit.trim()) || /^[a-z]-\d+$/i.test(unit.trim());
+}
+
+/** "Unit 12" for a number, the words as given for anything else. */
+export function placeLabel(unit: string): string {
+  return isNumbered(unit) ? `Unit ${unit.trim()}` : unit.trim();
+}
+
 /** "Lot 12", "Unit 4B", "Home 7": the home's number in the community's words. */
 export function homeLabel(
   community: { profile?: AssociationProfileAnswers },
   unit: string,
 ): string {
+  if (!isNumbered(unit)) return unit.trim();
   const w = homeWording(community);
   const word = community.profile?.propertyType ? w.numberExample : "Unit";
-  return `${word} ${unit}`;
+  return `${word} ${unit.trim()}`;
 }

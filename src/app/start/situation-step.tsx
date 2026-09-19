@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, HardHat, Home, KeyRound, Rows3 } from "lucide-react";
+import { useState } from "react";
+import { Building2, HardHat, Home, KeyRound, Plus, Rows3, X } from "lucide-react";
 import type {
   AssociationOrigin,
   CommunityDraft,
@@ -151,26 +152,87 @@ export function PropertyPicker({ draft, patch }: { draft: CommunityDraft; patch:
   );
 }
 
-/** Anything shared. Legitimately empty for plenty of associations. */
+/**
+ * Anything shared. Legitimately empty for plenty of associations.
+ *
+ * The six chips cover most communities; the box under them covers the rest,
+ * because a board with a dog park or a boat ramp should not have to pretend
+ * it is a playground. Whatever they type becomes a reservable amenity like
+ * the listed ones.
+ */
 export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
+  const [own, setOwn] = useState("");
+  const custom = draft.customSpaces ?? [];
+
+  function addOwn() {
+    const name = own.trim();
+    if (!name) return;
+    const taken =
+      custom.some((c) => c.toLowerCase() === name.toLowerCase()) ||
+      SPACES.some((sp) => sp.label.toLowerCase() === name.toLowerCase());
+    if (!taken) patch({ customSpaces: [...custom, name] });
+    setOwn("");
+  }
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {SPACES.map(({ id, label }) => (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-2">
+        {SPACES.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={draft.sharedSpaces.includes(id)}
+            onClick={() => patch({ sharedSpaces: toggle(draft.sharedSpaces, id) })}
+            className={cn(
+              "rounded-full border px-4 py-2 text-[15px] font-medium transition-colors",
+              draft.sharedSpaces.includes(id)
+                ? "border-brand bg-brand text-brand-fg"
+                : "border-border-2 text-fg-muted hover:text-fg",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+        {custom.map((name) => (
+          <span
+            key={name}
+            className="inline-flex items-center gap-1.5 rounded-full border border-brand bg-brand py-2 pl-4 pr-2 text-[15px] font-medium text-brand-fg"
+          >
+            {name}
+            <button
+              type="button"
+              aria-label={`Remove ${name}`}
+              onClick={() => patch({ customSpaces: custom.filter((c) => c !== name) })}
+              className="rounded-full p-0.5 opacity-80 hover:opacity-100"
+            >
+              <X className="size-3.5" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <form
+        className="flex max-w-md gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          addOwn();
+        }}
+      >
+        <input
+          value={own}
+          onChange={(e) => setOwn(e.target.value)}
+          placeholder="Something else, like a dog park"
+          aria-label="Another shared space"
+          className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
+        />
         <button
-          key={id}
-          type="button"
-          aria-pressed={draft.sharedSpaces.includes(id)}
-          onClick={() => patch({ sharedSpaces: toggle(draft.sharedSpaces, id) })}
-          className={cn(
-            "rounded-full border px-4 py-2 text-[15px] font-medium transition-colors",
-            draft.sharedSpaces.includes(id)
-              ? "border-brand bg-brand text-brand-fg"
-              : "border-border-2 text-fg-muted hover:text-fg",
-          )}
+          type="submit"
+          disabled={!own.trim()}
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-border-2 px-3.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg disabled:opacity-50"
         >
-          {label}
+          <Plus className="size-4" />
+          Add
         </button>
-      ))}
+      </form>
     </div>
   );
 }

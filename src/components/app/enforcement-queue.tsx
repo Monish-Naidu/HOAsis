@@ -52,6 +52,7 @@ import {
   relativeDays,
   todayIsoDate,
 } from "@/lib/utils";
+import { placeLabel as placeLabelOf } from "@/lib/wording";
 
 /**
  * Enforcement as one queue.
@@ -135,7 +136,7 @@ const LABEL = "text-[13px] font-semibold text-fg-muted";
 
 /** "Unit 63" for a home, the words as given for anything else. */
 function placeLabel(unit: string): string {
-  return /^\d+[a-z]?$/i.test(unit) ? `Unit ${unit}` : unit;
+  return placeLabelOf(unit);
 }
 
 type Editor =

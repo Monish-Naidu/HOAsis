@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import type { Violation } from "@/lib/types";
 import { formatDate, money, todayIsoDate } from "@/lib/utils";
+import { placeLabel } from "@/lib/wording";
 
 /**
  * A notice as a letter, ready for an envelope.
@@ -42,8 +43,7 @@ export function NoticeLetter({
   const { association } = community;
   const owner = community.owners.find((o) => o.id === violation.ownerId);
   const today = todayIsoDate();
-  const homeIsUnit = /^\d+[a-z]?$/i.test(violation.unit);
-  const where = homeIsUnit ? `Unit ${violation.unit}` : violation.unit;
+  const where = placeLabel(violation.unit);
 
   useEffect(() => {
     document.body.dataset.printing = "letter";

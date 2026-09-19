@@ -9,11 +9,15 @@ import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
 import { US_STATES } from "@/lib/data/library";
 import {
+  defaultHomeNaming,
   emptyDraft,
+  finalizeDraft,
+  founderUnit,
   otherHomes,
   unitCount,
   type CommunityDraft,
   type DraftHousehold,
+  type HomeNaming,
 } from "@/lib/data/new-community";
 import {
   expandPhases,
@@ -176,12 +180,12 @@ export function SetupWizard() {
     setFailure(null);
     if (!auth.user) {
       if (awaitingConfirmation) {
-        savePendingDraft(draft, draft.founder.email.trim());
+        savePendingDraft(finalizeDraft(draft), draft.founder.email.trim());
         setSentToEmail(true);
         return;
       }
       if (exploring) {
-        createCommunity(draft);
+        createCommunity(finalizeDraft(draft));
         router.push("/start/plan");
         return;
       }
@@ -190,7 +194,7 @@ export function SetupWizard() {
     }
     setBusy(true);
     try {
-      await createRemoteAssociation(draft);
+      await createRemoteAssociation(finalizeDraft(draft));
       // Straight to the plan rather than the dashboard. A board that lands on
       // an empty workspace has to work out what to do next; one that lands
       // on a plan is asked, in the order that gets money moving first.
@@ -388,11 +392,14 @@ export function SetupWizard() {
         // years has one for every home, and a builder's lots may not have
         // theirs from the county yet. Requiring it there stalls the whole
         // setup on a fact nobody has.
+        // A builder keys everything off the plat, so the number is required
+        // there. Everywhere else the address is what the founder knows, and
+        // the number is optional because plenty of communities never
+        // numbered anything.
         canContinue: Boolean(
           draft.founder.name.trim() &&
             draft.founder.email.trim() &&
-            draft.founder.unit.trim() &&
-            (w.fromBuilder || draft.founder.address?.trim()),
+            (w.fromBuilder ? draft.founder.unit.trim() : draft.founder.address?.trim()),
         ),
         body: (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -458,15 +465,20 @@ export function SetupWizard() {
             ? "Which homes will be in the community?"
             : "Which homes are in the community?",
         detail:
-          draft.origin === "builder"
-            ? `Give the number ranges from your site plan. Every ${w.home} gets a balance and a vote from day one, whether or not it has sold.`
-            : draft.origin === "handover"
-              ? `Give the number ranges, including any the builder still owns. Every ${w.home} gets a balance and a vote.`
-              : `Give the number ranges you already use. Every ${w.home} gets a balance and a vote, and owner names can come now or later.`,
-        // At least one range that produces homes. Without it the plan asks
-        // for the register again on the next screen, which reads as the same
-        // question twice.
-        canContinue: expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0,
+          (draft.homeNaming ?? defaultHomeNaming(draft)) === "addresses"
+            ? `List each ${w.home} by its address. Owner names and emails can come now or later, and every ${w.home} gets a balance and a vote either way.`
+            : draft.origin === "builder"
+              ? `Give the number ranges from your site plan. Every ${w.home} gets a balance and a vote from day one, whether or not it has sold.`
+              : draft.origin === "handover"
+                ? `Give the number ranges, including any the builder still owns. Every ${w.home} gets a balance and a vote.`
+                : `Give the number ranges you already use. Every ${w.home} gets a balance and a vote, and owner names can come now or later.`,
+        // Ranges must produce at least one home, or the plan asks for the
+        // register again on the next screen. A list of addresses may be
+        // empty: the founder's own home is already one, and the rest can be
+        // added from the roster.
+        canContinue:
+          (draft.homeNaming ?? defaultHomeNaming(draft)) === "addresses" ||
+          expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0,
         body: <HomesStep draft={draft} patch={patch} />,
       },
       bank: {
@@ -594,6 +606,227 @@ interface StepProps {
  */
 function HomesStep({ draft, patch }: StepProps) {
   const w = wordingFor(draft.propertyType, draft.origin);
+  const naming = draft.homeNaming ?? defaultHomeNaming(draft);
+
+  function setNaming(next: HomeNaming) {
+    if (next === naming) return;
+    // Switching ways of naming homes starts the list over. Rows built from
+    // ranges are not addresses and addresses are not ranges; carrying one
+    // into the other produces a roster nobody typed.
+    patch({ homeNaming: next, households: [], phases: undefined, lotPrefix: undefined });
+  }
+
+  const modes = (
+    <div
+      className="inline-flex w-fit gap-1 rounded-xl bg-surface-2 p-1"
+      role="radiogroup"
+      aria-label="How homes are named"
+    >
+      {(
+        [
+          { id: "addresses", label: "By address" },
+          { id: "numbers", label: `By ${w.home} number` },
+        ] as { id: HomeNaming; label: string }[]
+      ).map((mode) => (
+        <button
+          key={mode.id}
+          type="button"
+          role="radio"
+          aria-checked={naming === mode.id}
+          onClick={() => setNaming(mode.id)}
+          className={cn(
+            "rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors",
+            naming === mode.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
+          )}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (naming === "addresses") {
+    return (
+      <div className="flex flex-col gap-5">
+        {modes}
+        <AddressList draft={draft} patch={patch} w={w} />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-5">
+      {modes}
+      <RangesStep draft={draft} patch={patch} />
+    </div>
+  );
+}
+
+/**
+ * Homes as a plain list of addresses.
+ *
+ * The founder's own home is the first row and comes from the previous
+ * screen. Every other row is an address with an owner if the board knows
+ * one. The address is the register key, because a community that never
+ * numbered its homes has nothing else to key on, and inventing numbers for
+ * them is a roster nobody recognises.
+ */
+function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState("");
+  const mine = founderUnit(draft);
+  const rows = draft.households;
+
+  function setRows(next: DraftHousehold[]) {
+    patch({ households: next });
+  }
+
+  function editRow(index: number, change: Partial<DraftHousehold>) {
+    setRows(
+      rows.map((row, i) => {
+        if (i !== index) return row;
+        const merged = { ...row, ...change };
+        // The address is the key, so they move together.
+        if (change.address !== undefined) merged.unit = change.address;
+        return merged;
+      }),
+    );
+  }
+
+  function addRow() {
+    setRows([...rows, { name: "", email: "", unit: "", address: "" }]);
+  }
+
+  function addPasted() {
+    const lines = pasted
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const known = new Set(rows.map((r) => r.unit.trim().toLowerCase()));
+    const fresh = lines
+      .filter((line) => !known.has(line.toLowerCase()) && line.toLowerCase() !== mine.toLowerCase())
+      .map((address) => ({ name: "", email: "", unit: address, address }));
+    setRows([...rows.filter((r) => r.unit.trim() !== ""), ...fresh]);
+    setPasted("");
+    setPasting(false);
+  }
+
+  const listed = otherHomes(draft).length;
+  const named = otherHomes(draft).filter((h) => h.name.trim()).length;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card className="divide-y divide-border overflow-hidden">
+        <div className="hidden grid-cols-[1.4fr_1fr_1fr_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-[13px] font-semibold text-fg-muted sm:grid">
+          <span>Address</span>
+          <span>Owner</span>
+          <span>Email</span>
+          <span />
+        </div>
+        <div className="grid grid-cols-1 items-center gap-2 px-3.5 py-2.5 sm:grid-cols-[1.4fr_1fr_1fr_2rem]">
+          <span className="truncate text-[15px] font-medium text-fg">
+            {draft.founder.address?.trim() || mine || `Your ${w.home}`}
+          </span>
+          <span className="truncate text-[15px] text-fg">
+            {draft.founder.name.trim() || "You"}
+            <span className="ml-1.5 text-[13px] text-fg-subtle">yours</span>
+          </span>
+          <span className="truncate text-[13px] text-fg-subtle">{draft.founder.email}</span>
+          <span />
+        </div>
+        {rows.map((row, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-1 items-center gap-2 px-3.5 py-2.5 sm:grid-cols-[1.4fr_1fr_1fr_2rem]"
+          >
+            <input
+              value={row.address ?? row.unit}
+              onChange={(e) => editRow(index, { address: e.target.value })}
+              placeholder="1430 Mehr Meadows Lane"
+              aria-label={`Address of home ${index + 1}`}
+              autoComplete="off"
+              autoFocus={index === rows.length - 1 && !row.address}
+              className={cn(input, "h-9")}
+            />
+            <input
+              value={row.name}
+              onChange={(e) => editRow(index, { name: e.target.value })}
+              placeholder="Owner name"
+              aria-label={`Owner of home ${index + 1}`}
+              className={cn(input, "h-9")}
+            />
+            <input
+              type="email"
+              value={row.email}
+              onChange={(e) => editRow(index, { email: e.target.value })}
+              placeholder="Email"
+              aria-label={`Email for home ${index + 1}`}
+              className={cn(input, "h-9")}
+            />
+            <button
+              type="button"
+              aria-label={`Remove home ${index + 1}`}
+              onClick={() => setRows(rows.filter((_, i) => i !== index))}
+              className="justify-self-end rounded-md p-1 text-fg-subtle hover:bg-surface-2 hover:text-danger"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
+        ))}
+      </Card>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={addRow}>
+          <Plus className="size-3.5" />
+          Add a {w.home}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setPasting((v) => !v)}>
+          Paste a list
+        </Button>
+      </div>
+
+      {pasting ? (
+        <div className="flex flex-col gap-2">
+          <textarea
+            value={pasted}
+            onChange={(e) => setPasted(e.target.value)}
+            rows={5}
+            placeholder={"One address per line\n1430 Mehr Meadows Lane\n1432 Mehr Meadows Lane"}
+            aria-label="Addresses, one per line"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+          />
+          <div className="flex gap-2">
+            <Button variant="primary" size="sm" disabled={!pasted.trim()} onClick={addPasted}>
+              Add these
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setPasting(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="flex items-center gap-2 text-[13px] text-fg-muted">
+        <MapIcon className="size-3.5 shrink-0" />
+        {pluralHomes(listed + 1)}
+        {named > 0 ? `, ${named} with an owner listed` : ", owners can come later"}
+        {draft.duesCents > 0 ? (
+          <>
+            {" · "}
+            {money(draft.duesCents * (listed + 1), { cents: false })} per {cadenceNoun(draft)}
+          </>
+        ) : null}
+      </p>
+
+      <Callout tone="info" icon={<Users className="size-4" />} title="You can stop here">
+        Your own {w.home} is already on the list. Add the rest now, or add households one at a
+        time from the roster once you are in. Nothing is lost by moving on.
+      </Callout>
+    </div>
+  );
+}
+
+function RangesStep({ draft, patch }: StepProps) {
+  const w = wordingFor(draft.propertyType, draft.origin);
   const phases = draft.phases?.length ? draft.phases : [firstPhase(w.group)];
   const prefix = draft.lotPrefix ?? "";
   const problems = phaseProblems(phases, w.Home);
@@ -639,7 +872,7 @@ function HomesStep({ draft, patch }: StepProps) {
     setBuyer({ name: "", email: "" });
   }
 
-  const mine = draft.founder.unit.trim();
+  const mine = founderUnit(draft);
   const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
 
   return (
@@ -915,7 +1148,10 @@ function FounderNumber({
       : `As it appears on the plat or the register. The ${w.homes} on the next screen are numbered the same way.`
     : `As it appears on your register. The ${w.homes} on the next screen are numbered the same way.`;
   return (
-    <Field label={`${w.Home} number`} hint={hint}>
+    <Field
+      label={w.fromBuilder ? `${w.Home} number` : `${w.Home} number, if you use them`}
+      hint={w.fromBuilder ? hint : "Leave it blank if homes go by address. Otherwise, as it appears on your register."}
+    >
       <input
         value={draft.founder.unit}
         onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}

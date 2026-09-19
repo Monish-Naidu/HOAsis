@@ -77,6 +77,7 @@ import type {
 } from "@/lib/types";
 import { canRaiseNotice } from "@/lib/violations";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
+import { placeLabel } from "@/lib/wording";
 
 export type View = "resident" | "board";
 
@@ -957,7 +958,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     // The shared spaces named during setup become the amenities owners can
     // reserve. Without this the plan asked for them a second time.
-    const spaces = reservableSpaceNames(draft.sharedSpaces);
+    const spaces = reservableSpaceNames(draft.sharedSpaces, draft.customSpaces);
     if (spaces.length) {
       await supabase.from("amenities").insert(
         spaces.map((name) => ({
@@ -1266,7 +1267,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ? remote.community.owners
         : sliceStore(communityId, "owners").getSnapshot();
       if (existing.some((o) => o.unit === unit)) {
-        throw new ValidationError(`Unit ${unit} is already on the roster`, { unit });
+        throw new ValidationError(`${placeLabel(unit)} is already on the roster`, { unit });
       }
 
       // The id is chosen here so the screen can name the household before
@@ -1279,7 +1280,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         email: input.email.trim(),
         phone: "",
         unit,
-        address: `Unit ${unit}`,
+        address: placeLabel(unit),
         moveInDate: todayIsoDate(),
         balanceCents: 0,
         autopay: false,

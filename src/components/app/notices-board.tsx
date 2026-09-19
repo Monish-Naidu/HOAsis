@@ -16,6 +16,7 @@ import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import type { Owner, Violation } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
+import { placeLabel } from "@/lib/wording";
 
 /**
  * Notices, the simple version.
@@ -41,9 +42,6 @@ const INPUT =
   "mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand";
 const LABEL = "text-[13px] font-semibold text-fg-muted";
 
-function placeLabel(unit: string): string {
-  return /^\d+[a-z]?$/i.test(unit) ? `Unit ${unit}` : unit;
-}
 
 export function NoticesBoard() {
   const { community, addNotice, setViolationStage } = useAppState();

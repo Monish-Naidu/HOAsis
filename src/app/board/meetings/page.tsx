@@ -9,6 +9,7 @@ import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import type { Meeting } from "@/lib/types";
+import { placeLabel } from "@/lib/wording";
 
 /**
  * Who said they are coming. A headcount before the day is how a board knows
@@ -33,7 +34,7 @@ function Rsvps({ meeting }: { meeting: Meeting }) {
             />
             <span className="truncate">{r.name}</span>
             <span className="ml-auto shrink-0 text-fg-subtle">
-              {r.unit ? `Unit ${r.unit}` : ""}
+              {r.unit ? placeLabel(r.unit) : ""}
               {r.response === "no" ? " · can't make it" : ""}
             </span>
           </li>
@@ -112,7 +113,7 @@ export default function BoardMeetings() {
                       <span className="size-1.5 shrink-0 rounded-full bg-ok" />
                       <span className="truncate">{a.name}</span>
                       <span className="ml-auto shrink-0 text-fg-subtle">
-                        {a.role ?? `Unit ${a.unit}`} · {a.channel}
+                        {a.role ?? placeLabel(a.unit ?? "")} · {a.channel}
                       </span>
                     </li>
                   ))}

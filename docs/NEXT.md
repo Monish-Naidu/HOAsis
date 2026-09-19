@@ -8,6 +8,39 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19, later: homes by address, and amenities the board names
+
+Monish, from the Homes step of setup: not every community numbers its
+homes, some only have street addresses, and Continue only lit up once
+number ranges were typed. Also: the amenities picker only offered the six
+chips.
+
+- **Homes step has two ways in.** "By address" is the default for owners
+  who already run detached homes: a list with Address, Owner, Email, an
+  Add a home button and a Paste a list box (one address per line). The
+  founder's own home is the first row, from the previous screen, so
+  Continue is always enabled; the rest can come from the roster. "By home
+  number" is the old ranges screen, default for a builder or a condo. The
+  address is the register key (`DraftHousehold.unit` = the address,
+  `address` carried alongside), so a home that was never numbered is one
+  row with one balance and one vote. `founderUnit()` falls back to the
+  founder's address when the number is blank; `finalizeDraft()` settles
+  the key and drops blank rows before either creator runs.
+- **The founder's number is optional** unless a builder is involved, and
+  says so on the field.
+- **Amenities:** `customSpaces` on the draft, a text box under the chips,
+  and `amenitiesFromSpaces(spaces, custom)` makes each one a reservable
+  amenity in demo and remote alike.
+- **Migration 0030** (`0030_homes_by_address.sql`): `create_association`
+  reads `address` from each household. Same signature. **Not pushed yet:**
+  the Supabase project did not answer on 2026-09-19 (REST and pooler both
+  unreachable, "tenant not found"), which looks like a paused project.
+  Unpause it, then `npx supabase db push --password "$SUPABASE_DB_PASSWORD"`.
+- `homeLabel()` and the new `placeLabel()` in `lib/wording.ts` leave an
+  address alone instead of printing "Lot 1 Alder Way".
+- Tests: `tests/unit/new-community.test.ts`; `07-onboarding` fills the
+  address list when no ranges are offered.
+
 ## 2026-09-19: the launch scope, cut to what month one needs
 
 Monish, with customers about to onboard: simplify everything, grey out what

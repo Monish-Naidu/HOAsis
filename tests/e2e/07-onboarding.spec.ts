@@ -119,8 +119,18 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   // groups. At least one range is required, so a test that names none gets
   // a small default.
   const lots = a.lots ?? { from: 1, to: 3 };
-  await page.getByLabel(/^(Phase|Group) 1 first lot$/).fill(String(lots.from));
-  await page.getByLabel(/^(Phase|Group) 1 last lot$/).fill(String(lots.to));
+  if ((await page.getByLabel(/^(Phase|Group) 1 first lot$/).count()) > 0) {
+    await page.getByLabel(/^(Phase|Group) 1 first lot$/).fill(String(lots.from));
+    await page.getByLabel(/^(Phase|Group) 1 last lot$/).fill(String(lots.to));
+  } else {
+    // Owners who already run detached homes list them by address, and the
+    // list may be empty: the founder's own home is already one.
+    for (let n = lots.from; n <= lots.to; n += 1) {
+      if (n === lots.from) continue;
+      await page.getByRole("button", { name: /^Add a (home|unit|lot)$/ }).click();
+      await page.getByLabel(/^Address of home \d+$/).last().fill(`${n} Founder Way`);
+    }
+  }
   await page.waitForTimeout(300);
   await step(page);
 

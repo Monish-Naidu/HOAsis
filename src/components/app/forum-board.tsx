@@ -17,6 +17,7 @@ import { useToast } from "@/components/app/toast";
 import { forumCategories } from "@/lib/data";
 import { ROLE_LABEL, type ForumCategory, type ForumPost } from "@/lib/types";
 import { cn, daysFromToday, formatDate, pluralize, relativeDays, todayIsoDate } from "@/lib/utils";
+import { placeLabel } from "@/lib/wording";
 
 /** "today", "3 days ago", then a real date once it stops being recent. */
 function when(iso: string) {
@@ -381,7 +382,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                           <span className="font-semibold text-fg">{r.author}</span>
                           {r.authorRole ? <Badge tone="brand">{r.authorRole}</Badge> : null}
                           <span className="text-fg-subtle">
-                            {r.unit ? `Unit ${r.unit} · ` : ""}
+                            {r.unit ? `${placeLabel(r.unit)} · ` : ""}
                             {when(r.at)}
                           </span>
                         </div>

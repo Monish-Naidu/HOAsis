@@ -1,3 +1,4 @@
+import { placeLabel } from "@/lib/wording";
 /**
  * The emails themselves.
  *
@@ -145,7 +146,7 @@ export function pastDueEmail(input: DuesEmailInput) {
       cta: { label: `Pay ${amount}`, url: input.payUrl },
       footer: footerFor(input),
     }),
-    text: `${input.ownerName},\n\nUnit ${input.unitLabel} carries a balance of ${amount}${
+    text: `${input.ownerName},\n\n${placeLabel(input.unitLabel)} carries a balance of ${amount}${
       days > 0 ? `, ${days} days past due` : ""
     }.\n\nPay: ${input.payUrl}\n\nIf you have already paid, reply and the board will look into it.\n\n${input.associationName}`,
   };
