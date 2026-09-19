@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Building2, Info, User } from "lucide-react";
-import { Button, ButtonLink, Card } from "@/components/ui/primitives";
+import { ArrowRight, Building2, User } from "lucide-react";
+import { Button, ButtonLink, Card, IconTile } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,12 @@ export function SignInPanel() {
     role: ROLE_LABEL[a.role],
     isAdmin: a.role !== "resident",
   }));
+  // Board seats, then two residents: enough to see both sides without a
+  // fourteen-row list under the form.
+  const sampleSeats = [
+    ...seats.filter((s) => s.isAdmin),
+    ...seats.filter((s) => !s.isAdmin).slice(0, 2),
+  ];
   const [mode, setMode] = useState<"sign-in" | "create">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -235,75 +241,56 @@ export function SignInPanel() {
         </form>
       </Card>
 
-      {hasSupabase ? (
-        <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg">Just looking?</p>
-          <p className="mt-1 text-[13px] leading-snug text-fg-muted">
-            Set up a community and look around before making an account. It is built in this
-            browser only, and nothing about it is saved anywhere else.
-          </p>
-          <ButtonLink href="/start" variant="secondary" size="sm" className="mt-3 w-full">
-            Look around first
-          </ButtonLink>
-        </Card>
-      ) : null}
+      {/* The sample communities, and a seat in each.
 
-      {/* The demo associations. Against a real project the chips only swap
-          the photograph on the left, and a real member's associations are
-          in the header once they are in, so the row is not offered there. */}
-      {!hasSupabase && communities.length > 1 ? (
-        <div className="flex gap-1.5" role="radiogroup" aria-label="Association">
-          {communities.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              role="radio"
-              aria-checked={option.id === community.id}
-              onClick={() => setCommunity(option.id)}
-              className={cn(
-                "flex-1 rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors",
-                option.id === community.id
-                  ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
-                  : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {/* Demo seats. Never rendered against a real project: picking one would
-          sign a real visitor into fixture data. */}
-      {!hasSupabase ? (
+          Mehr Meadows is built into the browser, a year deep, and is the
+          quickest way to see what the product does. Picking a seat signs
+          you in as that person locally; the real project is untouched, and
+          the header offers the real associations once somebody actually
+          signs in. The same card is the whole front door when no project
+          is configured. */}
       <Card className="overflow-hidden">
-        <div className="flex items-start gap-2 border-b border-border px-4 py-2.5">
-          <Info className="mt-px size-3.5 shrink-0 text-fg-subtle" />
-          <p className="text-[13px] leading-snug text-fg-muted">
-            Prototype. No real accounts exist, so pick a seat and the app signs you in as
-            that person.
+        <div className="p-4">
+          <p className="text-[15px] font-semibold text-fg">Just looking? Try a sample community</p>
+          <p className="mt-1 text-[13px] leading-snug text-fg-muted">
+            {community.settings.displayName} is built into this browser with{" "}
+            {community.association.unitCount} homes and a year of history. Pick a seat and look
+            around. Nothing you do here is saved anywhere else.
           </p>
+          {communities.length > 1 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Sample community">
+              {communities.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={option.id === community.id}
+                  onClick={() => setCommunity(option.id)}
+                  className={cn(
+                    "press rounded-lg border px-3 py-1.5 text-[13px] font-medium",
+                    option.id === community.id
+                      ? "border-primary bg-primary-soft text-primary"
+                      : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
-        {seats.map((s, i) => (
+        {sampleSeats.map((s) => (
           <button
             key={s.id}
             type="button"
             onClick={() => enter(s.id)}
-            className={cn(
-              "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-2",
-              i > 0 && "border-t border-border",
-            )}
+            className="flex w-full items-center gap-3 border-t border-border px-4 py-2.5 text-left transition-colors hover:bg-surface-2"
           >
-            <span
-              className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                s.isAdmin
-                  ? "bg-navy-900 text-navy-50 dark:bg-navy-100 dark:text-navy-950"
-                  : "bg-surface-3 text-fg-muted",
-              )}
-            >
-              {s.isAdmin ? <Building2 className="size-4" /> : <User className="size-4" />}
-            </span>
+            <IconTile
+              icon={s.isAdmin ? Building2 : User}
+              tint={s.isAdmin ? "blue" : "neutral"}
+              size="sm"
+            />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[15px] font-medium text-fg">{s.name}</span>
               <span className="block text-[13px] text-fg-muted">
@@ -313,8 +300,14 @@ export function SignInPanel() {
             <ArrowRight className="size-3.5 shrink-0 text-fg-subtle" />
           </button>
         ))}
+        {hasSupabase ? (
+          <div className="border-t border-border p-3">
+            <ButtonLink href="/start" variant="ghost" size="sm" className="w-full">
+              Or set up your own community
+            </ButtonLink>
+          </div>
+        ) : null}
       </Card>
-      ) : null}
     </div>
   );
 }
