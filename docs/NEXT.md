@@ -8,6 +8,27 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19, night: Your HOAsis at yourhoasis.com
+
+Monish took the name back. The product is Your HOAsis; the domain is
+yourhoasis.com. Done the same night:
+
+- Code and copy renamed everywhere user-facing (wordmark "Your" + "HOAsis",
+  titles, emails, fixtures, package name, brand doc now
+  `docs/design/brand-yourhoasis.md`). Storage keys already said hoasis.
+- Cloudflare zone `yourhoasis.com`: A @ 76.76.21.21 and CNAME www
+  cname.vercel-dns.com, both DNS only. Vercel project has yourhoasis.com and
+  www; www, expresshoa.com and www.expresshoa.com all 308 to the apex.
+- Supabase Auth site_url is https://yourhoasis.com; the allow list keeps
+  expresshoa.com and localhost and Vercel previews.
+
+**Owed:** Resend does not know yourhoasis.com yet. The API key on this
+machine is send-only (403 on /domains), so add the domain in the Resend
+dashboard, add its DKIM and SPF records to the Cloudflare zone, then set
+`EMAIL_FROM="Your HOAsis <hello@yourhoasis.com>"` on Vercel. Until then
+the code default sends from Resend's test address, which works but says
+resend.dev.
+
 ## 2026-09-19, evening: the full-flow pass
 
 Monish: principal PM and principal designer, go through the whole flow on
