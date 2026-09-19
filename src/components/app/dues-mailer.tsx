@@ -78,13 +78,10 @@ export function DuesMailer() {
   if (!isRemote) {
     return (
       <Card className="mt-5">
-        <CardHeader title="Dues email" icon={<Mail className="size-4" />} />
-        <div className="px-5 py-4">
-          <p className="text-[15px] leading-relaxed text-fg-muted">
-            The demo runs in this browser, so there is nothing to send from. Sign in to a real
-            association to email its owners.
-          </p>
-        </div>
+        <p className="flex items-center gap-2 px-5 py-3 text-[13px] text-fg-muted">
+          <Mail className="size-3.5 shrink-0 text-fg-subtle" />
+          Dues email sends from a real association. The demo has nothing to send from.
+        </p>
       </Card>
     );
   }

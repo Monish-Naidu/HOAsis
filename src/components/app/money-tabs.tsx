@@ -19,13 +19,13 @@ import type { ModuleKey } from "@/lib/modules";
  * Shared costs only appears for an association that has any, so a board
  * billing one flat due never sees an empty tab.
  */
-const VIEWS: { href: string; label: string; detail: string; module?: ModuleKey }[] = [
-  { href: "/board/money", label: "Overview", detail: "Where the money stands today" },
-  { href: "/board/money/transactions", label: "Transactions", detail: "Every line, filtered and exportable" },
-  { href: "/board/money/budget", label: "Budget", detail: "Each line against the share of the year gone", module: "money-budget" },
-  { href: "/board/money/trends", label: "Trends", detail: "One year beside another", module: "money-trends" },
-  { href: "/board/money/collections", label: "Collections", detail: "Who is behind, and by how much" },
-  { href: "/board/reserves", label: "Reserves", detail: "What wears out, when, and what is set aside", module: "reserves" },
+const VIEWS: { href: string; label: string; module?: ModuleKey }[] = [
+  { href: "/board/money", label: "Overview" },
+  { href: "/board/money/transactions", label: "Transactions" },
+  { href: "/board/money/budget", label: "Budget", module: "money-budget" },
+  { href: "/board/money/trends", label: "Trends", module: "money-trends" },
+  { href: "/board/money/collections", label: "Collections" },
+  { href: "/board/reserves", label: "Reserves", module: "reserves" },
 ];
 
 export function MoneyTabs() {
@@ -40,7 +40,6 @@ export function MoneyTabs() {
           {
             href: "/board/shared-costs",
             label: "Shared costs",
-            detail: "Bills the association passes on",
           },
         ]
       : []),
@@ -70,7 +69,6 @@ export function MoneyTabs() {
           </Link>
         ))}
       </TabPill>
-      <p className="mt-2 text-[13px] text-fg-muted">{active.detail}</p>
     </div>
   );
 }

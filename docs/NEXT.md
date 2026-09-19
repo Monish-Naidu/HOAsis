@@ -8,6 +8,46 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19, evening: the full-flow pass
+
+Monish: principal PM and principal designer, go through the whole flow on
+both sides, find what is janky or does not work, fix it. Driven in Chrome
+at desktop width and with Playwright at 390px for the resident side. What
+changed:
+
+- **Setup comes back to the question you left.** Every "Open Documents"
+  style link out of a setup question now carries `?from=setup&task=<key>`
+  (`setupLink()` in setup-plan.tsx). The return bar reads it and says
+  "Back to the question" with the question's label, linking to
+  `/start/plan?task=<key>`; when the task completes on that screen it
+  pushes to the next open question, or the overview when none is left.
+- **Dashboard leads with "Needs you today":** transactions to confirm,
+  requests waiting, invoices to approve, join requests, owner-says-fixed
+  notices, overdue action items, each a row with a count and a link,
+  omitted at zero. Header is role + "Dashboard"; the year pills sit in
+  the chart card header.
+- **Duplicates removed:** the money-tabs caption that repeated every
+  finance page's description; the second "New announcement" button; the
+  "On the clock" card that showed each request a second time with two
+  more verbs; the My Home card on Account that repeated the banner.
+- **Jargon and grammar:** policy citation lines on requests are now
+  "Answer by Sep 3"; "1 updates" pluralised; vendor payouts say "Approve"
+  and "Approved by Dana" instead of a 1/2 quorum counter; the governing
+  tile is "Your governing documents"; meetings show one "Next meeting"
+  line instead of a lone stat tile.
+- **Broken things:** the request form's "Add photos or documents" button
+  did nothing; it now opens a picker and lists what was chosen (names and
+  sizes go on the request; bytes wait for request storage). The "Cheapest"
+  badge showed on a tie. The landing header's Get started wrapped to two
+  lines on phones. The roster's contact column drifted per row; it is a
+  fixed grid now. Phones showed the community name three times; the hero
+  title is screen-reader-only below lg on the resident side.
+
+Still worth doing, not done here: a real image upload for request
+attachments (needs a `request-files` bucket and a column), and the
+resident dashboard's Recent activity mixes charges and request updates
+that the Requests tab already shows.
+
 ## 2026-09-19, later: homes by address, and amenities the board names
 
 Monish, from the Homes step of setup: not every community numbers its

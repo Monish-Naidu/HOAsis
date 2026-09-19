@@ -507,9 +507,12 @@ export default function BoardHomeowners() {
               const open = openId === o.id;
               return (
                 <li key={o.id} className="border-b border-border last:border-b-0">
+                  {/* A fixed grid, so the contact column and the chevron line
+                      up down the list instead of drifting with the length of
+                      each name. Under md the contact folds under the name. */}
                   <div
                     className={cn(
-                      "flex items-center gap-3 px-5 py-3 transition-colors",
+                      "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 transition-colors md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_1.25rem_20rem]",
                       open ? "bg-surface-2" : "hover:bg-surface-2",
                     )}
                   >
@@ -518,8 +521,9 @@ export default function BoardHomeowners() {
                       onClick={() => toggle(o)}
                       aria-expanded={open}
                       aria-label={`${o.displayName}, unit ${o.unit}`}
-                      className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      className="col-span-1 grid min-w-0 grid-cols-subgrid items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand md:col-span-3"
                     >
+                      <span className="flex min-w-0 items-center gap-3">
                       {o.isCorporateOwner ? (
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-3 text-fg-muted">
                           <Building2 className="size-4" />
@@ -540,25 +544,31 @@ export default function BoardHomeowners() {
                           {homeLabel(community, o.unit)}
                           {o.address ? ` · ${o.address}` : ""}
                         </span>
+                        <span className="block truncate text-[13px] text-fg-subtle md:hidden">
+                          {o.email}
+                        </span>
                       </span>
-                      <span className="hidden w-60 shrink-0 md:block">
+                      </span>
+                      <span className="hidden min-w-0 md:block">
                         <span className="block truncate text-[13px] text-fg-muted">{o.email}</span>
                         <span className="tnum block text-[13px] text-fg-subtle">{o.phone}</span>
                       </span>
                       <ChevronDown
                         className={cn(
-                          "hidden size-4 shrink-0 text-fg-subtle transition-transform sm:block",
+                          "hidden size-4 shrink-0 text-fg-subtle transition-transform md:block",
                           open && "rotate-180",
                         )}
                       />
                     </button>
-                    <span className="flex shrink-0 items-center justify-end gap-3">
-                      {o.balanceCents > 0 ? (
-                        <span className="tnum hidden text-[15px] font-semibold text-fg sm:block">
-                          {money(o.balanceCents)}
-                        </span>
-                      ) : null}
-                      <DuesBadge owner={o} />
+                    {/* Fixed width, so the trailing column never pushes the
+                        contact column around from row to row. */}
+                    <span className="grid shrink-0 items-center gap-3 md:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
+                      <span className="tnum hidden text-right text-[15px] font-semibold text-fg md:block">
+                        {o.balanceCents > 0 ? money(o.balanceCents) : ""}
+                      </span>
+                      <span className="flex justify-end md:justify-start">
+                        <DuesBadge owner={o} />
+                      </span>
                       <Button
                         variant="secondary"
                         size="sm"

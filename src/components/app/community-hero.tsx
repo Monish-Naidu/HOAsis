@@ -146,6 +146,9 @@ export function CommunityHero({
         className={cn(
           "w-full px-4 sm:px-6",
           compact ? "pb-3" : overlay ? "pt-4 pr-16 sm:pt-5" : "pb-3.5",
+          // On a phone the app header above already says the name, and the
+          // home card below says it again. Three times is two too many.
+          overlay && "max-lg:sr-only",
         )}
       >
         <h1

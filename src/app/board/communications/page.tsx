@@ -79,13 +79,6 @@ function AnnouncementsManager({
         title="Announcements"
         subtitle={'What residents see under "From the board" on their home screen.'}
         icon={<Megaphone className="size-4" />}
-        action={
-          composing ? undefined : (
-            <Button variant="primary" size="sm" onClick={() => setComposing(true)}>
-              New announcement
-            </Button>
-          )
-        }
       />
 
       {composing ? (

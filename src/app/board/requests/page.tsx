@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Eye, Inbox } from "lucide-react";
+import { Eye, Inbox } from "lucide-react";
 import {
   Avatar,
   Badge,
-  Button,
   Card,
   CardHeader,
   PageHeader,
@@ -14,7 +13,7 @@ import {
 import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { WorkOrderPanel } from "@/components/app/work-order";
-import { daysFromToday, formatDate } from "@/lib/utils";
+import { daysFromToday, formatDate, pluralize } from "@/lib/utils";
 import type { RequestStatus } from "@/lib/types";
 
 const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
@@ -31,10 +30,6 @@ export default function BoardRequests() {
   const { requests, updateRequestStatus } = useAppState();
   const { notify } = useToast();
   const { open, decided, history } = bucketRequests(requests);
-  const clocks = requests
-    .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
-    .map((r) => ({ ...r, daysLeft: daysFromToday(r.dueDate!) }))
-    .sort((a, b) => a.daysLeft - b.daysLeft);
   // Work the board has taken on and not finished. Each one's panel sits in
   // its own row below; this is only the count under the stat.
   const inProgress = requests.filter((r) => r.workOrder && !r.workOrder.completedOn);
@@ -71,76 +66,37 @@ export default function BoardRequests() {
         />
       </div>
 
-      {/* Clock queue */}
-      <Card className="mt-5">
-        <CardHeader
-          title="On the clock"
-          
-          icon={<AlertTriangle className="size-4" />}
-        />
-        {clocks.map((r) => (
-          <div
-            key={r.id}
-            className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
-          >
-            <div
-              className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-lg ${
-                r.daysLeft <= 5 ? "bg-warn-soft text-warn" : "bg-surface-3 text-fg-muted"
-              }`}
-            >
-              <span className="tnum text-[17px] font-bold leading-none">{r.daysLeft}</span>
-              <span className="text-[12px] font-semibold uppercase">days</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[15px] font-semibold text-fg">{r.title}</p>
-                <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
-              </div>
-              <p className="mt-0.5 text-[13px] text-fg-muted">
-                {r.reference} · Unit {r.unit} · {r.ownerName}
-              </p>
-              <p className="mt-0.5 text-[13px] text-fg-subtle">{r.dueReason}</p>
-            </div>
-            <div className="flex gap-1.5">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  updateRequestStatus(r.id, "in-review", "Board picked this up for review.");
-                  notify(`${r.reference} moved to in review`);
-                }}
-              >
-                Respond
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  updateRequestStatus(r.id, "info-needed", "Board asked the owner for more detail.");
-                  notify(`Asked unit ${r.unit} for more detail`, "info");
-                }}
-              >
-                Ask for detail
-              </Button>
-            </div>
-          </div>
-        ))}
-      </Card>
-
       <div className="mt-5">
         {/* Queue */}
         <Card>
           <CardHeader title="Open queue" subtitle={`${open.length} awaiting a decision`} />
-          {open.map((r) => (
+          {open.map((r) => {
+            // A request the board owes an answer on wears the days it has
+            // left where the avatar would be. One list, one place to look.
+            const daysLeft = r.dueDate ? daysFromToday(r.dueDate) : null;
+            return (
             <div
               key={r.id}
               className="flex items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
             >
-              <Avatar name={r.ownerName} tone="neutral" />
+              {daysLeft === null ? (
+                <Avatar name={r.ownerName} tone="neutral" />
+              ) : (
+                <div
+                  className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-lg ${
+                    daysLeft <= 5 ? "bg-warn-soft text-warn" : "bg-surface-3 text-fg-muted"
+                  }`}
+                  aria-label={`${pluralize(Math.max(0, daysLeft), "day")} to answer`}
+                >
+                  <span className="tnum text-[17px] font-bold leading-none">{Math.max(0, daysLeft)}</span>
+                  <span className="text-[12px] font-semibold uppercase">days</span>
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-medium leading-snug text-fg">{r.title}</p>
                 <p className="mt-0.5 text-[13px] text-fg-muted">
                   {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
+                  {r.dueDate ? ` · Answer by ${formatDate(r.dueDate)}` : ""}
                 </p>
                 <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-fg-muted">
                   {r.summary}
@@ -148,8 +104,8 @@ export default function BoardRequests() {
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
                   <span className="text-[13px] text-fg-subtle">
-                    {r.thread.length} updates
-                    {r.attachments.length ? ` · ${r.attachments.length} files` : ""}
+                    {pluralize(r.thread.length, "update")}
+                    {r.attachments.length ? ` · ${pluralize(r.attachments.length, "file")}` : ""}
                   </span>
                   <span className="ml-auto flex gap-1.5">
                     <button
@@ -177,7 +133,8 @@ export default function BoardRequests() {
                 <WorkOrderPanel request={r} />
               </div>
             </div>
-          ))}
+            );
+          })}
         </Card>
 
       </div>

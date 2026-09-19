@@ -382,7 +382,12 @@ export function PayFlow() {
                           {instrument.label} ••{instrument.mask}
                         </span>
                         {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
-                        {cheapest?.instrument.id === instrument.id && !expired ? (
+                        {/* Only when this one costs the owner strictly less. A tie
+                            on the owner's side is not "cheapest", whatever it
+                            saves the association. */}
+                        {cheapest?.instrument.id === instrument.id &&
+                        cheapest.saves === "owner" &&
+                        !expired ? (
                           <Badge tone="ok">Cheapest</Badge>
                         ) : null}
                         {expired ? <Badge tone="danger">Expired</Badge> : null}

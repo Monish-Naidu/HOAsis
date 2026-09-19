@@ -293,7 +293,7 @@ export default function BoardVendors() {
             title="Payments"
             subtitle={
               needsApproval
-                ? `${needsApproval} waiting for a board member's approval`
+                ? `${needsApproval} waiting for approval`
                 : "Every payment the association has made"
             }
           />
@@ -354,7 +354,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
             notify(`Approved ${p.vendor}`);
           }}
         >
-          Add my approval
+          Approve
         </Button>
       ) : null}
 
@@ -369,7 +369,9 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
           ) : (
             <AlertTriangle className="size-3 text-warn" />
           )}
-          {p.approvals.length}/{p.approvalsRequired} approvals
+          {approved
+            ? `Approved by ${p.approvals.map((a) => a.name.split(" ")[0]).join(" and ")}`
+            : "Waiting for approval"}
         </span>
       </div>
 

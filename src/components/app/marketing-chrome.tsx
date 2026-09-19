@@ -100,7 +100,7 @@ export function MarketingHeader() {
           </Link>
           <Link
             href="/start"
-            className="inline-flex h-9 items-center rounded-lg bg-royal px-4 text-[15px] font-semibold text-royal-fg transition-colors hover:bg-royal-hover"
+            className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-lg bg-royal px-4 text-[15px] font-semibold text-royal-fg transition-colors hover:bg-royal-hover"
           >
             Get started
           </Link>

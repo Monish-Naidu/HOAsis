@@ -28,12 +28,12 @@ import { SectionLink, YearControl } from "@/components/app/finance-ui";
 import {
   useAppState,
   usePendingApprovals,
+  useReconciliation,
 } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { ActionItems } from "@/components/app/action-items";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
-import { homeWording } from "@/lib/wording";
 import type { BoardRole } from "@/lib/types";
 
 /**
@@ -60,7 +60,6 @@ export default function BoardDashboard() {
     community.ballots.length > 0 ||
     community.payouts.length > 0;
   const plan = buildPlan(community, profileFromCommunity(community));
-  const association = community.association;
 
   const years = ledgerYears(community);
   const thisYear = Number(todayIsoDate().slice(0, 4));
@@ -76,11 +75,10 @@ export default function BoardDashboard() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={`${association.name} · ${pluralize(association.unitCount, homeWording(community).home)}`}
-        title="Board Dashboard"
-        description={role}
-      />
+      {/* The hero banner directly above already names the association and
+          counts its homes, so the eyebrow is the one thing it does not say:
+          who is looking. */}
+      <PageHeader eyebrow={role} title="Dashboard" />
 
       {/* One line while setup is unfinished, pointing at the list, which
           lives on its own page. A to-do list living permanently on the
@@ -122,26 +120,31 @@ export default function BoardDashboard() {
             </Callout>
           ) : null}
 
+          <NeedsYou />
+
           {hasFlows || showDonut ? (
-            <section>
-              {/* One year control for both charts, and the way into the
-                  comparison. Two dropdowns off one piece of state read as
-                  two settings, and a board member changed one expecting
-                  the other to stay. */}
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                {years.length > 1 ? (
-                  <YearControl years={years} value={year} onChange={setYear} thisYear={thisYear} />
-                ) : (
-                  <span className="text-[13px] font-medium text-fg-muted">This year</span>
-                )}
-                {years.length > 1 && moduleOn("money-compare") ? (
-                  <SectionLink href="/board/money/trends">Compare years</SectionLink>
-                ) : null}
-              </div>
+            <section className="mt-5">
+              {/* One year control for both charts, in the chart's own header
+                  so it reads as the chart's control rather than a floating
+                  row of pills. The donut follows the same year. */}
               <div className="grid gap-5 xl:grid-cols-5">
                 {hasFlows ? (
                   <Card className={cn(showDonut ? "xl:col-span-3" : "xl:col-span-5")}>
-                    <CardHeader title="Monthly Financial Overview" />
+                    <CardHeader
+                      title="Monthly Financial Overview"
+                      action={
+                        <span className="flex flex-wrap items-center gap-3">
+                          {years.length > 1 ? (
+                            <YearControl years={years} value={year} onChange={setYear} thisYear={thisYear} />
+                          ) : (
+                            <span className="text-[13px] font-medium text-fg-muted">This year</span>
+                          )}
+                          {years.length > 1 && moduleOn("money-compare") ? (
+                            <SectionLink href="/board/money/trends">Compare years</SectionLink>
+                          ) : null}
+                        </span>
+                      }
+                    />
                     <MoneyFlowChart months={flows} />
                   </Card>
                 ) : null}
@@ -170,10 +173,100 @@ export default function BoardDashboard() {
           {/* The last meeting's homework. Lives here rather than only on
               Meetings because it is the thing a director should see on
               arrival, not the thing they go looking for. */}
-          <ActionItems className="mt-5" />
+          <div id="action-items">
+            <ActionItems className="mt-5" />
+          </div>
         </>
       ) : null}
     </>
+  );
+}
+
+/* --------------------------------------------------------------- needs you */
+
+/**
+ * What is waiting on a decision, and nothing else.
+ *
+ * The tiles below report; this card asks. Every row is a count of things a
+ * board member has to act on today, drawn from the same selectors the tabs
+ * use, so the number here is the number there. A zero row is not shown, and
+ * an empty card says so calmly rather than listing six zeroes.
+ */
+function NeedsYou() {
+  const { community, requests } = useAppState();
+  const recon = useReconciliation();
+  const approvals = usePendingApprovals();
+  const openRequests = requests.filter(
+    (r) => !["approved", "denied", "closed"].includes(r.status),
+  );
+  const joins = community.joinRequests.filter((j) => j.status === "pending");
+  const saysFixed = community.violations.filter(
+    (v) => v.stage !== "cured" && Boolean(v.ownerFixedDate),
+  );
+  const overdueItems = community.actionItems.filter(
+    (a) => !a.doneOn && a.dueOn && a.dueOn < community.asOf,
+  );
+
+  const rows = [
+    {
+      count: recon.needsReview.length,
+      label: pluralize(recon.needsReview.length, "transaction") + " to confirm",
+      href: "/board/money/transactions",
+    },
+    {
+      count: openRequests.length,
+      label: pluralize(openRequests.length, "request") + " waiting on an answer",
+      href: "/board/requests",
+    },
+    {
+      count: approvals.length,
+      label: pluralize(approvals.length, "invoice") + " awaiting approval",
+      href: "/board/vendors",
+    },
+    {
+      count: joins.length,
+      label: pluralize(joins.length, "person") + " asking to join",
+      href: "/board/homeowners",
+    },
+    {
+      count: saysFixed.length,
+      label: pluralize(saysFixed.length, "notice") + " the owner says is fixed",
+      href: "/board/violations",
+    },
+    {
+      count: overdueItems.length,
+      label: pluralize(overdueItems.length, "action item") + " overdue",
+      href: "#action-items",
+    },
+  ].filter((row) => row.count > 0);
+
+  return (
+    <Card>
+      <CardHeader title="Needs you today" />
+      {rows.length === 0 ? (
+        <p className="flex items-center gap-2 px-5 py-3.5 text-[15px] text-ok">
+          <ClipboardCheck className="size-4 shrink-0" />
+          Nothing needs you today.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {rows.map((row) => (
+            <li key={row.href}>
+              <Link
+                href={row.href}
+                className="flex items-center gap-3 px-5 py-2.5 text-[15px] text-fg transition-colors hover:bg-surface-2"
+              >
+                <span className="tnum flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-warn-soft px-1.5 text-[13px] font-semibold text-warn">
+                  {row.count}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{row.label}</span>
+                <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 

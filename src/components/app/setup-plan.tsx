@@ -571,10 +571,21 @@ function screenName(href: string): string {
   return names[href] ?? "the screen";
 }
 
+/**
+ * The address a question hands a board when it sends them into the product.
+ *
+ * `from=setup` says come back when this is done; `task` says come back to
+ * this question, not the overview. Every link out of a question goes
+ * through here so the return bar always knows where "back" is.
+ */
+export function setupLink(task: PlanTask, href = task.href): string {
+  return `${href}?from=setup&task=${encodeURIComponent(task.key)}`;
+}
+
 function GoThere({ task, secondary = false }: { task: PlanTask; secondary?: boolean }) {
   return (
     <Link
-      href={`${task.href}?from=setup`}
+      href={setupLink(task)}
       className={cn(
         "inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[15px] font-medium transition-colors",
         secondary ? "text-fg-muted hover:text-fg" : "bg-brand text-brand-fg hover:opacity-90",

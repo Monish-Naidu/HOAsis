@@ -23,7 +23,7 @@ import {
 import { useState } from "react";
 import Link from "next/link";
 import { recordsGaps } from "@/lib/metrics";
-import { GOVERNING_DOCS, disclosureCoverage, documentsPresent } from "@/lib/governing";
+import { disclosureCoverage, documentsPresent } from "@/lib/governing";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { formatDate } from "@/lib/utils";
@@ -170,7 +170,7 @@ export default function BoardDocuments() {
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-fg">
               {docsInWords.length > 0
-                ? `${docsInWords.map((d) => GOVERNING_DOCS[d].label).join(", ")}, readable and amendable`
+                ? "Your governing documents"
                 : "Your documents are files, not text"}
             </span>
             <span className="block text-[13px] leading-snug text-fg-muted">

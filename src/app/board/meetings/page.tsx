@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalendarDays, CalendarPlus } from "lucide-react";
-import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Stat } from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
@@ -75,16 +75,20 @@ export default function BoardMeetings() {
 
       {scheduling ? <ScheduleMeeting onClose={() => setScheduling(false)} /> : null}
 
-      {/* One number. A board meets a handful of times a year, and counting
-          those in four tiles said less than the date of the next one. */}
-      <div className="grid gap-4 sm:max-w-xs">
-        <Stat
-          label="Next meeting"
-          value={nextMeeting ? formatDate(nextMeeting.date) : "None set"}
-          hint={nextMeeting?.title}
-          icon={<CalendarDays className="size-4" />}
-        />
-      </div>
+      {/* One line. A board meets a handful of times a year, and a tile for
+          the date of the next one sat alone in a wide row looking unfinished. */}
+      <p className="flex items-center gap-2 text-[15px] text-fg-muted">
+        <CalendarDays className="size-4 shrink-0 text-fg-subtle" />
+        {nextMeeting ? (
+          <span>
+            Next meeting:{" "}
+            <span className="font-medium text-fg">{nextMeeting.title}</span>,{" "}
+            {formatDate(nextMeeting.date, "long")} at {nextMeeting.time}
+          </span>
+        ) : (
+          <span>No meeting scheduled.</span>
+        )}
+      </p>
 
       {live ? (
         <Card className="mt-5 overflow-hidden border-ok/30">

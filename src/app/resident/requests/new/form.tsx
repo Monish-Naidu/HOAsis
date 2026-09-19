@@ -1,18 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { formatSize } from "@/lib/documents";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ClipboardList,
-  Download,
-  FileSearch,
-  FileText,
-  Hammer,
-  PartyPopper,
-  Paperclip,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
 import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
@@ -64,6 +55,9 @@ export function NewRequestForm() {
   const [amenityId, setAmenityId] = useState("");
   const [formId, setFormId] = useState("");
   const [done, setDone] = useState(false);
+  // What the owner attached: names and sizes, which is what the board sees on
+  // the request. The bytes themselves wait for request storage.
+  const [files, setFiles] = useState<{ name: string; size: string }[]>([]);
 
   const chosen = kinds.find((k) => k.id === kind);
   const selectedAmenity = amenities.find((a) => a.id === amenityId);
@@ -137,10 +131,12 @@ export function NewRequestForm() {
       unit: owner.unit,
       status: "submitted",
       submittedDate: todayIsoDate(),
-      attachments:
-        kind === "architectural" && selectedForm
+      attachments: [
+        ...(kind === "architectural" && selectedForm
           ? [{ name: selectedForm.fileName, size: selectedForm.size }]
-          : [],
+          : []),
+        ...files,
+      ],
       thread: [
         {
           id: `rt-${seq}-1`,
@@ -322,13 +318,43 @@ export function NewRequestForm() {
               className="w-full resize-none bg-transparent text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
             />
           </label>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 p-4 text-left text-[15px] font-medium text-fg-muted hover:bg-surface-2"
-          >
+          <label className="flex w-full cursor-pointer items-center gap-2 p-4 text-left text-[15px] font-medium text-fg-muted hover:bg-surface-2">
             <Paperclip className="size-3.5" />
-            Add photos or documents
-          </button>
+            {files.length ? "Add another" : "Add photos or documents"}
+            <input
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx"
+              aria-label="Add photos or documents"
+              className="sr-only"
+              onChange={(e) => {
+                const picked = Array.from(e.target.files ?? []).map((f) => ({
+                  name: f.name,
+                  size: formatSize(f.size),
+                }));
+                e.target.value = "";
+                if (picked.length) setFiles((all) => [...all, ...picked]);
+              }}
+            />
+          </label>
+          {files.length ? (
+            <ul className="divide-y divide-border border-t border-border">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+                  <span className="min-w-0 flex-1 truncate text-fg">{f.name}</span>
+                  <span className="shrink-0 text-fg-subtle">{f.size}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${f.name}`}
+                    onClick={() => setFiles((all) => all.filter((_, j) => j !== i))}
+                    className="shrink-0 text-fg-subtle hover:text-danger"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </Card>
       </section>
 
