@@ -735,32 +735,34 @@ export default function MarketingHome() {
             half of the hero is not a flat wash next to a lit photograph. */}
         <div className="pointer-events-none absolute inset-0 -z-20 bg-aurora" aria-hidden />
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[66%] lg:block"
+          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[68%] lg:block"
           aria-hidden
         >
           {/* The oasis: homes on a ring road around a lake, one lit house on
               the island in the middle. Monish asked for it back on 2026-09-19;
               it is the picture the name comes from. One night render, lifted
-              and softened on the light theme, as shot on the dark one. */}
-          <Image
-            src="/marketing/hero-oasis.jpg"
-            alt=""
-            fill
-            priority
-            sizes="58vw"
-            className="object-cover object-[center_top] brightness-[1.22] saturate-[.9] dark:brightness-100 dark:saturate-100"
-          />
-          {/* The fade covers only the strip the headline column overlaps
-              (its left fifth or so), then lets go. The right half is the
-              photograph as shot. Monish asked on 2026-09-03 for less
-              white-out; the earlier wash ran to 72% of the width. */}
-          <div className="absolute inset-0 bg-gradient-to-r from-hero-field from-[10%] via-hero-field/55 via-[24%] to-transparent to-[46%]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-hero-field/55 via-transparent via-[26%] to-hero-field/30" />
-          {/* The lit house on the island, lit a little more: a warm radial
-              glow blended over the picture, centred where the island sits. */}
-          <div
-            className="absolute left-[54%] top-[50%] size-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_205_120/0.55),rgb(255_205_120/0.12)_45%,transparent_70%)] mix-blend-screen blur-xl dark:bg-[radial-gradient(closest-side,rgb(255_196_92/0.5),rgb(255_196_92/0.1)_45%,transparent_70%)]"
-          />
+              and softened on the light theme, as shot on the dark one.
+
+              The picture dissolves into the field through a mask on its own
+              box rather than a wash painted over it: a wash is a strip of
+              one flat color, and the moment the field behind it stopped being
+              flat (the aurora) that strip showed as a line. A mask has no
+              color, so there is nothing to mismatch. */}
+          <div className="absolute inset-0 [mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent_0%,black_44%),linear-gradient(to_bottom,transparent_0%,black_16%,black_84%,transparent_100%)] [-webkit-mask-composite:source-in]">
+            <Image
+              src="/marketing/hero-oasis.jpg"
+              alt=""
+              fill
+              priority
+              sizes="58vw"
+              className="object-cover object-[center_top] brightness-[1.22] saturate-[.9] dark:brightness-100 dark:saturate-100"
+            />
+            {/* The lit house on the island, lit a little more: a warm radial
+                glow blended over the picture, centred where the island sits. */}
+            <div
+              className="absolute left-[54%] top-[50%] size-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_205_120/0.55),rgb(255_205_120/0.12)_45%,transparent_70%)] mix-blend-screen blur-xl dark:bg-[radial-gradient(closest-side,rgb(255_196_92/0.5),rgb(255_196_92/0.1)_45%,transparent_70%)]"
+            />
+          </div>
           <HeroChips />
         </div>
 
@@ -804,7 +806,7 @@ export default function MarketingHome() {
           </div>
         </div>
 
-        <div className="relative -mb-px aspect-[16/11] w-full lg:hidden">
+        <div className="relative -mb-px aspect-[16/11] w-full [mask-image:linear-gradient(to_bottom,transparent_0%,black_22%)] lg:hidden">
           <Image
             src="/marketing/hero-oasis.jpg"
             alt="An illustrated neighborhood at night: homes on a ring road around a lake, with one lit house on the island in the middle"
@@ -813,7 +815,6 @@ export default function MarketingHome() {
             sizes="100vw"
             className="object-cover brightness-[1.22] saturate-[.9] dark:brightness-100 dark:saturate-100"
           />
-          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-hero-field to-transparent" />
         </div>
       </section>
 
