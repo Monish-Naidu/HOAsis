@@ -310,7 +310,12 @@ export function buildPlan(
     percent: all.length ? done / all.length : 1,
     /** The milestone worth announcing, rather than burying at 3 of 11. */
     canCollect: Boolean(collect?.complete),
-    allDone: all.length > 0 && done === all.length,
+    /**
+     * Nothing left, including when every task was skipped: a board that
+     * dismissed the whole list has no phases, and the dashboard used to read
+     * the first one and crash into "This page did not load".
+     */
+    allDone: done === all.length,
     /** What we removed by asking three questions instead of showing everything. */
     skipped: SETUP_TASKS.length - all.length,
   };

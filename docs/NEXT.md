@@ -8,6 +8,43 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19, late: one send, the right letter for each household
+
+Monish: Homeowners said "5 behind" but the composer previewed one
+person's name over a "Send to 5" button. It also asked the board to pick
+one template for the whole group, when the five stood on four different
+rungs of the collection ladder.
+
+- **`RemindersComposer`** (`reminders-composer.tsx`) replaces
+  `TemplateComposer`. The policy places each household on the ladder
+  (`collectionsLadder`), `src/lib/letters.ts` maps the rung to a letter
+  (reminder, late notice, notice of intent) and fills it from that record.
+  Left column: who, balance, days late, which letter. Right: that person's
+  letter as they will read it, with "Edit the letter" for the wording.
+  Households behind but under the reminder day are listed muted with
+  "Reminder in N days" and are not sent. Opens from "Send reminders" on
+  Homeowners and from the ladder's "Send reminders" on Collections
+  (`/board/homeowners?remind=1`, page wrapped in Suspense for it).
+- **The household panel has one composer.** A note continues the latest
+  thread; "Start from the {letter}" drops the filled-in letter into the
+  same textarea and sends it on its own thread under its own subject.
+- **Sends are real now.** `messageOwner` in app-state creates the thread
+  locally or in `threads`; the old composer only toasted. The inbox keeps
+  paragraphs (`whitespace-pre-wrap`).
+- **Still two paths for dues mail.** `DuesMailer` on Communications sends
+  the fixed API wording by real email for a live association; the letters
+  above land on the thread and are not emailed yet. Merging them needs
+  `/api/email/send` to take a subject and body per household.
+- **Dashboard crash fixed.** A board that skipped every setup task had no
+  phases, `SetupPlanSummary` read `phases[0]` and the dashboard showed
+  "This page did not load". `allDone` is now true when nothing is left.
+  Found because `scripts/product-shots.mjs` skips every task.
+- **Resident live meeting row** dropped its `ring-pulse` (the rings drew
+  from an unpositioned tile and read as a green flash). Calm tile, green
+  "Live now".
+- **Landing captures regenerated** from the current product (`pnpm shots`).
+  The monitor and phone were a year of design behind.
+
 ## 2026-09-19, night: the join code makes the account
 
 Monish: "when you use the join code, shouldn't it let you create an

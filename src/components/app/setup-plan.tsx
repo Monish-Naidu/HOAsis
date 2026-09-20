@@ -1072,7 +1072,8 @@ export function SetupPlanSummary() {
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   if (plan.allDone) return null;
   const next = plan.phases.flatMap((phase) => phase.tasks).find((task) => !task.complete);
-  const toCollect = plan.phases[0].total - plan.phases[0].done;
+  const collect = plan.phases.find((phase) => phase.id === "collect");
+  const toCollect = collect ? collect.total - collect.done : 0;
 
   // Straight into the next question. The overview stays one click away
   // under Getting started in the sidebar for anyone who wants the whole list.
@@ -1090,7 +1091,9 @@ export function SetupPlanSummary() {
           {next ? `Next: ${next.label}.` : ""}{" "}
           {plan.canCollect
             ? "You can already take payments."
-            : `${toCollect} ${toCollect === 1 ? "thing" : "things"} before you can take a payment.`}
+            : toCollect > 0
+              ? `${toCollect} ${toCollect === 1 ? "thing" : "things"} before you can take a payment.`
+              : ""}
         </span>
       </span>
       <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-[13px] font-semibold text-brand-fg sm:inline-flex">

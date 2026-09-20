@@ -153,18 +153,30 @@ test.describe("board actions", () => {
     await page.goto("/board/homeowners");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "Message everyone behind" }).click();
+    await page.getByRole("button", { name: "Send reminders" }).click();
     await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Late notice with fee" }).click();
-    await page.waitForTimeout(400);
 
-    const subject = await page.getByLabel("Subject").inputValue();
-    expect(subject, "the subject still shows a merge field").not.toContain("{{");
-    expect(subject.length).toBeGreaterThan(5);
+    // Every household behind is listed with the letter its rung calls for,
+    // not one template picked for the group.
+    const list = page.locator("main ul");
+    const badges = await list.getByText(/reminder|notice/i).count();
+    expect(badges, "nobody was assigned a letter").toBeGreaterThan(0);
 
-    const body = await page.locator("main textarea").first().inputValue();
+    // The preview is that household's own letter: no merge fields, an amount.
+    const preview = page.locator("main div.whitespace-pre-wrap").first();
+    const body = await preview.textContent();
     expect(body, "the body still shows a merge field").not.toContain("{{");
     expect(body, "the notice names no amount").toMatch(/\$\d/);
+
+    // Opening a second household changes the preview to that person.
+    const rows = page.getByRole("button", { pressed: false }).filter({ hasText: /late$/ });
+    if ((await rows.count()) > 0) {
+      const name = (await rows.first().textContent()) ?? "";
+      await rows.first().click();
+      await page.waitForTimeout(300);
+      const to = await page.getByText(/^To /).first().textContent();
+      expect(to ?? "", "the preview did not follow the selection").toContain(name.slice(0, 6));
+    }
   });
 
   test("exporting the roster produces a real CSV", async ({ page }) => {

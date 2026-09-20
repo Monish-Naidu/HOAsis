@@ -309,7 +309,7 @@ export default function BoardCommunications() {
                         {formatDate(m.at, "long")} · {m.channel}
                       </span>
                     </div>
-                    <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">{m.body}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed text-fg-muted">{m.body}</p>
                   </div>
                 </div>
               ))}

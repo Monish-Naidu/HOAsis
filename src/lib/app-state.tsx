@@ -239,6 +239,19 @@ interface AppState {
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
   /**
+   * A new letter to one household, on its own thread.
+   *
+   * A dues reminder is not a reply to "Question about the pool closure", so
+   * it starts a thread of its own under the subject the letter carries. The
+   * board's record is the thread; the resident's copy goes by email.
+   */
+  messageOwner: (
+    ownerId: string,
+    subject: string,
+    body: string,
+    tag?: Community["threads"][number]["tag"],
+  ) => void;
+  /**
    * Files the board uploads. A demo keeps the name and size; a real
    * association keeps the bytes in Storage and the rest in a row. Resolves
    * with what landed and what was refused, so the screen can say both.
@@ -3031,6 +3044,70 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, remote.profileId, communityId],
   );
 
+  const messageOwner = useCallback(
+    (
+      ownerId: string,
+      subject: string,
+      body: string,
+      tag: Community["threads"][number]["tag"] = "General",
+    ) => {
+      const id = newId();
+      const message = (senderName: string) => ({
+        id: `m-${id}-0`,
+        at: todayIsoDate(),
+        from: senderName,
+        fromRole: "board" as const,
+        direction: "outbound" as const,
+        channel: "email" as const,
+        body,
+      });
+      if (remote.community) {
+        const rc = remote.community;
+        const owner = rc.owners.find((o) => o.id === ownerId);
+        if (!owner) return;
+        const sender = rc.accounts.find((a) => a.id === remote.profileId);
+        const senderName = sender?.name ?? "Board";
+        void remoteWrite("Sending the letter", () =>
+          supabaseBrowser().from("threads").insert({
+            id,
+            association_id: rc.id,
+            subject,
+            unit_id: ownerId,
+            participants: [owner.displayName, senderName],
+            tag,
+            updated_on: todayIsoDate(),
+            unread: false,
+            messages: [message(senderName)],
+          }),
+        );
+        return;
+      }
+      const owner = sliceStore(communityId, "owners")
+        .getSnapshot()
+        .find((o) => o.id === ownerId);
+      if (!owner) return;
+      const sender = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      const senderName = sender?.name ?? "Board";
+      sliceStore(communityId, "threads").update((all) => [
+        {
+          id,
+          subject,
+          participants: [owner.displayName, senderName],
+          ownerId,
+          unit: owner.unit,
+          updatedDate: todayIsoDate(),
+          unread: false,
+          tag,
+          messages: [message(senderName)],
+        },
+        ...all,
+      ]);
+    },
+    [remote.community, remote.profileId, communityId],
+  );
+
   const uploadDocuments = useCallback(
     async (
       files: File[],
@@ -3792,6 +3869,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     approvePayout,
     markW9Requested,
     replyToThread,
+    messageOwner,
     uploadDocuments,
     addGoverningArticles,
     updateAssociation,

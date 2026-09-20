@@ -73,11 +73,11 @@ export function CollectionsLadder() {
         action={
           ladder.dueNow.length ? (
             <Link
-              href="/board/communications"
+              href="/board/homeowners?remind=1"
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
             >
               <Mail className="size-4" />
-              Send them
+              Send reminders
             </Link>
           ) : undefined
         }

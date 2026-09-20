@@ -49,7 +49,7 @@ export default function ResidentHome() {
               href="/resident/calendar"
               className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
             >
-              <IconTile icon={Radio} tint="teal" size="sm" className="ring-pulse text-ok" />
+              <IconTile icon={Radio} tint="teal" size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-semibold text-fg">{live.title}</span>
                 <span className="block text-[13px] text-ok">
