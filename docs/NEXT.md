@@ -8,6 +8,31 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## Still open, as of 2026-09-19
+
+The short list. Everything below it is history of what was built.
+
+1. **Dues letters are not emailed.** "Send reminders" on Homeowners puts
+   each household's letter on its thread; the resident's copy does not go
+   out by email. `DuesMailer` on Communications still sends the fixed API
+   wording. Merge: `/api/email/send` takes a subject and body per household,
+   `RemindersComposer` posts to it, `DuesMailer` goes away.
+2. **Landing copy overclaims.** "Knowledge center" (nowhere in the app),
+   "Message homeowners and vendors instantly" and "video call with board
+   members or vendors" (vendors cannot be messaged or called). Cut the words
+   or build the thing.
+3. **Resident calendar shows only upcoming meetings.** Board Meetings keeps
+   the past; a resident's search hit for an ended meeting lands on a calendar
+   that does not list it. Add a Past meetings card to `MeetingRsvps` or the
+   calendar page.
+4. **Resend domain.** yourhoasis.com is not verified, so mail still goes
+   from Resend's test sender and bulk invites fail for everyone but the
+   account owner. Monish adds the domain and DKIM/SPF, then sets
+   `EMAIL_FROM` on Vercel.
+5. **Anchors under the narrow board header.** Search deep links use
+   `scroll-mt-24`; below `lg` the board header is two rows tall and the
+   target row lands partly under it.
+
 ## 2026-09-19, late: one search for the whole association
 
 Monish asked what happens in year three, when every tab holds years of
