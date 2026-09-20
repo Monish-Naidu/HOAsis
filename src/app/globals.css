@@ -689,6 +689,13 @@
   0%   { opacity: 0.7; transform: scale(0.7); }
   100% { opacity: 0; transform: scale(1.9); }
 }
+/* The rings are absolutely positioned, so the element they belong to has
+   to be positioned itself. Without this they measured themselves against
+   the nearest positioned ancestor (once, the whole phone frame) and read as
+   a green flash across the screen, nowhere near the icon. */
+.ring-pulse {
+  position: relative;
+}
 .ring-pulse::before,
 .ring-pulse::after {
   content: "";
