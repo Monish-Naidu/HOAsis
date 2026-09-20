@@ -292,7 +292,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
           const showTitle = p.title && !p.body.startsWith(p.title);
           const isLiked = liked.has(p.id);
           return (
-            <Card key={p.id} as="article">
+            <Card key={p.id} as="article" id={`post-${p.id}`} className="scroll-mt-24">
               <div className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar name={p.author} tone={p.authorRole ? "brand" : "neutral"} />

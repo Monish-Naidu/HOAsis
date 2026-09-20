@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { BatteryFull, Monitor, Signal, Smartphone, Wifi } from "lucide-react";
 import { Avatar, type TintName } from "@/components/ui/primitives";
 import { ResidentBell } from "@/components/app/notifications";
+import { SearchButton, SearchPalette } from "@/components/app/search-palette";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { Rail, RailIcon } from "@/components/app/rail";
@@ -116,6 +117,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             </TabPill>
           </div>
           ) : null}
+          <SearchButton />
           <ViewSwitcher />
           <ResidentBell />
           {/* In website mode the rail's card carries the toggle. */}
@@ -135,6 +137,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
       </div>
       <div className="flex items-center gap-1.5">
+        <SearchButton compact />
         <ResidentBell compact />
         <Avatar name={ownerName} />
       </div>
@@ -145,6 +148,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   if (phonePreview) {
     return (
       <RequireSession>
+      <SearchPalette />
       <div className="min-h-dvh bg-bg lg:bg-surface-2">
         {topBar}
         <div className="lg:flex lg:justify-center lg:px-6 lg:py-10">
@@ -192,6 +196,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   /* -------------------------------------------------------------- website */
   return (
     <RequireSession>
+    <SearchPalette />
     <div className="page-ground min-h-dvh bg-bg lg:pl-[16.5rem]">
       {/* The sidebar floats: inset from the edges with a large radius, so it
           reads as a panel rather than a slab welded to the viewport. No
@@ -279,6 +284,7 @@ function PhoneHeader({
         <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
       </div>
       <div className="flex items-center gap-1.5">
+        <SearchButton compact />
         <ResidentBell compact />
         <Avatar name={ownerName} />
       </div>

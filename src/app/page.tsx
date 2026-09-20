@@ -821,8 +821,8 @@ export default function MarketingHome() {
       {/* The strip along the bottom of slide one. The huddle called the navy
           band too dark against the white page, so in light mode it is a quiet
           gray with the blue carrying the icons and copy; dark keeps navy. */}
-      <div className="border-y border-border bg-surface text-fg dark:border-0 dark:bg-navy-900">
-        <ul className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-5 py-4 text-[14px] font-semibold sm:justify-between">
+      <div className="border-y border-border bg-surface-2 text-fg dark:border-0 dark:bg-navy-900">
+        <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 items-center gap-x-6 gap-y-4 px-5 py-5 text-[14px] font-semibold sm:flex sm:flex-wrap sm:justify-between sm:gap-x-10 sm:gap-y-3">
           {ASSURANCES.map(({ icon, label, tint }, index) => (
             <Reveal key={label} delay={index * 70}>
               <li className="inline-flex items-center gap-2.5">
@@ -834,10 +834,12 @@ export default function MarketingHome() {
         </ul>
       </div>
 
-      {/* Slide two. */}
+      {/* Slide two. The copy sits at the top of the monitor rather than at
+          its middle: centred against a tall device, the headline drifted a
+          screen below the strip and the section opened on nothing. */}
       <section className="border-b border-border bg-surface">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
-          <div>
+        <div className="mx-auto grid w-full max-w-6xl items-start gap-12 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <div className="lg:pt-6">
             <Reveal>
               <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
                 Run your HOA.

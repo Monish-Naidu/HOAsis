@@ -2,7 +2,8 @@
 
 import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   BookOpen,
   ChevronRight,
@@ -33,8 +34,18 @@ const order: DocumentRecord["category"][] = [
 ];
 
 export default function ResidentDocuments() {
+  // `?q=` from the top bar's search, resolved on the client under Suspense.
+  return (
+    <Suspense fallback={null}>
+      <DocumentsScreen />
+    </Suspense>
+  );
+}
+
+function DocumentsScreen() {
   const { community, documents } = useAppState();
-  const [query, setQuery] = useState("");
+  const params = useSearchParams();
+  const [query, setQuery] = useState(params.get("q") ?? "");
   const visible = documents.filter((d) => d.visibility !== "board");
   const q = query.trim().toLowerCase();
 

@@ -14,7 +14,8 @@ import {
   Upload,
 } from "lucide-react";
 import { Badge, Card, CardHeader, IconTile, PageHeader } from "@/components/ui/primitives";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { recordsGaps } from "@/lib/metrics";
 import { disclosureCoverage, documentsPresent } from "@/lib/governing";
@@ -42,10 +43,20 @@ const order: DocumentRecord["category"][] = [
 ];
 
 export default function BoardDocuments() {
+  // `?q=` from the top bar's search, resolved on the client under Suspense.
+  return (
+    <Suspense fallback={null}>
+      <DocumentsScreen />
+    </Suspense>
+  );
+}
+
+function DocumentsScreen() {
   const { community, documents, uploadDocuments, setDocumentVisibility, removeDocument } =
     useAppState();
   const { notify } = useToast();
-  const [query, setQuery] = useState("");
+  const params = useSearchParams();
+  const [query, setQuery] = useState(params.get("q") ?? "");
   const [uploading, setUploading] = useState(false);
   const gaps = recordsGaps({ ...community, documents });
   const governing = community.governingDocs;

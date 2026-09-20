@@ -78,7 +78,8 @@ export default function BoardRequests() {
             return (
             <div
               key={r.id}
-              className="flex items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
+              id={`req-${r.id}`}
+              className="flex scroll-mt-24 items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
             >
               {daysLeft === null ? (
                 <Avatar name={r.ownerName} tone="neutral" />
@@ -150,7 +151,8 @@ export default function BoardRequests() {
           {decided.map((r) => (
             <div
               key={r.id}
-              className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              id={`req-${r.id}`}
+              className="flex scroll-mt-24 items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
             >
               <Avatar name={r.ownerName} tone="neutral" />
               <div className="min-w-0 flex-1">

@@ -30,7 +30,9 @@ export default function ResidentVote() {
       {open.length ? (
         <section className="space-y-3">
           {open.map((b) => (
-            <BallotVote key={b.id} ballot={b} />
+            <div key={b.id} id={`ballot-${b.id}`} className="scroll-mt-24">
+              <BallotVote ballot={b} />
+            </div>
           ))}
         </section>
       ) : (
@@ -46,7 +48,9 @@ export default function ResidentVote() {
           <SectionTitle>Closed</SectionTitle>
           <div className="space-y-3">
             {past.map((b) => (
-              <BallotVote key={b.id} ballot={b} />
+              <div key={b.id} id={`ballot-${b.id}`} className="scroll-mt-24">
+                <BallotVote ballot={b} />
+              </div>
             ))}
           </div>
         </section>

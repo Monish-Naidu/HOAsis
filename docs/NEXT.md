@@ -8,6 +8,35 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-19, late: one search for the whole association
+
+Monish asked what happens in year three, when every tab holds years of
+records. Answer built: one search field, not a filter bar on twelve tabs.
+
+- **`SearchPalette`** (`search-palette.tsx`): ⌘K / Ctrl+K anywhere in either
+  shell, or the Search button in the top bar (icon alone on the phone
+  header). Mounted once per shell; buttons call `openSearch()`, so two
+  headers never register the shortcut twice.
+- **`src/lib/search.ts`** builds the index from the records already in
+  memory: households, transactions, documents, threads, meetings, ballots,
+  requests, notices, vendors, announcements, forum posts, action items.
+  Every typed word must match; title beats subtitle beats hidden keywords;
+  ties go to the newest. Grouped by tab, five per group.
+- **Gating.** Board hits pass the route table (`BOARD_ROUTES` need and
+  module), so a Treasurer without `communications` never sees threads.
+  Residents get documents not marked board-only, meetings, owner ballots,
+  their own requests and notices, announcements, published posts.
+- **Deep links.** Households `?q=`, transactions `?q=&from=&to=` (the
+  entry's own year, not this month), documents `?q=` (both sides), threads
+  `?thread=` (Communications and both Documents pages now wrap in Suspense
+  for it), and `#id` anchors with `scroll-mt-24` on meetings, ballots,
+  requests, vendors, forum posts.
+- **Meetings keep their past.** Board Meetings has "Past meetings": date,
+  attendance, agenda, who was in the room, newest first. Ended meetings
+  used to vanish. Resident calendar still shows only upcoming; a resident's
+  meeting hit lands on the calendar page.
+- Tests: `tests/unit/search.test.ts`, `tests/e2e/12-search.spec.ts`.
+
 ## 2026-09-19, late: one send, the right letter for each household
 
 Monish: Homeowners said "5 behind" but the composer previewed one

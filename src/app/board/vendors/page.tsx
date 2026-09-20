@@ -227,7 +227,8 @@ export default function BoardVendors() {
                   return (
                     <tr
                       key={v.id}
-                      className="border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2"
+                      id={`vendor-${v.id}`}
+                      className="scroll-mt-24 border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2"
                     >
                       <td className="px-5 py-3">
                         <p className="font-medium text-fg">{v.name}</p>

@@ -16,6 +16,7 @@ import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { Rail } from "@/components/app/rail";
+import { SearchButton, SearchPalette } from "@/components/app/search-palette";
 import { PageTransition } from "@/components/app/page-transition";
 import { BOARD_ROUTES } from "@/lib/board-routes";
 
@@ -31,6 +32,7 @@ export default function BoardLayout({
   return (
     <RequireSession>
       <BoardOnly>
+        <SearchPalette />
         <div className="page-ground min-h-dvh bg-bg lg:pl-[16.5rem]">
           {/* The sidebar floats: inset from the edges with a large radius, to
             match the resident shell. The community's name is not here; the
@@ -48,6 +50,7 @@ export default function BoardLayout({
                 <CommunityName />
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
+                <SearchButton />
                 <ViewSwitcher />
                 <BoardBell />
                 {/* At lg the rail's own card carries both. */}

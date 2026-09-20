@@ -46,12 +46,21 @@ export function TransactionsScreen() {
   // A link that asks for the review queue opens on the whole year, since the
   // oldest unreviewed line is rarely this month's.
   const fromLink = params.get("status") === "needs-review";
-  const [preset, setPreset] = useState<PeriodPreset>(fromLink ? "this-year" : "this-month");
-  const [custom, setCustom] = useState(() => periodRange("custom", asOf));
+  // Search from the top bar lands on one line: its words in the box and its
+  // year as the period, so a 2024 entry is not hidden behind "this month".
+  const fromSearch = params.get("q");
+  const [preset, setPreset] = useState<PeriodPreset>(
+    fromSearch ? "custom" : fromLink ? "this-year" : "this-month",
+  );
+  const [custom, setCustom] = useState(() => {
+    const from = params.get("from");
+    const to = params.get("to");
+    return from && to ? { from, to } : periodRange("custom", asOf);
+  });
   const [accountId, setAccountId] = useState("all");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState<StatusFilter>(fromLink ? "needs-review" : "any");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(fromSearch ?? "");
   const [open, setOpen] = useState<string | null>(null);
 
   const range = preset === "custom" ? custom : periodRange(preset, asOf);

@@ -20,7 +20,8 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
 import { DeliveryPanel } from "@/components/app/delivery-panel";
 import { useToast } from "@/components/app/toast";
@@ -165,11 +166,22 @@ function AnnouncementsManager({
 }
 
 export default function BoardCommunications() {
+  // The screen reads `?thread=` from the URL, which is what the Suspense is
+  // for: the rest of the page prerenders and the selection resolves on the client.
+  return (
+    <Suspense fallback={null}>
+      <CommunicationsScreen />
+    </Suspense>
+  );
+}
+
+function CommunicationsScreen() {
   const { community, threads, replyToThread } = useAppState();
   const unread = useUnreadThreadCount();
   const stats = communicationsSummary(community);
   const { notify } = useToast();
-  const [activeId, setActiveId] = useState(threads[0]?.id);
+  const params = useSearchParams();
+  const [activeId, setActiveId] = useState(params.get("thread") ?? threads[0]?.id);
   const [draft, setDraft] = useState("");
   const [composing, setComposing] = useState(false);
   const active = threads.find((t) => t.id === activeId) ?? threads[0];

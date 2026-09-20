@@ -80,7 +80,8 @@ export function HomeownersScreen() {
     community.profile?.origin !== "builder" && community.profile?.origin !== "handover";
 
   const [filter, setFilter] = useState<Filter>("all");
-  const [query, setQuery] = useState("");
+  // Search from the top bar lands here with the household's name filled in.
+  const [query, setQuery] = useState(params.get("q") ?? "");
   const [openId, setOpenId] = useState<string | null>(null);
   const [focusComposer, setFocusComposer] = useState(false);
   const [shown, setShown] = useState(PAGE);

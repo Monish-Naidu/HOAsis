@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, CalendarPlus } from "lucide-react";
+import { CalendarDays, CalendarPlus, ChevronDown } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
@@ -57,6 +57,11 @@ export default function BoardMeetings() {
     .filter((m) => m.status !== "ended")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
   const nextMeeting = upcoming.find((m) => m.status !== "live");
+  // Newest first. What was on the agenda, and who came, is the record the
+  // next board inherits; it used to vanish the day the meeting ended.
+  const past = [...community.meetings]
+    .filter((m) => m.status === "ended")
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
     <>
@@ -152,7 +157,8 @@ export default function BoardMeetings() {
         {upcoming.map((m) => (
           <div
             key={m.id}
-            className="flex items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
+            id={`mtg-${m.id}`}
+            className="flex scroll-mt-24 items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
           >
             <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
               <span className="text-[12px] font-semibold uppercase text-fg-subtle">
@@ -185,6 +191,68 @@ export default function BoardMeetings() {
           </div>
         ))}
       </Card>
+
+      {past.length > 0 ? (
+        <Card className="mt-6">
+          <CardHeader title="Past meetings" subtitle="What was on the agenda, and who came" />
+          {past.map((m) => (
+            <details
+              key={m.id}
+              id={`mtg-${m.id}`}
+              className="group scroll-mt-24 border-b border-border last:border-b-0"
+            >
+              <summary className="flex cursor-pointer select-none items-start gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
+                <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
+                  <span className="text-[12px] font-semibold uppercase text-fg-subtle">
+                    {formatDate(m.date).split(" ")[0]}
+                  </span>
+                  <span className="tnum text-[15px] font-semibold leading-none text-fg">
+                    {formatDate(m.date).split(" ")[1]}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-fg">{m.title}</p>
+                  <p className="mt-0.5 text-[13px] text-fg-muted">
+                    {m.date.slice(0, 4)} · {m.location}
+                    {m.attendees.length ? ` · ${m.attendees.length} attended` : ""}
+                    {m.ballotIds.length ? ` · ${m.ballotIds.length} ballot` : ""}
+                    {m.recordingAvailable ? " · recording" : ""}
+                  </p>
+                </div>
+                <ChevronDown className="mt-1 size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="grid gap-4 border-t border-border bg-surface-2 px-5 py-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-[13px] font-semibold text-fg-muted">Agenda</p>
+                  <ol className="mt-1.5 space-y-1">
+                    {m.agenda.map((item, i) => (
+                      <li key={item} className="flex gap-2 text-[15px] text-fg-muted">
+                        <span className="tnum shrink-0 text-fg-subtle">{i + 1}.</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                {m.attendees.length ? (
+                  <div>
+                    <p className="text-[13px] font-semibold text-fg-muted">In the room</p>
+                    <ul className="mt-1.5 space-y-1">
+                      {m.attendees.map((a) => (
+                        <li key={a.name} className="flex items-center gap-2 text-[13px] text-fg-muted">
+                          <span className="truncate">{a.name}</span>
+                          <span className="ml-auto shrink-0 text-fg-subtle">
+                            {a.role ?? placeLabel(a.unit ?? "")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            </details>
+          ))}
+        </Card>
+      ) : null}
 
       <ActionItems className="mt-6" />
     </>
