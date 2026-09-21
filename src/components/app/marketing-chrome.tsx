@@ -61,34 +61,39 @@ export function MarketingHeader() {
     >
       {/* A fixed height, because the hero pulls itself up under this bar by
           exactly that much so the field runs to the top of the page. */}
+      {/* Two groups: the wordmark and the pages on the left, the account on
+          the right. Monish asked on 2026-09-20 for the nav beside the logo
+          rather than floating in the middle, and set in a heavier hand. */}
       <div className="mx-auto flex h-[68px] w-full max-w-6xl items-center justify-between gap-4 px-5">
-        <Link
-          href="/"
-          aria-label="Your HOAsis home"
-          className="transition-transform duration-200 ease-out hover:scale-[1.02] active:scale-[0.99]"
-        >
-          <Wordmark size={40} />
-        </Link>
+        <div className="flex items-center gap-8">
+          <Link
+            href="/"
+            aria-label="Your HOAsis home"
+            className="transition-transform duration-200 ease-out hover:scale-[1.02] active:scale-[0.99]"
+          >
+            <Wordmark size={40} />
+          </Link>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
-          {LINKS.map((link) => {
-            const active =
-              link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-[15px] font-medium transition-colors",
-                  active ? "text-fg" : "text-fg-muted hover:text-fg",
-                )}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+            {LINKS.map((link) => {
+              const active =
+                link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-[16px] font-semibold tracking-[-0.01em] transition-colors",
+                    active ? "text-fg" : "text-fg-muted hover:text-fg",
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
         <div className="flex items-center gap-2">
           {/* Over the hero photograph the muted ink vanished into the sky, so

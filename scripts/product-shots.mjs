@@ -23,13 +23,15 @@ const SHOTS = [
     file: "product-dashboard.png",
     path: "/board",
     seat: { accountId: "acct-arya", view: "board" },
-    width: 1180,
-    height: 900,
-    // Skip the community banner so the frame is the working area. The clip
+    // Wide enough that the two charts sit side by side (they stack under
+    // 1280), and the clip starts at them: the monitor on the front page is
+    // there to show the graphs, not the to-do list above them. The clip
     // matches the monitor artwork's screen, which is 1.91:1, so the capture
     // lands on it without cropping.
-    clipFrom: "main",
-    clipHeight: 618,
+    width: 1280,
+    height: 1000,
+    scrollTo: "Money in and out",
+    clipHeight: 670,
   },
   {
     file: "product-money.png",
@@ -99,7 +101,27 @@ for (const shot of SHOTS) {
   // The dev-server overlay badge is not part of the product.
   await page.evaluate(() => document.querySelector("nextjs-portal")?.remove());
 
-  if (shot.clipFrom) {
+  if (shot.scrollTo) {
+    // Bring the section holding that text to the top of the frame, and clip
+    // from there. The dev server's stuck-on scroll restoration is not a
+    // concern: the page was just opened.
+    const section = page.getByText(shot.scrollTo, { exact: true }).first();
+    await section.evaluate((el) => {
+      (el.closest("section") ?? el).scrollIntoView({ block: "start" });
+      // Back down by the app's sticky bar, so it is not sitting on the clip.
+      const bar = document.querySelector("header");
+      window.scrollBy(0, -((bar?.getBoundingClientRect().height ?? 0) + 16));
+    });
+    await page.waitForTimeout(400);
+    const box = await section.evaluate((el) => {
+      const r = (el.closest("section") ?? el).getBoundingClientRect();
+      return { y: r.y };
+    });
+    await page.screenshot({
+      path: `${OUT}/${shot.file}`,
+      clip: { x: 0, y: Math.max(0, box.y - 8), width: shot.width, height: shot.clipHeight },
+    });
+  } else if (shot.clipFrom) {
     const box = await page.locator(shot.clipFrom).boundingBox();
     await page.screenshot({
       path: `${OUT}/${shot.file}`,

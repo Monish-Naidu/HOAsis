@@ -2,11 +2,16 @@
 
 ## The hero illustration
 
-`hero-oasis.jpg` is the hero from 2026-09-19: the ring-road neighborhood
-around a lake with one lit house on the island, the picture the name comes
-from. It is the 2026-08-27 render (then `hero-community.jpg`) brought back at
-Monish's ask; the lakeside pair below stays in the folder for the other
-sections. A night render, lifted with a CSS filter on the light theme.
+`hero-oasis-light.jpg` and `hero-oasis-dark.jpg` are the hero pair Monish
+supplied on 2026-09-20: the ring-road neighborhood around a lake with one lit
+house on the island, the picture the name comes from, rendered once by day for
+the light theme and once by night for the dark one, each fading out on its
+left so the headline has ground. They replace the single night render from
+2026-08-27 that the light theme had to lift with a CSS filter.
+
+`device-monitor.png` is Monish's display render from the same day, cut out on
+a transparent ground with a soft halo in its alpha. The front page lays the
+dashboard capture on its glass.
 
 `hero-day.jpg` and `hero-night.jpg` are the same lakeside neighborhood rendered
 twice, and they are the one set of images here that is not photography and is

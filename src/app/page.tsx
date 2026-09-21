@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Bell,
+  BookOpen,
   Briefcase,
   CalendarDays,
   ChartNoAxesColumn,
@@ -26,6 +27,7 @@ import { Avatar, Card, IconTile, type TintName } from "@/components/ui/primitive
 import {
   articleBySlug,
   association,
+  libraryArticles,
   communitySettings,
   liveMeeting,
   openRequests,
@@ -36,7 +38,7 @@ import {
   vendors,
 } from "@/lib/data";
 import { computePaymentCost, FEE_SCHEDULE } from "@/lib/payments/instruments";
-import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
+import { PRICE_PER_HOME_CENTS, TRIAL_DAYS } from "@/lib/pricing";
 import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 
@@ -137,56 +139,37 @@ const POCKET: { icon: typeof Clock; tint: TintName; title: string; body: string 
 /**
  * The dashboard on a display, the way Apple shows hardware: the device floats
  * on the page itself with a soft ground shadow, no card and no studio
- * backdrop. The monitor render from 2026-08-31 carried its own baked-in
- * background, which read as a white slab on the dark theme, so the display is
- * drawn here instead: a thin black bezel, an aluminum stand, and the real
- * capture on the glass. The aluminum is fixed silver in both themes, like
- * every device bezel in the product.
+ * backdrop. The render is Monish's from 2026-09-20, an iMac-style display
+ * cut out on a transparent ground with a soft white halo baked into its
+ * alpha, so it sits on the light theme and glows on the dark one. The real
+ * capture is laid on the glass: the screen rectangle was measured off the
+ * render (x 174 to 1359, y 55 to 675 of 1536 x 1024), and the capture is
+ * taken at the same 1.91:1 so nothing is cropped or stretched.
  */
 function MonitorFrame({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="tilt-stage relative mx-auto w-full max-w-[680px]">
+    <div className="tilt-stage relative mx-auto w-full max-w-[820px]">
       {/* The glow the screen throws on the desk. */}
       <div
         className="pointer-events-none absolute -inset-x-10 -top-10 bottom-10 -z-10 rounded-[40%] bg-[radial-gradient(closest-side,rgb(63_130_242/0.22),transparent)] blur-2xl dark:bg-[radial-gradient(closest-side,rgb(77_139_245/0.28),transparent)]"
         aria-hidden
       />
-      {/* Studio Display proportions, silver finish: all screen, a thin
-          aluminum rim, no chin. The true product's near-black glass face is
-          exactly what the huddle killed for disappearing on the dark theme,
-          so the rim stays aluminum. */}
-      <div className="tilt relative rounded-[clamp(8px,1.6vw,14px)] bg-gradient-to-b from-[#eceef0] via-[#d7dade] to-[#bcc1c7] p-[clamp(5px,1vw,8px)] shadow-[0_30px_70px_-20px_rgb(0_0_0/0.45)] ring-1 ring-black/20 dark:shadow-[0_30px_70px_-20px_rgb(0_0_0/0.85)]">
-        {/* The machined edge, caught by the light along the top. */}
-        <div
-          className="pointer-events-none absolute inset-0 rounded-[clamp(8px,1.6vw,14px)] ring-1 ring-inset ring-white/60"
-          aria-hidden
+      <div className="tilt relative">
+        <Image
+          src="/marketing/device-monitor.png"
+          alt=""
+          width={1536}
+          height={1024}
+          sizes="(max-width: 1024px) 100vw, 820px"
+          className="h-auto w-full"
         />
-        {/* A whisper of black glass between aluminum and picture. */}
-        <div className="overflow-hidden rounded-[clamp(4px,0.8vw,7px)] bg-black p-[2px]">
-          <div className="overflow-hidden rounded-[clamp(3px,0.6vw,5px)] bg-surface">
-            <Image
-              src={src}
-              alt={alt}
-              width={2360}
-              height={1236}
-              sizes="(max-width: 1024px) 100vw, 660px"
-              className="h-auto w-full"
-            />
-          </div>
+        <div className="absolute left-[11.33%] top-[5.37%] h-[60.55%] w-[77.15%] overflow-hidden rounded-[2px] bg-surface">
+          <Image src={src} alt={alt} fill sizes="(max-width: 1024px) 78vw, 640px" className="object-cover object-top" />
         </div>
       </div>
-      {/* The stand: a slim arm and a low rounded foot, edge on. */}
-      <div
-        className="mx-auto h-[clamp(38px,7.5vw,58px)] w-[clamp(48px,9vw,68px)] rounded-b-[3px] bg-gradient-to-b from-[#c4c8cd] via-[#dcdfe3] to-[#adb2b9] shadow-[inset_1px_0_1px_rgb(255_255_255/0.5),inset_-1px_0_1px_rgb(0_0_0/0.12)]"
-        aria-hidden
-      />
-      <div
-        className="mx-auto h-[7px] w-[clamp(130px,28vw,190px)] rounded-full bg-gradient-to-b from-[#e6e8eb] to-[#9ba0a6]"
-        aria-hidden
-      />
       {/* The ground it sits on. */}
       <div
-        className="mx-auto -mt-1 h-4 w-[64%] rounded-[100%] bg-black/20 blur-lg dark:bg-black/50"
+        className="mx-auto -mt-4 h-5 w-[58%] rounded-[100%] bg-black/20 blur-lg dark:bg-black/50"
         aria-hidden
       />
     </div>
@@ -202,25 +185,29 @@ function MonitorFrame({ src, alt }: { src: string; alt: string }) {
  * exact render width. Change the width and the matrix must be recomputed
  * (docs/design/dash-2026-09-01 has the measurement notes).
  */
-function PhoneFrame({ src, alt }: { src: string; alt: string }) {
+const PHONE_BASE_WIDTH = 340;
+// The matrix at 340px, as measured. Rendering wider is a uniform scale of
+// the output, so the linear and translation terms scale and the two
+// perspective terms stay put.
+const PHONE_MATRIX = [0.33193, -0.063114, -0.000153, -0.029395, 0.341345, -0.00008, 93.253766, 40.420067];
+
+function PhoneFrame({ src, alt, width = PHONE_BASE_WIDTH }: { src: string; alt: string; width?: number }) {
+  const k = width / PHONE_BASE_WIDTH;
+  const [a, b, pa, c, d, pb, tx, ty] = PHONE_MATRIX;
+  const transform = `matrix3d(${a * k}, ${b * k}, 0, ${pa}, ${c * k}, ${d * k}, 0, ${pb}, 0, 0, 1, 0, ${tx * k}, ${ty * k}, 0, 1)`;
   return (
-    // A fixed render width: the matrix is computed for exactly 340px, and a
-    // uniform scale is the only resize that keeps the overlay registered.
-    <div className="relative mx-auto w-[340px] origin-top max-[359px]:scale-[.88]">
+    <div className="relative mx-auto origin-top max-[359px]:scale-[.88]" style={{ width }}>
       <Image
         src="/marketing/device-phone.png"
         alt=""
         width={1086}
         height={1448}
-        sizes="340px"
+        sizes={`${width}px`}
         className="h-auto w-full"
       />
       <div
         className="absolute left-0 top-0 h-[1030px] w-[430px] origin-top-left overflow-hidden rounded-[50px]"
-        style={{
-          transform:
-            "matrix3d(0.331930, -0.063114, 0, -0.000153, -0.029395, 0.341345, 0, -0.000080, 0, 0, 1, 0, 93.253766, 40.420067, 0, 1)",
-        }}
+        style={{ transform }}
       >
         <Image src={src} alt={alt} fill sizes="430px" className="object-cover object-top" />
         {/* A whisper of glass, so the flat capture sits in the photograph. */}
@@ -281,30 +268,6 @@ function ComplianceMini() {
           {update.readMinutes} min read · {formatDate(update.publishedDate)}
         </p>
       ) : null}
-    </Mini>
-  );
-}
-
-/** Two notices the way the board sees them: one waiting, one the owner says is fixed. */
-function NoticesMini() {
-  const rows = [
-    { home: "Unit 14", what: "Trash cans out front", state: "Owner says fixed", tone: "ok" as const },
-    { home: "Unit 3", what: "Fence paint peeling", state: "Sent 4 days ago", tone: "info" as const },
-  ];
-  return (
-    <Mini>
-      <p className="text-[12px] font-semibold text-fg">Open notices</p>
-      <ul className="mt-2 space-y-2">
-        {rows.map((row) => (
-          <li key={row.home} className="flex items-center justify-between gap-2">
-            <span className="min-w-0">
-              <span className="block truncate text-[11px] font-medium text-fg">{row.home}</span>
-              <span className="block truncate text-[11px] text-fg-muted">{row.what}</span>
-            </span>
-            <Pill tone={row.tone}>{row.state}</Pill>
-          </li>
-        ))}
-      </ul>
     </Mini>
   );
 }
@@ -450,7 +413,31 @@ function PaymentsMini() {
   );
 }
 
-/** Everything the four tiles leave out, as one strip under them. */
+/** Three guides from the library, the ones a new board reaches for first. */
+function KnowledgeMini() {
+  const guides = ["first-90-days-on-a-board", "reading-an-hoa-budget", "running-a-board-meeting"]
+    .map((slug) => libraryArticles.find((article) => article.slug === slug))
+    .filter((article) => article !== undefined);
+  return (
+    <Mini className="p-2">
+      <ul className="divide-y divide-border">
+        {guides.map((guide) => (
+          <li key={guide.slug} className="px-1 py-1.5">
+            <p className="truncate text-[11px] font-semibold leading-tight text-fg">{guide.title}</p>
+            <p className="tnum mt-0.5 text-[10px] text-fg-muted">{guide.readMinutes} min read</p>
+          </li>
+        ))}
+      </ul>
+    </Mini>
+  );
+}
+
+/**
+ * Everything the four tiles leave out, as one strip under them. Notices
+ * dropped out of the tiles on 2026-09-20 when Monish put the four biggest
+ * pains first; the knowledge center is a tile until compliance takes its
+ * place, and moves down here when it does.
+ */
 const EVERYTHING_ELSE = [
   "Notices",
   "Architectural requests",
@@ -458,33 +445,21 @@ const EVERYTHING_ELSE = [
   "Communication",
   "Meetings",
   "Voting",
-  "Knowledge center",
+  ...(moduleOn("compliance") ? ["Knowledge center"] : []),
 ];
 
+/**
+ * In the order Monish set on 2026-09-20: the four things boards hurt over
+ * most, money first. Compliance takes the fourth tile once the module is on;
+ * until then it is the library, which is where the compliance answers live.
+ */
 const FEATURES = [
-  // Compliance leads only while that module is on; until then the first
-  // tile is the thing every board does in month one.
-  moduleOn("compliance")
-    ? {
-        icon: ShieldCheck,
-        tint: "violet" as TintName,
-        title: "Compliance updates",
-        line: "Stay ahead of changing laws.",
-        mini: <ComplianceMini />,
-      }
-    : {
-        icon: ClipboardCheck,
-        tint: "coral" as TintName,
-        title: "Notices",
-        line: "Send one, and see it fixed.",
-        mini: <NoticesMini />,
-      },
   {
-    icon: ChartNoAxesColumn,
-    tint: "teal" as TintName,
-    title: "Reserve tracking",
-    line: "Know if you're on track.",
-    mini: <ReserveMini />,
+    icon: CreditCard,
+    tint: "blue" as TintName,
+    title: "Payments & dues",
+    line: "Collected, posted, reconciled.",
+    mini: <PaymentsMini />,
   },
   {
     icon: Briefcase,
@@ -494,12 +469,27 @@ const FEATURES = [
     mini: <VendorMini />,
   },
   {
-    icon: CreditCard,
-    tint: "blue" as TintName,
-    title: "Payments & dues",
-    line: "Collected, posted, reconciled.",
-    mini: <PaymentsMini />,
+    icon: ChartNoAxesColumn,
+    tint: "teal" as TintName,
+    title: "Reserve tracking",
+    line: "Know if you're on track.",
+    mini: <ReserveMini />,
   },
+  moduleOn("compliance")
+    ? {
+        icon: ShieldCheck,
+        tint: "violet" as TintName,
+        title: "Compliance updates",
+        line: "Stay ahead of changing laws.",
+        mini: <ComplianceMini />,
+      }
+    : {
+        icon: BookOpen,
+        tint: "violet" as TintName,
+        title: "Knowledge center",
+        line: "Plain answers for every board job.",
+        mini: <KnowledgeMini />,
+      },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -540,7 +530,17 @@ function Notice({
   );
 }
 
-function PocketNotices({ className }: { className?: string }) {
+/**
+ * `itemClassNames` places each card on its own, in order, for the layout
+ * that hangs them around the phone; a missing card keeps the others' slots.
+ */
+function PocketNotices({
+  className,
+  itemClassNames = [],
+}: {
+  className?: string;
+  itemClassNames?: string[];
+}) {
   const request = openRequests()[0];
   const coi = vendorGaps().expiringCoi[0];
   const next = upcomingMeetings().find((meeting) => meeting.status !== "live");
@@ -554,6 +554,7 @@ function PocketNotices({ className }: { className?: string }) {
           tint="blue"
           title={`New ${request.kind} request`}
           body={`Unit ${request.unit}`}
+          className={itemClassNames[0]}
         />
       ) : null}
       {coi ? (
@@ -562,6 +563,7 @@ function PocketNotices({ className }: { className?: string }) {
           tint="amber"
           title={`Vendor COI expires in ${daysFromToday(coi.coiExpires!)} days`}
           body={coi.name}
+          className={itemClassNames[1]}
         />
       ) : null}
       {next ? (
@@ -570,6 +572,7 @@ function PocketNotices({ className }: { className?: string }) {
           tint="violet"
           title="Board meeting"
           body={`${formatDate(next.date)} at ${next.time}, ${next.location}`}
+          className={itemClassNames[2]}
         />
       ) : null}
       {live ? (
@@ -578,6 +581,7 @@ function PocketNotices({ className }: { className?: string }) {
           tint="coral"
           title="Video call with the board"
           body={`Live now, ${live.attendees.length} joined`}
+          className={itemClassNames[3]}
         >
           <div className="mt-3 flex items-center justify-between gap-3">
             <div className="flex -space-x-2">
@@ -650,38 +654,58 @@ function PocketTile({
 }
 
 /**
- * Two chips pinned on the hero picture, drawn from the demo's own records so
- * they say something the product can back up. They land a beat after the
- * headline and then float, the way a notification sits on a lock screen.
+ * Callouts pinned on the hero picture, each above the home it is about with
+ * a line down to its roof, the way a map labels a place. Drawn from the
+ * demo's own records so they say something the product can back up.
+ *
+ * `x` and `y` are the roof point as a percentage of the picture, which keeps
+ * the pin on the house at every size because the picture's box holds its
+ * aspect. `lineAt` is where along the card's width the line drops, so a card
+ * at the picture's edge can hang left of its pin.
  */
 function HeroChip({
   icon,
   tint,
   title,
   body,
-  className,
+  x,
+  y,
+  lineAt = 50,
   delay,
 }: {
   icon: typeof Bell;
   tint: TintName;
   title: string;
   body: string;
-  className?: string;
+  x: number;
+  y: number;
+  lineAt?: number;
   delay: number;
 }) {
   return (
     <div
-      className={cn("land pointer-events-none", className)}
-      style={{ "--land-delay": `${delay}ms` } as React.CSSProperties}
+      className="pointer-events-none absolute w-max"
+      style={{ left: `${x}%`, top: `${y}%`, transform: `translate(-${lineAt}%, -100%)` }}
       aria-hidden
     >
-      <div className={cn(delay > 700 ? "float-late" : "float")}>
-        <div className="flex items-center gap-3 rounded-2xl border border-white/40 bg-surface/85 p-3 pr-4 shadow-float backdrop-blur-md dark:border-white/10">
+      <div className="land" style={{ "--land-delay": `${delay}ms` } as React.CSSProperties}>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/50 bg-surface/90 p-3 pr-4 shadow-float backdrop-blur-md dark:border-white/10">
           <IconTile icon={icon} tint={tint} variant="solid" size="md" />
           <div className="min-w-0">
             <p className="text-[13px] font-semibold leading-tight text-fg">{title}</p>
             <p className="mt-0.5 text-[12px] leading-snug text-fg-muted">{body}</p>
           </div>
+        </div>
+        {/* The line down to the roof, and the point where it lands. */}
+        <div className="relative h-8">
+          <div
+            className="absolute top-0 h-full w-px bg-white shadow-[0_0_4px_rgb(0_0_0/0.35)]"
+            style={{ left: `${lineAt}%` }}
+          />
+          <div
+            className="absolute bottom-0 size-2.5 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-white bg-brand shadow-[0_0_0_3px_rgb(255_255_255/0.35)]"
+            style={{ left: `${lineAt}%` }}
+          />
         </div>
       </div>
     </div>
@@ -690,6 +714,7 @@ function HeroChip({
 
 function HeroChips() {
   const request = openRequests()[0];
+  const meeting = upcomingMeetings().find((m) => m.status !== "live");
   // The demo association's own dues, priced by the same computePaymentCost
   // the pay screen runs, so the chip and the product agree to the cent.
   const ach = computePaymentCost("ach", association.duesCents, {
@@ -700,22 +725,39 @@ function HeroChips() {
   const kind = request ? request.kind.charAt(0).toUpperCase() + request.kind.slice(1) : "";
   return (
     <>
+      {/* The home on the left of the ring. */}
       <HeroChip
         icon={CircleDollarSign}
         tint="teal"
         title={`Dues paid, ${money(ach.residentPaysCents)}`}
         body={ach.platformCents === 0 ? "Bank transfer, no fee" : "Bank transfer, posted today"}
-        className="absolute left-[27%] top-[17%]"
+        x={50}
+        y={31.5}
         delay={520}
       />
+      {/* The house on the island, the one the whole picture is about. */}
+      {meeting ? (
+        <HeroChip
+          icon={CalendarDays}
+          tint="violet"
+          title="Board meeting"
+          body={`${formatDate(meeting.date)} · ${meeting.location}`}
+          x={71.5}
+          y={44.8}
+          delay={720}
+        />
+      ) : null}
+      {/* The home on the right of the ring, at the picture's edge. */}
       {request ? (
         <HeroChip
           icon={ClipboardCheck}
           tint="blue"
           title={`${kind} request approved`}
           body={`Unit ${request.unit} · from your phone`}
-          className="absolute bottom-[24%] right-[7%]"
-          delay={820}
+          x={93.6}
+          y={32}
+          lineAt={82}
+          delay={920}
         />
       ) : null}
     </>
@@ -735,38 +777,40 @@ export default function MarketingHome() {
             half of the hero is not a flat wash next to a lit photograph. */}
         <div className="pointer-events-none absolute inset-0 -z-20 bg-aurora" aria-hidden />
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[68%] lg:block"
+          className="pointer-events-none absolute inset-y-0 right-0 hidden aspect-[1672/941] lg:block"
           aria-hidden
         >
           {/* The oasis: homes on a ring road around a lake, one lit house on
-              the island in the middle. Monish asked for it back on 2026-09-19;
-              it is the picture the name comes from. One night render, lifted
-              and softened on the light theme, as shot on the dark one.
+              the island in the middle. Monish's own pair from 2026-09-20, a
+              day render for the light theme and a night one for the dark,
+              each already fading out on its left. The box holds the
+              picture's aspect and takes its height from the hero, so the
+              whole ring is always in frame and never cropped or zoomed; the
+              callouts are pinned in picture percentages for the same reason.
 
-              The picture dissolves into the field through a mask on its own
-              box rather than a wash painted over it: a wash is a strip of
-              one flat color, and the moment the field behind it stopped being
-              flat (the aurora) that strip showed as a line. A mask has no
-              color, so there is nothing to mismatch. */}
-          <div className="absolute inset-0 [mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent_0%,black_44%),linear-gradient(to_bottom,transparent_0%,black_16%,black_84%,transparent_100%)] [-webkit-mask-composite:source-in]">
+              A short mask on the left finishes the picture's own fade into
+              the field, and one at the foot dissolves it into the strip. */}
+          <div className="absolute inset-0 [mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent_0%,black_26%),linear-gradient(to_bottom,transparent_0%,black_10%,black_84%,transparent_100%)] [-webkit-mask-composite:source-in]">
             <Image
-              src="/marketing/hero-oasis.jpg"
+              src="/marketing/hero-oasis-light.jpg"
               alt=""
               fill
               priority
-              sizes="58vw"
-              className="object-cover object-[center_top] brightness-[1.22] saturate-[.9] dark:brightness-100 dark:saturate-100"
+              sizes="(min-width: 1024px) 1320px, 100vw"
+              className="object-cover dark:hidden"
             />
-            {/* The lit house on the island, lit a little more: a warm radial
-                glow blended over the picture, centred where the island sits. */}
-            <div
-              className="absolute left-[54%] top-[50%] size-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_205_120/0.55),rgb(255_205_120/0.12)_45%,transparent_70%)] mix-blend-screen blur-xl dark:bg-[radial-gradient(closest-side,rgb(255_196_92/0.5),rgb(255_196_92/0.1)_45%,transparent_70%)]"
+            <Image
+              src="/marketing/hero-oasis-dark.jpg"
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 1320px, 100vw"
+              className="hidden object-cover dark:block"
             />
           </div>
           <HeroChips />
         </div>
 
-        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[36rem] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-center lg:pb-20 lg:pt-16">
+        <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20 lg:grid lg:min-h-[clamp(36rem,50vw,46rem)] lg:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] lg:items-center lg:pb-20 lg:pt-16">
           <div className="lg:pr-8">
             <Reveal>
               <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-tint-blue/25 bg-surface/70 py-1 pl-1.5 pr-3 text-[13px] font-semibold text-fg-muted shadow-card backdrop-blur-sm">
@@ -776,9 +820,9 @@ export default function MarketingHome() {
                 {TRIAL_DAYS} days free, no card to start
               </p>
               <h1 className="text-balance text-[44px] font-semibold leading-[1.04] tracking-[-0.035em] text-fg sm:text-[60px]">
-                Moving your HOA
+                Your community.
                 <br />
-                <span className="text-gradient">forward.</span>
+                <span className="text-gradient">Your HOAsis.</span>
               </h1>
             </Reveal>
             <Reveal delay={90}>
@@ -806,14 +850,21 @@ export default function MarketingHome() {
           </div>
         </div>
 
-        <div className="relative -mb-px aspect-[16/11] w-full [mask-image:linear-gradient(to_bottom,transparent_0%,black_22%)] lg:hidden">
+        <div className="relative -mb-px aspect-[1672/941] w-full [mask-image:linear-gradient(to_bottom,transparent_0%,black_22%)] lg:hidden">
           <Image
-            src="/marketing/hero-oasis.jpg"
-            alt="An illustrated neighborhood at night: homes on a ring road around a lake, with one lit house on the island in the middle"
+            src="/marketing/hero-oasis-light.jpg"
+            alt="An illustrated neighborhood: homes on a ring road around a lake, with one lit house on the island in the middle"
             fill
             priority
             sizes="100vw"
-            className="object-cover brightness-[1.22] saturate-[.9] dark:brightness-100 dark:saturate-100"
+            className="object-cover dark:hidden"
+          />
+          <Image
+            src="/marketing/hero-oasis-dark.jpg"
+            alt="The same neighborhood at night, every window lit"
+            fill
+            sizes="100vw"
+            className="hidden object-cover dark:block"
           />
         </div>
       </section>
@@ -822,14 +873,17 @@ export default function MarketingHome() {
           band too dark against the white page, so in light mode it is a quiet
           gray with the blue carrying the icons and copy; dark keeps navy. */}
       <div className="border-y border-border bg-surface-2 text-fg dark:border-0 dark:bg-navy-900">
-        <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 items-center gap-x-6 gap-y-4 px-5 py-5 text-[14px] font-semibold sm:flex sm:flex-wrap sm:justify-between sm:gap-x-10 sm:gap-y-3">
+        {/* Four equal cells, each promise centred in its own, so the row
+            reads as evenly spaced from edge to edge rather than as a list
+            that starts on the left and runs out. */}
+        <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-4 gap-y-5 px-5 py-7 text-[15px] font-semibold sm:grid-cols-4 sm:text-[17px] sm:tracking-[-0.01em]">
           {ASSURANCES.map(({ icon, label, tint }, index) => (
-            <Reveal key={label} delay={index * 70}>
-              <li className="inline-flex items-center gap-2.5">
-                <IconTile icon={icon} tint={tint} variant="solid" size="sm" />
+            <li key={label}>
+              <Reveal delay={index * 70} className="flex items-center justify-center gap-3">
+                <IconTile icon={icon} tint={tint} variant="solid" size="md" />
                 {label}
-              </li>
-            </Reveal>
+              </Reveal>
+            </li>
           ))}
         </ul>
       </div>
@@ -838,8 +892,8 @@ export default function MarketingHome() {
           its middle: centred against a tall device, the headline drifted a
           screen below the strip and the section opened on nothing. */}
       <section className="border-b border-border bg-surface">
-        <div className="mx-auto grid w-full max-w-6xl items-start gap-12 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
-          <div className="lg:pt-6">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
+          <div>
             <Reveal>
               <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
                 Run your HOA.
@@ -866,7 +920,7 @@ export default function MarketingHome() {
           <Reveal delay={160}>
             <MonitorFrame
               src="/marketing/product-dashboard.png"
-              alt="The Your HOAsis board dashboard: money in and out by month, spending by category, cash on hand, and transactions waiting for review"
+              alt="The Your HOAsis board dashboard: money in and out by month, spending by category, and the association's balances"
             />
           </Reveal>
         </div>
@@ -990,7 +1044,7 @@ export default function MarketingHome() {
       {/* Slide five. */}
       <section className="relative isolate overflow-hidden border-b border-border bg-hero-field">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-70" aria-hidden />
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-10">
           <div>
             <Reveal>
               <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
@@ -1015,19 +1069,31 @@ export default function MarketingHome() {
             </Reveal>
           </div>
 
-          <div className="relative lg:min-h-[560px]">
+          {/* The phone in the middle of its column, the four cards hung
+              around it, two a side, their inner edges over the device the
+              way notifications sit over a lock screen. */}
+          <div className="relative lg:min-h-[700px]">
             <Reveal delay={160}>
-              <div className="tilt-stage lg:absolute lg:left-0 lg:top-0 lg:w-[296px]">
+              <div className="tilt-stage w-fit lg:absolute lg:left-1/2 lg:top-0 lg:-translate-x-1/2">
                 <div className="tilt">
-                <PhoneFrame
-                  src="/marketing/product-resident.png"
-                  alt="The resident app showing a balance due, a live board meeting, and open ballots"
-                />
+                  <PhoneFrame
+                    src="/marketing/product-resident.png"
+                    alt="The resident app showing a balance due, a live board meeting, and open ballots"
+                    width={500}
+                  />
                 </div>
               </div>
             </Reveal>
-            <Reveal delay={240}>
-              <PocketNotices className="mt-8 grid gap-3 sm:grid-cols-2 lg:absolute lg:right-0 lg:top-6 lg:mt-0 lg:flex lg:w-[320px] lg:flex-col lg:gap-4" />
+            <Reveal delay={240} className="lg:absolute lg:inset-0 lg:z-10">
+              <PocketNotices
+                className="mt-8 grid gap-3 sm:grid-cols-2 lg:contents"
+                itemClassNames={[
+                  "lg:absolute lg:left-0 lg:top-[14%] lg:w-[236px]",
+                  "lg:absolute lg:left-0 lg:top-[58%] lg:w-[236px]",
+                  "lg:absolute lg:right-0 lg:top-[30%] lg:w-[236px]",
+                  "lg:absolute lg:right-0 lg:top-[66%] lg:w-[256px]",
+                ]}
+              />
             </Reveal>
           </div>
         </div>
@@ -1052,8 +1118,7 @@ export default function MarketingHome() {
                   One price. Every feature.
                 </h2>
                 <p className="mt-2 max-w-xl text-[17px] leading-relaxed text-fg-muted">
-                  After your {TRIAL_DAYS} free days. {money(PRICE_PER_TRANSACTION_CENTS)} per
-                  payment, any rail. No setup fee, no add-ons, cancel whenever.
+                  After your {TRIAL_DAYS} free days. No setup fee, no add-ons, cancel whenever.
                 </p>
               </div>
             </div>
