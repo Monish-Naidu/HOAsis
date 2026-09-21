@@ -45,7 +45,9 @@ import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 
 export const metadata = {
-  title: "Your HOAsis. Moving your community forward.",
+  // Absolute: the root template would otherwise append " · Your HOAsis" to
+  // a title that already ends in it.
+  title: { absolute: "Your community. Your HOAsis." },
   description:
     "Everything your HOA needs to get things done quickly, all in one place. Set up in minutes, no card to start, and the first 90 days are free.",
 };
