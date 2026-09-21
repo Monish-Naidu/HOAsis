@@ -16,7 +16,7 @@ import {
   UserPlus,
   Vote,
 } from "lucide-react";
-import { Callout, Card, CardHeader, IconTile, PageHeader, TINT_FIELD, type TintName } from "@/components/ui/primitives";
+import { Callout, Card, CardHeader, IconTile, TINT_FIELD, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
 import {
@@ -35,7 +35,6 @@ import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { ActionItems } from "@/components/app/action-items";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
-import type { BoardRole } from "@/lib/types";
 
 /**
  * The board dashboard, laid out to the 2026-09-01 design almost exactly
@@ -45,15 +44,8 @@ import type { BoardRole } from "@/lib/types";
  * Finances, approvals on Vendors, both one click away through their tiles.
  */
 
-const ROLE_LABEL: Record<BoardRole, string> = {
-  president: "Board President",
-  "vice-president": "Vice President",
-  treasurer: "Treasurer",
-  secretary: "Secretary",
-};
-
 export default function BoardDashboard() {
-  const { community, account } = useAppState();
+  const { community } = useAppState();
   // Something to run: money has moved, or somebody has asked for something.
   const running =
     community.ledger.length > 0 ||
@@ -71,15 +63,12 @@ export default function BoardDashboard() {
   const exposure = insuranceExposure(community);
   const showDonut = moduleOn("money-compare") && spending.rows.length > 0;
 
-  const role =
-    account && account.role !== "resident" ? ROLE_LABEL[account.role] : "Board member";
-
   return (
     <>
-      {/* The hero banner directly above already names the association and
-          counts its homes, so the eyebrow is the one thing it does not say:
-          who is looking. */}
-      <PageHeader eyebrow={role} title="Dashboard" />
+      {/* No page title. The photo above names the association and counts
+          its homes, the rail's card says who is looking, and the selected
+          rail row says "Dashboard"; a heading that repeated all three was
+          the same redundancy as the white bar that came off on 2026-09-21. */}
 
       {/* One line while setup is unfinished, pointing at the list, which
           lives on its own page. A to-do list living permanently on the
