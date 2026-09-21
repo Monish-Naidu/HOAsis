@@ -13,7 +13,7 @@ import {
   Vote,
   Wrench,
 } from "lucide-react";
-import { Card, CardHeader, IconTile, SectionTitle, type TintName } from "@/components/ui/primitives";
+import { Card, CardHeader, IconTile, SectionTitle, TINT_FIELD, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { calendarEntries } from "@/lib/metrics";
 import {
@@ -194,16 +194,6 @@ function AccountSummary() {
 
 /* ----------------------------------------------------------------- actions */
 
-/** The soft field each action tile sits on, in its own tint. */
-const ACTION_FIELD: Record<TintName, string> = {
-  blue: "bg-tint-blue-soft hover:bg-tint-blue-soft/70",
-  teal: "bg-tint-teal-soft hover:bg-tint-teal-soft/70",
-  amber: "bg-tint-amber-soft hover:bg-tint-amber-soft/70",
-  coral: "bg-tint-coral-soft hover:bg-tint-coral-soft/70",
-  violet: "bg-tint-violet-soft hover:bg-tint-violet-soft/70",
-  neutral: "bg-surface-2 hover:bg-surface-3",
-};
-
 function QuickActions() {
   // Three, and each goes somewhere different. Five tiles used to resolve to
   // three destinations, two of them already in the tab bar.
@@ -226,7 +216,7 @@ function QuickActions() {
             href={href}
             className={cn(
               "press group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-4 text-center transition-colors @xl:min-h-24 @xl:flex-row @xl:gap-3 @xl:px-4",
-              ACTION_FIELD[tint],
+              TINT_FIELD[tint],
             )}
           >
             <IconTile

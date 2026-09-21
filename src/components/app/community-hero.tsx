@@ -148,11 +148,13 @@ export function CommunityHero({
         // Taller again with an overlay, which needs its own band of photo.
         compact
           ? "h-28"
-          : toolbar
+          : toolbar && overlay
             ? "h-64 sm:h-72 lg:h-80"
-            : overlay
-              ? "h-64 sm:h-72"
-              : "h-44 sm:h-56",
+            : toolbar
+              ? "h-48 sm:h-56 lg:h-64"
+              : overlay
+                ? "h-64 sm:h-72"
+                : "h-44 sm:h-56",
         className,
       )}
       aria-label={settings.displayName}
@@ -182,7 +184,10 @@ export function CommunityHero({
           compact ? "pb-3" : overlay ? "pt-4 sm:pt-5" : "pb-3.5",
           // The cover button sits top right unless the toolbar is there.
           overlay && !toolbar && "pr-16",
-          toolbar && "flex items-start justify-between gap-4",
+          // With a card below, the name and the tray share the top row.
+          // Without one the name keeps the bottom and the tray takes the
+          // corner on its own.
+          toolbar && overlay && "flex items-start justify-between gap-4",
           // On a phone the app header above already says the name, and the
           // home card below says it again. Three times is two too many.
           overlay && "max-lg:sr-only",
@@ -204,9 +209,12 @@ export function CommunityHero({
             </p>
           ) : null}
         </div>
-        {toolbar ? <div className="shrink-0">{toolbar}</div> : null}
+        {toolbar && overlay ? <div className="shrink-0">{toolbar}</div> : null}
       </div>
       {overlay ? <div className="w-full px-4 pb-4 sm:px-6 sm:pb-5">{overlay}</div> : null}
+      {toolbar && !overlay ? (
+        <div className="absolute right-4 top-4 z-10 sm:right-6">{toolbar}</div>
+      ) : null}
 
       <CoverPhotoButton corner={toolbar ? "bottom" : "top"} />
     </section>
@@ -340,15 +348,60 @@ function CoverPhotoButton({ corner = "top" }: { corner?: "top" | "bottom" }) {
 }
 
 /**
- * The banner, on the dashboard only.
+ * The board's chrome: the bar on every page, and the banner on the
+ * dashboard only.
  *
- * It rode above every board page, which meant every page opened with the
- * same photo, the same name and the same home count before its own title.
- * The name is already in the top bar. The dashboard is the front door and
- * keeps the photo; every other page gets its title at the top.
+ * The banner rode above every board page, which meant every page opened
+ * with the same photo, the same name and the same home count before its
+ * own title. The dashboard is the front door and keeps the photo; every
+ * other page gets its title at the top, under the bar.
+ *
+ * On the dashboard at desktop width the bar is gone too, the same as the
+ * resident dashboard: the photo runs to the top and the controls ride on
+ * it in a frosted tray (Monish, 2026-09-21). Under `lg` the bar stays,
+ * because it carries the horizontal nav.
+ *
+ * A client component so the server layout can hand it the bar's pieces
+ * and let the pathname decide where they go.
  */
-export function BoardHero() {
+export function BoardChrome({
+  name,
+  controls,
+  nav,
+}: {
+  name: ReactNode;
+  controls: ReactNode;
+  nav: ReactNode;
+}) {
   const pathname = usePathname();
-  if (pathname !== "/board") return null;
-  return <CommunityHero withLocation compact />;
+  const dashboard = pathname === "/board";
+  return (
+    <>
+      <header
+        className={cn(
+          "sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md",
+          dashboard && "lg:hidden",
+        )}
+      >
+        <div className="flex items-center justify-between gap-4 px-4 py-2.5 lg:px-6">
+          {name}
+          {controls}
+        </div>
+        {/* Horizontal nav on narrow screens */}
+        <div className="no-scrollbar overflow-x-auto border-t border-border px-3 py-1.5 lg:hidden">
+          {nav}
+        </div>
+      </header>
+      {dashboard ? (
+        <CommunityHero
+          withLocation
+          toolbar={
+            <div className="hidden rounded-2xl bg-surface/90 p-1.5 shadow-float ring-1 ring-border/70 backdrop-blur-md lg:block">
+              {controls}
+            </div>
+          }
+        />
+      ) : null}
+    </>
+  );
 }

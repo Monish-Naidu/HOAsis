@@ -101,11 +101,11 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
         activeKey={activeRoute?.key ?? ""}
         className={cn(
           "flex gap-1 lg:flex-col",
-          // A fixed rhythm in the sidebar. The rows used to share the leftover
-          // height, which read fine with thirteen tabs and fell apart with a
-          // treasurer's six spread over the whole column. The rows arrive one
-          // after another on first paint.
-          rail && "stagger w-full flex-col gap-1",
+          // Rows grow to share the column on a tall display, each capped so
+          // a treasurer's six do not balloon over the whole column (that was
+          // tried with justify-evenly and fell apart); past the cap they pack
+          // from the top. Same rule as the resident rail, 2026-09-21.
+          rail && "stagger w-full flex-col gap-1.5",
         )}
         pillClassName={
           rail
@@ -125,8 +125,10 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
             className={cn(
               // The selected background is the travelling pill behind the row,
               // not a class on the link, so it slides rather than cuts.
-              "group relative z-10 flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors duration-200",
-              rail && "gap-3 rounded-2xl px-2.5 py-2",
+              "group relative z-10 flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors duration-200",
+              rail
+                ? "min-h-11 max-h-[5.5rem] flex-1 gap-3 rounded-2xl px-3 py-2.5 text-[15px]"
+                : "shrink-0",
               rail
                 ? active
                   ? "text-white"

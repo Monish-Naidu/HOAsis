@@ -11,7 +11,7 @@ import {
   RequireSession,
   ViewSwitcher,
 } from "@/components/app/account-menu";
-import { BoardHero, CommunityName } from "@/components/app/community-hero";
+import { BoardChrome, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
@@ -40,8 +40,8 @@ export default function BoardLayout({
           <Rail home="/board" label="Board">
             <BoardNav variant="rail" />
           </Rail>
-          <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md">
-            <div className="flex items-center justify-between gap-4 px-4 py-2.5 lg:px-6">
+          <BoardChrome
+            name={
               <div className="flex items-center gap-3">
                 <Link href="/" className="lg:hidden">
                   <Wordmark />
@@ -49,6 +49,8 @@ export default function BoardLayout({
                 <span className="hidden h-5 w-px bg-border sm:block lg:hidden" />
                 <CommunityName />
               </div>
+            }
+            controls={
               <div className="flex items-center gap-2 sm:gap-3">
                 <SearchButton />
                 <ViewSwitcher />
@@ -57,14 +59,9 @@ export default function BoardLayout({
                 <ThemeToggle className="hidden sm:inline-flex lg:hidden" />
                 <AccountMenu compact />
               </div>
-            </div>
-            {/* Horizontal nav on narrow screens */}
-            <div className="no-scrollbar overflow-x-auto border-t border-border px-3 py-1.5 lg:hidden">
-              <BoardNav />
-            </div>
-          </header>
-
-          <BoardHero />
+            }
+            nav={<BoardNav />}
+          />
 
           <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-6 lg:py-8">
             <main className="min-w-0">

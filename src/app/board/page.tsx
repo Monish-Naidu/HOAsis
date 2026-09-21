@@ -16,7 +16,7 @@ import {
   UserPlus,
   Vote,
 } from "lucide-react";
-import { Callout, Card, CardHeader, IconTile, PageHeader, type TintName } from "@/components/ui/primitives";
+import { Callout, Card, CardHeader, IconTile, PageHeader, TINT_FIELD, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
 import {
@@ -441,25 +441,35 @@ const ACTIONS: { href: string; label: string; icon: typeof Vote; tint: TintName 
   { href: "/board/communications", label: "Send an announcement", icon: Megaphone, tint: "coral" },
 ];
 
-/** The four things a board does most, one row, each wearing its tab's tint. */
+/**
+ * The four things a board does most, one row, each on a field of its tab's
+ * tint. The tiles split the card's width and grow with the screen, the
+ * same as the resident dashboard's.
+ */
 function QuickActions() {
   return (
     <Card className="mt-6">
       <CardHeader accent="violet" title="Quick actions" />
-      <div className="grid grid-cols-2 gap-1 p-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-4 lg:gap-4 lg:p-4">
         {ACTIONS.map(({ href, label, icon, tint }) => (
           <Link
             key={label}
             href={href}
-            className="press group flex flex-col items-center gap-2 rounded-xl px-1 py-4 text-center hover:bg-surface-2"
+            className={cn(
+              "press group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-4 text-center transition-colors xl:min-h-24 xl:flex-row xl:gap-3 xl:px-4",
+              TINT_FIELD[tint],
+            )}
           >
             <IconTile
               icon={icon}
               tint={tint}
-              size="lg"
+              variant="solid"
+              size="md"
               className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
             />
-            <span className="text-[13px] font-medium leading-tight text-fg">{label}</span>
+            <span className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-fg xl:text-[16px]">
+              {label}
+            </span>
           </Link>
         ))}
       </div>

@@ -179,6 +179,20 @@ export const ACCENT_BAR: Record<TintName, string> = {
   neutral: "bg-border-2",
 };
 
+/**
+ * The soft field a large tappable tile sits on, in its tint, with a hover
+ * that lightens rather than darkens so the tile reads as lit. Both
+ * dashboards' quick actions wear this.
+ */
+export const TINT_FIELD: Record<TintName, string> = {
+  blue: "bg-tint-blue-soft hover:bg-tint-blue-soft/70",
+  teal: "bg-tint-teal-soft hover:bg-tint-teal-soft/70",
+  amber: "bg-tint-amber-soft hover:bg-tint-amber-soft/70",
+  coral: "bg-tint-coral-soft hover:bg-tint-coral-soft/70",
+  violet: "bg-tint-violet-soft hover:bg-tint-violet-soft/70",
+  neutral: "bg-surface-2 hover:bg-surface-3",
+};
+
 const TILE_SOFT: Record<TintName, string> = {
   blue: "bg-tint-blue-soft text-tint-blue-fg",
   teal: "bg-tint-teal-soft text-tint-teal-fg",
