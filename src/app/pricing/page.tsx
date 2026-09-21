@@ -1,61 +1,28 @@
 import Link from "next/link";
-import { ArrowRight, Landmark, Mail, Receipt, Scale } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { IconTile, type TintName } from "@/components/ui/primitives";
 import { TRIAL_DAYS } from "@/lib/pricing";
 import { PriceCalculator } from "./price-calculator";
 
 export const metadata = {
   title: "Pricing",
   description:
-    "One rate per home per month, every feature included. Payment costs pass through at cost. The first 90 days are free.",
+    "One rate per home per month, every feature included. The first 90 days are free.",
 };
 
 /**
- * The page is one dial and a few tiles. It used to be a rate card, two prose
- * columns, a comparison table and a footnote, and Monish read it as words.
- * The rate and the comparison are still here; they are computed from one
- * homes count in `PriceCalculator` so they cannot drift, and everything
- * around them is a tile with a border and one line.
+ * The page is one dial. It used to be a rate card, two prose columns, a
+ * comparison table and a footnote, and Monish read it as words. The rate
+ * and the comparison are computed from one homes count in `PriceCalculator`
+ * so they cannot drift. The "What a payment costs" tiles under the dial
+ * came off on 2026-09-21 at Monish's ask; the processor's pass-through is
+ * on every receipt, which is where a board actually reads it.
  *
  * The comparison is against a management company, not other software. At
  * this rate a large association pays us more than per-association software
  * charges, so that comparison is one we lose and one the reader is not
  * making: they are deciding whether to hand the association to a manager.
  */
-
-/**
- * How a payment is priced. The processor's rates are its published card and
- * ACH costs, passed through untouched, so a board can check them anywhere.
- * The per-payment platform fee came off this page on 2026-09-21 at Monish's
- * ask, so the page quotes the one rate and the processor's pass-through.
- */
-const PAYMENT_TILES: { icon: typeof Landmark; tint: TintName; label: string; body: string }[] = [
-  {
-    icon: Landmark,
-    tint: "blue",
-    label: "Processor, at cost",
-    body: "2.9% + 30¢ on cards, 35¢ on bank transfers. Never marked up.",
-  },
-  {
-    icon: Scale,
-    tint: "teal",
-    label: "Owner or association pays",
-    body: "Your call, set once and changed any time. Waive it on bank transfers if you like.",
-  },
-  {
-    icon: Receipt,
-    tint: "violet",
-    label: "On every receipt",
-    body: "The processor's cost sits on its own line, so nobody has to guess.",
-  },
-  {
-    icon: Mail,
-    tint: "amber",
-    label: "Only extra: postage",
-    body: "Billed at cost when a notice has to go on paper. Nothing else.",
-  },
-];
 
 export default function PricingPage() {
   return (
@@ -76,33 +43,6 @@ export default function PricingPage() {
         <Reveal delay={60} className="mt-10">
           <PriceCalculator />
         </Reveal>
-
-        <section className="mt-14">
-          <Reveal>
-            <h2 className="text-center text-[26px] font-semibold tracking-[-0.03em] text-fg sm:text-[32px]">
-              What a payment costs
-            </h2>
-          </Reveal>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {PAYMENT_TILES.map(({ icon, tint, label, body }, index) => (
-              <Reveal key={label} delay={index * 70}>
-                <div className="lift h-full rounded-2xl border border-border bg-surface p-5 shadow-card">
-                  <IconTile icon={icon} tint={tint} variant="solid" size="lg" />
-                  <p className="mt-4 text-[16px] font-semibold tracking-[-0.015em] text-fg">
-                    {label}
-                  </p>
-                  <p className="mt-1 text-[14px] leading-snug text-fg-muted">{body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-          <Reveal delay={120}>
-            <p className="mt-4 text-center text-[13px] leading-relaxed text-fg-subtle">
-              Some HOA software bills per association, so at a large enough community it costs
-              less than we do. It also does not do reserves. We would rather you knew.
-            </p>
-          </Reveal>
-        </section>
 
         <Reveal delay={160}>
           <div className="relative isolate mt-14 overflow-hidden rounded-[1.5rem] border border-border bg-navy-900 px-6 py-10 text-center text-navy-50 dark:bg-navy-800 sm:py-12">

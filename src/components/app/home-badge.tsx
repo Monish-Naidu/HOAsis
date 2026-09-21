@@ -18,7 +18,7 @@ import { useToast } from "@/components/app/toast";
  * card shows; the two never disagree.
  */
 export function HomeBadge() {
-  const { settings } = useAppState();
+  const { settings, account } = useAppState();
   const owner = useCurrentOwner();
   const { photo, uploaded, setPhoto } = useHomePhoto();
   const { notify } = useToast();
@@ -77,7 +77,11 @@ export function HomeBadge() {
         </button>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[17px] font-semibold tracking-[-0.015em] sm:text-[19px]">My Home</p>
+        {/* The person, not "My Home": the address on the next line already
+            says it is a home, and a name on the card says whose. */}
+        <p className="truncate text-[17px] font-semibold tracking-[-0.015em] sm:text-[19px]">
+          {account?.name ?? owner.members[0] ?? "My Home"}
+        </p>
         <p className="mt-0.5 truncate text-[15px] text-white/90">{owner.address}</p>
         <p className="truncate text-[13px] text-white/70">{settings.displayName}</p>
         <div className="mt-2 flex items-center gap-3">

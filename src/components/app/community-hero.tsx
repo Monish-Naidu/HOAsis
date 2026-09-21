@@ -111,6 +111,7 @@ export function CommunityHero({
   compact,
   withLocation,
   overlay,
+  toolbar,
 }: {
   subtitle?: string;
   className?: string;
@@ -122,6 +123,13 @@ export function CommunityHero({
    * two never collide, and the banner grows to give the card room.
    */
   overlay?: ReactNode;
+  /**
+   * The page's controls, top right on the photo, for a page that has no bar
+   * above the banner. The banner grows again so the photo reads as the top
+   * of the page and not as a strip, and the cover button moves to the
+   * bottom corner to stay out of the tray's way.
+   */
+  toolbar?: ReactNode;
 }) {
   const { settings, community } = useAppState();
   const line =
@@ -138,7 +146,13 @@ export function CommunityHero({
         // Taller per the 2026-09-01 huddle: the banner was leaving too much
         // white space beneath it, so it carries more of the viewport now.
         // Taller again with an overlay, which needs its own band of photo.
-        compact ? "h-28" : overlay ? "h-64 sm:h-72" : "h-44 sm:h-56",
+        compact
+          ? "h-28"
+          : toolbar
+            ? "h-64 sm:h-72 lg:h-80"
+            : overlay
+              ? "h-64 sm:h-72"
+              : "h-44 sm:h-56",
         className,
       )}
       aria-label={settings.displayName}
@@ -165,30 +179,36 @@ export function CommunityHero({
       <div
         className={cn(
           "w-full px-4 sm:px-6",
-          compact ? "pb-3" : overlay ? "pt-4 pr-16 sm:pt-5" : "pb-3.5",
+          compact ? "pb-3" : overlay ? "pt-4 sm:pt-5" : "pb-3.5",
+          // The cover button sits top right unless the toolbar is there.
+          overlay && !toolbar && "pr-16",
+          toolbar && "flex items-start justify-between gap-4",
           // On a phone the app header above already says the name, and the
           // home card below says it again. Three times is two too many.
           overlay && "max-lg:sr-only",
         )}
       >
-        <h1
-          className={cn(
-            "font-semibold tracking-[-0.03em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35),0_8px_24px_rgb(0_0_0/0.25)]",
-            compact ? "text-[22px]" : "text-[30px] sm:text-[36px]",
-          )}
-        >
-          {settings.displayName}
-        </h1>
-        {line ? (
-          <p className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[12px] font-medium text-white/95 backdrop-blur-md sm:text-[13px]">
-            <Building2 className="size-3" strokeWidth={2.2} />
-            {line}
-          </p>
-        ) : null}
+        <div className="min-w-0">
+          <h1
+            className={cn(
+              "font-semibold tracking-[-0.03em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35),0_8px_24px_rgb(0_0_0/0.25)]",
+              compact ? "text-[22px]" : "text-[30px] sm:text-[36px]",
+            )}
+          >
+            {settings.displayName}
+          </h1>
+          {line ? (
+            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[12px] font-medium text-white/95 backdrop-blur-md sm:text-[13px]">
+              <Building2 className="size-3" strokeWidth={2.2} />
+              {line}
+            </p>
+          ) : null}
+        </div>
+        {toolbar ? <div className="shrink-0">{toolbar}</div> : null}
       </div>
       {overlay ? <div className="w-full px-4 pb-4 sm:px-6 sm:pb-5">{overlay}</div> : null}
 
-      <CoverPhotoButton />
+      <CoverPhotoButton corner={toolbar ? "bottom" : "top"} />
     </section>
   );
 }
@@ -271,7 +291,7 @@ export function useCoverPhotoUpload() {
   return { busy, choose };
 }
 
-function CoverPhotoButton() {
+function CoverPhotoButton({ corner = "top" }: { corner?: "top" | "bottom" }) {
   const { can, community } = useAppState();
   const { busy, choose } = useCoverPhotoUpload();
   const input = useRef<HTMLInputElement>(null);
@@ -299,7 +319,10 @@ function CoverPhotoButton() {
           community.settings.photoUrl ? "Change the cover photo" : "Add a cover photo"
         }
         title={community.settings.photoUrl ? "Change the cover photo" : "Add a cover photo"}
-        className="absolute right-4 top-4 z-10 flex size-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65 disabled:opacity-60 sm:right-6"
+        className={cn(
+          "absolute right-4 z-10 flex size-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65 disabled:opacity-60 sm:right-6",
+          corner === "top" ? "top-4" : "bottom-4 sm:bottom-5",
+        )}
       >
         {busy ? (
           <span

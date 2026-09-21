@@ -87,13 +87,14 @@ export default function ResidentHome() {
       <AccountSummary />
       <QuickActions />
 
-      <div className="grid gap-6 @3xl:grid-cols-2 @3xl:items-start [&>*]:min-w-0">
+      {/* Activity and the schedule side by side on equal footing, both
+          stretched to the taller of the two; the board's word runs the full
+          width underneath. Monish's 2026-09-21 layout. */}
+      <div className="grid gap-6 @3xl:grid-cols-2 @3xl:items-stretch [&>*]:min-w-0">
         <RecentActivity />
-        <div className="space-y-6">
-          <HomeSchedule entries={calendarEntries(community)} />
-          <Announcements />
-        </div>
+        <HomeSchedule entries={calendarEntries(community)} />
       </div>
+      <Announcements />
     </div>
   );
 }
@@ -193,6 +194,16 @@ function AccountSummary() {
 
 /* ----------------------------------------------------------------- actions */
 
+/** The soft field each action tile sits on, in its own tint. */
+const ACTION_FIELD: Record<TintName, string> = {
+  blue: "bg-tint-blue-soft hover:bg-tint-blue-soft/70",
+  teal: "bg-tint-teal-soft hover:bg-tint-teal-soft/70",
+  amber: "bg-tint-amber-soft hover:bg-tint-amber-soft/70",
+  coral: "bg-tint-coral-soft hover:bg-tint-coral-soft/70",
+  violet: "bg-tint-violet-soft hover:bg-tint-violet-soft/70",
+  neutral: "bg-surface-2 hover:bg-surface-3",
+};
+
 function QuickActions() {
   // Three, and each goes somewhere different. Five tiles used to resolve to
   // three destinations, two of them already in the tab bar.
@@ -204,20 +215,30 @@ function QuickActions() {
   return (
     <Card>
       <CardHeader accent="blue" title="Quick actions" />
-      <div className="grid grid-cols-3 gap-1 p-3">
+      {/* Three tiles that split the card's width between them and grow with
+          the screen, each on a field of its own tint, so the row reads as
+          three buttons and not three icons floating in white. Stacked on a
+          phone, icon beside label from a tablet width up. */}
+      <div className="grid grid-cols-3 gap-3 p-3 @xl:gap-4 @xl:p-4">
         {actions.map(({ href, label, icon, tint }) => (
           <Link
             key={label}
             href={href}
-            className="press group flex flex-col items-center gap-1.5 rounded-xl px-1 py-3 text-center hover:bg-surface-2"
+            className={cn(
+              "press group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-4 text-center transition-colors @xl:min-h-24 @xl:flex-row @xl:gap-3 @xl:px-4",
+              ACTION_FIELD[tint],
+            )}
           >
             <IconTile
               icon={icon}
               tint={tint}
+              variant="solid"
               size="md"
               className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
             />
-            <span className="text-[13px] font-medium leading-tight text-fg">{label}</span>
+            <span className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-fg @xl:text-[16px]">
+              {label}
+            </span>
           </Link>
         ))}
       </div>
@@ -285,7 +306,7 @@ function RecentActivity() {
   if (feed.length === 0) return null;
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader
         accent="teal"
         title="Recent activity"
@@ -334,9 +355,11 @@ function Announcements() {
   return (
     <section>
       <SectionTitle>From the board</SectionTitle>
-      <div className="space-y-3">
+      {/* The pinned notice runs the full width; the rest share it two up
+          once there is room, so the band fills the bottom of the page. */}
+      <div className="grid gap-3 @3xl:grid-cols-2 [&>*]:min-w-0">
         {pinned ? (
-          <Card className="relative overflow-hidden">
+          <Card className="relative overflow-hidden @3xl:col-span-2">
             <span className="absolute inset-y-0 left-0 w-[3px] bg-brand-gradient" aria-hidden />
             <div className="p-4 pl-5">
               <div className="mb-1.5 flex items-center gap-2">

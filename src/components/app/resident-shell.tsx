@@ -59,25 +59,9 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   // "Lot 12" or "Unit 3", then the street only when one is on file.
   const homeLine = `${homeLabel(community, unit)}${address ? ` · ${address}` : ""}`;
 
-  const topBar = (
-    <header className="hidden border-b border-border bg-surface lg:block">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        {/* In website mode the sidebar carries the logo; showing it twice on
-            one edge of the screen reads as a mistake. */}
-        <div className="min-w-0">
-          {phonePreview ? (
-            <Link href="/">
-              <Wordmark />
-            </Link>
-          ) : (
-            // The banner no longer rides above every page, so the bar says
-            // whose portal this is and which home.
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold text-fg">{associationName}</p>
-              <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
-            </div>
-          )}
-        </div>
+  // The controls, once. On most pages they sit in the top bar; on the
+  // dashboard the bar is gone and they ride on the photo instead.
+  const controls = (
         <div className="flex items-center gap-2.5">
           {moduleOn("phone-preview") ? (
           <div role="radiogroup" aria-label="Resident layout">
@@ -124,9 +108,33 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           {phonePreview ? <ThemeToggle /> : null}
           <AccountMenu compact />
         </div>
+  );
+
+  const topBar = (
+    <header className="hidden border-b border-border bg-surface lg:block">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3">
+        {/* In website mode the sidebar carries the logo; showing it twice on
+            one edge of the screen reads as a mistake. */}
+        <div className="min-w-0">
+          {phonePreview ? (
+            <Link href="/">
+              <Wordmark />
+            </Link>
+          ) : (
+            // The banner does not ride above these pages, so the bar says
+            // whose portal this is and which home.
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold text-fg">{associationName}</p>
+              <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
+            </div>
+          )}
+        </div>
+        {controls}
       </div>
     </header>
   );
+
+  const onDashboard = pathname === "/resident";
 
   const appHeader = (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md lg:hidden">
@@ -209,9 +217,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                 t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
               )?.href ?? ""
             }
-            // Rows share the leftover height, per the huddle: evenly spaced
-            // down the column, not packed at the top.
-            className="stagger flex min-h-full w-full flex-col justify-evenly gap-1"
+            // Rows grow to share the column's height, so on a tall display
+            // each button fills its slot instead of floating in a gap
+            // (Monish, on a 42" screen, 2026-09-21). Capped so a laptop
+            // still reads as a list; past the cap the spacing takes over.
+            className="stagger flex min-h-full w-full flex-col justify-evenly gap-1.5"
             pillClassName="bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
           >
             {tabs.map(({ href, label, icon: Icon, webLabel, tint }) => {
@@ -224,7 +234,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   data-tab-key={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative z-10 flex items-center gap-3 rounded-2xl px-2.5 py-2 text-[14px] font-medium transition-colors duration-200",
+                    "group relative z-10 flex min-h-11 max-h-[5.5rem] flex-1 items-center gap-3 rounded-2xl px-3 py-2.5 text-[15px] font-medium transition-colors duration-200",
                     active
                       ? "text-white"
                       : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
@@ -238,11 +248,25 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           </TabPill>
         </nav>
       </Rail>
-      {topBar}
+      {/* The dashboard has no bar: the photo runs to the top of the page and
+          the controls sit on it in a frosted tray, because a white strip
+          saying the association's name above a photo saying the same thing
+          was one name too many (Monish, 2026-09-21). Every other page keeps
+          the bar, since it has no photo to carry the name. */}
+      {onDashboard ? null : topBar}
       {appHeader}
       {/* The photo and the home card are the front door, not a masthead on
           every page. Elsewhere the page title comes first. */}
-      {pathname === "/resident" ? <CommunityHero overlay={<HomeBadge />} /> : null}
+      {onDashboard ? (
+        <CommunityHero
+          overlay={<HomeBadge />}
+          toolbar={
+            <div className="hidden rounded-2xl bg-surface/90 p-1.5 shadow-float ring-1 ring-border/70 backdrop-blur-md lg:block">
+              {controls}
+            </div>
+          }
+        />
+      ) : null}
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
         {/* The home screen runs the full width for its dashboard grid; every
             other screen keeps the phone-width column both modes share, centred
@@ -252,7 +276,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <main
           className={cn(
             "mx-auto min-w-0 @container",
-            pathname === "/resident" ? "" : "lg:max-w-2xl",
+            onDashboard ? "" : "lg:max-w-2xl",
           )}
         >
           <Gated pathname={pathname}>{children}</Gated>

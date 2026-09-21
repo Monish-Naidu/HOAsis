@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarDays, CalendarOff, ChevronRight, Megaphone } from "lucide-react";
-import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { kindLabel, kindTone, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
 import { formatDate, relativeDays } from "@/lib/utils";
@@ -36,17 +36,22 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
   const next = upcomingFrom(entries, community.asOf, 3);
 
   return (
-    <section>
-      <SectionTitle
+    // The same card and header Recent activity wears, so the two sit side by
+    // side on the dashboard as equals rather than a card next to a heading.
+    <Card className="h-full">
+      <CardHeader
+        accent="amber"
+        title="Next up"
         action={
-          <Link href="/resident/calendar" className="text-[13px] font-medium text-accent">
+          <Link
+            href="/resident/calendar"
+            className="text-[13px] font-medium text-accent hover:underline"
+          >
             Full calendar
           </Link>
         }
-      >
-        Next up
-      </SectionTitle>
-      <Card>
+      />
+      <div>
         {next.length ? (
           <>
             {next.map((e, i) => (
@@ -93,7 +98,7 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
             </p>
           </div>
         )}
-      </Card>
-    </section>
+      </div>
+    </Card>
   );
 }

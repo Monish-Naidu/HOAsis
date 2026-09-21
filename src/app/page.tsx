@@ -15,11 +15,13 @@ import {
   ClipboardCheck,
   Clock,
   CreditCard,
+  FileText,
   Headphones,
   MessagesSquare,
   ShieldCheck,
   Sparkles,
   Video,
+  Vote,
   Zap,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
@@ -442,14 +444,21 @@ function KnowledgeMini() {
  * pains first; the knowledge center is a tile until compliance takes its
  * place, and moves down here when it does.
  */
-const EVERYTHING_ELSE = [
-  "Notices",
-  "Architectural requests",
-  "Documents",
-  "Communication",
-  "Meetings",
-  "Voting",
-  ...(moduleOn("compliance") ? ["Knowledge center"] : []),
+/**
+ * The strip under the four feature cards. Each item wears the same solid
+ * tile the cards do, in its own tint, so the row reads as the rest of the
+ * product and not as a footnote; the grid gives every item the same width.
+ */
+const EVERYTHING_ELSE: { label: string; icon: typeof Bell; tint: TintName }[] = [
+  { label: "Notices", icon: Bell, tint: "coral" },
+  { label: "Architectural requests", icon: ClipboardCheck, tint: "blue" },
+  { label: "Documents", icon: FileText, tint: "violet" },
+  { label: "Communication", icon: MessagesSquare, tint: "teal" },
+  { label: "Meetings", icon: CalendarDays, tint: "amber" },
+  { label: "Voting", icon: Vote, tint: "violet" },
+  ...(moduleOn("compliance")
+    ? [{ label: "Knowledge center", icon: BookOpen, tint: "blue" as TintName }]
+    : []),
 ];
 
 /**
@@ -1028,21 +1037,36 @@ export default function MarketingHome() {
           </div>
 
           <Reveal delay={300}>
-            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-3 rounded-2xl border border-border bg-gradient-to-r from-tint-blue-soft via-surface-2 to-tint-violet-soft px-6 py-5">
-              <span className="mr-2 inline-flex items-center gap-2.5 text-[16px] font-semibold text-fg">
+            <Card className="mt-6 overflow-hidden bg-gradient-to-r from-tint-blue-soft via-surface to-tint-violet-soft">
+              <div className="flex items-center gap-3 border-b border-border/70 px-6 py-4">
                 <IconTile icon={Sparkles} tint="amber" variant="solid" size="sm" />
-                And everything else
-              </span>
-              {EVERYTHING_ELSE.map((item) => (
-                <span
-                  key={item}
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[14px] font-medium text-fg-muted"
-                >
-                  <Check className="size-3.5 text-ok" strokeWidth={3} />
-                  {item}
-                </span>
-              ))}
-            </div>
+                <h3 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
+                  And everything else
+                </h3>
+                <p className="hidden text-[15px] text-fg-muted sm:block">
+                  Included, on the same one rate.
+                </p>
+              </div>
+              {/* One column per item, all the same width, so the row is evenly
+                  spaced whatever the count. Under a laptop width it wraps to
+                  three, then two. */}
+              <ul
+                className="grid grid-cols-2 gap-px bg-border/60 sm:grid-cols-3 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none"
+              >
+                {EVERYTHING_ELSE.map(({ label, icon, tint }) => (
+                  <li
+                    key={label}
+                    className="lift flex flex-col items-center gap-3 bg-surface px-3 py-6 text-center"
+                  >
+                    <IconTile icon={icon} tint={tint} variant="solid" size="lg" ring />
+                    <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em] text-fg">
+                      <Check className="size-3.5 shrink-0 text-ok" strokeWidth={3} />
+                      {label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           </Reveal>
         </div>
       </section>
