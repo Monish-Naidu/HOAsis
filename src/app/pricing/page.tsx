@@ -2,8 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Landmark, Mail, Receipt, Scale } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { IconTile, type TintName } from "@/components/ui/primitives";
-import { PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
-import { money } from "@/lib/utils";
+import { TRIAL_DAYS } from "@/lib/pricing";
 import { PriceCalculator } from "./price-calculator";
 
 export const metadata = {
@@ -28,6 +27,8 @@ export const metadata = {
 /**
  * How a payment is priced. The processor's rates are its published card and
  * ACH costs, passed through untouched, so a board can check them anywhere.
+ * The per-payment platform fee came off this page on 2026-09-21 at Monish's
+ * ask, so the page quotes the one rate and the processor's pass-through.
  */
 const PAYMENT_TILES: { icon: typeof Landmark; tint: TintName; label: string; body: string }[] = [
   {
@@ -37,16 +38,16 @@ const PAYMENT_TILES: { icon: typeof Landmark; tint: TintName; label: string; bod
     body: "2.9% + 30¢ on cards, 35¢ on bank transfers. Never marked up.",
   },
   {
-    icon: Receipt,
+    icon: Scale,
     tint: "teal",
-    label: `Ours, ${money(PRICE_PER_TRANSACTION_CENTS, { cents: false })} flat`,
-    body: "Same on a $100 payment and a $1,000 one. Owner or association pays it, your call.",
+    label: "Owner or association pays",
+    body: "Your call, set once and changed any time. Waive it on bank transfers if you like.",
   },
   {
-    icon: Scale,
+    icon: Receipt,
     tint: "violet",
-    label: "Two lines, never blended",
-    body: "Every receipt shows the processor's cost and ours separately.",
+    label: "On every receipt",
+    body: "The processor's cost sits on its own line, so nobody has to guess.",
   },
   {
     icon: Mail,

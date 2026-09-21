@@ -9,7 +9,6 @@ import {
   monthlyFor,
   PRICE_EXAMPLES,
   PRICE_PER_HOME_CENTS,
-  PRICE_PER_TRANSACTION_CENTS,
   TRIAL_DAYS,
 } from "@/lib/pricing";
 import { cn, money } from "@/lib/utils";
@@ -81,8 +80,7 @@ export function PriceCalculator() {
               <p className="text-[17px] font-medium text-fg-muted">per home, per month</p>
             </div>
             <p className="mt-2 text-[15px] text-fg-muted">
-              Plus {money(PRICE_PER_TRANSACTION_CENTS, { cents: false })} per payment, any rail.
-              No setup fee. Cancel whenever.
+              No setup fee, no add-ons. Cancel whenever.
             </p>
 
             {/* The dial. */}

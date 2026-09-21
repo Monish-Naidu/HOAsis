@@ -242,7 +242,7 @@ function Pill({ tone, children }: { tone: "ok" | "info"; children: React.ReactNo
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold",
         tone === "ok" ? "bg-ok-soft text-ok" : "bg-info-soft text-info",
       )}
     >
@@ -257,14 +257,14 @@ function ComplianceMini() {
   return (
     <Mini>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold text-fg">Washington updates</p>
+        <p className="text-[13px] font-semibold text-fg">Washington updates</p>
         <Pill tone="ok">New</Pill>
       </div>
-      <p className="mt-2 text-[11px] leading-snug text-fg-muted">
+      <p className="mt-2 text-[12px] leading-snug text-fg-muted">
         {update?.summary ?? "Bill numbers and effective dates, in plain words."}
       </p>
       {update ? (
-        <p className="tnum mt-2 text-[10px] text-fg-subtle">
+        <p className="tnum mt-2 text-[11px] text-fg-subtle">
           {update.readMinutes} min read · {formatDate(update.publishedDate)}
         </p>
       ) : null}
@@ -276,7 +276,7 @@ function Ring({ percent }: { percent: number }) {
   const r = 17;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 44 44" className="size-12 shrink-0 -rotate-90" aria-hidden>
+    <svg viewBox="0 0 44 44" className="size-14 shrink-0 -rotate-90" aria-hidden>
       <circle cx="22" cy="22" r={r} fill="none" strokeWidth="5" className="stroke-surface-3" />
       <circle
         cx="22"
@@ -303,11 +303,11 @@ function ReserveMini() {
     <Mini>
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-medium text-fg-muted">Reserve health</p>
-          <p className="tnum mt-0.5 text-[22px] font-semibold leading-none tracking-[-0.02em] text-fg">
+          <p className="text-[12px] font-medium text-fg-muted">Reserve health</p>
+          <p className="tnum mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.02em] text-fg">
             {percent}%
           </p>
-          <p className={cn("mt-1 text-[11px] font-semibold", onTrack ? "text-ok" : "text-warn")}>
+          <p className={cn("mt-1 text-[12px] font-semibold", onTrack ? "text-ok" : "text-warn")}>
             {onTrack ? "On track" : "Behind the study"}
           </p>
         </div>
@@ -318,13 +318,13 @@ function ReserveMini() {
           const funded = Math.round((component.fundedCents / component.replacementCostCents) * 100);
           return (
             <li key={component.id}>
-              <div className="flex items-center justify-between gap-2 text-[11px]">
+              <div className="flex items-center justify-between gap-2 text-[12px]">
                 <span className="truncate text-fg">{component.name.split(",")[0]}</span>
                 <span className="tnum shrink-0 text-fg-muted">
                   {year + component.remainingLifeYears} · {funded}%
                 </span>
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-3">
                 <div
                   className={cn(
                     "h-full rounded-full",
@@ -343,18 +343,18 @@ function ReserveMini() {
 
 function VendorMini() {
   return (
-    <Mini className="p-2">
+    <Mini className="p-2.5">
       <ul className="divide-y divide-border">
         {vendors.slice(0, 3).map((vendor) => {
           const active =
             vendor.w9OnFile && (!vendor.coiExpires || daysFromToday(vendor.coiExpires) >= 0);
           return (
-            <li key={vendor.id} className="px-1 py-1.5">
-              <p className="truncate text-[11px] font-semibold leading-tight text-fg">
+            <li key={vendor.id} className="px-1 py-2">
+              <p className="truncate text-[12px] font-semibold leading-tight text-fg">
                 {vendor.name}
               </p>
               <div className="mt-0.5 flex items-center justify-between gap-2">
-                <p className="truncate text-[10px] text-fg-muted">{vendor.service}</p>
+                <p className="truncate text-[11px] text-fg-muted">{vendor.service}</p>
                 <Pill tone={active ? "ok" : "info"}>{active ? "Active" : "Review"}</Pill>
               </div>
             </li>
@@ -377,7 +377,7 @@ function PaymentsMini() {
   };
   const dues = association.duesCents;
   return (
-    <Mini className="p-2">
+    <Mini className="p-2.5">
       <ul className="divide-y divide-border">
         {(
           [
@@ -387,15 +387,19 @@ function PaymentsMini() {
         ).map(({ kind, label }) => {
           const cost = computePaymentCost(kind, dues, policy);
           return (
-            <li key={kind} className="px-1 py-1.5">
+            <li key={kind} className="px-1 py-2">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold text-fg">{label}</p>
-                <span className="tnum text-[11px] text-fg-muted">
+                <p className="whitespace-nowrap text-[12px] font-semibold text-fg">{label}</p>
+                <span className="tnum text-[12px] text-fg-muted">
                   {money(cost.residentPaysCents)}
                 </span>
               </div>
-              <div className="mt-0.5 flex items-center justify-between gap-2">
-                <p className="text-[10px] text-fg-muted">{FEE_SCHEDULE[kind].settlement}</p>
+              <div className="mt-0.5 flex items-start justify-between gap-2">
+                {/* The schedule's own words, minus the hedge: "About 4
+                    business days" and the pill do not share a 220px row. */}
+                <p className="min-w-0 text-[11px] leading-snug text-fg-muted">
+                  {FEE_SCHEDULE[kind].settlement.replace(/^About /, "")}
+                </p>
                 {/* Under a flat owner fee both rails cost the owner the same;
                     the saving lands on the association, and the pay screen
                     says so in the same words. */}
@@ -404,8 +408,8 @@ function PaymentsMini() {
             </li>
           );
         })}
-        <li className="flex items-center justify-between gap-2 px-1 py-1.5">
-          <p className="text-[11px] font-semibold text-fg">Autopay</p>
+        <li className="flex items-center justify-between gap-2 px-1 py-2">
+          <p className="text-[12px] font-semibold text-fg">Autopay</p>
           <Pill tone="info">On the 1st</Pill>
         </li>
       </ul>
@@ -419,12 +423,12 @@ function KnowledgeMini() {
     .map((slug) => libraryArticles.find((article) => article.slug === slug))
     .filter((article) => article !== undefined);
   return (
-    <Mini className="p-2">
+    <Mini className="p-2.5">
       <ul className="divide-y divide-border">
         {guides.map((guide) => (
-          <li key={guide.slug} className="px-1 py-1.5">
-            <p className="truncate text-[11px] font-semibold leading-tight text-fg">{guide.title}</p>
-            <p className="tnum mt-0.5 text-[10px] text-fg-muted">{guide.readMinutes} min read</p>
+          <li key={guide.slug} className="px-1 py-2">
+            <p className="line-clamp-2 text-[12px] font-semibold leading-tight text-fg">{guide.title}</p>
+            <p className="tnum mt-0.5 text-[11px] text-fg-muted">{guide.readMinutes} min read</p>
           </li>
         ))}
       </ul>
@@ -826,7 +830,9 @@ export default function MarketingHome() {
               </h1>
             </Reveal>
             <Reveal delay={90}>
-              <p className="mt-6 max-w-md text-[18px] leading-relaxed text-fg-muted">
+              {/* Full ink and a halo of the field colour behind it: muted gray
+                  at this size sank into the picture's fade on both themes. */}
+              <p className="mt-6 max-w-md text-[20px] font-medium leading-relaxed text-fg [text-shadow:0_0_24px_var(--hero-field),0_0_8px_var(--hero-field)]">
                 Everything your HOA needs to get things done quickly, all in one place.
               </p>
             </Reveal>
@@ -1005,34 +1011,34 @@ export default function MarketingHome() {
               <Reveal
                 key={title}
                 delay={index * 80}
-                className="w-[272px] shrink-0 snap-start lg:w-auto"
+                className="w-[300px] shrink-0 snap-start lg:w-auto"
               >
-                <Card className="lift relative overflow-hidden p-5">
+                <Card className="lift relative overflow-hidden p-6">
                   <div className="flex flex-col items-center text-center">
-                    <IconTile icon={icon} tint={tint} variant="solid" size="lg" ring />
-                    <h3 className="mt-3 text-[17px] font-semibold tracking-[-0.02em] text-fg">
+                    <IconTile icon={icon} tint={tint} variant="solid" size="xl" ring />
+                    <h3 className="mt-4 text-[19px] font-semibold tracking-[-0.02em] text-fg">
                       {title}
                     </h3>
-                    <p className="mt-1 text-[14px] leading-snug text-fg-muted">{line}</p>
+                    <p className="mt-1 text-[15px] leading-snug text-fg-muted">{line}</p>
                   </div>
-                  <div className="mt-4">{mini}</div>
+                  <div className="mt-5">{mini}</div>
                 </Card>
               </Reveal>
             ))}
           </div>
 
           <Reveal delay={300}>
-            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border bg-gradient-to-r from-tint-blue-soft via-surface-2 to-tint-violet-soft px-5 py-4">
-              <span className="mr-1 inline-flex items-center gap-2 text-[14px] font-semibold text-fg">
-                <IconTile icon={Sparkles} tint="amber" variant="solid" size="xs" />
+            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-3 rounded-2xl border border-border bg-gradient-to-r from-tint-blue-soft via-surface-2 to-tint-violet-soft px-6 py-5">
+              <span className="mr-2 inline-flex items-center gap-2.5 text-[16px] font-semibold text-fg">
+                <IconTile icon={Sparkles} tint="amber" variant="solid" size="sm" />
                 And everything else
               </span>
               {EVERYTHING_ELSE.map((item) => (
                 <span
                   key={item}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[13px] font-medium text-fg-muted"
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[14px] font-medium text-fg-muted"
                 >
-                  <Check className="size-3 text-ok" strokeWidth={3} />
+                  <Check className="size-3.5 text-ok" strokeWidth={3} />
                   {item}
                 </span>
               ))}
