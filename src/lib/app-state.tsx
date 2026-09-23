@@ -261,7 +261,7 @@ interface AppState {
    */
   uploadDocuments: (
     files: File[],
-    options?: { category?: DocumentRecord["category"] },
+    options?: { category?: DocumentRecord["category"]; visibility?: DocumentRecord["visibility"] },
   ) => Promise<UploadOutcome>;
   /** Text confirmed out of an uploaded declaration, bylaws or rule set. */
   addGoverningArticles: (articles: Community["governingDocs"]) => void;
@@ -3124,10 +3124,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const uploadDocuments = useCallback(
     async (
       files: File[],
-      options?: { category?: DocumentRecord["category"] },
+      options?: {
+        category?: DocumentRecord["category"];
+        /** Board only unless the caller says otherwise; governing documents say so. */
+        visibility?: DocumentRecord["visibility"];
+      },
     ): Promise<UploadOutcome> => {
       const outcome: UploadOutcome = { uploaded: [], rejected: [], filed: [] };
       const category = options?.category ?? "Notices";
+      const visibility = options?.visibility ?? "board";
       const accepted: File[] = [];
       for (const file of files) {
         const reason = rejectReason(file);
@@ -3166,7 +3171,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           association_id: associationId,
           name: documentTitle(file.name),
           category,
-          visibility: "board",
+          visibility: toDbVisibility(visibility),
           storage_path: path,
           size_label: formatSize(file.size),
         });
