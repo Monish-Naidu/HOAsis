@@ -41,6 +41,16 @@ function intentMetadata(intent: Stripe.PaymentIntent) {
   };
 }
 
+/** Stripe's processing fee alone, from an expanded balance transaction. */
+function stripeFeeCents(tx: Stripe.Charge["balance_transaction"]): number {
+  if (!tx || typeof tx === "string") return 0;
+  const details = tx.fee_details ?? [];
+  if (details.length === 0) return tx.fee;
+  return details
+    .filter((d) => d.type === "stripe_fee" || d.type === "tax")
+    .reduce((sum, d) => sum + d.amount, 0);
+}
+
 /** What actually paid, from the charge, since a "card" can be a wallet. */
 function railFromCharge(charge: Stripe.Charge | null, fallback: "ach" | "card") {
   const details = charge?.payment_method_details;
@@ -70,9 +80,11 @@ export async function POST(request: NextRequest) {
   }
 
   switch (event.type) {
+    case "payment_intent.requires_action":
     case "payment_intent.processing": {
-      // ACH confirmed; the money is in flight for days. The pending row is
-      // what lets the resident see that something honest is happening.
+      // ACH confirmed, or waiting on micro-deposits; either way the money
+      // is not here yet. The pending row is what lets the resident see that
+      // something honest is happening.
       const intent = event.data.object;
       const meta = intentMetadata(intent);
       if (!meta) break;
@@ -101,18 +113,29 @@ export async function POST(request: NextRequest) {
       if (!meta) break;
 
       // The actual processor fee from the balance transaction, so the books
-      // carry what Stripe took rather than what our schedule estimated.
+      // carry what Stripe took rather than what our schedule estimated. Only
+      // Stripe's own fee: the balance transaction's total also includes our
+      // application fee, which the books already carry as platform_fee_cents,
+      // and counting it twice would understate what the association keeps.
+      // The transaction can lag the event by a moment, so a missing or empty
+      // fee is asked for again before being recorded as nothing.
       let processorFeeCents = 0;
       let charge: Stripe.Charge | null = null;
-      const chargeId = typeof intent.latest_charge === "string" ? intent.latest_charge : null;
+      const chargeId =
+        typeof intent.latest_charge === "string"
+          ? intent.latest_charge
+          : (intent.latest_charge?.id ?? null);
       if (chargeId) {
-        charge = await stripe().charges.retrieve(
-          chargeId,
-          { expand: ["balance_transaction"] },
-          event.account ? { stripeAccount: event.account } : undefined,
-        );
-        const tx = charge.balance_transaction;
-        if (tx && typeof tx !== "string") processorFeeCents = tx.fee;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          charge = await stripe().charges.retrieve(
+            chargeId,
+            { expand: ["balance_transaction"] },
+            event.account ? { stripeAccount: event.account } : undefined,
+          );
+          processorFeeCents = stripeFeeCents(charge.balance_transaction);
+          if (processorFeeCents > 0) break;
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
       }
 
       const { error } = await supabaseAdmin().rpc("record_payment", {

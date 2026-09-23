@@ -112,6 +112,17 @@ describe("the webhook route", () => {
     );
   });
 
+  it("holds a pending row for a bank still verifying its deposits", async () => {
+    const response = await POST(
+      signedRequest(intentEvent("payment_intent.requires_action", {})) as never,
+    );
+    expect(response.status).toBe(200);
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ state: "pending", stripe_payment_intent_id: "pi_1" }),
+      { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
+    );
+  });
+
   it("fails only pending rows on payment_failed", async () => {
     const response = await POST(
       signedRequest(intentEvent("payment_intent.payment_failed", {})) as never,

@@ -18,8 +18,8 @@ export const STRIPE_TEST_MODE = (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 
 const NUMBERS: { label: string; value: string; note: string }[] = [
   { label: "Routing number", value: "110000000", note: "Use with every test account below" },
-  { label: "Bank, instant", value: "000123456789", note: "Verifies at once, payment succeeds" },
-  { label: "Bank, micro-deposits", value: "000222222227", note: "Confirm amounts 32 and 45 later" },
+  { label: "Bank, succeeds", value: "000123456789", note: "Typed in by hand, it asks for micro-deposits: use code SM11AA" },
+  { label: "Bank, micro-deposit amounts", value: "32 and 45", note: "When the page asks for amounts instead of a code" },
   { label: "Bank, fails", value: "000111111113", note: "The payment is returned" },
   { label: "Card, works", value: "4242 4242 4242 4242", note: "Any future date, any CVC, any ZIP" },
   { label: "Card, declines", value: "4000 0000 0000 0002", note: "Shows the decline path" },
@@ -67,10 +67,15 @@ export function TestModeGuide({
           <ol className="list-decimal space-y-1 pl-5">
             <li>
               Pick <strong>New bank account</strong>, then in Stripe&apos;s form choose{" "}
-              <strong>Enter bank details manually</strong> and use a routing and account number
-              from the table. Or pick <strong>New card</strong> and use a card number.
+              <strong>Test (Non-OAuth)</strong> for an instant bank, or{" "}
+              <strong>Enter bank details manually</strong> and press <strong>Autofill</strong>.
+              Or pick <strong>New card</strong> and use a card number.
             </li>
-            <li>Press Pay. A card settles while you watch; a bank shows as processing.</li>
+            <li>
+              Press Pay. A card settles while you watch. A bank typed in by hand shows{" "}
+              <strong>Confirm the deposits</strong>: open it, enter the code, and the payment
+              goes through on its own.
+            </li>
             <li>
               To save a method for autopay, use <strong>Add a payment method</strong> instead, then
               switch autopay on. The cron runs daily at 14:30 UTC.

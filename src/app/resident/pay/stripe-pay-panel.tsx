@@ -36,12 +36,30 @@ type Phase =
   | { name: "waiting"; intentId: string }
   | { name: "settled"; amountCents: number }
   | { name: "received" }
-  | { name: "pending" };
+  | { name: "pending" }
+  /** A bank typed in by hand: Stripe sends two small deposits first. */
+  | { name: "verify"; url: string | null };
 
 type Rail = "ach" | "card";
 
 const POLL_MS = 2_000;
 const POLL_LIMIT = 10;
+
+/**
+ * The hosted page for confirming micro-deposits, when a bank was typed in
+ * rather than signed in to. Stripe only charges once the amounts match, so
+ * this is the resident's next step, not an error.
+ */
+function microdepositUrl(intent: {
+  next_action?: {
+    type?: string;
+    verify_with_microdeposits?: { hosted_verification_url?: string } | null;
+  } | null;
+}): string | null {
+  const action = intent.next_action;
+  if (action?.type !== "verify_with_microdeposits") return null;
+  return action.verify_with_microdeposits?.hosted_verification_url ?? null;
+}
 
 async function waitForSettlement(intentId: string): Promise<boolean> {
   const supabase = supabaseBrowser();
@@ -90,6 +108,7 @@ export function StripePayPanel({
     const setupIntentId = params.get("setup_intent");
     if (intentId && status === "succeeded") return { name: "waiting", intentId };
     if (intentId && status === "processing") return { name: "pending" };
+    if (intentId && status === "requires_action") return { name: "verify", url: null };
     if (setupIntentId && status === "succeeded") return { name: "finish-setup", setupIntentId };
     return { name: "rail" };
   });
@@ -212,6 +231,17 @@ export function StripePayPanel({
         tone="pending"
         title="Payment initiated"
         detail="Bank payments take about 4 business days to clear. It will appear on your account as soon as it does."
+      />
+    );
+  }
+  if (phase.name === "verify") {
+    return (
+      <Receipt
+        icon={<Landmark className="size-6" />}
+        tone="pending"
+        title="One more step: confirm your bank"
+        detail="Two small deposits will land in that account in a day or two. Confirm the amounts and the payment goes through on its own; nothing is taken until then."
+        link={phase.url ? { label: "Confirm the deposits", url: phase.url } : undefined}
       />
     );
   }
@@ -435,7 +465,9 @@ function ConfirmSaved({
     const intent = result.paymentIntent;
     if (intent?.status === "succeeded") onDone({ name: "waiting", intentId: intent.id });
     else if (intent?.status === "processing") onDone({ name: "pending" });
-    else setProblem("The payment did not finish. Nothing has been charged.");
+    else if (intent?.status === "requires_action" && microdepositUrl(intent)) {
+      onDone({ name: "verify", url: microdepositUrl(intent) });
+    } else setProblem("The payment did not finish. Nothing has been charged.");
   }
 
   return (
@@ -504,7 +536,9 @@ function ConfirmForm({
     const intent = result.paymentIntent;
     if (intent?.status === "succeeded") onDone({ name: "waiting", intentId: intent.id });
     else if (intent?.status === "processing") onDone({ name: "pending" });
-    else setProblem("The payment did not finish. Nothing has been charged.");
+    else if (intent?.status === "requires_action" && microdepositUrl(intent)) {
+      onDone({ name: "verify", url: microdepositUrl(intent) });
+    } else setProblem("The payment did not finish. Nothing has been charged.");
   }
 
   return (
@@ -544,11 +578,14 @@ function Receipt({
   tone,
   title,
   detail,
+  link,
 }: {
   icon: React.ReactNode;
   tone: "ok" | "pending";
   title: string;
   detail: string;
+  /** An outside step the resident still has to take, opened in a new tab. */
+  link?: { label: string; url: string };
 }) {
   return (
     <div className="animate-rise space-y-5">
@@ -563,10 +600,23 @@ function Receipt({
         </span>
         <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">{title}</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">{detail}</p>
-        <div className="mt-5">
+        <div className="mt-5 flex flex-col gap-2">
+          {link ? (
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-9 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+            >
+              {link.label}
+            </a>
+          ) : null}
           <Link
             href="/resident/account"
-            className="flex h-9 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+            className={cn(
+              "flex h-9 items-center justify-center rounded-lg text-[15px] font-medium",
+              link ? "border border-border text-fg" : "bg-brand text-brand-fg",
+            )}
           >
             View account
           </Link>

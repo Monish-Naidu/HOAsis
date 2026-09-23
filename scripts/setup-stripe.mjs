@@ -43,6 +43,7 @@ const WANTED = [
     url: `${origin}/api/stripe/webhook`,
     connect: true,
     events: [
+      "payment_intent.requires_action",
       "payment_intent.processing",
       "payment_intent.succeeded",
       "payment_intent.payment_failed",
