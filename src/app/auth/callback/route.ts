@@ -51,6 +51,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(back);
   }
 
+  // Any seat a board set out under this email is theirs now. Before the
+  // redirect, so the first screen already knows which associations they hold.
+  await supabase.rpc("claim_my_seats");
+
   // Honour an explicit destination, but only a path on this site, so a crafted
   // link cannot use us to bounce somebody somewhere else.
   if (next && next.startsWith("/") && !next.startsWith("//")) {

@@ -117,6 +117,9 @@ export async function loadRemote(profileId: string | null): Promise<void> {
   const supabase = supabaseBrowser();
 
   try {
+    // A session that predates an invitation still deserves the seat: claim
+    // anything listed under this email before asking what we belong to.
+    await supabase.rpc("claim_my_seats");
     const associations = await loadMyAssociations(supabase);
     if (!associations.length) {
       // Signed in, but belongs to nothing yet. That is a real state with its
