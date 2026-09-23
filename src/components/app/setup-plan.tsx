@@ -162,6 +162,12 @@ export function SetupFlow({ welcome = false }: { welcome?: boolean }) {
       <Finished
         plan={plan}
         leftOpen={tasks.filter((t) => !t.complete)}
+        onOpen={(key) => {
+          // The flow is already mounted, so a link to ?task= would only
+          // change the address bar. Land on the question directly.
+          flow.jump(key);
+          setStage("questions");
+        }}
       />
     );
   }
@@ -340,7 +346,15 @@ function Done({ label, detail }: { label: string; detail: string }) {
 }
 
 /** The end. Either everything is done, or here is what was left for later. */
-function Finished({ plan, leftOpen }: { plan: Plan; leftOpen: PlanTask[] }) {
+function Finished({
+  plan,
+  leftOpen,
+  onOpen,
+}: {
+  plan: Plan;
+  leftOpen: PlanTask[];
+  onOpen: (key: string) => void;
+}) {
   return (
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
       <span className="mb-5 flex items-center gap-4">
@@ -375,12 +389,13 @@ function Finished({ plan, leftOpen }: { plan: Plan; leftOpen: PlanTask[] }) {
                 <span className="block text-[15px] font-medium text-fg">{task.label}</span>
                 <span className="block truncate text-[13px] text-fg-muted">{task.detail}</span>
               </span>
-              <Link
-                href={`/start/plan?task=${task.key}`}
+              <button
+                type="button"
+                onClick={() => onOpen(task.key)}
                 className="shrink-0 text-[13px] font-semibold text-accent hover:underline"
               >
                 Do this
-              </Link>
+              </button>
             </div>
           ))}
         </Card>

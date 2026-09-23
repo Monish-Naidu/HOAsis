@@ -51,6 +51,7 @@ export function PayFlow() {
     settings,
     community,
     isRemote,
+    can,
     removeInstrument,
     setDefaultInstrument,
     recordPayment,
@@ -513,9 +514,19 @@ export function PayFlow() {
                 : "Your board hasn't set up online payments yet"
             }
           >
-            {stripeAccountId
-              ? "The Stripe publishable key is missing from this deployment."
-              : "Ask a board member to finish payment setup in Settings. Until then, dues are collected the way your board announced."}
+            {stripeAccountId ? (
+              "The Stripe publishable key is missing from this deployment."
+            ) : can("finances") ? (
+              <>
+                You can do it:{" "}
+                <Link href="/board/settings" className="font-medium underline">
+                  Set up payments in Settings
+                </Link>
+                . It takes a few minutes and owners can pay here once it is done.
+              </>
+            ) : (
+              "Ask a board member to finish payment setup in Settings. Until then, dues are collected the way your board announced."
+            )}
           </Callout>
         )}
       </div>
