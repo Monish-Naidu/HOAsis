@@ -32,6 +32,7 @@ import { InstrumentMenu } from "./instrument-menu";
 import { StripePayPanel } from "./stripe-pay-panel";
 import { isChargeable } from "@/lib/payments/autopay";
 import { useToast } from "@/components/app/toast";
+import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { policyFor } from "@/lib/collections";
 import { moduleOn } from "@/lib/modules";
 
@@ -466,6 +467,7 @@ export function PayFlow() {
         {amountSection}
         {stripeAccountId && publishableKey ? (
           <>
+            <TestModeGuide audience="resident" />
             <StripePayPanel
               associationId={community.association.id}
               unitId={owner.id}

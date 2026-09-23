@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/primitives";
 import { DangerZone } from "@/components/app/danger-zone";
 import { BillingRow } from "@/components/app/billing-row";
+import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { useAppState } from "@/lib/app-state";
 import { AmenityRules } from "@/components/app/amenity-rules";
 import { useToast } from "@/components/app/toast";
@@ -299,6 +300,7 @@ export function SettingsScreen() {
           <CardHeader title="Payments" subtitle="Your plan, where dues land, and who pays the fee" />
           {isRemote ? <BillingRow /> : null}
           {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
+          {isRemote ? <TestModeGuide audience="board" className="mx-4 my-3" /> : null}
 
           <SettingRow
             title="Payment fee"
