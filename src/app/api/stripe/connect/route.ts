@@ -7,11 +7,14 @@ import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
  *
  * POST creates the connected account on first call and returns a hosted
  * onboarding link either way; GET reports where onboarding stands. The
- * controller settings are the "Stripe handles pricing" shape on purpose:
- * Stripe bills the HOA its own processing fees, carries payment losses, and
- * gives the treasurer a full dashboard, which leaves the platform with no
- * monthly per-account fee and near-zero loss exposure. Dues settle to the
- * association's own bank account, never to us.
+ * account is Accounts v2 (Stripe refuses v1 for new platforms since 2026)
+ * with a merchant configuration and the "Stripe handles pricing" shape:
+ * Stripe collects its own processing fees from the HOA, carries payment
+ * losses, collects the onboarding requirements, and gives the treasurer the
+ * full dashboard, which leaves the platform with no monthly per-account fee
+ * and near-zero loss exposure. Dues settle to the association's own bank
+ * account, never to us. The id is still acct_…, so every v1 call made on its
+ * behalf (PaymentIntents, SetupIntents, Customers) is unchanged.
  *
  * Authorization matches the email route: the caller's own session answers
  * has_capability, so a crafted request from someone else's console gets a 403.
@@ -55,12 +58,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ accountId: null, chargesEnabled: false, detailsSubmitted: false });
   }
 
-  const account = await stripe().accounts.retrieve(row.stripe_account_id);
-  return NextResponse.json({
-    accountId: account.id,
-    chargesEnabled: account.charges_enabled,
-    detailsSubmitted: account.details_submitted,
+  const account = await stripe().v2.core.accounts.retrieve(row.stripe_account_id, {
+    include: ["configuration.merchant", "requirements"],
   });
+  const capabilities = account.configuration?.merchant?.capabilities;
+  // Live means a resident can pay by at least one rail. Both are requested;
+  // ACH is the one that matters for dues, cards usually clear first.
+  const chargesEnabled =
+    capabilities?.card_payments?.status === "active" ||
+    capabilities?.ach_debit_payments?.status === "active";
+  // Nothing left for the treasurer to type. Stripe may still be verifying.
+  const detailsSubmitted = !(account.requirements?.entries ?? []).some(
+    (entry) => entry.awaiting_action_from === "user",
+  );
+  return NextResponse.json({ accountId: account.id, chargesEnabled, detailsSubmitted });
 }
 
 export async function POST(request: NextRequest) {
@@ -85,16 +96,26 @@ export async function POST(request: NextRequest) {
 
   let accountId = row.stripe_account_id;
   if (!accountId) {
-    const account = await stripe().accounts.create({
-      country: "US",
-      controller: {
-        fees: { payer: "account" },
-        losses: { payments: "stripe" },
-        stripe_dashboard: { type: "full" },
-        requirement_collection: "stripe",
+    const account = await stripe().v2.core.accounts.create({
+      display_name: row.name,
+      identity: {
+        country: "us",
+        entity_type: "company",
+        business_details: {
+          registered_name: row.name,
+          id_numbers: row.ein ? [{ type: "us_ein", value: row.ein }] : undefined,
+        },
       },
-      business_profile: { name: row.name },
-      company: row.ein ? { tax_id: row.ein } : undefined,
+      configuration: {
+        merchant: {
+          capabilities: {
+            card_payments: { requested: true },
+            ach_debit_payments: { requested: true },
+          },
+        },
+      },
+      defaults: { responsibilities: { fees_collector: "stripe", losses_collector: "stripe" } },
+      dashboard: "full",
       metadata: { association_id: associationId! },
     });
     accountId = account.id;
@@ -110,11 +131,16 @@ export async function POST(request: NextRequest) {
   }
 
   const origin = request.nextUrl.origin;
-  const link = await stripe().accountLinks.create({
+  const link = await stripe().v2.core.accountLinks.create({
     account: accountId,
-    type: "account_onboarding",
-    return_url: `${origin}/board/settings?stripe=return`,
-    refresh_url: `${origin}/board/settings?stripe=refresh`,
+    use_case: {
+      type: "account_onboarding",
+      account_onboarding: {
+        configurations: ["merchant"],
+        return_url: `${origin}/board/settings?stripe=return`,
+        refresh_url: `${origin}/board/settings?stripe=refresh`,
+      },
+    },
   });
   return NextResponse.json({ url: link.url });
 }

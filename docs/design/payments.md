@@ -6,9 +6,13 @@ is the flow as it stands, and what still waits on keys.
 
 ## The shape
 
-Every association is a Stripe **connected account** with the "Stripe handles
-pricing" controller: Stripe bills the HOA its own processing fees, carries
-the payment losses, and gives the treasurer the full dashboard. Dues settle
+Every association is a Stripe **connected account**, created with Accounts
+v2 (Stripe refuses v1 for platforms onboarded from 2026) carrying a merchant
+configuration with card and ACH debit capabilities, `fees_collector` and
+`losses_collector` both `stripe`, and the full dashboard: Stripe bills the
+HOA its own processing fees, carries the payment losses, collects the
+onboarding requirements, and gives the treasurer the full dashboard. The id
+is still `acct_…`, so every v1 call made on its behalf is unchanged. Dues settle
 to the association's own bank account, never to us; our margin is the
 `application_fee_amount` on each intent, derived from the same
 `computePaymentCost` the pay screen shows.
@@ -83,15 +87,13 @@ declines both go out through `sendAutopayNotice` and land in `email_log`.
 
 Add `?dry=1` to see what a run would do.
 
-## What still waits on Monish
+## Keys and endpoints (done 2026-09-23)
 
-Three values from the Stripe dashboard and one script:
-
-1. `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (test keys)
-   into `.env.local`.
-2. `pnpm stripe:setup` creates both webhook endpoints against
-   yourhoasis.com and writes their secrets plus a `CRON_SECRET`.
-3. The same five values into Vercel, then redeploy.
+The Stripe account is the "YourHOAsis sandbox" in test mode. Both keys are
+in `.env.local` and in Vercel (Production and Preview), `pnpm stripe:setup`
+registered both webhook endpoints against yourhoasis.com and wrote their
+secrets plus a `CRON_SECRET`. Going live is a live key pair, the script run
+again with the live key, and the five values replaced in Vercel.
 
 Locally, `stripe login` once, then
 `stripe listen --forward-connect-to localhost:3000/api/stripe/webhook`
