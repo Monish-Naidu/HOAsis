@@ -3269,8 +3269,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (payout: Community["payouts"][number]) => {
       if (remote.community) {
         const rc = remote.community;
-        void remoteWrite("Recording the payment", () =>
-          supabaseBrowser().from("payouts").insert({
+        void remoteWrite("Recording the payment", async () => {
+          const supabase = supabaseBrowser();
+          const { error } = await supabase.from("payouts").insert({
             id: newId(),
             association_id: rc.id,
             vendor_id: isUuid(payout.vendorId) ? payout.vendorId : null,
@@ -3283,8 +3284,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             expected_on: payout.expectedDate,
             approvals: payout.approvals,
             approvals_required: payout.approvalsRequired,
-          }),
-        );
+          });
+          if (error) throw new Error(error.message);
+          // Money that already left is a line on the books from the same
+          // click, or Finances shows a bank balance the bank does not.
+          if (payout.status !== "paid") return;
+          const vendor = rc.vendors.find((v) => v.id === payout.vendorId);
+          const operating = rc.bankAccounts.find((b) => b.kind === "operating");
+          return supabase.from("ledger_entries").insert({
+            association_id: rc.id,
+            bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
+            occurred_on: payout.issuedDate,
+            description: payout.invoiceNumber
+              ? `${payout.vendor}, ${payout.invoiceNumber}`
+              : payout.vendor,
+            counterparty: payout.vendor,
+            category: vendor?.defaultCategory ?? "Vendors",
+            amount_cents: -payout.amountCents,
+            confirmed_at: new Date().toISOString(),
+          });
+        });
         return;
       }
       sliceStore(communityId, "payouts").update((all) =>

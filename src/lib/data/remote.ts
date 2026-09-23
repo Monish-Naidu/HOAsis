@@ -572,7 +572,16 @@ export async function loadCommunity(
       achEnabled: v.ach_enabled,
       w9OnFile: v.w9_on_file,
       coiExpires: v.coi_expires_on ?? undefined,
-      ytdPaidCents: 0,
+      // What actually went out to them this year, from the payments the board
+      // recorded, so the $600 line for a W-9 is measured rather than guessed.
+      ytdPaidCents: (payoutRows.data ?? [])
+        .filter(
+          (p) =>
+            p.status === "paid" &&
+            (p.vendor_id === v.id || p.vendor_name === v.name) &&
+            p.issued_on.slice(0, 4) === today.slice(0, 4),
+        )
+        .reduce((sum, p) => sum + p.amount_cents, 0),
       defaultCategory: v.default_category as Community["vendors"][number]["defaultCategory"],
     })),
 

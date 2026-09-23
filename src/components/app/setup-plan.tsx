@@ -701,7 +701,7 @@ function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
               if (!files.length) return;
               setBusy(true);
               try {
-                const outcome = await uploadDocuments(files);
+                const outcome = await uploadDocuments(files, { category: "Governing" });
                 if (outcome.uploaded.length) {
                   notify(
                     `Uploaded ${outcome.uploaded.length === 1 ? outcome.uploaded[0] : `${outcome.uploaded.length} files`}. It is board only until you say otherwise.`,
