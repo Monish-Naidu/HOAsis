@@ -16,7 +16,7 @@ import { PageTransition } from "@/components/app/page-transition";
 import { moduleOn } from "@/lib/modules";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
-import { CommunityHero } from "@/components/app/community-hero";
+import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { HomeBadge } from "@/components/app/home-badge";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
