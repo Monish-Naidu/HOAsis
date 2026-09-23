@@ -173,6 +173,8 @@ interface AppState {
     asOf: string,
     balances: { ownerId: string; amountCents: number }[],
   ) => void;
+  /** Names the owner of a home that has none on record yet. */
+  setHouseholdOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
   removeOwner: (ownerId: string) => () => void;
   /**
    * A home changes hands. The seller's seat ends on the closing date, the
@@ -1396,6 +1398,35 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * came from disputes it, and a board that cannot show where it came from
    * loses that dispute.
    */
+  const setHouseholdOwner = useCallback(
+    (ownerId: string, input: { name: string; email: string }) => {
+      const name = input.name.trim();
+      const email = input.email.trim();
+      if (remote.community) {
+        // The empty membership the founding wizard left on the home takes the
+        // name, so the row on the roster becomes theirs rather than a second
+        // household on the same lot. Seating waits for them to sign in.
+        return remoteWrite("Adding the owner", () =>
+          supabaseBrowser()
+            .from("memberships")
+            .update({ full_name: name, invited_email: email || null })
+            .eq("unit_id", ownerId)
+            .is("profile_id", null)
+            .is("ends_on", null),
+        );
+      }
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) =>
+          o.id === ownerId
+            ? { ...o, displayName: name, members: [name], email, placeholder: false }
+            : o,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, communityId],
+  );
+
   const setOpeningBalances = useCallback(
     (asOf: string, balances: { ownerId: string; amountCents: number }[]) => {
       if (remote.community) {
@@ -3828,6 +3859,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     dismissReport,
     raiseNoticeFromReport,
     setOpeningBalances,
+    setHouseholdOwner,
     removeOwner,
     transferHome,
     setAccountRole,

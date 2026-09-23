@@ -205,6 +205,7 @@ export async function loadCommunity(
     return {
       id: unit.id,
       displayName: holder?.full_name || placeholder,
+      placeholder: !holder?.full_name,
       members: members.length ? members : [holder?.full_name || placeholder],
       email: holder?.invited_email ?? "",
       phone: holder?.phone ?? "",

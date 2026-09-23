@@ -930,7 +930,8 @@ function BoardInline({ task }: { task: PlanTask }) {
     return (
       <div className="space-y-3">
         <p className="text-[15px] leading-relaxed text-fg-muted">
-          Nobody to appoint yet. Add a household with an email and they can hold an office.
+          Nobody to appoint yet. An officer needs a login: invite a household by email, and once
+          they have signed in they can hold an office.
         </p>
         <GoThere task={{ ...task, href: "/board/homeowners" }} />
       </div>

@@ -166,6 +166,8 @@ export interface Owner {
   daysPastDue: number;
   boardRole?: string;
   isCorporateOwner?: boolean;
+  /** No owner on record yet: the roster shows a stand-in name for the home. */
+  placeholder?: boolean;
   /**
    * A photograph of the home, where the association holds one.
    *

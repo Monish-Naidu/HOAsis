@@ -65,6 +65,7 @@ export function HomeownersScreen() {
     transferHome,
     replyToThread,
     messageOwner,
+    setHouseholdOwner,
     can,
     isRemote,
   } = useAppState();
@@ -605,10 +606,10 @@ export function HomeownersScreen() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        aria-label={`Message ${o.displayName}`}
+                        aria-label={o.placeholder ? `Add the owner of ${o.unit}` : `Message ${o.displayName}`}
                         onClick={() => toggle(o, true)}
                       >
-                        Message
+                        {o.placeholder ? "Add owner" : "Message"}
                       </Button>
                     </span>
                   </div>
@@ -625,6 +626,11 @@ export function HomeownersScreen() {
                           : null;
                       })()}
                       onSend={(body, subject) => send(o, body, subject)}
+                      onSetOwner={(name, email) =>
+                        void setHouseholdOwner(o.id, { name, email }).then((ok) => {
+                          if (ok) notify(`${name} is on ${o.unit}`);
+                        })
+                      }
                       onSale={() => startSale(o)}
                       onInvite={() => copyInvite(o)}
                       onEmailInvite={isRemote && o.email ? () => void emailInvites([o]) : undefined}
@@ -709,6 +715,7 @@ function HouseholdDetail({
   focusComposer,
   letter,
   onSend,
+  onSetOwner,
   onSale,
   onInvite,
   onEmailInvite,
@@ -721,6 +728,8 @@ function HouseholdDetail({
   /** The dues letter this household is due today, already filled in. Null when none is. */
   letter: { name: string; subject: string; body: string } | null;
   onSend: (body: string, subject?: string) => void;
+  /** For a home with no owner on record: name them. */
+  onSetOwner: (name: string, email: string) => void;
   onSale: () => void;
   onInvite: () => void;
   onEmailInvite?: () => void;
@@ -771,6 +780,9 @@ function HouseholdDetail({
           {owner.boardRole ? <KeyValue label="Board">{owner.boardRole}</KeyValue> : null}
         </dl>
 
+        {owner.placeholder ? (
+          <AddOwnerForm unit={owner.unit} onSave={onSetOwner} />
+        ) : (
         <div>
           <label className="block">
             <span className="mb-1.5 flex items-center justify-between gap-3 text-[13px] font-semibold text-fg-muted">
@@ -825,6 +837,7 @@ function HouseholdDetail({
             </Button>
           </div>
         </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-border pt-3">
@@ -869,5 +882,53 @@ function HouseholdDetail({
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * A home the wizard added with nobody on it. Naming the owner here writes
+ * onto the empty membership, so the roster gains a person rather than a
+ * second household on the same lot.
+ */
+function AddOwnerForm({
+  unit,
+  onSave,
+}: {
+  unit: string;
+  onSave: (name: string, email: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        onSave(name.trim(), email.trim());
+      }}
+    >
+      <p className="text-[13px] font-semibold text-fg-muted">Who owns {unit}?</p>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Owner name"
+        aria-label="Owner name"
+        className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+      />
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        type="email"
+        placeholder="Email, so they can sign in and pay"
+        aria-label="Owner email"
+        className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+      />
+      <div className="flex justify-end">
+        <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
+          Save owner
+        </Button>
+      </div>
+    </form>
   );
 }
