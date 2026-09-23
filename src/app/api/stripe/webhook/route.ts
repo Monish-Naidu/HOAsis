@@ -16,6 +16,11 @@ import { supabaseAdmin } from "@/lib/supabase/server";
  *
  * Runs under the service role because there is no signed-in person here;
  * record_payment treats a null auth.uid() as this trusted path.
+ *
+ * SetupIntents matter here too: a bank saved by micro-deposit sits in
+ * payment_instruments marked `verifying` until Stripe says the amounts
+ * matched, and disappears if they never do. The endpoint must subscribe to
+ * setup_intent.* as well as payment_intent.*.
  */
 export const runtime = "nodejs";
 
@@ -135,6 +140,37 @@ export async function POST(request: NextRequest) {
         .update({ state: "failed" })
         .eq("stripe_payment_intent_id", intent.id)
         .eq("state", "pending");
+      break;
+    }
+
+    case "setup_intent.succeeded": {
+      // The micro-deposits matched. The row loses its verifying mark and
+      // becomes chargeable, by hand and by autopay.
+      const intent = event.data.object;
+      const admin = supabaseAdmin();
+      const { data: rows } = await admin
+        .from("payment_instruments")
+        .select("id, detail")
+        .eq("detail->>setupIntentId", intent.id);
+      for (const row of rows ?? []) {
+        const detail = { ...((row.detail as Record<string, unknown>) ?? {}) };
+        delete detail.status;
+        delete detail.verifyUrl;
+        delete detail.setupIntentId;
+        await admin.from("payment_instruments").update({ detail }).eq("id", row.id);
+      }
+      break;
+    }
+
+    case "setup_intent.setup_failed":
+    case "setup_intent.canceled": {
+      // Wrong amounts too many times, or the owner gave up. A bank that can
+      // never be charged is not a payment method.
+      const intent = event.data.object;
+      await supabaseAdmin()
+        .from("payment_instruments")
+        .delete()
+        .eq("detail->>setupIntentId", intent.id);
       break;
     }
 

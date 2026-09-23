@@ -43,6 +43,15 @@ export interface PaymentInstrument {
   accountType?: "checking" | "savings";
   /** Stands in for the processor token. Never a card number. */
   token: string;
+  /**
+   * A bank added by micro-deposit is real but cannot be charged until the
+   * owner confirms the amounts. Absent means ready.
+   */
+  status?: "verifying";
+  /** Stripe's hosted page for confirming those deposits. */
+  verifyUrl?: string;
+  /** The SetupIntent that is still verifying, so the webhook can find the row. */
+  setupIntentId?: string;
 }
 
 /* -------------------------------------------------------------------------- */

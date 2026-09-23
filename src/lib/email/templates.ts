@@ -331,3 +331,64 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+/* -------------------------------------------------------------------------- */
+/* Autopay                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface AutopayEmailInput {
+  associationName: string;
+  ownerName: string;
+  amountCents: number;
+  /** "BECU checking ••1234". */
+  method: string;
+  /** Why it did not go through, in Stripe's words, for the failed kind. */
+  problem?: string;
+  /** Lands on the pay screen, signed in. */
+  payUrl: string;
+}
+
+/**
+ * The two autopay notices. A charge that went out is a receipt: the amount is
+ * the subject, and the one link is the account. A charge that failed is the
+ * same shape with the problem in one line, because the owner's next move is
+ * to pay by hand, and the link takes them there.
+ */
+export function autopayEmail(kind: "charged" | "failed", input: AutopayEmailInput) {
+  const amount = money(input.amountCents);
+  const heading =
+    kind === "charged"
+      ? `Autopay sent ${amount} to ${input.associationName}`
+      : `Autopay could not send ${amount}`;
+  const subject =
+    kind === "charged"
+      ? `${amount} paid by autopay · ${input.associationName}`
+      : `Autopay failed for ${amount} · ${input.associationName}`;
+  const detail =
+    kind === "charged"
+      ? `It came from ${input.method} and applies to your oldest charge first. A bank payment takes a few business days to clear; a card is same day.`
+      : `${input.method} was declined${input.problem ? `: ${input.problem}` : ""}. Nothing was taken. Autopay will try again next month; until then the balance is yours to pay by hand.`;
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
+      ${heading}
+    </h1>
+    <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
+      ${input.ownerName}, ${detail}
+    </p>`;
+
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: kind === "charged" ? `${amount} from ${input.method}.` : `Nothing was taken.`,
+      body,
+      cta:
+        kind === "charged"
+          ? { label: "View account", url: input.payUrl }
+          : { label: `Pay ${amount}`, url: input.payUrl },
+      footer: `Sent by ${input.associationName} through Your HOAsis because autopay is on for your home. Turn it off any time on the pay screen.`,
+    }),
+    text: `${input.ownerName},\n\n${heading}. ${detail}\n\n${input.payUrl}\n\nYour HOAsis`,
+  };
+}

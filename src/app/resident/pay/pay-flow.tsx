@@ -9,11 +9,8 @@ import {
   CreditCard,
   Info,
   Landmark,
-  MoreHorizontal,
   Plus,
   Repeat,
-  Star,
-  Trash2,
   X,
 } from "lucide-react";
 import { Badge, Button, Callout, Card, IconTile, SectionTitle, SuccessMark, Toggle } from "@/components/ui/primitives";
@@ -31,7 +28,9 @@ import {
 } from "@/lib/payments/instruments";
 import { cn, formatDate, money, ordinal, relativeDays, today } from "@/lib/utils";
 import { AddMethod } from "./add-method";
+import { InstrumentMenu } from "./instrument-menu";
 import { StripePayPanel } from "./stripe-pay-panel";
+import { isChargeable } from "@/lib/payments/autopay";
 import { useToast } from "@/components/app/toast";
 import { policyFor } from "@/lib/collections";
 import { moduleOn } from "@/lib/modules";
@@ -62,6 +61,11 @@ export function PayFlow() {
   const { notify } = useToast();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The Stripe panel's choice: a saved instrument's id, or "new-ach" /
+  // "new-card". Held here so autopay can read which saved method it is.
+  const [stripeSelection, setStripeSelection] = useState<string>(
+    () => instruments.find((i) => i.isDefault)?.id ?? instruments[0]?.id ?? "new-ach",
+  );
   const [amountMode, setAmountMode] = useState<"balance" | "custom">("balance");
   const [custom, setCustom] = useState("");
   // Autopay is the owner's standing instruction, so it starts from what they
@@ -88,6 +92,15 @@ export function PayFlow() {
     instruments.find((i) => i.id === selectedId) ??
     instruments.find((i) => i.isDefault) ??
     instruments[0];
+
+  // What autopay would draw from. For a real association that has to be a
+  // method Stripe can charge with nobody present: the one chosen in the
+  // panel if it is saved and verified, else the household's default.
+  const autopayInstrument = isRemote
+    ? (instruments.find((i) => i.id === stripeSelection && isChargeable(i)) ??
+      instruments.find((i) => i.isDefault && isChargeable(i)) ??
+      instruments.find((i) => isChargeable(i)))
+    : selected;
 
   const amountCents = useMemo(() => {
     if (amountMode === "balance") return balanceCents > 0 ? balanceCents : duesCents;
@@ -124,7 +137,11 @@ export function PayFlow() {
             day,
             capCents: cap ?? undefined,
             skipMonth: skip ?? undefined,
-            instrumentId: selected?.id,
+            instrumentId: autopayInstrument?.id,
+            // Kept from the first save, so changing the day later does not
+            // move the start; set now, so the promise on screen ("Next
+            // autopay: October 1") is the month the cron waits for.
+            startMonth: plan?.startMonth ?? upcomingMonth,
           }
         : null,
     ).then((ok) => {
@@ -248,6 +265,181 @@ export function PayFlow() {
     </section>
   );
 
+  // Autopay, shared by the demo and Stripe branches as a JSX value.
+  const autopaySection = (
+        <section id="autopay" className="scroll-mt-20">
+          <SectionTitle>Autopay</SectionTitle>
+          <Card className="p-4">
+            <div className="flex items-start gap-3">
+              <IconTile icon={Repeat} tint="violet" size="md" className="mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-fg">
+                  Autopay {money(duesCents)} on the {ordinal(autopayDay)}
+                </p>
+                <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
+                  {selected
+                    ? `From ${describeInstrument(selected)}. Cancel any time.`
+                    : "Add a payment method to turn this on."}
+                </p>
+              </div>
+              <Toggle
+                checked={autopay}
+                onChange={(on) => {
+                  setAutopayOn(on);
+                  persistAutopay({ on });
+                }}
+                disabled={!selected}
+                label="Enable autopay"
+              />
+            </div>
+
+            {autopay ? (
+              <>
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="mb-2 text-[13px] font-semibold text-fg-muted">
+                    Day of the month
+                  </p>
+                  <div className="grid grid-cols-8 gap-1.5">
+                    {Array.from({ length: settings.autopayLateAfterDay }, (_, i) => i + 1).map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => {
+                          setAutopayDay(day);
+                          persistAutopay({ on: true, day });
+                        }}
+                        aria-pressed={autopayDay === day}
+                        className={cn(
+                          "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
+                          autopayDay === day
+                            ? "bg-brand-gradient text-primary-fg shadow-raised"
+                            : day === settings.autopayLateAfterDay
+                              ? "border border-warn/40 bg-warn-soft text-warn"
+                              : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
+                        )}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[13px] leading-snug text-fg-subtle">
+                    The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
+                    dues are late.
+                    {collections.lateFeeCents > 0
+                      ? ` A ${money(collections.lateFeeCents)} late fee applies from ${collections.lateNoticeDay} days past due.`
+                      : ""}
+                  </p>
+                </div>
+
+                {moduleOn("autopay-extras") ? (
+                  <>
+                {/* The cap. The one fear that keeps people off autopay is a
+                    special assessment or a fine draining the account on the
+                    first. Above the cap, the balance waits for them. */}
+                <div className="mt-3 border-t border-border pt-3">
+                  <label className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={capCents !== null}
+                      onChange={(e) => {
+                        const next = e.target.checked ? (capCents ?? duesCents) : null;
+                        setCapCents(next);
+                        setCapText(next ? String(next / 100) : "");
+                        persistAutopay({ on: true, capCents: next });
+                      }}
+                      className="mt-0.5 size-4 rounded border-border-2"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-medium text-fg">
+                        Only when my balance is at most
+                      </span>
+                      <span className="block text-[13px] leading-snug text-fg-muted">
+                        A special assessment or a fine that pushes the balance above this waits for
+                        you to pay it yourself. Regular dues still go out on the {ordinal(autopayDay)}.
+                      </span>
+                    </span>
+                  </label>
+                  {capCents !== null ? (
+                    <div className="mt-2 flex items-center gap-2 pl-6">
+                      <span className="text-[15px] text-fg-muted">$</span>
+                      <input
+                        inputMode="decimal"
+                        aria-label="Autopay cap in dollars"
+                        value={capText}
+                        onChange={(e) => setCapText(e.target.value)}
+                        onBlur={() => {
+                          const parsed = Math.round(
+                            Number(capText.replace(/[^0-9.]/g, "")) * 100,
+                          );
+                          const next = Number.isFinite(parsed) && parsed > 0 ? parsed : duesCents;
+                          setCapCents(next);
+                          setCapText(String(next / 100));
+                          if (next !== capCents) persistAutopay({ on: true, capCents: next });
+                        }}
+                        className="tnum h-9 w-28 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand"
+                      />
+                      <span className="text-[13px] text-fg-subtle">
+                        Dues are {money(duesCents)}.
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* A tight month, answered without turning the whole thing off
+                    and forgetting to turn it back on. */}
+                <div className="mt-3 border-t border-border pt-3">
+                  {skipsUpcoming ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[15px] font-medium text-fg">
+                        Skipping {monthLabel(upcomingMonth)}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSkipMonth(null);
+                          persistAutopay({ on: true, skipMonth: null });
+                        }}
+                      >
+                        Undo
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-medium text-fg">Skip next month</p>
+                        <p className="text-[13px] leading-snug text-fg-muted">
+                          Autopay sits out {monthLabel(upcomingMonth)} and carries on after. The
+                          balance still shows here so you can pay it by hand.
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setSkipMonth(upcomingMonth);
+                          persistAutopay({ on: true, skipMonth: upcomingMonth });
+                        }}
+                      >
+                        Skip {monthLabel(upcomingMonth).split(" ")[0]}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                  </>
+                ) : null}
+
+                <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">
+                  Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}
+                  {skipsUpcoming ? ` · ${monthLabel(upcomingMonth)} skipped` : ""}
+                </div>
+              </>
+            ) : null}
+          </Card>
+        </section>
+  );
+
   // A real association pays through Stripe or not at all. The demo path below
   // must never run here: it writes a settled payment with no money moving.
   if (isRemote) {
@@ -280,6 +472,8 @@ export function PayFlow() {
               amountCents={amountCents}
               publishableKey={publishableKey}
               instruments={instruments}
+              selection={stripeSelection}
+              onSelect={setStripeSelection}
             />
             {adding ? (
               <div className="space-y-2">
@@ -305,6 +499,7 @@ export function PayFlow() {
                 Add a payment method
               </Button>
             )}
+            {autopaySection}
           </>
         ) : (
           <Callout
@@ -405,61 +600,26 @@ export function PayFlow() {
                     ) : null}
                   </button>
 
-                  <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      aria-label={`Options for ${instrument.label}`}
-                      aria-expanded={menuFor === instrument.id}
-                      onClick={() =>
-                        setMenuFor(menuFor === instrument.id ? null : instrument.id)
-                      }
-                      className="flex size-8 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg"
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </button>
-                    {menuFor === instrument.id ? (
-                      <>
-                        <button
-                          type="button"
-                          aria-label="Close"
-                          className="fixed inset-0 z-20 cursor-default"
-                          onClick={() => setMenuFor(null)}
-                        />
-                        <div className="absolute right-0 top-9 z-30 w-48 overflow-hidden rounded-2xl border border-border bg-surface shadow-float">
-                          <button
-                            type="button"
-                            disabled={instrument.isDefault}
-                            onClick={() => {
-                              setDefaultInstrument(instrument.id);
-                              setMenuFor(null);
-                              notify(`${instrument.label} is now the default`);
-                            }}
-                            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[15px] text-fg hover:bg-surface-2 disabled:opacity-40"
-                          >
-                            <Star
-                              className={cn("size-3.5", instrument.isDefault && "fill-current")}
-                            />
-                            {instrument.isDefault ? "Already default" : "Make default"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const undo = removeInstrument(instrument.id);
-                              setMenuFor(null);
-                              notify(`Removed ${instrument.label} ••${instrument.mask}`, "warn", {
-                                label: "Undo",
-                                onClick: undo,
-                              });
-                            }}
-                            className="flex w-full items-center gap-2.5 border-t border-border px-3.5 py-2.5 text-left text-[15px] text-danger hover:bg-danger-soft"
-                          >
-                            <Trash2 className="size-3.5" />
-                            Remove
-                          </button>
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
+                  <InstrumentMenu
+                    label={instrument.label}
+                    isDefault={instrument.isDefault}
+                    open={menuFor === instrument.id}
+                    onToggle={() => setMenuFor(menuFor === instrument.id ? null : instrument.id)}
+                    onMakeDefault={() => {
+                      setDefaultInstrument(instrument.id);
+                      setMenuFor(null);
+                      notify(`${instrument.label} is now the default`);
+                    }}
+                    onRemove={() => {
+                      const undo = removeInstrument(instrument.id);
+                      setMenuFor(null);
+                      notify(
+                        `Removed ${instrument.label} ••${instrument.mask}`,
+                        "warn",
+                        undo ? { label: "Undo", onClick: undo } : undefined,
+                      );
+                    }}
+                  />
                 </div>
               );
             })}
@@ -527,178 +687,7 @@ export function PayFlow() {
         </Card>
       ) : null}
 
-      {/* Autopay */}
-      <section id="autopay" className="scroll-mt-20">
-        <SectionTitle>Autopay</SectionTitle>
-        <Card className="p-4">
-          <div className="flex items-start gap-3">
-            <IconTile icon={Repeat} tint="violet" size="md" className="mt-0.5" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-semibold text-fg">
-                Autopay {money(duesCents)} on the {ordinal(autopayDay)}
-              </p>
-              <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
-                {selected
-                  ? `From ${describeInstrument(selected)}. Cancel any time.`
-                  : "Add a payment method to turn this on."}
-              </p>
-            </div>
-            <Toggle
-              checked={autopay}
-              onChange={(on) => {
-                setAutopayOn(on);
-                persistAutopay({ on });
-              }}
-              disabled={!selected}
-              label="Enable autopay"
-            />
-          </div>
-
-          {autopay ? (
-            <>
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="mb-2 text-[13px] font-semibold text-fg-muted">
-                  Day of the month
-                </p>
-                <div className="grid grid-cols-8 gap-1.5">
-                  {Array.from({ length: settings.autopayLateAfterDay }, (_, i) => i + 1).map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => {
-                        setAutopayDay(day);
-                        persistAutopay({ on: true, day });
-                      }}
-                      aria-pressed={autopayDay === day}
-                      className={cn(
-                        "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
-                        autopayDay === day
-                          ? "bg-brand-gradient text-primary-fg shadow-raised"
-                          : day === settings.autopayLateAfterDay
-                            ? "border border-warn/40 bg-warn-soft text-warn"
-                            : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
-                      )}
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-[13px] leading-snug text-fg-subtle">
-                  The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
-                  dues are late.
-                  {collections.lateFeeCents > 0
-                    ? ` A ${money(collections.lateFeeCents)} late fee applies from ${collections.lateNoticeDay} days past due.`
-                    : ""}
-                </p>
-              </div>
-
-              {moduleOn("autopay-extras") ? (
-                <>
-              {/* The cap. The one fear that keeps people off autopay is a
-                  special assessment or a fine draining the account on the
-                  first. Above the cap, the balance waits for them. */}
-              <div className="mt-3 border-t border-border pt-3">
-                <label className="flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    checked={capCents !== null}
-                    onChange={(e) => {
-                      const next = e.target.checked ? (capCents ?? duesCents) : null;
-                      setCapCents(next);
-                      setCapText(next ? String(next / 100) : "");
-                      persistAutopay({ on: true, capCents: next });
-                    }}
-                    className="mt-0.5 size-4 rounded border-border-2"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-medium text-fg">
-                      Only when my balance is at most
-                    </span>
-                    <span className="block text-[13px] leading-snug text-fg-muted">
-                      A special assessment or a fine that pushes the balance above this waits for
-                      you to pay it yourself. Regular dues still go out on the {ordinal(autopayDay)}.
-                    </span>
-                  </span>
-                </label>
-                {capCents !== null ? (
-                  <div className="mt-2 flex items-center gap-2 pl-6">
-                    <span className="text-[15px] text-fg-muted">$</span>
-                    <input
-                      inputMode="decimal"
-                      aria-label="Autopay cap in dollars"
-                      value={capText}
-                      onChange={(e) => setCapText(e.target.value)}
-                      onBlur={() => {
-                        const parsed = Math.round(
-                          Number(capText.replace(/[^0-9.]/g, "")) * 100,
-                        );
-                        const next = Number.isFinite(parsed) && parsed > 0 ? parsed : duesCents;
-                        setCapCents(next);
-                        setCapText(String(next / 100));
-                        if (next !== capCents) persistAutopay({ on: true, capCents: next });
-                      }}
-                      className="tnum h-9 w-28 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand"
-                    />
-                    <span className="text-[13px] text-fg-subtle">
-                      Dues are {money(duesCents)}.
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* A tight month, answered without turning the whole thing off
-                  and forgetting to turn it back on. */}
-              <div className="mt-3 border-t border-border pt-3">
-                {skipsUpcoming ? (
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[15px] font-medium text-fg">
-                      Skipping {monthLabel(upcomingMonth)}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSkipMonth(null);
-                        persistAutopay({ on: true, skipMonth: null });
-                      }}
-                    >
-                      Undo
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[15px] font-medium text-fg">Skip next month</p>
-                      <p className="text-[13px] leading-snug text-fg-muted">
-                        Autopay sits out {monthLabel(upcomingMonth)} and carries on after. The
-                        balance still shows here so you can pay it by hand.
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setSkipMonth(upcomingMonth);
-                        persistAutopay({ on: true, skipMonth: upcomingMonth });
-                      }}
-                    >
-                      Skip {monthLabel(upcomingMonth).split(" ")[0]}
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-                </>
-              ) : null}
-
-              <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">
-                Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}
-                {skipsUpcoming ? ` · ${monthLabel(upcomingMonth)} skipped` : ""}
-              </div>
-            </>
-          ) : null}
-        </Card>
-      </section>
+      {autopaySection}
     </div>
   );
 }

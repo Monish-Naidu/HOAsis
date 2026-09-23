@@ -325,6 +325,67 @@ export type Database = {
           },
         ]
       }
+      autopay_runs: {
+        Row: {
+          amount_cents: number
+          association_id: string
+          created_at: string
+          id: string
+          month: string
+          rail: string | null
+          reason: string | null
+          state: string
+          stripe_payment_intent_id: string | null
+          unit_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          association_id: string
+          created_at?: string
+          id?: string
+          month: string
+          rail?: string | null
+          reason?: string | null
+          state: string
+          stripe_payment_intent_id?: string | null
+          unit_id: string
+        }
+        Update: {
+          amount_cents?: number
+          association_id?: string
+          created_at?: string
+          id?: string
+          month?: string
+          rail?: string | null
+          reason?: string | null
+          state?: string
+          stripe_payment_intent_id?: string | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autopay_runs_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "autopay_runs_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "autopay_runs_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ballot_options: {
         Row: {
           ballot_id: string
@@ -2776,6 +2837,7 @@ export type Database = {
         | "community"
         | "newsletter"
         | "billing"
+        | "invite"
       payment_rail: "ach" | "card" | "apple-pay" | "google-pay"
       payment_state: "pending" | "settled" | "failed" | "refunded"
       post_status: "pending" | "published" | "rejected"
@@ -2978,6 +3040,7 @@ export const Constants = {
         "community",
         "newsletter",
         "billing",
+        "invite",
       ],
       payment_rail: ["ach", "card", "apple-pay", "google-pay"],
       payment_state: ["pending", "settled", "failed", "refunded"],

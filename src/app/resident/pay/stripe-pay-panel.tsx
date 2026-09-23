@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { CheckCircle2, Clock3, CreditCard, Info, Landmark } from "lucide-react";
-import { Button, Callout, Card } from "@/components/ui/primitives";
+import { CheckCircle2, Clock3, CreditCard, ExternalLink, Info, Landmark } from "lucide-react";
+import { Badge, Button, Callout, Card } from "@/components/ui/primitives";
 import type { PaymentCost, PaymentInstrument } from "@/lib/payments/instruments";
+import { useAppState } from "@/lib/app-state";
+import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { refreshRemote } from "@/lib/data/remote-store";
 import { cn, money } from "@/lib/utils";
+import { InstrumentMenu } from "./instrument-menu";
 
 /**
  * The real-money pay panel, rendered only for a remote association with a
@@ -60,13 +63,21 @@ export function StripePayPanel({
   amountCents,
   publishableKey,
   instruments,
+  selection,
+  onSelect,
 }: {
   associationId: string;
   unitId: string;
   amountCents: number;
   publishableKey: string;
   instruments: PaymentInstrument[];
+  /** A saved instrument's id, or "new-ach" / "new-card". Owned by the pay flow. */
+  selection: string;
+  onSelect: (selection: string) => void;
 }) {
+  const { removeInstrument, setDefaultInstrument } = useAppState();
+  const { notify } = useToast();
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   // Coming back from a 3DS or bank redirect, the URL carries the intent and
   // the books are whatever the webhook has written by now. This panel never
   // server-renders (remote mode exists only after hydration), so the URL can
@@ -82,10 +93,6 @@ export function StripePayPanel({
     if (setupIntentId && status === "succeeded") return { name: "finish-setup", setupIntentId };
     return { name: "rail" };
   });
-  // Either a saved instrument's id, or "new-ach" / "new-card".
-  const [selection, setSelection] = useState<string>(
-    () => instruments.find((i) => i.isDefault)?.id ?? instruments[0]?.id ?? "new-ach",
-  );
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
@@ -136,6 +143,7 @@ export function StripePayPanel({
 
   const saved = instruments.find((i) => i.id === selection);
   const newRail: Rail = selection === "new-card" ? "card" : "ach";
+  const savedUsable = !saved || (saved.token.startsWith("pm_") && saved.status !== "verifying");
 
   async function begin() {
     setBusy(true);
@@ -245,32 +253,94 @@ export function StripePayPanel({
   }
 
   /* Method choice. The exact fee lands when the server prices the intent. */
-  const options = [
-    ...instruments.map((instrument) => ({
-      value: instrument.id,
-      label: `${instrument.label} ••${instrument.mask}`,
-      hint: instrument.kind === "ach" ? "Bank transfer" : "Card",
-      icon: instrument.kind === "ach" ? Landmark : CreditCard,
-    })),
+  const fresh = [
     { value: "new-ach", label: "New bank account", hint: "Lowest fee", icon: Landmark },
     { value: "new-card", label: "New card", hint: "Settles today", icon: CreditCard },
   ];
+  const rowClass = (active: boolean, disabled = false) =>
+    cn(
+      "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+      active ? "border-navy-700 bg-brand-soft dark:border-navy-300" : "border-border",
+      disabled ? "opacity-60" : !active && "hover:bg-surface-2",
+    );
   return (
     <Card className="p-4">
       {savedNote ? <p className="mb-3 text-[13px] font-medium text-ok">{savedNote}</p> : null}
       <div className="space-y-1.5">
-        {options.map((option) => (
+        {instruments.map((instrument) => {
+          const Icon = instrument.kind === "ach" ? Landmark : CreditCard;
+          const verifying = instrument.status === "verifying";
+          // A row from before Stripe carries a demo token and cannot be charged.
+          const stale = !instrument.token.startsWith("pm_");
+          const active = selection === instrument.id;
+          return (
+            <div key={instrument.id} className={rowClass(active, verifying || stale)}>
+              <button
+                type="button"
+                disabled={verifying || stale}
+                onClick={() => onSelect(instrument.id)}
+                aria-pressed={active}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <Icon className="size-4 shrink-0 text-fg-muted" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="truncate text-[15px] font-medium text-fg">
+                      {instrument.label} ••{instrument.mask}
+                    </span>
+                    {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
+                    {verifying ? <Badge tone="warn">Verifying</Badge> : null}
+                    {stale ? <Badge tone="danger">Add again</Badge> : null}
+                  </span>
+                  <span className="mt-0.5 block text-[13px] text-fg-muted">
+                    {verifying
+                      ? "Confirm the two small deposits to use it"
+                      : stale
+                        ? "Saved before online payments"
+                        : instrument.kind === "ach"
+                          ? "Bank transfer"
+                          : "Card"}
+                  </span>
+                </span>
+              </button>
+              {verifying && instrument.verifyUrl ? (
+                <a
+                  href={instrument.verifyUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-brand hover:bg-surface-2"
+                >
+                  Verify
+                  <ExternalLink className="size-3" />
+                </a>
+              ) : null}
+              <InstrumentMenu
+                label={instrument.label}
+                isDefault={instrument.isDefault}
+                open={menuFor === instrument.id}
+                onToggle={() => setMenuFor(menuFor === instrument.id ? null : instrument.id)}
+                onMakeDefault={() => {
+                  setDefaultInstrument(instrument.id);
+                  setMenuFor(null);
+                  notify(`${instrument.label} is now the default`);
+                }}
+                onRemove={() => {
+                  removeInstrument(instrument.id);
+                  setMenuFor(null);
+                  if (active) onSelect("new-ach");
+                  notify(`Removed ${instrument.label} ••${instrument.mask}`, "warn");
+                }}
+              />
+            </div>
+          );
+        })}
+        {fresh.map((option) => (
           <button
             key={option.value}
             type="button"
-            onClick={() => setSelection(option.value)}
+            onClick={() => onSelect(option.value)}
             aria-pressed={selection === option.value}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-              selection === option.value
-                ? "border-navy-700 bg-brand-soft dark:border-navy-300"
-                : "border-border hover:bg-surface-2",
-            )}
+            className={rowClass(selection === option.value)}
           >
             <option.icon className="size-4 shrink-0 text-fg-muted" />
             <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-fg">
@@ -287,7 +357,7 @@ export function StripePayPanel({
         variant="primary"
         size="lg"
         className="mt-4 w-full"
-        disabled={busy || amountCents <= 0}
+        disabled={busy || amountCents <= 0 || !savedUsable}
         onClick={begin}
       >
         {busy ? "One moment…" : `Continue to pay ${money(amountCents)}`}

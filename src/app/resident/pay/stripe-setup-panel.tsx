@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { ShieldCheck } from "lucide-react";
+import { ExternalLink, ShieldCheck } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";
 import { refreshRemote } from "@/lib/data/remote-store";
 
@@ -116,7 +116,7 @@ function SetupForm({
   const elements = useElements();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [verifying, setVerifying] = useState(false);
+  const [verifying, setVerifying] = useState<{ url: string | null } | null>(null);
 
   async function save() {
     if (!stripe || !elements) return;
@@ -133,25 +133,37 @@ function SetupForm({
       return;
     }
     const intent = result.setupIntent;
-    if (intent?.status === "succeeded") {
-      const response = await fetch("/api/stripe/instruments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ associationId, unitId, setupIntentId: intent.id }),
-      });
+    const microdeposits =
+      intent?.status === "requires_action" &&
+      intent.next_action?.type === "verify_with_microdeposits";
+    if (!intent || (intent.status !== "succeeded" && !microdeposits)) {
       setBusy(false);
-      if (!response.ok) {
-        const data = await response.json();
-        setProblem(data.error ?? "The method could not be saved.");
-        return;
-      }
-      await refreshRemote();
-      onDone();
+      setProblem("The method could not be saved. Nothing was charged.");
       return;
     }
+    // Saved either way. A bank on micro-deposits is a row marked verifying,
+    // with Stripe's page for confirming the amounts, so it is still here
+    // when the owner comes back in two days.
+    const response = await fetch("/api/stripe/instruments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ associationId, unitId, setupIntentId: intent.id }),
+    });
     setBusy(false);
-    // Micro-deposits: the bank is real, verification takes a day or two.
-    setVerifying(true);
+    if (!response.ok) {
+      const data = await response.json();
+      setProblem(data.error ?? "The method could not be saved.");
+      return;
+    }
+    await refreshRemote();
+    if (microdeposits) {
+      const action = intent.next_action as {
+        verify_with_microdeposits?: { hosted_verification_url?: string };
+      } | null;
+      setVerifying({ url: action?.verify_with_microdeposits?.hosted_verification_url ?? null });
+      return;
+    }
+    onDone();
   }
 
   if (verifying) {
@@ -159,12 +171,25 @@ function SetupForm({
       <Card className="p-4">
         <p className="text-[15px] font-medium text-fg">Verification started</p>
         <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-          Your bank will receive a small deposit in the next day or two. Come back and confirm the
-          amount to finish adding this account.
+          Two small deposits will land in that account in a day or two. Confirm the amounts and
+          the account is ready; until then it shows here as verifying.
         </p>
-        <Button variant="secondary" size="sm" className="mt-3" onClick={onDone}>
-          Done
-        </Button>
+        <div className="mt-3 flex gap-2">
+          {verifying.url ? (
+            <a
+              href={verifying.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+            >
+              Confirm deposits
+              <ExternalLink className="size-3.5" />
+            </a>
+          ) : null}
+          <Button variant="secondary" size="md" className="flex-1" onClick={onDone}>
+            Done
+          </Button>
+        </div>
       </Card>
     );
   }

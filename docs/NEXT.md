@@ -426,10 +426,12 @@ either the access token or Docker, and neither is available here.
 3. `supabase login` (fresh `SUPABASE_ACCESS_TOKEN`), then `pnpm db:types`
    to replace the hand-patched `database.types.ts`. Also a fresh Vercel
    CLI token.
-4. Stripe: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`,
-   `STRIPE_WEBHOOK_SECRET` (Connect endpoint), `STRIPE_BILLING_WEBHOOK_SECRET`
-   (plain endpoint) and `CRON_SECRET` in Vercel. Autopay is a stored
-   instruction until these exist.
+4. Stripe: `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` from
+   the dashboard into `.env.local`, then `pnpm stripe:setup` registers both
+   webhook endpoints and writes `STRIPE_WEBHOOK_SECRET`,
+   `STRIPE_BILLING_WEBHOOK_SECRET` and `CRON_SECRET`; copy all five into
+   Vercel. Autopay runs daily once these exist (2026-09-23,
+   `docs/design/payments.md`).
 
 ## 2026-09-05: every screen driven in Chrome, both modes, and what it turned up
 

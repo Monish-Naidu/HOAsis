@@ -102,10 +102,17 @@ export async function POST(request: NextRequest) {
     if (!instrument || instrument.unit_id !== unitId) {
       return NextResponse.json({ error: "No such payment method" }, { status: 404 });
     }
-    const token = (instrument.detail as { token?: string } | null)?.token;
+    const detail = instrument.detail as { token?: string; status?: string } | null;
+    const token = detail?.token;
     if (!token || !token.startsWith("pm_")) {
       return NextResponse.json(
         { error: "That saved method predates online payments. Add it again to use it." },
+        { status: 409 },
+      );
+    }
+    if (detail?.status === "verifying") {
+      return NextResponse.json(
+        { error: "That bank account is still verifying. Confirm the deposits first." },
         { status: 409 },
       );
     }

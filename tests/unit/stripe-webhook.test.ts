@@ -18,7 +18,14 @@ const upsert = vi.fn(async () => ({ error: null }));
 const secondEq = vi.fn(async () => ({ error: null }));
 const firstEq = vi.fn(() => ({ eq: secondEq }));
 const update = vi.fn(() => ({ eq: firstEq }));
-const from = vi.fn(() => ({ upsert, update }));
+// setup_intent handling reads verifying rows by their SetupIntent id.
+const selectEq = vi.fn(async () => ({
+  data: [{ id: "inst-1", detail: { token: "pm_1", status: "verifying", verifyUrl: "u", setupIntentId: "seti_1" } }],
+}));
+const select = vi.fn(() => ({ eq: selectEq }));
+const deleteEq = vi.fn(async () => ({ error: null }));
+const del = vi.fn(() => ({ eq: deleteEq }));
+const from = vi.fn(() => ({ upsert, update, select, delete: del }));
 
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: () => ({ from, rpc }),
@@ -122,6 +129,36 @@ describe("the webhook route", () => {
     expect(response.status).toBe(200);
     expect(rpc).not.toHaveBeenCalled();
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it("clears the verifying mark when a SetupIntent succeeds", async () => {
+    const event = {
+      id: "evt_2",
+      object: "event",
+      type: "setup_intent.succeeded",
+      account: "acct_test",
+      data: { object: { object: "setup_intent", id: "seti_1" } },
+    };
+    const response = await POST(signedRequest(event) as never);
+    expect(response.status).toBe(200);
+    expect(from).toHaveBeenCalledWith("payment_instruments");
+    expect(selectEq).toHaveBeenCalledWith("detail->>setupIntentId", "seti_1");
+    expect(update).toHaveBeenCalledWith({ detail: { token: "pm_1" } });
+    expect(firstEq).toHaveBeenCalledWith("id", "inst-1");
+  });
+
+  it("removes a bank whose deposits never matched", async () => {
+    const event = {
+      id: "evt_3",
+      object: "event",
+      type: "setup_intent.setup_failed",
+      account: "acct_test",
+      data: { object: { object: "setup_intent", id: "seti_1" } },
+    };
+    const response = await POST(signedRequest(event) as never);
+    expect(response.status).toBe(200);
+    expect(del).toHaveBeenCalled();
+    expect(deleteEq).toHaveBeenCalledWith("detail->>setupIntentId", "seti_1");
   });
 
   it("acknowledges event types it does not handle", async () => {

@@ -20,7 +20,8 @@
     "shots": "node scripts/product-shots.mjs",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "db:playground": "node scripts/seed-playground.mjs"
+    "db:playground": "node scripts/seed-playground.mjs",
+    "stripe:setup": "node scripts/setup-stripe.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.8.2",

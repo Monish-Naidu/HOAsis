@@ -227,7 +227,8 @@ interface AppState {
   removePost: (postId: string) => () => void;
   addRequest: (request: HomeRequest) => void;
   addInstrument: (instrument: Omit<PaymentInstrument, "id" | "isDefault">) => PaymentInstrument;
-  removeInstrument: (instrumentId: string) => () => void;
+  /** Returns an undo where one is possible; a Stripe method, once detached, is gone. */
+  removeInstrument: (instrumentId: string) => (() => void) | undefined;
   setDefaultInstrument: (instrumentId: string) => void;
   /** Returns an undo: confirming moves a transaction into every report. */
   confirmLedgerEntry: (
@@ -2738,39 +2739,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (instrumentId: string) => {
       if (remote.community) {
         const rc = remote.community;
-        const removed = rc.instruments.find((i) => i.id === instrumentId);
-        const successor = removed?.isDefault
-          ? rc.instruments.find((i) => i.ownerId === removed.ownerId && i.id !== instrumentId)
-          : undefined;
+        // The route detaches the method from Stripe before the row goes, and
+        // a detached method cannot come back, so there is nothing to undo.
         void remoteWrite("Removing the payment method", async () => {
-          const supabase = supabaseBrowser();
-          const { error } = await supabase.from("payment_instruments").delete().eq("id", instrumentId);
-          if (error) throw new Error(error.message);
-          if (successor) {
-            return supabase
-              .from("payment_instruments")
-              .update({ is_default: true })
-              .eq("id", successor.id);
+          const response = await fetch("/api/stripe/instruments", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ associationId: rc.id, instrumentId }),
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error ?? "Could not remove the payment method");
           }
         });
-        return () => {
-          if (!removed) return;
-          const { id, ownerId, kind, label, mask, isDefault, addedDate, ...detail } = removed;
-          void remoteWrite("Restoring the payment method", () =>
-            supabaseBrowser().from("payment_instruments").insert({
-              id,
-              association_id: rc.id,
-              unit_id: ownerId,
-              profile_id: remote.profileId,
-              kind,
-              label,
-              mask,
-              is_default: isDefault,
-              added_on: addedDate,
-              detail,
-            }),
-          );
-        };
+        return undefined;
       }
       return destructive(sliceStore(communityId, "instruments"), (all) => {
         const removed = all.find((i) => i.id === instrumentId);
@@ -2782,7 +2764,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           : kept;
       });
     },
-    [remote.community, remote.profileId, communityId],
+    [remote.community, communityId],
   );
 
   const setDefaultInstrument = useCallback(

@@ -192,6 +192,12 @@ export interface AutopayPlan {
   /** One month, as YYYY-MM, that autopay sits out. */
   skipMonth?: string;
   instrumentId?: string;
+  /**
+   * The first month, as YYYY-MM, autopay may run. Set when it is switched on,
+   * so turning it on late in a month does not take that month's balance the
+   * next morning when the screen promised next month.
+   */
+  startMonth?: string;
 }
 
 /* -------------------------------------------------------------------------- */
