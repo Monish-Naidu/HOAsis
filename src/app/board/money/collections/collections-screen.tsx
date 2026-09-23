@@ -8,7 +8,7 @@ import { AgingBar } from "@/components/app/board-charts";
 import { SectionLink, StatTile } from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
 import { agingBuckets, delinquency, duesCollection } from "@/lib/metrics";
-import { money, pluralize, todayIsoDate } from "@/lib/utils";
+import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 import { placeLabel } from "@/lib/wording";
 
 const STANDING_TONE = {
@@ -69,7 +69,9 @@ export function CollectionsScreen() {
           hint={
             dues.measurable
               ? `${money(dues.collectedYtd, { cents: false })} of ${money(dues.expectedYtd, { cents: false })} billed`
-              : "Set dues in Settings to measure this"
+              : community.association.duesCents > 0
+                ? `The first bill goes out ${formatDate(community.nextChargeDate, "long")}`
+                : "Set dues in Settings to measure this"
           }
         />
       </div>
