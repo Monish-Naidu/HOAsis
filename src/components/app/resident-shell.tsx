@@ -57,7 +57,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const unit = owner?.unit ?? "";
   const address = owner?.address ?? "";
   // "Lot 12" or "Unit 3", then the street only when one is on file.
-  const homeLine = `${homeLabel(community, unit)}${address ? ` · ${address}` : ""}`;
+  const homeLine = (() => {
+    const label = homeLabel(community, unit);
+    // A home keyed by its address already says where it is.
+    return address && address !== label ? `${label} · ${address}` : label;
+  })();
 
   // The controls, once. On most pages they sit in the top bar; on the
   // dashboard the bar is gone and they ride on the photo instead.
@@ -124,7 +128,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             // The banner does not ride above these pages, so the bar says
             // whose portal this is and which home.
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold text-fg">{associationName}</p>
+              {/* Somebody with homes in two associations switches here, the
+                  same control the board bar has. With one it is just the name. */}
+              <div className="-ml-2">
+                <CommunityName />
+              </div>
               <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
             </div>
           )}

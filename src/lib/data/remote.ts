@@ -243,19 +243,24 @@ export async function loadCommunity(
       ),
     }));
 
-  // Statements, newest first, keyed by home.
+  // Statements keyed by home, each line carrying the balance after it. The
+  // running figure is derived here from the same rows the balance view sums,
+  // oldest first, so the statement and the balance cannot disagree.
   const ownerCharges: Record<string, ChargeLine[]> = {};
   for (const unit of unitRows) ownerCharges[unit.id] = [];
-  for (const c of chargeRows) {
+  const running = new Map<string, number>();
+  for (const c of [...chargeRows].sort((x, y) =>
+    x.due_on === y.due_on ? x.created_at.localeCompare(y.created_at) : x.due_on.localeCompare(y.due_on),
+  )) {
+    const after = (running.get(c.unit_id) ?? 0) + c.amount_cents;
+    running.set(c.unit_id, after);
     (ownerCharges[c.unit_id] ??= []).push({
       id: c.id,
       date: c.due_on,
       label: c.label,
       kind: c.kind,
       amountCents: c.amount_cents,
-      // Running balances are computed by the screens from the ledger they are
-      // given, so storing one here would be a second number that can disagree.
-      balanceAfterCents: 0,
+      balanceAfterCents: after,
     });
   }
 
