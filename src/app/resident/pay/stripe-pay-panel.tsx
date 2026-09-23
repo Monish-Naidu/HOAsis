@@ -559,7 +559,11 @@ function ConfirmForm({
           <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
         </div>
       </dl>
-      <PaymentElement />
+      <PaymentElement
+        onLoadError={(event) =>
+          setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")
+        }
+      />
       {problem ? <p className="mt-3 text-[13px] font-medium text-danger">{problem}</p> : null}
       <div className="mt-4 flex gap-2">
         <Button variant="secondary" className="flex-1" onClick={onBack} disabled={busy}>

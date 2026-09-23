@@ -117,6 +117,9 @@ function SetupForm({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [verifying, setVerifying] = useState<{ url: string | null } | null>(null);
+  // Stripe's form loads in its own frame; until it says so, saving is a no-op
+  // and a failure to load would otherwise be silent.
+  const [ready, setReady] = useState(false);
 
   async function save() {
     if (!stripe || !elements) return;
@@ -196,14 +199,19 @@ function SetupForm({
 
   return (
     <Card className="p-4">
-      <PaymentElement />
+      <PaymentElement
+        onReady={() => setReady(true)}
+        onLoadError={(event) =>
+          setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")
+        }
+      />
       {problem ? <p className="mt-3 text-[13px] font-medium text-danger">{problem}</p> : null}
       <Button
         variant="primary"
         size="lg"
         className="mt-4 w-full"
         onClick={save}
-        disabled={busy || !stripe}
+        disabled={busy || !stripe || !ready}
       >
         {busy ? "Saving…" : "Save payment method"}
       </Button>
