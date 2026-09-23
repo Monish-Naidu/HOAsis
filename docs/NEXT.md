@@ -8,6 +8,16 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-23: Stripe live in test mode, full overnight QA
+
+Write-up in `docs/qa-2026-09-23.md`. Payments work end to end on Oakview.
+Two large holes closed: dues were never billed for real associations
+(`/api/assessments/run`, migration 0034) and invited owners never received
+their seat on sign-in (`claim_my_seats`, migration 0035). Open from that
+run: the SetupIntent "Add a payment method" form needs a human click test,
+Link extras in the Stripe form, Radar Pro on Oakview, officers still need a
+login, and the Resend domain below.
+
 ## Still open, as of 2026-09-19
 
 The short list. Everything below it is history of what was built.
