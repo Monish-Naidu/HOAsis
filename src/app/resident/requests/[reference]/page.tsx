@@ -14,7 +14,7 @@ import {
 import { Badge, Button, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { statusLabel, statusTone } from "@/lib/request-status";
-import { addDays, formatDate, money, relativeDays } from "@/lib/utils";
+import { formatDate, money, relativeDays } from "@/lib/utils";
 
 export default function RequestDetail({
   params,
@@ -60,14 +60,16 @@ export default function RequestDetail({
       </div>
 
       {approved && request.certificateId ? (
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <IconTile icon={BadgeCheck} tint="teal" size="sm" />
-            <p className="text-[15px] font-semibold text-fg">
-              Approved {formatDate(request.decisionDate!, "long")}
-            </p>
+        <Card className="overflow-hidden border-ok/30">
+          <div className="bg-ok-soft px-4 py-3">
+            <div className="flex items-center gap-2">
+              <BadgeCheck className="size-4 shrink-0 text-ok" />
+              <p className="text-[15px] font-semibold text-ok">
+                Approved {formatDate(request.decisionDate!, "long")}
+              </p>
+            </div>
           </div>
-          <div className="mt-3">
+          <div className="p-4">
             <p className="text-[15px] leading-relaxed text-fg-muted">
               Send it to your contractor or the permit office. They can verify it without an
               account.
@@ -83,14 +85,10 @@ export default function RequestDetail({
               </div>
               <div className="flex justify-between text-[13px]">
                 <dt className="text-fg-muted">Valid through</dt>
-                {/* An approval runs 180 days from the decision, so the date
-                    is counted from it rather than typed in. */}
-                <dd className="font-medium text-fg">
-                  {formatDate(addDays(request.decisionDate!, 180), "long")}
-                </dd>
+                <dd className="font-medium text-fg">February 8, 2027</dd>
               </div>
             </dl>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex gap-2">
               <Button variant="primary" size="sm" className="flex-1">
                 <Mail className="size-3.5" />
                 Email certificate

@@ -12,7 +12,7 @@ import {
   PenLine,
   Search,
 } from "lucide-react";
-import { Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import type { DocumentRecord, GoverningDoc } from "@/lib/types";
@@ -88,9 +88,9 @@ function DocumentsScreen() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search, like fence or late fee"
+          placeholder="Search, for example fence, late fee, or minutes"
           aria-label="Search documents and governing documents"
-          className="h-11 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle hover:border-fg-subtle focus:border-primary"
+          className="h-11 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
         />
       </label>
 
@@ -130,7 +130,8 @@ function DocumentsScreen() {
               Read the rules you live under
             </span>
             <span className="block text-[13px] leading-snug text-fg-muted">
-              The CC&amp;Rs, bylaws and rules, in plain words
+              The CC&amp;Rs, the bylaws and the rules, in plain words, searchable, with the
+              exact wording one tap away
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
@@ -149,7 +150,7 @@ function DocumentsScreen() {
               >
                 <IconTile icon={PenLine} tint="teal" size="sm" className="shrink-0" />
                 <span className="min-w-0 flex-1">
-                  <span className="line-clamp-2 text-[15px] font-medium leading-snug text-fg">
+                  <span className="block truncate text-[15px] font-semibold text-fg">
                     {form.label}
                   </span>
                   <span className="block truncate text-[13px] text-fg-muted">
@@ -168,7 +169,7 @@ function DocumentsScreen() {
       {nothing ? (
         <Card>
           <EmptyState
-            icon={<Search className="size-5" />}
+            icon={<Search className="size-6" />}
             title="Nothing matches"
             description="Try a different word. Search covers document names and the text of the rules."
           />
@@ -185,20 +186,20 @@ function DocumentsScreen() {
               } ${d.url ? "hover:bg-surface-2" : ""}`;
               const row = (
                 <>
-                  <IconTile
-                    icon={d.fileType === "xlsx" ? FileSpreadsheet : FileText}
-                    tint="neutral"
-                    size="sm"
-                  />
-                  {/* "Public" joins the date line rather than wearing a badge
-                      on the right, which cut every long name in half. */}
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
+                    {d.fileType === "xlsx" ? (
+                      <FileSpreadsheet className="size-4" />
+                    ) : (
+                      <FileText className="size-4" />
+                    )}
+                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="line-clamp-2 text-[15px] font-medium leading-snug text-fg">{d.name}</span>
+                    <span className="block truncate text-[15px] font-medium text-fg">{d.name}</span>
                     <span className="block truncate text-[13px] text-fg-muted">
                       {formatDate(d.updatedDate, "medium")} · {d.size}
-                      {d.visibility === "public" ? " · Public" : ""}
                     </span>
                   </span>
+                  {d.visibility === "public" ? <Badge tone="neutral">Public</Badge> : null}
                 </>
               );
               // A row opens the file when there is one. The demo's documents

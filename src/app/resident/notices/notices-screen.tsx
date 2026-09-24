@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Gavel, ShieldCheck } from "lucide-react";
-import { Badge, Button, ButtonLink, Card, EmptyState } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { useToast } from "@/components/app/toast";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -69,7 +69,7 @@ export function NoticesScreen() {
       <div>
         <Link
           href="/resident/requests"
-          className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           Requests
@@ -85,7 +85,7 @@ export function NoticesScreen() {
       {mine.length === 0 ? (
         <Card>
           <EmptyState
-            icon={<ShieldCheck className="size-5" />}
+            icon={<ShieldCheck className="size-6" />}
             title="Nothing outstanding"
             description="Notices about your home appear here, with any photos attached."
           />
@@ -119,7 +119,7 @@ export function NoticesScreen() {
                         Relies on{" "}
                         <Link
                           href="/resident/documents/governing"
-                          className="font-medium text-accent hover:underline"
+                          className="font-medium text-brand hover:underline"
                         >
                           {violation.ruleCitation}
                         </Link>
@@ -210,7 +210,7 @@ function OpenFooter({ violation }: { violation: Violation }) {
               rows={2}
               autoFocus
               placeholder="Replaced the fence boards on Saturday."
-              className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary"
+              className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
             />
           </label>
           <div className="mt-2 flex gap-2">
@@ -232,10 +232,13 @@ function OpenFooter({ violation }: { violation: Violation }) {
             <Button variant="secondary" size="sm" onClick={() => setSaying(true)}>
               <Check className="size-3.5" />I have fixed this
             </Button>
-            <ButtonLink href="/resident/requests/new" variant="secondary" size="sm">
+            <Link
+              href="/resident/requests/new"
+              className="inline-flex h-8 items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg transition-colors hover:bg-surface-3"
+            >
               <Gavel className="size-3.5" />
               Ask the board
-            </ButtonLink>
+            </Link>
           </div>
         </>
       )}

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BookOpen, Filter, Landmark, Search, Sparkles } from "lucide-react";
-import { Badge, Card, EmptyState, Segmented } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState } from "@/components/ui/primitives";
 import type { GoverningArticle, GoverningDoc, GoverningTopic } from "@/lib/types";
 import { GOVERNING_DOCS, documentsPresent } from "@/lib/governing";
 import { formatDate, cn } from "@/lib/utils";
@@ -88,9 +88,9 @@ export function GoverningReader({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search, like fence or late fee"
+            placeholder="Search all three documents, for example fence or late fee"
             aria-label="Search the governing documents"
-            className="h-10 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle hover:border-fg-subtle focus:border-primary"
+            className="h-10 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
           />
         </label>
         <button
@@ -98,10 +98,10 @@ export function GoverningReader({
           onClick={() => setMineOnly((v) => !v)}
           aria-pressed={mineOnly}
           className={cn(
-            "press inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[14px] font-medium transition-colors",
+            "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[15px] font-medium transition-colors",
             mineOnly
-              ? "border-primary bg-primary-soft text-primary"
-              : "border-border-2 bg-surface text-fg-muted hover:border-fg-subtle hover:text-fg",
+              ? "border-brand bg-brand-soft text-brand-soft-fg"
+              : "border-border-2 bg-surface text-fg-muted hover:text-fg",
           )}
         >
           <Filter className="size-4" />
@@ -110,16 +110,24 @@ export function GoverningReader({
       </div>
 
       {docs.length > 1 ? (
-        <Segmented
-          label="Document"
-          className="mt-3"
-          value={doc}
-          onChange={setDoc}
-          options={(["all", ...docs] as const).map((d) => ({
-            value: d,
-            label: d === "all" ? "All" : DOC_SHORT[d],
-          }))}
-        />
+        <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto pb-1">
+          {(["all", ...docs] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDoc(d)}
+              aria-pressed={doc === d}
+              className={cn(
+                "shrink-0 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                doc === d
+                  ? "border-brand bg-brand-soft text-brand-soft-fg"
+                  : "border-border-2 bg-surface text-fg-muted hover:text-fg",
+              )}
+            >
+              {d === "all" ? "All three documents" : GOVERNING_DOCS[d].label}
+            </button>
+          ))}
+        </div>
       ) : null}
 
       {/* Which document wins, said once, where somebody comparing two
@@ -141,10 +149,10 @@ export function GoverningReader({
             onClick={() => setTopic(t)}
             aria-pressed={topic === t}
             className={cn(
-              "h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium transition-colors",
+              "shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
               topic === t
-                ? "border-primary bg-primary-soft text-primary"
-                : "border-border bg-surface text-fg-muted hover:border-border-2 hover:text-fg",
+                ? "bg-brand text-brand-fg"
+                : "bg-surface-2 text-fg-muted hover:text-fg",
             )}
           >
             {t === "all" ? "Everything" : TOPIC_LABEL[t]}
@@ -155,7 +163,7 @@ export function GoverningReader({
       {matches.length === 0 ? (
         <Card className="mt-4">
           <EmptyState
-            icon={<BookOpen className="size-5" />}
+            icon={<BookOpen className="size-6" />}
             title="Nothing matches"
             description="Try a different word. Search covers the full text of all three documents."
           />
@@ -214,7 +222,7 @@ export function GoverningReader({
                       wording is below.
                     </p>
                   )}
-                  <p className="mt-2 text-[13px] font-medium text-accent">
+                  <p className="mt-2 text-[13px] font-medium text-brand">
                     {expanded ? "Hide the exact wording" : "Read the exact wording"}
                   </p>
                 </button>

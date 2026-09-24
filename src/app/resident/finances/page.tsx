@@ -4,7 +4,7 @@ import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { FundsGate } from "./guard";
 import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
-import { Badge, Card, IconTile, Meter, SectionTitle, Stat } from "@/components/ui/primitives";
+import { Badge, Card, Meter, SectionTitle } from "@/components/ui/primitives";
 import { budgetSummary, cashPosition, interestSummary, reserveSummary } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { SharedCostCard } from "@/components/app/shared-cost-card";
@@ -26,21 +26,23 @@ export default function ResidentFinances() {
       <ResidentTitle title="Association funds" />
 
       {/* Totals */}
-      <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2">
-        <Stat
-          label="Operating"
-          value={money(cash.operating, { cents: false })}
-          icon={<Landmark className="size-4" />}
-          accent="teal"
-          hint="Day to day bills"
-        />
-        <Stat
-          label="Reserves"
-          value={money(cash.reserve, { cents: false })}
-          icon={<PiggyBank className="size-4" />}
-          accent="violet"
-          hint="Saved for big repairs"
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-4">
+          <p className="text-[13px] font-semibold text-fg-muted">
+            Operating
+          </p>
+          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
+            {money(cash.operating, { cents: false })}
+          </p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-[13px] font-semibold text-fg-muted">
+            Reserves
+          </p>
+          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
+            {money(cash.reserve, { cents: false })}
+          </p>
+        </Card>
       </div>
 
       <SharedCostCard community={community} />
@@ -51,19 +53,19 @@ export default function ResidentFinances() {
         <Card className="p-4">
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <p className="text-[13px] text-fg-muted">Blended rate</p>
+              <p className="text-[13px] text-fg-subtle">Blended rate</p>
               <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
                 {interest.blendedApy.toFixed(2)}%
               </p>
             </div>
             <div>
-              <p className="text-[13px] text-fg-muted">This year</p>
+              <p className="text-[13px] text-fg-subtle">Interest YTD</p>
               <p className="tnum mt-1 text-[17px] font-semibold leading-none text-ok">
                 {money(interest.earnedYtd, { cents: false })}
               </p>
             </div>
             <div>
-              <p className="text-[13px] text-fg-muted">Full year</p>
+              <p className="text-[13px] text-fg-subtle">Full year</p>
               <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
                 {money(interest.projectedAnnual, { cents: false })}
               </p>
@@ -81,11 +83,13 @@ export default function ResidentFinances() {
               key={a.id}
               className={`flex items-center gap-3 px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
             >
-              <IconTile
-                icon={a.kind === "operating" ? Landmark : PiggyBank}
-                tint={a.kind === "operating" ? "teal" : "violet"}
-                size="sm"
-              />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
+                {a.kind === "operating" ? (
+                  <Landmark className="size-4" />
+                ) : (
+                  <PiggyBank className="size-4" />
+                )}
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
                 <p className="truncate text-[13px] text-fg-muted">
@@ -180,7 +184,7 @@ export default function ResidentFinances() {
               className={`flex items-start gap-3 px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
             >
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-[15px] font-medium leading-snug text-fg">{e.description}</p>
+                <p className="truncate text-[15px] font-medium text-fg">{e.description}</p>
                 <p className="mt-0.5 truncate text-[13px] text-fg-muted">
                   {formatDate(e.date, "long")} · {e.category}
                 </p>
@@ -195,7 +199,7 @@ export default function ResidentFinances() {
                 </p>
                 {e.status === "pending" ? (
                   <Badge tone="neutral" className="mt-0.5">
-                    Pending
+                    pending
                   </Badge>
                 ) : null}
               </div>
@@ -209,9 +213,9 @@ export default function ResidentFinances() {
 
       <Link
         href="/resident/documents"
-        className="flex min-h-14 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
+        className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
       >
-        <IconTile icon={TrendingUp} tint="violet" size="sm" />
+        <TrendingUp className="size-4 shrink-0 text-fg-subtle" />
         <span className="flex-1 text-[15px] font-medium text-fg">Budget and reserve study</span>
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>

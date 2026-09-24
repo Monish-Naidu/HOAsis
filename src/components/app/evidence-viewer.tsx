@@ -142,7 +142,7 @@ export function EvidenceViewer({
               aria-current={i === safe}
               className={cn(
                 "h-1.5 flex-1 rounded-full transition-colors",
-                i === safe ? "bg-primary" : "bg-surface-3 hover:bg-border-2",
+                i === safe ? "bg-brand" : "bg-surface-3 hover:bg-border-2",
               )}
             />
           ))}

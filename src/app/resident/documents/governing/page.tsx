@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, ChevronRight, FileText, ShieldQuestion, Vote } from "lucide-react";
-import { Badge, ButtonLink, Card, EmptyState, IconTile } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState } from "@/components/ui/primitives";
 import { GoverningReader } from "@/components/app/governing-reader";
 import { AmendmentDiff } from "@/components/app/amendment-diff";
 import { DocumentHierarchy } from "@/components/app/document-hierarchy";
@@ -19,7 +19,7 @@ export default function ResidentGoverningDocuments() {
       <div>
         <Link
           href="/resident/documents"
-          className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           Documents
@@ -28,14 +28,15 @@ export default function ResidentGoverningDocuments() {
           The rules you live under
         </h1>
         <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
-          Three documents, searchable together, in plain words.
+          Three documents, searchable together, in plain words, with the exact wording one
+          tap away.
         </p>
       </div>
 
       {articles.length === 0 ? (
         <Card>
           <EmptyState
-            icon={<FileText className="size-5" />}
+            icon={<FileText className="size-6" />}
             title="The documents are here as files"
             description="The text has not been added yet. You can download the files from Documents."
           />
@@ -46,13 +47,16 @@ export default function ResidentGoverningDocuments() {
             href="/resident/documents/what-you-agreed-to"
             className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
           >
-            <IconTile icon={ShieldQuestion} tint="violet" size="md" />
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-fg">
+              <ShieldQuestion className="size-5" />
+            </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[15px] font-semibold text-fg">
                 The eight things worth knowing
               </span>
               <span className="block text-[13px] leading-snug text-fg-muted">
-                Flags, solar, parking, renting out, approvals, and falling behind
+                Flags, solar, signs, parking, working from home, renting out, what needs
+                approval, and what happens if you fall behind
               </span>
             </span>
             <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
@@ -65,7 +69,7 @@ export default function ResidentGoverningDocuments() {
               {open.map((amendment) => {
                 const current = articles.find((a) => a.id === amendment.articleId);
                 return (
-                  <Card key={amendment.id} className="p-4">
+                  <Card key={amendment.id} className="border-warn/30 bg-warn-soft/40 p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone="warn">Open for your vote</Badge>
                       <span className="text-[13px] text-fg-muted">
@@ -79,7 +83,7 @@ export default function ResidentGoverningDocuments() {
                       {amendment.plain}
                     </p>
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-[13px] font-medium text-accent hover:underline">
+                      <summary className="cursor-pointer text-[13px] font-medium text-brand">
                         See exactly what changes
                       </summary>
                       <div className="mt-3">
@@ -95,10 +99,13 @@ export default function ResidentGoverningDocuments() {
                       </div>
                     </details>
                     {amendment.ballotId ? (
-                      <ButtonLink href="/resident/vote" variant="primary" size="md" className="mt-3">
+                      <Link
+                        href="/resident/vote"
+                        className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
+                      >
                         <Vote className="size-4" />
                         Cast your vote
-                      </ButtonLink>
+                      </Link>
                     ) : null}
                   </Card>
                 );

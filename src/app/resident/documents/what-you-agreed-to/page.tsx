@@ -17,7 +17,7 @@ export default function WhatYouAgreedTo() {
       <div>
         <Link
           href="/resident/documents/governing"
-          className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           The rules you live under
@@ -31,14 +31,15 @@ export default function WhatYouAgreedTo() {
             does not know a rule exists cannot ask for the approval that would
             have made their project legal. */}
         <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
-          Eight questions that catch most people out. You agreed to these at closing.
+          Eight questions that catch most people out. You signed up to these at closing,
+          whether or not anyone showed them to you.
         </p>
       </div>
 
       {articles.length === 0 ? (
         <Card>
           <EmptyState
-            icon={<FileText className="size-5" />}
+            icon={<FileText className="size-6" />}
             title="The documents are here only as files"
             description="The text of your governing documents has not been imported yet."
           />

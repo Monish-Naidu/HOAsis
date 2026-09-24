@@ -31,7 +31,7 @@ export function ContactCard() {
   if (!owner) return null;
 
   const field =
-    "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-primary";
+    "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
 
   function save() {
     void updateMyContact({ phone: phone.trim(), mailingAddress: mailing.trim() }).then((ok) => {
