@@ -368,7 +368,7 @@ function StatusCell({
   return (
     <>
       {e.duplicateOfId ? (
-        <Badge tone="danger">
+        <Badge tone="danger" dot={false}>
           <Copy className="size-2.5" />
           Duplicate?
         </Badge>

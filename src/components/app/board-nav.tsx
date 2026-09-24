@@ -116,6 +116,13 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
             href={href}
             data-tab-key={key}
             aria-current={active ? "page" : undefined}
+            // On a phone the strip scrolls, and the lit row for Vendors or
+            // Settings sat off its right edge. Bring it into view.
+            ref={
+              !rail && active
+                ? (el) => el?.scrollIntoView({ block: "nearest", inline: "nearest" })
+                : undefined
+            }
             className={cn(
               // The selected background is the travelling pill behind the row,
               // not a class on the link, so it slides rather than cuts.

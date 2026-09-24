@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalendarPlus, X } from "lucide-react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Select } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { addDays, formatDate, todayIsoDate } from "@/lib/utils";
@@ -100,17 +100,17 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
           </label>
           <label className="block">
             <span className={label}>Kind</span>
-            <select
+            <Select
               value={kind}
               onChange={(e) => setKind(e.target.value as Meeting["kind"])}
-              className={field}
+              className="w-full [&>select]:h-10"
             >
               {KINDS.map((k) => (
                 <option key={k.value} value={k.value}>
                   {k.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className="mt-1 block text-[13px] text-fg-subtle">
               {KINDS.find((k) => k.value === kind)?.hint}
             </span>

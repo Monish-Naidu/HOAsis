@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Select } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { LedgerCategory } from "@/lib/types";
@@ -80,18 +80,18 @@ export function AddBudgetLine() {
       >
         <label className="block">
           <span className="text-[13px] font-semibold text-fg-muted">Category</span>
-          <select
+          <Select
             value={category}
             onChange={(e) => setCategory(e.target.value as (typeof CATEGORIES)[number])}
             aria-label="Budget category"
-            className={`mt-1.5 w-48 ${field}`}
+            className="mt-1.5 w-48 [&>select]:h-10"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className="text-[13px] font-semibold text-fg-muted">A year</span>

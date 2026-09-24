@@ -6,11 +6,13 @@ import { ArrowLeft, FilePlus2, FileText, Send, Trash2, Vote } from "lucide-react
 import {
   Badge,
   Button,
+  ButtonLink,
   Callout,
   Card,
   CardHeader,
   EmptyState,
   PageHeader,
+  Segmented,
 } from "@/components/ui/primitives";
 import { GoverningReader } from "@/components/app/governing-reader";
 import { AmendmentDiff } from "@/components/app/amendment-diff";
@@ -25,7 +27,7 @@ import {
 } from "@/lib/governing";
 import { policyTemplates } from "@/lib/data/policy-templates";
 import type { PolicyTemplate } from "@/lib/data/policy-templates";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 const STAGE_TONE = {
   draft: "neutral",
@@ -175,12 +177,9 @@ export function AmendScreen() {
             title="Only the files are here"
             description="These are files, so owners can download them but not search them."
             action={
-              <Link
-                href="/board/documents/import"
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90"
-              >
+              <ButtonLink href="/board/documents/import" variant="primary" size="md">
                 Import the text
-              </Link>
+              </ButtonLink>
             }
           />
         </Card>
@@ -215,29 +214,18 @@ export function AmendScreen() {
       {/* Which document, before anything else. The three are not the same
           instrument and they are not changed the same way, and a board that
           picks the wrong one has amended nothing. */}
-      <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto pb-1">
-        {present.map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            onClick={() => {
-              setDoc(kind);
-              reset();
-              const first = articlesIn(all, kind)[0];
-              if (first) setTargetId(first.id);
-            }}
-            aria-pressed={doc === kind}
-            className={cn(
-              "shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors",
-              doc === kind
-                ? "bg-brand text-brand-fg"
-                : "bg-surface-2 text-fg-muted hover:text-fg",
-            )}
-          >
-            {GOVERNING_DOCS[kind].label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Which document"
+        value={doc}
+        onChange={(kind) => {
+          setDoc(kind);
+          reset();
+          const first = articlesIn(all, kind)[0];
+          if (first) setTargetId(first.id);
+        }}
+        options={present.map((kind) => ({ value: kind, label: GOVERNING_DOCS[kind].label }))}
+        className="mb-4 pointer-coarse:[&>button]:h-9"
+      />
 
       <Callout
         tone={boardAdopted ? "warn" : "info"}
@@ -499,10 +487,15 @@ export function AmendScreen() {
         />
       </div>
 
-      <p className="mt-6 text-[13px] text-fg-subtle">
-        <Link href="/board/documents" className="text-brand hover:underline">
+      {/* Importing lives here, with the text it produces, rather than as a
+          card on Documents beside the files. */}
+      <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-fg-subtle">
+        <Link href="/board/documents" className="text-accent hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to documents
+        </Link>
+        <Link href="/board/documents/import" className="text-accent hover:underline">
+          Import the text of another document
         </Link>
       </p>
     </>

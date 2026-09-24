@@ -9,7 +9,6 @@ import {
   Lock,
   Megaphone,
   Plus,
-  RotateCcw,
   ShieldCheck,
   Trash2,
   Upload,
@@ -21,7 +20,9 @@ import {
   Callout,
   Card,
   CardHeader,
+  Checkbox,
   PageHeader,
+  Select,
   SettingRow,
   Toggle,
 } from "@/components/ui/primitives";
@@ -59,7 +60,6 @@ export function SettingsScreen() {
     community,
     removeAmenity,
     removeForm,
-    resetDemo,
     can,
     isRemote,
     documents,
@@ -71,12 +71,16 @@ export function SettingsScreen() {
 
   const [newAmenity, setNewAmenity] = useState("");
   const [newFormLabel, setNewFormLabel] = useState("");
+  const [appointing, setAppointing] = useState<{ ownerId: string; role: AccountRole } | null>(null);
 
   const roleFromLabel = (label?: string): AccountRole =>
     ((Object.keys(ROLE_LABEL) as AccountRole[]).find((r) => ROLE_LABEL[r] === label) ??
       "resident") as AccountRole;
-  const boardRows = community.owners
-    .filter((o) => o.email || accounts.some((a) => a.ownerId === o.id))
+  // Every home with a named owner, signed up or not, with the role it holds.
+  // An officer can be named the day the association is set up; their access
+  // is waiting when they create their account.
+  const homes = community.owners
+    .filter((o) => !o.placeholder && (o.email || accounts.some((a) => a.ownerId === o.id)))
     .map((o) => {
       const holder = accounts.find((a) => a.ownerId === o.id);
       return {
@@ -86,8 +90,14 @@ export function SettingsScreen() {
         role: holder?.role ?? roleFromLabel(o.boardRole),
         signedUp: Boolean(holder),
       };
-    })
-    .sort((a, b) => (a.role === "president" ? -1 : b.role === "president" ? 1 : 0));
+    });
+  const ROLE_ORDER: AccountRole[] = ["president", "vice-president", "treasurer", "secretary"];
+  const officers = homes
+    .filter((h) => h.role !== "resident")
+    .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
+  const candidates = homes
+    .filter((h) => h.role === "resident")
+    .sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true }));
 
   if (!can("settings")) {
     return (
@@ -145,15 +155,6 @@ export function SettingsScreen() {
       <PageHeader
         title="Settings"
         description="Name, visibility, board members, and billing."
-        action={
-          // A real association has no demo to reset.
-          isRemote ? null : (
-            <Button variant="secondary" size="md" onClick={resetDemo}>
-              <RotateCcw className="size-3.5" />
-              Reset demo data
-            </Button>
-          )
-        }
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -191,7 +192,7 @@ export function SettingsScreen() {
               value={settings.displayName}
               onChange={(e) => updateSettings({ displayName: e.target.value })}
               aria-label="Community name"
-              className="h-9 w-48 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+              className="h-9 w-48 max-w-full rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-primary"
             />
           </SettingRow>
           <div className="border-b border-border px-5 py-4">
@@ -205,8 +206,8 @@ export function SettingsScreen() {
               role="img"
               aria-label="Current community photo"
             />
-            <div className="mt-2 flex items-center gap-2">
-              <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[15px] font-medium text-fg hover:bg-surface-2">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <label className="press inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-border-2 bg-surface px-3.5 text-[14px] font-medium text-fg hover:bg-surface-2">
                 <Upload className="size-3.5" />
                 Replace photo
                 <input
@@ -255,7 +256,7 @@ export function SettingsScreen() {
                   className={cn(
                     "rounded-lg border p-3 text-left transition-colors",
                     settings.homeLayout === o.v
-                      ? "border-navy-700 bg-brand-soft dark:border-navy-300"
+                      ? "border-primary bg-primary-soft"
                       : "border-border hover:bg-surface-2",
                   )}
                 >
@@ -309,24 +310,23 @@ export function SettingsScreen() {
             title="Payment fee"
             description="Flat fee per payment, added to the processor's cost"
           >
-            <select
+            <Select
               value={settings.paymentFeeCents}
               onChange={(e) => updateSettings({ paymentFeeCents: Number(e.target.value) })}
               aria-label="Payment fee"
-              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               {[0, 50, 100, 150, 200, 250, 300].map((cents) => (
                 <option key={cents} value={cents}>
                   {cents === 0 ? "No fee" : `$${(cents / 100).toFixed(2)}`}
                 </option>
               ))}
-            </select>
+            </Select>
           </SettingRow>
           <SettingRow
             title="Who pays it"
             description="Paid by the owner or by the association"
           >
-            <select
+            <Select
               value={settings.paymentFeePaidBy}
               onChange={(e) =>
                 updateSettings({
@@ -334,11 +334,10 @@ export function SettingsScreen() {
                 })
               }
               aria-label="Who pays the fee"
-              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               <option value="owner">The owner</option>
               <option value="association">The association</option>
-            </select>
+            </Select>
           </SettingRow>
           <SettingRow
             title="Waive it on bank transfers"
@@ -354,18 +353,17 @@ export function SettingsScreen() {
             title="Autopay late day"
             description="The latest day of the month autopay can run"
           >
-            <select
+            <Select
               value={settings.autopayLateAfterDay}
               onChange={(e) => updateSettings({ autopayLateAfterDay: Number(e.target.value) })}
               aria-label="Autopay late day"
-              className="h-9 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                 <option key={d} value={d}>
                   {d}
                 </option>
               ))}
-            </select>
+            </Select>
           </SettingRow>
         </Card>
 
@@ -403,7 +401,7 @@ export function SettingsScreen() {
 
         {/* Insurance. The setup plan sends a board here and there was nothing
             to fill in, so the task could never be completed. */}
-        <Card id="insurance" className="scroll-mt-24">
+        <Card id="insurance" className="scroll-mt-32 lg:scroll-mt-24">
           <CardHeader
             title="Insurance"
             subtitle="The policy and its renewal date"
@@ -442,42 +440,99 @@ export function SettingsScreen() {
           </div>
         </Card>
 
-        {/* Appointing officers. The capability grid below only ever listed
-            people who were already officers, so a board of one had no way to
-            add a second. */}
+        {/* The officers, and a way to add one. It listed all 88 homes with a
+            role picker each, which made the four people who hold an office
+            the hardest thing on the card to find. */}
         <Card>
           <CardHeader
             title="Who is on the board"
-            subtitle="Assign roles. Each role comes with its own access."
+            subtitle="Each role comes with its own access."
+            action={
+              isPresident && !appointing && candidates.length ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setAppointing({ ownerId: "", role: "secretary" })}
+                >
+                  <Plus className="size-3.5" />
+                  Add a board member
+                </Button>
+              ) : undefined
+            }
           />
-          {/* Every home with a named owner, signed up or not. An officer can
-              be named the day the association is set up; their access is
-              waiting when they create their account. */}
+          {appointing ? (
+            <form
+              className="flex flex-wrap items-end gap-2 border-b border-border bg-surface-2 px-5 py-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const home = candidates.find((h) => h.ownerId === appointing.ownerId);
+                if (!home) return;
+                setHomeRole(home.ownerId, appointing.role);
+                notify(`${home.name} is ${ROLE_LABEL[appointing.role]}`, "ok");
+                setAppointing(null);
+              }}
+            >
+              <Select
+                value={appointing.ownerId}
+                onChange={(e) => setAppointing({ ...appointing, ownerId: e.target.value })}
+                aria-label="Which home"
+                className="min-w-[12rem] flex-1"
+              >
+                <option value="">Choose a home</option>
+                {candidates.map((h) => (
+                  <option key={h.ownerId} value={h.ownerId}>
+                    {homeLabel(community, h.unit)} · {h.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                value={appointing.role}
+                onChange={(e) =>
+                  setAppointing({ ...appointing, role: e.target.value as AccountRole })
+                }
+                aria-label="Role"
+              >
+                {(["vice-president", "treasurer", "secretary"] as const).map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
+              </Select>
+              <Button type="submit" variant="secondary" size="md" disabled={!appointing.ownerId}>
+                Add
+              </Button>
+              <Button variant="ghost" size="md" onClick={() => setAppointing(null)}>
+                Cancel
+              </Button>
+            </form>
+          ) : null}
           <div className="divide-y divide-border">
-            {boardRows.map((row) => (
-              <div key={row.ownerId} className="flex items-center gap-3 px-5 py-3">
-                <div className="min-w-0 flex-1">
+            {officers.map((row) => (
+              <div key={row.ownerId} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
+                <div className="min-w-[10rem] flex-1">
                   <p className="truncate text-[15px] font-medium text-fg">{row.name}</p>
                   <p className="truncate text-[13px] text-fg-muted">
                     {homeLabel(community, row.unit)}
                     {row.signedUp ? "" : " · not signed up yet"}
                   </p>
                 </div>
-                <select
-                  value={row.role}
-                  disabled={!isPresident || row.role === "president"}
-                  onChange={(e) => setHomeRole(row.ownerId, e.target.value as AccountRole)}
-                  aria-label={`${row.name}'s role`}
-                  className="h-9 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand disabled:opacity-50"
-                >
-                  {(["resident", "treasurer", "secretary", "vice-president", "president"] as const)
-                    .filter((r) => r !== "president" || row.role === "president")
-                    .map((r) => (
+                {isPresident && row.role !== "president" ? (
+                  <Select
+                    value={row.role}
+                    onChange={(e) => setHomeRole(row.ownerId, e.target.value as AccountRole)}
+                    aria-label={`${row.name}'s role`}
+                  >
+                    {(["vice-president", "treasurer", "secretary", "resident"] as const).map((r) => (
                       <option key={r} value={r}>
-                        {ROLE_LABEL[r]}
+                        {r === "resident" ? "Not on the board" : ROLE_LABEL[r]}
                       </option>
                     ))}
-                </select>
+                  </Select>
+                ) : (
+                  <Badge tone={row.role === "president" ? "brand" : "neutral"}>
+                    {ROLE_LABEL[row.role]}
+                  </Badge>
+                )}
               </div>
             ))}
           </div>
@@ -530,9 +585,11 @@ export function SettingsScreen() {
           {amenities.map((a) => (
             <div
               key={a.id}
-              className="flex items-start gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-border px-5 py-3 last:border-b-0"
             >
-              <div className="min-w-0 flex-1">
+              {/* 12rem for the name and its rules before the switch and the
+                  bin wrap under, so a phone never gets a word per line. */}
+              <div className="min-w-[12rem] flex-1">
                 <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
                 <p className="truncate text-[13px] text-fg-muted">{a.detail}</p>
                 {a.reservable ? (
@@ -542,25 +599,27 @@ export function SettingsScreen() {
                   />
                 ) : null}
               </div>
-              <label className="mt-0.5 flex shrink-0 items-center gap-1.5 text-[13px] text-fg-muted">
-                Reservable
-                <Toggle
-                  checked={a.reservable}
-                  onChange={(v) => patchAmenity(a.id, { reservable: v })}
-                  label={`${a.name} reservable`}
-                />
-              </label>
-              <button
-                type="button"
-                aria-label={`Remove ${a.name}`}
-                onClick={() => {
-                  const undo = removeAmenity(a.id);
-                  notify(`Removed ${a.name}`, "warn", { label: "Undo", onClick: undo });
-                }}
-                className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
+              <span className="ml-auto flex shrink-0 items-center gap-2">
+                <label className="mt-0.5 flex items-center gap-1.5 text-[13px] text-fg-muted">
+                  Reservable
+                  <Toggle
+                    checked={a.reservable}
+                    onChange={(v) => patchAmenity(a.id, { reservable: v })}
+                    label={`${a.name} reservable`}
+                  />
+                </label>
+                <button
+                  type="button"
+                  aria-label={`Remove ${a.name}`}
+                  onClick={() => {
+                    const undo = removeAmenity(a.id);
+                    notify(`Removed ${a.name}`, "warn", { label: "Undo", onClick: undo });
+                  }}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </span>
             </div>
           ))}
           <div className="flex items-center gap-2 border-t border-border px-5 py-3">
@@ -569,9 +628,9 @@ export function SettingsScreen() {
               onChange={(e) => setNewAmenity(e.target.value)}
               placeholder="Add an amenity"
               aria-label="New amenity name"
-              className="h-9 flex-1 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+              className="h-9 min-w-0 flex-1 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-primary"
             />
-            <Button variant="primary" size="sm" onClick={addAmenity} disabled={!newAmenity.trim()}>
+            <Button variant="secondary" size="md" className="shrink-0" onClick={addAmenity} disabled={!newAmenity.trim()}>
               <Plus className="size-3.5" />
               Add
             </Button>
@@ -617,11 +676,11 @@ export function SettingsScreen() {
             <input
               value={newFormLabel}
               onChange={(e) => setNewFormLabel(e.target.value)}
-              placeholder="Label residents will see, for example Paint color request"
+              placeholder="Label residents see, like Paint color request"
               aria-label="New form label"
-              className="h-9 flex-1 rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+              className="h-9 min-w-0 flex-1 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-primary"
             />
-            <Button variant="primary" size="sm" onClick={addForm} disabled={!newFormLabel.trim()}>
+            <Button variant="secondary" size="md" className="shrink-0" onClick={addForm} disabled={!newFormLabel.trim()}>
               <Upload className="size-3.5" />
               Upload
             </Button>
@@ -671,13 +730,12 @@ export function SettingsScreen() {
                       </td>
                       {GRANTABLE.map((c) => (
                         <td key={c} className="px-2 py-3 text-center">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={a.capabilities[c]}
                             disabled={!isPresident || a.role === "president"}
                             onChange={(e) => setCapability(a.id, c, e.target.checked)}
                             aria-label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
-                            className="size-4 accent-navy-700 disabled:opacity-40"
+                            className="disabled:opacity-40"
                           />
                         </td>
                       ))}

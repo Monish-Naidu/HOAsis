@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalendarOff, Clock, Plus, SlidersHorizontal, X } from "lucide-react";
-import { Button } from "@/components/ui/primitives";
+import { Button, Select } from "@/components/ui/primitives";
 import { describeRules, formatMinute, rulesFor } from "@/lib/bookings";
 import type { Blackout, BookingRules, CommunityAmenity } from "@/lib/types";
 import { formatDate, todayIsoDate } from "@/lib/utils";
@@ -74,42 +74,42 @@ export function AmenityRules({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-[13px] font-semibold text-fg-muted">Open from</span>
-              <select
+              <Select
                 value={rules.opensHour}
                 onChange={(e) => set({ opensHour: Number(e.target.value) })}
-                className={`mt-1.5 w-full ${field}`}
+                className="mt-1.5 w-full [&>select]:h-10"
               >
                 {Array.from({ length: 24 }, (_, h) => (
                   <option key={h} value={h}>
                     {formatMinute(h * 60)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="block">
               <span className="text-[13px] font-semibold text-fg-muted">Until</span>
-              <select
+              <Select
                 value={rules.closesHour}
                 onChange={(e) => set({ closesHour: Number(e.target.value) })}
-                className={`mt-1.5 w-full ${field}`}
+                className="mt-1.5 w-full [&>select]:h-10"
               >
                 {Array.from({ length: 24 }, (_, h) => h + 1).map((h) => (
                   <option key={h} value={h}>
                     {formatMinute(Math.min(h, 23) * 60 + (h === 24 ? 59 : 0))}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="block">
               <span className="text-[13px] font-semibold text-fg-muted">
                 How long is one booking
               </span>
-              <select
+              <Select
                 value={rules.slotMinutes}
                 onChange={(e) => set({ slotMinutes: Number(e.target.value) })}
-                className={`mt-1.5 w-full ${field}`}
+                className="mt-1.5 w-full [&>select]:h-10"
               >
                 <option value={30}>30 minutes</option>
                 <option value={60}>1 hour</option>
@@ -117,24 +117,24 @@ export function AmenityRules({
                 <option value={120}>2 hours</option>
                 <option value={180}>3 hours</option>
                 <option value={240}>4 hours</option>
-              </select>
+              </Select>
             </label>
 
             <label className="block">
               <span className="text-[13px] font-semibold text-fg-muted">
                 How far ahead can they book
               </span>
-              <select
+              <Select
                 value={rules.advanceDays}
                 onChange={(e) => set({ advanceDays: Number(e.target.value) })}
-                className={`mt-1.5 w-full ${field}`}
+                className="mt-1.5 w-full [&>select]:h-10"
               >
                 <option value={7}>A week</option>
                 <option value={14}>Two weeks</option>
                 <option value={30}>A month</option>
                 <option value={60}>Two months</option>
                 <option value={90}>Three months</option>
-              </select>
+              </Select>
             </label>
 
             <label className="block">

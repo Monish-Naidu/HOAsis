@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Eye, Inbox } from "lucide-react";
+import { Inbox } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -15,17 +14,7 @@ import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { WorkOrderPanel } from "@/components/app/work-order";
 import { daysFromToday, formatDate, pluralize } from "@/lib/utils";
-import type { RequestStatus } from "@/lib/types";
-
-const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
-  approved: "ok",
-  denied: "danger",
-  "in-review": "info",
-  "info-needed": "warn",
-  submitted: "neutral",
-  closed: "neutral",
-  draft: "neutral",
-};
+import { statusLabel, statusTone } from "@/lib/request-status";
 
 export default function BoardRequests() {
   const { requests, updateRequestStatus } = useAppState();
@@ -40,15 +29,6 @@ export default function BoardRequests() {
       <PageHeader
         title="Requests"
         description="Requests from owners and where each one stands."
-        action={
-          <Link
-            href="/resident/requests"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-2 px-4 text-[15px] font-medium text-fg hover:bg-surface-2"
-          >
-            <Eye className="size-3.5" />
-            See the resident&apos;s view
-          </Link>
-        }
       />
 
       {/* Two lists, not tiles and a list. The count sits in each header where
@@ -71,47 +51,43 @@ export default function BoardRequests() {
             description="New requests from owners appear here."
           />
         ) : null}
-        {open.map((r) => {
-            // A request the board owes an answer on wears the days it has
-            // left where the avatar would be. One list, one place to look.
-            const daysLeft = r.dueDate ? daysFromToday(r.dueDate) : null;
+        {open.map((r, index) => {
+            // The deadline is a badge beside the status, not a tile where the
+            // avatar goes: a row with a face and a row with a number side by
+            // side read as two different kinds of thing.
+            const daysLeft = r.dueDate ? Math.max(0, daysFromToday(r.dueDate)) : null;
             return (
             <div
               key={r.id}
               id={`req-${r.id}`}
-              className="flex scroll-mt-24 items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
+              className="flex scroll-mt-32 items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0 lg:scroll-mt-24"
             >
-              {daysLeft === null ? (
-                <Avatar name={r.ownerName} tone="neutral" />
-              ) : (
-                <div
-                  className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-lg ${
-                    daysLeft <= 5 ? "bg-warn-soft text-warn" : "bg-surface-3 text-fg-muted"
-                  }`}
-                  aria-label={`${pluralize(Math.max(0, daysLeft), "day")} to answer`}
-                >
-                  <span className="tnum text-[17px] font-bold leading-none">{Math.max(0, daysLeft)}</span>
-                  <span className="text-[12px] font-semibold uppercase">days</span>
-                </div>
-              )}
+              <Avatar name={r.ownerName} tone="neutral" />
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-medium leading-snug text-fg">{r.title}</p>
                 <p className="mt-0.5 text-[13px] text-fg-muted">
                   {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
-                  {r.dueDate ? ` · Answer by ${formatDate(r.dueDate)}` : ""}
                 </p>
                 <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-fg-muted">
                   {r.summary}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
+                  <Badge tone={statusTone[r.status]}>{statusLabel[r.status]}</Badge>
+                  {daysLeft !== null ? (
+                    <Badge tone={daysLeft <= 5 ? "warn" : "neutral"}>
+                      {daysLeft === 0 ? "Answer today" : `${pluralize(daysLeft, "day")} to answer`}
+                    </Badge>
+                  ) : null}
                   <span className="text-[13px] text-fg-subtle">
                     {pluralize(r.thread.length, "update")}
                     {r.attachments.length ? ` · ${pluralize(r.attachments.length, "file")}` : ""}
                   </span>
                   <span className="ml-auto flex gap-1.5">
+                    {/* Filled only when it is the one decision on the page.
+                        Five filled Approve buttons in a column is five
+                        primaries, which is none. */}
                     <Button
-                      variant="primary"
+                      variant={open.length === 1 && index === 0 ? "primary" : "secondary"}
                       size="sm"
                       onClick={() => {
                         updateRequestStatus(r.id, "approved", "Approved by the board.");
@@ -152,7 +128,7 @@ export default function BoardRequests() {
             <div
               key={r.id}
               id={`req-${r.id}`}
-              className="flex scroll-mt-24 items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex scroll-mt-32 lg:scroll-mt-24 items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
             >
               <Avatar name={r.ownerName} tone="neutral" />
               <div className="min-w-0 flex-1">
@@ -161,7 +137,7 @@ export default function BoardRequests() {
                   {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
                 </p>
               </div>
-              <Badge tone={statusTone[r.status]}>{r.status.replace("-", " ")}</Badge>
+              <Badge tone={statusTone[r.status]}>{statusLabel[r.status]}</Badge>
             </div>
           ))}
         </Card>

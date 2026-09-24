@@ -7,13 +7,12 @@ import {
   ExternalLink,
   FileSpreadsheet,
   FileText,
-  ScanLine,
   Search,
   ShieldQuestion,
   Trash2,
   Upload,
 } from "lucide-react";
-import { Badge, Card, CardHeader, IconTile, PageHeader } from "@/components/ui/primitives";
+import { Badge, Card, CardHeader, IconTile, PageHeader, Select } from "@/components/ui/primitives";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -80,9 +79,11 @@ function DocumentsScreen() {
         title="Documents"
         description="Files for the association, and who can see each one."
         action={
+          // A label, so the whole button opens the file picker; dressed as the
+          // primary button, which a <label> cannot borrow from the primitive.
           <label
             aria-busy={uploading}
-            className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90 aria-busy:cursor-progress aria-busy:opacity-70"
+            className="press inline-flex h-9 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg bg-brand-gradient px-3.5 text-[14px] font-medium text-primary-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-sm)] hover:brightness-[1.06] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ring)] aria-busy:cursor-progress aria-busy:opacity-70"
           >
             <Upload className="size-3.5" />
             {uploading ? "Uploading" : "Upload"}
@@ -213,21 +214,6 @@ function DocumentsScreen() {
         </Link>
         ) : null}
 
-        <Link
-          href="/board/documents/import"
-          className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
-        >
-          <IconTile icon={ScanLine} tint="teal" size="md" className="shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-fg">
-              Import the text of a document
-            </span>
-            <span className="block text-[13px] leading-snug text-fg-muted">
-              Turn an uploaded declaration or rule set into searchable articles.
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-        </Link>
       </div>
 
 
@@ -235,14 +221,14 @@ function DocumentsScreen() {
         <CardHeader
           title="All documents"
           action={
-            <div className="hidden h-8 items-center gap-2 rounded-lg border border-border px-2.5 sm:flex">
-              <Search className="size-3.5 text-fg-subtle" />
+            <div className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-border-2 px-2.5 focus-within:border-primary">
+              <Search className="size-3.5 shrink-0 text-fg-subtle" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search documents"
                 aria-label="Search documents"
-                className="w-40 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
+                className="w-40 min-w-0 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
           }
@@ -296,7 +282,9 @@ function DocumentsScreen() {
                       <ExternalLink className="size-3.5" />
                     </a>
                   ) : null}
-                  <select
+                  <Select
+                    size="sm"
+                    className="shrink-0"
                     value={d.visibility}
                     onChange={async (e) => {
                       const next = e.target.value as DocumentRecord["visibility"];
@@ -311,12 +299,11 @@ function DocumentsScreen() {
                       }
                     }}
                     aria-label={`Who can see ${d.name}`}
-                    className="h-8 shrink-0 rounded-lg border border-border bg-surface px-2 text-[13px] font-medium text-fg outline-none focus:border-brand"
                   >
                     <option value="public">Public</option>
                     <option value="members">Owners</option>
                     <option value="board">Board only</option>
-                  </select>
+                  </Select>
                   <button
                     type="button"
                     aria-label={`Remove ${d.name}`}

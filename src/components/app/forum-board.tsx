@@ -19,9 +19,17 @@ import { ROLE_LABEL, type ForumCategory, type ForumPost } from "@/lib/types";
 import { cn, daysFromToday, formatDate, pluralize, relativeDays, todayIsoDate } from "@/lib/utils";
 import { placeLabel } from "@/lib/wording";
 
-/** "today", "3 days ago", then a real date once it stops being recent. */
+/**
+ * "today", "3 days ago", then a real date once it stops being recent.
+ *
+ * Never the future: a post cannot have been written tomorrow. A clock a day
+ * ahead, or a fixture dated past the demo's pinned today, read "tomorrow"
+ * on a post somebody had already made, so anything ahead is "today".
+ */
 function when(iso: string) {
-  return daysFromToday(iso) > -30 ? relativeDays(iso) : formatDate(iso);
+  const days = daysFromToday(iso);
+  if (days >= 0) return "today";
+  return days > -30 ? relativeDays(iso) : formatDate(iso);
 }
 
 /** A post written in the composer has no title of its own; the first line stands in. */
@@ -243,7 +251,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button
-                  variant="primary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => {
                     const undo = moderatePost(post.id, "published");
@@ -292,7 +300,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
           const showTitle = p.title && !p.body.startsWith(p.title);
           const isLiked = liked.has(p.id);
           return (
-            <Card key={p.id} as="article" id={`post-${p.id}`} className="scroll-mt-24">
+            <Card key={p.id} as="article" id={`post-${p.id}`} className="scroll-mt-32 lg:scroll-mt-24">
               <div className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar name={p.author} tone={p.authorRole ? "brand" : "neutral"} />
@@ -340,23 +348,24 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   type="button"
                   onClick={() => like(p.id)}
                   aria-pressed={isLiked}
+                  aria-label={`${pluralize(p.likes, "like")}${isLiked ? ", liked" : ""}`}
                   className={cn(actionButton, isLiked && "text-danger hover:text-danger")}
                 >
                   <Heart className={cn("size-4", isLiked && "fill-current")} />
                   {p.likes}
                 </button>
+                {/* One control for the thread: the count, which opens it.
+                    A separate Reply button beside it opened the same thing,
+                    and a screen reader heard the count twice. */}
                 <button
                   type="button"
                   onClick={() => toggleThread(p.id)}
                   aria-expanded={expanded}
+                  aria-label={`${pluralize(p.replies.length, "reply", "replies")}, ${expanded ? "hide" : "show and reply"}`}
                   className={actionButton}
                 >
                   <MessageCircle className="size-4" />
-                  {p.replies.length}
-                  <span className="sr-only">{pluralize(p.replies.length, "reply", "replies")}</span>
-                </button>
-                <button type="button" onClick={() => toggleThread(p.id)} className={actionButton}>
-                  Reply
+                  {p.replies.length ? p.replies.length : "Reply"}
                 </button>
                 {moderate ? (
                   <span className="ml-auto flex gap-1">
@@ -442,9 +451,12 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
         })}
       </div>
 
-      <p className="text-[13px] text-fg-subtle">
-        Need a board decision? Send a request instead. Posts here carry no deadline.
-      </p>
+      {/* For a resident, the way to the board. The board is the board. */}
+      {moderate ? null : (
+        <p className="text-[13px] text-fg-subtle">
+          Need a board decision? Send a request instead. Posts here carry no deadline.
+        </p>
+      )}
     </div>
   );
 }

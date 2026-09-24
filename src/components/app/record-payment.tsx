@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Receipt, X } from "lucide-react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Select } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { money, todayIsoDate } from "@/lib/utils";
@@ -51,18 +51,18 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="text-[13px] font-semibold text-fg-muted">Who you paid</span>
-            <select
+            <Select
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
               aria-label="Vendor"
-              className={`mt-1.5 ${field}`}
+              className="mt-1.5 w-full [&>select]:h-10"
             >
               {vendors.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="block">
             <span className="text-[13px] font-semibold text-fg-muted">How much</span>
@@ -94,16 +94,16 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
           </label>
           <label className="block">
             <span className="text-[13px] font-semibold text-fg-muted">How</span>
-            <select
+            <Select
               value={method}
               onChange={(e) => setMethod(e.target.value as typeof method)}
               aria-label="Payment method"
-              className={`mt-1.5 ${field}`}
+              className="mt-1.5 w-full [&>select]:h-10"
             >
               <option value="ach">Bank transfer</option>
               <option value="check">Check</option>
               <option value="card">Card</option>
-            </select>
+            </Select>
           </label>
           <label className="block">
             <span className="text-[13px] font-semibold text-fg-muted">

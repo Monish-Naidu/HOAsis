@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import { Check, Copy, Inbox, Paperclip, Plus, X } from "lucide-react";
-import { Badge, Button, Card, CardHeader, EmptyState, type Tone } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Segmented,
+  Select,
+  type Tone,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { communitySlug } from "@/lib/metrics";
-import type { InvoiceStatus, VendorInvoice } from "@/lib/types";
+import { communitySlug, vendorDecisions } from "@/lib/metrics";
+import type { InvoiceStatus, Payout, VendorInvoice } from "@/lib/types";
 import { addDays, cn, daysFromToday, formatDate, money, relativeDays, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -19,6 +28,13 @@ import { addDays, cn, daysFromToday, formatDate, money, relativeDays, todayIsoDa
  *
  * Email-in is not wired yet. The address is real in shape and shown so a board
  * can start giving it out, and the seeded rows show what arrives.
+ *
+ * Since 2026-09-24 this is the one approval queue on Vendors. Payments short
+ * of a second signature used to wait in a separate Payments card with their
+ * own filled Approve button, so the page had two queues and four filled
+ * buttons. Now every vendor decision is a row here, counted by
+ * `vendorDecisions` like the rail badge and the dashboard, and only the first
+ * row's action is filled.
  */
 
 type Filter = "waiting" | "paid" | "all";
@@ -55,6 +71,7 @@ export function InvoiceInbox() {
     approveInvoice,
     rejectInvoice,
     payInvoice,
+    approvePayout,
   } = useAppState();
   const { notify } = useToast();
 
@@ -63,8 +80,14 @@ export function InvoiceInbox() {
   const [attaching, setAttaching] = useState(false);
 
   const address = `invoices@${communitySlug(community)}.yourhoasis.com`;
+  const decisions = vendorDecisions(community);
   const waiting = invoices.filter(isWaiting);
   const paid = invoices.filter((i) => i.status === "paid");
+  // Payments settling an invoice already in this list are that invoice's
+  // row, not a second one.
+  const toSign = decisions.toSign.filter(
+    (p) => !waiting.some((i) => i.id === p.invoiceId || i.payoutId === p.id),
+  );
 
   // Waiting is a to-do list, so soonest due comes first. The other views are
   // a record, so newest received comes first.
@@ -99,7 +122,7 @@ export function InvoiceInbox() {
   return (
     <Card>
       <CardHeader
-        title="Invoices"
+        title="To approve"
         subtitle={
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>Vendors email bills to</span>
@@ -110,7 +133,7 @@ export function InvoiceInbox() {
               type="button"
               onClick={copyAddress}
               aria-label="Copy the invoice address"
-              className="inline-flex size-6 items-center justify-center rounded-md text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+              className="-my-1 inline-flex size-8 items-center justify-center rounded-md text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
             >
               <Copy className="size-3.5" />
             </button>
@@ -118,7 +141,7 @@ export function InvoiceInbox() {
         }
         action={
           isRemote || attaching ? undefined : (
-            <Button variant="secondary" size="sm" onClick={() => setAttaching(true)}>
+            <Button variant="ghost" size="sm" onClick={() => setAttaching(true)}>
               <Plus className="size-3.5" />
               Attach an invoice
             </Button>
@@ -145,38 +168,26 @@ export function InvoiceInbox() {
         />
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-5 py-2.5">
-        {(
-          [
-            ["waiting", "Waiting", waiting.length],
-            ["paid", "Paid", paid.length],
-            ["all", "All", invoices.length],
-          ] as const
-        ).map(([key, text, count]) => (
-          <button
-            key={key}
-            type="button"
-            aria-pressed={filter === key}
-            onClick={() => setFilter(key)}
-            className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors",
-              filter === key
-                ? "bg-brand-soft text-brand-soft-fg"
-                : "text-fg-muted hover:bg-surface-2 hover:text-fg",
-            )}
-          >
-            {text}
-            <span className="tnum opacity-70">{count}</span>
-          </button>
-        ))}
+      <div className="border-b border-border px-5 py-2.5">
+        <Segmented
+          label="Which bills"
+          value={filter}
+          onChange={setFilter}
+          className="pointer-coarse:[&>button]:h-9"
+          options={[
+            { value: "waiting", label: "To approve", count: decisions.count },
+            { value: "paid", label: "Paid", count: paid.length },
+            { value: "all", label: "All", count: invoices.length },
+          ]}
+        />
       </div>
 
-      {visible.length === 0 ? (
+      {visible.length === 0 && (filter !== "waiting" || toSign.length === 0) ? (
         <EmptyState
           icon={<Inbox className="size-5" />}
           title={
             filter === "waiting"
-              ? "Nothing waiting"
+              ? "Nothing to approve"
               : filter === "paid"
                 ? "Nothing paid yet"
                 : "No invoices yet"
@@ -189,10 +200,11 @@ export function InvoiceInbox() {
         />
       ) : (
         <ul>
-          {visible.map((invoice) => (
+          {visible.map((invoice, index) => (
             <InvoiceRow
               key={invoice.id}
               invoice={invoice}
+              primary={filter === "waiting" && index === 0}
               payout={payouts.find((p) => p.id === invoice.payoutId)}
               readOnly={isRemote}
               panel={panel?.id === invoice.id ? panel.mode : null}
@@ -217,6 +229,19 @@ export function InvoiceInbox() {
               }}
             />
           ))}
+          {filter === "waiting"
+            ? toSign.map((payout, index) => (
+                <SignRow
+                  key={payout.id}
+                  payout={payout}
+                  primary={visible.length === 0 && index === 0}
+                  readOnly={isRemote}
+                  onApprove={() =>
+                    run(() => approvePayout(payout.id), `Approved ${payout.vendor}`)
+                  }
+                />
+              ))
+            : null}
         </ul>
       )}
     </Card>
@@ -229,6 +254,7 @@ export function InvoiceInbox() {
 
 function InvoiceRow({
   invoice,
+  primary,
   payout,
   readOnly,
   panel,
@@ -238,6 +264,8 @@ function InvoiceRow({
   onPay,
 }: {
   invoice: VendorInvoice;
+  /** The first row of the queue carries the page's one filled button. */
+  primary: boolean;
   payout?: { id: string; expectedDate: string; status: string; notes?: string };
   readOnly: boolean;
   panel: "reject" | "pay" | null;
@@ -252,8 +280,10 @@ function InvoiceRow({
 
   return (
     <li className="border-b border-border px-5 py-3.5 last:border-b-0">
-      <div className="flex items-start gap-4">
-        <div className="min-w-0 flex-1">
+      {/* The text keeps 12rem, so on a phone the amount and the buttons drop
+          under it rather than squeezing it to a word per line. */}
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+        <div className="min-w-[12rem] flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[15px] font-medium text-fg">{invoice.vendor}</p>
             <Badge tone={status.tone}>{status.label}</Badge>
@@ -277,21 +307,21 @@ function InvoiceRow({
           </div>
         </div>
 
-        <div className="shrink-0 text-right">
+        <div className="ml-auto shrink-0 text-right">
           <p className="tnum text-[15px] font-semibold text-fg">{money(invoice.amountCents)}</p>
           {readOnly || panel ? null : invoice.status === "new" ? (
             <div className="mt-1.5 flex justify-end gap-1.5">
               <Button variant="ghost" size="sm" onClick={() => onPanel("reject")}>
                 Reject
               </Button>
-              <Button variant="secondary" size="sm" onClick={onApprove}>
+              <Button variant={primary ? "primary" : "secondary"} size="sm" onClick={onApprove}>
                 <Check className="size-3.5" />
                 Approve
               </Button>
             </div>
           ) : invoice.status === "approved" ? (
             <div className="mt-1.5 flex justify-end">
-              <Button variant="primary" size="sm" onClick={() => onPanel("pay")}>
+              <Button variant={primary ? "primary" : "secondary"} size="sm" onClick={() => onPanel("pay")}>
                 Pay by ACH
               </Button>
             </div>
@@ -302,7 +332,10 @@ function InvoiceRow({
       {invoice.status === "paid" && payout ? (
         <p className="mt-2 text-[13px] text-fg-muted">
           Paid by ACH, {payout.status === "paid" ? "landed" : "lands"}{" "}
-          {relativeDays(payout.expectedDate)}.{" "}
+          {daysFromToday(payout.expectedDate) >= -60
+            ? relativeDays(payout.expectedDate)
+            : formatDate(payout.expectedDate)}
+          .{" "}
           <a href={`#payout-${payout.id}`} className="font-medium text-brand underline-offset-2 hover:underline">
             See the payment
           </a>
@@ -322,6 +355,52 @@ function InvoiceRow({
       {panel === "pay" ? (
         <PayPanel invoice={invoice} onCancel={() => onPanel(null)} onPay={onPay} />
       ) : null}
+    </li>
+  );
+}
+
+/** A payment already sent for approval that is still a signature short. */
+function SignRow({
+  payout,
+  primary,
+  readOnly,
+  onApprove,
+}: {
+  payout: Payout;
+  primary: boolean;
+  readOnly: boolean;
+  onApprove: () => void;
+}) {
+  const signed = payout.approvals.map((a) => a.name.split(" ")[0]).join(" and ");
+  return (
+    <li
+      id={`sign-${payout.id}`}
+      className="flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-border px-5 py-3.5 last:border-b-0"
+    >
+      <div className="min-w-[12rem] flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[15px] font-medium text-fg">{payout.vendor}</p>
+          <Badge tone="warn">Needs a signature</Badge>
+        </div>
+        <p className="mt-0.5 text-[13px] text-fg-muted">
+          {payout.invoiceNumber}, {payout.method === "ach" ? "ACH" : "check"}
+        </p>
+        <p className="mt-1.5 text-[13px] text-fg-subtle">
+          {payout.approvals.length} of {payout.approvalsRequired} approvals
+          {signed ? `, ${signed} signed` : ""}
+        </p>
+      </div>
+      <div className="ml-auto shrink-0 text-right">
+        <p className="tnum text-[15px] font-semibold text-fg">{money(payout.amountCents)}</p>
+        {readOnly ? null : (
+          <div className="mt-1.5 flex justify-end">
+            <Button variant={primary ? "primary" : "secondary"} size="sm" onClick={onApprove}>
+              <Check className="size-3.5" />
+              Approve
+            </Button>
+          </div>
+        )}
+      </div>
     </li>
   );
 }
@@ -466,13 +545,18 @@ function AttachForm({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className={label}>Vendor</span>
-          <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={field}>
+          <Select
+            value={vendorId}
+            onChange={(e) => setVendorId(e.target.value)}
+            aria-label="Vendor"
+            className="w-full"
+          >
             {vendors.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className={label}>Invoice number</span>

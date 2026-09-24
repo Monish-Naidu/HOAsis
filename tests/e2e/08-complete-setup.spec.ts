@@ -194,8 +194,9 @@ test("the return bar carries a board back, and disappears when done", async ({ p
   test.setTimeout(120_000);
   await found(page, "Return Bar HOA", "Detached homes");
 
-  // Mid setup, every workspace screen offers the way back.
-  await page.goto("/board/documents");
+  // Mid setup, a screen reached from the plan offers the way back. Since
+  // 2026-09-24 only from the plan: on every tab it was noise.
+  await page.goto("/board/documents?from=setup");
   await page.waitForLoadState("networkidle");
   await expect(
     page.getByRole("link", { name: /Back to setting up/ }),
@@ -204,7 +205,7 @@ test("the return bar carries a board back, and disappears when done", async ({ p
 
   await completeEverything(page, "Detached homes");
 
-  await page.goto("/board/documents");
+  await page.goto("/board/documents?from=setup");
   await page.waitForLoadState("networkidle");
   const after = await inspect(page);
   expect(

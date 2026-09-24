@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Pencil, Trash2, Wrench } from "lucide-react";
-import { Badge, Button, Card } from "@/components/ui/primitives";
+import { Badge, Button, Card, Select } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { HomeRequest, WorkOrder } from "@/lib/types";
@@ -183,10 +183,10 @@ function WorkOrderForm({
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block">
             <span className={LABEL}>Who is doing it</span>
-            <select
+            <Select
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
-              className={FIELD}
+              className="w-full [&>select]:h-10"
             >
               <option value="">Not chosen yet</option>
               {vendors.map((v) => (
@@ -194,7 +194,7 @@ function WorkOrderForm({
                   {v.name} · {v.service}
                 </option>
               ))}
-            </select>
+            </Select>
             {!vendorId ? (
               <input
                 value={vendorName}

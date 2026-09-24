@@ -12,9 +12,9 @@ import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
  * The way back to the question.
  *
  * Every task on the list links into the workspace, and once a board followed
- * one there was nothing to follow back. So while setup is unfinished a thin
- * bar rides above the page with the count and a way back, and it disappears
- * the moment the list is complete.
+ * one there was nothing to follow back. So a thin bar rides above a page
+ * reached from the plan (`?from=setup`), with the count and a way back, and
+ * it disappears the moment the list is complete.
  *
  * Back means the question they left, not the overview. A link out of a
  * question carries `?from=setup&task=<key>`, and the bar reads both: with a
@@ -69,6 +69,10 @@ function ReturnBar() {
 
   if (plan.allDone) return null;
   if (pathname === "/board/setup" || pathname === "/board") return null;
+  // Only for somebody who came from the plan. On every tab it was a bar a
+  // board scrolled past forty times a day; the rail's Setting up row is the
+  // way back for anyone who wandered in on their own.
+  if (!fromSetup) return null;
 
   const href = requested ? `/start/plan?task=${encodeURIComponent(requested.key)}` : "/board/setup";
 

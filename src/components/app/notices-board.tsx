@@ -187,7 +187,7 @@ function NoticeRow({
             <span className="text-[15px] font-semibold text-fg">{placeLabel(violation.unit)}</span>
             <span className="text-[13px] text-fg-muted">{violation.ownerName}</span>
             {fixed ? (
-              <Badge tone="ok">
+              <Badge tone="ok" dot={false}>
                 <Check className="size-2.5" />
                 Owner says fixed
               </Badge>

@@ -25,6 +25,8 @@ import {
   EmptyState,
   KeyValue,
   PageHeader,
+  Segmented,
+  Select,
 } from "@/components/ui/primitives";
 import { RemindersComposer } from "@/components/app/reminders-composer";
 import { JoinRequests } from "@/components/app/join-requests";
@@ -76,7 +78,8 @@ export function HomeownersScreen() {
 
   const owners = community.owners;
   const delinq = delinquency(community);
-  const paidUp = owners.length - delinq.past.length;
+  // Homes with nobody on record are neither paid up nor behind.
+  const paidUp = delinq.current;
   // Opening balances are for an association that switched here mid-life. A
   // new build starts every home at zero, so for it the screen is noise.
   const showOpeningBalances =
@@ -126,7 +129,7 @@ export function HomeownersScreen() {
   const matching = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return sorted.filter((o) => {
-      if (filter === "paid" && o.daysPastDue > 0) return false;
+      if (filter === "paid" && (o.daysPastDue > 0 || o.placeholder)) return false;
       if (filter === "behind" && o.daysPastDue === 0) return false;
       if (kind !== "all" && o.homeType !== kind) return false;
       if (!needle) return true;
@@ -351,42 +354,26 @@ export function HomeownersScreen() {
       <Card className="mt-6">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
-          <div
-            role="group"
-            aria-label="Show households"
-            className="inline-flex rounded-lg bg-surface-3 p-0.5"
-          >
-            {segments.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                aria-pressed={filter === s.key}
-                onClick={() => {
-                  setFilter(s.key);
-                  setShown(PAGE);
-                }}
-                className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors",
-                  filter === s.key
-                    ? "bg-surface text-fg shadow-card"
-                    : "text-fg-muted hover:text-fg",
-                )}
-              >
-                {s.label}
-                <span className="tnum text-fg-subtle">{s.count}</span>
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="Show households"
+            value={filter}
+            onChange={(next) => {
+              setFilter(next);
+              setShown(PAGE);
+            }}
+            options={segments.map((seg) => ({ value: seg.key, label: seg.label, count: seg.count }))}
+            className="pointer-coarse:[&>button]:h-9"
+          />
           <div className="flex flex-wrap items-center gap-1">
             {mixed ? (
-              <select
+              <Select
                 value={kind}
                 onChange={(e) => {
                   setKind(e.target.value as HomeType | "all");
                   setShown(PAGE);
                 }}
                 aria-label="Kind of home"
-                className="mr-1 h-9 rounded-lg border border-border bg-surface px-2.5 text-[13px] text-fg outline-none"
+                className="mr-1"
               >
                 <option value="all">All kinds</option>
                 {kinds.map(({ type, count }) => (
@@ -394,9 +381,9 @@ export function HomeownersScreen() {
                     {HOME_TYPE_LABEL[type].many} ({count})
                   </option>
                 ))}
-              </select>
+              </Select>
             ) : null}
-            <div className="mr-1 flex h-9 items-center gap-2 rounded-lg border border-border px-2.5">
+            <div className="mr-1 flex h-9 min-w-0 items-center gap-2 rounded-lg border border-border-2 px-2.5 focus-within:border-primary">
               <Search className="size-3.5 text-fg-subtle" />
               <input
                 value={query}
@@ -406,7 +393,7 @@ export function HomeownersScreen() {
                 }}
                 placeholder="Search owners"
                 aria-label="Search owners"
-                className="w-40 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
+                className="w-40 min-w-0 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
             <Button variant="ghost" size="sm" onClick={() => startSale(null)}>
@@ -458,18 +445,18 @@ export function HomeownersScreen() {
                 className={input}
               />
               {mixed ? (
-                <select
+                <Select
                   value={entry.homeType ?? kinds[0].type}
                   onChange={(e) => setEntry({ ...entry, homeType: e.target.value as HomeType })}
                   aria-label="Kind of home"
-                  className={input}
+                  className="[&>select]:h-10"
                 >
                   {HOME_TYPES.map((t) => (
                     <option key={t} value={t}>
                       {HOME_TYPE_LABEL[t].one}
                     </option>
                   ))}
-                </select>
+                </Select>
               ) : null}
               <Button
                 variant="primary"
@@ -509,11 +496,11 @@ export function HomeownersScreen() {
               </Button>
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_10rem_auto]">
-              <select
+              <Select
                 value={sale.ownerId ?? ""}
                 onChange={(e) => setSale({ ...sale, ownerId: e.target.value || null })}
                 aria-label="Home being sold"
-                className={input}
+                className="[&>select]:h-10"
               >
                 <option value="">Which home?</option>
                 {[...owners]
@@ -523,7 +510,7 @@ export function HomeownersScreen() {
                       {homeLabel(community, o.unit)} · {o.displayName}
                     </option>
                   ))}
-              </select>
+              </Select>
               <input
                 value={sale.name}
                 onChange={(e) => setSale({ ...sale, name: e.target.value })}
@@ -600,7 +587,7 @@ export function HomeownersScreen() {
                       each name. Under md the contact folds under the name. */}
                   <div
                     className={cn(
-                      "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 transition-colors md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_1.25rem_20rem]",
+                      "group/row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 transition-colors md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_1.25rem_16rem]",
                       open ? "bg-surface-2" : "hover:bg-surface-2",
                     )}
                   >
@@ -651,20 +638,29 @@ export function HomeownersScreen() {
                     </button>
                     {/* Fixed width, so the trailing column never pushes the
                         contact column around from row to row. */}
-                    <span className="grid shrink-0 items-center gap-3 md:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
+                    <span className="flex shrink-0 items-center justify-end gap-2 md:grid md:grid-cols-[5.5rem_minmax(0,1fr)_2rem] md:gap-3">
                       <span className="tnum hidden text-right text-[15px] font-semibold text-fg md:block">
                         {o.balanceCents > 0 ? money(o.balanceCents) : ""}
                       </span>
                       <span className="flex justify-end md:justify-start">
-                        <DuesBadge owner={o} />
+                        <DuesBadge owner={o} unsold={community.profile?.origin === "builder"} />
                       </span>
+                      {/* A glyph, not 88 bordered buttons down the page. On a
+                          desktop it shows on the row under the pointer or
+                          keyboard; under lg there is no hover, so it stays. */}
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="sm"
                         aria-label={o.placeholder ? `Add the owner of ${o.unit}` : `Message ${o.displayName}`}
+                        title={o.placeholder ? "Add owner" : "Message"}
                         onClick={() => toggle(o, true)}
+                        className={cn(
+                          "size-8 px-0",
+                          !open &&
+                            "lg:opacity-0 lg:group-hover/row:opacity-100 lg:group-focus-within/row:opacity-100",
+                        )}
                       >
-                        {o.placeholder ? "Add owner" : "Message"}
+                        {o.placeholder ? <Plus className="size-4" /> : <Mail className="size-4" />}
                       </Button>
                     </span>
                   </div>
@@ -756,7 +752,10 @@ function threadFor(threads: MessageThread[], owner: Owner) {
     .sort((a, b) => b.updatedDate.localeCompare(a.updatedDate))[0];
 }
 
-function DuesBadge({ owner }: { owner: Owner }) {
+function DuesBadge({ owner, unsold }: { owner: Owner; unsold: boolean }) {
+  // Nobody on record: not paid up, not behind, nobody to message. It read
+  // "Paid up" beside a Message button that could reach nobody.
+  if (owner.placeholder) return <Badge tone="neutral">{unsold ? "Unsold" : "No owner"}</Badge>;
   if (owner.standing === "collections") {
     return (
       <Badge tone="danger" dot>
@@ -840,11 +839,11 @@ function HouseholdDetail({
           <KeyValue label="Address">{owner.address}</KeyValue>
           {onSetKind ? (
             <KeyValue label="Kind of home">
-              <select
+              <Select
+                size="sm"
                 value={owner.homeType ?? ""}
                 onChange={(e) => onSetKind(e.target.value as HomeType)}
                 aria-label={`Kind of home for ${owner.unit}`}
-                className="h-8 rounded-md border border-border bg-surface px-2 text-[13px] text-fg outline-none focus:border-brand"
               >
                 {owner.homeType ? null : <option value="">Not set</option>}
                 {HOME_TYPES.map((t) => (
@@ -852,7 +851,7 @@ function HouseholdDetail({
                     {HOME_TYPE_LABEL[t].one}
                   </option>
                 ))}
-              </select>
+              </Select>
             </KeyValue>
           ) : null}
           {duesLine ? <KeyValue label="Dues">{duesLine}</KeyValue> : null}

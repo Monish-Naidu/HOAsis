@@ -52,10 +52,16 @@ export function resultLine(ballot: Ballot): string {
 export function BallotCard({
   ballot,
   onClose,
+  sealedNote = true,
 }: {
   ballot: Ballot;
   /** Ends voting now. Absent on a closed ballot. */
   onClose?: (ballot: Ballot) => void;
+  /**
+   * The line saying results show when voting ends. Off where the page says
+   * it once above a list of cards, rather than on every card.
+   */
+  sealedNote?: boolean;
 }) {
   const { settings } = useAppState();
   const t = tally(ballot);
@@ -70,7 +76,7 @@ export function BallotCard({
       <div className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={open ? "ok" : "neutral"}>
-            {open ? "Open" : scheduled ? "Opens soon" : "Closed"}
+            {open ? "Open" : scheduled ? "Scheduled" : "Closed"}
           </Badge>
           <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
             <Clock className="size-3" />
@@ -124,7 +130,7 @@ export function BallotCard({
         </div>
       ) : null}
 
-      {open && !showResults ? (
+      {open && !showResults && sealedNote ? (
         <div className="flex items-start gap-2 border-t border-border px-5 py-3">
           <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
           <p className="text-[13px] leading-snug text-fg-muted">

@@ -170,9 +170,11 @@ function RequestRow({
               className="h-9 w-24 min-w-0 rounded-lg border border-border bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand sm:w-48"
             />
           </label>
+          {/* Secondary, always: a list of several requests was a column of
+              filled buttons, and the page's own filled button is elsewhere. */}
           <Button
             type="submit"
-            variant={onDecline ? "primary" : "secondary"}
+            variant="secondary"
             size="sm"
             disabled={!unit.trim() || taken || busy}
           >

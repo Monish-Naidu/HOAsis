@@ -10,8 +10,18 @@ import {
   ShieldAlert,
   StickyNote,
   Trash2,
+  Truck,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  Checkbox,
+  EmptyState,
+  PageHeader,
+} from "@/components/ui/primitives";
 import { useState } from "react";
 import { useAppState, useVendorGaps } from "@/lib/app-state";
 import { InvoiceInbox } from "@/components/app/invoice-inbox";
@@ -20,12 +30,13 @@ import { useToast } from "@/components/app/toast";
 import type { Payout } from "@/lib/types";
 import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
+import { vendorDecisions } from "@/lib/metrics";
 
-const payoutTone = {
-  paid: "ok",
-  "in-transit": "warn",
-  scheduled: "info",
-  "needs-approval": "warn",
+const PAYOUT_STATUS = {
+  paid: { label: "Paid", tone: "ok" },
+  "in-transit": { label: "In transit", tone: "warn" },
+  scheduled: { label: "Scheduled", tone: "info" },
+  "needs-approval": { label: "Needs approval", tone: "warn" },
 } as const;
 
 const field =
@@ -33,7 +44,7 @@ const field =
 
 export default function BoardVendors() {
   const gaps = useVendorGaps();
-  const { vendors, payouts, markW9Requested, addVendor, removeVendor } = useAppState();
+  const { community, vendors, payouts, markW9Requested, addVendor, removeVendor } = useAppState();
   const { notify } = useToast();
   const [adding, setAdding] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -44,7 +55,9 @@ export default function BoardVendors() {
     w9OnFile: false,
   });
 
-  const needsApproval = payouts.filter((p) => p.approvals.length < p.approvalsRequired).length;
+  // With bills waiting, the first one's action is the page's filled button,
+  // so Add vendor steps down to secondary.
+  const decisions = vendorDecisions(community).count;
 
   function saveVendor() {
     if (!draft.name.trim()) return;
@@ -83,7 +96,11 @@ export default function BoardVendors() {
                 <Receipt className="size-3.5" />
                 Record a payment
               </Button>
-              <Button variant="primary" size="md" onClick={() => setAdding(true)}>
+              <Button
+                variant={decisions > 0 ? "secondary" : "primary"}
+                size="md"
+                onClick={() => setAdding(true)}
+              >
                 <Plus className="size-3.5" />
                 Add vendor
               </Button>
@@ -128,20 +145,16 @@ export default function BoardVendors() {
             {moduleOn("vendor-tax-forms") ? (
               <>
                 <label className="flex items-center gap-2 text-[15px] text-fg">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={draft.achEnabled}
                     onChange={(e) => setDraft({ ...draft, achEnabled: e.target.checked })}
-                    className="size-4 accent-current text-brand"
                   />
                   Pays by ACH
                 </label>
                 <label className="flex items-center gap-2 text-[15px] text-fg">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={draft.w9OnFile}
                     onChange={(e) => setDraft({ ...draft, w9OnFile: e.target.checked })}
-                    className="size-4 accent-current text-brand"
                   />
                   W-9 already on file
                 </label>
@@ -207,103 +220,161 @@ export default function BoardVendors() {
         </Callout>
       ) : null}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-5">
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader title="Vendor list" subtitle="Everyone the association pays" />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left">
-              <thead>
-                <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
-                  <th className="px-5 py-2.5 font-semibold">Vendor</th>
-                  <th className="px-3 py-2.5 font-semibold">Pays by</th>
-                  <th className="px-3 py-2.5 font-semibold">On file</th>
-                  <th className="px-5 py-2.5 text-right font-semibold">Paid this year</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vendors.map((v) => {
-                  const coiDays = v.coiExpires ? daysFromToday(v.coiExpires) : null;
-                  const coiSoon = coiDays !== null && coiDays < 60;
-                  return (
-                    <tr
-                      key={v.id}
-                      id={`vendor-${v.id}`}
-                      className="scroll-mt-24 border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2"
-                    >
-                      <td className="px-5 py-3">
-                        <p className="font-medium text-fg">{v.name}</p>
-                        <p className="text-[13px] text-fg-muted">{v.service}</p>
-                      </td>
-                      <td className="px-3 py-3">
-                        {v.achEnabled ? (
-                          <Badge tone="ok">ACH</Badge>
-                        ) : (
-                          <Badge tone="warn">Check</Badge>
-                        )}
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {moduleOn("vendor-tax-forms") ? (
-                            v.w9OnFile ? (
-                              <Badge tone="neutral">W-9</Badge>
-                            ) : (
-                              <Badge tone="danger">
-                                <AlertTriangle className="size-2.5" />
-                                No W-9
-                              </Badge>
-                            )
-                          ) : null}
-                          {v.coiExpires ? (
-                            <Badge tone={coiSoon ? "warn" : "neutral"}>
-                              Insurance {coiSoon ? relativeDays(v.coiExpires) : formatDate(v.coiExpires)}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="flex items-center justify-end gap-2">
-                          <span className="tnum font-semibold text-fg">
-                            {money(v.ytdPaidCents, { cents: false })}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`Remove ${v.name}`}
-                            onClick={() => {
-                              const undo = removeVendor(v.id);
-                              notify(`Removed ${v.name}`, "warn", {
-                                label: "Undo",
-                                onClick: undo,
-                              });
-                            }}
-                            className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </span>
-                      </td>
+          {vendors.length === 0 ? (
+            <EmptyState
+              icon={<Truck className="size-5" />}
+              tint="amber"
+              title="No vendors yet"
+              description="Add the people the association pays: landscaping, the pool, insurance."
+              action={
+                adding ? undefined : (
+                  <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
+                    <Plus className="size-3.5" />
+                    Add vendor
+                  </Button>
+                )
+              }
+            />
+          ) : (
+            <>
+              {/* On a phone, a list: name and what was paid on one line,
+                  the service and the paperwork under it. */}
+              <ul className="divide-y divide-border sm:hidden">
+                {vendors.map((v) => (
+                  <li
+                    key={v.id}
+                    id={`vendor-${v.id}`}
+                    className="flex scroll-mt-32 items-start gap-2 px-5 py-3 lg:scroll-mt-24"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="min-w-0 truncate text-[15px] font-medium text-fg">{v.name}</p>
+                        <p className="tnum shrink-0 text-[15px] font-semibold text-fg">
+                          {money(v.ytdPaidCents, { cents: false })}
+                        </p>
+                      </div>
+                      <p className="truncate text-[13px] text-fg-muted">{v.service}</p>
+                      <VendorBadges vendor={v} className="mt-1.5" />
+                    </div>
+                    <RemoveVendor
+                      name={v.name}
+                      onRemove={() => {
+                        const undo = removeVendor(v.id);
+                        notify(`Removed ${v.name}`, "warn", { label: "Undo", onClick: undo });
+                      }}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full min-w-[560px] text-left">
+                  <thead>
+                    <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
+                      <th className="px-5 py-2.5 font-semibold">Vendor</th>
+                      <th className="px-3 py-2.5 font-semibold">On file</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">Paid this year</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {vendors.map((v) => (
+                      <tr
+                        key={v.id}
+                        id={`vendor-${v.id}`}
+                        className="scroll-mt-32 border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2 lg:scroll-mt-24"
+                      >
+                        <td className="px-5 py-3">
+                          <p className="font-medium text-fg">{v.name}</p>
+                          <p className="text-[13px] text-fg-muted">{v.service}</p>
+                        </td>
+                        <td className="px-3 py-3">
+                          <VendorBadges vendor={v} />
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="flex items-center justify-end gap-2">
+                            <span className="tnum font-semibold text-fg">
+                              {money(v.ytdPaidCents, { cents: false })}
+                            </span>
+                            <RemoveVendor
+                              name={v.name}
+                              onRemove={() => {
+                                const undo = removeVendor(v.id);
+                                notify(`Removed ${v.name}`, "warn", { label: "Undo", onClick: undo });
+                              }}
+                            />
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </Card>
 
+        {/* A record, not a queue. A payment still short of a signature is a
+            row in To approve above; here it only wears its status. */}
         <Card className="lg:col-span-2">
-          <CardHeader
-            title="Payments"
-            subtitle={
-              needsApproval
-                ? `${needsApproval} waiting for approval`
-                : "Every payment the association has made"
-            }
-          />
-          {payouts.map((p) => (
-            <PayoutRow key={p.id} payout={p} />
-          ))}
+          <CardHeader title="Payments" subtitle="Every payment the association has made" />
+          {payouts.length === 0 ? (
+            <p className="px-5 py-6 text-[15px] text-fg-muted">
+              No payments yet. Paying an approved bill puts it here.
+            </p>
+          ) : (
+            payouts.map((p) => <PayoutRow key={p.id} payout={p} />)
+          )}
         </Card>
       </div>
     </>
+  );
+}
+
+/** How a vendor is paid and what paperwork is on file, as badges. */
+function VendorBadges({
+  vendor: v,
+  className,
+}: {
+  vendor: ReturnType<typeof useAppState>["vendors"][number];
+  className?: string;
+}) {
+  const coiDays = v.coiExpires ? daysFromToday(v.coiExpires) : null;
+  const coiSoon = coiDays !== null && coiDays < 60;
+  return (
+    <div className={`flex flex-wrap gap-1 ${className ?? ""}`}>
+      {/* By exception: ACH is the normal case and said so on every row. */}
+      {v.achEnabled ? null : <Badge tone="warn">Pays by check</Badge>}
+      {moduleOn("vendor-tax-forms") ? (
+        v.w9OnFile ? (
+          <Badge tone="neutral">W-9</Badge>
+        ) : (
+          <Badge tone="danger" dot={false}>
+            <AlertTriangle className="size-2.5" />
+            No W-9
+          </Badge>
+        )
+      ) : null}
+      {v.coiExpires ? (
+        <Badge tone={coiSoon ? "warn" : "neutral"}>
+          Insurance {coiSoon ? relativeDays(v.coiExpires) : formatDate(v.coiExpires)}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function RemoveVendor({ name, onRemove }: { name: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`Remove ${name}`}
+      onClick={onRemove}
+      className="flex size-8 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+    >
+      <Trash2 className="size-3.5" />
+    </button>
   );
 }
 
@@ -312,7 +383,7 @@ export default function BoardVendors() {
 /* -------------------------------------------------------------------------- */
 
 function PayoutRow({ payout: p }: { payout: Payout }) {
-  const { invoices, isRemote, approvePayout, setPayoutNotes } = useAppState();
+  const { invoices, isRemote, setPayoutNotes } = useAppState();
   const { notify } = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(p.notes ?? "");
@@ -328,7 +399,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
   return (
     <div
       id={`payout-${p.id}`}
-      className="scroll-mt-24 border-b border-border px-5 py-3.5 target:bg-brand-soft/40 last:border-b-0"
+      className="scroll-mt-32 lg:scroll-mt-24 border-b border-border px-5 py-3.5 target:bg-brand-soft/40 last:border-b-0"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -339,30 +410,19 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
           <p className="tnum text-[15px] font-semibold text-fg">
             {money(p.amountCents, { cents: false })}
           </p>
-          <Badge tone={payoutTone[p.status]} className="mt-0.5">
-            {p.status.replace("-", " ")}
+          <Badge tone={PAYOUT_STATUS[p.status].tone} className="mt-0.5">
+            {PAYOUT_STATUS[p.status].label}
           </Badge>
         </div>
       </div>
 
-      {!approved ? (
-        <Button
-          variant="primary"
-          size="sm"
-          className="mt-2"
-          onClick={() => {
-            approvePayout(p.id);
-            notify(`Approved ${p.vendor}`);
-          }}
-        >
-          Approve
-        </Button>
-      ) : null}
-
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
         <span className="font-medium uppercase">{p.method}</span>
         <span>
-          {p.status === "paid" ? "landed" : "lands"} {relativeDays(p.expectedDate)}
+          {p.status === "paid" ? "landed" : "lands"}{" "}
+          {daysFromToday(p.expectedDate) >= -60
+            ? relativeDays(p.expectedDate)
+            : formatDate(p.expectedDate)}
         </span>
         <span className="inline-flex items-center gap-1">
           {approved ? (
@@ -370,9 +430,13 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
           ) : (
             <AlertTriangle className="size-3 text-warn" />
           )}
-          {approved
-            ? `Approved by ${p.approvals.map((a) => a.name.split(" ")[0]).join(" and ")}`
-            : "Waiting for approval"}
+          {approved ? (
+            `Approved by ${p.approvals.map((a) => a.name.split(" ")[0]).join(" and ")}`
+          ) : (
+            <a href={`#sign-${p.id}`} className="font-medium text-accent hover:underline">
+              Waiting for approval, above
+            </a>
+          )}
         </span>
       </div>
 
@@ -412,7 +476,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
             >
               Cancel
             </Button>
-            <Button variant="primary" size="sm" onClick={save}>
+            <Button variant="secondary" size="sm" onClick={save}>
               Save
             </Button>
           </div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRightLeft, LogOut, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, LogOut, RotateCcw, Trash2 } from "lucide-react";
 import { Badge, Button, Callout, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -31,7 +31,7 @@ const inputClass =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
 
 export function DangerZone() {
-  const { community, account, isRemote } = useAppState();
+  const { community, account, isRemote, resetDemo } = useAppState();
   const { notify } = useToast();
   const router = useRouter();
   const [flow, setFlow] = useState<Flow>(null);
@@ -44,15 +44,28 @@ export function DangerZone() {
   const others = community.accounts.filter((a) => a.id !== account?.id);
   const canceled = community.association.subscriptionStatus === "canceled";
 
+  // A demo has nothing to cancel or delete. What it can do is start over,
+  // which used to be a button in the page header, beside the title, where a
+  // stray click threw away an afternoon of trying things.
   if (!isRemote) {
     return (
       <Card className="mt-5">
-        <CardHeader title="Leaving" icon={<AlertTriangle className="size-4" />} />
-        <div className="px-5 py-4">
-          <p className="text-[15px] leading-relaxed text-fg-muted">
-            This is a demo, so there is nothing to cancel and nothing to delete. Sign in to a
-            real association to manage its subscription.
+        <CardHeader title="Start over" icon={<AlertTriangle className="size-4" />} />
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
+          <p className="min-w-[12rem] flex-1 text-[15px] leading-relaxed text-fg-muted">
+            Put the demo back the way it started. Everything you changed in this browser goes.
           </p>
+          <Button
+            variant="danger"
+            size="md"
+            onClick={() => {
+              resetDemo();
+              notify("The demo is back to the start", "ok");
+            }}
+          >
+            <RotateCcw className="size-3.5" />
+            Reset demo data
+          </Button>
         </div>
       </Card>
     );

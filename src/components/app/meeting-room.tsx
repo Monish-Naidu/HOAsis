@@ -10,7 +10,16 @@ import { cn } from "@/lib/utils";
  * The meeting surface. Joining is local state in this prototype: no call
  * provider is wired up, so the tiles show initials rather than camera feeds.
  */
-export function MeetingRoom({ meeting, compact }: { meeting: Meeting; compact?: boolean }) {
+export function MeetingRoom({
+  meeting,
+  compact,
+  joinVariant = "primary",
+}: {
+  meeting: Meeting;
+  compact?: boolean;
+  /** Secondary where the page already has its one filled button. */
+  joinVariant?: "primary" | "secondary";
+}) {
   const [joined, setJoined] = useState(false);
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
@@ -19,7 +28,7 @@ export function MeetingRoom({ meeting, compact }: { meeting: Meeting; compact?: 
     return (
       <div className="p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="primary" size={compact ? "md" : "lg"} onClick={() => setJoined(true)}>
+          <Button variant={joinVariant} size={compact ? "md" : "lg"} onClick={() => setJoined(true)}>
             <Video className="size-4" />
             Join the call
           </Button>

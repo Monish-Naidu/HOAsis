@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ListChecks, Plus, X } from "lucide-react";
-import { Button, Card, CardHeader, EmptyState } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, EmptyState, Select } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { ActionItem } from "@/lib/types";
@@ -219,14 +219,14 @@ function AddForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className={LABEL}>Who</span>
-          <select value={owner} onChange={(e) => setOwner(e.target.value)} className={FIELD}>
+          <Select value={owner} onChange={(e) => setOwner(e.target.value)} className="w-full [&>select]:h-10">
             {board.map((a) => (
               <option key={a.id} value={a.name}>
                 {a.name}
               </option>
             ))}
             <option value="__other">Somebody else</option>
-          </select>
+          </Select>
           {owner === "__other" ? (
             <input
               value={custom}

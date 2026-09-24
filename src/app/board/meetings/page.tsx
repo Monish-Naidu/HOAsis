@@ -7,7 +7,7 @@ import { MeetingRoom } from "@/components/app/meeting-room";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
-import { formatDate } from "@/lib/utils";
+import { formatDate, pluralize } from "@/lib/utils";
 import type { Meeting } from "@/lib/types";
 import { placeLabel } from "@/lib/wording";
 
@@ -53,10 +53,10 @@ export default function BoardMeetings() {
   const { community } = useAppState();
   const [scheduling, setScheduling] = useState(false);
   const live = community.meetings.find((m) => m.status === "live");
+  // The live meeting has its own card above, so it is not also a row here.
   const upcoming = [...community.meetings]
-    .filter((m) => m.status !== "ended")
+    .filter((m) => m.status === "scheduled")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
-  const nextMeeting = upcoming.find((m) => m.status !== "live");
   // Newest first. What was on the agenda, and who came, is the record the
   // next board inherits; it used to vanish the day the meeting ended.
   const past = [...community.meetings]
@@ -80,22 +80,8 @@ export default function BoardMeetings() {
 
       {scheduling ? <ScheduleMeeting onClose={() => setScheduling(false)} /> : null}
 
-      {/* One line. A board meets a handful of times a year, and a tile for
-          the date of the next one sat alone in a wide row looking unfinished. */}
-      <p className="flex items-center gap-2 text-[15px] text-fg-muted">
-        {nextMeeting ? (
-          <span>
-            Next meeting:{" "}
-            <span className="font-medium text-fg">{nextMeeting.title}</span>,{" "}
-            {formatDate(nextMeeting.date, "long")} at {nextMeeting.time}
-          </span>
-        ) : (
-          <span>No meeting scheduled.</span>
-        )}
-      </p>
-
       {live ? (
-        <Card className="mt-6 overflow-hidden border-ok/30">
+        <Card className="overflow-hidden border-ok/30">
           <div className="flex flex-wrap items-center gap-3 border-b border-border bg-ok-soft px-5 py-3">
             <Badge tone="ok" dot>
               Live
@@ -110,7 +96,8 @@ export default function BoardMeetings() {
           </div>
           <div className="grid lg:grid-cols-5">
             <div className="lg:col-span-3">
-              <MeetingRoom meeting={live} />
+              {/* Secondary: Schedule a meeting is the page's filled button. */}
+              <MeetingRoom meeting={live} joinVariant="secondary" />
               <div className="border-t border-border px-4 py-3">
                 <p className="text-[13px] font-semibold text-fg-muted">
                   In the room
@@ -145,7 +132,7 @@ export default function BoardMeetings() {
         </Card>
       ) : null}
 
-      <Card className="mt-6">
+      <Card className={live ? "mt-6" : undefined}>
         <CardHeader title="Upcoming" subtitle="On every resident's calendar" />
         {upcoming.length === 0 ? (
           <EmptyState
@@ -158,7 +145,7 @@ export default function BoardMeetings() {
           <div
             key={m.id}
             id={`mtg-${m.id}`}
-            className="flex scroll-mt-24 items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
+            className="flex scroll-mt-32 lg:scroll-mt-24 items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
           >
             <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
               <span className="text-[12px] font-semibold uppercase text-fg-subtle">
@@ -171,11 +158,6 @@ export default function BoardMeetings() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-[15px] font-medium text-fg">{m.title}</p>
-                {m.status === "live" ? (
-                  <Badge tone="ok" dot>
-                    Live
-                  </Badge>
-                ) : null}
               </div>
               <p className="mt-0.5 text-[13px] text-fg-muted">
                 {m.time} · {m.location}
@@ -184,7 +166,9 @@ export default function BoardMeetings() {
                 {m.noticeSentDate
                   ? `Notice sent ${formatDate(m.noticeSentDate, "long")}`
                   : "Notice not sent"}
-                {m.ballotIds.length ? ` · ${m.ballotIds.length} ballot on the agenda` : ""}
+                {m.ballotIds.length
+                  ? ` · ${pluralize(m.ballotIds.length, "ballot")} on the agenda`
+                  : ""}
               </p>
               <Rsvps meeting={m} />
             </div>
@@ -199,7 +183,7 @@ export default function BoardMeetings() {
             <details
               key={m.id}
               id={`mtg-${m.id}`}
-              className="group scroll-mt-24 border-b border-border last:border-b-0"
+              className="group scroll-mt-32 lg:scroll-mt-24 border-b border-border last:border-b-0"
             >
               <summary className="flex cursor-pointer select-none items-start gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
                 <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
@@ -215,7 +199,7 @@ export default function BoardMeetings() {
                   <p className="mt-0.5 text-[13px] text-fg-muted">
                     {m.date.slice(0, 4)} · {m.location}
                     {m.attendees.length ? ` · ${m.attendees.length} attended` : ""}
-                    {m.ballotIds.length ? ` · ${m.ballotIds.length} ballot` : ""}
+                    {m.ballotIds.length ? ` · ${pluralize(m.ballotIds.length, "ballot")}` : ""}
                     {m.recordingAvailable ? " · recording" : ""}
                   </p>
                 </div>
@@ -254,7 +238,12 @@ export default function BoardMeetings() {
         </Card>
       ) : null}
 
-      <ActionItems className="mt-6" />
+      {/* The one home for action items since the 2026-09-24 board pass. An
+          overdue one still surfaces on the dashboard, as a row in Needs you
+          that links here. */}
+      <div id="action-items" className="mt-6 scroll-mt-32 lg:scroll-mt-24">
+        <ActionItems />
+      </div>
     </>
   );
 }

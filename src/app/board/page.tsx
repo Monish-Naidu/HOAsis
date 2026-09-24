@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -9,39 +8,31 @@ import {
   Home,
   Landmark,
   ListChecks,
-  Megaphone,
   Percent,
   Receipt,
   ShieldAlert,
   UserPlus,
-  Vote,
 } from "lucide-react";
-import { Callout, Card, CardHeader, IconTile, TINT_FIELD, type TintName } from "@/components/ui/primitives";
+import { Callout, Card, CardHeader, IconTile, Stat, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
-import {
-  cashPosition,
-  delinquency,
-  duesCollection,
-  insuranceExposure,
-  ledgerYears,
-  monthlyFlows,
-  spendingByCategory,
-} from "@/lib/metrics";
-import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
-import { SectionLink, YearControl } from "@/components/app/finance-ui";
-import { useAppState, usePendingApprovals, useReconciliation } from "@/lib/app-state";
+import { cashPosition, delinquency, duesCollection, insuranceExposure, vendorDecisions } from "@/lib/metrics";
+import { SectionLink } from "@/components/app/finance-ui";
+import { useAppState, useReconciliation } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
-import { ActionItems } from "@/components/app/action-items";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
-import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
- * The board dashboard, laid out to the 2026-09-01 design almost exactly
- * (docs/design/dash-2026-09-01). Where a card in the design had nothing real
- * behind it, the nearest true thing stands in: Community Updates shows the
- * forum, not a synthesized safety feed. Reconciliation work lives on
- * Finances, approvals on Vendors, both one click away through their tiles.
+ * The board dashboard: four numbers, then what is waiting on a decision.
+ *
+ * It started as the 2026-09-01 design almost exactly
+ * (docs/design/dash-2026-09-01), and the 2026-09-24 board pass took three
+ * things off it. The money chart is on Finances, where the year control and
+ * the export are. The quick actions only switched tabs, which the rail
+ * already does in one click. The action items live on Meetings, where they
+ * are made and ticked off; an overdue one still shows here as a row in
+ * Needs you. What is left is what a director should see on arrival.
  */
 
 export default function BoardDashboard() {
@@ -53,15 +44,7 @@ export default function BoardDashboard() {
     community.ballots.length > 0 ||
     community.payouts.length > 0;
   const plan = buildPlan(community, profileFromCommunity(community));
-
-  const years = ledgerYears(community);
-  const thisYear = Number(todayIsoDate().slice(0, 4));
-  const [year, setYear] = useState(years[0] ?? thisYear);
-  const flows = monthlyFlows(community, year);
-  const spending = spendingByCategory(community, year);
-  const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
   const exposure = insuranceExposure(community);
-  const showDonut = moduleOn("money-compare") && spending.rows.length > 0;
 
   return (
     <>
@@ -70,35 +53,33 @@ export default function BoardDashboard() {
           rail row says "Dashboard"; a heading that repeated all three was
           the same redundancy as the white bar that came off on 2026-09-21. */}
 
-      {/* One line while setup is unfinished, pointing at the list, which
-          lives on its own page. A to-do list living permanently on the
-          dashboard is how a board learns to read past it. Gone when done. */}
-      <SetupPlanSummary />
-
       {/* An association with no transactions, no requests and no ballots has
           nothing to run, so a dashboard of zeroes and empty cards tells them
-          nothing and looks broken. Say so instead. */}
+          nothing and looks broken. The setup plan is the page for them. */}
       {!running ? (
-        <Card className="p-6">
-          <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
-            Nothing to run yet
-          </p>
-          <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-fg-muted">
-            Once dues are billed, a payment lands, or an owner asks for something, it shows up
-            here.{plan.allDone ? "" : " The list above is the way to get there."}
-          </p>
-        </Card>
-      ) : null}
-
-      {running ? (
         <>
+          <SetupPlanSummary />
+          <Card className="p-6">
+            <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+              Nothing to run yet
+            </p>
+            <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-fg-muted">
+              Once dues are billed, a payment lands, or an owner asks for something, it shows up
+              here.{plan.allDone ? "" : " The list above is the way to get there."}
+            </p>
+          </Card>
+        </>
+      ) : (
+        <>
+          <StatTiles />
+
           {/* The one finding on Finances that a president should not have
               to click through to see. Money above the insured limit is a
               decision, not a report. */}
           {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
             <Callout
               tone="warn"
-              className="mb-6"
+              className="mt-6"
               icon={<ShieldAlert className="size-4" />}
               title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
               action={<SectionLink href="/board/money">See where</SectionLink>}
@@ -112,63 +93,14 @@ export default function BoardDashboard() {
 
           <NeedsYou />
 
-          {hasFlows || showDonut ? (
-            <section className="mt-6">
-              {/* One year control for both charts, in the chart's own header
-                  so it reads as the chart's control rather than a floating
-                  row of pills. The donut follows the same year. */}
-              <div className="grid gap-4 xl:grid-cols-5">
-                {hasFlows ? (
-                  <Card className={cn(showDonut ? "xl:col-span-3" : "xl:col-span-5")}>
-                    <CardHeader
-                      accent="teal"
-                      title="Money in and out"
-                      action={
-                        <span className="flex flex-wrap items-center gap-3">
-                          {years.length > 1 ? (
-                            <YearControl years={years} value={year} onChange={setYear} thisYear={thisYear} />
-                          ) : (
-                            <span className="text-[13px] font-medium text-fg-muted">This year</span>
-                          )}
-                          {years.length > 1 && moduleOn("money-compare") ? (
-                            <SectionLink href="/board/money/trends">Compare years</SectionLink>
-                          ) : null}
-                        </span>
-                      }
-                    />
-                    <MoneyFlowChart months={flows} />
-                  </Card>
-                ) : null}
-                {showDonut ? (
-                  <Card className={cn(hasFlows ? "xl:col-span-2" : "xl:col-span-5")}>
-                    <CardHeader accent="teal" title="Spending by category" />
-                    <SpendingDonut
-                      rows={spending.rows}
-                      totalCents={spending.totalCents}
-                      reportHref="/board/money"
-                    />
-                  </Card>
-                ) : null}
-              </div>
-            </section>
-          ) : null}
-
-          <StatTiles />
-
-          {/* Everything resident-facing (activity, community, announcements,
-              events) left this page per the huddle: the board view is
-              admin-level only, and board members flip to the resident view
-              for the rest. Quick Actions is what remains. */}
-          <QuickActions />
-
-          {/* The last meeting's homework. Lives here rather than only on
-              Meetings because it is the thing a director should see on
-              arrival, not the thing they go looking for. */}
-          <div id="action-items">
-            <ActionItems className="mt-6" />
+          {/* One line while setup is unfinished, pointing at the list, which
+              lives on its own page. Below the work, because once dues are
+              moving the work is what a director opens this for. */}
+          <div className="mt-6">
+            <SetupPlanSummary />
           </div>
         </>
-      ) : null}
+      )}
     </>
   );
 }
@@ -178,15 +110,16 @@ export default function BoardDashboard() {
 /**
  * What is waiting on a decision, and nothing else.
  *
- * The tiles below report; this card asks. Every row is a count of things a
+ * The tiles above report; this card asks. Every row is a count of things a
  * board member has to act on today, drawn from the same selectors the tabs
- * use, so the number here is the number there. A zero row is not shown, and
- * an empty card says so calmly rather than listing six zeroes.
+ * and the rail badges use, so the number here is the number there. A zero
+ * row is not shown, and an empty card says so calmly rather than listing
+ * six zeroes.
  */
 function NeedsYou() {
   const { community, requests } = useAppState();
   const recon = useReconciliation();
-  const approvals = usePendingApprovals();
+  const vendors = vendorDecisions(community);
   const openRequests = requests.filter(
     (r) => !["approved", "denied", "closed"].includes(r.status),
   );
@@ -205,7 +138,7 @@ function NeedsYou() {
     {
       count: recon.needsReview.length,
       label: pluralize(recon.needsReview.length, "transaction") + " to confirm",
-      href: "/board/money/transactions",
+      href: "/board/money/transactions?status=needs-review",
       icon: Landmark,
       tint: "teal",
     },
@@ -217,15 +150,15 @@ function NeedsYou() {
       tint: "blue",
     },
     {
-      count: approvals.length,
-      label: pluralize(approvals.length, "invoice") + " awaiting approval",
+      count: vendors.count,
+      label: pluralize(vendors.count, "vendor bill") + " waiting on you",
       href: "/board/vendors",
       icon: Receipt,
       tint: "amber",
     },
     {
       count: joins.length,
-      label: pluralize(joins.length, "person") + " asking to join",
+      label: pluralize(joins.length, "person", "people") + " asking to join",
       href: "/board/homeowners",
       icon: UserPlus,
       tint: "violet",
@@ -240,7 +173,7 @@ function NeedsYou() {
     {
       count: overdueItems.length,
       label: pluralize(overdueItems.length, "action item") + " overdue",
-      href: "#action-items",
+      href: "/board/meetings#action-items",
       icon: ListChecks,
       tint: "coral",
     },
@@ -248,13 +181,13 @@ function NeedsYou() {
   const rows = all.filter((row) => row.count > 0);
 
   return (
-    <Card>
+    <Card className="mt-6">
       <CardHeader
         accent="blue"
         title="Needs you today"
         action={
           rows.length ? (
-            <span className="tnum inline-flex h-6 items-center rounded-full bg-brand-gradient px-2.5 text-[12px] font-bold text-primary-fg">
+            <span className="tnum inline-flex h-6 items-center rounded-full bg-primary-soft px-2.5 text-[12px] font-bold text-primary">
               {rows.reduce((n, row) => n + row.count, 0)}
             </span>
           ) : null
@@ -271,7 +204,7 @@ function NeedsYou() {
             <li key={row.href}>
               <Link
                 href={row.href}
-                className="group flex items-center gap-3 px-5 py-3 text-[15px] text-fg transition-colors hover:bg-surface-2"
+                className="group flex min-h-12 items-center gap-3 px-5 py-3 text-[15px] text-fg transition-colors hover:bg-surface-2"
               >
                 <IconTile icon={row.icon} tint={row.tint} size="sm" />
                 <span className="min-w-0 flex-1 truncate">
@@ -290,64 +223,11 @@ function NeedsYou() {
 
 /* ------------------------------------------------------------------- tiles */
 
-const STAT_BAR: Record<TintName, string> = {
-  blue: "bg-tint-blue",
-  teal: "bg-tint-teal",
-  amber: "bg-tint-amber",
-  coral: "bg-tint-coral",
-  violet: "bg-tint-violet",
-  neutral: "bg-border-2",
-};
-
-function StatTile({
-  icon,
-  tint,
-  label,
-  value,
-  valueTone,
-  sub,
-  href,
-  action,
-}: {
-  icon: typeof Landmark;
-  /** The tile's own colour: a hairline along the top and the field behind the icon. */
-  tint: TintName;
-  label: string;
-  value: React.ReactNode;
-  valueTone?: "ok" | "warn";
-  sub?: string;
-  href: string;
-  action: string;
-}) {
-  return (
-    <Card className="relative flex items-start gap-3 overflow-hidden p-4">
-      <span className={cn("absolute inset-x-0 top-0 h-[3px]", STAT_BAR[tint])} aria-hidden />
-      {/* The icon aids recognition: each tile keeps its tint, and only the
-          number changes colour when it is a problem. */}
-      <IconTile icon={icon} tint={valueTone === "warn" ? "amber" : tint} size="md" />
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-fg-muted">{label}</p>
-        <p
-          className={cn(
-            "tnum mt-1 truncate text-[22px] font-semibold leading-none tracking-[-0.02em]",
-            valueTone === "ok" ? "text-ok" : valueTone === "warn" ? "text-warn" : "text-fg",
-          )}
-        >
-          {value}
-        </p>
-        {sub ? <p className="mt-1 truncate text-[13px] text-fg-muted">{sub}</p> : null}
-        <Link
-          href={href}
-          className="group mt-1.5 inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
-        >
-          {action}
-          <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      </div>
-    </Card>
-  );
-}
-
+/**
+ * Four numbers that are not already a row in Needs you: what is in the bank,
+ * who is behind, how the year is collecting, and when the board next sits.
+ * Each tile is the way into the page that has the rest.
+ */
 function StatTiles() {
   const { community } = useAppState();
   const cash = cashPosition(community);
@@ -361,47 +241,45 @@ function StatTiles() {
       .filter((m) => m.status === "scheduled" && daysFromToday(m.date) >= 0)
       .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
 
-  // Four numbers that are not already a row in Needs you: what is in the
-  // bank, who is behind, how the year is collecting, and when the board
-  // next sits. Requests and invoices are decisions, so they live above.
   return (
-    <div className="stagger mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatTile
-        icon={Landmark}
-        tint="teal"
+    <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Stat
+        icon={<Landmark className="size-4" />}
+        accent="teal"
         label="Cash on hand"
         value={<CountUp cents={cash.operating} />}
-        sub="Operating account"
+        hint="Operating account"
         href="/board/money"
-        action="Open finances"
       />
-      <StatTile
-        icon={Home}
-        tint="coral"
+      <Stat
+        icon={<Home className="size-4" />}
+        accent="coral"
         label="Past due"
         value={<CountUp kind="number" value={delinq.past.length} />}
-        valueTone={delinq.past.length > 0 ? "warn" : undefined}
-        sub={delinq.past.length > 0 ? `${money(delinq.totalCents, { cents: false })} owed` : "Everyone is current"}
+        tone={delinq.past.length > 0 ? "warn" : "neutral"}
+        hint={
+          delinq.past.length > 0
+            ? `${delinq.past.length === 1 ? "Household" : "Households"}, ${money(delinq.totalCents, { cents: false })} owed`
+            : "Everyone is current"
+        }
         href="/board/money/collections"
-        action="See who"
       />
-      <StatTile
-        icon={Percent}
-        tint="blue"
+      <Stat
+        icon={<Percent className="size-4" />}
+        accent="blue"
         label={`Dues collected, ${thisYear}`}
         value={dues.measurable ? <CountUp kind="percent" value={Math.round(dues.rate * 100)} /> : "Not yet"}
-        valueTone={dues.measurable && dues.rate < 0.9 ? "warn" : undefined}
-        sub={
+        tone={dues.measurable && dues.rate < 0.9 ? "warn" : "neutral"}
+        hint={
           dues.measurable
             ? `${money(dues.collectedYtd, { cents: false })} of ${money(dues.expectedYtd, { cents: false })}`
             : "Nothing billed yet"
         }
         href="/board/money/collections"
-        action="Collections"
       />
-      <StatTile
-        icon={CalendarDays}
-        tint="violet"
+      <Stat
+        icon={<CalendarDays className="size-4" />}
+        accent="amber"
         label="Next meeting"
         value={
           liveMeeting
@@ -412,56 +290,10 @@ function StatTiles() {
                 : formatDate(nextMeeting.date)
               : "None set"
         }
-        valueTone={liveMeeting ? "ok" : undefined}
-        sub={nextMeeting ? `${nextMeeting.title} · ${nextMeeting.time}` : "Schedule one from Meetings"}
+        tone={liveMeeting ? "ok" : "neutral"}
+        hint={nextMeeting ? `${nextMeeting.title} · ${nextMeeting.time}` : "Schedule one from Meetings"}
         href="/board/meetings"
-        action={liveMeeting ? "Join meeting" : nextMeeting ? "Open meetings" : "Schedule one"}
       />
     </div>
-  );
-}
-
-/* ------------------------------------------------------------ quick actions */
-
-const ACTIONS: { href: string; label: string; icon: typeof Vote; tint: TintName }[] = [
-  { href: "/board/voting", label: "New ballot", icon: Vote, tint: "violet" },
-  { href: "/board/meetings", label: "Schedule a meeting", icon: CalendarDays, tint: "amber" },
-  { href: "/board/requests", label: "Review requests", icon: ClipboardCheck, tint: "blue" },
-  { href: "/board/communications", label: "Send an announcement", icon: Megaphone, tint: "coral" },
-];
-
-/**
- * The four things a board does most, one row, each on a field of its tab's
- * tint. The tiles split the card's width and grow with the screen, the
- * same as the resident dashboard's.
- */
-function QuickActions() {
-  return (
-    <Card className="mt-6">
-      <CardHeader accent="violet" title="Quick actions" />
-      <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-4 lg:gap-4 lg:p-4">
-        {ACTIONS.map(({ href, label, icon, tint }) => (
-          <Link
-            key={label}
-            href={href}
-            className={cn(
-              "press group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-4 text-center transition-colors xl:min-h-24 xl:flex-row xl:gap-3 xl:px-4",
-              TINT_FIELD[tint],
-            )}
-          >
-            <IconTile
-              icon={icon}
-              tint={tint}
-              variant="solid"
-              size="md"
-              className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
-            />
-            <span className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-fg xl:text-[16px]">
-              {label}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </Card>
   );
 }
