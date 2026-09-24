@@ -1,45 +1,73 @@
 "use client";
 
-import { Radio, Users } from "lucide-react";
+import { CalendarOff, Radio, Users } from "lucide-react";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { useToast } from "@/components/app/toast";
-import { Button, Card, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { EntryRow } from "@/components/app/calendar-view";
+import { kindLabel, kindTone, upcomingFrom } from "@/lib/calendar";
+import { calendarEntries } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, relativeDays } from "@/lib/utils";
 
 /**
- * The meetings ahead, and whether this home is coming.
+ * Everything coming up, once, with the RSVP on the meeting's own row.
  *
- * Lived on the Vote page until the launch scope, where it made a page that
- * should ask one question ask three. Meetings have their own tab.
+ * The calendar page used to list the same two meetings twice: under "Next
+ * up" as calendar entries, then again under "Are you coming?" with the
+ * buttons. One list now, soonest first; ballots and deadlines sit in it as
+ * plain rows that open where they are acted on.
  */
 export function MeetingRsvps() {
   const { community, account, rsvpMeeting } = useAppState();
   const { notify } = useToast();
-  const meetings = [...community.meetings]
-    .filter((m) => m.status === "scheduled" && m.date >= community.asOf)
-    .sort((a, b) => (a.date < b.date ? -1 : 1));
-
-  if (meetings.length === 0) return null;
+  const upcoming = upcomingFrom(calendarEntries(community), community.asOf, 8);
 
   return (
     <section>
-      <SectionTitle>Are you coming?</SectionTitle>
+      <SectionTitle>Coming up</SectionTitle>
       <Card>
-        {meetings.map((m, i) => {
+        {upcoming.length === 0 ? (
+          <EmptyState
+            icon={<CalendarOff className="size-5" />}
+            title="Nothing scheduled"
+            description="Meetings and votes appear here once the board sets them."
+          />
+        ) : null}
+        {upcoming.map((entry, i) => {
+          const m =
+            entry.kind === "meeting"
+              ? community.meetings.find((x) => `cal-${x.id}` === entry.id && x.status === "scheduled")
+              : undefined;
+          if (!m) return <EntryRow key={entry.id} entry={entry} divided={i > 0} showDate />;
           // The person's own answer, and how many neighbours said yes. The
           // board sees the names; here a count is all a resident needs.
           const mine = (m.rsvps ?? []).find((r) => r.profileId === account?.id)?.response;
           const coming = (m.rsvps ?? []).filter((r) => r.response === "yes").length;
           return (
-            <div key={m.id} className={cn("px-4 py-3", i > 0 && "border-t border-border")}>
-              <p className="text-[15px] font-medium text-fg">{m.title}</p>
+            <div
+              key={m.id}
+              id={`meeting-${m.id}`}
+              className={cn("scroll-mt-24 px-4 py-3", i > 0 && "border-t border-border")}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[15px] font-medium text-fg">{m.title}</p>
+                <Badge tone={kindTone.meeting}>{kindLabel.meeting}</Badge>
+              </div>
               <p className="mt-0.5 text-[13px] text-fg-muted">
-                {formatDate(m.date, "long")} at {m.time} · {m.location}
+                {formatDate(m.date, "long")} · {relativeDays(m.date)} · {m.time} · {m.location}
               </p>
               {m.dialIn ? (
                 <p className="mt-1 text-[13px] text-fg-subtle">
-                  Dial in {m.dialIn}
+                  Video call:{" "}
+                  <a
+                    href={m.dialIn}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    join link
+                  </a>
                   {m.passcode ? ` · passcode ${m.passcode}` : ""}
                 </p>
               ) : null}

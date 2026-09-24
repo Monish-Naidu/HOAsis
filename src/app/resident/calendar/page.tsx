@@ -12,8 +12,10 @@ export default function ResidentCalendar() {
     <div className="animate-rise space-y-6">
       <ResidentTitle title="Meetings" />
       <LiveMeetingCard />
-      <CalendarView entries={calendarEntries(community)} asOf={community.asOf} />
+      {/* What is coming first, with the RSVPs; the month underneath for
+          anybody looking for a date. */}
       <MeetingRsvps />
+      <CalendarView entries={calendarEntries(community)} asOf={community.asOf} showUpcoming={false} />
     </div>
   );
 }

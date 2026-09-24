@@ -5,6 +5,7 @@ import {
   FileText,
   Home,
   Landmark,
+  Mail,
   MessageSquarePlus,
   MessageSquareText,
   Receipt,
@@ -82,6 +83,9 @@ export const residentTabs: ResidentTab[] = [
     visible: (s) => s.showFundsToResidents,
     module: "resident-funds",
   },
+  // Sidebar only; on a phone it is one tap from Requests. Asking the board a
+  // question used to mean email, with no trace here.
+  { href: "/resident/messages", label: "Messages", icon: Mail, tint: "coral", webOnly: true },
   // Account closes the list, per the huddle's nav order. Violet, the
   // records tint: neutral grey made its title tile look switched off.
   { href: "/resident/account", label: "Account", icon: Receipt, tint: "violet" },

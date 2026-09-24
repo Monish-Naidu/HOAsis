@@ -759,7 +759,8 @@ export function calendarEntries(c: Community) {
       title: m.title,
       detail: `${m.time} · ${m.location}`,
       kind: "meeting",
-      href: "/resident/vote",
+      // The meeting's own row on the calendar page, where the RSVP is.
+      href: `/resident/calendar#meeting-${m.id}`,
     });
   }
   for (const b of c.ballots) {

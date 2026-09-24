@@ -25,6 +25,9 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
   const mine = marked[0];
   // Picks not yet cast, for a multi seat race. Starts from what was cast.
   const [draft, setDraft] = useState<string[]>(marked);
+  // A first vote is one tap. Changing it asks once: on a CC&R amendment a
+  // stray tap should not quietly move a home's vote.
+  const [switchTo, setSwitchTo] = useState<string | null>(null);
   const closed = ballot.status !== "open" || daysFromToday(ballot.closesDate) < 0;
   const votes = ballot.options.reduce((t, o) => t + o.votes, 0);
   const cast = ballot.homesVoted ?? Math.round(votes / seats);
@@ -97,7 +100,9 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                     setDraft(picked ? draft.filter((id) => id !== o.id) : [...draft, o.id]);
                     return;
                   }
-                  if (!picked) castVote(ballot.id, o.id);
+                  if (picked) return;
+                  if (mine) setSwitchTo(o.id);
+                  else castVote(ballot.id, o.id);
                 }}
                 className={cn(
                   "press flex min-h-12 w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors disabled:opacity-50",
@@ -137,10 +142,35 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                 {mine ? "Update my vote" : "Cast my vote"}
               </Button>
             </div>
+          ) : switchTo ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2.5">
+              <p className="text-[13px] text-fg">
+                Change your vote to{" "}
+                <span className="font-semibold">
+                  {ballot.options.find((o) => o.id === switchTo)?.label}
+                </span>
+                ?
+              </p>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSwitchTo(null)}>
+                  Keep my vote
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    castVote(ballot.id, switchTo);
+                    setSwitchTo(null);
+                  }}
+                >
+                  Change it
+                </Button>
+              </div>
+            </div>
           ) : (
             <p className="pt-1 text-[13px] text-fg-subtle">
               {mine
-                ? "Tap another choice to change your vote before it ends."
+                ? "You can change your vote until it ends."
                 : "Tap a choice to vote. One vote per home."}
             </p>
           )}

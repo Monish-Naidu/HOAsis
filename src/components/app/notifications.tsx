@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   Inbox,
+  Mail,
   Megaphone,
   MessagesSquare,
   Radio,
@@ -163,12 +164,29 @@ function useResidentNotices(): Notice[] {
     .map((r) => ({ r, last: [...r.thread].sort((a, b) => (a.at < b.at ? 1 : -1))[0] }))
     .filter((x) => x.last && x.last.actorRole !== "resident" && daysFromToday(x.last.at) >= -14)
     .sort((a, b) => (a.last.at < b.last.at ? 1 : -1))[0];
+  const answered = owner
+    ? community.threads
+        .filter((t) => t.ownerId === owner.id)
+        .map((t) => ({ t, last: t.messages[t.messages.length - 1] }))
+        .filter((x) => x.last && x.last.fromRole !== "resident" && daysFromToday(x.last.at) >= -14)
+        .sort((a, b) => (a.t.updatedDate < b.t.updatedDate ? 1 : -1))[0]
+    : undefined;
+  if (answered) {
+    notices.push({
+      id: "message",
+      title: `The board replied: ${answered.t.subject}`,
+      detail: answered.last.body,
+      href: "/resident/messages",
+      icon: Mail,
+      tone: "bg-info-soft text-info",
+    });
+  }
   if (updated) {
     notices.push({
       id: "request",
-      title: `Request ${updated.r.reference} was updated`,
+      title: `The board answered: ${updated.r.title}`,
       detail: updated.last.body,
-      href: "/resident/requests",
+      href: `/resident/requests/${encodeURIComponent(updated.r.reference)}`,
       icon: ClipboardCheck,
       tone: "bg-info-soft text-info",
     });

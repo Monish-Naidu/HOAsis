@@ -2723,6 +2723,10 @@ export type Database = {
         }[]
       }
       my_unit_ids: { Args: never; Returns: string[] }
+      owner_message: {
+        Args: { p_body: string; p_unit_id: string }
+        Returns: Json
+      }
       post_shared_cost_bill: {
         Args: {
           p_due_on?: string
@@ -2750,6 +2754,10 @@ export type Database = {
         Returns: string
       }
       remove_household: { Args: { p_unit_id: string }; Returns: undefined }
+      reply_as_owner: {
+        Args: { p_body: string; p_thread_id: string }
+        Returns: undefined
+      }
       request_association_deletion: {
         Args: { p_association_id: string; p_typed_name: string }
         Returns: string
@@ -2775,6 +2783,15 @@ export type Database = {
       set_my_autopay: {
         Args: { p_association_id: string; p_autopay: Json }
         Returns: undefined
+      }
+      start_owner_thread: {
+        Args: {
+          p_body: string
+          p_subject: string
+          p_tag?: string
+          p_unit_id: string
+        }
+        Returns: string
       }
       tables_without_rls: {
         Args: never

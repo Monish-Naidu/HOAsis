@@ -157,7 +157,7 @@ function CommunicationsScreen() {
                     <div className="flex flex-wrap items-baseline gap-x-2">
                       <span className="text-[15px] font-semibold text-fg">{m.from}</span>
                       <span className="text-[13px] text-fg-subtle">
-                        {formatDate(m.at, "long")} · {m.channel}
+                        {formatDate(m.at, "long")} · {m.channel === "portal" ? "in the app" : m.channel}
                       </span>
                     </div>
                     <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed text-fg-muted">{m.body}</p>

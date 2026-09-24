@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { formatSize } from "@/lib/documents";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
 import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
@@ -68,11 +68,25 @@ export function NewRequestForm() {
   } | null>(null);
   const reservable = amenities.filter((a) => a.reservable);
   const selectedForm = forms.find((f) => f.id === formId);
-  const ready =
-    Boolean(kind) &&
-    Boolean(title.trim()) &&
-    (kind !== "amenity" || Boolean(amenityId)) &&
-    (kind !== "architectural" || Boolean(formId));
+  // A booking names itself: the amenity and the time are the title. Asking
+  // an owner to type "Clubhouse, Saturday" after picking both was busywork.
+  const bookingTitle =
+    kind === "amenity" && selectedAmenity
+      ? `${selectedAmenity.name}${slot ? `, ${formatDate(slot.date, "medium")} at ${formatMinute(slot.startMinute)}` : ""}`
+      : "";
+  const effectiveTitle = title.trim() || bookingTitle;
+  // What is still missing, said under the button instead of a grey button
+  // that gives no reason.
+  const missing = !kind
+    ? "Choose a type"
+    : kind === "amenity" && !amenityId
+      ? "Choose an amenity"
+      : kind === "architectural" && !formId
+        ? "Choose a form"
+        : !effectiveTitle
+          ? "Add a title"
+          : null;
+  const ready = missing === null;
 
   if (done) {
     return (
@@ -124,8 +138,8 @@ export function NewRequestForm() {
       id: `req-${seq}`,
       reference: ref,
       kind: kind as RequestKind,
-      title: title.trim(),
-      summary: detail || title.trim(),
+      title: effectiveTitle,
+      summary: detail || effectiveTitle,
       ownerId: owner.id,
       ownerName: owner.displayName,
       unit: owner.unit,
@@ -143,7 +157,7 @@ export function NewRequestForm() {
           at: todayIsoDate(),
           actor: owner.members[0],
           actorRole: "resident",
-          body: detail || title.trim(),
+          body: detail || effectiveTitle,
           kind: "note",
         },
         {
@@ -262,6 +276,17 @@ export function NewRequestForm() {
                 </option>
               ))}
             </select>
+            {selectedForm?.fields?.length ? (
+              // The same application can be filled in and signed here, with
+              // the answers the board needs. Sending the PDF is the fallback.
+              <Link
+                href={`/resident/documents/forms/${selectedForm.id}`}
+                className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2.5 text-[15px] font-medium text-primary hover:bg-primary-soft/70"
+              >
+                Fill in {selectedForm.label.toLowerCase()} here instead
+                <ArrowRight className="size-4 shrink-0" />
+              </Link>
+            ) : null}
             {selectedForm ? (
               <div className="mt-3 rounded-lg bg-surface-2 p-3">
                 <div className="flex items-start gap-2">
@@ -295,26 +320,28 @@ export function NewRequestForm() {
       <section>
         <SectionTitle>Details</SectionTitle>
         <Card className="divide-y divide-border">
+          {kind === "amenity" ? null : (
+            <label className="block p-4">
+              <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">
+                Title
+              </span>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Short summary"
+                className="w-full bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
+              />
+            </label>
+          )}
           <label className="block p-4">
             <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">
-              Title
-            </span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Short summary"
-              className="w-full bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
-            />
-          </label>
-          <label className="block p-4">
-            <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">
-              Description
+              {kind === "amenity" ? "Anything the board should know" : "Description"}
             </span>
             <textarea
-              rows={5}
+              rows={kind === "amenity" ? 3 : 5}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="What's going on, where, and since when?"
+              placeholder={kind === "amenity" ? "Optional. How many guests, what for." : "What's going on, where, and since when?"}
               className="w-full resize-none bg-transparent text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
             />
           </label>
@@ -366,8 +393,11 @@ export function NewRequestForm() {
         disabled={!ready}
         onClick={submit}
       >
-        Submit request
+        {kind === "amenity" ? "Ask to book it" : "Send request"}
       </Button>
+      {missing ? (
+        <p className="-mt-3 text-center text-[13px] text-fg-subtle">{missing} to send it.</p>
+      ) : null}
     </form>
   );
 }

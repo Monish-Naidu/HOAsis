@@ -266,7 +266,9 @@ export const BOARD_ROUTES: BoardRoute[] = [
     icon: MessagesSquare,
     key: "communications", tint: "coral",
     module: "communications",
-    need: ["communications"],
+    // Finances opens it too. The database shows a treasurer the Billing
+    // conversations only (0044): the past due letters are theirs to answer.
+    need: ["communications", "finances"],
   },
   {
     href: "/board/communications/announcements",

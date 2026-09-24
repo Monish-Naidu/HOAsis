@@ -12,7 +12,7 @@ import {
   PenLine,
   Search,
 } from "lucide-react";
-import { Badge, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
+import { Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
 import type { DocumentRecord, GoverningDoc } from "@/lib/types";
@@ -155,7 +155,7 @@ function DocumentsScreen() {
                   </span>
                   <span className="block truncate text-[13px] text-fg-muted">
                     {form.decisionDays
-                      ? `They have ${form.decisionDays} days to answer`
+                      ? `The board answers within ${form.decisionDays} days`
                       : form.description}
                   </span>
                 </span>
@@ -199,7 +199,6 @@ function DocumentsScreen() {
                       {formatDate(d.updatedDate, "medium")} · {d.size}
                     </span>
                   </span>
-                  {d.visibility === "public" ? <Badge tone="neutral">Public</Badge> : null}
                 </>
               );
               // A row opens the file when there is one. The demo's documents

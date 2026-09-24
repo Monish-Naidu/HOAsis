@@ -70,6 +70,7 @@ import type {
   ForumPost,
   ForumReply,
   HomeRequest,
+  MessageThread,
   Owner,
   HomeType,
   BankAccount,
@@ -251,6 +252,15 @@ interface AppState {
   approvePayout: (payoutId: string) => void;
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
+  /** An owner starting a conversation with the board. Resolves true when it landed. */
+  messageBoard: (
+    ownerId: string,
+    subject: string,
+    body: string,
+    tag?: MessageThread["tag"],
+  ) => Promise<boolean>;
+  /** An owner answering one of their home's conversations. */
+  replyAsOwner: (threadId: string, ownerId: string, body: string) => Promise<boolean>;
   /**
    * A new letter to one household, on its own thread.
    *
@@ -3131,6 +3141,89 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
+  const messageBoard = useCallback(
+    async (ownerId: string, subject: string, body: string, tag: MessageThread["tag"] = "General") => {
+      if (!subject.trim() || !body.trim()) {
+        throw new ValidationError("Add a subject and a few words", {});
+      }
+      if (remote.community) {
+        return remoteWrite("Sending your message", () =>
+          supabaseBrowser().rpc("start_owner_thread", {
+            p_unit_id: ownerId,
+            p_subject: subject.trim(),
+            p_body: body.trim(),
+            p_tag: tag,
+          }),
+        );
+      }
+      const owner = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId);
+      const from = owner?.members[0] ?? owner?.displayName ?? "Owner";
+      sliceStore(communityId, "threads").update((all) => [
+        {
+          id: `t-${newId()}`,
+          subject: subject.trim(),
+          participants: [from],
+          ownerId,
+          unit: owner?.unit,
+          updatedDate: todayIsoDate(),
+          unread: true,
+          tag,
+          messages: [
+            {
+              id: `m-${newId()}`,
+              at: todayIsoDate(),
+              from,
+              fromRole: "resident",
+              direction: "inbound",
+              channel: "portal",
+              body: body.trim(),
+            },
+          ],
+        },
+        ...all,
+      ]);
+      return true;
+    },
+    [remote.community, communityId],
+  );
+
+  const replyAsOwner = useCallback(
+    async (threadId: string, ownerId: string, body: string) => {
+      if (!body.trim()) return false;
+      if (remote.community) {
+        return remoteWrite("Sending your reply", () =>
+          supabaseBrowser().rpc("reply_as_owner", { p_thread_id: threadId, p_body: body.trim() }),
+        );
+      }
+      const owner = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId);
+      sliceStore(communityId, "threads").update((all) =>
+        all.map((t) =>
+          t.id === threadId
+            ? {
+                ...t,
+                unread: true,
+                updatedDate: todayIsoDate(),
+                messages: [
+                  ...t.messages,
+                  {
+                    id: `m-${newId()}`,
+                    at: todayIsoDate(),
+                    from: owner?.members[0] ?? owner?.displayName ?? "Owner",
+                    fromRole: "resident",
+                    direction: "inbound",
+                    channel: "portal",
+                    body: body.trim(),
+                  },
+                ],
+              }
+            : t,
+        ),
+      );
+      return true;
+    },
+    [remote.community, communityId],
+  );
+
   const replyToThread = useCallback(
     (threadId: string, body: string) => {
       const message = (senderName: string, count: number) => ({
@@ -4036,6 +4129,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     approvePayout,
     markW9Requested,
     replyToThread,
+    messageBoard,
+    replyAsOwner,
     messageOwner,
     uploadDocuments,
     addGoverningArticles,

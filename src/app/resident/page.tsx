@@ -201,41 +201,37 @@ function QuickActions() {
   // Three, and each goes somewhere different. Five tiles used to resolve to
   // three destinations, two of them already in the tab bar.
   const actions: { href: string; label: string; icon: typeof Wrench; tint: TintName }[] = [
-    { href: "/resident/requests/new", label: "Submit request", icon: Wrench, tint: "blue" },
+    { href: "/resident/requests/new", label: "New request", icon: Wrench, tint: "blue" },
     { href: "/resident/documents", label: "Documents", icon: FileText, tint: "violet" },
     { href: "/resident/vote", label: "Vote", icon: Vote, tint: "teal" },
   ];
+  // A row of three tinted buttons, no card around them. A card titled
+  // "Quick actions" wrapping three links was the tallest thing on the page
+  // after the photo, for the least information.
   return (
-    <Card>
-      <CardHeader accent="blue" title="Quick actions" />
-      {/* Three tiles that split the card's width between them and grow with
-          the screen, each on a field of its own tint, so the row reads as
-          three buttons and not three icons floating in white. Stacked on a
-          phone, icon beside label from a tablet width up. */}
-      <div className="grid grid-cols-3 gap-3 p-3 @xl:gap-4 @xl:p-4">
-        {actions.map(({ href, label, icon, tint }) => (
-          <Link
-            key={label}
-            href={href}
-            className={cn(
-              "press group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-4 text-center transition-colors @xl:min-h-24 @xl:flex-row @xl:gap-3 @xl:px-4",
-              TINT_FIELD[tint],
-            )}
-          >
-            <IconTile
-              icon={icon}
-              tint={tint}
-              variant="solid"
-              size="md"
-              className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
-            />
-            <span className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-fg @xl:text-[16px]">
-              {label}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </Card>
+    <nav aria-label="Quick actions" className="grid grid-cols-3 gap-3 @xl:gap-4">
+      {actions.map(({ href, label, icon, tint }) => (
+        <Link
+          key={label}
+          href={href}
+          className={cn(
+            "press group flex min-h-[4.75rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center transition-colors @xl:min-h-16 @xl:flex-row @xl:gap-3 @xl:px-4",
+            TINT_FIELD[tint],
+          )}
+        >
+          <IconTile
+            icon={icon}
+            tint={tint}
+            variant="solid"
+            size="md"
+            className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
+          />
+          <span className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-fg @xl:text-[16px]">
+            {label}
+          </span>
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -285,8 +281,10 @@ function RecentActivity() {
     rows.push({
       id: `req-${withUpdate.r.id}`,
       date: withUpdate.last.at,
-      title: `Request ${withUpdate.r.reference} updated`,
-      href: "/resident/requests",
+      // The request by its name, and who moved it. "Request REQ-2026-121
+      // updated" was an ID, and the update was usually the owner's own note.
+      title: `${withUpdate.r.title}: ${withUpdate.last.actorRole === "resident" ? "you added a note" : "the board answered"}`,
+      href: `/resident/requests/${encodeURIComponent(withUpdate.r.reference)}`,
       icon: Wrench,
       tint: "blue",
     });

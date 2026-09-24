@@ -2,8 +2,8 @@
 
 import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Gavel, Plus } from "lucide-react";
-import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { ChevronDown, ChevronRight, Gavel, Mail, Plus } from "lucide-react";
+import { Badge, ButtonLink, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { bucketRequests, useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
 import { kindLabel, statusLabel, statusTone } from "@/lib/request-status";
 import { formatDate, pluralize, relativeDays } from "@/lib/utils";
@@ -22,21 +22,35 @@ export default function ResidentRequests() {
     ? community.violations.filter((v) => v.ownerId === owner.id || v.unit === owner.unit)
     : [];
   const openNotices = notices.filter((v) => v.stage !== "cured");
+  const myThreads = owner ? community.threads.filter((t) => t.ownerId === owner.id).length : 0;
 
   return (
     <div className="animate-rise space-y-6">
       <ResidentTitle
         title="Requests"
         action={
-          <Link
-            href="/resident/requests/new"
-            className="press flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-primary-fg shadow-glow"
-            aria-label="New request"
-          >
-            <Plus className="size-4" />
-          </Link>
+          <ButtonLink href="/resident/requests/new" variant="primary" size="md">
+            <Plus className="size-3.5" />
+            New request
+          </ButtonLink>
         }
       />
+
+      {/* A question is not a request. On a phone, where Messages has no
+          tab, this is the way in. */}
+      <Link
+        href="/resident/messages"
+        className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+      >
+        <IconTile icon={Mail} tint="coral" size="sm" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-fg">Message the board</span>
+          <span className="block text-[13px] leading-snug text-fg-muted">
+            {myThreads > 0 ? `${pluralize(myThreads, "conversation")}` : "Ask a question, no decision needed"}
+          </span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+      </Link>
 
       {notices.length > 0 ? (
         <Link

@@ -175,7 +175,7 @@ export function FillForm({ formId }: { formId: string }) {
           </p>
           {submitted.dueDate ? (
             <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-[13px] leading-relaxed text-fg-muted">
-              They have until {formatDate(submitted.dueDate, "long")} to decide.{" "}
+              The committee decides by {formatDate(submitted.dueDate, "long")}.{" "}
               {submitted.dueReason}
             </p>
           ) : null}
@@ -214,7 +214,7 @@ export function FillForm({ formId }: { formId: string }) {
             </Badge>
             {form.decisionDays ? (
               <span className="text-[13px] text-fg-muted">
-                They have {form.decisionDays} days to answer
+                The committee answers within {form.decisionDays} days
               </span>
             ) : null}
           </div>

@@ -19,15 +19,20 @@ const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 export function CalendarView({
   entries,
   asOf = todayIsoDate(),
+  showUpcoming = true,
 }: {
   entries: CalendarEntry[];
   /** The community's own "today", so it does not open on an empty month. */
   asOf?: string;
+  /** Off where the page lists what is coming itself, with the RSVPs. */
+  showUpcoming?: boolean;
 }) {
   const today = new Date(`${asOf}T12:00:00Z`);
   const [year, setYear] = useState(today.getUTCFullYear());
   const [month, setMonth] = useState(today.getUTCMonth());
-  const [selected, setSelected] = useState<string | null>(asOf);
+  // Nothing picked until somebody taps a day. Opening on today's empty box
+  // said "Nothing on this day" before anybody had asked.
+  const [selected, setSelected] = useState<string | null>(null);
 
   const cells = monthGrid(year, month, entries, asOf);
   const selectedEntries = selected ? entries.filter((e) => e.date === selected) : [];
@@ -142,6 +147,7 @@ export function CalendarView({
         </Card>
       ) : null}
 
+      {showUpcoming ? (
       <div>
         <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">
           Next up
@@ -158,11 +164,12 @@ export function CalendarView({
           )}
         </Card>
       </div>
+      ) : null}
     </div>
   );
 }
 
-function EntryRow({
+export function EntryRow({
   entry,
   divided,
   showDate,

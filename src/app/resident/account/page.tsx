@@ -26,6 +26,92 @@ export default function ResidentAccount() {
     .filter((c) => c.kind === "payment" && c.date.startsWith(paidYear))
     .reduce((t, c) => t + Math.abs(c.amountCents), 0);
 
+  // Six lines, the last few months, and the rest folded by year. A year of
+  // dues and payments was twenty-four rows before the contact details.
+  const RECENT = 6;
+  const recent = ownerCharges.slice(0, RECENT);
+  const olderYears = Object.entries(
+    ownerCharges.slice(RECENT).reduce<Record<string, typeof ownerCharges>>((acc, line) => {
+      (acc[line.date.slice(0, 4)] ??= []).push(line);
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[0].localeCompare(a[0]));
+
+  const row = (line: (typeof ownerCharges)[number], i: number) => {
+            const isPayment = line.kind === "payment";
+            const body = (
+              <>
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${
+                      isPayment ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted"
+                    }`}
+                  >
+                    {isPayment ? <CircleDollarSign className="size-4" /> : <Receipt className="size-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-medium text-fg">{line.label}</p>
+                    <p className="mt-0.5 text-[13px] text-fg-muted">
+                      {formatDate(line.date, "long")}
+                      {line.method ? ` · ${line.method}` : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p
+                      className={`tnum text-[15px] font-semibold ${
+                        isPayment ? "text-ok" : "text-fg"
+                      }`}
+                    >
+                      {isPayment ? "−" : ""}
+                      {money(Math.abs(line.amountCents))}
+                    </p>
+                    <p className="tnum mt-0.5 text-[13px] text-fg-subtle">
+                      Balance {money(line.balanceAfterCents)}
+                    </p>
+                  </div>
+                  {line.appliedTo?.length ? (
+                    <ChevronDown className="mt-1 size-3.5 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
+                  ) : null}
+                </div>
+              </>
+            );
+
+            if (!line.appliedTo?.length) {
+              return (
+                <div
+                  key={line.id}
+                  className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
+                >
+                  {body}
+                </div>
+              );
+            }
+
+            return (
+              <details
+                key={line.id}
+                className={`group ${i > 0 ? "border-t border-border" : ""}`}
+              >
+                <summary className="cursor-pointer list-none px-4 py-3 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+                  {body}
+                </summary>
+                <div className="border-t border-border bg-surface-2 px-4 py-3">
+                  <p className="mb-2 text-[13px] font-semibold text-fg-muted">
+                    Applied to
+                  </p>
+                  <ul className="space-y-1.5">
+                    {line.appliedTo.map((a) => (
+                      <li key={a.chargeId} className="flex justify-between text-[13px]">
+                        <span className="text-fg-muted">{a.label}</span>
+                        <span className="tnum font-medium text-fg">{money(a.amountCents)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </details>
+            );
+  };
+
   return (
     <div className="animate-rise space-y-6">
       <ResidentTitle
@@ -113,80 +199,19 @@ export default function ResidentAccount() {
           Activity
         </SectionTitle>
         <Card>
-          {ownerCharges.map((line, i) => {
-            const isPayment = line.kind === "payment";
-            const body = (
-              <>
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${
-                      isPayment ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted"
-                    }`}
-                  >
-                    {isPayment ? <CircleDollarSign className="size-4" /> : <Receipt className="size-4" />}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-fg">{line.label}</p>
-                    <p className="mt-0.5 text-[13px] text-fg-muted">
-                      {formatDate(line.date, "long")}
-                      {line.method ? ` · ${line.method}` : ""}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p
-                      className={`tnum text-[15px] font-semibold ${
-                        isPayment ? "text-ok" : "text-fg"
-                      }`}
-                    >
-                      {isPayment ? "−" : ""}
-                      {money(Math.abs(line.amountCents))}
-                    </p>
-                    <p className="tnum mt-0.5 text-[13px] text-fg-subtle">
-                      Balance {money(line.balanceAfterCents)}
-                    </p>
-                  </div>
-                  {line.appliedTo?.length ? (
-                    <ChevronDown className="mt-1 size-3.5 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
-                  ) : null}
-                </div>
-              </>
-            );
-
-            if (!line.appliedTo?.length) {
-              return (
-                <div
-                  key={line.id}
-                  className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
-                >
-                  {body}
-                </div>
-              );
-            }
-
-            return (
-              <details
-                key={line.id}
-                className={`group ${i > 0 ? "border-t border-border" : ""}`}
-              >
-                <summary className="cursor-pointer list-none px-4 py-3 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-                  {body}
-                </summary>
-                <div className="border-t border-border bg-surface-2 px-4 py-3">
-                  <p className="mb-2 text-[13px] font-semibold text-fg-muted">
-                    Applied to
-                  </p>
-                  <ul className="space-y-1.5">
-                    {line.appliedTo.map((a) => (
-                      <li key={a.chargeId} className="flex justify-between text-[13px]">
-                        <span className="text-fg-muted">{a.label}</span>
-                        <span className="tnum font-medium text-fg">{money(a.amountCents)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            );
-          })}
+          {recent.map((line, i) => row(line, i))}
+          {olderYears.map(([year, lines]) => (
+            <details key={year} className="group/year border-t border-border">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[13px] font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden">
+                {year === paidYear ? `Earlier in ${year}` : year}
+                <span className="flex items-center gap-2 font-medium text-fg-subtle">
+                  {lines.length} entries
+                  <ChevronDown className="size-3.5 transition-transform group-open/year:rotate-180" />
+                </span>
+              </summary>
+              {lines.map((line) => row(line, 1))}
+            </details>
+          ))}
         </Card>
       </section>
 
