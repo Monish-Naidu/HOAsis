@@ -110,8 +110,10 @@ async function completeEverything(page: Page, property: Kind) {
     await uploadDoc(page, "Structural inspection report.pdf");
   }
 
-  // Budget: one expense line, on the Budget tab of Finances.
-  await page.goto("/board/money/budget");
+  // Budget: one expense line, answered inside the plan. The Budget tab of
+  // Finances is switched off for launch, and the plan is where a board adds
+  // its first line anyway.
+  await page.goto("/start/plan?task=budget");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Add a budget line" }).click();
   await page.getByLabel("Annual amount").fill("18000");
@@ -130,7 +132,14 @@ async function completeEverything(page: Page, property: Kind) {
   // Settings: insurance, an officer, an amenity, a photograph.
   await page.goto("/board/settings");
   await page.waitForLoadState("networkidle");
-  await page.getByLabel("Marcus Bell's role").selectOption("treasurer");
+  // Officers: the board list shows who holds an office, and a new one is
+  // added from a picker rather than a dropdown on every home.
+  await page.getByRole("button", { name: "Add a board member" }).click();
+  const which = page.getByLabel("Which home");
+  const marcus = await which.locator("option", { hasText: "Marcus Bell" }).getAttribute("value");
+  await which.selectOption(marcus ?? "");
+  await page.getByLabel("Role").selectOption("treasurer");
+  await page.locator("form", { has: which }).getByRole("button", { name: /^Add$/ }).click();
   await page.waitForTimeout(400);
 
   await page.getByPlaceholder("Add an amenity").fill("Clubhouse");

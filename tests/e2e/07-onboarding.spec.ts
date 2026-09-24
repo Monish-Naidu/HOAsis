@@ -110,7 +110,8 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
   await page.getByLabel("Your home address").fill("1 Founder Way");
-  await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("1");
+  // An established association's number is optional and says so.
+  await page.getByLabel(/^(Lot|Home|Unit) number/).fill("1");
   await step(page);
   if ((await page.getByLabel("Builder name").count()) > 0) {
     if (a.builder) await page.getByLabel("Builder name").fill(a.builder);
@@ -335,7 +336,8 @@ test.describe("getting to money", () => {
       "Ridgeline Homes",
     );
     // Twelve lots, of which the founder holds one.
-    expect(health.text, "the homes never arrived").toMatch(/12 homes|12 units/i);
+    // The roster's All filter carries the count.
+    expect(health.text, "the homes never arrived").toMatch(/All\s*12\b/);
   });
 });
 
@@ -553,8 +555,9 @@ test.describe("an association that already runs itself", () => {
       "day you switched",
     );
 
-    // Lot 2, which the founder does not hold.
-    const box = page.getByLabel(/^Opening balance for .*2$/);
+    // Home 2, which the founder does not hold. Detached homes of an
+    // established association go by address.
+    const box = page.getByLabel(/^Opening balance for .*, 2 Founder Way$/);
     await box.fill("1240.50");
     await page.waitForTimeout(300);
     await page.getByRole("button", { name: /^Set \d+ balances?$/ }).click();
@@ -750,9 +753,9 @@ test.describe("get started and signing up are the same flow", () => {
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
     await step(page);
-    await page.getByLabel(/Each home pays/i).fill("120");
-    await step(page);
     await page.getByRole("button", { name: /Detached homes/ }).click();
+    await step(page);
+    await page.getByLabel(/Each home pays/i).fill("120");
     await step(page);
     await step(page);
     await page.getByRole("button", { name: /We are building the community/ }).click();

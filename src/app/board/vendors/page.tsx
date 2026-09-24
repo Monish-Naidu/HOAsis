@@ -228,15 +228,9 @@ export default function BoardVendors() {
               icon={<Truck className="size-5" />}
               tint="amber"
               title="No vendors yet"
+              // The header's Add vendor is the way in; a second one here put
+              // the same action on the screen twice.
               description="Add the people the association pays: landscaping, the pool, insurance."
-              action={
-                adding ? undefined : (
-                  <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
-                    <Plus className="size-3.5" />
-                    Add vendor
-                  </Button>
-                )
-              }
             />
           ) : (
             <>

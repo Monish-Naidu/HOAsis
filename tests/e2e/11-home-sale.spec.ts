@@ -40,6 +40,8 @@ test.describe("recording a sale", () => {
   }) => {
     // The shipped demo predates the question and keeps the button.
     await page.goto("/board/homeowners");
-    await expect(page.getByRole("link", { name: "Opening balances" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Enter what each home owed on day one" }),
+    ).toBeVisible();
   });
 });
