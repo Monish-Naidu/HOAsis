@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { formatSize } from "@/lib/documents";
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
-import { Button, ButtonLink, Callout, Card, IconTile, SectionTitle, Select, SuccessMark } from "@/components/ui/primitives";
+import { ArrowLeft, CheckCircle2, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
+import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -78,14 +78,17 @@ export function NewRequestForm() {
     return (
       <div className="animate-rise space-y-5">
         <Card className="p-6 text-center">
-          <div className="mb-4 flex justify-center">
-            <SuccessMark size={56} />
-          </div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">Request sent</h1>
+          <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
+            <CheckCircle2 className="size-6" />
+          </span>
+          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">Request submitted</h1>
           <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">Reference {reference}</p>
-          <ButtonLink href="/resident/requests" variant="primary" size="lg" className="mt-5 w-full">
+          <Link
+            href="/resident/requests"
+            className="mt-5 flex h-10 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+          >
             Track it
-          </ButtonLink>
+          </Link>
         </Card>
         {chosen ? (
           <Callout tone="info" title="Response clock started">
@@ -162,31 +165,33 @@ export function NewRequestForm() {
     <form className="animate-rise space-y-6" onSubmit={(e) => e.preventDefault()}>
       <Link
         href="/resident/requests"
-        className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-[13px] font-medium text-fg-muted hover:text-fg"
+        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
       >
         <ArrowLeft className="size-3.5" />
         Cancel
       </Link>
 
-      <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">New request</h1>
+      <div>
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">New request</h1>
+        
+      </div>
 
       <section>
         <SectionTitle>Type</SectionTitle>
         <div className="grid grid-cols-2 gap-2.5">
-          {kinds.filter((k) => moduleOn("module" in k ? k.module : undefined)).map(({ id, label, hint, icon }) => (
+          {kinds.filter((k) => moduleOn("module" in k ? k.module : undefined)).map(({ id, label, hint, icon: Icon }) => (
             <button
               key={id}
               type="button"
               onClick={() => setKind(id)}
-              aria-pressed={kind === id}
               className={cn(
-                "press rounded-card border p-3 text-left shadow-card transition-colors",
+                "rounded-card border p-3 text-left transition-colors",
                 kind === id
-                  ? "border-primary bg-primary-soft ring-1 ring-inset ring-primary"
+                  ? "border-navy-700 bg-brand-soft dark:border-navy-300"
                   : "border-border bg-surface hover:bg-surface-2",
               )}
             >
-              <IconTile icon={icon} tint="blue" size="sm" className="mb-2.5" />
+              <Icon className="mb-2 size-4 text-fg-muted" />
               <p className="text-[15px] font-semibold text-fg">{label}</p>
               <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{hint}</p>
             </button>
@@ -202,11 +207,11 @@ export function NewRequestForm() {
         <section>
           <SectionTitle>Which amenity</SectionTitle>
           <Card className="p-4">
-            <Select
+            <select
               value={amenityId}
               onChange={(e) => setAmenityId(e.target.value)}
               aria-label="Amenity"
-              className="w-full"
+              className="h-11 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               <option value="">Select an amenity</option>
               {reservable.map((a) => (
@@ -214,7 +219,7 @@ export function NewRequestForm() {
                   {a.name}
                 </option>
               ))}
-            </Select>
+            </select>
             {reservable.length === 0 ? (
               <p className="mt-2 text-[13px] text-fg-muted">
                 The board has not made any amenities reservable yet.
@@ -244,11 +249,11 @@ export function NewRequestForm() {
         <section>
           <SectionTitle>Which form</SectionTitle>
           <Card className="p-4">
-            <Select
+            <select
               value={formId}
               onChange={(e) => setFormId(e.target.value)}
               aria-label="Architectural form"
-              className="w-full"
+              className="h-11 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
             >
               <option value="">Select a form</option>
               {forms.map((f) => (
@@ -256,7 +261,7 @@ export function NewRequestForm() {
                   {f.label}
                 </option>
               ))}
-            </Select>
+            </select>
             {selectedForm ? (
               <div className="mt-3 rounded-lg bg-surface-2 p-3">
                 <div className="flex items-start gap-2">
@@ -273,10 +278,13 @@ export function NewRequestForm() {
                       {selectedForm.source === "uploaded" ? " · uploaded by the board" : ""}
                     </p>
                   </div>
-                  <Button variant="secondary" size="sm" className="shrink-0">
-                    <Download className="size-3.5" />
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-md border border-border-2 px-2 py-1 text-[13px] font-medium text-fg hover:bg-surface"
+                  >
+                    <Download className="mr-1 inline size-3" />
                     Open
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : null}
@@ -339,7 +347,7 @@ export function NewRequestForm() {
                     type="button"
                     aria-label={`Remove ${f.name}`}
                     onClick={() => setFiles((all) => all.filter((_, j) => j !== i))}
-                    className="-mr-2 flex size-9 shrink-0 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-danger"
+                    className="shrink-0 text-fg-subtle hover:text-danger"
                   >
                     <X className="size-3.5" />
                   </button>
@@ -358,7 +366,7 @@ export function NewRequestForm() {
         disabled={!ready}
         onClick={submit}
       >
-        Send request
+        Submit request
       </Button>
     </form>
   );

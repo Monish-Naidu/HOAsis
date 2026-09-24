@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { ExternalLink, ShieldCheck } from "lucide-react";
-import { Button, ButtonLink, Card } from "@/components/ui/primitives";
+import { Button, Card } from "@/components/ui/primitives";
 import { refreshRemote } from "@/lib/data/remote-store";
 
 /**
@@ -179,17 +179,15 @@ function SetupForm({
         </p>
         <div className="mt-3 flex gap-2">
           {verifying.url ? (
-            <ButtonLink
+            <a
               href={verifying.url}
               target="_blank"
               rel="noreferrer"
-              variant="primary"
-              size="md"
-              className="flex-1"
+              className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
             >
               Confirm deposits
               <ExternalLink className="size-3.5" />
-            </ButtonLink>
+            </a>
           ) : null}
           <Button variant="secondary" size="md" className="flex-1" onClick={onDone}>
             Done

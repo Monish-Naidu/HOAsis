@@ -2,11 +2,13 @@
 
 import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, ClipboardList, Gavel, Plus } from "lucide-react";
-import { Badge, ButtonLink, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
+import { ChevronDown, ChevronRight, Gavel, Plus } from "lucide-react";
+import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { bucketRequests, useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
-import { kindLabel, statusLabel, statusTone } from "@/lib/request-status";
+import { kindLabel, statusTone } from "@/lib/request-status";
 import { formatDate, pluralize, relativeDays } from "@/lib/utils";
+
+
 
 export default function ResidentRequests() {
   const mine = useMyRequests();
@@ -26,19 +28,32 @@ export default function ResidentRequests() {
       <ResidentTitle
         title="Requests"
         action={
-          <ButtonLink href="/resident/requests/new" variant="primary" size="lg" className="shrink-0">
+          <Link
+            href="/resident/requests/new"
+            className="press flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-primary-fg shadow-glow"
+            aria-label="New request"
+          >
             <Plus className="size-4" />
-            New request
-          </ButtonLink>
+          </Link>
         }
       />
 
       {notices.length > 0 ? (
         <Link
           href="/resident/notices"
-          className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+          className={`flex items-center gap-3 rounded-card border p-4 shadow-card transition-colors ${
+            openNotices.length > 0
+              ? "border-warn/30 bg-warn-soft hover:bg-warn-soft/70"
+              : "border-border bg-surface hover:bg-surface-2"
+          }`}
         >
-          <IconTile icon={Gavel} tint={openNotices.length > 0 ? "coral" : "neutral"} size="md" />
+          <span
+            className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${
+              openNotices.length > 0 ? "bg-warn/15 text-warn" : "bg-surface-3 text-fg-muted"
+            }`}
+          >
+            <Gavel className="size-5" />
+          </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-fg">
               {openNotices.length > 0
@@ -47,11 +62,10 @@ export default function ResidentRequests() {
             </span>
             <span className="block text-[13px] leading-snug text-fg-muted">
               {openNotices.length > 0
-                ? "What the board is relying on, photos included"
+                ? "See what the board is relying on, including every photograph"
                 : "Nothing outstanding. The record is kept here."}
             </span>
           </span>
-          {openNotices.length > 0 ? <Badge tone="warn">Open</Badge> : null}
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
         </Link>
       ) : null}
@@ -93,14 +107,10 @@ export default function ResidentRequests() {
       ) : null}
 
       {!mine.length ? (
-        <Card>
-          <EmptyState
-            icon={<ClipboardList className="size-5" />}
-            tint="blue"
-            title="No requests yet"
-            description="Repairs, approvals, and anything else you need from the board."
-          />
-        </Card>
+        <EmptyState
+          title="No requests yet"
+          description="Repairs, approvals, and other requests. Tap plus to start one."
+        />
       ) : null}
     </div>
   );
@@ -121,22 +131,22 @@ function RequestRow({
       }`}
     >
       <div className="min-w-0 flex-1">
-        {/* The status rides on the top line with the kind, so the title
-            below gets the whole width instead of a third of it. */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-[13px] font-medium text-fg-subtle">
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] font-medium text-fg-subtle">
             {kindLabel[request.kind]}
-            {request.dueDate && !["approved", "denied", "closed"].includes(request.status) ? (
-              <span className="text-warn"> · Answer due {relativeDays(request.dueDate)}</span>
-            ) : null}
           </span>
-          <Badge tone={statusTone[request.status]}>{statusLabel[request.status]}</Badge>
+          {request.dueDate && !["approved", "denied", "closed"].includes(request.status) ? (
+            <span className="text-[13px] font-medium text-warn">
+              answer due {relativeDays(request.dueDate)}
+            </span>
+          ) : null}
         </div>
-        <p className="mt-1 line-clamp-2 text-[15px] font-medium leading-snug text-fg">{request.title}</p>
+        <p className="mt-0.5 truncate text-[15px] font-medium text-fg">{request.title}</p>
         <p className="mt-0.5 text-[13px] text-fg-muted">
           {request.reference} · {formatDate(request.submittedDate)}
         </p>
       </div>
+      <Badge tone={statusTone[request.status]}>{request.status.replace("-", " ")}</Badge>
       <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
     </Link>
   );

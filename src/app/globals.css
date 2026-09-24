@@ -38,17 +38,16 @@
   --neutral-800: #2a2926;
   --neutral-900: #1a1917;
 
-  /* semantic, light. Cool neutrals since the 2026-09-24 overhaul: the warm
-     grey read beige beside the navy and the blue. */
-  --bg:          #f5f6f8;
+  /* semantic, light */
+  --bg:          var(--neutral-100);
   --surface:     #ffffff;
-  --surface-2:   #f9fafb;
-  --surface-3:   #eceef2;
-  --border:      #e5e7eb;
-  --border-2:    #d4d8e0;
-  --fg:          #111a2b;
-  --fg-muted:    #5f6776;
-  --fg-subtle:   #8e95a2;
+  --surface-2:   var(--neutral-50);
+  --surface-3:   var(--neutral-200);
+  --border:      #e4e3df;
+  --border-2:    #d5d3ce;
+  --fg:          #16202e;
+  --fg-muted:    #6b6f78;
+  --fg-subtle:   #9296a0;
   --brand:       var(--navy-800);
   --brand-fg:    #ffffff;
   --brand-soft:  var(--navy-50);
@@ -126,7 +125,7 @@
   --chart-5: #ec7fab;
   --chart-other: #78766f;
 
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 1px rgb(15 23 42 / 0.03);
+  --shadow-sm: 0 1px 2px rgb(11 21 36 / 0.05);
   --shadow-md: 0 2px 4px -1px rgb(11 21 36 / 0.06), 0 6px 16px -4px rgb(11 21 36 / 0.08);
   --shadow-lg: 0 8px 32px -8px rgb(11 21 36 / 0.16);
   /* Glows: a coloured shadow under a primary button on hover, and the halo a
@@ -140,8 +139,8 @@
   --surface:     #101c2e;
   --surface-2:   var(--navy-900);
   --surface-3:   var(--navy-800);
-  --border:      #1a2840;
-  --border-2:    #25385a;
+  --border:      #1f3050;
+  --border-2:    #2a4064;
   --fg:          #e9edf3;
   --fg-muted:    #9aa8bd;
   --fg-subtle:   #6c7d96;

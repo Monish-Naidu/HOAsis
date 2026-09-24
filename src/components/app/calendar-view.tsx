@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState } from "@/components/ui/primitives";
 import {
   kindLabel,
   kindTone,
@@ -43,12 +43,12 @@ export function CalendarView({
   return (
     <div className="space-y-4">
       <Card>
-        <div className="flex items-center justify-between border-b border-border px-2 py-1.5">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <button
             type="button"
             aria-label="Previous month"
             onClick={() => shift(-1)}
-            className="press flex size-10 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
+            className="flex size-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -57,7 +57,7 @@ export function CalendarView({
             type="button"
             aria-label="Next month"
             onClick={() => shift(1)}
-            className="press flex size-10 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
+            className="flex size-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -74,10 +74,7 @@ export function CalendarView({
           ))}
         </div>
 
-        {/* A month of 48px rows, not squares: at the page's 672px column a
-            square cell was 96px tall and the month ran past the fold. No
-            grid lines either; the days line up on their own. */}
-        <div className="grid grid-cols-7 gap-0.5 p-1.5">
+        <div className="grid grid-cols-7 gap-px bg-border p-px">
           {cells.map((c) => {
             const isSelected = c.date === selected;
             return (
@@ -88,18 +85,17 @@ export function CalendarView({
                 aria-label={`${formatDate(c.date, "long")}, ${c.entries.length} items`}
                 aria-pressed={isSelected}
                 className={cn(
-                  "relative flex h-12 flex-col items-center justify-center gap-1 rounded-lg transition-colors",
-                  isSelected ? "bg-primary-soft" : "hover:bg-surface-2",
+                  "relative flex aspect-square flex-col items-center justify-center gap-1 bg-surface transition-colors",
+                  !c.inMonth && "opacity-35",
+                  isSelected ? "bg-brand-soft" : "hover:bg-surface-2",
                 )}
               >
                 <span
                   className={cn(
-                    "tnum flex size-7 items-center justify-center rounded-full text-[13px]",
+                    "tnum flex size-6 items-center justify-center rounded-full text-[13px]",
                     c.isToday
-                      ? "bg-primary font-semibold text-primary-fg"
-                      : c.inMonth
-                        ? "font-medium text-fg"
-                        : "text-fg-subtle",
+                      ? "bg-navy-900 font-semibold text-navy-50 dark:bg-navy-100 dark:text-navy-950"
+                      : "font-medium text-fg",
                   )}
                 >
                   {c.day}
@@ -111,8 +107,7 @@ export function CalendarView({
                         key={e.id}
                         className={cn(
                           "size-1 rounded-full",
-                          // The same colour as the Meeting badge below.
-                          e.kind === "meeting" && "bg-brand-soft-fg",
+                          e.kind === "meeting" && "bg-navy-600 dark:bg-navy-300",
                           e.kind === "event" && "bg-ok",
                           e.kind === "ballot-opens" && "bg-info",
                           (e.kind === "ballot-closes" || e.kind === "deadline") && "bg-warn",
@@ -148,7 +143,9 @@ export function CalendarView({
       ) : null}
 
       <div>
-        <SectionTitle>Next up</SectionTitle>
+        <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">
+          Next up
+        </h2>
         <Card>
           {upcoming.length ? (
             upcoming.map((e, i) => <EntryRow key={e.id} entry={e} divided={i > 0} showDate />)

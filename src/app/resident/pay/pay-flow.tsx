@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Apple,
+  Check,
   CreditCard,
   Info,
   Landmark,
@@ -12,7 +13,7 @@ import {
   Repeat,
   X,
 } from "lucide-react";
-import { Badge, Button, ButtonLink, Callout, Card, Checkbox, IconTile, SectionTitle, Segmented, SuccessMark, Toggle } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, IconTile, SectionTitle, SuccessMark, Toggle } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { useAppState, useCurrentOwner, useMyInstruments } from "@/lib/app-state";
 import {
@@ -190,9 +191,12 @@ export function PayFlow() {
             <Button variant="secondary" size="lg" className="flex-1" onClick={() => setPaid(null)}>
               Back
             </Button>
-            <ButtonLink href="/resident/account" variant="primary" size="lg" className="flex-1">
+            <Link
+              href="/resident/account"
+              className="press shimmer flex h-11 flex-1 items-center justify-center rounded-lg bg-brand-gradient text-[15px] font-medium text-primary-fg shadow-raised hover:shadow-glow"
+            >
               View account
-            </ButtonLink>
+            </Link>
           </div>
         </Card>
       </div>
@@ -201,7 +205,7 @@ export function PayFlow() {
 
   /* ---------------------------------------------------------------- form */
   const heading = (
-    <ResidentTitle title="Pay dues" subtitle={`Due ${formatDate(nextCharge, "long")}`} />
+    <ResidentTitle title="Pay dues" subtitle={`Dues due ${formatDate(nextCharge, "long")}`} />
   );
 
   // Shared between the demo and Stripe branches, as a JSX value rather than a
@@ -210,36 +214,58 @@ export function PayFlow() {
     <section>
       <SectionTitle>Amount</SectionTitle>
       <Card className="p-4">
-        <Segmented
-          label="Amount"
-          className="flex w-full [&>button]:flex-1 [&>button]:justify-center"
-          value={amountMode}
-          onChange={setAmountMode}
-          options={[
-            { value: "balance", label: balanceCents > 0 ? "Full balance" : "Next dues" },
-            { value: "custom", label: "Other amount" },
-          ]}
-        />
-        {amountMode === "balance" ? (
-          <p className="tnum mt-4 text-[28px] font-semibold leading-none tracking-[-0.025em] text-fg">
-            {money(balanceCents > 0 ? balanceCents : duesCents)}
-          </p>
-        ) : (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setAmountMode("balance")}
+            aria-pressed={amountMode === "balance"}
+            className={cn(
+              "press flex-1 rounded-lg border px-3 py-3 text-left",
+              amountMode === "balance"
+                ? "border-primary bg-primary-soft shadow-[0_0_0_3px_var(--primary-soft)]"
+                : "border-border hover:bg-surface-2",
+            )}
+          >
+            <span className="block text-[13px] font-medium text-fg-muted">
+              {balanceCents > 0 ? "Full balance" : "Next dues"}
+            </span>
+            <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
+              {money(balanceCents > 0 ? balanceCents : duesCents)}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAmountMode("custom")}
+            aria-pressed={amountMode === "custom"}
+            className={cn(
+              "press flex-1 rounded-lg border px-3 py-3 text-left",
+              amountMode === "custom"
+                ? "border-primary bg-primary-soft shadow-[0_0_0_3px_var(--primary-soft)]"
+                : "border-border hover:bg-surface-2",
+            )}
+          >
+            <span className="block text-[13px] font-medium text-fg-muted">Other amount</span>
+            <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
+              {amountMode === "custom" && amountCents ? money(amountCents) : "$0.00"}
+            </span>
+          </button>
+        </div>
+        {amountMode === "custom" ? (
           <label className="mt-3 block">
             <span className="sr-only">Payment amount</span>
-            <div className="flex h-12 items-center gap-1 rounded-lg border border-border-2 bg-surface px-3 transition-colors focus-within:border-primary">
-              <span className="text-[22px] font-semibold text-fg-subtle">$</span>
+            <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
+              <span className="text-[17px] text-fg-muted">$</span>
               <input
                 autoFocus
                 inputMode="decimal"
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
                 placeholder="0.00"
-                className="tnum w-full bg-transparent text-[22px] font-semibold tracking-[-0.02em] text-fg outline-none placeholder:text-fg-subtle"
+                className="tnum w-full bg-transparent text-[17px] font-medium text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
           </label>
-        )}
+        ) : null}
       </Card>
     </section>
   );
@@ -288,12 +314,10 @@ export function PayFlow() {
                           persistAutopay({ on: true, day });
                         }}
                         aria-pressed={autopayDay === day}
-                        // Selected is an outline in the primary blue, not a
-                        // fill: Pay is the one filled button on this screen.
                         className={cn(
-                          "tnum flex h-10 items-center justify-center rounded-lg text-[13px] font-medium transition-colors",
+                          "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
                           autopayDay === day
-                            ? "border border-primary bg-primary-soft font-semibold text-primary ring-1 ring-inset ring-primary"
+                            ? "bg-brand-gradient text-primary-fg shadow-raised"
                             : day === settings.autopayLateAfterDay
                               ? "border border-warn/40 bg-warn-soft text-warn"
                               : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -319,7 +343,8 @@ export function PayFlow() {
                     first. Above the cap, the balance waits for them. */}
                 <div className="mt-3 border-t border-border pt-3">
                   <label className="flex items-start gap-2.5">
-                    <Checkbox
+                    <input
+                      type="checkbox"
                       checked={capCents !== null}
                       onChange={(e) => {
                         const next = e.target.checked ? (capCents ?? duesCents) : null;
@@ -327,7 +352,7 @@ export function PayFlow() {
                         setCapText(next ? String(next / 100) : "");
                         persistAutopay({ on: true, capCents: next });
                       }}
-                      className="mt-1"
+                      className="mt-0.5 size-4 rounded border-border-2"
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[15px] font-medium text-fg">
@@ -356,7 +381,7 @@ export function PayFlow() {
                           setCapText(String(next / 100));
                           if (next !== capCents) persistAutopay({ on: true, capCents: next });
                         }}
-                        className="tnum h-9 w-28 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-primary"
+                        className="tnum h-9 w-28 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand"
                       />
                       <span className="text-[13px] text-fg-subtle">
                         Dues are {money(duesCents)}.
@@ -532,7 +557,7 @@ export function PayFlow() {
             </p>
           </Card>
         ) : (
-          <Card role="radiogroup" aria-label="Pay from">
+          <Card>
             {instruments.map((instrument, index) => {
               const Icon = RAIL_ICON[instrument.kind];
               const active = selected?.id === instrument.id;
@@ -542,32 +567,26 @@ export function PayFlow() {
                 <div
                   key={instrument.id}
                   className={cn(
-                    "flex min-h-16 w-full items-center gap-1 py-1.5 pl-2 pr-2",
+                    "flex min-h-14 w-full items-center gap-3 px-4 py-3",
                     index > 0 && "border-t border-border",
+                    active && "bg-brand-soft/60",
                   )}
                 >
-                  {/* A radio row: the ring on the left says which one pays,
-                      the tile says what kind of account it is. */}
                   <button
                     type="button"
-                    role="radio"
-                    aria-checked={active}
                     disabled={expired}
                     onClick={() => setSelectedId(instrument.id)}
-                    className="flex min-h-13 min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-2 disabled:opacity-50"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-50"
                   >
-                    <span
-                      className={cn(
-                        "flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                        active ? "border-primary" : "border-border-2",
-                      )}
-                      aria-hidden
-                    >
-                      {active ? <span className="pop-in size-2.5 rounded-full bg-primary" /> : null}
-                    </span>
-                    <IconTile icon={Icon} tint="blue" size="sm" />
+                    <IconTile
+                      icon={Icon}
+                      tint="blue"
+                      variant={active ? "solid" : "soft"}
+                      size="md"
+                      className={cn("transition-transform duration-200", active && "scale-105")}
+                    />
                     <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="flex flex-wrap items-center gap-2">
                         <span className="truncate text-[15px] font-medium text-fg">
                           {instrument.label} ••{instrument.mask}
                         </span>
@@ -590,6 +609,11 @@ export function PayFlow() {
                           : "No fee to you"}
                       </span>
                     </span>
+                    {active ? (
+                      <span className="pop-in flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-primary-fg">
+                        <Check className="size-3" strokeWidth={3} />
+                      </span>
+                    ) : null}
                   </button>
 
                   <InstrumentMenu

@@ -47,12 +47,12 @@ export type TintName = "blue" | "teal" | "amber" | "coral" | "violet";
 
 export const theme = {
   light: {
-    bg: "#f5f6f8",
+    bg: palette.neutral[100],
     surface: "#ffffff",
-    surface2: "#f9fafb",
-    border: "#e5e7eb",
-    fg: "#111a2b",
-    fgMuted: "#5f6776",
+    surface2: palette.neutral[50],
+    border: "#e4e3df",
+    fg: "#16202e",
+    fgMuted: "#6b6f78",
     brand: palette.navy[800],
     brandFg: "#ffffff",
     accent: "#2c6cd1",
@@ -86,7 +86,7 @@ export const theme = {
     bg: palette.navy[950],
     surface: "#101c2e",
     surface2: palette.navy[900],
-    border: "#1a2840",
+    border: "#1f3050",
     fg: "#e9edf3",
     fgMuted: "#9aa8bd",
     brand: palette.navy[100],

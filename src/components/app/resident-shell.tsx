@@ -225,12 +225,14 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                 t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
               )?.href ?? ""
             }
-            // A list packed from the top, 44px a row. Spreading the rows
-            // across the column made 80px rows on a laptop, which read as
-            // buttons rather than a list. Only a genuinely tall display
-            // (Monish's 42" screen, 2026-09-21) spreads them out.
-            className="stagger flex min-h-full w-full flex-col justify-start gap-0.5 [@media(min-height:1100px)]:justify-evenly"
-            pillClassName="bg-brand-gradient rounded-xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
+            // Rows grow to share the column's height, so on a tall display
+            // each button fills its slot instead of floating in a gap
+            // (Monish, on a 42" screen, 2026-09-21). Capped so a laptop
+            // still reads as a list; past the cap the spacing takes over.
+            // Packing them from the top was tried 2026-09-24 and read as
+            // cramped; he asked for this back.
+            className="stagger flex min-h-full w-full flex-col justify-evenly gap-1.5"
+            pillClassName="bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
           >
             {tabs.map(({ href, label, icon: Icon, webLabel, tint }) => {
               const active =
@@ -242,7 +244,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   data-tab-key={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative z-10 flex h-11 shrink-0 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors duration-200",
+                    "group relative z-10 flex min-h-11 max-h-[5.5rem] flex-1 items-center gap-3 rounded-2xl px-3 py-2.5 text-[15px] font-medium transition-colors duration-200",
                     active
                       ? "text-white"
                       : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
