@@ -48,9 +48,13 @@ export function ViewSwitcher({ className }: { className?: string }) {
           type="button"
           role="radio"
           aria-checked={view === v}
+          // Below sm the word is hidden and only the glyph shows, so the
+          // name has to come from here.
+          aria-label={label}
+          title={label}
           onClick={() => go(v)}
           className={cn(
-            "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
+            "inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] font-medium transition-colors sm:h-7 sm:px-2.5",
             view === v ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
           )}
         >
@@ -86,7 +90,7 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
           signOut();
           router.push("/signin");
         }}
-        className="flex size-8 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg"
+        className="press flex size-10 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg lg:size-9"
       >
         <LogOut className="size-4" />
       </button>

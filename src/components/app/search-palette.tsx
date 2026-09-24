@@ -90,7 +90,7 @@ export function SearchButton({ compact = false, className }: { compact?: boolean
         onClick={openSearch}
         aria-label="Search"
         className={cn(
-          "press inline-flex size-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg",
+          "press inline-flex size-10 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg lg:size-9",
           className,
         )}
       >

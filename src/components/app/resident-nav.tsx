@@ -22,6 +22,11 @@ interface ResidentTab {
   tint?: TintName;
   /** The sidebar has room for a longer name than a 63px tab does. */
   webLabel?: string;
+  /**
+   * A shorter name for the phone tab bar, where six tabs share 320px and
+   * "Dashboard" alone wanted a sixth of the screen.
+   */
+  tabLabel?: string;
   /** Sidebar only. The phone tab bar holds six. */
   webOnly?: boolean;
   /** Some sections are switched off by the admin. */
@@ -38,7 +43,7 @@ interface ResidentTab {
  * Community, Account.
  */
 export const residentTabs: ResidentTab[] = [
-  { href: "/resident", label: "Dashboard", icon: Home, tint: "blue" },
+  { href: "/resident", label: "Dashboard", tabLabel: "Home", icon: Home, tint: "blue" },
   { href: "/resident/pay", label: "Payments", icon: CreditCard, tint: "teal" },
   { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus, tint: "blue" },
   {
@@ -77,8 +82,9 @@ export const residentTabs: ResidentTab[] = [
     visible: (s) => s.showFundsToResidents,
     module: "resident-funds",
   },
-  // Account closes the list, per the huddle's nav order.
-  { href: "/resident/account", label: "Account", icon: Receipt, tint: "neutral" },
+  // Account closes the list, per the huddle's nav order. Violet, the
+  // records tint: neutral grey made its title tile look switched off.
+  { href: "/resident/account", label: "Account", icon: Receipt, tint: "violet" },
 ];
 
 /**

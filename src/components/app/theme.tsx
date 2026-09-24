@@ -174,7 +174,7 @@ export function ThemeToggle({
         title={`${current.label}. Click for ${next.label.toLowerCase()}`}
         onClick={() => setMode(next.value)}
         className={cn(
-          "inline-flex size-9 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg",
+          "press inline-flex size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:size-9",
           className,
         )}
       >

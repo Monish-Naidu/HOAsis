@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Bell,
@@ -184,6 +185,27 @@ function BellPanel({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // Where the panel sits, measured from the bell when it opens. Anchoring it
+  // to the bell's right edge with a fixed width ran it 40px off the left of
+  // a 320px screen, since the bell is not at the screen's edge.
+  const [place, setPlace] = useState<{ top: number; right: number; width: number } | null>(null);
+
+  function toggle(bell: HTMLButtonElement) {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const r = bell.getBoundingClientRect();
+    const gutter = 8;
+    const width = Math.min(compact ? 304 : 320, window.innerWidth - gutter * 2);
+    // Right-aligned under the bell when it fits, pulled in when it does not.
+    const right = Math.min(
+      Math.max(gutter, window.innerWidth - r.right),
+      window.innerWidth - width - gutter,
+    );
+    setPlace({ top: r.bottom + 8, right, width });
+    setOpen(true);
+  }
 
   return (
     <div className="relative">
@@ -195,8 +217,8 @@ function BellPanel({
             : `Notifications, ${pluralize(notices.length, "item")}`
         }
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="relative flex size-8 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        onClick={(e) => toggle(e.currentTarget)}
+        className="press relative flex size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:size-9"
       >
         <Bell className="size-[18px]" strokeWidth={1.9} />
         {notices.length > 0 ? (
@@ -206,57 +228,61 @@ function BellPanel({
         ) : null}
       </button>
 
-      {open ? (
-        <>
-          <button
-            type="button"
-            aria-label="Close notifications"
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            className={cn(
-              "absolute right-0 z-50 mt-2 overflow-hidden rounded-card border border-border bg-surface shadow-float",
-              compact ? "w-[19rem]" : "w-80",
-            )}
-          >
-            <p className="border-b border-border px-4 py-2.5 text-[13px] font-semibold text-fg-muted">
-              Notifications
-            </p>
-            {notices.length === 0 ? (
-              <p className="px-4 py-6 text-center text-[14px] text-fg-muted">
-                Nothing needs you right now.
-              </p>
-            ) : (
-              notices.map(({ icon: Icon, ...n }) => (
-                <Link
-                  key={n.id}
-                  href={n.href}
-                  onClick={() => setOpen(false)}
-                  className="flex items-start gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-surface-2"
-                >
-                  <span
-                    className={cn(
-                      "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
-                      n.tone,
-                    )}
-                  >
-                    <Icon className="size-4" strokeWidth={2} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-medium leading-snug text-fg">
-                      {n.title}
-                    </span>
-                    <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-fg-muted">
-                      {n.detail}
-                    </span>
-                  </span>
-                </Link>
-              ))
-            )}
-          </div>
-        </>
-      ) : null}
+      {/* Portalled to the body. The dashboard's bell sits in a frosted tray,
+          and a backdrop filter makes its box the frame for anything fixed
+          inside it, so the panel landed inside the photo and was cut off. */}
+      {open && place
+        ? createPortal(
+            <>
+              <button
+                type="button"
+                aria-label="Close notifications"
+                className="fixed inset-0 z-40 cursor-default"
+                onClick={() => setOpen(false)}
+              />
+              <div
+                className="fixed z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-card border border-border bg-surface shadow-float"
+                style={{ top: place.top, right: place.right, width: place.width }}
+              >
+                <p className="border-b border-border px-4 py-2.5 text-[13px] font-semibold text-fg-muted">
+                  Notifications
+                </p>
+                {notices.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-[14px] text-fg-muted">
+                    Nothing needs you right now.
+                  </p>
+                ) : (
+                  notices.map(({ icon: Icon, ...n }) => (
+                    <Link
+                      key={n.id}
+                      href={n.href}
+                      onClick={() => setOpen(false)}
+                      className="flex items-start gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-surface-2"
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                          n.tone,
+                        )}
+                      >
+                        <Icon className="size-4" strokeWidth={2} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px] font-medium leading-snug text-fg">
+                          {n.title}
+                        </span>
+                        <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-fg-muted">
+                          {n.detail}
+                        </span>
+                      </span>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
