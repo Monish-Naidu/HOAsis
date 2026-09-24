@@ -314,6 +314,15 @@ const buttonStyles = {
 type ButtonVariant = keyof typeof buttonStyles.variant;
 type ButtonSize = keyof typeof buttonStyles.size;
 
+/**
+ * A button's classes, for something that has to be another element: a
+ * <label> that opens a file picker, a <summary>. Anything that can be a
+ * Button should be one.
+ */
+export function buttonClass(variant: ButtonVariant = "secondary", size: ButtonSize = "md"): string {
+  return cn(buttonStyles.base, buttonStyles.variant[variant], buttonStyles.size[size]);
+}
+
 export function Button({
   variant = "secondary",
   size = "md",
@@ -778,7 +787,8 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={cn(
             "inline-flex shrink-0 items-center gap-1.5 rounded-md font-medium transition-colors",
-            size === "lg" ? "h-9 px-4 text-[14px]" : "h-7 px-3 text-[13px]",
+            // A finger needs more than a pointer does.
+            size === "lg" ? "h-9 px-4 text-[14px]" : "h-7 px-3 text-[13px] pointer-coarse:h-9",
             value === o.value ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
           )}
         >
@@ -802,7 +812,7 @@ export function Select({
       <select
         className={cn(
           "w-full min-w-0 appearance-none rounded-lg border border-border-2 bg-surface pl-3 pr-8 text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary",
-          size === "sm" ? "h-8 text-[13px]" : "h-9 text-[14px]",
+          size === "sm" ? "h-8 text-[13px] pointer-coarse:h-9" : "h-9 text-[14px]",
         )}
         {...props}
       >
