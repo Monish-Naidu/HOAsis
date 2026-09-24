@@ -297,7 +297,7 @@ const buttonStyles = {
       "bg-brand-gradient text-primary-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-sm)] hover:brightness-[1.06] disabled:bg-none disabled:bg-surface-3 disabled:text-fg-subtle disabled:shadow-none disabled:opacity-100",
     // The marketing call to action: the same button, with the shimmer and
     // the glow the product itself stays without.
-    hero: "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow hover:brightness-[1.05]",
+    hero: "shimmer bg-brand-gradient font-semibold text-primary-fg shadow-raised hover:shadow-glow hover:brightness-[1.05]",
     secondary: "border border-border-2 bg-surface text-fg hover:border-fg-subtle hover:bg-surface-2",
     ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
     danger: "border border-danger/30 bg-danger-soft text-danger hover:border-danger/50",
