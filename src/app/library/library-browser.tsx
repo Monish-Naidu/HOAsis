@@ -89,7 +89,7 @@ export function LibraryBrowser({ articles }: { articles: LibraryArticle[] }) {
             className={cn(
               "shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
               topic === t
-                ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
+                ? "border-primary bg-primary-soft text-primary"
                 : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
             )}
           >

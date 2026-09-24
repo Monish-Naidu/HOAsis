@@ -110,10 +110,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-baseline gap-1 break-words text-[15px] font-medium text-brand hover:underline"
+                      // Inline, not inline-flex, and break-all: a long statute
+                      // URL has no spaces to wrap at and ran off a 320px phone.
+                      className="break-all text-[15px] font-medium text-primary hover:underline"
                     >
                       {sourceLabel(source.url)}
-                      <ExternalLink className="size-3 shrink-0 self-center" />
+                      <ExternalLink className="ml-1 inline size-3 align-[-1px]" />
                     </a>
                     {source.note ? (
                       <span className="block text-[13px] leading-snug text-fg-muted">

@@ -1,8 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 import { ArrowRight, Building2, HeartHandshake, Ruler, ShieldCheck } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { Card } from "@/components/ui/primitives";
+import { ButtonLink, Card, IconTile, type TintName } from "@/components/ui/primitives";
 
 export const metadata = {
   title: "About",
@@ -32,24 +31,33 @@ const FOUNDERS = [
   },
 ];
 
-const BELIEFS = [
+/**
+ * Each belief wears its idea's tint, the same one the product uses: money
+ * teal, numbers and reports blue, the record violet, time and what is
+ * coming amber.
+ */
+const BELIEFS: { icon: typeof ShieldCheck; tint: TintName; title: string; body: string }[] = [
   {
     icon: ShieldCheck,
+    tint: "teal",
     title: "No one person should move money alone",
     body: "The scandal that ends self-management is almost never a bad decision. It is one person with sole control of the account. Dual approval is the default here, and the treasurer is not an exception to it.",
   },
   {
     icon: Building2,
+    tint: "blue",
     title: "A number you cannot stand behind is worse than no number",
     body: "Transactions that need a human decision are held out of every report until they get one. A dashboard that quietly averages in an uncertain figure is lying politely.",
   },
   {
     icon: HeartHandshake,
+    tint: "violet",
     title: "The next board inherits whatever you leave",
     body: "This starts at turnover and never stops. Requests, decisions, and the reasons behind them stay on the record, because otherwise the only institutional memory is whoever happens to still live there.",
   },
   {
     icon: Ruler,
+    tint: "amber",
     title: "A first budget that sells houses is not a first budget",
     body: "Low dues in year one make a community easier to sell and hand the incoming board a shortfall it did not choose. We show what reserves actually require before the assessment is set, on the theory that a builder would rather know than find out at a deposition.",
   },
@@ -102,14 +110,14 @@ export default function AboutPage() {
             </h2>
           </Reveal>
           <div className="mt-4 space-y-4">
-            {BELIEFS.map(({ icon: Icon, title, body }, index) => (
+            {BELIEFS.map(({ icon, tint, title, body }, index) => (
               <Reveal key={title} delay={index * 80}>
-                <Card className="p-5">
-                  <span className="mb-3 inline-flex size-9 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-fg">
-                    <Icon className="size-4" strokeWidth={1.9} />
-                  </span>
-                  <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">{title}</h3>
-                  <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{body}</p>
+                <Card className="flex items-start gap-4 p-5">
+                  <IconTile icon={icon} tint={tint} size="md" />
+                  <div className="min-w-0">
+                    <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">{title}</h3>
+                    <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{body}</p>
+                  </div>
                 </Card>
               </Reveal>
             ))}
@@ -130,18 +138,20 @@ export default function AboutPage() {
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {FOUNDERS.map((founder, index) => (
               <Reveal key={founder.name} delay={index * 90}>
-                <Card className="flex h-full flex-col overflow-hidden">
-                  <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface-3">
+                <Card className="flex h-full flex-col p-5">
+                  {/* A headshot, not a poster: a full-width 4:5 portrait made
+                      the two of us the loudest thing on the page. */}
+                  <div className="relative aspect-square w-full max-w-[160px] overflow-hidden rounded-2xl bg-surface-3">
                     {founder.photo ? (
                       <Image
                         src={founder.photo}
                         alt={`${founder.name}, ${founder.role}`}
                         fill
-                        sizes="(max-width: 640px) 100vw, 320px"
+                        sizes="160px"
                         className="object-cover object-top"
                       />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center bg-navy-900 text-[48px] font-semibold tracking-[-0.03em] text-navy-50 dark:bg-navy-800">
+                      <span className="flex h-full w-full items-center justify-center bg-surface-3 text-[40px] font-semibold tracking-[-0.03em] text-fg-muted">
                         {founder.name
                           .split(" ")
                           .map((part) => part[0])
@@ -149,7 +159,7 @@ export default function AboutPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-1 flex-col p-5">
+                  <div className="mt-4 flex flex-1 flex-col">
                     <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-fg">
                       {founder.name}
                     </h3>
@@ -170,7 +180,7 @@ export default function AboutPage() {
             <div className="mt-4 space-y-4 text-[17px] leading-[1.75] text-fg-muted">
               <p>
                 Self-managed associations, roughly 20 to 400 homes, where a handful of neighbors
-                run the whole thing. Single family, townhome, or condo. If you have a professional
+                run the whole thing. Single family, townhome, condo, or a mix. If you have a professional
                 manager and are happy, we are not trying to change your mind.
               </p>
               <p>
@@ -192,13 +202,10 @@ export default function AboutPage() {
               books, a live meeting, an open ballot, and a reserve plan that does not quite work.
               Sign in as anyone.
             </p>
-            <Link
-              href="/signin"
-              className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg"
-            >
+            <ButtonLink href="/signin#sample" variant="primary" size="lg" className="group mt-5">
               Open the demo
-              <ArrowRight className="size-3.5" />
-            </Link>
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </ButtonLink>
           </div>
         </Reveal>
       </main>

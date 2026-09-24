@@ -154,7 +154,7 @@ export function SignInPanel() {
               className={cn(
                 "py-3 text-[15px] font-medium transition-colors",
                 mode === m
-                  ? "border-b-2 border-navy-900 text-fg dark:border-navy-100"
+                  ? "-mb-px border-b-2 border-primary text-fg"
                   : "text-fg-muted hover:text-fg",
               )}
             >
@@ -248,8 +248,9 @@ export function SignInPanel() {
           you in as that person locally; the real project is untouched, and
           the header offers the real associations once somebody actually
           signs in. The same card is the whole front door when no project
-          is configured. */}
-      <Card className="overflow-hidden">
+          is configured. The front page's "See how it works" lands here
+          by its id. */}
+      <Card id="sample" className="scroll-mt-6 overflow-hidden">
         <div className="p-4">
           <p className="text-[15px] font-semibold text-fg">Just looking? Try a sample community</p>
           <p className="mt-1 text-[13px] leading-snug text-fg-muted">
@@ -335,7 +336,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-11 w-full rounded-lg border border-border bg-surface-2 px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-border-2"
+        className="h-11 w-full rounded-lg border border-border bg-surface-2 px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
       />
     </label>
   );

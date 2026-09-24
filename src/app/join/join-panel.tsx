@@ -4,7 +4,7 @@ import { Suspense, use, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowRight, DoorOpen, ShieldCheck } from "lucide-react";
-import { Button, Card, SuccessMark } from "@/components/ui/primitives";
+import { Button, ButtonLink, Card, SuccessMark } from "@/components/ui/primitives";
 import { useAppState, useCommunityById, useStorageReady } from "@/lib/app-state";
 import { useAuth, signUp } from "@/lib/auth";
 import { parseInvitation } from "@/lib/invitations";
@@ -67,18 +67,12 @@ export function JoinPanel() {
           your board to send it again, or join with the association&apos;s code.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Link
-            href="/join"
-            className="press shimmer inline-flex h-10 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[15px] font-semibold text-primary-fg shadow-raised hover:shadow-glow"
-          >
+          <ButtonLink href="/join" variant="primary" size="lg">
             Join with a code
-          </Link>
-          <Link
-            href="/signin"
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 px-4 text-[15px] font-semibold text-fg hover:bg-surface-2"
-          >
+          </ButtonLink>
+          <ButtonLink href="/signin" variant="secondary" size="lg">
             Sign in
-          </Link>
+          </ButtonLink>
         </div>
       </Card>
     );
@@ -124,7 +118,7 @@ export function JoinPanel() {
 }
 
 const field =
-  "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand disabled:bg-surface-2 disabled:text-fg-muted";
+  "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-primary disabled:bg-surface-2 disabled:text-fg-muted";
 const label = "mb-1 block text-[13px] font-semibold text-fg-muted";
 
 /* ------------------------------------------------------------------ code */
@@ -214,7 +208,7 @@ function JoinWithCode({
         </Button>
         <p className="text-center text-[13px] text-fg-subtle">
           Already have an account?{" "}
-          <Link href="/signin" className="font-medium text-brand hover:underline">
+          <Link href="/signin" className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>
@@ -323,12 +317,14 @@ function JoinForm({
               : `One tap on the link we sent to ${effectiveEmail} confirms your address. The board of ${found.name} then confirms your home, and you will get an email when they let you in.`
             : `The board confirms your home and lets you in. You will get an email when they do.`}
         </p>
-        <Link
+        <ButtonLink
           href={done === "waiting" ? "/resident" : "/signin"}
-          className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg border border-border-2 px-4 text-[15px] font-semibold text-fg hover:bg-surface-2"
+          variant="secondary"
+          size="lg"
+          className="mt-5"
         >
           {done === "waiting" ? "Go to my account" : "Go to sign in"}
-        </Link>
+        </ButtonLink>
       </Card>
     );
   }
@@ -434,7 +430,7 @@ function JoinForm({
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
                 placeholder="We closed on the 14th."
-                className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+                className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
               />
             </label>
           </>
@@ -475,7 +471,7 @@ function JoinForm({
             Already have an account?{" "}
             <Link
               href={`/signin?next=${encodeURIComponent(`/join?${invited ? "invite" : "code"}=${code}`)}`}
-              className="font-medium text-brand hover:underline"
+              className="font-medium text-primary hover:underline"
             >
               Sign in
             </Link>

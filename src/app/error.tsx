@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Button, Card } from "@/components/ui/primitives";
+import { Button, ButtonLink, Card, IconTile } from "@/components/ui/primitives";
 import { Wordmark } from "@/components/app/logo";
 
 /** Route level fallback. Next renders this when a segment throws. */
@@ -25,9 +24,7 @@ export default function RouteError({
       </header>
       <main className="flex flex-1 items-center justify-center px-5 pb-20">
         <Card className="w-full max-w-md p-6">
-          <span className="mb-3 inline-flex size-10 items-center justify-center rounded-xl bg-warn-soft text-warn">
-            <AlertTriangle className="size-5" />
-          </span>
+          <IconTile icon={AlertTriangle} tint="amber" size="md" className="mb-4" />
           <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
             This page did not load
           </h1>
@@ -37,17 +34,14 @@ export default function RouteError({
           {error.digest ? (
             <p className="mt-2 font-mono text-[13px] text-fg-subtle">Reference {error.digest}</p>
           ) : null}
-          <div className="mt-5 flex gap-2">
-            <Button variant="primary" size="md" onClick={reset}>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button variant="primary" size="lg" onClick={reset}>
               <RotateCcw className="size-3.5" />
               Try again
             </Button>
-            <Link
-              href="/signin"
-              className="inline-flex h-9 items-center rounded-lg border border-border-2 px-4 text-[15px] font-medium text-fg hover:bg-surface-2"
-            >
+            <ButtonLink href="/signin" variant="secondary" size="lg">
               Back to sign in
-            </Link>
+            </ButtonLink>
           </div>
         </Card>
       </main>

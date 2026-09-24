@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ArrowRight, Check, Minus, Plus } from "lucide-react";
 import {
   annualFor,
@@ -11,6 +10,7 @@ import {
   PRICE_PER_HOME_CENTS,
   TRIAL_DAYS,
 } from "@/lib/pricing";
+import { Badge, ButtonLink } from "@/components/ui/primitives";
 import { cn, money } from "@/lib/utils";
 
 /**
@@ -27,15 +27,19 @@ const DEFAULT_HOMES = PRICE_EXAMPLES.find((e) => e.highlight)?.homes ?? 88;
 const MIN_HOMES = 4;
 const MAX_HOMES = 2_000;
 
-/** Short, bold keyword first. The list has to be scannable, not read. */
+/**
+ * Short, bold keyword first. The list has to be scannable, not read. Only
+ * what a new association gets today: no native app, and no compliance
+ * register while that module is switched off.
+ */
 const INCLUDED: { lead: string; rest: string }[] = [
   { lead: "Every feature", rest: "at every size" },
   { lead: "Unlimited", rest: "board members and residents" },
   { lead: "Accounting", rest: "with bank matching and reserves" },
-  { lead: "Resident site", rest: "and mobile app" },
-  { lead: "Voting, meetings", rest: "and video with dial-in" },
+  { lead: "Resident site", rest: "that works on any phone" },
+  { lead: "Voting and meetings", rest: "with agendas and a call-in link" },
   { lead: "Documents", rest: "and the public records page" },
-  { lead: "Compliance register", rest: "for your state" },
+  { lead: "Board guides", rest: "for your state's rules" },
   { lead: "Live support", rest: "from the people who built it" },
 ];
 
@@ -60,19 +64,23 @@ export function PriceCalculator() {
   const managedHigh = MANAGEMENT_RANGE_PER_HOME.high * homes * 12;
 
   return (
-    <div className="relative isolate overflow-hidden rounded-[1.5rem] border border-border bg-hero-field p-3 sm:p-5">
-      {/* The stage: the aurora under everything, so the dial sits on colour. */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora" aria-hidden />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-5">
-        {/* The plan card: a gradient band, the rate, the button. */}
+    <div className="relative isolate">
+      {/* The stage: a soft aurora under the two cards, dissolved at its
+          edges, rather than a bordered panel around them. */}
+      <div
+        className="pointer-events-none absolute -inset-x-10 -inset-y-12 -z-10 bg-aurora [mask-image:radial-gradient(closest-side,black_55%,transparent)]"
+        aria-hidden
+      />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-5">
+        {/* The plan card: the rate, the dial, the button. No coloured band
+            across the top: a card never has a coloured header, and the
+            price is the colour this card needs. */}
         <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-float">
-          <div className="flex items-center justify-between gap-3 bg-brand-gradient px-6 py-3 text-primary-fg">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em]">One plan</p>
-            <p className="text-[13px] font-medium text-white/85">
-              {TRIAL_DAYS} days free, no card
-            </p>
-          </div>
-          <div className="px-6 pb-6 pt-5">
+          <div className="p-6">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Badge tone="blue">One plan</Badge>
+              <Badge tone="ok">{TRIAL_DAYS} days free, no card</Badge>
+            </div>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <p className="tnum text-gradient text-[56px] font-semibold leading-none tracking-[-0.04em]">
                 {money(PRICE_PER_HOME_CENTS, { cents: false })}
@@ -128,7 +136,7 @@ export function PriceCalculator() {
                     className={cn(
                       "press rounded-full border px-3 py-1 text-[13px] font-semibold",
                       homes === example.homes
-                        ? "border-transparent bg-brand-gradient text-primary-fg shadow-raised"
+                        ? "border-primary bg-primary-soft text-primary"
                         : "border-border-2 bg-surface text-fg-muted hover:border-fg-subtle hover:text-fg",
                     )}
                   >
@@ -156,22 +164,17 @@ export function PriceCalculator() {
               </div>
             </div>
 
-            <Link
-              href="/start"
-              className="press shimmer group mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-gradient text-[16px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
-            >
+            <ButtonLink href="/start" variant="hero" size="xl" className="group mt-5 w-full">
               Start free for {TRIAL_DAYS} days
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            </ButtonLink>
           </div>
         </div>
 
         {/* What comes with it, and what it saves. */}
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl border border-border bg-surface p-6">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-              Included, always
-            </p>
+          <div className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+            <p className="text-[15px] font-semibold text-fg">Included, always</p>
             <ul className="mt-3 space-y-2.5">
               {INCLUDED.map((item) => (
                 <li key={item.lead} className="flex items-start gap-2.5">
@@ -186,9 +189,7 @@ export function PriceCalculator() {
 
           {/* Computed from the same dial, so it cannot disagree with the price. */}
           <div className="rounded-2xl border border-tint-teal/25 bg-tint-teal-soft p-6 text-tint-teal-fg">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] opacity-80">
-              Next to a management company
-            </p>
+            <p className="text-[15px] font-semibold">Next to a management company</p>
             <p key={homes} className="tnum pop-in mt-2 text-[30px] font-semibold leading-none tracking-[-0.03em]">
               {money(managedLow - annual, { cents: false })} to{" "}
               {money(managedHigh - annual, { cents: false })}
