@@ -177,7 +177,11 @@ try {
   const { data: newSeat, error: saleError } = await president.client.rpc("transfer_home", { p_unit_id: soldUnit, p_new_name: "Buyer", p_new_email: `buyer-${stamp}@example.com`, p_closing_date: day(0) });
   check("transfer_home: the board records a sale", !closingError && !saleError && Boolean(newSeat), saleError?.message ?? closingError?.message ?? "");
   const { data: seats } = await admin.from("memberships").select("full_name,ends_on").eq("unit_id", soldUnit).order("starts_on");
-  check("transfer_home: the seller's seat ended and the buyer's began", (seats ?? []).length === 2 && seats[0].ends_on !== null && seats[1].ends_on === null, JSON.stringify(seats));
+  // By name, not by order: both seats start today, so starts_on cannot tell
+  // them apart and the order came back either way.
+  const seller = (seats ?? []).find((s) => s.full_name === "Seller");
+  const buyer = (seats ?? []).find((s) => s.full_name === "Buyer");
+  check("transfer_home: the seller's seat ended and the buyer's began", (seats ?? []).length === 2 && seller?.ends_on != null && buyer?.ends_on === null, JSON.stringify(seats));
   const { data: soldBalances, error: soldBalanceError } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", soldUnit);
   check("transfer_home: the buyer starts at zero", !soldBalanceError && (soldBalances ?? []).length === 1 && soldBalances[0].balance_cents === 0, soldBalanceError?.message ?? JSON.stringify(soldBalances));
   const { error: presidentSale } = await president.client.rpc("transfer_home", { p_unit_id: presidentUnit, p_new_name: "Nobody", p_new_email: "", p_closing_date: day(0) });
