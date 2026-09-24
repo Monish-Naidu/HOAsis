@@ -8,6 +8,57 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-24 overnight: mixed communities, the overhaul, five years
+
+Monish's six asks, all built. **Committed locally, not pushed**: he wants to
+try it on localhost first. Migrations 0036, 0040, 0041, 0042 are already on
+the production database (all additive; the deployed site keeps working).
+
+1. **Mixed communities.** Onboarding asks the kinds of home (pick one to
+   three) before dues; dues can differ by kind; each lot range carries its
+   kind; the founder's kind comes from the range their number is in. Each
+   unit stores `home_type`, the association `home_types` and `dues_by_type`
+   (0036); `issue_assessment` bills each home its kind's amount. Read per
+   home dues only through `src/lib/home-types.ts`. Homeowners filters and
+   edits by kind; Settings has a **Dues** card (dues could not be changed
+   after founding at all before tonight); resident cards show the kind.
+2. **Mobile.** 65 routes x 8 widths audited; every break fixed (landing
+   phone section, board header at 320, resident tab bar at 320/360, squeezed
+   rows, wide tables stacked below sm, notifications panel, wizard footer,
+   16px fields on touch). No page scrolls sideways at 320 to 1440.
+3. **Overhaul.** Cool neutrals, no card hairlines, one button scale
+   (`sm md lg xl`, `hero` for marketing), `Segmented` `Select` `Checkbox`,
+   one filled button per screen, landing rebuilt (flat browser frame with
+   light and dark captures, fewer glossy tiles, no seams, no overclaiming
+   copy), About linked, wizard survives a reload.
+4. **Board tabs, 13 rows to 9** plus Setting up: Finances (Overview,
+   Transactions, Collections, Reserves), Requests (From owners, Notices),
+   Messages (Inbox, Announcements, Community), Meetings (Meetings, Voting).
+   URLs unchanged; routes carry `parent`/`tab`; `section-tabs.tsx` in the
+   board layout. Numbers that disagreed now agree (reserves, vendor counts,
+   transaction totals, collections labels). Dashboard lost its chart, quick
+   actions and action items; Settings lists officers plus a picker.
+5. See 4.
+6. **Five years, forty homes.** Juniper Hollow was founded through /start
+   and filled by `scripts/verify-five-years.mjs` (townhomes 1-24, condos
+   25-40 at a higher amount). Write-up: `docs/qa-2026-09-24-five-years.md`.
+   Biggest finds, fixed: every real association past about two years read only
+   its newest 1000 statement rows; buyer closing payments never hit the
+   books; the second request number collided; owners saw $0 for association
+   funds (`association_funds`, 0041); two seat elections took one pick per
+   home and halved turnout (`cast_votes`, 0042).
+
+Sign in to Juniper: `monishnaidu18+fiveyear@gmail.com` (password in the QA
+write-up). Owners `qa5y-*@example.com`. Remove it with
+`node scripts/verify-five-years.mjs --remove`.
+
+**Still open, his call:** late fees are promised on the pay page but never
+charged; no way to record a reserve transfer or any ledger line besides dues
+and vendor payments; a buyer sees the seller's payment history; Budget and
+Trends stay off; Resend domain still unverified (nobody but Monish can sign
+up until it is). `scripts/verify-ranked-list.mjs` signs in with Monish's
+seed password, which no longer works.
+
 ## 2026-09-23: Stripe live in test mode, full overnight QA
 
 Write-up in `docs/qa-2026-09-23.md`. Payments work end to end on Oakview.
