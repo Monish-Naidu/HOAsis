@@ -52,8 +52,9 @@ export function CardHeader({
   icon?: ReactNode;
   tint?: TintName;
   /**
-   * A hairline of the tint along the top of the card, the same one the
-   * stat tiles wear, for a dashboard card that should be found by colour.
+   * The card's colour, worn by its icon tile. It used to also draw a
+   * hairline along the top; a dashboard of six coloured lines read as
+   * decoration, so since 2026-09-24 the tile alone carries it.
    */
   accent?: TintName;
   className?: string;
@@ -63,28 +64,22 @@ export function CardHeader({
       className={cn(
         // Wraps, so on a phone the action drops under the title instead of
         // pushing the card wider than the screen.
-        "flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4",
-        // Clipped to the card's own corner radius, less its border, so the
-        // hairline follows the curve instead of poking past it.
-        accent && "relative overflow-hidden rounded-t-[13px]",
+        "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5",
         className,
       )}
     >
-      {accent ? (
-        <span className={cn("absolute inset-x-0 top-0 h-[3px]", ACCENT_BAR[accent])} aria-hidden />
-      ) : null}
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         {icon ? (
-          <IconTile tint={tint ?? "blue"} size="sm" className="mt-0.5">
+          <IconTile tint={tint ?? accent ?? "blue"} size="sm">
             {icon}
           </IconTile>
         ) : null}
         <div className="min-w-0">
-          <h2 className="truncate text-[17px] font-semibold tracking-[-0.01em] text-fg">
+          <h2 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-fg">
             {title}
           </h2>
           {subtitle ? (
-            <p className="mt-0.5 text-[15px] leading-snug text-fg-muted">{subtitle}</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{subtitle}</p>
           ) : null}
         </div>
       </div>
@@ -132,7 +127,7 @@ export function PageHeader({
   icon?: ReactNode | false;
 }) {
   return (
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
       <div className="flex min-w-0 items-center gap-4">
         {icon === false ? null : icon === undefined ? <RouteTile /> : icon}
         <div className="min-w-0">
@@ -145,7 +140,7 @@ export function PageHeader({
             {title}
           </h1>
           {description ? (
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-fg-muted">{description}</p>
+            <p className="mt-1 max-w-2xl text-[14px] leading-relaxed text-fg-muted">{description}</p>
           ) : null}
         </div>
       </div>
@@ -169,15 +164,6 @@ export function PageHeader({
  */
 export type TintName = "blue" | "teal" | "amber" | "coral" | "violet" | "neutral";
 
-/** The hairline along the top of a card or a stat tile. */
-export const ACCENT_BAR: Record<TintName, string> = {
-  blue: "bg-tint-blue",
-  teal: "bg-tint-teal",
-  amber: "bg-tint-amber",
-  coral: "bg-tint-coral",
-  violet: "bg-tint-violet",
-  neutral: "bg-border-2",
-};
 
 /**
  * The soft field a large tappable tile sits on, in its tint, with a hover
@@ -302,20 +288,26 @@ export function SuccessMark({
 /* -------------------------------------------------------------------------- */
 
 const buttonStyles = {
-  base: "press inline-flex items-center justify-center gap-2 rounded-lg text-[15px] font-medium disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
+  base: "press inline-flex items-center justify-center gap-2 rounded-lg font-medium disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
   variant: {
-    // The one filled button on a screen: the brand gradient, lit on hover.
+    // The one filled button on a screen: the brand gradient with a lit top
+    // edge. Disabled, it goes flat grey rather than a paler blue, which
+    // still looked pressable.
     primary:
-      "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow hover:brightness-[1.05]",
+      "bg-brand-gradient text-primary-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-sm)] hover:brightness-[1.06] disabled:bg-none disabled:bg-surface-3 disabled:text-fg-subtle disabled:shadow-none disabled:opacity-100",
+    // The marketing call to action: the same button, with the shimmer and
+    // the glow the product itself stays without.
+    hero: "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow hover:brightness-[1.05]",
     secondary: "border border-border-2 bg-surface text-fg hover:border-fg-subtle hover:bg-surface-2",
     ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
     danger: "border border-danger/30 bg-danger-soft text-danger hover:border-danger/50",
     quiet: "bg-surface-3 text-fg hover:opacity-80",
   },
   size: {
-    sm: "h-8 px-3",
-    md: "h-9 px-4",
-    lg: "h-11 px-5 text-sm",
+    sm: "h-8 px-3 text-[13px]",
+    md: "h-9 px-3.5 text-[14px]",
+    lg: "h-10 px-4 text-[15px]",
+    xl: "h-12 rounded-xl px-6 text-[17px] font-semibold",
   },
 } as const;
 
@@ -393,18 +385,23 @@ export function Badge({
   tone?: Tone;
   className?: string;
   children: ReactNode;
-  /** A status dot ahead of the word: the colour, then the word that names it. */
+  /**
+   * A status dot ahead of the word: the colour, then the word that names it.
+   * On by default for the four status tones, so a status never relies on
+   * colour alone.
+   */
   dot?: boolean;
 }) {
+  const showDot = dot ?? (tone === "ok" || tone === "warn" || tone === "danger" || tone === "info");
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-semibold tracking-[0.01em]",
+        "inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-1.5 text-[12px] font-medium",
         tones[tone],
         className,
       )}
     >
-      {dot ? (
+      {showDot ? (
         <span className="relative flex size-1.5">
           <span className="absolute inset-0 rounded-full bg-current opacity-40" style={{ transform: "scale(1.9)" }} />
           <span className="relative size-1.5 rounded-full bg-current" />
@@ -418,15 +415,6 @@ export function Badge({
 /* -------------------------------------------------------------------------- */
 /* Data display                                                                */
 /* -------------------------------------------------------------------------- */
-
-const STAT_ACCENT: Record<TintName, string> = {
-  blue: "bg-tint-blue",
-  teal: "bg-tint-teal",
-  amber: "bg-tint-amber",
-  coral: "bg-tint-coral",
-  violet: "bg-tint-violet",
-  neutral: "bg-border-2",
-};
 
 export function Stat({
   label,
@@ -443,7 +431,7 @@ export function Stat({
   hint?: ReactNode;
   tone?: Tone;
   icon?: ReactNode;
-  /** A coloured hairline along the top and a tile behind the icon, so four tiles in a row read as four things. */
+  /** A tinted tile behind the icon, so four tiles in a row read as four things. */
   accent?: TintName;
   className?: string;
   /** Makes the whole tile the way into its detail screen. */
@@ -461,11 +449,8 @@ export function Stat({
         className,
       )}
     >
-      {accent ? (
-        <span className={cn("absolute inset-x-0 top-0 h-[3px]", STAT_ACCENT[accent])} aria-hidden />
-      ) : null}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-semibold text-fg-muted">
+        <p className="text-[13px] font-medium text-fg-muted">
           {label}
         </p>
         {icon ? (
@@ -480,7 +465,7 @@ export function Stat({
       </div>
       <p
         className={cn(
-          "tnum mt-2 text-[24px] font-semibold leading-none tracking-[-0.03em]",
+          "tnum mt-2.5 text-[26px] font-semibold leading-none tracking-[-0.025em]",
           tone === "ok" && "text-ok",
           tone === "danger" && "text-danger",
           tone === "warn" && "text-warn",
@@ -598,8 +583,8 @@ export function Row({
 export function KeyValue({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <dt className="text-[15px] text-fg-muted">{label}</dt>
-      <dd className="tnum text-[15px] font-medium text-fg">{children}</dd>
+      <dt className="text-[14px] text-fg-muted">{label}</dt>
+      <dd className="tnum min-w-0 text-right text-[14px] font-medium text-fg">{children}</dd>
     </div>
   );
 }
@@ -626,9 +611,9 @@ export function EmptyState({
           {icon}
         </IconTile>
       ) : null}
-      <p className="text-sm font-medium text-fg">{title}</p>
+      <p className="text-[15px] font-semibold text-fg">{title}</p>
       {description ? (
-        <p className="mt-1 max-w-sm text-[15px] text-fg-muted">{description}</p>
+        <p className="mt-1 max-w-sm text-[14px] text-fg-muted">{description}</p>
       ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
@@ -729,17 +714,118 @@ export function SettingRow({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 border-b border-border px-5 py-4 last:border-b-0",
+        // Wraps below sm, so a wide control drops under its label instead of
+        // squeezing the label to a word per line on a phone.
+        "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5 last:border-b-0 sm:flex-nowrap",
         className,
       )}
     >
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-medium text-fg">{title}</p>
+      <div className="min-w-[12rem] flex-1">
+        <p className="text-[14px] font-medium text-fg">{title}</p>
         {description ? (
           <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{description}</p>
         ) : null}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="min-w-0 max-w-full shrink-0">{children}</div>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Controls                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One of a few views, side by side. The one segmented control.
+ *
+ * There were four hand-built styles of this (money tabs, the date range,
+ * the roster filter, open and resolved). This is the shape all of them take.
+ */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+  className,
+}: {
+  options: { value: T; label: ReactNode; count?: number }[];
+  value: T;
+  onChange: (next: T) => void;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn("inline-flex max-w-full overflow-x-auto rounded-lg bg-surface-3 p-0.5 no-scrollbar", className)}
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors",
+            value === o.value ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
+          )}
+        >
+          {o.label}
+          {o.count !== undefined ? <span className="tnum text-fg-subtle">{o.count}</span> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A native select, dressed: the platform's picker on a phone, our chrome everywhere. */
+export function Select({
+  className,
+  children,
+  size = "md",
+  ...props
+}: Omit<ComponentProps<"select">, "size"> & { size?: "sm" | "md" }) {
+  return (
+    <span className={cn("relative inline-flex min-w-0", className)}>
+      <select
+        className={cn(
+          "w-full min-w-0 appearance-none rounded-lg border border-border-2 bg-surface pl-3 pr-8 text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary",
+          size === "sm" ? "h-8 text-[13px]" : "h-9 text-[14px]",
+        )}
+        {...props}
+      >
+        {children}
+      </select>
+      <svg
+        viewBox="0 0 16 16"
+        aria-hidden
+        className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-fg-subtle"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M4 6l4 4 4-4" />
+      </svg>
+    </span>
+  );
+}
+
+/** A checkbox in the primary blue. */
+export function Checkbox({
+  className,
+  ...props
+}: Omit<ComponentProps<"input">, "type">) {
+  return (
+    <input
+      type="checkbox"
+      className={cn(
+        "size-4 shrink-0 cursor-pointer rounded-[5px] border-border-2 accent-[var(--primary)]",
+        className,
+      )}
+      {...props}
+    />
   );
 }
