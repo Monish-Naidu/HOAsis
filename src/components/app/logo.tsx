@@ -64,8 +64,9 @@ export function Wordmark({ className, size = 28 }: { className?: string; size?: 
   return (
     <span className={cn("inline-flex items-center text-fg", className)} style={{ gap: size * 0.2 }}>
       <Logo size={size} />
+      {/* Never wraps: "Your" over "HOAsis" in a narrow bar read as two words. */}
       <span
-        className="font-semibold"
+        className="whitespace-nowrap font-semibold"
         style={{
           fontSize,
           letterSpacing: `${-0.014 - Math.min(size, 48) * 0.0004}em`,

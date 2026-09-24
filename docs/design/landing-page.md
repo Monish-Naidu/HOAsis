@@ -160,7 +160,7 @@ Decisions taken in the rehaul, and why:
 - **"Live support"** on the strip is what the board sidebar already
   promises, phone and chat 7am to 11pm. The pricing page said "email
   support"; it now says the same thing as the strip.
-- **The nav reads Home, Pricing, Resources, About.** "Resources" is the
+- **The nav read Home, Pricing, Resources, About** (Pricing, Resources, About since 2026-09-24). "Resources" is the
   library under the deck's label; the route is unchanged.
 - **The header is transparent at the top and solid after eight pixels**,
   read through `useSyncExternalStore`. The hero pulls itself up under the
@@ -178,3 +178,45 @@ Still owed, in addition to the list above:
 1. **A clean still of Greg** without the play button, if one is ever
    rendered; the painted-out version is close but not original.
 2. **Native apps**, before the pocket section can carry store badges.
+
+## The startup pass, 2026-09-24
+
+Monish asked for the page to look "cleaner, professional, and like a tech
+startup that catches most people's eyes". The slides, their order and their
+words stay; the finish changed. What was decided, so it is not re-litigated:
+
+- **One lit tile per feature card, soft everywhere else.** There were 21
+  `solid` tiles on the page. Now only the four feature cards carry one. The
+  assurance strip is a bare 18px glyph in its tint, the benefits and the
+  pocket tiles are `soft`, and "And everything else" is one wrapped row of
+  chips instead of six 128px cells.
+- **No hairlines between sections.** Sections sit on `bg-bg` and are told
+  apart by space. The hero field fades into the page at its foot, and the
+  Eric and pocket sections carry an aurora dissolved top and bottom
+  (`Wash` in `page.tsx`), so there is no edge anywhere.
+- **The dashboard is in a flat browser window at the full page width**,
+  not the silver desktop render (`device-monitor.png`, deleted). The render
+  dated the page and shrank the capture to where it could not be read. The
+  capture is the top of `/board` at 1280 x 800, taken at 2x in both themes
+  by `pnpm shots`, and swapped with `dark:`. The phone capture swaps the
+  same way.
+- **The phone is laid out at 340px and sized with CSS `zoom`.** It used to
+  take a width and scale its projective matrix, which pinned it at 500px
+  and pushed the pocket section off every phone.
+- **"See how it works" replaces the hero's "Log in"**, which repeated the
+  nav. It opens the sample community on `/signin#sample`.
+- **One call to action per section.** Get started in the hero and the
+  close, Start today on Eric, See pricing on the price card. The "Run your
+  HOA" section shows the product instead.
+- **The price line is a card**, and the payment rails under it are plain
+  glyphs with labels (Stripe, bank transfer, cards, Apple Pay, autopay)
+  rather than a row of grey words that read as placeholder logos.
+- **The close is an inset navy stage**, rounded, not a full-bleed band.
+- **Copy that overclaimed is gone.** No "knowledge center" (the fourth card
+  is "Board guides", the library's articles), no messaging or calling
+  vendors, no "mobile app" or "compliance register" on pricing while there
+  is no native app and the compliance module is off.
+- **Mixed communities get one line**, under "Run your HOA": single-family
+  homes, townhomes, condos, or a mix.
+- **Nav is Pricing, Resources, About.** About came back in the slot "Home"
+  held; the wordmark already goes home.

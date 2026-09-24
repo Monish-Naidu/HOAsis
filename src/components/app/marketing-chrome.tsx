@@ -6,22 +6,24 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Wordmark } from "@/components/app/logo";
 import { ThemeToggle } from "@/components/app/theme";
+import { ButtonLink } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 
 /**
- * The nav from the deck of 2026-08-28: Home, Pricing, Resources.
+ * The nav: Pricing, Resources, About.
  *
  * "Resources" is the library. The route keeps its name because links to it
  * exist; the label follows the design, because that is the word a board
  * member scans for.
  *
- * About is hidden for now on Monish's ask (2026-09-01). The page still
- * renders at /about for anyone holding the link; only the ways in are gone.
+ * About was hidden on 2026-09-01 and came back on 2026-09-24 in the slot
+ * "Home" held: the wordmark already goes home, and a page nobody can reach
+ * does no work.
  */
 const LINKS = [
-  { href: "/", label: "Home" },
   { href: "/pricing", label: "Pricing" },
   { href: "/library", label: "Resources" },
+  { href: "/about", label: "About" },
 ];
 
 function subscribeToScroll(onChange: () => void) {
@@ -76,8 +78,7 @@ export function MarketingHeader() {
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
             {LINKS.map((link) => {
-              const active =
-                link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              const active = pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
@@ -113,12 +114,16 @@ export function MarketingHeader() {
               Log in
             </Link>
           </div>
-          <Link
+          {/* Under 380px the wordmark, this and the menu do not share a row;
+              the button moves into the menu, and the hero carries its own. */}
+          <ButtonLink
             href="/start"
-            className="press shimmer inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-lg bg-brand-gradient px-4 text-[15px] font-semibold text-primary-fg shadow-raised hover:shadow-glow"
+            variant="hero"
+            size="md"
+            className="shrink-0 font-semibold max-[379px]:hidden"
           >
             Get started
-          </Link>
+          </ButtonLink>
           <button
             type="button"
             aria-label="Menu"
@@ -133,7 +138,9 @@ export function MarketingHeader() {
 
       {open ? (
         <nav className="border-t border-border px-5 py-2 md:hidden" aria-label="Main">
-          {LINKS.map((link) => (
+          {/* Log in joins the list here: under `sm` its pill in the bar is
+              hidden, and the menu is the only way to it. */}
+          {[...LINKS, { href: "/signin", label: "Log in" }].map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -143,6 +150,15 @@ export function MarketingHeader() {
               {link.label}
             </Link>
           ))}
+          <ButtonLink
+            href="/start"
+            variant="hero"
+            size="lg"
+            onClick={() => setOpen(false)}
+            className="my-2 w-full font-semibold min-[380px]:hidden"
+          >
+            Get started
+          </ButtonLink>
         </nav>
       ) : null}
     </header>
@@ -156,8 +172,8 @@ export function MarketingFooter() {
         <div>
           <Wordmark size={34} />
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-fg-muted">
-            Moving your community forward. Everything your community needs to get
-            things done quickly, all in one place.
+            Your community. Your HOAsis. Everything your HOA needs to get things
+            done quickly, all in one place.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">

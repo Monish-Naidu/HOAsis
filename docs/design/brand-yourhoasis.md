@@ -1,5 +1,12 @@
 # Your HOAsis: the rebrand, and how to talk
 
+2026-09-21. The hero headline and the tab title are **"Your community.
+Your HOAsis."**, Monish's explicit choice. It replaces "Moving your
+community forward" as the primary line everywhere: the h1, the page title,
+the footer. "Moving your community forward" moves to the shelf below. The
+voice rules are otherwise unchanged; speed is still the mechanism and the
+body copy still earns it.
+
 2026-09-19. ExpressHOA becomes Your HOAsis at yourhoasis.com. The
 hummingbird, the palette and the voice below carry over unchanged; the
 wordmark is now "Your" in ink and "HOAsis" in the accent. Everything below
@@ -35,8 +42,8 @@ and `public/brand/yourhoasis-mark-white.svg`.
 
 ## Voice rules
 
-1. **Verbs of motion.** Move, forward, done, minutes. "Moving your community
-   forward" is the tagline; body copy earns it with concrete speed:
+1. **Verbs of motion.** Move, forward, done, minutes. "Your community. Your
+   HOAsis." is the headline; body copy earns it with concrete speed:
    "set up in minutes", "approve from your phone", "done before dinner".
 2. **Speed claims must be true in the product.** "Setup in minutes" is
    measured; "live support" was already vetted before it went on the strip.
@@ -55,12 +62,12 @@ and `public/brand/yourhoasis-mark-white.svg`.
 
 | Surface | Was | Is |
 | --- | --- | --- |
-| Hero h1 | Your community. Your oasis. | Moving your community **forward.** |
+| Hero h1 | Your community. Your oasis. | Your community. **Your HOAsis.** (2026-09-21; was "Moving your community forward." from 2026-09-01) |
 | Hero sub | ...clarity, connection, and calm... | Everything your community needs to get things done quickly, all in one place. |
 | Primary CTA | Quick Setup | Get started |
-| Secondary CTA | See the live demo | See how it works (opens the live demo; no play icon, because there is no video) |
+| Secondary CTA | See the live demo | See how it works (opens the sample community on `/signin#sample`; no play icon, because there is no video) |
 | Nav account link | Sign in | Log in (marketing only; the product keeps "sign in" wording) |
-| Assurance strip | five text items | four with icons: Setup in Minutes / No Card to Start / Cancel Whenever / Live Support. The 90-day trial moves to the pricing line, where the question it answers is asked. |
+| Assurance strip | five text items | four with bare tinted glyphs, sentence case: Setup in minutes / No card to start / Cancel whenever / Live support. The 90-day trial is the pill above the headline and the pricing line. |
 | Slide 2 body | HOAsis gives your board... | ExpressHOA gives your board the tools to get the work done in minutes, so the neighborhood stays the calm place you chose. |
 | Close | Start today. | Start today. + the bridge line as the subhead. |
 
@@ -81,7 +88,8 @@ counterparty in the demo ledger ("ExpressHOA Payments") and the record URLs
 
 ## Taglines on the shelf
 
-- Moving your community forward. *(primary)*
+- Your community. Your HOAsis. *(primary, since 2026-09-21)*
+- Moving your community forward. *(primary 2026-09-01 to 2026-09-21)*
 - Fast for the board. Calm for the neighborhood. *(bridge/closer)*
 - Run your HOA. Not another job. *(kept from the deck; still true)*
 - Done before dinner. *(campaign-grade, unused)*
