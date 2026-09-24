@@ -266,6 +266,13 @@ export async function loadCommunity(
       ),
     }));
 
+  // The first day of this fiscal year. A budget's actuals are this year's
+  // alone; summing every year on the books read five years of landscaping
+  // against one year's budget line.
+  const thisYearStart = `${today.slice(0, 4)}-${a.fiscal_year_start ?? "01-01"}`;
+  const fiscalYearFrom =
+    thisYearStart <= today ? thisYearStart : `${Number(today.slice(0, 4)) - 1}-${a.fiscal_year_start}`;
+
   // Statements keyed by home, each line carrying the balance after it. The
   // running figure is derived here from the same rows the balance view sums,
   // oldest first, so the statement and the balance cannot disagree.
@@ -286,6 +293,10 @@ export async function loadCommunity(
       balanceAfterCents: after,
     });
   }
+  // Walked oldest first for the running balance, shown newest first like the
+  // fixture's statements. Five years in, oldest first put the owner's last
+  // payment a hundred and twenty lines down the page.
+  for (const lines of Object.values(ownerCharges)) lines.reverse();
 
   return {
     id: a.id,
@@ -407,7 +418,7 @@ export async function loadCommunity(
           // Actuals come from the books, never from a typed number, so the
           // budget screen and the ledger cannot disagree.
           ytdActualCents: (ledger.data ?? [])
-            .filter((e) => e.category === line.category)
+            .filter((e) => e.category === line.category && e.occurred_on >= fiscalYearFrom)
             .filter((e) => (line.kind === "income" ? e.amount_cents > 0 : e.amount_cents < 0))
             .reduce((total, e) => total + Math.abs(e.amount_cents), 0),
           kind: line.kind as "income" | "expense",
@@ -420,7 +431,10 @@ export async function loadCommunity(
               (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1) *
               unitRows.length,
             ytdActualCents: (ledger.data ?? [])
-              .filter((e) => e.category === "Assessments" && e.amount_cents > 0)
+              .filter(
+                (e) =>
+                  e.category === "Assessments" && e.amount_cents > 0 && e.occurred_on >= fiscalYearFrom,
+              )
               .reduce((total, e) => total + e.amount_cents, 0),
             kind: "income",
           },

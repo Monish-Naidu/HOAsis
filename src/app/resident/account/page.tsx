@@ -20,8 +20,10 @@ export default function ResidentAccount() {
   if (!currentOwner) return null;
   // The year the ledger is actually in, not a constant.
   const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
+  // That year's payments only. Summing every line was right while a statement
+  // held one year; with five it put the whole history under "Paid in".
   const paidThisYear = ownerCharges
-    .filter((c) => c.kind === "payment")
+    .filter((c) => c.kind === "payment" && c.date.startsWith(paidYear))
     .reduce((t, c) => t + Math.abs(c.amountCents), 0);
 
   return (

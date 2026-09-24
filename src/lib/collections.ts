@@ -1,5 +1,6 @@
 import type { Community } from "@/lib/data/community";
 import type { CollectionPolicy, CommunitySettings, Owner } from "@/lib/types";
+import { addDays } from "@/lib/utils";
 
 export type { CollectionPolicy };
 
@@ -167,7 +168,19 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
      * sixty has a gap in the record, and the gap is what an owner's lawyer
      * points at. Naming it is more useful than quietly moving on.
      */
-    skipped: rows.filter((r) => r.owner.daysPastDue > policy.demandDay),
+    skipped: rows.filter(
+      (r) =>
+        r.owner.daysPastDue > policy.demandDay &&
+        // "No notice on record" has to mean the record: a billing letter to
+        // this home since it fell behind. Counting days alone flagged a
+        // household that had been sent every letter on the ladder.
+        !c.threads.some(
+          (t) =>
+            t.ownerId === r.owner.id &&
+            t.tag === "Billing" &&
+            t.updatedDate >= addDays(c.asOf, -r.owner.daysPastDue),
+        ),
+    ),
   };
 }
 

@@ -15,7 +15,7 @@ export type DuesCadence = "monthly" | "quarterly" | "annually";
 export interface DuesPeriod {
   /** The date the charge is due, YYYY-MM-DD. */
   dueOn: string;
-  /** "October dues", "Q4 2026 dues", "2027 dues". */
+  /** "October 2026 dues", "Q4 2026 dues", "2027 dues". */
   label: string;
 }
 
@@ -60,7 +60,9 @@ export function currentDuesPeriod(input: {
         y -= 1;
       }
     }
-    return { dueOn: iso(y, m, dueDay), label: `${MONTHS[m - 1]} dues` };
+    // With the year, like the quarterly and annual labels. Five years of
+    // statements otherwise hold five lines that each read "October dues".
+    return { dueOn: iso(y, m, dueDay), label: `${MONTHS[m - 1]} ${y} dues` };
   }
 
   if (cadence === "quarterly") {

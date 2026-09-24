@@ -74,7 +74,10 @@ export function formatDate(iso: string, style: "short" | "medium" | "long" = "me
       timeZone: "UTC",
     });
   }
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  // A date from another year says which. Five years in, a notice, a request
+  // and a letter all read "Aug 18", and two of them were years apart.
+  const year = d.getUTCFullYear() === today().getUTCFullYear() ? undefined : "numeric";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year, timeZone: "UTC" });
 }
 
 /**

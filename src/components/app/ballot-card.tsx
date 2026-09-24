@@ -34,6 +34,17 @@ export function resultLine(ballot: Ballot): string {
   const t = tally(ballot);
   const who = ballot.audience === "board" ? "directors" : "homes";
   if (t.cast === 0) return "Nobody voted";
+  const seats = Math.max(1, ballot.seats ?? 1);
+  if (seats > 1) {
+    // As many winners as seats, and a tie only where it decides the last one.
+    const ranked = [...ballot.options].sort((a, b) => b.votes - a.votes);
+    const last = ranked[seats - 1];
+    if (last && ranked[seats] && ranked[seats].votes === last.votes) {
+      return `Tied for the last seat · ${t.cast} of ${ballot.eligible} ${who} voted`;
+    }
+    const elected = ranked.slice(0, seats).filter((o) => o.votes > 0).map((o) => o.label);
+    return `${elected.join(" and ")} elected · ${t.cast} of ${ballot.eligible} ${who} voted`;
+  }
   if (t.tied) return `Tied · ${t.cast} of ${ballot.eligible} ${who} voted`;
   return `${t.leading.label} won · ${t.cast} of ${ballot.eligible} ${who} voted`;
 }

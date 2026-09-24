@@ -19,6 +19,8 @@ import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/a
 import { useCoverPhotoUpload } from "@/components/app/community-hero";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
+import { useAuth } from "@/lib/auth";
+import { useRemote } from "@/lib/data/remote-store";
 import { DOCUMENT_ACCEPT } from "@/lib/documents";
 import {
   buildPlan,
@@ -106,7 +108,26 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
   },
 };
 
+/**
+ * Waits for the signed in person's own association before asking anything.
+ *
+ * /start/plan is often the first page of a visit: a reload, a bookmark, the
+ * dashboard's link opened in a new tab. Nothing else on that page starts the
+ * session, so the sample community rendered in its place, and a founder was
+ * shown Mehr Meadows' 88 homes as their plan. Keyed by the community as well,
+ * because the questions asked are counted once, on the first render.
+ */
 export function SetupFlow({ welcome = false }: { welcome?: boolean }) {
+  const auth = useAuth();
+  const remote = useRemote();
+  const { community } = useAppState();
+  if (auth.loading || remote.status === "loading" || (auth.user && remote.status === "signed-out")) {
+    return null;
+  }
+  return <SetupQuestions key={community.id} welcome={welcome} />;
+}
+
+function SetupQuestions({ welcome }: { welcome: boolean }) {
   const { community, dismissedSetupTasks, dismissSetupTask } = useAppState();
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   const tasks = plan.phases.flatMap((phase) => phase.tasks);

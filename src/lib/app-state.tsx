@@ -1982,6 +1982,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               due_on: input.closingDate,
             });
             if (error) throw new Error(error.message);
+            // And the money itself, which the title company wires to the
+            // association. Without this line the owner's balance cleared while
+            // the bank balance and "collected" never saw the payment.
+            const operating = rc.bankAccounts.find((b) => b.kind === "operating");
+            const { error: bookError } = await supabase.from("ledger_entries").insert({
+              association_id: rc.id,
+              bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
+              occurred_on: input.closingDate,
+              description: `Paid at closing, unit ${owner?.unit ?? ""}`.trim(),
+              counterparty: owner?.displayName ?? "Title company",
+              category: "Assessments",
+              amount_cents: owed,
+              confirmed_at: new Date().toISOString(),
+            });
+            if (bookError) throw new Error(bookError.message);
           }
           return supabase.rpc("transfer_home", {
             p_unit_id: ownerId,

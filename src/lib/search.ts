@@ -105,7 +105,10 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `own-${o.id}`,
       kind: "household",
       title: o.displayName,
-      subtitle: `Unit ${o.unit} · ${o.address}${o.balanceCents > 0 ? ` · ${money(o.balanceCents)} owed` : ""}`,
+      // Homes numbered without addresses read "Unit 4 · · $9,950.00 owed" otherwise.
+      subtitle: [`Unit ${o.unit}`, o.address, o.balanceCents > 0 ? `${money(o.balanceCents)} owed` : ""]
+        .filter(Boolean)
+        .join(" · "),
       date: o.moveInDate,
       href: `/board/homeowners?q=${q(o.displayName)}`,
       keywords: [o.members.join(" "), o.email, o.phone, o.boardRole ?? ""].join(" "),

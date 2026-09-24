@@ -102,7 +102,7 @@ export function NewRequestForm() {
   function submit() {
     if (!owner || !kind) return;
     const seq = 200 + allRequests.length;
-    const ref = `REQ-2026-${seq}`;
+    const ref = `REQ-${todayIsoDate().slice(0, 4)}-${seq}`;
     const detail =
       kind === "amenity" && selectedAmenity
         ? `${selectedAmenity.name}${
