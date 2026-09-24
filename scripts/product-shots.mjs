@@ -5,15 +5,11 @@
  * something the product does not do. Re-run after a design change; the old
  * shots are the ones that quietly start lying.
  *
- * Every shot is taken twice, light and dark, at 2x. The front page swaps
- * them with the theme (`dark:hidden` / `dark:block`), so a visitor in dark
- * mode sees the product in dark mode.
- *
- * Capture width matters more than it looks. The dashboard is displayed at
- * up to 1112px in a browser frame, so a 1280px capture lands at 87% and the
- * type stays close to its native size. Wider, and 15px body text drops
- * toward 12px, which is where a screenshot stops being readable and starts
- * saying "this product is cluttered".
+ * Capture width matters more than it looks. These are displayed at about
+ * 1112px, so a 1400px capture is downscaled to 79% and 15px body text lands
+ * near 12px, which is where a screenshot stops being readable and starts
+ * saying "this product is cluttered". Capturing near the display width keeps
+ * the type close to its native size.
  */
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
@@ -24,17 +20,40 @@ mkdirSync(OUT, { recursive: true });
 
 const SHOTS = [
   {
-    // The top of the board's home, rail and all, at 16:10: what a board
-    // member sees when they open the product. The front page's frame is
-    // sized to this shape (2560 x 1600 at 2x).
-    name: "product-dashboard",
-    path: "/board",
+    file: "product-dashboard.png",
+    // The charts moved from the dashboard to Finances on 2026-09-24.
+    path: "/board/money",
     seat: { accountId: "acct-arya", view: "board" },
+    // Wide enough that the two charts sit side by side (they stack under
+    // 1280), and the clip starts at them: the monitor on the front page is
+    // there to show the graphs, not the to-do list above them. The clip
+    // matches the monitor artwork's screen, which is 1.91:1, so the capture
+    // lands on it without cropping.
     width: 1280,
-    height: 800,
+    height: 1000,
+    scrollTo: "Money in and out",
+    clipHeight: 670,
   },
   {
-    name: "product-resident",
+    file: "product-money.png",
+    path: "/board/money",
+    seat: { accountId: "acct-arya", view: "board" },
+    width: 1180,
+    height: 950,
+    clipFrom: "main",
+    clipHeight: 680,
+  },
+  {
+    file: "product-reserves.png",
+    path: "/board/reserves",
+    seat: { accountId: "acct-arya", view: "board" },
+    width: 1180,
+    height: 950,
+    clipFrom: "main",
+    clipHeight: 680,
+  },
+  {
+    file: "product-resident.png",
     path: "/resident",
     seat: { accountId: "acct-monish", view: "resident" },
     width: 430,
@@ -45,55 +64,81 @@ const SHOTS = [
   },
 ];
 
-const THEMES = ["light", "dark"];
-
 const browser = await chromium.launch();
 
 for (const shot of SHOTS) {
-  for (const theme of THEMES) {
-    const context = await browser.newContext({
-      viewport: { width: shot.width, height: shot.height },
-      deviceScaleFactor: 2,
-      colorScheme: theme,
-      // The stagger and count-up animations land on their end state, so
-      // the capture never catches a row halfway in.
-      reducedMotion: "reduce",
+  const context = await browser.newContext({
+    viewport: { width: shot.width, height: shot.height },
+    deviceScaleFactor: 2,
+    colorScheme: "light",
+  });
+  const page = await context.newPage();
+
+  // Seed the demo session before anything renders, so the app comes up signed
+  // in rather than bouncing to the front door.
+  await page.addInitScript(
+    ({ seat, mode }) => {
+      localStorage.setItem("hoasis-session", JSON.stringify(seat));
+      // The setup checklist is onboarding scaffolding. A marketing shot should
+      // show the product doing its job, not a new customer's to-do list, so
+      // every task is marked skipped before the page renders.
+      localStorage.setItem(
+        "hoasis:mehr-meadows:setup-skipped",
+        JSON.stringify([
+          "roster", "bank", "invites", "documents", "budget", "board",
+          "insurance", "reserves", "vendors", "amenities", "photo",
+        ]),
+      );
+      localStorage.setItem("hoasis-community", JSON.stringify("mehr-meadows"));
+      // Raw, not JSON: the theme script compares the stored string directly.
+      localStorage.setItem("hoasis-theme", "light");
+      if (mode) localStorage.setItem("hoasis-resident-mode", JSON.stringify(mode));
+    },
+    { seat: shot.seat, mode: shot.mode },
+  );
+
+  await page.goto(`${BASE}${shot.path}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1200);
+  // The dev-server overlay badge is not part of the product.
+  await page.evaluate(() => document.querySelector("nextjs-portal")?.remove());
+
+  if (shot.scrollTo) {
+    // Bring the section holding that text to the top of the frame, and clip
+    // from there. The dev server's stuck-on scroll restoration is not a
+    // concern: the page was just opened.
+    const section = page.getByText(shot.scrollTo, { exact: true }).first();
+    await section.evaluate((el) => {
+      (el.closest("section") ?? el).scrollIntoView({ block: "start" });
+      // Back down by the app's sticky bar, so it is not sitting on the clip.
+      const bar = document.querySelector("header");
+      window.scrollBy(0, -((bar?.getBoundingClientRect().height ?? 0) + 16));
     });
-    const page = await context.newPage();
-
-    // Seed the demo session before anything renders, so the app comes up
-    // signed in rather than bouncing to the front door.
-    await page.addInitScript(
-      ({ seat, mode, theme }) => {
-        localStorage.setItem("hoasis-session", JSON.stringify(seat));
-        // The setup checklist is onboarding scaffolding. A marketing shot
-        // should show the product doing its job, not a new customer's to-do
-        // list, so every task is marked skipped before the page renders.
-        localStorage.setItem(
-          "hoasis:mehr-meadows:setup-skipped",
-          JSON.stringify([
-            "roster", "bank", "invites", "documents", "budget", "board",
-            "insurance", "reserves", "vendors", "amenities", "photo",
-          ]),
-        );
-        localStorage.setItem("hoasis-community", JSON.stringify("mehr-meadows"));
-        // Raw, not JSON: the theme script compares the stored string directly.
-        localStorage.setItem("hoasis-theme", theme);
-        if (mode) localStorage.setItem("hoasis-resident-mode", JSON.stringify(mode));
+    await page.waitForTimeout(400);
+    const box = await section.evaluate((el) => {
+      const r = (el.closest("section") ?? el).getBoundingClientRect();
+      return { y: r.y };
+    });
+    await page.screenshot({
+      path: `${OUT}/${shot.file}`,
+      clip: { x: 0, y: Math.max(0, box.y - 8), width: shot.width, height: shot.clipHeight },
+    });
+  } else if (shot.clipFrom) {
+    const box = await page.locator(shot.clipFrom).boundingBox();
+    await page.screenshot({
+      path: `${OUT}/${shot.file}`,
+      clip: {
+        x: 0,
+        y: Math.max(0, box.y - 8),
+        width: shot.width,
+        height: Math.min(shot.clipHeight, shot.height - Math.max(0, box.y - 8)),
       },
-      { seat: shot.seat, mode: shot.mode, theme },
-    );
-
-    await page.goto(`${BASE}${shot.path}`, { waitUntil: "networkidle" });
-    await page.waitForTimeout(1500);
-    // The dev-server overlay badge is not part of the product.
-    await page.evaluate(() => document.querySelector("nextjs-portal")?.remove());
-
-    const file = `${shot.name}${theme === "dark" ? "-dark" : ""}.png`;
-    await page.screenshot({ path: `${OUT}/${file}` });
-    console.log(file);
-    await context.close();
+    });
+  } else {
+    await page.screenshot({ path: `${OUT}/${shot.file}` });
   }
+
+  console.log(`${shot.file}`);
+  await context.close();
 }
 
 await browser.close();
