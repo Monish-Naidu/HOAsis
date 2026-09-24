@@ -28,7 +28,9 @@ export function ReserveStudyCard() {
   const study = community.settings.reserveStudy;
   const document = study ? community.documents.find((d) => d.id === study.documentId) : undefined;
   const [busy, setBusy] = useState(false);
-  const [studyDate, setStudyDate] = useState(study?.studyDate ?? todayIsoDate());
+  // Empty until somebody types the date printed on the study. Defaulting to
+  // today filed a 2019 study as this year's and put the next one ten years out.
+  const [studyDate, setStudyDate] = useState(study?.studyDate ?? "");
 
   async function upload(file: File) {
     setBusy(true);
@@ -48,10 +50,12 @@ export function ReserveStudyCard() {
     }
   }
 
-  const input = (label: string) => (
+  const input = (label: string, needsDate = false) => (
     <label
       aria-busy={busy}
-      className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border-2 px-3.5 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2 aria-busy:cursor-progress aria-busy:opacity-70"
+      aria-disabled={needsDate && !studyDate}
+      title={needsDate && !studyDate ? "Enter the date on the study first" : undefined}
+      className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border-2 px-3.5 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2 aria-busy:cursor-progress aria-busy:opacity-70 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
     >
       <Upload className="size-3.5" />
       {busy ? "Uploading" : label}
@@ -59,7 +63,7 @@ export function ReserveStudyCard() {
         type="file"
         accept={DOCUMENT_ACCEPT}
         aria-label={label}
-        disabled={busy}
+        disabled={busy || (needsDate && !studyDate)}
         className="sr-only"
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -89,7 +93,7 @@ export function ReserveStudyCard() {
               className="h-9 rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
             />
           </label>
-          {input("Upload the study")}
+          {input("Upload the study", true)}
         </div>
       </Card>
     );

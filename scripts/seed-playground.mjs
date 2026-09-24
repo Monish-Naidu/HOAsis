@@ -47,9 +47,12 @@ const must = (label) => ({ error }) => { if (error) throw new Error(`${label}: $
 const PEOPLE = [
   // Board. Monish founds it and is President.
   { unit: "7",  name: "Monish Naidu",     email: OWNER,          role: "president", address: "1428 Mehr Meadows Lane" },
-  { unit: "3",  name: "Dana Whitcomb",    email: plus("dana"),   role: "treasurer",      caps: ["finances", "vendors", "requests"] },
-  { unit: "11", name: "Sofia Bergman",    email: plus("sofia"),  role: "secretary",      caps: ["communications", "documents", "voting", "requests"] },
-  { unit: "5",  name: "Arya Mehr",        email: plus("arya"),   role: "vice-president", caps: ["requests", "compliance", "communications", "forum"] },
+  // Each officer holds the role's default access (DEFAULT_ROLE_CAPABILITIES),
+  // which is what the product gives an officer appointed in Settings. The
+  // treasurer had no Documents here, so could not upload the statements.
+  { unit: "3",  name: "Dana Whitcomb",    email: plus("dana"),   role: "treasurer",      caps: ["finances", "vendors", "documents"] },
+  { unit: "11", name: "Sofia Bergman",    email: plus("sofia"),  role: "secretary",      caps: ["documents", "communications", "voting", "compliance", "forum"] },
+  { unit: "5",  name: "Arya Mehr",        email: plus("arya"),   role: "vice-president", caps: ["requests", "documents", "communications", "voting", "forum"] },
   // Owners with accounts.
   { unit: "12", name: "Owen Brady",       email: plus("owen") },
   { unit: "15", name: "Rhea Calloway",    email: plus("rhea") },

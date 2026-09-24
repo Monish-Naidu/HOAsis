@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeftRight,
   Check,
+  ChevronDown,
   Copy,
   FileText,
   Lock,
@@ -35,6 +36,7 @@ import { AmenityRules } from "@/components/app/amenity-rules";
 import { useToast } from "@/components/app/toast";
 import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
 import {
+  type Capability,
   ROLE_LABEL,
   type AccountRole,
   type ArchitecturalForm,
@@ -89,6 +91,11 @@ export function SettingsScreen() {
         unit: o.unit,
         role: holder?.role ?? roleFromLabel(o.boardRole),
         signedUp: Boolean(holder),
+        // What the seat opens, in the names on the sidebar, so a president
+        // appointing a treasurer can see what that gives them.
+        opens: holder
+          ? GRANTABLE.filter((c) => holder.capabilities[c])
+          : [],
       };
     });
   const ROLE_ORDER: AccountRole[] = ["president", "vice-president", "treasurer", "secretary"];
@@ -515,6 +522,11 @@ export function SettingsScreen() {
                     {homeLabel(community, row.unit)}
                     {row.signedUp ? "" : " · not signed up yet"}
                   </p>
+                  {row.opens.length ? (
+                    <p className="mt-0.5 text-[13px] text-fg-subtle">
+                      {row.role === "president" ? "Opens everything" : `Opens ${opensLine(row.opens)}`}
+                    </p>
+                  ) : null}
                 </div>
                 {isPresident && row.role !== "president" ? (
                   <Select
@@ -651,7 +663,7 @@ export function SettingsScreen() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[15px] font-medium text-fg">{f.label}</p>
-                    <Badge tone={f.source === "baseline" ? "neutral" : "brand"}>{f.source}</Badge>
+                    <Badge tone={f.source === "baseline" ? "neutral" : "brand"}>{f.source === "baseline" ? "Standard" : "Yours"}</Badge>
                   </div>
                   <p className="mt-0.5 truncate text-[13px] text-fg-muted">{f.fileName}</p>
                   <p className="text-[13px] text-fg-subtle">
@@ -751,7 +763,20 @@ export function SettingsScreen() {
         </Card>
         ) : null}
       </div>
-          <DangerZone />
+          {/* Folded. Deleting the association sat one scroll below the dues
+              amount, open, on a page a treasurer visits monthly. */}
+          <details className="group mt-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-card border border-border bg-surface px-5 py-3.5 text-[15px] font-medium text-fg shadow-card transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+              <span>
+                Leaving and closing
+                <span className="ml-2 text-[13px] font-normal text-fg-muted">
+                  Hand over the presidency, leave, cancel, or delete
+                </span>
+              </span>
+              <ChevronDown className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
+            </summary>
+            <DangerZone />
+          </details>
 </>
   );
 }
@@ -839,4 +864,22 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
       )}
     </SettingRow>
   );
+}
+
+/** A seat's capabilities, in the words on the sidebar. */
+const SECTION_NAME: Partial<Record<Capability, string>> = {
+  finances: "Finances",
+  vendors: "Vendors",
+  requests: "Requests and notices",
+  communications: "Messages",
+  voting: "Meetings and voting",
+  documents: "Documents",
+  forum: "Community",
+  settings: "Settings",
+};
+
+function opensLine(capabilities: Capability[]): string {
+  const names = capabilities.map((c) => SECTION_NAME[c]).filter((n): n is string => Boolean(n));
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }

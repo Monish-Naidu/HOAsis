@@ -18,7 +18,7 @@ import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
 import { caps, DEFAULT_ROLE_CAPABILITIES, NO_CAPABILITIES } from "@/lib/data/accounts";
-import { addDays, daysFromToday, setToday, todayIsoDate } from "@/lib/utils";
+import { addDays, daysFromToday, formatDate, setToday, todayIsoDate } from "@/lib/utils";
 import { isUuid, newId } from "@/lib/core/ids";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
@@ -224,6 +224,8 @@ interface AppState {
     pinned?: boolean;
   }) => void;
   removeAnnouncement: (id: string) => void;
+  /** Posts the meeting's notice to every home screen and records the date. */
+  sendMeetingNotice: (meetingId: string) => void;
   /** Returns an undo, because publishing broadcasts and rejecting discards. */
   moderatePost: (
     postId: string,
@@ -2182,6 +2184,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, remote.profileId, communityId],
   );
 
+  const sendMeetingNotice = useCallback(
+    (meetingId: string) => {
+      const meetings = remote.community ? remote.community.meetings : meetingList;
+      const m = meetings.find((x) => x.id === meetingId);
+      if (!m) return;
+      const when = `${formatDate(m.date, "long")} at ${m.time}`;
+      addAnnouncement({
+        title: `Notice of meeting: ${m.title}, ${when}`,
+        body: [
+          `${m.title} is on ${when}, ${m.location}.`,
+          m.dialIn ? `Join by video: ${m.dialIn}${m.passcode ? ` (passcode ${m.passcode})` : ""}.` : "",
+          m.agenda.length ? `Agenda: ${m.agenda.join("; ")}.` : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+        category: "Governance",
+      });
+      const today = todayIsoDate();
+      if (remote.community) {
+        void remoteWrite("Recording the notice", () =>
+          supabaseBrowser().from("meetings").update({ notice_sent_on: today }).eq("id", meetingId),
+        );
+        return;
+      }
+      sliceStore(communityId, "meetings").update((all) =>
+        all.map((x) => (x.id === meetingId ? { ...x, noticeSentDate: today } : x)),
+      );
+    },
+    [remote.community, meetingList, addAnnouncement, communityId],
+  );
+
   const removeAnnouncement = useCallback(
     (id: string) => {
       if (remote.community) {
@@ -4116,6 +4149,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addPost,
     addAnnouncement,
     removeAnnouncement,
+    sendMeetingNotice,
     moderatePost,
     togglePinned,
     removePost,

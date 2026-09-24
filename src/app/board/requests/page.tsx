@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Inbox } from "lucide-react";
 import {
   Avatar,
@@ -24,6 +26,8 @@ export default function BoardRequests() {
   // Work the board has taken on and not finished. Each one's panel sits in
   // its own row below; this is only the count under the stat.
   const inProgress = requests.filter((r) => r.workOrder && !r.workOrder.completedOn);
+  // Denying is the one answer an owner cannot undo, so it asks once.
+  const [denying, setDenying] = useState<string | null>(null);
 
   return (
     <>
@@ -84,30 +88,57 @@ export default function BoardRequests() {
                     {r.attachments.length ? ` · ${pluralize(r.attachments.length, "file")}` : ""}
                   </span>
                   <span className="ml-auto flex gap-1.5">
-                    {/* Filled only when it is the one decision on the page.
-                        Five filled Approve buttons in a column is five
-                        primaries, which is none. */}
-                    <Button
-                      variant={open.length === 1 && index === 0 ? "primary" : "secondary"}
-                      size="sm"
-                      onClick={() => {
-                        updateRequestStatus(r.id, "approved", "Approved by the board.");
-                        notify(`${r.reference} approved`);
-                      }}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-danger hover:bg-danger-soft"
-                      onClick={() => {
-                        updateRequestStatus(r.id, "denied", "Denied by the board.");
-                        notify(`${r.reference} denied`, "warn");
-                      }}
-                    >
-                      Deny
-                    </Button>
+                    {r.kind === "maintenance" ? (
+                      // A streetlight is not approved or denied. It is fixed,
+                      // usually through the work order below.
+                      <Button
+                        variant={open.length === 1 && index === 0 ? "primary" : "secondary"}
+                        size="sm"
+                        onClick={() => {
+                          updateRequestStatus(r.id, "closed", "Fixed. Closed by the board.");
+                          notify(`${r.reference} marked fixed`);
+                        }}
+                      >
+                        Mark fixed
+                      </Button>
+                    ) : denying === r.id ? (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => setDenying(null)}>
+                          Keep open
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="text-danger"
+                          onClick={() => {
+                            updateRequestStatus(r.id, "denied", "Denied by the board.");
+                            notify(`${r.reference} denied`, "warn");
+                            setDenying(null);
+                          }}
+                        >
+                          Deny it
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {/* Filled only when it is the one decision on the page.
+                            Five filled Approve buttons in a column is five
+                            primaries, which is none. */}
+                        <Button
+                          variant={open.length === 1 && index === 0 ? "primary" : "secondary"}
+                          size="sm"
+                          onClick={() => {
+                            updateRequestStatus(r.id, "approved", "Approved by the board.");
+                            notify(`${r.reference} approved`);
+                          }}
+                        >
+                          Approve
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDenying(r.id)}>
+                          Deny
+                        </Button>
+                      </>
+                    )}
                   </span>
                 </div>
                 <WorkOrderPanel request={r} />

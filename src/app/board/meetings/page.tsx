@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, CalendarPlus, ChevronDown } from "lucide-react";
+import { CalendarDays, CalendarPlus, ChevronDown, Megaphone } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
-import { formatDate, pluralize } from "@/lib/utils";
+import { cn, formatDate, pluralize } from "@/lib/utils";
+import { useToast } from "@/components/app/toast";
 import type { Meeting } from "@/lib/types";
 import { useHomeLabel } from "@/components/app/use-home-label";
 
@@ -52,7 +53,8 @@ function Rsvps({ meeting }: { meeting: Meeting }) {
  */
 export default function BoardMeetings() {
   const placeLabel = useHomeLabel();
-  const { community } = useAppState();
+  const { community, sendMeetingNotice } = useAppState();
+  const { notify } = useToast();
   const [scheduling, setScheduling] = useState(false);
   const live = community.meetings.find((m) => m.status === "live");
   // The live meeting has its own card above, so it is not also a row here.
@@ -164,16 +166,30 @@ export default function BoardMeetings() {
               <p className="mt-0.5 text-[13px] text-fg-muted">
                 {m.time} · {m.location}
               </p>
-              <p className="mt-0.5 text-[13px] text-fg-subtle">
+              <p className={cn("mt-0.5 text-[13px]", m.noticeSentDate ? "text-fg-subtle" : "text-warn")}>
                 {m.noticeSentDate
                   ? `Notice sent ${formatDate(m.noticeSentDate, "long")}`
-                  : "Notice not sent"}
+                  : "Owners have not been sent notice"}
                 {m.ballotIds.length
                   ? ` · ${pluralize(m.ballotIds.length, "ballot")} on the agenda`
                   : ""}
               </p>
               <Rsvps meeting={m} />
             </div>
+            {m.noticeSentDate ? null : (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="shrink-0"
+                onClick={() => {
+                  sendMeetingNotice(m.id);
+                  notify(`Notice of ${m.title} posted to every home`);
+                }}
+              >
+                <Megaphone className="size-3.5" />
+                Send notice
+              </Button>
+            )}
           </div>
         ))}
       </Card>
@@ -199,7 +215,7 @@ export default function BoardMeetings() {
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-medium text-fg">{m.title}</p>
                   <p className="mt-0.5 text-[13px] text-fg-muted">
-                    {m.date.slice(0, 4)} · {m.location}
+                    {formatDate(m.date, "long")} · {m.time} · {m.location}
                     {m.attendees.length ? ` · ${m.attendees.length} attended` : ""}
                     {m.ballotIds.length ? ` · ${pluralize(m.ballotIds.length, "ballot")}` : ""}
                     {m.recordingAvailable ? " · recording" : ""}

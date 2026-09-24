@@ -8,6 +8,7 @@ import {
   Home,
   Landmark,
   ListChecks,
+  Megaphone,
   Percent,
   Receipt,
   ShieldAlert,
@@ -133,6 +134,13 @@ function NeedsYou() {
   const saysFixed = community.violations.filter(
     (v) => v.stage !== "cured" && Boolean(v.ownerFixedDate),
   );
+  const unnoticed = community.meetings.filter(
+    (m) =>
+      m.status === "scheduled" &&
+      !m.noticeSentDate &&
+      daysFromToday(m.date) >= 0 &&
+      daysFromToday(m.date) <= 60,
+  );
   const overdueItems = community.actionItems.filter(
     (a) => !a.doneOn && a.dueOn && a.dueOn < community.asOf,
   );
@@ -175,6 +183,16 @@ function NeedsYou() {
       href: "/board/violations",
       icon: ShieldAlert,
       tint: "coral",
+    },
+    {
+      // Owners are owed notice of a meeting, and the annual meeting's window
+      // is set by statute. Quiet grey text on the Meetings page was the only
+      // place it was said.
+      count: unnoticed.length,
+      label: pluralize(unnoticed.length, "meeting") + " without notice to owners",
+      href: "/board/meetings",
+      icon: Megaphone,
+      tint: "amber",
     },
     {
       count: overdueItems.length,
