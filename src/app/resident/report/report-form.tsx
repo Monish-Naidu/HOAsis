@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Send, ShieldCheck } from "lucide-react";
-import { Button, Callout, Card, EmptyState } from "@/components/ui/primitives";
+import { ArrowLeft, Send, ShieldCheck } from "lucide-react";
+import { Button, ButtonLink, Callout, Card, EmptyState, SuccessMark } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 
 const input =
-  "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary";
 
 /**
  * Telling the board about something you have seen.
@@ -72,9 +72,9 @@ export function ReportForm() {
     return (
       <div className="animate-rise space-y-5">
         <Card className="px-5 py-8 text-center">
-          <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
-            <Check className="size-6" strokeWidth={2.5} />
-          </span>
+          <div className="mb-4 flex justify-center">
+            <SuccessMark size={56} />
+          </div>
           <p className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
             Sent to the board
           </p>
@@ -86,12 +86,9 @@ export function ReportForm() {
             You will not be told the outcome. The board handles enforcement on its own
             record, and telling a reporter what happened next is how a rule becomes a feud.
           </p>
-          <Link
-            href="/resident"
-            className="mt-5 inline-flex h-10 items-center rounded-lg bg-brand px-5 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
-          >
+          <ButtonLink href="/resident" variant="primary" size="lg" className="mt-5">
             Done
-          </Link>
+          </ButtonLink>
         </Card>
       </div>
     );
@@ -102,7 +99,7 @@ export function ReportForm() {
       <div>
         <Link
           href="/resident"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           Home
@@ -152,7 +149,7 @@ export function ReportForm() {
             rows={4}
             placeholder="What it was, and roughly when. Plain words are fine."
             aria-label="What you saw"
-            className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
+            className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary"
           />
           <span className="mt-1 block text-[13px] leading-relaxed text-fg-subtle">
             Describe what you saw rather than who you think is at fault. The board decides

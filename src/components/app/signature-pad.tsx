@@ -104,7 +104,7 @@ export function SignaturePad({
           onChange={(e) => onTypedName(e.target.value)}
           autoComplete="name"
           placeholder="Rhea Calloway"
-          className="mt-1.5 h-11 w-full rounded-lg border border-border-2 bg-surface px-3 font-[family-name:var(--font-signature,inherit)] text-[19px] text-fg outline-none focus:border-brand"
+          className="mt-1.5 h-11 w-full rounded-lg border border-border-2 bg-surface px-3 font-[family-name:var(--font-signature,inherit)] text-[19px] text-fg outline-none focus:border-primary"
         />
       </label>
 
@@ -133,7 +133,7 @@ export function SignaturePad({
           aria-label="Draw your signature"
           className={cn(
             "mt-1.5 h-28 w-full touch-none rounded-lg border border-dashed bg-surface-2",
-            hasInk ? "border-brand" : "border-border-2",
+            hasInk ? "border-primary" : "border-border-2",
           )}
         />
         {!hasInk ? (

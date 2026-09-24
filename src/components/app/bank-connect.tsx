@@ -26,7 +26,7 @@ import { cn, todayIsoDate } from "@/lib/utils";
  */
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary";
 
 type Route = "link" | "manual";
 
@@ -94,7 +94,7 @@ export function BankConnect({
             className={cn(
               "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-[15px] font-medium transition-colors",
               route === id
-                ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
+                ? "border-primary bg-primary-soft text-primary"
                 : "border-border text-fg-muted hover:bg-surface-2",
             )}
           >

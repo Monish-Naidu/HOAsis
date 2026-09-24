@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Download, Paperclip, ScrollText } from "lucide-react";
-import { Badge, Button, Callout, Card, EmptyState } from "@/components/ui/primitives";
+import { ArrowLeft, Download, Paperclip, ScrollText } from "lucide-react";
+import { Badge, Button, ButtonLink, Callout, Card, Checkbox, EmptyState, Select, SuccessMark } from "@/components/ui/primitives";
 import { SignaturePad } from "@/components/app/signature-pad";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -164,10 +164,10 @@ export function FillForm({ formId }: { formId: string }) {
     return (
       <div className="space-y-4">
         <Card className="p-5 text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
-            <CheckCircle2 className="size-6" />
-          </span>
-          <p className="mt-3 text-[19px] font-semibold text-fg">Sent to the committee</p>
+          <div className="flex justify-center">
+            <SuccessMark size={56} />
+          </div>
+          <p className="mt-4 text-[22px] font-semibold tracking-[-0.02em] text-fg">Sent to the committee</p>
           <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
             Your reference is{" "}
             <span className="font-semibold text-fg">{submitted.reference}</span>. A copy of
@@ -180,19 +180,12 @@ export function FillForm({ formId }: { formId: string }) {
             </p>
           ) : null}
           <div className="mt-4 flex justify-center gap-2">
-            <Link
-              href={`/resident/requests/${submitted.reference}`}
-              className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg"
-            >
-              Track it
-            </Link>
-            <button
-              type="button"
-              onClick={() => router.push("/resident/documents")}
-              className="inline-flex h-10 items-center rounded-lg border border-border-2 bg-surface px-4 text-[15px] font-medium text-fg"
-            >
+            <Button variant="secondary" size="lg" onClick={() => router.push("/resident/documents")}>
               Documents
-            </button>
+            </Button>
+            <ButtonLink href={`/resident/requests/${submitted.reference}`} variant="primary" size="lg">
+              Track it
+            </ButtonLink>
           </div>
         </Card>
       </div>
@@ -247,7 +240,7 @@ export function FillForm({ formId }: { formId: string }) {
         </Callout>
       ) : null}
 
-      <Button size="lg" className="w-full" disabled={!canSubmit} onClick={submit}>
+      <Button variant="primary" size="lg" className="w-full" disabled={!canSubmit} onClick={submit}>
         Sign and submit
       </Button>
       <p className="pb-2 text-center text-[13px] text-fg-subtle">
@@ -261,7 +254,7 @@ function Back() {
   return (
     <Link
       href="/resident/documents"
-      className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+      className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
     >
       <ArrowLeft className="size-3.5" />
       Documents
@@ -283,7 +276,7 @@ function Field({
   onFiles: (names: string[]) => void;
 }) {
   const input =
-    "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors focus:border-brand";
+    "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary";
 
   return (
     <div className="px-4 py-3.5">
@@ -299,13 +292,13 @@ function Field({
             onChange={(e) => onChange(e.target.value)}
             rows={3}
             placeholder={field.placeholder}
-            className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+            className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary"
           />
         ) : field.kind === "choice" ? (
-          <select
+          <Select
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className={`mt-1.5 ${input}`}
+            className="mt-1.5 w-full"
           >
             <option value="">Choose one</option>
             {field.options?.map((option) => (
@@ -313,14 +306,12 @@ function Field({
                 {option}
               </option>
             ))}
-          </select>
+          </Select>
         ) : field.kind === "checkbox" ? (
           <span className="mt-1.5 flex items-center gap-2">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={value === "Yes"}
               onChange={(e) => onChange(e.target.checked ? "Yes" : "No")}
-              className="size-4 rounded border-border-2"
             />
             <span className="text-[15px] text-fg-muted">Yes</span>
           </span>
@@ -352,7 +343,8 @@ function Field({
                     <button
                       type="button"
                       onClick={() => onFiles(files.filter((f) => f !== name))}
-                      className="text-fg-subtle transition-colors hover:text-danger"
+                      aria-label={`Remove ${name}`}
+                      className="-my-1 inline-flex h-8 items-center rounded-md px-2 text-fg-subtle transition-colors hover:text-danger"
                     >
                       Remove
                     </button>

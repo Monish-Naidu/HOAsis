@@ -87,21 +87,19 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                   if (!picked) castVote(ballot.id, o.id);
                 }}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors",
+                  "press flex min-h-12 w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors",
                   picked
-                    ? "border-navy-700 bg-brand-soft dark:border-navy-300"
-                    : "border-border hover:bg-surface-2",
+                    ? "border-primary bg-primary-soft ring-1 ring-inset ring-primary"
+                    : "border-border hover:border-border-2 hover:bg-surface-2",
                 )}
               >
                 <span
                   className={cn(
                     "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
-                    picked
-                      ? "border-navy-700 bg-navy-700 text-navy-50 dark:border-navy-200 dark:bg-navy-200 dark:text-navy-950"
-                      : "border-border-2",
+                    picked ? "border-primary bg-primary text-primary-fg" : "border-border-2",
                   )}
                 >
-                  {picked ? <Check className="size-3" strokeWidth={3} /> : null}
+                  {picked ? <Check className="pop-in size-3" strokeWidth={3} /> : null}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[15px] font-medium text-fg">{o.label}</span>

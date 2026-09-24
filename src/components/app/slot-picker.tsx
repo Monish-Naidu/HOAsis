@@ -71,7 +71,9 @@ export function SlotPicker({
             title={blackoutFor(amenity, day)?.reason}
             className={cn(
               "shrink-0 rounded-lg px-3 py-2 text-center transition-colors",
-              date === day ? "bg-brand text-brand-fg" : "bg-surface text-fg-muted hover:text-fg",
+              date === day
+                ? "bg-primary-soft text-primary ring-1 ring-inset ring-primary"
+                : "bg-surface text-fg-muted hover:text-fg",
               isBlackedOut(amenity, day) && date !== day && "opacity-40",
             )}
           >
@@ -98,7 +100,7 @@ export function SlotPicker({
               className={cn(
                 "rounded-lg border px-2 py-2.5 text-[15px] font-medium transition-colors",
                 picked
-                  ? "border-brand bg-brand text-brand-fg"
+                  ? "border-primary bg-primary-soft text-primary ring-1 ring-inset ring-primary"
                   : slot.allowed
                     ? "border-border-2 bg-surface text-fg hover:bg-surface-3"
                     : "cursor-not-allowed border-transparent bg-surface-3 text-fg-subtle line-through",
