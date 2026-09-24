@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, CalendarOff, ChevronRight, Megaphone } from "lucide-react";
-import { Badge, Card, CardHeader } from "@/components/ui/primitives";
+import { CalendarOff, Megaphone } from "lucide-react";
+import { Badge, Card, CardHeader, EmptyState } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { kindLabel, kindTone, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
 import { formatDate, relativeDays } from "@/lib/utils";
@@ -71,32 +71,29 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium text-fg">{e.title}</p>
+                  {/* Two lines before it cuts: at 320px one line left
+                      "Special board me..." and nothing to go on. */}
+                  <p className="line-clamp-2 text-[15px] font-medium leading-snug text-fg">{e.title}</p>
                   <p className="truncate text-[13px] text-fg-muted">
+                    {/* On a phone the kind leads this line instead of
+                        taking a badge's width from the title. */}
+                    <span className="@md:hidden">{kindLabel[e.kind]} · </span>
                     {relativeDays(e.date)}
                     {e.detail ? ` · ${e.detail}` : ""}
                   </p>
                 </div>
-                <Badge tone={kindTone[e.kind]}>{kindLabel[e.kind]}</Badge>
+                <span className="hidden shrink-0 @md:inline-flex">
+                  <Badge tone={kindTone[e.kind]}>{kindLabel[e.kind]}</Badge>
+                </span>
               </Link>
             ))}
-            <Link
-              href="/resident/calendar"
-              className="flex items-center gap-2 border-t border-border px-4 py-2.5 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
-            >
-              <CalendarDays className="size-3.5" />
-              Open the calendar
-              <ChevronRight className="ml-auto size-3.5" />
-            </Link>
           </>
         ) : (
-          <div className="flex flex-col items-center px-6 py-8 text-center">
-            <CalendarOff className="mb-2 size-5 text-fg-subtle" />
-            <p className="text-[15px] font-medium text-fg">Nothing scheduled</p>
-            <p className="mt-1 text-[13px] text-fg-muted">
-              The board posts meetings and events here as they are set.
-            </p>
-          </div>
+          <EmptyState
+            icon={<CalendarOff className="size-5" />}
+            title="Nothing scheduled"
+            description="Meetings and events show up here once the board sets them."
+          />
         )}
       </div>
     </Card>

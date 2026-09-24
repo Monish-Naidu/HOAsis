@@ -13,7 +13,7 @@ import {
   Vote,
   Wrench,
 } from "lucide-react";
-import { Card, CardHeader, IconTile, SectionTitle, TINT_FIELD, type TintName } from "@/components/ui/primitives";
+import { ButtonLink, Card, CardHeader, IconTile, SectionTitle, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { calendarEntries } from "@/lib/metrics";
 import {
@@ -137,7 +137,7 @@ function AccountSummary() {
       />
       <div className="flex flex-col gap-4 p-4 @xl:flex-row @xl:items-center @xl:gap-6 @xl:px-5">
         <div className="flex items-center gap-3.5 @xl:flex-1">
-          <IconTile icon={CreditCard} tint={past ? "coral" : "blue"} variant="solid" size="lg" />
+          <IconTile icon={CreditCard} tint={past ? "coral" : "teal"} size="lg" />
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-fg-muted">
               {past ? "Past due" : "Current balance"}
@@ -174,21 +174,18 @@ function AccountSummary() {
         </div>
         {/* Present even at a zero balance: paying ahead of the next
             assessment is a real thing owners do, and the pay screen
-            handles it. But when autopay is on and nothing is owed, a navy
+            handles it. But when autopay is on and nothing is owed, a filled
             "Pay $285" next to a $0.00 balance reads as two answers to one
             question, so the button steps back to an outline and says what
             it does. */}
-        <Link
+        <ButtonLink
           href="/resident/pay"
-          className={cn(
-            "press inline-flex h-11 shrink-0 items-center justify-center rounded-lg px-6 text-[16px] font-semibold",
-            covered
-              ? "border border-border-2 bg-surface text-fg hover:bg-surface-2"
-              : "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow",
-          )}
+          variant={covered ? "secondary" : "primary"}
+          size="lg"
+          className="h-11 shrink-0 px-6 font-semibold"
         >
           {covered ? "Pay early" : `Pay ${money(amount, { cents: false })}`}
-        </Link>
+        </ButtonLink>
       </div>
     </Card>
   );
@@ -199,42 +196,37 @@ function AccountSummary() {
 function QuickActions() {
   // Three, and each goes somewhere different. Five tiles used to resolve to
   // three destinations, two of them already in the tab bar.
-  const actions: { href: string; label: string; icon: typeof Wrench; tint: TintName }[] = [
-    { href: "/resident/requests/new", label: "Submit request", icon: Wrench, tint: "blue" },
-    { href: "/resident/documents", label: "Documents", icon: FileText, tint: "violet" },
-    { href: "/resident/vote", label: "Vote", icon: Vote, tint: "teal" },
+  // `short` is for the narrowest phones, where a third of the row is 90px.
+  const actions: {
+    href: string;
+    label: string;
+    short: string;
+    icon: typeof Wrench;
+    tint: TintName;
+  }[] = [
+    { href: "/resident/requests/new", label: "New request", short: "Request", icon: Wrench, tint: "blue" },
+    { href: "/resident/documents", label: "Documents", short: "Docs", icon: FileText, tint: "violet" },
+    { href: "/resident/vote", label: "Vote", short: "Vote", icon: Vote, tint: "violet" },
   ];
+  // One row of plain buttons, not a card of pastel blocks: these are ways
+  // out of the page, and the balance above is the page's one filled button.
+  // The icon tiles step aside on a phone so three labels fit one row.
   return (
-    <Card>
-      <CardHeader accent="blue" title="Quick actions" />
-      {/* Three tiles that split the card's width between them and grow with
-          the screen, each on a field of its own tint, so the row reads as
-          three buttons and not three icons floating in white. Stacked on a
-          phone, icon beside label from a tablet width up. */}
-      <div className="grid grid-cols-3 gap-3 p-3 @xl:gap-4 @xl:p-4">
-        {actions.map(({ href, label, icon, tint }) => (
-          <Link
-            key={label}
-            href={href}
-            className={cn(
-              "press group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-4 text-center transition-colors @xl:min-h-24 @xl:flex-row @xl:gap-3 @xl:px-4",
-              TINT_FIELD[tint],
-            )}
-          >
-            <IconTile
-              icon={icon}
-              tint={tint}
-              variant="solid"
-              size="md"
-              className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
-            />
-            <span className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-fg @xl:text-[16px]">
-              {label}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </Card>
+    <nav aria-label="Quick actions" className="grid grid-cols-3 gap-2 @xl:gap-3">
+      {actions.map(({ href, label, short, icon, tint }) => (
+        <ButtonLink
+          key={label}
+          href={href}
+          variant="secondary"
+          size="lg"
+          className="h-11 min-w-0 gap-2.5 px-2 text-[14px] @md:px-4"
+        >
+          <IconTile icon={icon} tint={tint} size="xs" className="hidden @md:inline-flex" />
+          <span className="truncate @xs:hidden">{short}</span>
+          <span className="hidden truncate @xs:inline">{label}</span>
+        </ButtonLink>
+      ))}
+    </nav>
   );
 }
 
@@ -319,7 +311,7 @@ function RecentActivity() {
         >
           <IconTile icon={icon} tint={row.tint} size="sm" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-medium text-fg">{row.title}</span>
+            <span className="line-clamp-2 text-[15px] font-medium leading-snug text-fg">{row.title}</span>
             <span className="block text-[13px] text-fg-muted">{formatDate(row.date)}</span>
           </span>
           {row.amount ? (
@@ -351,9 +343,8 @@ function Announcements() {
           once there is room, so the band fills the bottom of the page. */}
       <div className="grid gap-3 @3xl:grid-cols-2 [&>*]:min-w-0">
         {pinned ? (
-          <Card className="relative overflow-hidden @3xl:col-span-2">
-            <span className="absolute inset-y-0 left-0 w-[3px] bg-brand-gradient" aria-hidden />
-            <div className="p-4 pl-5">
+          <Card className="@3xl:col-span-2">
+            <div className="p-4">
               <div className="mb-1.5 flex items-center gap-2">
                 <IconTile icon={Megaphone} tint="coral" size="xs" />
                 <span className="text-[13px] font-semibold text-fg-muted">

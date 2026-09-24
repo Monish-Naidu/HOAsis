@@ -1,9 +1,9 @@
 "use client";
 
 import { ResidentTitle } from "@/components/app/resident-title";
-import { ChevronDown, ChevronRight, CircleDollarSign, Download, Landmark, Receipt } from "lucide-react";
+import { ChevronDown, ChevronRight, CircleDollarSign, Download, Landmark, Receipt, Wallet } from "lucide-react";
 import Link from "next/link";
-import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Card, IconTile, SectionTitle, Stat, type Tone } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { ContactCard } from "@/components/app/contact-card";
@@ -26,6 +26,17 @@ export default function ResidentAccount() {
     .filter((c) => c.kind === "payment" && c.date.startsWith(paidYear))
     .reduce((t, c) => t + Math.abs(c.amountCents), 0);
 
+  // What the balance badge says. A balance that is owed but not yet late is
+  // due, not paid up: a green "Paid up" under $285.00 was two answers.
+  const standing: { tone: Tone; label: string } =
+    currentOwner.standing === "collections"
+      ? { tone: "danger", label: "In collections" }
+      : currentOwner.daysPastDue > 0
+        ? { tone: "warn", label: `${currentOwner.daysPastDue} days past due` }
+        : currentOwner.balanceCents > 0
+          ? { tone: "info", label: `Due ${formatDate(community.nextChargeDate)}` }
+          : { tone: "ok", label: "Paid up" };
+
   return (
     <div className="animate-rise space-y-6">
       <ResidentTitle
@@ -41,48 +52,28 @@ export default function ResidentAccount() {
           .join(" · ")}
       />
 
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg-muted">
-            Balance
-          </p>
-          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
-            {money(currentOwner.balanceCents)}
-          </p>
-          <Badge
-            tone={
-              currentOwner.standing === "current"
-                ? "ok"
-                : currentOwner.standing === "collections"
-                  ? "danger"
-                  : "warn"
-            }
-            className="mt-2"
-          >
-            {currentOwner.standing === "current"
-              ? "Paid up"
-              : currentOwner.standing === "collections"
-                ? "In collections"
-                : `${currentOwner.daysPastDue} days past due`}
-          </Badge>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg-muted">
-            Paid in {paidYear}
-          </p>
-          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
-            {money(paidThisYear, { cents: false })}
-          </p>
-          <p className="mt-2 text-[13px] text-fg-muted">
-            {money(ownerDues(association, currentOwner), { cents: false })} a{" "}
-            {association.duesCadence === "monthly"
+      <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2">
+        <Stat
+          label="Balance"
+          value={money(currentOwner.balanceCents)}
+          icon={<Wallet className="size-4" />}
+          accent="teal"
+          tone={standing.tone === "danger" ? "danger" : "neutral"}
+          hint={<Badge tone={standing.tone}>{standing.label}</Badge>}
+        />
+        <Stat
+          label={`Paid in ${paidYear}`}
+          value={money(paidThisYear, { cents: false })}
+          icon={<Receipt className="size-4" />}
+          accent="violet"
+          hint={`${money(ownerDues(association, currentOwner), { cents: false })} a ${
+            association.duesCadence === "monthly"
               ? "month"
               : association.duesCadence === "quarterly"
                 ? "quarter"
-                : "year"}{" "}
-            in dues
-          </p>
-        </Card>
+                : "year"
+          } in dues`}
+        />
       </div>
 
       <section>
@@ -118,13 +109,12 @@ export default function ResidentAccount() {
             const body = (
               <>
                 <div className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${
-                      isPayment ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted"
-                    }`}
-                  >
-                    {isPayment ? <CircleDollarSign className="size-4" /> : <Receipt className="size-4" />}
-                  </span>
+                  <IconTile
+                    icon={isPayment ? CircleDollarSign : Receipt}
+                    tint={isPayment ? "teal" : "neutral"}
+                    size="sm"
+                    className="mt-0.5"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-medium text-fg">{line.label}</p>
                     <p className="mt-0.5 text-[13px] text-fg-muted">
@@ -194,9 +184,9 @@ export default function ResidentAccount() {
 
       <Link
         href="/resident/finances"
-        className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
+        className="flex min-h-14 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
       >
-        <Landmark className="size-4 shrink-0 text-fg-subtle" />
+        <IconTile icon={Landmark} tint="teal" size="sm" />
         <span className="flex-1 text-[15px] font-medium text-fg">Association funds</span>
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>

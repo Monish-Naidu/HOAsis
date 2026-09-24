@@ -17,3 +17,17 @@ export const kindLabel = {
   amenity: "Amenity",
   "violation-appeal": "Appeal",
 } as const;
+
+/**
+ * The words a status wears on screen. The enum is kebab case for the
+ * database; "in review" in lowercase on a badge read as a leaked value.
+ */
+export const statusLabel: Record<RequestStatus, string> = {
+  approved: "Approved",
+  denied: "Denied",
+  "in-review": "In review",
+  "info-needed": "Needs info",
+  submitted: "Submitted",
+  closed: "Closed",
+  draft: "Draft",
+};

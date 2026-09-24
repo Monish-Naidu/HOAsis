@@ -11,9 +11,9 @@ import {
   Paperclip,
   Wrench,
 } from "lucide-react";
-import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
-import { statusTone } from "@/lib/request-status";
+import { statusLabel, statusTone } from "@/lib/request-status";
 import { formatDate, money, relativeDays } from "@/lib/utils";
 
 export default function RequestDetail({
@@ -42,7 +42,7 @@ export default function RequestDetail({
     <div className="animate-rise space-y-5">
       <Link
         href="/resident/requests"
-        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
+        className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-[13px] font-medium text-fg-muted hover:text-fg"
       >
         <ArrowLeft className="size-3.5" />
         All requests
@@ -50,10 +50,10 @@ export default function RequestDetail({
 
       <div>
         <div className="mb-2 flex items-center gap-2">
-          <Badge tone={statusTone[request.status]}>{request.status.replace("-", " ")}</Badge>
+          <Badge tone={statusTone[request.status]}>{statusLabel[request.status]}</Badge>
           <span className="text-[13px] text-fg-subtle">{request.reference}</span>
         </div>
-        <h1 className="text-[20px] font-semibold leading-snug tracking-[-0.02em] text-fg">
+        <h1 className="text-[22px] font-semibold leading-snug tracking-[-0.02em] text-fg">
           {request.title}
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">{request.summary}</p>
@@ -105,7 +105,7 @@ export default function RequestDetail({
       {request.dueDate && isOpen ? (
         <Card className="p-4">
           <div className="flex items-start gap-3">
-            <CalendarClock className="mt-0.5 size-4 shrink-0 text-warn" />
+            <IconTile icon={CalendarClock} tint="amber" size="sm" />
             <div>
               <p className="text-[15px] font-semibold text-fg">
                 The board owes you an answer {relativeDays(request.dueDate)}
@@ -123,7 +123,7 @@ export default function RequestDetail({
           <SectionTitle>Work order</SectionTitle>
           <Card className="p-4">
             <div className="flex items-start gap-3">
-              <Wrench className="mt-0.5 size-4 shrink-0 text-fg-muted" />
+              <IconTile icon={Wrench} tint="blue" size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-semibold text-fg">
                   {request.workOrder.completedOn
@@ -194,7 +194,7 @@ export default function RequestDetail({
                 <span
                   className={`size-2 shrink-0 rounded-full ${
                     e.kind === "status"
-                      ? "bg-navy-600 dark:bg-navy-300"
+                      ? "bg-primary"
                       : e.actorRole === "resident"
                         ? "bg-accent"
                         : "bg-fg-subtle"
