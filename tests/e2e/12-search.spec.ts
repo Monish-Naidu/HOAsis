@@ -45,6 +45,23 @@ test.describe("search", () => {
     expect(text, "the page landed on nothing").not.toContain("This page did not load");
   });
 
+  test("a notice opens on the notice, not the list it is somewhere on", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Search" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Search" });
+    await dialog.getByRole("textbox").fill("commercial vehicle");
+    await page.waitForTimeout(200);
+    await page.keyboard.press("Enter");
+    await page.waitForURL(/\/board\/violations\?open=/);
+    await page.waitForLoadState("networkidle");
+    await expect(
+      page.getByRole("button", { name: /Commercial vehicle parked overnight/, expanded: true }),
+      "the notice did not open",
+    ).toBeVisible();
+  });
+
   test("a resident finds their own request and nobody else's", async ({ page }) => {
     await seedSession(page, { seat: SEATS.resident, view: "resident" });
     await page.goto("/resident");

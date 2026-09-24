@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Check, ChevronDown, Plus, Printer, ShieldQuestion, X } from "lucide-react";
 import {
   Badge,
@@ -8,14 +9,15 @@ import {
   Card,
   EmptyState,
   PageHeader,
+  Segmented,
+  Select,
 } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
-import { TabPill } from "@/components/app/tab-pill";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import type { Owner, Violation } from "@/lib/types";
-import { cn, formatDate, relativeDays } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, relativeDays } from "@/lib/utils";
 import { placeLabel } from "@/lib/wording";
 
 /**
@@ -33,10 +35,6 @@ import { placeLabel } from "@/lib/wording";
  */
 
 type Tab = "open" | "resolved";
-const TABS: { key: Tab; label: string }[] = [
-  { key: "open", label: "Open" },
-  { key: "resolved", label: "Resolved" },
-];
 
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand";
@@ -44,10 +42,21 @@ const LABEL = "text-[13px] font-semibold text-fg-muted";
 
 
 export function NoticesBoard() {
+  // `?open=` from search lands on one notice, expanded, on the right list.
+  return (
+    <Suspense fallback={null}>
+      <Notices />
+    </Suspense>
+  );
+}
+
+function Notices() {
   const { community, addNotice, setViolationStage } = useAppState();
   const { notify } = useToast();
-  const [tab, setTab] = useState<Tab>("open");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const params = useSearchParams();
+  const linked = community.violations.find((v) => v.id === params.get("open"));
+  const [tab, setTab] = useState<Tab>(linked?.stage === "cured" ? "resolved" : "open");
+  const [openId, setOpenId] = useState<string | null>(linked?.id ?? null);
   const [creating, setCreating] = useState(false);
   const [printing, setPrinting] = useState<Violation | null>(null);
 
@@ -104,32 +113,18 @@ export function NoticesBoard() {
         />
       ) : null}
 
-      <TabPill
-        activeKey={tab}
-        className="inline-flex gap-1 rounded-xl bg-surface-2 p-1"
-        pillClassName="bg-surface shadow-card rounded-lg"
-      >
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            role="tab"
-            data-tab-key={t.key}
-            aria-selected={tab === t.key}
-            onClick={() => {
-              setTab(t.key);
-              setOpenId(null);
-            }}
-            className={cn(
-              "relative z-10 flex items-center gap-1.5 rounded-lg px-4 py-2 text-[15px] font-medium transition-colors duration-200",
-              tab === t.key ? "text-fg" : "text-fg-muted hover:text-fg",
-            )}
-          >
-            {t.label}
-            <span className="tnum text-[13px] text-fg-subtle">{counts[t.key]}</span>
-          </button>
-        ))}
-      </TabPill>
+      <Segmented
+        label="Which notices"
+        value={tab}
+        onChange={(next) => {
+          setTab(next);
+          setOpenId(null);
+        }}
+        options={[
+          { value: "open", label: "Open", count: counts.open },
+          { value: "resolved", label: "Resolved", count: counts.resolved },
+        ]}
+      />
 
       <Card className="mt-4">
         {rows.length === 0 ? (
@@ -180,7 +175,7 @@ function NoticeRow({
   const fixed = !resolved && Boolean(violation.ownerFixedDate);
 
   return (
-    <div>
+    <div id={`vio-${violation.id}`} className="scroll-mt-32 lg:scroll-mt-24">
       <button
         type="button"
         onClick={onToggle}
@@ -205,7 +200,11 @@ function NoticeRow({
           <p className="mt-0.5 text-[13px] text-fg-subtle">
             {resolved
               ? `Resolved ${formatDate(violation.resolvedDate ?? violation.nextActionDate)}`
-              : `Sent ${formatDate(violation.openedDate)} · ${relativeDays(violation.openedDate)}`}
+              : // A relative age only while it is recent. "1688 days ago" is a
+                // number to decode; the date, with its year, is not.
+                daysFromToday(violation.openedDate) >= -60
+                ? `Sent ${formatDate(violation.openedDate)} · ${relativeDays(violation.openedDate)}`
+                : `Sent ${formatDate(violation.openedDate)}`}
           </p>
         </div>
         <ChevronDown
@@ -239,7 +238,8 @@ function NoticeRow({
 
           {!resolved ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="primary" size="sm" onClick={() => onResolve(violation)}>
+              {/* Secondary: New notice is the page's one filled button. */}
+              <Button variant="secondary" size="sm" onClick={() => onResolve(violation)}>
                 <Check className="size-3.5" />
                 Mark resolved
               </Button>
@@ -296,12 +296,12 @@ function NewNotice({
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className={LABEL}>Which home</span>
-          <select
+          <Select
             value={ownerId}
             onChange={(e) => setOwnerId(e.target.value)}
             autoFocus
             aria-label="Which home"
-            className={INPUT}
+            className="mt-1.5 w-full"
           >
             <option value="">Choose a home</option>
             {sorted.map((o) => (
@@ -309,7 +309,7 @@ function NewNotice({
                 {placeLabel(o.unit)} · {o.displayName}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className={LABEL}>Which rule, if you want to name it</span>

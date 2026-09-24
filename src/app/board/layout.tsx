@@ -3,6 +3,7 @@ import { BoardNav } from "@/components/app/board-nav";
 import { RequireCapability } from "@/components/app/require-capability";
 import { BoardOnly } from "@/components/app/board-only";
 import { SetupReturnBar } from "@/components/app/setup-return-bar";
+import { SectionTabs } from "@/components/app/section-tabs";
 import { LocalCopyBanner } from "@/components/app/local-copy-banner";
 import { TrialBanner } from "@/components/app/trial-banner";
 import { BillingGate } from "@/components/app/billing-gate";
@@ -14,7 +15,7 @@ import {
 import { BoardChrome, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
-import { Wordmark } from "@/components/app/logo";
+import { Logo, Wordmark } from "@/components/app/logo";
 import { Rail } from "@/components/app/rail";
 import { SearchButton, SearchPalette } from "@/components/app/search-palette";
 import { PageTransition } from "@/components/app/page-transition";
@@ -42,16 +43,19 @@ export default function BoardLayout({
           </Rail>
           <BoardChrome
             name={
-              <div className="flex items-center gap-3">
-                <Link href="/" className="lg:hidden">
-                  <Wordmark />
+              <div className="flex min-w-0 items-center gap-3">
+                {/* The bird alone on a phone: at 320 the full wordmark and five
+                    controls came to 359px and pushed sign out off the edge. */}
+                <Link href="/" aria-label="Your HOAsis" className="shrink-0 lg:hidden">
+                  <Logo className="sm:hidden" />
+                  <Wordmark className="hidden sm:inline-flex" />
                 </Link>
                 <span className="hidden h-5 w-px bg-border sm:block lg:hidden" />
                 <CommunityName />
               </div>
             }
             controls={
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
                 <SearchButton />
                 <ViewSwitcher />
                 <BoardBell />
@@ -69,6 +73,7 @@ export default function BoardLayout({
               <TrialBanner />
               <SetupReturnBar />
               <BillingGate>
+                <SectionTabs />
                 <RequireCapability>
                   <PageTransition order={BOARD_ROUTES.filter((r) => !r.hidden).map((r) => r.href)}>
                     {children}

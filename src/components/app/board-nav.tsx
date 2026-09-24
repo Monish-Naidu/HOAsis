@@ -2,15 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  useAppState,
-  usePendingApprovals,
-  useReconciliation,
-  useUnreadThreadCount,
-  useVendorGaps,
-} from "@/lib/app-state";
-import { BOARD_ROUTES, routeOn } from "@/lib/board-routes";
-import { complianceSummary, delinquency } from "@/lib/metrics";
+import { useAppState, useReconciliation, useUnreadThreadCount } from "@/lib/app-state";
+import { BOARD_ROUTES, routeOffered, sectionFor, sectionPages } from "@/lib/board-routes";
+import { complianceSummary, delinquency, vendorDecisions } from "@/lib/metrics";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { TabPill } from "@/components/app/tab-pill";
 import { RailIcon } from "@/components/app/rail";
@@ -21,7 +15,7 @@ export interface NavBadge {
   tone: "danger" | "warn" | "neutral";
 }
 
-const items = BOARD_ROUTES;
+const rows = BOARD_ROUTES.filter((route) => !route.hidden);
 
 /**
  * Counts live next to each section.
@@ -34,8 +28,6 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const pathname = usePathname();
   const { can, community, requests } = useAppState();
   const recon = useReconciliation();
-  const gaps = useVendorGaps();
-  const approvals = usePendingApprovals();
   const unread = useUnreadThreadCount();
   const comp = complianceSummary(community);
   const delinq = delinquency(community);
@@ -55,34 +47,36 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
     // much further, and the row disappears entirely at zero.
     setup: { count: plan.total - plan.done, tone: "neutral" },
     money: { count: recon.needsReview.length, tone: "warn" },
+    // The section, not only its first tab: an owner saying a notice is fixed
+    // is the board's move as much as a request is.
     requests: {
-      count: requests.filter(
-        (r) => !["approved", "denied", "closed"].includes(r.status),
-      ).length,
+      count:
+        requests.filter((r) => !["approved", "denied", "closed"].includes(r.status)).length +
+        community.violations.filter((v) => v.stage !== "cured" && Boolean(v.ownerFixedDate))
+          .length,
       tone: "neutral",
     },
     compliance: { count: comp.overdue.length, tone: "danger" },
     communications: { count: unread, tone: "neutral" },
     homeowners: { count: delinq.past.length, tone: "warn" },
-    vendors: {
-      count: gaps.missingW9.length + gaps.expiringCoi.length + approvals.length,
-      tone: "warn",
-    },
+    // The same number as the dashboard and the Vendors page, from one selector.
+    vendors: { count: vendorDecisions(community).count, tone: "warn" },
   };
 
-  // Three separate questions: may they open it, is there anything on it, and
-  // does it deserve its own line rather than living inside another tab.
-  const visible = items.filter(
-    (i) =>
-      !i.hidden &&
-      routeOn(i) &&
-      (!i.need || i.need.some((c) => can(c))) &&
-      (!i.present || i.present(community)),
-  );
+  // Three separate questions, asked of every page in a row: may they open
+  // it, is it switched on, and is there anything on it. A row stands if any
+  // of its pages does, and opens the first one that does, so a seat that may
+  // vote but not see meetings still finds Voting under Meetings.
+  const visible = rows
+    .map((row) => {
+      const offered = sectionPages(row).filter((page) => routeOffered(page, can, community));
+      return offered.length ? { ...row, href: offered[0].href } : null;
+    })
+    .filter((row) => row !== null);
 
-  const activeRoute = visible.find(({ href }) =>
-    href === "/board" ? pathname === href : pathname.startsWith(href),
-  );
+  // By section, so Voting lights Meetings and Reserves lights Finances.
+  const activeKey = sectionFor(pathname)?.key ?? "";
+  const activeRoute = visible.find((row) => row.key === activeKey);
 
   /**
    * Two dressings for one nav.
@@ -114,7 +108,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
         }
       >
       {visible.map(({ href, label, icon: Icon, key, tint }) => {
-        const active = href === "/board" ? pathname === href : pathname.startsWith(href);
+        const active = key === activeRoute?.key;
         const badge = badges[key];
         return (
           <Link
@@ -128,7 +122,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
               "group relative z-10 flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors duration-200",
               rail
                 ? "min-h-11 max-h-[5.5rem] flex-1 gap-3 rounded-2xl px-3 py-2.5 text-[15px]"
-                : "shrink-0",
+                : "min-h-10 shrink-0",
               rail
                 ? active
                   ? "text-white"

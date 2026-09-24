@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BOARD_ROUTES, capabilitiesFor } from "@/lib/board-routes";
+import { BOARD_ROUTES, capabilitiesFor, sectionFor, sectionPages } from "@/lib/board-routes";
 import { GRANTABLE } from "@/lib/data";
 
 /**
@@ -68,5 +68,50 @@ describe("capabilitiesFor", () => {
   it("returns nothing for a path outside the admin tree", () => {
     expect(capabilitiesFor("/resident/pay")).toBeUndefined();
     expect(capabilitiesFor("/library")).toBeUndefined();
+  });
+});
+
+describe("sections", () => {
+  it("puts every child under a row that exists and is a row", () => {
+    for (const route of BOARD_ROUTES.filter((r) => r.parent)) {
+      const parent = BOARD_ROUTES.find((r) => r.key === route.parent);
+      expect(parent, `${route.href} names a parent that does not exist`).toBeTruthy();
+      expect(parent!.hidden, `${route.href} hangs under a hidden page`).toBeFalsy();
+      // A child with its own line would be two ways in and one lit row.
+      expect(route.hidden, `${route.href} has a parent and its own line`).toBe(true);
+    }
+  });
+
+  it("keeps the sidebar to ten rows at most", () => {
+    // Nine, plus Setting up while it lasts. Compliance waits behind its
+    // module, so it is listed but not offered.
+    expect(BOARD_ROUTES.filter((r) => !r.hidden).length).toBeLessThanOrEqual(11);
+  });
+
+  it("lights the row a folded page lives under", () => {
+    expect(sectionFor("/board/voting")?.key).toBe("meetings");
+    expect(sectionFor("/board/violations")?.key).toBe("requests");
+    expect(sectionFor("/board/forum")?.key).toBe("communications");
+    expect(sectionFor("/board/communications/announcements")?.key).toBe("communications");
+    expect(sectionFor("/board/reserves")?.key).toBe("money");
+    expect(sectionFor("/board/money/transactions")?.key).toBe("money");
+    expect(sectionFor("/board/documents/governing")?.key).toBe("documents");
+    expect(sectionFor("/board")?.key).toBe("dashboard");
+  });
+
+  it("orders a section's tabs as the audit named them", () => {
+    const money = BOARD_ROUTES.find((r) => r.key === "money")!;
+    expect(sectionPages(money).map((r) => r.tab ?? r.label).slice(0, 4)).toEqual([
+      "Overview",
+      "Transactions",
+      "Collections",
+      "Reserves",
+    ]);
+  });
+
+  it("gives a folded money page the section's teal", () => {
+    for (const route of BOARD_ROUTES.filter((r) => r.parent === "money")) {
+      expect(route.tint, route.href).toBe("teal");
+    }
   });
 });

@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { AlertTriangle, ArrowRight, Mail } from "lucide-react";
-import { Badge, Card, CardHeader } from "@/components/ui/primitives";
+import { AlertTriangle, Mail } from "lucide-react";
+import { Badge, ButtonLink, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import {
   policyFor,
@@ -14,7 +13,9 @@ import { placeLabel } from "@/lib/wording";
 
 /** The steps in the board's own words. The policy keeps its legal names. */
 const STEP: Record<CollectionStage, string> = {
-  current: "Current",
+  // Behind, but not yet at the reminder day. It said "Current" beside
+  // "9 days late", and the table under it said "In grace" for the same home.
+  current: "In grace",
   reminder: "Reminder due",
   "late-notice": "Notice due",
   demand: "Final notice due",
@@ -63,30 +64,32 @@ export function CollectionsLadder() {
 
   return (
     <Card className="mt-6">
+      {/* The title counts the list under it. The count that needs a notice
+          today is a subset, so it is the subtitle, not the headline. */}
       <CardHeader
-        title={
+        title={`${pluralize(ladder.rows.length, "household")} behind`}
+        subtitle={`${
           ladder.dueNow.length
-            ? `${pluralize(ladder.dueNow.length, "household")} need a notice today`
-            : "Nothing owed today"
-        }
-        subtitle={`${money(ladder.totalCents)} outstanding. Every household runs the same steps.`}
+            ? `${ladder.dueNow.length} ${ladder.dueNow.length === 1 ? "needs" : "need"} a notice today`
+            : "No notice owed today"
+        }. ${money(ladder.totalCents)} outstanding.`}
         action={
           ladder.dueNow.length ? (
-            <Link
-              href="/board/homeowners?remind=1"
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
-            >
-              <Mail className="size-4" />
+            <ButtonLink href="/board/homeowners?remind=1" variant="primary" size="md">
+              <Mail className="size-3.5" />
               Send reminders
-            </Link>
+            </ButtonLink>
           ) : undefined
         }
       />
 
       <div className="divide-y divide-border">
         {ladder.rows.map((row) => (
-          <div key={row.owner.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
-            <div className="min-w-0 flex-1">
+          <div key={row.owner.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3">
+            {/* At least 12rem for the name and the step, so on a phone the
+                amount and the badge wrap under them rather than squeezing
+                the text to a word per line. */}
+            <div className="min-w-[12rem] flex-1">
               <p className="truncate text-[15px] font-medium text-fg">
                 {row.owner.displayName}
                 <span className="ml-2 text-[13px] font-normal text-fg-muted">
@@ -94,6 +97,7 @@ export function CollectionsLadder() {
                 </span>
               </p>
               <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
+                {pluralize(row.owner.daysPastDue, "day")} late ·{" "}
                 {row.actionDue
                   ? ACTION[row.stage]
                   : row.daysToNext !== undefined
@@ -101,13 +105,12 @@ export function CollectionsLadder() {
                     : "Nothing due"}
               </p>
             </div>
-            <p className="tnum shrink-0 text-[15px] font-semibold text-fg">
-              {money(row.owner.balanceCents)}
-            </p>
-            <span className="shrink-0 text-[13px] text-fg-subtle">
-              {pluralize(row.owner.daysPastDue, "day")} late
+            <span className="ml-auto flex shrink-0 items-center gap-3">
+              <span className="tnum text-[15px] font-semibold text-fg">
+                {money(row.owner.balanceCents)}
+              </span>
+              <Badge tone={TONE[row.stage]}>{STEP[row.stage]}</Badge>
             </span>
-            <Badge tone={TONE[row.stage]}>{STEP[row.stage]}</Badge>
           </div>
         ))}
       </div>
@@ -121,21 +124,6 @@ export function CollectionsLadder() {
           </p>
         </div>
       ) : null}
-
-      <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
-        <p className="text-[13px] text-fg-muted">
-          Reminder at {policy.reminderDay} days, notice at {policy.lateNoticeDay}, final notice
-          at {policy.demandDay}, attorney at {policy.counselDay}. A payment plan of at least{" "}
-          {policy.minimumPlanMonths} months is offered first.
-        </p>
-        <Link
-          href="#collections-policy"
-          className="inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-brand hover:underline"
-        >
-          Change
-          <ArrowRight className="size-3" />
-        </Link>
-      </div>
     </Card>
   );
 }

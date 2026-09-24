@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus } from "lucide-react";
-import { TabPill } from "@/components/app/tab-pill";
+import { Segmented as SegmentedControl, Select } from "@/components/ui/primitives";
 import { PERIOD_LABEL, type Delta, type PeriodPreset } from "@/lib/metrics";
 import { cn, money } from "@/lib/utils";
 
@@ -69,7 +69,6 @@ export function StatTile({
   goodWhen,
   href,
   tone,
-  accent,
   className,
 }: {
   label: string;
@@ -79,22 +78,15 @@ export function StatTile({
   goodWhen?: "up" | "down" | "neither";
   href?: string;
   tone?: "ok" | "warn" | "danger";
-  /** A coloured hairline along the top, so a row of tiles reads as a row of different things. */
+  /**
+   * Kept so callers still compile. The hairline it drew went on 2026-09-24
+   * with the one on `Stat`: six coloured lines read as decoration.
+   */
   accent?: "blue" | "teal" | "amber" | "coral" | "violet";
   className?: string;
 }) {
-  const bar = accent
-    ? {
-        blue: "bg-tint-blue",
-        teal: "bg-tint-teal",
-        amber: "bg-tint-amber",
-        coral: "bg-tint-coral",
-        violet: "bg-tint-violet",
-      }[accent]
-    : null;
   const body = (
     <>
-      {bar ? <span className={cn("absolute inset-x-0 top-0 h-[3px]", bar)} aria-hidden /> : null}
       <div className="flex items-center justify-between gap-2">
         <p className="text-[13px] font-semibold text-fg-muted">{label}</p>
         {delta ? <DeltaChip delta={delta} goodWhen={goodWhen} /> : null}
@@ -132,51 +124,34 @@ export interface SegmentOption<T extends string> {
 }
 
 /**
- * A segmented control: one selection out of a few, the background sliding
- * between them. The same shape as the money tabs, one size smaller, for
- * choices that live inside a page rather than between pages.
+ * The primitive segmented control with the finance screens' prop names, so
+ * the period picker and the year control look like every other one. Taller
+ * under a finger: 28px was under any touch guideline for a thing tapped
+ * every visit.
  */
 export function Segmented<T extends string>({
   options,
   value,
   onChange,
   ariaLabel,
-  size = "sm",
   className,
 }: {
   options: readonly SegmentOption<T>[];
   value: T;
   onChange: (value: T) => void;
   ariaLabel: string;
+  /** Unused since the primitive took over; one size now. */
   size?: "sm" | "md";
   className?: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cn("inline-flex max-w-full", className)}>
-      <TabPill
-        activeKey={value}
-        className="no-scrollbar inline-flex gap-0.5 overflow-x-auto rounded-lg bg-surface-2 p-0.5 ring-1 ring-inset ring-border"
-        pillClassName="bg-surface shadow-raised rounded-md"
-      >
-        {options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={value === o.value}
-            data-tab-key={o.value}
-            onClick={() => onChange(o.value)}
-            className={cn(
-              "relative z-10 shrink-0 whitespace-nowrap rounded-md font-medium transition-colors duration-200",
-              size === "sm" ? "h-7 px-2.5 text-[13px]" : "h-8 px-3 text-[13px]",
-              value === o.value ? "text-fg" : "text-fg-muted hover:text-fg",
-            )}
-          >
-            {o.label}
-          </button>
-        ))}
-      </TabPill>
-    </div>
+    <SegmentedControl
+      label={ariaLabel}
+      value={value}
+      onChange={onChange}
+      options={options.map((o) => ({ value: o.value, label: o.label }))}
+      className={cn("pointer-coarse:[&>button]:h-9", className)}
+    />
   );
 }
 
@@ -197,21 +172,19 @@ export function SelectField<T extends string>({
   className?: string;
 }) {
   return (
-    <select
+    <Select
+      size="sm"
       aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
-      className={cn(
-        "h-8 max-w-full rounded-lg border border-border-2 bg-surface px-2 text-[13px] font-medium text-fg outline-none focus:border-brand",
-        className,
-      )}
+      className={cn("max-w-full pointer-coarse:[&>select]:h-9", className)}
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 

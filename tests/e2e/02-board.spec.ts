@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { MODULES } from "../../src/lib/modules";
 import {
   ADMIN_TABS,
+  BOARD_SECTION_TABS,
   SEATS,
   TC1_SEATS,
   expectHealthy,
@@ -29,6 +30,27 @@ test.describe("board workspace", () => {
       await openTab(page, "/board", tab);
       const health = await expectHealthy(page, `admin ${tab}`);
       expect(health.headingCount, `${tab} rendered nothing`).toBeGreaterThan(0);
+    });
+  }
+
+  for (const [href, section] of Object.entries(BOARD_SECTION_TABS)) {
+    test(`${section.row} carries its tabs, and each one opens`, async ({ page }) => {
+      await page.goto(href);
+      await page.waitForLoadState("networkidle");
+      const nav = page.getByRole("navigation", { name: section.row });
+      const names = (await nav.getByRole("link").allTextContents()).map((t) => t.trim());
+      expect(names, `${section.row} offers the wrong tabs`).toEqual(section.tabs);
+
+      for (const tab of section.tabs) {
+        await nav.getByRole("link", { name: tab, exact: true }).click();
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(250);
+        await expectHealthy(page, `${section.row}, ${tab}`);
+        // Whichever tab is open, its row stays lit.
+        await expect(page.locator('aside a[aria-current="page"]')).toHaveText(
+          new RegExp(`^${section.row}`),
+        );
+      }
     });
   }
 
@@ -358,7 +380,7 @@ test.describe("money is one place", () => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
-  test("the sidebar carries Finances and Reserve Study, and shared costs stay behind Finances", async ({ page }) => {
+  test("the sidebar carries Finances, and Reserves and shared costs stay behind it", async ({ page }) => {
     await page.goto("/board");
     await page.waitForLoadState("networkidle");
 
@@ -367,22 +389,28 @@ test.describe("money is one place", () => {
         (a.textContent ?? "").trim().split("\n")[0],
       ),
     );
-    // The 2026-09-01 design gives the reserve study its own line again;
-    // shared costs remain a layer inside Finances.
-    expect(tabs.some((t) => t.startsWith("Reserve Study")), "Reserve Study lost its line").toBe(true);
+    // Nine rows since 2026-09-24: Reserves is a tab inside Finances, not a
+    // line of its own, and it lights Finances while it is open.
+    expect(tabs.some((t) => t.startsWith("Reserve")), "Reserves is still its own line").toBe(false);
     expect(tabs.some((t) => t.startsWith("Shared costs")), "Shared costs is still its own line").toBe(false);
     expect(tabs.some((t) => t.startsWith("Finances")), "Finances vanished entirely").toBe(true);
+
+    await page.goto("/board/reserves");
+    await page.waitForLoadState("networkidle");
+    await expect(
+      page.locator('aside a[aria-current="page"]'),
+      "Reserves does not light the Finances row",
+    ).toHaveText(/^Finances/);
   });
 
   test("the control moves between the three, and names the horizon", async ({ page }) => {
     await page.goto("/board/money");
     const health = await expectHealthy(page, "money");
-    // The reserves live behind the money control, not on a tab of their own.
+    // The reserves live behind the Finances tabs, not on a line of their own.
     expect(health.text, "reserves are not reachable from money").toContain("Reserves");
 
-    await page.getByRole("link", { name: "Reserves" }).click();
-    await page.waitForTimeout(600);
-    expect(page.url()).toContain("/board/reserves");
+    await page.getByRole("navigation", { name: "Finances" }).getByRole("link", { name: "Reserves" }).click();
+    await page.waitForURL("**/board/reserves");
     await expectHealthy(page, "reserves through the control");
   });
 
@@ -402,6 +430,9 @@ test.describe("money is one place", () => {
     await page.waitForLoadState("networkidle");
     const health = await inspect(page);
     expect(health.crashed).toBe(false);
+    // A resident in the board view is sent to their own home screen, with
+    // their own balance on it. Figures are only a leak on the board page.
+    if (!new URL(page.url()).pathname.startsWith("/board")) return;
     expect(health.text, "reserves leaked to a resident").not.toMatch(/\$[\d,]{3,}/);
   });
 });

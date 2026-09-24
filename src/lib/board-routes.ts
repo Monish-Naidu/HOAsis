@@ -6,6 +6,7 @@ import {
   Inbox,
   LayoutDashboard,
   ListChecks,
+  Megaphone,
   MessageSquareText,
   MessagesSquare,
   Settings,
@@ -35,10 +36,13 @@ import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
  * Adding a route here is what gates it. A route that is not listed is
  * reachable by any member, which is correct only for the dashboard.
  *
- * Order and naming follow the 2026-09-01 dashboard design
- * (docs/design/dash-2026-09-01): Finances, Violations, Reserve Study,
- * Community, Meetings each got their own line. Homeowners and Communications
- * are not in that design but are real work, so they keep their rows.
+ * Order and naming: the 2026-09-01 dashboard design gave thirteen things
+ * their own line, and the 2026-09-24 board pass folded them to nine a
+ * volunteer can hold in their head: Dashboard, Finances, Homeowners, Vendors,
+ * Requests, Messages, Meetings, Documents, Settings, plus Setting up while
+ * it lasts. The pages that lost a line keep their route and their entry
+ * here, marked `hidden` with a `parent`. A child is listed right after its
+ * section, in the order its tab appears.
  */
 export interface BoardRoute {
   href: string;
@@ -81,6 +85,22 @@ export interface BoardRoute {
    * always on.
    */
   module?: ModuleKey;
+  /**
+   * The sidebar row this page lives under, by key.
+   *
+   * Thirteen rows was a list nobody read, so related pages share one: Voting
+   * sits under Meetings, Notices under Requests, Community under Messages,
+   * Reserves under Finances. Each keeps its own flat URL, its own gate and
+   * its own module; the parent row lights up while it is open, and the
+   * section's tabs (`SectionTabs`) are how a board moves between them.
+   */
+  parent?: string;
+  /**
+   * The name on the section's tab, where it differs from the page title.
+   * Finances is "Overview" beside Transactions; Messages is "Inbox" beside
+   * Announcements.
+   */
+  tab?: string;
 }
 
 export const BOARD_ROUTES: BoardRoute[] = [
@@ -114,7 +134,91 @@ export const BOARD_ROUTES: BoardRoute[] = [
     need: ["settings", "finances"],
     present: (c) => !buildPlan(c, profileFromCommunity(c)).allDone,
   },
-  { href: "/board/money", label: "Finances", icon: Banknote, key: "money", tint: "teal", need: ["finances"], module: "money" },
+  {
+    href: "/board/money",
+    label: "Finances",
+    tab: "Overview",
+    icon: Banknote,
+    key: "money",
+    tint: "teal",
+    need: ["finances"],
+    module: "money",
+  },
+  /**
+   * The Finances tabs. Each is its own route so a link or a bookmark lands on
+   * the right view, hidden because the section's tabs are their navigation,
+   * and listed because listing is what gates them. Teal like the row, so the
+   * title tile on Transactions is the same colour as the row that opened it.
+   */
+  {
+    href: "/board/money/transactions",
+    hidden: true,
+    parent: "money",
+    label: "Transactions",
+    icon: Banknote,
+    key: "money-transactions",
+    tint: "teal",
+    module: "money",
+    need: ["finances"],
+  },
+  {
+    href: "/board/money/collections",
+    hidden: true,
+    parent: "money",
+    label: "Collections",
+    icon: Banknote,
+    key: "money-collections",
+    tint: "teal",
+    module: "money",
+    need: ["finances"],
+  },
+  {
+    href: "/board/reserves",
+    hidden: true,
+    parent: "money",
+    // One name everywhere. It was Reserve Study on the rail, Reserves on the
+    // tab and Reserve fund on the overview, for the same page.
+    label: "Reserves",
+    icon: ChartPie,
+    key: "reserves",
+    tint: "teal",
+    module: "reserves",
+    need: ["finances"],
+  },
+  {
+    href: "/board/money/budget",
+    hidden: true,
+    parent: "money",
+    label: "Budget",
+    icon: Banknote,
+    key: "money-budget",
+    tint: "teal",
+    module: "money-budget",
+    need: ["finances"],
+  },
+  {
+    href: "/board/money/trends",
+    hidden: true,
+    parent: "money",
+    label: "Trends",
+    icon: Banknote,
+    key: "money-trends",
+    tint: "teal",
+    module: "money-trends",
+    need: ["finances"],
+  },
+  {
+    href: "/board/shared-costs",
+    hidden: true,
+    parent: "money",
+    label: "Shared costs",
+    icon: Droplets,
+    key: "shared-costs",
+    tint: "teal",
+    module: "shared-costs",
+    need: ["finances"],
+    present: (c) => c.sharedCosts.length > 0 || c.specialAssessments.length > 0,
+  },
   {
     href: "/board/homeowners",
     label: "Homeowners",
@@ -125,10 +229,24 @@ export const BOARD_ROUTES: BoardRoute[] = [
     // due to any resident who reached the URL.
     need: ["finances", "communications"],
   },
+  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", tint: "amber", need: ["vendors"], module: "vendors" },
+  {
+    href: "/board/requests",
+    label: "Requests",
+    tab: "From owners",
+    icon: Inbox,
+    key: "requests",
+    tint: "blue",
+    need: ["requests"],
+    module: "requests",
+  },
   {
     href: "/board/violations",
+    hidden: true,
+    parent: "requests",
     // Called Notices since the 2026-09-19 launch scope: two states, three
-    // actions. The route keeps its name because links point at it.
+    // actions. The route keeps its name because links point at it. It sits
+    // under Requests because both are the board answering one household.
     label: "Notices",
     icon: TriangleAlert,
     key: "violations", tint: "coral",
@@ -137,34 +255,31 @@ export const BOARD_ROUTES: BoardRoute[] = [
     // answering a household, and splitting the grant would strand one queue.
     need: ["requests"],
   },
-  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", tint: "amber", need: ["vendors"], module: "vendors" },
-  { href: "/board/requests", label: "Requests", icon: Inbox, key: "requests", tint: "blue", need: ["requests"], module: "requests" },
-  {
-    href: "/board/reserves",
-    label: "Reserve Study",
-    icon: ChartPie,
-    key: "reserves", tint: "teal",
-    module: "reserves",
-    need: ["finances"],
-  },
-  {
-    href: "/board/compliance",
-    label: "Compliance",
-    icon: ShieldCheck,
-    key: "compliance", tint: "violet",
-    module: "compliance",
-    need: ["compliance"],
-  },
   {
     href: "/board/communications",
-    label: "Communications",
+    // Messages, because that is what a board member is looking for when they
+    // open it. The route keeps its old name for the links that point at it.
+    label: "Messages",
+    tab: "Inbox",
     icon: MessagesSquare,
     key: "communications", tint: "coral",
     module: "communications",
     need: ["communications"],
   },
   {
+    href: "/board/communications/announcements",
+    hidden: true,
+    parent: "communications",
+    label: "Announcements",
+    icon: Megaphone,
+    key: "announcements", tint: "coral",
+    module: "communications",
+    need: ["communications"],
+  },
+  {
     href: "/board/forum",
+    hidden: true,
+    parent: "communications",
     label: "Community",
     icon: MessageSquareText,
     key: "forum", tint: "blue",
@@ -179,7 +294,25 @@ export const BOARD_ROUTES: BoardRoute[] = [
     module: "meetings",
     need: ["voting"],
   },
-  { href: "/board/voting", label: "Voting", icon: Vote, key: "voting", tint: "violet", need: ["voting"], module: "voting" },
+  {
+    href: "/board/voting",
+    hidden: true,
+    parent: "meetings",
+    label: "Voting",
+    icon: Vote,
+    key: "voting",
+    tint: "violet",
+    need: ["voting"],
+    module: "voting",
+  },
+  {
+    href: "/board/compliance",
+    label: "Compliance",
+    icon: ShieldCheck,
+    key: "compliance", tint: "violet",
+    module: "compliance",
+    need: ["compliance"],
+  },
   {
     href: "/board/documents",
     label: "Documents",
@@ -187,57 +320,6 @@ export const BOARD_ROUTES: BoardRoute[] = [
     key: "documents", tint: "violet",
     module: "documents",
     need: ["documents"],
-  },
-  /**
-   * The Finances tabs. Each is its own route so a link or a bookmark lands on
-   * the right view, hidden because the segmented control on the money pages is
-   * their navigation, and listed because listing is what gates them.
-   */
-  {
-    href: "/board/money/transactions",
-    hidden: true,
-    label: "Transactions",
-    icon: Banknote,
-    key: "money-transactions",
-    module: "money",
-    need: ["finances"],
-  },
-  {
-    href: "/board/money/budget",
-    hidden: true,
-    label: "Budget",
-    icon: Banknote,
-    key: "money-budget",
-    module: "money-budget",
-    need: ["finances"],
-  },
-  {
-    href: "/board/money/trends",
-    hidden: true,
-    label: "Trends",
-    icon: Banknote,
-    key: "money-trends",
-    module: "money-trends",
-    need: ["finances"],
-  },
-  {
-    href: "/board/money/collections",
-    hidden: true,
-    label: "Collections",
-    icon: Banknote,
-    key: "money-collections",
-    module: "money",
-    need: ["finances"],
-  },
-  {
-    href: "/board/shared-costs",
-    hidden: true,
-    label: "Shared costs",
-    icon: Droplets,
-    key: "shared-costs",
-    module: "shared-costs",
-    need: ["finances"],
-    present: (c) => c.sharedCosts.length > 0 || c.specialAssessments.length > 0,
   },
   { href: "/board/settings", label: "Settings", icon: Settings, key: "settings", tint: "neutral", need: ["settings"], module: "settings" },
 ];
@@ -267,4 +349,32 @@ export function boardModuleFor(pathname: string): ModuleKey | undefined {
 /** Whether the route is switched on at all. Capability is a separate question. */
 export function routeOn(route: BoardRoute): boolean {
   return moduleOn(route.module);
+}
+
+/**
+ * Whether this seat is offered the route: switched on, theirs to open, and
+ * with something on it. The same three questions for a rail row and a tab.
+ */
+export function routeOffered(
+  route: BoardRoute,
+  can: (capability: Capability) => boolean,
+  community: Community,
+): boolean {
+  return (
+    routeOn(route) &&
+    (!route.need || route.need.some((c) => can(c))) &&
+    (!route.present || route.present(community))
+  );
+}
+
+/** The section a path belongs to: its route's parent row, or the route itself. */
+export function sectionFor(pathname: string): BoardRoute | undefined {
+  const route = routeFor(pathname);
+  if (!route) return undefined;
+  return route.parent ? BOARD_ROUTES.find((r) => r.key === route.parent) : route;
+}
+
+/** A section's pages in tab order: the row itself, then its children. */
+export function sectionPages(section: BoardRoute): BoardRoute[] {
+  return [section, ...BOARD_ROUTES.filter((r) => r.parent === section.key)];
 }

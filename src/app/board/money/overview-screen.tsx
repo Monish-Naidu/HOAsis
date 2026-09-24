@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Landmark, ShieldAlert } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, Meter, PageHeader } from "@/components/ui/primitives";
-import { MoneyTabs } from "@/components/app/money-tabs";
+import { Button, Callout, Card, CardHeader, Meter, PageHeader } from "@/components/ui/primitives";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { BankConnect } from "@/components/app/bank-connect";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
@@ -16,7 +15,6 @@ import {
   budgetVariance,
   cashPosition,
   compareYears,
-  duesCollection,
   insuranceExposure,
   ledgerYears,
   monthName,
@@ -46,7 +44,7 @@ export function OverviewScreen() {
   const thisYear = Number(todayIsoDate().slice(0, 4));
   const years = ledgerYears(community);
   const [year, setYear] = useState(years[0] ?? thisYear);
-  const flows = monthlyFlows(community, year);
+  const flows = monthlyFlows(community, year, todayIsoDate());
   const spending = spendingByCategory(community, year);
   const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
 
@@ -58,13 +56,11 @@ export function OverviewScreen() {
   const showBudget = moduleOn("money-budget");
 
   const budget = budgetVariance(community);
-  const dues = duesCollection(community, thisYear);
   const aging = agingBuckets(community);
   const needsReview = recon.needsReview;
 
   return (
     <>
-      <MoneyTabs />
       <PageHeader
         title="Finances"
         description="Balances, recent activity, and items to review."
@@ -115,8 +111,11 @@ export function OverviewScreen() {
               : "No bank account connected yet"
           }
         />
+        {/* The bank's figure, named as one. The Reserves tab shows the same
+            number first and then what of it is assigned to each component,
+            so the two screens cannot be read as disagreeing. */}
         <StatTile
-          label="Reserves"
+          label="Reserve accounts"
           value={money(cash.reserve, { cents: false })}
           hint={
             reserveAccounts.length
@@ -173,12 +172,14 @@ export function OverviewScreen() {
           />
           <ul className="divide-y divide-border">
             {needsReview.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                <span className="tnum w-14 shrink-0 text-[13px] text-fg-muted">{formatDate(e.date)}</span>
-                <span className="min-w-0 flex-1">
+              <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
+                {/* The text keeps at least 12rem, so on a phone the amount and
+                    the two buttons drop under it instead of squeezing it to a
+                    word per line. */}
+                <span className="min-w-[12rem] flex-1">
                   <span className="block truncate text-[15px] font-medium text-fg">{e.description}</span>
                   <span className="block text-[13px] text-fg-subtle">
-                    {e.counterparty}
+                    <span className="tnum">{formatDate(e.date)}</span> · {e.counterparty}
                     {e.duplicateOfId ? " · looks like a duplicate" : null}
                     {e.suggestedCategory ? ` · ${e.suggestedCategory}?` : null}
                   </span>
@@ -186,27 +187,28 @@ export function OverviewScreen() {
                 <span className={`tnum text-[15px] font-semibold ${e.amountCents >= 0 ? "text-ok" : "text-fg"}`}>
                   {money(e.amountCents, { sign: e.amountCents > 0 })}
                 </span>
-                <span className="flex gap-1.5">
-                  <button
-                    type="button"
+                <span className="ml-auto flex gap-1.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => {
                       const undo = confirmLedgerEntry(e.id);
                       notify(`Confirmed ${e.description}`, "ok", { label: "Undo", onClick: undo });
                     }}
-                    className="h-7 rounded-md border border-border-2 px-2 text-[13px] font-medium text-fg hover:bg-surface-2"
                   >
                     Confirm
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-danger hover:bg-danger-soft hover:text-danger"
                     onClick={() => {
                       const undo = dismissLedgerEntry(e.id);
                       notify("Removed from the ledger", "warn", { label: "Undo", onClick: undo });
                     }}
-                    className="h-7 rounded-md px-2 text-[13px] font-medium text-danger hover:bg-danger-soft"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </span>
               </li>
             ))}
@@ -279,85 +281,54 @@ export function OverviewScreen() {
         </section>
       ) : null}
 
-      {/* Budget pace and dues collection, each a glance and a link. Budget
-          waits behind the launch switch; dues collection stands alone then. */}
-      <div className={showBudget ? "mt-6 grid gap-4 lg:grid-cols-2" : "mt-6 grid gap-4"}>
-        {showBudget ? (
-        <Card>
-          <CardHeader
-            title="Budget pace"
-            subtitle={`${Math.round(budget.yearElapsed * 100)}% of the year gone`}
-            action={budget.hasBudget ? <SectionLink href="/board/money/budget">Budget</SectionLink> : undefined}
-          />
-          {budget.hasBudget ? (
-            <div className="space-y-4 px-5 py-4">
-              {[
-                { label: "Money in", total: budget.incomeTotal, tone: "ok" as const },
-                { label: "Money out", total: budget.expenseTotal, tone: "brand" as const },
-              ].map((row) => (
-                <div key={row.label}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-[13px] font-semibold text-fg-muted">{row.label}</p>
-                    <p className="tnum text-[13px] text-fg-muted">
-                      <span className="font-semibold text-fg">{money(row.total.ytdActualCents, { cents: false })}</span>{" "}
-                      of {money(row.total.annualCents, { cents: false })} · {Math.round(row.total.pace * 100)}%
-                    </p>
+      {/* Budget pace, a glance and a link, once the budget module is on.
+          The dues collection card that sat beside it said what the
+          Collections tab says in more detail, one click away. */}
+      {showBudget ? (
+          <Card className="mt-6">
+            <CardHeader
+              title="Budget pace"
+              subtitle={`${Math.round(budget.yearElapsed * 100)}% of the year gone`}
+              action={budget.hasBudget ? <SectionLink href="/board/money/budget">Budget</SectionLink> : undefined}
+            />
+            {budget.hasBudget ? (
+              <div className="space-y-4 px-5 py-4">
+                {[
+                  { label: "Money in", total: budget.incomeTotal, tone: "ok" as const },
+                  { label: "Money out", total: budget.expenseTotal, tone: "brand" as const },
+                ].map((row) => (
+                  <div key={row.label}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="text-[13px] font-semibold text-fg-muted">{row.label}</p>
+                      <p className="tnum text-[13px] text-fg-muted">
+                        <span className="font-semibold text-fg">{money(row.total.ytdActualCents, { cents: false })}</span>{" "}
+                        of {money(row.total.annualCents, { cents: false })} · {Math.round(row.total.pace * 100)}%
+                      </p>
+                    </div>
+                    <Meter
+                      value={row.total.pace}
+                      tone={row.label === "Money out" && row.total.pace > budget.yearElapsed + 0.02 ? "warn" : row.tone}
+                      className="mt-2"
+                      aria-label={`${row.label}, ${Math.round(row.total.pace * 100)}% of budget`}
+                    />
                   </div>
-                  <Meter
-                    value={row.total.pace}
-                    tone={row.label === "Money out" && row.total.pace > budget.yearElapsed + 0.02 ? "warn" : row.tone}
-                    className="mt-2"
-                    aria-label={`${row.label}, ${Math.round(row.total.pace * 100)}% of budget`}
-                  />
-                </div>
-              ))}
-              <p className="text-[13px] text-fg-muted">
-                {budget.flagged.length
-                  ? `${pluralize(budget.flagged.length, "line")} off pace: ${budget.flagged.map((r) => r.category).join(", ")}.`
-                  : "Every line is on pace."}
-              </p>
-            </div>
-          ) : (
-            <div className="px-5 py-4">
-              <p className="mb-3 text-[15px] text-fg-muted">
-                No budget yet. Add the lines you spend on and this page starts measuring against them.
-              </p>
-              <AddBudgetLine />
-            </div>
-          )}
-        </Card>
-        ) : null}
-
-        <Card>
-          <CardHeader
-            title="Dues collection"
-            subtitle={dues.measurable ? `${thisYear}, billed against collected` : "Nothing billed yet"}
-            action={<SectionLink href="/board/money/collections">Collections</SectionLink>}
-          />
-          <div className="px-5 py-4">
-            {dues.measurable ? (
-              <>
-                <div className="flex items-end justify-between gap-3">
-                  <p className="tnum text-[28px] font-semibold leading-none tracking-[-0.03em] text-fg">
-                    {Math.round(dues.rate * 100)}%
-                  </p>
-                  <p className="tnum text-right text-[13px] text-fg-muted">
-                    {money(dues.collectedYtd, { cents: false })} of {money(dues.expectedYtd, { cents: false })}
-                  </p>
-                </div>
-                <Meter value={dues.rate} tone={dues.rate >= 0.95 ? "ok" : "warn"} className="mt-3" aria-label="Dues collected" />
-              </>
-            ) : null}
-            <div className="mt-4 flex items-center justify-between gap-3 text-[13px]">
-              <span className="text-fg-muted">Past due</span>
-              <span className="flex items-center gap-2">
-                <span className="tnum font-semibold text-fg">{money(aging.pastDueCents, { cents: false })}</span>
-                <Badge tone={aging.pastDueCount ? "warn" : "ok"}>{pluralize(aging.pastDueCount, "household")}</Badge>
-              </span>
-            </div>
-          </div>
-        </Card>
-      </div>
+                ))}
+                <p className="text-[13px] text-fg-muted">
+                  {budget.flagged.length
+                    ? `${pluralize(budget.flagged.length, "line")} off pace: ${budget.flagged.map((r) => r.category).join(", ")}.`
+                    : "Every line is on pace."}
+                </p>
+              </div>
+            ) : (
+              <div className="px-5 py-4">
+                <p className="mb-3 text-[15px] text-fg-muted">
+                  No budget yet. Add the lines you spend on and this page starts measuring against them.
+                </p>
+                <AddBudgetLine />
+              </div>
+            )}
+          </Card>
+      ) : null}
 
       {primary && recon.staleFeeds.length ? (
         <p className="mt-4 flex items-center gap-1.5 text-[13px] text-fg-muted">

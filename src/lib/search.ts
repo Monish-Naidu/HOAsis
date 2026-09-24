@@ -72,9 +72,10 @@ export const KIND_ROUTE: Record<SearchKind, string> = {
   request: "/board/requests",
   notice: "/board/violations",
   vendor: "/board/vendors",
-  announcement: "/board/communications",
+  announcement: "/board/communications/announcements",
   post: "/board/forum",
-  action: "/board",
+  // Action items live on Meetings since the 2026-09-24 board pass.
+  action: "/board/meetings",
 };
 
 const TINT: Record<SearchKind, TintName> = {
@@ -186,9 +187,10 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `vio-${v.id}`,
       kind: "notice",
       title: v.rule,
-      subtitle: `${v.reference} · ${v.ownerName}, unit ${v.unit} · ${v.stage}`,
+      subtitle: `${v.reference} · ${v.ownerName}, unit ${v.unit} · ${v.stage === "cured" ? "resolved" : "open"}`,
       date: v.openedDate,
-      href: `/board/violations`,
+      // The notice itself, open, not the list it is somewhere on.
+      href: `/board/violations?open=${q(v.id)}#vio-${v.id}`,
       keywords: `${v.ruleCitation} ${v.openedDate.slice(0, 4)}`,
     });
   }
@@ -210,7 +212,7 @@ export function boardIndex(c: Community): SearchHit[] {
       title: a.title,
       subtitle: `${a.category} · ${a.postedDate}`,
       date: a.postedDate,
-      href: `/board/communications#announcements`,
+      href: `/board/communications/announcements#announcements`,
       keywords: `${a.body.slice(0, 400)} ${a.postedDate.slice(0, 4)}`,
     });
   }
@@ -232,7 +234,7 @@ export function boardIndex(c: Community): SearchHit[] {
       title: a.title,
       subtitle: `${a.ownerName}${a.dueOn ? ` · due ${a.dueOn}` : ""}${a.doneOn ? " · done" : ""}`,
       date: a.dueOn ?? a.doneOn ?? "",
-      href: `/board#action-items`,
+      href: `/board/meetings#action-items`,
       keywords: "",
     });
   }

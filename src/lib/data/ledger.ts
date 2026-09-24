@@ -1251,10 +1251,16 @@ export const payouts: Payout[] = [
     invoiceNumber: "AGA-2261",
     amountCents: 138_000,
     method: "ach",
-    status: "scheduled",
-    issuedDate: "2026-08-21",
-    expectedDate: "2026-08-24",
-    approvals: [{ name: "Arya Mehr", at: "2026-08-19" }],
+    // Paid, because the bank says so: le-130 cleared on August 11. It sat
+    // here a signature short and scheduled for the 24th, so the Vendors page
+    // asked the board to approve money that had already left.
+    status: "paid",
+    issuedDate: "2026-08-10",
+    expectedDate: "2026-08-11",
+    approvals: [
+      { name: "Dana Whitcomb", at: "2026-08-09" },
+      { name: "Arya Mehr", at: "2026-08-10" },
+    ],
     approvalsRequired: 2,
   },
 ];

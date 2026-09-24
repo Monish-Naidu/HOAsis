@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Card, CardHeader, PageHeader } from "@/components/ui/primitives";
-import { MoneyTabs } from "@/components/app/money-tabs";
 import { NetTrendChart, YearCompareChart } from "@/components/app/board-charts";
 import { DeltaChip, InlineBar, Segmented, SelectField, StatTile } from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
@@ -34,7 +33,6 @@ export function TrendsScreen() {
   if (years.length < 2) {
     return (
       <>
-        <MoneyTabs />
         <PageHeader title="Trends" description="Year over year." />
         <Card className="p-6">
           <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">One year of history so far</p>
@@ -58,7 +56,6 @@ export function TrendsScreen() {
 
   return (
     <>
-      <MoneyTabs />
       <PageHeader
         title="Trends"
         description={`${span} of each year. Reserve funding is shown separately.`}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil } from "lucide-react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { ChevronDown, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/primitives";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import {
@@ -44,30 +44,43 @@ export function CollectionPolicyCard() {
   }
 
   return (
-    <Card id="collections-policy" className="mt-6 scroll-mt-24">
-      <CardHeader
-        title="Collections policy"
-        subtitle={
-          isDefault
-            ? "The default steps. Change the days or the fee to match your bylaws."
-            : "Your steps. Every household runs the same ones."
-        }
-        action={
-          can("finances") && !editing ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setDraft(saved);
-                setEditing(true);
-              }}
-            >
-              <Pencil className="size-3.5" />
-              Edit
-            </Button>
-          ) : null
-        }
-      />
+    // Folded by default: the policy is read once a year and changed less
+    // often, and open it pushed the dues table off the bottom of the page.
+    // A link to #collections-policy still lands on it, and it opens itself
+    // while being edited.
+    <details
+      id="collections-policy"
+      open={editing || undefined}
+      className="group mt-6 min-w-0 scroll-mt-32 rounded-card border border-border bg-surface shadow-card lg:scroll-mt-24"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold tracking-[-0.01em] text-fg">
+            Collections policy
+          </span>
+          <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">
+            {isDefault
+              ? "The default steps. Change the days or the fee to match your bylaws."
+              : "Your steps. Every household runs the same ones."}
+          </span>
+        </span>
+        <ChevronDown className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
+      </summary>
+      {can("finances") && !editing ? (
+        <div className="flex justify-end px-5 pb-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDraft(saved);
+              setEditing(true);
+            }}
+          >
+            <Pencil className="size-3.5" />
+            Edit
+          </Button>
+        </div>
+      ) : null}
 
       {editing ? (
         <div className="px-5 pb-5">
@@ -156,7 +169,7 @@ export function CollectionPolicyCard() {
           <Rung day={saved.counselDay} label="Attorney" detail="With every notice attached" />
         </ol>
       )}
-    </Card>
+    </details>
   );
 }
 

@@ -117,9 +117,17 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
             ))}
           </div>
         </div>
+        {/* Every other month on a phone once there are more than six:
+            twelve three-letter labels in 280px ran into each other. */}
         <div className="ml-10 flex justify-around pt-1.5">
-          {months.map((m) => (
-            <span key={m.month} className="flex-1 text-center text-[11px] text-fg-subtle">
+          {months.map((m, i) => (
+            <span
+              key={m.month}
+              className={cn(
+                "flex-1 text-center text-[11px] text-fg-subtle",
+                months.length > 6 && i % 2 === 1 && "max-sm:invisible",
+              )}
+            >
               {monthLabel(m.month)}
             </span>
           ))}
@@ -139,7 +147,9 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
         <tbody>
           {months.map((m) => (
             <tr key={m.month}>
-              <th scope="row">{m.month}</th>
+              <th scope="row">
+                {monthLabel(m.month)} {m.month.slice(0, 4)}
+              </th>
               <td>{money(m.inCents)}</td>
               <td>{money(m.outCents)}</td>
             </tr>
@@ -195,7 +205,7 @@ export function SpendingDonut({
 }: {
   rows: SpendingRow[];
   totalCents: number;
-  /** "View full financial report", into the books the figures came from. */
+  /** A link into the transactions the figures came from. */
   reportHref?: string;
 }) {
   const [active, setActive] = useState<number | null>(null);
@@ -272,7 +282,7 @@ export function SpendingDonut({
             href={reportHref}
             className="inline-flex items-center gap-1 text-[13px] font-semibold text-accent hover:underline"
           >
-            View full financial report
+            See the transactions
             <ArrowRight className="size-3.5" />
           </Link>
         </div>
@@ -363,8 +373,14 @@ export function YearCompareChart({
           </div>
         </div>
         <div className="ml-10 flex justify-around pt-1.5">
-          {months.map((m) => (
-            <span key={m.label} className="flex-1 text-center text-[11px] text-fg-subtle">
+          {months.map((m, i) => (
+            <span
+              key={m.label}
+              className={cn(
+                "flex-1 text-center text-[11px] text-fg-subtle",
+                months.length > 6 && i % 2 === 1 && "max-sm:invisible",
+              )}
+            >
               {m.label}
             </span>
           ))}

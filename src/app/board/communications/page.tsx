@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Inbox,
-  MailCheck,
-  Pin,
-  Send,
-} from "lucide-react";
-import type { Announcement } from "@/lib/types";
+import { ArrowDownLeft, ArrowUpRight, Inbox, MailCheck, Send } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -18,152 +10,24 @@ import {
   CardHeader,
   EmptyState,
   PageHeader,
-  Stat,
 } from "@/components/ui/primitives";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
 import { DeliveryPanel } from "@/components/app/delivery-panel";
 import { useToast } from "@/components/app/toast";
-import { formatDate, pluralize } from "@/lib/utils";
-import { communicationsSummary } from "@/lib/metrics";
-import { DuesMailer } from "@/components/app/dues-mailer";
+import { cn, formatDate, pluralize } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 import { placeLabel } from "@/lib/wording";
 
-
 /**
- * What every resident's home screen carries under "From the board".
+ * Messages, the inbox: what owners have written to the board, and the reply.
  *
- * Announcements used to exist only as demo fixtures. Now the board writes
- * them here, they persist, and removing one takes it off every resident's
- * screen the same moment.
+ * Announcements used to share this page with the inbox, the dues email and
+ * three stat tiles, which made the one thing a board member opens it for (an
+ * owner is waiting) the fourth thing on the screen. They have their own tab
+ * now, beside this one and the Community forum.
  */
-function AnnouncementsManager({
-  composing,
-  setComposing,
-}: {
-  composing: boolean;
-  setComposing: (open: boolean) => void;
-}) {
-  const { community, addAnnouncement, removeAnnouncement } = useAppState();
-  const { notify } = useToast();
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  // Every announcement is a notice until a board asks for kinds. The picker
-  // was the one field on this form nobody could answer.
-  const category: Announcement["category"] = "Notice";
-  const [pinned, setPinned] = useState(false);
-
-  const announcements = [...community.announcements].sort((a, b) =>
-    a.postedDate < b.postedDate ? 1 : -1,
-  );
-
-  function post() {
-    if (!title.trim() || !body.trim()) {
-      notify("An announcement needs a title and a body", "warn");
-      return;
-    }
-    addAnnouncement({ title: title.trim(), body: body.trim(), category, pinned });
-    setTitle("");
-    setBody("");
-    setPinned(false);
-    setComposing(false);
-    notify("Posted. Every resident's home screen carries it now.");
-  }
-
-  return (
-    <Card id="announcements" className="mt-6 scroll-mt-24">
-      <CardHeader
-        title="Announcements"
-        subtitle="What every home sees under From the board"
-      />
-
-      {composing ? (
-        <form
-          className="space-y-3 border-b border-border bg-surface-2 px-5 py-4"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          <div className="flex flex-wrap gap-3">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title"
-              aria-label="Announcement title"
-              className="h-9 min-w-52 flex-1 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg placeholder:text-fg-subtle"
-            />
-          </div>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="What should every household know?"
-            aria-label="Announcement body"
-            rows={3}
-            className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg placeholder:text-fg-subtle"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-[13px] font-medium text-fg-muted">
-              <input
-                type="checkbox"
-                checked={pinned}
-                onChange={(e) => setPinned(e.target.checked)}
-                className="size-4 accent-current"
-              />
-              Pin to the top of the home screen
-            </label>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setComposing(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" size="sm" onClick={post}>
-                Post announcement
-              </Button>
-            </div>
-          </div>
-        </form>
-      ) : null}
-
-      {announcements.length === 0 && !composing ? (
-        <p className="px-5 py-6 text-center text-[15px] text-fg-muted">
-          Nothing posted yet. The first announcement most boards write is how dues are billed.
-        </p>
-      ) : null}
-      {announcements.map((a) => (
-        <div
-          key={a.id}
-          className="flex items-start gap-3 border-b border-border px-5 py-3 last:border-b-0"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[15px] font-medium text-fg">{a.title}</p>
-              {a.pinned ? (
-                <Badge tone="brand">
-                  <Pin className="size-2.5" />
-                  Pinned
-                </Badge>
-              ) : null}
-              <Badge tone="neutral">{a.category}</Badge>
-            </div>
-            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-fg-muted">{a.body}</p>
-            <p className="mt-1 text-[13px] text-fg-subtle">
-              {a.author} · {formatDate(a.postedDate)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              removeAnnouncement(a.id);
-              notify("Announcement removed", "warn");
-            }}
-            className="shrink-0 rounded-md px-2 py-1 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-danger"
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-    </Card>
-  );
-}
 
 export default function BoardCommunications() {
   // The screen reads `?thread=` from the URL, which is what the Suspense is
@@ -178,22 +42,13 @@ export default function BoardCommunications() {
 function CommunicationsScreen() {
   const { community, threads, replyToThread } = useAppState();
   const unread = useUnreadThreadCount();
-  const stats = communicationsSummary(community);
   const { notify } = useToast();
   const params = useSearchParams();
   const [activeId, setActiveId] = useState(params.get("thread") ?? threads[0]?.id);
   const [draft, setDraft] = useState("");
-  const [composing, setComposing] = useState(false);
   const active = threads.find((t) => t.id === activeId) ?? threads[0];
   // Every board seat is copied on a reply, so the count is the roster's.
   const boardSeats = community.accounts.filter((a) => a.role !== "resident").length;
-
-  // The page's one primary action writes to every resident's home screen.
-  // It used to show a toast about a composer that did not exist.
-  function startMessage() {
-    setComposing(true);
-    document.getElementById("announcements")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 
   function send() {
     if (!draft.trim() || !active) return;
@@ -205,46 +60,25 @@ function CommunicationsScreen() {
   return (
     <>
       <PageHeader
-        title="Communications"
-        description="Announcements to the community and messages from owners."
-        action={
-          <Button variant="primary" size="md" onClick={startMessage}>
-            <Send className="size-3.5" />
-            New announcement
-          </Button>
+        title="Messages"
+        description={
+          unread
+            ? `${pluralize(unread, "conversation")} waiting on a reply.`
+            : "What owners have written to the board."
         }
       />
 
-      {/* Which ways a notice may actually go. It sits above the numbers
-          because it governs them: a household counted as reachable by email is
-          not reachable for a notice the statute says must go on paper. */}
+      {/* Which ways a notice may actually go. It governs everything sent from
+          here: a household reachable by email is not reachable for a notice
+          the statute says must go on paper. */}
       {moduleOn("delivery-panel") ? (
         <div className="mb-6">
           <DeliveryPanel />
         </div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Unread" value={String(unread)} tone={unread ? "warn" : "neutral"} hint="Owner messages waiting on a reply" />
-        <Stat
-          label="Reachable households"
-          value={String(stats.reachable)}
-          tone={stats.reachable === stats.households ? "ok" : "warn"}
-          hint={
-            stats.reachable === stats.households
-              ? "Every household has an email on file"
-              : `${stats.households - stats.reachable} with no email on file`
-          }
-        />
-        <Stat label="Open threads" value={String(threads.length)} hint="Conversations with owners" />
-      </div>
-
-      <DuesMailer />
-
-      <AnnouncementsManager composing={composing} setComposing={setComposing} />
-
       {!active ? (
-        <Card className="mt-6">
+        <Card>
           <EmptyState
             icon={<Inbox className="size-5" />}
             title="No owner messages yet"
@@ -252,18 +86,22 @@ function CommunicationsScreen() {
           />
         </Card>
       ) : (
-      <div className="mt-6 grid items-stretch gap-6 lg:grid-cols-5">
+      // One column until lg, and each column may shrink: without both, the
+      // longest subject set the grid's width and the page scrolled sideways
+      // at 320 to 390.
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
         {/* Thread list */}
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Inbox" subtitle={pluralize(threads.length, "conversation")} />
           {threads.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setActiveId(t.id)}
-              className={`flex w-full items-start gap-3 border-b border-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface-2 ${
-                t.id === active.id ? "bg-brand-soft/50" : ""
-              }`}
+              className={cn(
+                "flex w-full items-start gap-3 border-b border-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface-2",
+                t.id === active.id && "bg-primary-soft/50",
+              )}
             >
               <Avatar name={t.participants[0]} tone={t.unread ? "brand" : "neutral"} />
               <div className="min-w-0 flex-1">
@@ -291,7 +129,7 @@ function CommunicationsScreen() {
         </Card>
 
         {/* Reading pane, as tall as the inbox beside it */}
-        <div className="flex flex-col gap-6 lg:col-span-3">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
           <Card className="flex flex-1 flex-col">
             <CardHeader
               title={active.subject}

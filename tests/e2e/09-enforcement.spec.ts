@@ -15,7 +15,11 @@ import { SEATS, expectHealthy, inspect, seedSession } from "./helpers";
  */
 
 async function openTab(page: import("@playwright/test").Page, name: "Open" | "Resolved") {
-  await page.getByRole("tab", { name: new RegExp(`^${name}`) }).click();
+  // A segmented control since 2026-09-24: pressed buttons, not tabs.
+  await page
+    .getByRole("group", { name: "Which notices" })
+    .getByRole("button", { name: new RegExp(`^${name}`) })
+    .click();
   await page.waitForTimeout(300);
 }
 

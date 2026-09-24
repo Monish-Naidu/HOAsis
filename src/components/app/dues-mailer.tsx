@@ -76,14 +76,14 @@ export function DuesMailer() {
   }
 
   // Sending is a server capability, and a demo association has no server.
+  // One quiet line, not a card: a card that exists to say it does nothing
+  // was the loudest thing on the page.
   if (!isRemote) {
     return (
-      <Card className="mt-5">
-        <p className="flex items-center gap-2 px-5 py-3 text-[13px] text-fg-muted">
-          <Mail className="size-3.5 shrink-0 text-fg-subtle" />
-          Dues email sends from a real association. The demo has nothing to send from.
-        </p>
-      </Card>
+      <p className="mt-4 flex items-center gap-2 text-[13px] text-fg-subtle">
+        <Mail className="size-3.5 shrink-0" />
+        The dues email is off in the demo.
+      </p>
     );
   }
 
@@ -203,8 +203,9 @@ function Run({
         >
           {busy === "preview" ? "Checking" : "Preview"}
         </Button>
+        {/* Secondary: the page's one filled button is New announcement. */}
         <Button
-          variant="primary"
+          variant="secondary"
           size="sm"
           onClick={onSend}
           disabled={disabled}

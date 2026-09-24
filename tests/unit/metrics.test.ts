@@ -4,6 +4,7 @@ import {
   agingBuckets,
   budgetVariance,
   compareYears,
+  delinquency,
   duesCollection,
   filterLedger,
   ledgerTotals,
@@ -11,6 +12,7 @@ import {
   monthlyFlows,
   netByYear,
   periodRange,
+  vendorDecisions,
   yearSummary,
 } from "@/lib/metrics";
 
@@ -129,6 +131,40 @@ describe("duesCollection", () => {
   });
 });
 
+describe("duesCollection, gross of fees", () => {
+  it("reads a month everyone paid as 100%, though the bank got the net", () => {
+    const owners = mehrMeadows.owners.slice(0, 2).map((o) => ({ ...o, homeType: undefined }));
+    const dues = mehrMeadows.association.duesCents;
+    const ledger = owners.map((o, i) => ({
+      id: `net-${i}`,
+      date: "2026-03-02",
+      description: "Assessment payment",
+      counterparty: o.displayName,
+      category: "Assessments" as const,
+      accountId: "acct-operating",
+      amountCents: dues - 900, // the processor's cut, taken out of the deposit
+      status: "cleared" as const,
+    }));
+    const ownerCharges = Object.fromEntries(
+      owners.map((o) => [
+        o.id,
+        [{ id: `p-${o.id}`, date: "2026-03-02", label: "Card payment", kind: "payment" as const, amountCents: -dues, balanceAfterCents: 0 }],
+      ]),
+    );
+    const c = {
+      ...mehrMeadows,
+      association: { ...mehrMeadows.association, unitCount: 2, duesCadence: "monthly" as const },
+      owners,
+      ledger,
+      ownerCharges,
+    };
+    const d = duesCollection(c, 2026);
+    expect(d.months).toHaveLength(1);
+    expect(d.months[0].collectedCents).toBe(d.months[0].expectedCents);
+    expect(d.rate).toBe(1);
+  });
+});
+
 describe("budgetVariance", () => {
   it("signs variance so positive is good on both kinds of line", () => {
     const v = budgetVariance(mehrMeadows);
@@ -153,12 +189,87 @@ describe("ledger filters", () => {
     expect(rows.every((e) => e.amountCents < 0)).toBe(true);
     const totals = ledgerTotals(rows);
     expect(totals.inCents).toBe(0);
-    expect(totals.running.get(rows[0].id)).toBe(-totals.outCents);
+    // Held lines move nothing; transfers move the balance but are not spending.
+    const counted = rows.filter((e) => e.status !== "needs-review");
+    expect(totals.running.get(rows[0].id)).toBe(
+      counted.reduce((t, e) => t + e.amountCents, 0),
+    );
+    expect(totals.running.get(rows[0].id)).toBe(-totals.outCents + totals.transferCents);
+  });
+
+  it("holds unconfirmed lines out of the totals, as the overview promises", () => {
+    const base = { accountId: "acct-operating", category: "Repairs & maintenance" as const, counterparty: "Ace" };
+    const rows = [
+      { ...base, id: "a", date: "2026-08-11", description: "Gate", amountCents: -138_000, status: "cleared" as const },
+      { ...base, id: "b", date: "2026-08-10", description: "Gate again", amountCents: -138_000, status: "needs-review" as const, duplicateOfId: "a" },
+      { ...base, id: "c", date: "2026-08-09", description: "Dues", category: "Assessments" as const, amountCents: 28_500, status: "pending" as const },
+    ];
+    const totals = ledgerTotals(rows);
+    expect(totals.outCents).toBe(138_000);
+    expect(totals.inCents).toBe(28_500);
+    expect(totals.needsReview).toBe(1);
+    expect(totals.count).toBe(3);
+    expect(totals.running.get("a")).toBe(28_500 - 138_000);
+  });
+
+  it("counts a reserve transfer as neither money in nor money out", () => {
+    const base = { counterparty: "Mehr Meadows", category: "Reserve transfer" as const, status: "cleared" as const, date: "2026-08-01", description: "Monthly reserve contribution" };
+    const rows = [
+      { ...base, id: "out", accountId: "acct-operating", amountCents: -500_000 },
+      { ...base, id: "in", accountId: "acct-reserve", amountCents: 500_000 },
+    ];
+    const totals = ledgerTotals(rows);
+    expect(totals.inCents).toBe(0);
+    expect(totals.outCents).toBe(0);
+    expect(totals.netCents).toBe(0);
+    expect(totals.transferCents).toBe(0);
+  });
+
+  it("agrees with the real ledger: no held line and no transfer in any total", () => {
+    const rows = filterLedger(c.ledger, periodRange("this-year", c.asOf));
+    const totals = ledgerTotals(rows);
+    const plain = rows.filter((e) => e.status !== "needs-review" && e.category !== "Reserve transfer");
+    expect(totals.inCents).toBe(plain.filter((e) => e.amountCents > 0).reduce((t, e) => t + e.amountCents, 0));
+    expect(totals.outCents).toBe(plain.filter((e) => e.amountCents < 0).reduce((t, e) => t - e.amountCents, 0));
   });
 
   it("searches description and counterparty, case blind", () => {
     const rows = filterLedger(c.ledger, { search: "cascade" });
     expect(rows.length).toBeGreaterThan(20);
     expect(rows.every((e) => e.counterparty === "Cascade Grounds Co.")).toBe(true);
+  });
+});
+
+describe("vendorDecisions", () => {
+  const c = mehrMeadows;
+
+  it("counts bills to approve, bills to pay and payments to sign, and nothing else", () => {
+    const d = vendorDecisions(c);
+    expect(d.count).toBe(d.toApprove.length + d.toPay.length + d.toSign.length);
+    expect(d.toApprove.every((i) => i.status === "new")).toBe(true);
+    expect(d.toPay.every((i) => i.status === "approved")).toBe(true);
+    expect(d.toSign.every((p) => p.approvals.length < p.approvalsRequired)).toBe(true);
+  });
+
+  it("does not ask for a signature on money the bank says already left", () => {
+    // Ace Gate cleared on August 11; its payment sat a signature short.
+    const cleared = c.ledger.filter((e) => e.status === "cleared" && e.amountCents < 0);
+    for (const payout of vendorDecisions(c).toSign) {
+      const paid = cleared.some(
+        (e) => e.counterparty === payout.vendor && -e.amountCents === payout.amountCents,
+      );
+      expect(paid, `${payout.vendor} is waiting on approval but already cleared`).toBe(false);
+    }
+  });
+});
+
+describe("delinquency", () => {
+  it("does not count a home with nobody on record as a household paying on time", () => {
+    const owners = mehrMeadows.owners.slice(0, 4).map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 }));
+    owners.push({ ...owners[0], id: "empty", placeholder: true, displayName: "Lot 99" });
+    const d = delinquency({ ...mehrMeadows, owners });
+    expect(d.households).toBe(4);
+    expect(d.current).toBe(4);
+    expect(d.collectionRate).toBe(1);
   });
 });

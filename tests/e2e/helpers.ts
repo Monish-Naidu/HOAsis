@@ -189,29 +189,33 @@ export async function expectHealthy(page: Page, label: string) {
   return health;
 }
 
-/** The admin tabs, as a board member sees them. */
 /**
  * The sidebar, as a board sees it.
  *
- * Reserves and shared costs are deliberately absent: they are money, and they
- * live behind the Money tab's own control rather than as their own lines. They
- * keep their routes and their capability gate, which `03-roles` covers.
+ * Nine rows since the 2026-09-24 board pass. Reserves, Notices, Community,
+ * Voting and Announcements lost their own lines and live as tabs inside a
+ * row (`BOARD_SECTION_TABS`); they keep their routes and their capability
+ * gate, which `03-roles` covers.
  */
 export const ADMIN_TABS = [
   "Dashboard",
   "Finances",
   "Homeowners",
-  "Notices",
   "Vendors",
   "Requests",
-  "Reserve Study",
-  "Communications",
-  "Community",
+  "Messages",
   "Meetings",
-  "Voting",
   "Documents",
   "Settings",
 ] as const;
+
+/** The pages folded under a sidebar row, as the tabs along its top. */
+export const BOARD_SECTION_TABS: Record<string, { row: string; tabs: string[] }> = {
+  "/board/money": { row: "Finances", tabs: ["Overview", "Transactions", "Collections", "Reserves"] },
+  "/board/requests": { row: "Requests", tabs: ["From owners", "Notices"] },
+  "/board/communications": { row: "Messages", tabs: ["Inbox", "Announcements", "Community"] },
+  "/board/meetings": { row: "Meetings", tabs: ["Meetings", "Voting"] },
+};
 
 export const RESIDENT_TABS = [
   "Dashboard",

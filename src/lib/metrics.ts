@@ -28,17 +28,23 @@ export function cashPosition(c: Community) {
 
 export function delinquency(c: Community) {
   const past = c.owners.filter((o) => o.daysPastDue > 0);
-  const billed = c.owners.length || 1;
+  // A home with nobody on record is not a household that is paying on time.
+  // It was counted as one, so a new build with forty unsold lots read as
+  // ninety percent current before anybody had paid anything.
+  const households = c.owners.filter((o) => !o.placeholder).length;
+  const billed = households || 1;
   return {
     past,
+    households,
+    current: households - past.filter((o) => !o.placeholder).length,
     totalCents: past.reduce((sum, o) => sum + o.balanceCents, 0),
     byBucket: {
       grace: past.filter((o) => o.standing === "grace"),
       late: past.filter((o) => o.standing === "late"),
       collections: past.filter((o) => o.standing === "collections"),
     },
-    collectionRate: (billed - past.length) / billed,
-    autopayRate: c.owners.filter((o) => o.autopay).length / billed,
+    collectionRate: (households - past.filter((o) => !o.placeholder).length) / billed,
+    autopayRate: c.owners.filter((o) => o.autopay && !o.placeholder).length / billed,
   };
 }
 
@@ -102,8 +108,13 @@ export function ledgerYears(c: Community): number[] {
  *
  * Figures, not pixels, so the same rows can back a chart and a CSV.
  */
-export function monthlyFlows(c: Community, year: number) {
-  const months = Array.from({ length: 12 }, (_, i) => ({
+export function monthlyFlows(c: Community, year: number, through?: string) {
+  // A year still under way stops at the given month. Four empty months after
+  // it read as four months of nothing coming in, and a screen reader table
+  // said "$0.00" for money that simply has not had a chance to arrive.
+  const last =
+    through && Number(through.slice(0, 4)) === year ? Number(through.slice(5, 7)) : 12;
+  const months = Array.from({ length: last }, (_, i) => ({
     month: `${year}-${String(i + 1).padStart(2, "0")}`,
     inCents: 0,
     outCents: 0,
@@ -112,6 +123,7 @@ export function monthlyFlows(c: Community, year: number) {
     if (e.category === "Reserve transfer") continue;
     if (Number(e.date.slice(0, 4)) !== year) continue;
     const row = months[Number(e.date.slice(5, 7)) - 1];
+    if (!row) continue;
     if (e.amountCents >= 0) row.inCents += e.amountCents;
     else row.outCents += -e.amountCents;
   }
@@ -317,13 +329,26 @@ export function duesCollection(c: Community, year: number) {
   const perMonth =
     duesCadence === "monthly" ? perPeriod : duesCadence === "quarterly" ? perPeriod / 3 : perPeriod / 12;
   const expectedCents = Math.round(perMonth);
-  const collected = Array.from({ length: 12 }, () => 0);
+  // Collected means what owners paid, before the processor's cut. The ledger
+  // books each deposit net of the fee, so a month in which every home paid
+  // read 96% against a gross bill (found in the five year run, 2026-09-24).
+  // Owners' statements carry the gross payment, so a month they cover is
+  // measured from them; a month they do not reach falls back to the ledger.
+  const deposited = Array.from({ length: 12 }, () => 0);
+  const paid = Array.from({ length: 12 }, () => 0);
   const active = Array.from({ length: 12 }, () => false);
   for (const e of c.ledger) {
     if (yearOf(e.date) !== year) continue;
     active[monthOf(e.date) - 1] = true;
-    if (e.category === "Assessments" && e.amountCents > 0) collected[monthOf(e.date) - 1] += e.amountCents;
+    if (e.category === "Assessments" && e.amountCents > 0) deposited[monthOf(e.date) - 1] += e.amountCents;
   }
+  for (const lines of Object.values(c.ownerCharges ?? {})) {
+    for (const line of lines) {
+      if (line.kind !== "payment" || yearOf(line.date) !== year) continue;
+      paid[monthOf(line.date) - 1] += -line.amountCents;
+    }
+  }
+  const collected = deposited.map((net, i) => (paid[i] > 0 ? paid[i] : net));
   const months = collected
     .map((collectedCents, i) => ({
       month: i + 1,
@@ -507,17 +532,28 @@ export function filterLedger(ledger: Community["ledger"], f: LedgerFilter) {
 /**
  * Totals for a filtered set, plus a running balance per row.
  *
+ * Two kinds of line stay out of Money in and Money out. A line waiting on
+ * review is held out of every report until somebody confirms it, which the
+ * Finances overview promises in so many words; counting it here made the
+ * page disagree with that promise and doubled any duplicate the bank sent.
+ * And a transfer into reserves is the association moving its own money: it
+ * appears once as money out of operating and once as money into reserves,
+ * and counting both inflated each side by the same amount.
+ *
  * The running figure accumulates from the oldest row up, so the newest row at
  * the top of the table carries the total: the number a treasurer checks the
- * bank statement against.
+ * bank statement against. Held lines do not move it either; transfers do,
+ * because each account's balance really changes.
  */
 export function ledgerTotals(rows: Community["ledger"]) {
-  const inCents = rows.reduce((t, e) => t + (e.amountCents > 0 ? e.amountCents : 0), 0);
-  const outCents = rows.reduce((t, e) => t + (e.amountCents < 0 ? -e.amountCents : 0), 0);
+  const counted = rows.filter((e) => e.status !== "needs-review");
+  const flows = counted.filter((e) => e.category !== "Reserve transfer");
+  const inCents = flows.reduce((t, e) => t + (e.amountCents > 0 ? e.amountCents : 0), 0);
+  const outCents = flows.reduce((t, e) => t + (e.amountCents < 0 ? -e.amountCents : 0), 0);
   const running = new Map<string, number>();
   let sum = 0;
   for (let i = rows.length - 1; i >= 0; i--) {
-    sum += rows[i].amountCents;
+    if (rows[i].status !== "needs-review") sum += rows[i].amountCents;
     running.set(rows[i].id, sum);
   }
   return {
@@ -525,7 +561,11 @@ export function ledgerTotals(rows: Community["ledger"]) {
     outCents,
     netCents: inCents - outCents,
     count: rows.length,
-    needsReview: rows.filter((e) => e.status === "needs-review").length,
+    needsReview: rows.length - counted.length,
+    /** Moved between the association's own accounts, net. Neither in nor out. */
+    transferCents: counted
+      .filter((e) => e.category === "Reserve transfer")
+      .reduce((t, e) => t + e.amountCents, 0),
     running,
   };
 }
@@ -627,6 +667,29 @@ export function payoutSpeed(c: Community) {
   return { ach: byMethod("ach"), check: byMethod("check") };
 }
 
+/**
+ * Every vendor decision the board owes, as one list and one number.
+ *
+ * The rail said five, the dashboard said two and the Vendors page said three,
+ * because each counted something different: one added missing W-9s while the
+ * tax paperwork was switched off, one counted payments and called them
+ * invoices. Now all three read this. A bill is owed a decision when it is
+ * new (approve or reject), approved and unpaid (pay it), or a payment is
+ * still short of the signatures it needs. Paperwork is not a decision and
+ * does not count.
+ */
+export function vendorDecisions(c: Community) {
+  const toApprove = c.invoices.filter((i) => i.status === "new");
+  const toPay = c.invoices.filter((i) => i.status === "approved");
+  const toSign = c.payouts.filter((p) => p.approvals.length < p.approvalsRequired);
+  return {
+    toApprove,
+    toPay,
+    toSign,
+    count: toApprove.length + toPay.length + toSign.length,
+  };
+}
+
 export function vendorGaps(c: Community) {
   return {
     missingW9: c.vendors.filter((v) => !v.w9OnFile),
@@ -722,8 +785,9 @@ export function communicationsSummary(c: Community) {
     unread: threads.filter((t) => t.unread).length,
     sent: outbound.length,
     /** Households we hold an email for, which is who a notice can actually reach. */
-    reachable: c.owners.filter((o) => o.email.trim().length > 0).length,
-    households: c.owners.length,
+    // Homes with nobody on record have nobody to reach, so they are neither.
+    reachable: c.owners.filter((o) => !o.placeholder && o.email.trim().length > 0).length,
+    households: c.owners.filter((o) => !o.placeholder).length,
     /** Undefined when nothing has been answered yet, rather than zero. */
     avgReplyDays: gaps.length
       ? Math.round((gaps.reduce((t, g) => t + g, 0) / gaps.length) * 10) / 10

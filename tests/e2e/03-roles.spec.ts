@@ -12,9 +12,11 @@ import { RESIDENT_TABS, SEATS, expectHealthy, inspect, openTab, seedSession } fr
 
 /** Which capabilities each seeded officer holds, per the fixtures. */
 const OFFICERS = [
-  { name: "president", seat: SEATS.president, expects: ["Finances", "Settings", "Voting"] },
+  // Voting lives under Meetings and the inbox under Messages since the
+  // 2026-09-24 board pass; the row is what the sidebar offers.
+  { name: "president", seat: SEATS.president, expects: ["Finances", "Settings", "Meetings"] },
   { name: "treasurer", seat: SEATS.treasurer, expects: ["Finances"] },
-  { name: "secretary", seat: SEATS.secretary, expects: ["Voting", "Documents", "Communications"] },
+  { name: "secretary", seat: SEATS.secretary, expects: ["Meetings", "Documents", "Messages"] },
 ] as const;
 
 test.describe("officers", () => {
@@ -88,6 +90,12 @@ test.describe("officers", () => {
       const health = await inspect(page);
 
       expect(health.crashed, `${path} crashed for a resident`).toBe(false);
+
+      // A resident in the board view is sent to their own home screen, which
+      // shows their own balance. That is theirs to see; what matters is that
+      // the board page did not render, so the figures are checked only if
+      // the browser is still on it.
+      if (!new URL(page.url()).pathname.startsWith("/board")) continue;
 
       // Assert the property rather than the wording, so rephrasing the refusal
       // does not silently turn this test off: whatever it says, the board's

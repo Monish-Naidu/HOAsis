@@ -23,7 +23,6 @@ import {
   PageHeader,
   Stat,
 } from "@/components/ui/primitives";
-import { MoneyTabs } from "@/components/app/money-tabs";
 import { useAppState } from "@/lib/app-state";
 import { assessmentProgress, communitySlug, sharedCostSummary } from "@/lib/metrics";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -89,7 +88,6 @@ export function SharedCostsScreen() {
   if (!shared.enabled && !assessments.enabled && !adding) {
     return (
       <>
-        <MoneyTabs />
         <PageHeader
           eyebrow="Shared costs"
           title="Bills the association passes on"

@@ -3,10 +3,9 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, PiggyBank, Plus } from "lucide-react";
 import { Button, Callout, Card, CardHeader, Meter, PageHeader, Stat } from "@/components/ui/primitives";
-import { MoneyTabs } from "@/components/app/money-tabs";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
 import { ReserveStudyCard } from "@/components/app/reserve-study-card";
-import { reserveSummary } from "@/lib/metrics";
+import { cashPosition, reserveSummary } from "@/lib/metrics";
 import { fundingBand } from "@/lib/reserves";
 import { useAppState } from "@/lib/app-state";
 import { money, pluralize, shortMoney, today } from "@/lib/utils";
@@ -35,27 +34,22 @@ export function ReservesScreen() {
   const band = fundingBand(summary.percentFunded);
   const year = today().getUTCFullYear();
 
-  // What the budget already sends to reserves each month, or the surplus if
-  // the budget has no such line. Seeded from this association, never a
-  // constant: a five home community shown a big default is nonsense.
+  // What the adopted budget sends to reserves each month, and only that. It
+  // used to fall back to income minus expenses, so a new association with a
+  // dues line and nothing else was told it set aside $360 a month "from the
+  // adopted budget" it did not have. No reserve line means no figure.
   const monthlyCents = useMemo(() => {
     const transfer = community.budget.find((b) => b.category === "Reserve transfer");
-    if (transfer) return Math.round(transfer.annualCents / 12);
-    const income = community.budget
-      .filter((b) => b.kind === "income")
-      .reduce((t, b) => t + b.annualCents, 0);
-    const expense = community.budget
-      .filter((b) => b.kind === "expense")
-      .reduce((t, b) => t + b.annualCents, 0);
-    return Math.max(0, Math.round((income - expense) / 12));
+    return transfer ? Math.round(transfer.annualCents / 12) : null;
   }, [community.budget]);
+  const inAccounts = cashPosition(community).reserve;
+  const unassigned = inAccounts - summary.funded;
 
   const next = summary.urgent[0] ?? [...components].sort((a, b) => a.remainingLifeYears - b.remainingLifeYears)[0];
 
   if (!summary.hasStudy) {
     return (
       <>
-        <MoneyTabs />
         <PageHeader
           title="Reserves"
           description="Components, replacement dates, and funds set aside."
@@ -73,18 +67,6 @@ export function ReservesScreen() {
         </Callout>
 
         <ReserveStudyCard />
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <Stat
-            label="Set aside each month"
-            value={money(monthlyCents, { cents: false })}
-            tone={monthlyCents === 0 ? "warn" : "neutral"}
-            hint="From the adopted budget"
-            icon={<PiggyBank className="size-4" />}
-          />
-          <Stat label="Things to replace" value="0" tone="warn" hint="Roofs, paving, fencing, shared drainage" />
-          <Stat label="Percent funded" value="Unknown" tone="warn" hint="Needs a study" />
-        </div>
 
         <Card className="mt-6">
           <CardHeader title="What to do about it" subtitle="Three steps, in order" />
@@ -126,13 +108,13 @@ export function ReservesScreen() {
     );
   }
 
+  const sorted = [...components].sort((a, b) => a.remainingLifeYears - b.remainingLifeYears);
   const behind = components.filter(
     (c) => c.remainingLifeYears <= 3 && c.fundedCents < c.replacementCostCents,
   );
 
   return (
     <>
-      <MoneyTabs />
       <PageHeader
         title="Reserves"
         description="Components, replacement dates, and funds set aside."
@@ -140,24 +122,31 @@ export function ReservesScreen() {
       />
       {addForm}
 
+      {/* The first figure is the bank's, the same number Finances shows as
+          Reserve accounts. What is assigned to components is named as that,
+          so "set aside" never means two amounts on two screens. */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          label="Set aside"
-          value={money(summary.funded, { cents: false })}
-          hint={`Against ${money(summary.required, { cents: false })} to replace everything`}
+          label="In reserve accounts"
+          value={money(inAccounts, { cents: false })}
+          hint={
+            unassigned > 0
+              ? `${money(summary.funded, { cents: false })} assigned, ${money(unassigned, { cents: false })} not yet`
+              : `${money(summary.funded, { cents: false })} assigned to components`
+          }
           icon={<PiggyBank className="size-4" />}
         />
         <Stat
           label="Percent funded"
           value={`${Math.round(summary.percentFunded * 100)}%`}
           tone={band.tone}
-          hint={band.label}
+          hint={`${band.label}. ${money(summary.funded, { cents: false })} of ${money(summary.required, { cents: false })}`}
         />
         <Stat
-          label="Set aside each month"
-          value={money(monthlyCents, { cents: false })}
-          tone={monthlyCents === 0 ? "warn" : "neutral"}
-          hint="From the adopted budget"
+          label="Budgeted each month"
+          value={monthlyCents === null ? "None" : money(monthlyCents, { cents: false })}
+          tone={monthlyCents ? "neutral" : "warn"}
+          hint={monthlyCents === null ? "No reserve line in the budget" : "The budget's reserve line"}
         />
         <Stat
           label="Replacing next"
@@ -186,7 +175,45 @@ export function ReservesScreen() {
 
       <Card className="mt-6">
         <CardHeader title="What the money is for" subtitle="Each component, when it is due, and what is set aside" />
-        <div className="overflow-x-auto">
+        {/* On a phone, one row per component: name and cost on a line, the
+            year and how much is set aside under it. The table's money
+            columns were off the edge at 375 with nothing saying so. */}
+        <ul className="divide-y divide-border sm:hidden">
+          {sorted.map((component) => {
+            const share = component.replacementCostCents
+              ? component.fundedCents / component.replacementCostCents
+              : 0;
+            return (
+              <li key={component.id} className="px-5 py-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="min-w-0 truncate text-[15px] font-medium text-fg">{component.name}</p>
+                  <p className="tnum shrink-0 text-[15px] font-semibold text-fg">
+                    {shortMoney(component.replacementCostCents)}
+                  </p>
+                </div>
+                <p className="mt-0.5 text-[13px] text-fg-muted">
+                  <span
+                    className={
+                      component.remainingLifeYears <= 2 ? "tnum font-semibold text-warn" : "tnum"
+                    }
+                  >
+                    {year + component.remainingLifeYears}
+                  </span>
+                  {" · "}
+                  <span className="tnum">{shortMoney(component.fundedCents)}</span> set aside,{" "}
+                  <span className="tnum">{Math.round(share * 100)}%</span>
+                </p>
+                <Meter
+                  value={share}
+                  tone={share >= 0.8 ? "ok" : share >= 0.4 ? "brand" : "warn"}
+                  className="mt-2"
+                  aria-label={`${component.name} ${Math.round(share * 100)} percent funded`}
+                />
+              </li>
+            );
+          })}
+        </ul>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[640px] text-left">
             <thead>
               <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
@@ -198,9 +225,7 @@ export function ReservesScreen() {
               </tr>
             </thead>
             <tbody>
-              {[...components]
-                .sort((a, b) => a.remainingLifeYears - b.remainingLifeYears)
-                .map((component) => {
+              {sorted.map((component) => {
                   const share = component.replacementCostCents
                     ? component.fundedCents / component.replacementCostCents
                     : 0;

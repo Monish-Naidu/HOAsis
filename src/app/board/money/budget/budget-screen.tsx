@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge, Card, CardHeader, Meter, PageHeader } from "@/components/ui/primitives";
-import { MoneyTabs } from "@/components/app/money-tabs";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { StatTile } from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
@@ -26,7 +25,6 @@ export function BudgetScreen() {
 
   return (
     <>
-      <MoneyTabs />
       <PageHeader
         title="Budget"
         description={`FY${year} adopted budget against actual, with ${elapsedPct}% of the year gone.`}
