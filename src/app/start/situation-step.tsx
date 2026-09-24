@@ -164,14 +164,14 @@ export function PropertyPicker({ draft, patch }: { draft: CommunityDraft; patch:
               onClick={() => pick(id)}
               className={cn(
                 "relative rounded-card border p-4 text-left transition-colors",
-                on ? "border-brand bg-brand-soft" : "border-border-2 hover:bg-surface-2",
+                on ? "border-primary bg-primary-soft" : "border-border-2 bg-surface hover:bg-surface-2",
               )}
             >
               <span
                 aria-hidden
                 className={cn(
                   "absolute right-3 top-3 grid size-5 place-items-center rounded-full border transition-colors",
-                  on ? "border-brand bg-brand text-brand-fg" : "border-border-2",
+                  on ? "border-primary bg-primary text-primary-fg" : "border-border-2",
                 )}
               >
                 {on ? <Check className="size-3" strokeWidth={3} /> : null}
@@ -226,7 +226,7 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
             className={cn(
               "rounded-full border px-4 py-2 text-[15px] font-medium transition-colors",
               draft.sharedSpaces.includes(id)
-                ? "border-brand bg-brand text-brand-fg"
+                ? "border-primary bg-primary text-primary-fg"
                 : "border-border-2 text-fg-muted hover:text-fg",
             )}
           >
@@ -236,7 +236,7 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
         {custom.map((name) => (
           <span
             key={name}
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand bg-brand py-2 pl-4 pr-2 text-[15px] font-medium text-brand-fg"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary py-2 pl-4 pr-2 text-[15px] font-medium text-primary-fg"
           >
             {name}
             <button
@@ -262,7 +262,7 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
           onChange={(e) => setOwn(e.target.value)}
           placeholder="Something else, like a dog park"
           aria-label="Another shared space"
-          className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
+          className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary"
         />
         <button
           type="submit"
@@ -305,7 +305,7 @@ export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: P
                       className={cn(
                         "flex w-full items-center gap-3 rounded-card border px-3.5 py-2.5 text-left transition-colors",
                         picked
-                          ? "border-brand bg-brand-soft"
+                          ? "border-primary bg-primary-soft"
                           : "border-border-2 bg-surface hover:bg-surface-2",
                       )}
                     >
@@ -316,7 +316,7 @@ export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: P
                       <span
                         className={cn(
                           "size-4 shrink-0 rounded-full border-2",
-                          picked ? "border-brand bg-brand" : "border-border-2",
+                          picked ? "border-primary bg-primary" : "border-border-2",
                         )}
                         aria-hidden
                       />
@@ -342,12 +342,12 @@ export function CollectsPicker({ draft, patch }: { draft: CommunityDraft; patch:
   const card = (picked: boolean) =>
     cn(
       "flex w-full items-start gap-3 rounded-card border p-4 text-left transition-colors",
-      picked ? "border-brand bg-brand-soft" : "border-border-2 hover:bg-surface-2",
+      picked ? "border-primary bg-primary-soft" : "border-border-2 bg-surface hover:bg-surface-2",
     );
   const box = (picked: boolean) =>
     cn(
       "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2",
-      picked ? "border-brand bg-brand text-brand-fg" : "border-border-2",
+      picked ? "border-primary bg-primary text-primary-fg" : "border-border-2",
     );
   return (
     <div className="space-y-2">
@@ -411,14 +411,14 @@ function OriginCard({
       className={cn(
         "flex w-full items-start gap-3.5 rounded-card border text-left transition-colors",
         compact ? "p-3" : "p-4",
-        picked ? "border-brand bg-brand-soft" : "border-border-2 bg-surface hover:bg-surface-2",
+        picked ? "border-primary bg-primary-soft" : "border-border-2 bg-surface hover:bg-surface-2",
       )}
     >
       <span
         className={cn(
           "mt-0.5 flex shrink-0 items-center justify-center rounded-lg",
           compact ? "size-8" : "size-9",
-          picked ? "bg-brand text-brand-fg" : "bg-surface-3 text-fg-muted",
+          picked ? "bg-primary text-primary-fg" : "bg-surface-3 text-fg-muted",
         )}
         aria-hidden
       >
@@ -433,7 +433,7 @@ function OriginCard({
             comparable and the consequence is confirmed rather than competing
             for attention. */}
         {picked ? (
-          <span className="mt-2 block border-t border-brand/25 pt-2 text-[13px] leading-relaxed text-brand-soft-fg">
+          <span className="mt-2 block border-t border-primary/25 pt-2 text-[13px] leading-relaxed text-primary">
             <span className="font-semibold">What that changes: </span>
             {option.changes}
           </span>
@@ -442,7 +442,7 @@ function OriginCard({
       <span
         className={cn(
           "mt-1 size-4 shrink-0 rounded-full border-2",
-          picked ? "border-brand bg-brand" : "border-border-2",
+          picked ? "border-primary bg-primary" : "border-border-2",
         )}
         aria-hidden
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Map as MapIcon, Plus, Trash2, Users } from "lucide-react";
 import { Button, Callout, Card } from "@/components/ui/primitives";
@@ -43,6 +43,14 @@ import {
 } from "@/lib/pending-draft";
 import { cn, money } from "@/lib/utils";
 import { wordingFor, type Wording } from "@/lib/wording";
+import {
+  clearProgress,
+  forgetRead,
+  parseProgress,
+  readProgressOnce,
+  saveProgress,
+  type WizardProgress,
+} from "./wizard-progress";
 
 /**
  * Setting up an association, one question at a time.
@@ -115,15 +123,44 @@ function questionIds(signedIn: boolean, draft: CommunityDraft): QuestionId[] {
   ];
 }
 
+/** Nothing to subscribe to: the saved progress is read once, see `readProgressOnce`. */
+const noSubscription = () => () => {};
+/** What the server and the hydrating client see, before storage can be read. */
+const NOT_READ = "not-read";
+
+/**
+ * The wizard, with its answers carried across a reload.
+ *
+ * The page is prerendered, so the first render cannot know what this tab
+ * saved. It renders the empty wizard with saving held off; once hydrated,
+ * the saved progress is read, and if there is any the wizard remounts on it
+ * once. Saving starts only after that read, so the empty first render can
+ * never overwrite the answers it is about to restore.
+ */
 export function SetupWizard() {
+  const raw = useSyncExternalStore(noSubscription, readProgressOnce, () => NOT_READ);
+  const hydrated = raw !== NOT_READ;
+  const restored = hydrated ? parseProgress(raw) : null;
+  return (
+    <WizardQuestions key={restored ? "restored" : "fresh"} restored={restored} persist={hydrated} />
+  );
+}
+
+function WizardQuestions({
+  restored,
+  persist,
+}: {
+  restored: WizardProgress | null;
+  persist: boolean;
+}) {
   const { createCommunity, createRemoteAssociation } = useAppState();
   const auth = useAuth();
   const router = useRouter();
-  const [draft, setDraft] = useState<CommunityDraft>(emptyDraft);
+  const [draft, setDraft] = useState<CommunityDraft>(() => restored?.draft ?? emptyDraft());
   const signedIn = Boolean(auth.user);
   const ids = questionIds(signedIn, draft);
 
-  const flow = useFlowPosition(signedIn ? "name" : "account");
+  const flow = useFlowPosition(restored?.current ?? (signedIn ? "name" : "account"));
   // The account question vanishes when a session arrives; land on the first
   // real question rather than on nothing.
   const current = (ids.includes(flow.current as QuestionId) ? flow.current : ids[0]) as QuestionId;
@@ -144,11 +181,24 @@ export function SetupWizard() {
   // Account created on the first step, email not yet confirmed. The account
   // question stays in the list so they can look back at it, but never asks
   // twice.
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(
+    restored?.awaitingConfirmation ?? false,
+  );
   // Chose to look around without an account. Ends in a browser-only copy.
-  const [exploring, setExploring] = useState(false);
+  const [exploring, setExploring] = useState(restored?.exploring ?? false);
   // Finished with the confirmation still outstanding; the draft is held.
   const [sentToEmail, setSentToEmail] = useState(false);
+
+  // Every answer, and where the reader is, written as it changes so a reload
+  // lands back on the same question with the same answers. Writing to
+  // storage only; nothing here sets state.
+  useEffect(() => {
+    if (!persist || sentToEmail) return;
+    saveProgress({ draft, current, exploring, awaitingConfirmation });
+  }, [persist, sentToEmail, draft, current, exploring, awaitingConfirmation]);
+  // The next visit to /start reads storage afresh rather than this visit's
+  // first read.
+  useEffect(() => forgetRead, []);
 
   const canResume = signedIn && Boolean(pending) && !resumeDismissed && current === "name";
 
@@ -187,12 +237,15 @@ export function SetupWizard() {
     setFailure(null);
     if (!auth.user) {
       if (awaitingConfirmation) {
+        // The pending draft holds it from here, through the email round trip.
         savePendingDraft(finalizeDraft(draft), draft.founder.email.trim());
+        clearProgress();
         setSentToEmail(true);
         return;
       }
       if (exploring) {
         createCommunity(finalizeDraft(draft));
+        clearProgress();
         router.push("/start/plan");
         return;
       }
@@ -202,6 +255,7 @@ export function SetupWizard() {
     setBusy(true);
     try {
       await createRemoteAssociation(finalizeDraft(draft));
+      clearProgress();
       // Straight to the plan rather than the dashboard. A board that lands on
       // an empty workspace has to work out what to do next; one that lands
       // on a plan is asked, in the order that gets money moving first.
@@ -830,7 +884,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
             rows={5}
             placeholder={"One address per line\n1430 Mehr Meadows Lane\n1432 Mehr Meadows Lane"}
             aria-label="Addresses, one per line"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
           />
           <div className="flex gap-2">
             <Button variant="primary" size="sm" disabled={!pasted.trim()} onClick={addPasted}>
@@ -950,7 +1004,11 @@ function RangesStep({ draft, patch }: StepProps) {
         </div>
 
         <Card className="divide-y divide-border overflow-hidden">
-          <div className="grid grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-[13px] font-semibold text-fg-muted">
+          {/* The column heads, from a tablet up. On a phone each range is two
+              rows, the name and then first, last and count, each field with
+              its own small label: five columns in 335px left the name field
+              25px wide. */}
+          <div className="hidden grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-[13px] font-semibold text-fg-muted sm:grid">
             <span>{w.group}</span>
             <span>First</span>
             <span>Last</span>
@@ -959,49 +1017,62 @@ function RangesStep({ draft, patch }: StepProps) {
           </div>
           {phases.map((phase) => {
             const problem = problems.find((p) => p.phaseId === phase.id);
+            // A range with a problem creates nothing, so it counts nothing.
+            const count = problem ? 0 : lotsInPhase(phase);
             return (
               <div key={phase.id}>
-                <div className="grid grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 px-3.5 py-2.5">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_2rem] items-end gap-2 px-3.5 py-2.5 sm:grid-cols-[1fr_5rem_5rem_4.5rem_2rem] sm:items-center">
                   <input
                     value={phase.label}
                     onChange={(e) => editPhase(phase.id, { label: e.target.value })}
                     aria-label={`Name of ${phase.label}`}
-                    className={cn(input, "h-9")}
+                    className={cn(input, "col-span-3 h-9 font-medium sm:col-span-1 sm:font-normal")}
                   />
-                  <input
-                    type="number"
-                    min={1}
-                    value={Number.isFinite(phase.from) ? phase.from : ""}
-                    onChange={(e) =>
-                      editPhase(phase.id, { from: Number.parseInt(e.target.value, 10) })
-                    }
-                    aria-label={`${phase.label} first lot`}
-                    className={cn(input, "h-9 tnum")}
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    value={Number.isFinite(phase.to) && phase.to > 0 ? phase.to : ""}
-                    onChange={(e) =>
-                      editPhase(phase.id, { to: Number.parseInt(e.target.value, 10) })
-                    }
-                    aria-label={`${phase.label} last lot`}
-                    className={cn(input, "h-9 tnum")}
-                  />
-                  <span className="tnum text-right text-[15px] font-medium text-fg-muted">
-                    {problem ? "—" : lotsInPhase(phase)}
+                  <label className="order-3 min-w-0 sm:order-none">
+                    <span className="mb-1 block text-[12px] font-medium text-fg-subtle sm:hidden">
+                      First
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={Number.isFinite(phase.from) ? phase.from : ""}
+                      onChange={(e) =>
+                        editPhase(phase.id, { from: Number.parseInt(e.target.value, 10) })
+                      }
+                      aria-label={`${phase.label} first lot`}
+                      className={cn(input, "h-9 tnum")}
+                    />
+                  </label>
+                  <label className="order-4 min-w-0 sm:order-none">
+                    <span className="mb-1 block text-[12px] font-medium text-fg-subtle sm:hidden">
+                      Last
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={Number.isFinite(phase.to) && phase.to > 0 ? phase.to : ""}
+                      onChange={(e) =>
+                        editPhase(phase.id, { to: Number.parseInt(e.target.value, 10) })
+                      }
+                      aria-label={`${phase.label} last lot`}
+                      className={cn(input, "h-9 tnum")}
+                    />
+                  </label>
+                  <span className="tnum order-5 flex h-9 items-center justify-end whitespace-nowrap text-[15px] font-medium text-fg-muted sm:order-none">
+                    {count}
+                    <span className="ml-1 sm:hidden">{count === 1 ? w.home : w.homes}</span>
                   </span>
                   {phases.length > 1 ? (
                     <button
                       type="button"
                       aria-label={`Remove ${phase.label}`}
                       onClick={() => setPhases(phases.filter((p) => p.id !== phase.id))}
-                      className="rounded-md p-1 text-fg-subtle hover:bg-surface-2 hover:text-danger"
+                      className="order-2 flex size-8 items-center justify-center self-center rounded-md text-fg-subtle hover:bg-surface-2 hover:text-danger sm:order-none"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
                   ) : (
-                    <span />
+                    <span className="order-2 sm:order-none" />
                   )}
                 </div>
                 {mixed ? (
@@ -1048,7 +1119,7 @@ function RangesStep({ draft, patch }: StepProps) {
             return (
             <div key={home.unit} className="px-3.5 py-2.5">
               <div className="flex items-center gap-3">
-                <span className="w-20 shrink-0 truncate text-[13px] font-medium text-fg-subtle">
+                <span className="w-16 shrink-0 truncate text-[13px] font-medium text-fg-subtle sm:w-20">
                   {home.unit}
                   {mixed ? (
                     <span className="block truncate text-[12px] font-normal">
@@ -1080,7 +1151,7 @@ function RangesStep({ draft, patch }: StepProps) {
                       )}
                     </>
                   ) : (
-                    <span className="block text-[15px] text-fg-subtle">
+                    <span className="block truncate text-[15px] text-fg-subtle">
                       {w.fromBuilder
                         ? `Not sold yet${draft.builderName?.trim() ? `, ${draft.builderName.trim()}` : ""}`
                         : "No owner listed"}
@@ -1094,7 +1165,7 @@ function RangesStep({ draft, patch }: StepProps) {
                       setNamingUnit(namingUnit === home.unit ? null : home.unit);
                       setBuyer({ name: home.name, email: home.email });
                     }}
-                    className="shrink-0 text-[13px] font-medium text-brand hover:underline"
+                    className="shrink-0 text-[13px] font-medium text-primary hover:underline"
                   >
                     {home.name.trim() ? "Edit" : w.fromBuilder ? "It has sold" : "Add the owner"}
                   </button>
@@ -1137,7 +1208,7 @@ function RangesStep({ draft, patch }: StepProps) {
             <button
               type="button"
               onClick={() => setShown(draft.households.length)}
-              className="w-full px-3.5 py-3 text-left text-[13px] font-medium text-brand transition-colors hover:bg-surface-2"
+              className="w-full px-3.5 py-3 text-left text-[13px] font-medium text-primary transition-colors hover:bg-surface-2"
             >
               Show the other {draft.households.length - shown} {w.homes}
             </button>
@@ -1221,7 +1292,7 @@ function TypeChips({
           className={cn(
             "h-8 rounded-full border px-3 text-[13px] font-medium transition-colors",
             value === t
-              ? "border-brand bg-brand-soft text-brand"
+              ? "border-primary bg-primary-soft text-primary"
               : "border-border-2 text-fg-muted hover:bg-surface-2 hover:text-fg",
           )}
         >
@@ -1335,7 +1406,7 @@ function MixLine({ draft }: { draft: CommunityDraft }) {
 }
 
 const input =
-  "h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  "h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary";
 
 /**
  * The founder's number and address, ordered and worded by who is asking.

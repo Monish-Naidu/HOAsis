@@ -160,39 +160,51 @@ export function QuestionFlow({
         ) : null}
 
         {question.ownsFooter ? null : (
-          <div className="mt-8 flex items-center justify-between gap-3">
-            <div>
-              {onBack ? (
-                <Button variant="ghost" size="md" onClick={onBack} disabled={busy}>
-                  <ArrowLeft className="size-4" />
-                  Back
-                </Button>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-2">
-              {question.skipLabel ? (
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() => {
-                    question.onSkip?.();
-                    onSkip();
-                  }}
-                  disabled={busy}
-                >
-                  {question.skipLabel}
-                </Button>
-              ) : null}
+          // One row: Back on the left, Continue on the right. When there is
+          // a skip, it sits beside Continue from a tablet up; on a phone the
+          // three did not fit, so Back drops to its arrow, Continue takes the
+          // row, and the skip goes full width underneath. One button, moved
+          // by `order`, so there is never a hidden twin for a test to find.
+          <div className="mt-8 flex flex-wrap items-center gap-x-2 gap-y-2">
+            {onBack ? (
               <Button
-                variant="primary"
-                size="md"
-                onClick={question.onContinue ?? onContinue}
-                disabled={!canContinue}
+                variant="ghost"
+                size="lg"
+                onClick={onBack}
+                disabled={busy}
+                className="order-1 max-sm:px-3"
               >
-                {busy ? "One moment" : (question.continueLabel ?? "Continue")}
-                {busy ? null : <ArrowRight className="size-4" />}
+                <ArrowLeft className="size-4" />
+                <span className="max-sm:sr-only">Back</span>
               </Button>
-            </div>
+            ) : null}
+            {question.skipLabel ? (
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => {
+                  question.onSkip?.();
+                  onSkip();
+                }}
+                disabled={busy}
+                className="order-3 basis-full sm:order-2 sm:ml-auto sm:basis-auto"
+              >
+                {question.skipLabel}
+              </Button>
+            ) : null}
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={question.onContinue ?? onContinue}
+              disabled={!canContinue}
+              className={cn(
+                "order-2 ml-auto max-sm:flex-1 sm:order-3",
+                question.skipLabel && "sm:ml-0",
+              )}
+            >
+              {busy ? "One moment" : (question.continueLabel ?? "Continue")}
+              {busy ? null : <ArrowRight className="size-4" />}
+            </Button>
           </div>
         )}
       </div>
@@ -213,7 +225,7 @@ function Progress({ index, total, group }: { index: number; total: number; group
   return (
     <div>
       <div
-        className="h-1 w-full overflow-hidden rounded-full bg-border-2"
+        className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={total}
@@ -221,7 +233,7 @@ function Progress({ index, total, group }: { index: number; total: number; group
         aria-label="Setup progress"
       >
         <div
-          className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out"
+          className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
           style={{ width: `${percent}%` }}
         />
       </div>

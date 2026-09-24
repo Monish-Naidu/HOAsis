@@ -54,7 +54,7 @@ export function PortingCard() {
                 {step.href ? (
                   <Link
                     href={step.href}
-                    className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"
+                    className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"
                   >
                     Open
                     <ArrowRight className="size-3" />

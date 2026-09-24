@@ -49,7 +49,7 @@ export function AccountStep({
   const [failure, setFailure] = useState<string | null>(null);
 
   const input =
-    "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors focus:border-brand";
+    "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors focus:border-primary";
 
   const name = draft.founder.name.trim();
   const email = draft.founder.email.trim();
@@ -86,15 +86,15 @@ export function AccountStep({
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.028em] text-fg">
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
             Your account is ready
           </h1>
-          <p className="mt-1.5 max-w-[56ch] text-[15px] leading-relaxed text-fg-muted">
+          <p className="mt-2 max-w-[56ch] text-[15px] leading-relaxed text-fg-muted sm:text-[17px]">
             We sent a confirmation link to <span className="font-semibold text-fg">{email}</span>.
             Open it whenever you like. Setup carries on here in the meantime.
           </p>
         </div>
-        <Button size="lg" onClick={onContinue}>
+        <Button variant="primary" size="lg" onClick={onContinue}>
           Continue
           <ArrowRight className="size-4" />
         </Button>
@@ -107,10 +107,10 @@ export function AccountStep({
   return (
     <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
       <div>
-        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.028em] text-fg">
+        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
           Start with an account
         </h1>
-        <p className="mt-1.5 max-w-[56ch] text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-2 max-w-[56ch] text-[15px] leading-relaxed text-fg-muted sm:text-[17px]">
           So nothing you enter is lost. Confirming your email can wait until the end.
         </p>
       </div>
@@ -167,7 +167,13 @@ export function AccountStep({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" size="lg" disabled={busy || !ready} onClick={() => void create()}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          disabled={busy || !ready}
+          onClick={() => void create()}
+        >
           {busy ? "One moment" : "Continue"}
           {busy ? null : <ArrowRight className="size-4" />}
         </Button>

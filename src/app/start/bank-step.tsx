@@ -60,7 +60,7 @@ export function BankStep({
       <BankConnect kind="operating" onConnect={onConnect} linked={linked} />
 
       <Callout
-        tone="brand"
+        tone="info"
         icon={<ShieldCheck className="size-4" />}
         title="Operating first, reserves later"
       >

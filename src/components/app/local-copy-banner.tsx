@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, MonitorSmartphone } from "lucide-react";
-import { Callout } from "@/components/ui/primitives";
+import { ButtonLink, Callout } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 
 /**
@@ -26,13 +25,10 @@ export function LocalCopyBanner() {
       icon={<MonitorSmartphone className="size-4" />}
       title={`${community.settings.displayName} lives only in this browser`}
       action={
-        <Link
-          href="/signin"
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-semibold text-brand-fg"
-        >
+        <ButtonLink href="/signin" variant="primary" size="sm">
           Set it up for real
           <ArrowRight className="size-3.5" />
-        </Link>
+        </ButtonLink>
       }
     >
       Nothing here is saved anywhere else and nobody else can sign in. Create an account, then

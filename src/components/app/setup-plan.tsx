@@ -514,7 +514,7 @@ export function SetupOverview() {
         </div>
         <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
           <div
-            className="h-full rounded-full bg-brand transition-all duration-500"
+            className="h-full rounded-full bg-primary transition-all duration-500"
             style={{ width: `${Math.round(plan.percent * 100)}%` }}
           />
         </div>
@@ -634,16 +634,10 @@ export function setupLink(task: PlanTask, href = task.href): string {
 
 function GoThere({ task, secondary = false }: { task: PlanTask; secondary?: boolean }) {
   return (
-    <Link
-      href={setupLink(task)}
-      className={cn(
-        "inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[15px] font-medium transition-colors",
-        secondary ? "text-fg-muted hover:text-fg" : "bg-brand text-brand-fg hover:opacity-90",
-      )}
-    >
+    <ButtonLink href={setupLink(task)} variant={secondary ? "ghost" : "primary"} size="md">
       {secondary ? `Or open ${screenName(task.href)}` : `Open ${screenName(task.href)}`}
       <ArrowRight className="size-3.5" />
-    </Link>
+    </ButtonLink>
   );
 }
 
@@ -732,7 +726,7 @@ function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <label
           aria-busy={busy}
-          className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg hover:opacity-90 aria-busy:opacity-70"
+          className="press inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand-gradient px-3.5 text-[14px] font-medium text-primary-fg shadow-sm hover:brightness-[1.06] aria-busy:opacity-70"
         >
           <Upload className="size-3.5" />
           {busy ? "Uploading" : "Upload a document"}
@@ -1148,7 +1142,7 @@ export function SetupPlanSummary() {
               : ""}
         </span>
       </span>
-      <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-[13px] font-semibold text-brand-fg sm:inline-flex">
+      <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand-gradient px-3.5 text-[13px] font-semibold text-primary-fg shadow-sm sm:inline-flex">
         Continue
         <ArrowRight className="size-3.5" />
       </span>
