@@ -26,7 +26,9 @@ export function ResidentTitle({
     .sort((a, b) => b.href.length - a.href.length)
     .find((t) => (t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href)));
   return (
-    <div className="flex items-start justify-between gap-3">
+    // Wraps, so on the narrowest phones the action drops under the title
+    // instead of sliding over it.
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-3">
       <div className="flex min-w-0 items-center gap-3">
         {tab ? (
           <IconTile icon={tab.icon} tint={tab.tint ?? "blue"} variant="solid" size="md" className="pop-in" />

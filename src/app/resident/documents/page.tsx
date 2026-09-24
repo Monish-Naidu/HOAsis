@@ -149,7 +149,7 @@ function DocumentsScreen() {
               >
                 <IconTile icon={PenLine} tint="teal" size="sm" className="shrink-0" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-medium text-fg">
+                  <span className="line-clamp-2 text-[15px] font-medium leading-snug text-fg">
                     {form.label}
                   </span>
                   <span className="block truncate text-[13px] text-fg-muted">

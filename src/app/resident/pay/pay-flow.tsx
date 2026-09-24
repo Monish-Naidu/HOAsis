@@ -565,7 +565,9 @@ export function PayFlow() {
                     >
                       {active ? <span className="pop-in size-2.5 rounded-full bg-primary" /> : null}
                     </span>
-                    <IconTile icon={Icon} tint="blue" size="sm" />
+                    {/* The tile steps aside on the narrowest phones, where
+                        the account's name needs the room more. */}
+                    <IconTile icon={Icon} tint="blue" size="sm" className="hidden @xs:inline-flex" />
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="truncate text-[15px] font-medium text-fg">

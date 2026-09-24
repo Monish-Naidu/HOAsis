@@ -57,7 +57,7 @@ export default function ResidentFinances() {
               </p>
             </div>
             <div>
-              <p className="text-[13px] text-fg-muted">Earned this year</p>
+              <p className="text-[13px] text-fg-muted">This year</p>
               <p className="tnum mt-1 text-[17px] font-semibold leading-none text-ok">
                 {money(interest.earnedYtd, { cents: false })}
               </p>
