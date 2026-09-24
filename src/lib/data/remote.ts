@@ -6,6 +6,7 @@ import { caps } from "./accounts";
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
+import { duesFor } from "@/lib/home-types";
 
 /**
  * Loading a real association out of Postgres.
@@ -80,6 +81,26 @@ async function everyRow<T>(
     rows.push(...(data ?? []));
     if ((data ?? []).length < 1000) return { data: rows, error: null };
   }
+}
+
+/** What `association_funds` returns: the part of the books an owner may see. */
+interface FundsSummary {
+  accounts: { id: string; kind: string; institution: string; balance_cents: number }[];
+  by_category: { category: string; in_cents: number; out_cents: number }[];
+  recent: {
+    id: string;
+    occurred_on: string;
+    description: string;
+    counterparty: string;
+    category: string;
+    amount_cents: number;
+    bank_account_id: string | null;
+  }[];
+}
+
+function fundsActual(funds: FundsSummary, category: string, kind: "income" | "expense"): number {
+  const row = funds.by_category.find((c) => c.category === category);
+  return row ? Number(kind === "income" ? row.in_cents : row.out_cents) : 0;
 }
 
 function daysBetween(from: string, to: string): number {
@@ -178,6 +199,18 @@ export async function loadCommunity(
   }
 
   const a = association.data;
+
+  // An owner cannot read the bank accounts or the ledger, and should not: a
+  // payment's line names the household that paid. What they may know comes
+  // from one function instead: balances, this year's totals by category, and
+  // recent spending. Only asked when the tables came back empty, which is
+  // what they do for anyone without the finances capability.
+  const funds =
+    (banks.data ?? []).length || (ledger.data ?? []).length
+      ? null
+      : (((await supabase.rpc("association_funds", { p_association_id: associationId })).data ??
+          null) as FundsSummary | null);
+
   // Display preferences with no column of their own live in a jsonb patch.
   const stored = (a.settings ?? {}) as Partial<CommunitySettings>;
   const unitRows = units.data ?? [];
@@ -379,7 +412,23 @@ export async function loadCommunity(
       createdAt: p.created_at,
     })),
 
-    bankAccounts: (banks.data ?? []).map((b) => ({
+    bankAccounts: funds
+      ? funds.accounts.map((b) => ({
+          id: b.id,
+          name: `${b.kind[0].toUpperCase()}${b.kind.slice(1)} account`,
+          institution: b.institution,
+          mask: "",
+          kind: b.kind as Community["bankAccounts"][number]["kind"],
+          balanceCents: Number(b.balance_cents),
+          syncedMinutesAgo: 0,
+          status: "live" as const,
+          reconciledThroughDate: today,
+          unreconciledCount: 0,
+          apy: 0,
+          interestYtdCents: 0,
+          insuredLimitCents: 250_000_00,
+        }))
+      : (banks.data ?? []).map((b) => ({
       id: b.id,
       name: `${b.kind[0].toUpperCase()}${b.kind.slice(1)} account`,
       institution: b.institution,
@@ -400,7 +449,18 @@ export async function loadCommunity(
       insuredLimitCents: 250_000_00,
     })),
 
-    ledger: (ledger.data ?? []).map((e) => ({
+    ledger: funds
+      ? funds.recent.map((e) => ({
+          id: e.id,
+          date: e.occurred_on,
+          description: e.description,
+          counterparty: e.counterparty,
+          category: e.category as Community["ledger"][number]["category"],
+          accountId: e.bank_account_id ?? "unassigned",
+          amountCents: e.amount_cents,
+          status: "cleared" as const,
+        }))
+      : (ledger.data ?? []).map((e) => ({
       id: e.id,
       date: e.occurred_on,
       description: e.description,
@@ -417,25 +477,41 @@ export async function loadCommunity(
           annualCents: Number(line.annual_cents),
           // Actuals come from the books, never from a typed number, so the
           // budget screen and the ledger cannot disagree.
-          ytdActualCents: (ledger.data ?? [])
-            .filter((e) => e.category === line.category && e.occurred_on >= fiscalYearFrom)
-            .filter((e) => (line.kind === "income" ? e.amount_cents > 0 : e.amount_cents < 0))
-            .reduce((total, e) => total + Math.abs(e.amount_cents), 0),
+          ytdActualCents: funds
+            ? fundsActual(funds, line.category, line.kind as "income" | "expense")
+            : (ledger.data ?? [])
+                .filter((e) => e.category === line.category && e.occurred_on >= fiscalYearFrom)
+                .filter((e) => (line.kind === "income" ? e.amount_cents > 0 : e.amount_cents < 0))
+                .reduce((total, e) => total + Math.abs(e.amount_cents), 0),
           kind: line.kind as "income" | "expense",
         }))
       : [
           {
             category: "Assessments",
+            // Every home at its own kind's amount, as issue_assessment bills it.
             annualCents:
-              a.dues_cents *
-              (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1) *
-              unitRows.length,
-            ytdActualCents: (ledger.data ?? [])
-              .filter(
-                (e) =>
-                  e.category === "Assessments" && e.amount_cents > 0 && e.occurred_on >= fiscalYearFrom,
-              )
-              .reduce((total, e) => total + e.amount_cents, 0),
+              unitRows.reduce(
+                (sum, u) =>
+                  sum +
+                  duesFor(
+                    {
+                      duesCents: a.dues_cents,
+                      duesByType: (a.dues_by_type ?? {}) as Record<string, number>,
+                    },
+                    u.home_type ?? undefined,
+                  ),
+                0,
+              ) * (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1),
+            ytdActualCents: funds
+              ? fundsActual(funds, "Assessments", "income")
+              : (ledger.data ?? [])
+                  .filter(
+                    (e) =>
+                      e.category === "Assessments" &&
+                      e.amount_cents > 0 &&
+                      e.occurred_on >= fiscalYearFrom,
+                  )
+                  .reduce((total, e) => total + e.amount_cents, 0),
             kind: "income",
           },
         ],

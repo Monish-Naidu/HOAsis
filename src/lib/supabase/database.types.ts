@@ -2595,6 +2595,7 @@ export type Database = {
           state: string
         }[]
       }
+      association_funds: { Args: { p_association_id: string }; Returns: Json }
       cancel_association_deletion: {
         Args: { p_association_id: string }
         Returns: undefined
