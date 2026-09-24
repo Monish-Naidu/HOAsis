@@ -746,19 +746,29 @@ export function Segmented<T extends string>({
   value,
   onChange,
   label,
+  size = "md",
+  fill = false,
   className,
 }: {
   options: { value: T; label: ReactNode; count?: number }[];
   value: T;
   onChange: (next: T) => void;
   label: string;
+  /** `lg` is the touch size, for a control that is the main thing on a phone screen. */
+  size?: "md" | "lg";
+  /** Stretches across its container, each option an equal share. */
+  fill?: boolean;
   className?: string;
 }) {
   return (
     <div
       role="group"
       aria-label={label}
-      className={cn("inline-flex max-w-full overflow-x-auto rounded-lg bg-surface-3 p-0.5 no-scrollbar", className)}
+      className={cn(
+        "max-w-full overflow-x-auto rounded-lg bg-surface-3 p-0.5 no-scrollbar",
+        fill ? "flex [&>button]:flex-1 [&>button]:justify-center" : "inline-flex",
+        className,
+      )}
     >
       {options.map((o) => (
         <button
@@ -767,7 +777,8 @@ export function Segmented<T extends string>({
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors",
+            "inline-flex shrink-0 items-center gap-1.5 rounded-md font-medium transition-colors",
+            size === "lg" ? "h-9 px-4 text-[14px]" : "h-7 px-3 text-[13px]",
             value === o.value ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
           )}
         >
