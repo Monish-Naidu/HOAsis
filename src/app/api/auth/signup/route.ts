@@ -92,8 +92,17 @@ export async function POST(request: NextRequest) {
     // Undo, so the next attempt is not told the address is taken.
     await admin.auth.admin.deleteUser(data.user.id).catch(() => undefined);
     console.error("[hoasis] signup email failed", sendError);
+    // Resend refuses anything but the account owner's address until the
+    // sending domain is verified. That is our setup, not their typo, and
+    // telling them to check the address sent people hunting for a mistake
+    // they had not made.
+    const ours = /testing emails|verify a domain|domain is not verified/i.test(sendError.message ?? "");
     return NextResponse.json(
-      { message: "We could not send the confirmation email. Check the address and try again." },
+      {
+        message: ours
+          ? "We could not send the confirmation email on our side. Try again later."
+          : "We could not send the confirmation email. Check the address and try again.",
+      },
       { status: 502 },
     );
   }
