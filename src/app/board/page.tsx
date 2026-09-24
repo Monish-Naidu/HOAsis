@@ -270,9 +270,11 @@ function StatTiles() {
   // Money tiles only for those who can read the books. Without the finances
   // capability the ledger comes back empty, and "$0, everyone is current"
   // is a false statement, not a hidden one.
-  const columns = seesMoney ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2";
+  // Two across even on a phone: stacked one per row, four tiles filled the
+  // first screen and pushed Needs you below the fold.
+  const columns = seesMoney ? "grid-cols-2 xl:grid-cols-4" : "grid-cols-2";
   return (
-    <div className={`stagger grid gap-4 ${columns}`}>
+    <div className={`stagger grid gap-3 sm:gap-4 ${columns}`}>
       {seesMoney ? (
         <>
       <Stat

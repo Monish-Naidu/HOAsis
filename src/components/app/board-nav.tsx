@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppState, useReconciliation, useUnreadThreadCount } from "@/lib/app-state";
@@ -89,8 +90,18 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
    */
   const rail = variant === "rail";
 
+  // On a phone the bar scrolls sideways. Keep the open section in view, so
+  // Settings, ninth in the row, is not lit somewhere off the right edge.
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (rail) return;
+    navRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [rail, pathname]);
+
   return (
-    <nav aria-label="Board sections" className={cn(rail && "flex min-h-full w-full")}>
+    <nav ref={navRef} aria-label="Board sections" className={cn(rail && "flex min-h-full w-full")}>
       <TabPill
         activeKey={activeRoute?.key ?? ""}
         className={cn(

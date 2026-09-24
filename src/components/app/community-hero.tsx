@@ -388,7 +388,9 @@ export function BoardChrome({
           {controls}
         </div>
         {/* Horizontal nav on narrow screens */}
-        <div className="no-scrollbar overflow-x-auto border-t border-border px-3 py-1.5 lg:hidden">
+        {/* The right edge fades, so nine sections with three on screen read
+            as a row that scrolls rather than a row of three. */}
+        <div className="no-scrollbar overflow-x-auto border-t border-border px-3 py-1.5 [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] lg:hidden">
           {nav}
         </div>
       </header>

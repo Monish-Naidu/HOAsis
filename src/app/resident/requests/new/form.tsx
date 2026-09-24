@@ -4,7 +4,7 @@ import { useState } from "react";
 import { formatSize } from "@/lib/documents";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
-import { Button, Callout, Card, SectionTitle } from "@/components/ui/primitives";
+import { Button, Callout, Card, SectionTitle, Select } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -221,11 +221,11 @@ export function NewRequestForm() {
         <section>
           <SectionTitle>Which amenity</SectionTitle>
           <Card className="p-4">
-            <select
+            <Select
               value={amenityId}
               onChange={(e) => setAmenityId(e.target.value)}
               aria-label="Amenity"
-              className="h-11 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+              className="w-full [&>select]:h-11 [&>select]:text-[15px]"
             >
               <option value="">Select an amenity</option>
               {reservable.map((a) => (
@@ -233,7 +233,7 @@ export function NewRequestForm() {
                   {a.name}
                 </option>
               ))}
-            </select>
+            </Select>
             {reservable.length === 0 ? (
               <p className="mt-2 text-[13px] text-fg-muted">
                 The board has not made any amenities reservable yet.
@@ -263,11 +263,11 @@ export function NewRequestForm() {
         <section>
           <SectionTitle>Which form</SectionTitle>
           <Card className="p-4">
-            <select
+            <Select
               value={formId}
               onChange={(e) => setFormId(e.target.value)}
               aria-label="Architectural form"
-              className="h-11 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] text-fg outline-none"
+              className="w-full [&>select]:h-11 [&>select]:text-[15px]"
             >
               <option value="">Select a form</option>
               {forms.map((f) => (
@@ -275,7 +275,7 @@ export function NewRequestForm() {
                   {f.label}
                 </option>
               ))}
-            </select>
+            </Select>
             {selectedForm?.fields?.length ? (
               // The same application can be filled in and signed here, with
               // the answers the board needs. Sending the PDF is the fallback.

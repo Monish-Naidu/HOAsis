@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Download, Paperclip, ScrollText } from "lucide-react";
-import { Badge, Button, Callout, Card, EmptyState } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, EmptyState, Select } from "@/components/ui/primitives";
 import { SignaturePad } from "@/components/app/signature-pad";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -302,10 +302,10 @@ function Field({
             className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
           />
         ) : field.kind === "choice" ? (
-          <select
+          <Select
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className={`mt-1.5 ${input}`}
+            className="mt-1.5 w-full [&>select]:h-11 [&>select]:text-[15px]"
           >
             <option value="">Choose one</option>
             {field.options?.map((option) => (
@@ -313,7 +313,7 @@ function Field({
                 {option}
               </option>
             ))}
-          </select>
+          </Select>
         ) : field.kind === "checkbox" ? (
           <span className="mt-1.5 flex items-center gap-2">
             <input

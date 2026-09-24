@@ -270,7 +270,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       id: `form-${f.id}`,
       kind: "document",
       title: f.label,
-      subtitle: f.decisionDays ? `Form · the board answers within ${f.decisionDays} days` : "Form",
+      subtitle: f.decisionDays ? `Form · answered within ${f.decisionDays} days` : "Form",
       date: f.updatedDate,
       href: `/resident/documents/forms/${f.id}`,
       keywords: `form application request ${f.description}`,
