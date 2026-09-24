@@ -24,6 +24,7 @@ import {
 } from "@/lib/app-state";
 import { HomeSchedule } from "@/components/app/home-schedule";
 import { cn, formatDate, money, relativeDays } from "@/lib/utils";
+import { ownerDues } from "@/lib/home-types";
 
 /**
  * The resident home, laid out to the 2026-09-01 dashboard design.
@@ -116,7 +117,8 @@ function AccountSummary() {
 
   const past = owner.daysPastDue > 0;
   const nextCharge = community.nextChargeDate;
-  const amount = owner.balanceCents > 0 ? owner.balanceCents : community.association.duesCents;
+  const amount =
+    owner.balanceCents > 0 ? owner.balanceCents : ownerDues(community.association, owner);
   const covered = owner.autopay && owner.balanceCents <= 0;
 
   return (

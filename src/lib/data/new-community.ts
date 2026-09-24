@@ -1,4 +1,4 @@
-import type { Account, BankAccount, Owner, Cents, ISODate,
+import type { Account, BankAccount, Owner, Cents, ISODate, HomeType,
   Amenity,
 } from "@/lib/types";
 import type { LotPhase } from "@/lib/lots";
@@ -8,6 +8,8 @@ import { caps, GRANTABLE, NO_CAPABILITIES } from "./accounts";
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { wordingFor } from "@/lib/wording";
+import { homeTypesOf, soleType } from "@/lib/home-types";
+import { phaseFor } from "@/lib/lots";
 
 /**
  * Defaults nobody is asked about during setup.
@@ -47,7 +49,7 @@ const DEFAULT_LATE_AFTER_DAY = 10;
  * carries a master policy over the structures or only over common areas, and
  * whether a reserve study is a statutory duty rather than good practice.
  */
-export type PropertyType = "single-family" | "townhomes" | "condos";
+export type PropertyType = HomeType;
 
 /**
  * Who is setting this up.
@@ -95,7 +97,10 @@ export type SharedSpace = "pool" | "clubhouse" | "gym" | "playground" | "gate" |
 
 /** The persisted form of the three onboarding answers. */
 export interface AssociationProfileAnswers {
+  /** The one kind, when there is one. Unset for a mix. */
   propertyType?: PropertyType;
+  /** Every kind present. Read through `homeTypesOf`. */
+  homeTypes?: PropertyType[];
   origin?: AssociationOrigin;
   previously?: PreviousSetup;
   collects: ExtraCollection[];
@@ -109,11 +114,23 @@ export interface CommunityDraft {
   state: string;
   stateName: string;
   duesCents: Cents;
+  /**
+   * Per kind of home, when a mixed community bills kinds differently. Unset
+   * means every home pays `duesCents`.
+   */
+  duesByType?: Partial<Record<PropertyType, Cents>>;
   duesCadence: "monthly" | "quarterly" | "annually";
   /** Day of the month an assessment is billed. */
   dueDay: number;
   /** The person setting this up. They become President. */
-  founder: { name: string; email: string; unit: string; address?: string };
+  founder: {
+    name: string;
+    email: string;
+    unit: string;
+    address?: string;
+    /** Only asked of a mixed community. */
+    homeType?: PropertyType;
+  };
   /** Every home in the community, not counting the founder's own. */
   households: DraftHousehold[];
   /**
@@ -140,6 +157,11 @@ export interface CommunityDraft {
    * landscaper is something they simply know. We derive the rest.
    */
   propertyType?: PropertyType;
+  /**
+   * Every kind of home in the community. One answer for most; a new build
+   * often has two or three. `propertyType` is kept in step when there is one.
+   */
+  homeTypes?: PropertyType[];
   origin?: AssociationOrigin;
   /** Only asked of an established association. */
   previously?: PreviousSetup;
@@ -174,6 +196,8 @@ export interface DraftHousehold {
   unit: string;
   /** The street address, when the board has it. */
   address?: string;
+  /** Which kind of home, in a mixed community. */
+  homeType?: PropertyType;
 }
 
 /** A URL-safe id from a name, with a suffix so two "Oak Ridge"s do not collide. */
@@ -215,7 +239,35 @@ function yearElapsedFrom(fiscalYearStart: string, asOf: ISODate): number {
 /** Annualized assessment income, which is the only budget line we can infer. */
 function annualDues(draft: CommunityDraft): Cents {
   const perYear = draft.duesCadence === "monthly" ? 12 : draft.duesCadence === "quarterly" ? 4 : 1;
-  return draft.duesCents * perYear * unitCount(draft);
+  return draftDuesTotal(draft) * perYear;
+}
+
+/** What one home in the draft pays per period. */
+export function draftDuesFor(draft: CommunityDraft, homeType?: PropertyType): Cents {
+  const own = homeType ? draft.duesByType?.[homeType] : undefined;
+  return own && own > 0 ? own : draft.duesCents;
+}
+
+/**
+ * The founder's kind of home. Their number sits inside one of the ranges,
+ * and the site plan is the authority on what that number is; failing that,
+ * whatever they picked, and failing that the first kind.
+ */
+export function founderHomeType(draft: CommunityDraft): PropertyType | undefined {
+  const types = homeTypesOf(draft);
+  const inRange = phaseFor(draft.phases ?? [], draft.lotPrefix ?? "", founderUnit(draft))?.homeType;
+  const picked = inRange ?? draft.founder.homeType;
+  return picked && types.includes(picked) ? picked : types[0];
+}
+
+/** Every home's dues in the draft, per period, the founder's included. */
+export function draftDuesTotal(draft: CommunityDraft): Cents {
+  const types = homeTypesOf(draft);
+  const founderType = founderHomeType(draft);
+  return otherHomes(draft).reduce(
+    (sum, h) => sum + draftDuesFor(draft, h.homeType ?? types[0]),
+    draftDuesFor(draft, founderType),
+  );
 }
 
 /** Homes in the association: the roster, including the founder's own. */
@@ -246,8 +298,12 @@ export function founderUnit(draft: CommunityDraft): string {
 
 /** Which way this draft names its homes, when the board has not said. */
 export function defaultHomeNaming(draft: CommunityDraft): HomeNaming {
-  const w = wordingFor(draft.propertyType, draft.origin);
-  return w.fromBuilder || draft.propertyType === "condos" ? "numbers" : "addresses";
+  const types = homeTypesOf(draft);
+  const w = wordingFor(types, draft.origin);
+  // Anything attached is numbered: a condo building and a row of townhomes
+  // share one street address. Only an all-detached community goes by street.
+  const attached = types.some((t) => t !== "single-family");
+  return w.fromBuilder || attached ? "numbers" : "addresses";
 }
 
 /**
@@ -258,9 +314,28 @@ export function defaultHomeNaming(draft: CommunityDraft): HomeNaming {
  */
 export function finalizeDraft(draft: CommunityDraft): CommunityDraft {
   const unit = founderUnit(draft);
+  const types = homeTypesOf(draft);
+  const sole = soleType(types);
+  // Every home carries its kind, so nothing downstream has to know whether
+  // the answer was one kind or several. A home whose kind was never picked
+  // is the first kind, which is what the form showed it as.
+  const typed = (t?: PropertyType) => (t && types.includes(t) ? t : types[0]);
+  // Amounts kept only for kinds present, and only when they differ.
+  const byType = Object.fromEntries(
+    types
+      .map((t) => [t, draft.duesByType?.[t]] as const)
+      .filter(([, cents]) => cents && cents > 0 && cents !== draft.duesCents),
+  ) as CommunityDraft["duesByType"];
   return {
     ...draft,
-    founder: { ...draft.founder, unit },
+    propertyType: sole,
+    homeTypes: types,
+    duesByType: types.length > 1 && Object.keys(byType ?? {}).length ? byType : undefined,
+    founder: {
+      ...draft.founder,
+      unit,
+      homeType: founderHomeType(draft),
+    },
     households: draft.households
       .map((h) => ({
         ...h,
@@ -268,6 +343,7 @@ export function finalizeDraft(draft: CommunityDraft): CommunityDraft {
         email: h.email.trim(),
         unit: h.unit.trim(),
         address: h.address?.trim() || undefined,
+        homeType: typed(h.homeType),
       }))
       .filter((h) => h.unit !== "" && h.unit !== unit),
     customSpaces: (draft.customSpaces ?? []).map((c) => c.trim()).filter(Boolean),
@@ -293,7 +369,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
   // A home without an address yet is shown by its number, in the community's
   // own words: "Lot 12" on a subdivision, "Unit 12" anywhere attached.
   const numbered = (unit: string) =>
-    `${wordingFor(draft.propertyType, draft.origin).numberExample} ${unit}`;
+    `${wordingFor(homeTypesOf(draft), draft.origin).numberExample} ${unit}`;
   const accountId = (unit: string) => `${id}-acct-${unit}`;
 
   const founderOwner: Owner = {
@@ -310,6 +386,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     standing: "current",
     daysPastDue: 0,
     boardRole: "President",
+    homeType: draft.founder.homeType,
   };
 
   // An unsold lot is held by the builder, and saying so on the roster is the
@@ -332,6 +409,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       autopay: false,
       standing: "current",
       daysPastDue: 0,
+      homeType: household.homeType,
     };
   });
 
@@ -373,6 +451,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     // Carried through so the plan can be rebuilt later without asking again.
     profile: {
       propertyType: draft.propertyType,
+      homeTypes: homeTypesOf(draft),
       origin: draft.origin,
       previously: draft.previously,
       collects: draft.collects,
@@ -388,6 +467,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       unitCount: unitCount(draft),
       fiscalYearStart: FISCAL_YEAR_START,
       duesCents: draft.duesCents,
+      duesByType: draft.duesByType,
       duesCadence: draft.duesCadence,
       addressLine: `${draft.city}, ${draft.stateName}`,
       managedBy: "self",

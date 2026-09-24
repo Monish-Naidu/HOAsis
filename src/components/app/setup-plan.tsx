@@ -29,6 +29,7 @@ import {
 import { ADMIN_ROLES, ROLE_LABEL, type AccountRole } from "@/lib/types";
 import { cn, money, pluralize } from "@/lib/utils";
 import { HummingbirdArriving } from "@/components/app/hummingbird";
+import { describeMix, duesVary, isMixed, totalDues } from "@/lib/home-types";
 
 /**
  * Finishing setup, one question at a time.
@@ -266,6 +267,9 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
   const homes = community.owners.length;
   const dues = community.association.duesCents;
   const cadence = community.association.duesCadence;
+  // A mixed community names its kinds, and says so when they pay differently.
+  const mix = describeMix(community.owners);
+  const varies = duesVary(community.association);
   const bank = community.bankAccounts.find((a) => a.kind === "operating");
 
   return (
@@ -278,7 +282,8 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
       </h1>
       <p className="mt-3 max-w-[52ch] text-[17px] leading-relaxed text-fg-muted">
         {pluralize(homes, "home")} on the register
-        {dues > 0 ? `, ${money(dues)} ${cadence} each` : ""}.{" "}
+        {isMixed(community.profile) && mix ? ` (${mix})` : ""}
+        {dues > 0 && !varies ? `, ${money(dues)} ${cadence} each` : ""}.{" "}
         {plan.canCollect
           ? "You can already take payments."
           : `${pluralize(plan.phases[0].total - plan.phases[0].done, "thing")} before you can take a payment.`}
@@ -294,7 +299,14 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
       <Card className="mt-6 divide-y divide-border overflow-hidden">
         <Done label={`${pluralize(homes, "home")} added`} detail="Each has a balance and a vote" />
         {dues > 0 ? (
-          <Done label={`${money(dues)} ${cadence} assessment`} detail="Billed to every home" />
+          <Done
+            label={
+              varies
+                ? `${money(totalDues(community.association, community.owners))} ${cadence} in assessments`
+                : `${money(dues)} ${cadence} assessment`
+            }
+            detail={varies ? "Each kind of home at its own amount" : "Billed to every home"}
+          />
         ) : null}
         {bank ? (
           <Done label={`${bank.institution} ••${bank.mask} connected`} detail="Dues land here" />

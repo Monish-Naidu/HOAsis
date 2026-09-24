@@ -6,6 +6,7 @@ import { Camera, ChevronRight, Home as HomeIcon } from "lucide-react";
 import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
 import { shrinkImage } from "@/lib/home-photo";
 import { useToast } from "@/components/app/toast";
+import { HOME_TYPE_LABEL, isMixed } from "@/lib/home-types";
 
 /**
  * The resident's home, inlaid on the community banner.
@@ -18,8 +19,11 @@ import { useToast } from "@/components/app/toast";
  * card shows; the two never disagree.
  */
 export function HomeBadge() {
-  const { settings, account } = useAppState();
+  const { settings, account, community } = useAppState();
   const owner = useCurrentOwner();
+  // In a mixed community the kind of home is part of what the home is.
+  const kind =
+    isMixed(community.profile) && owner?.homeType ? HOME_TYPE_LABEL[owner.homeType].one : null;
   const { photo, uploaded, setPhoto } = useHomePhoto();
   const { notify } = useToast();
   const input = useRef<HTMLInputElement>(null);
@@ -83,7 +87,10 @@ export function HomeBadge() {
           {account?.name ?? owner.members[0] ?? "My Home"}
         </p>
         <p className="mt-0.5 truncate text-[15px] text-white/90">{owner.address}</p>
-        <p className="truncate text-[13px] text-white/70">{settings.displayName}</p>
+        <p className="truncate text-[13px] text-white/70">
+          {kind ? `${kind} · ` : ""}
+          {settings.displayName}
+        </p>
         <div className="mt-2 flex items-center gap-3">
           <Link
             href="/resident/account"

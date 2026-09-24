@@ -46,11 +46,11 @@ async function found(page: Page, name: string, property: Kind) {
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: "Washington" });
   await next();
+  await page.getByRole("button", { name: new RegExp(property) }).click();
+  await next();
   await page.getByLabel(/Each home pays/i).fill("250");
   await next();
 
-  await page.getByRole("button", { name: new RegExp(property) }).click();
-  await next();
   await page.getByRole("button", { name: /^Pool$/ }).click();
   await next();
   await page.getByRole("button", { name: /We are building the community/ }).click();

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
 import { shrinkImage } from "@/lib/home-photo";
 import { useToast } from "@/components/app/toast";
+import { HOME_TYPE_LABEL, isMixed } from "@/lib/home-types";
 
 /**
  * The My Home card: the photograph, the address, the association.
@@ -21,8 +22,11 @@ import { useToast } from "@/components/app/toast";
  * lives in this browser, so losing it costs a picture, never a record.
  */
 export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
-  const { settings } = useAppState();
+  const { settings, community } = useAppState();
   const owner = useCurrentOwner();
+  // In a mixed community the kind of home is part of what the home is.
+  const kind =
+    isMixed(community.profile) && owner?.homeType ? HOME_TYPE_LABEL[owner.homeType].one : null;
   const { photo, uploaded, setPhoto } = useHomePhoto();
   const { notify } = useToast();
   const input = useRef<HTMLInputElement>(null);
@@ -69,7 +73,10 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
       <div className="min-w-0 flex-1 p-4">
         <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">My Home</p>
         <p className="mt-0.5 truncate text-[15px] text-fg-muted">{owner.address}</p>
-        <p className="truncate text-[13px] text-fg-subtle">{settings.displayName}</p>
+        <p className="truncate text-[13px] text-fg-subtle">
+          {kind ? `${kind} · ` : ""}
+          {settings.displayName}
+        </p>
         <div className="mt-1.5 flex items-center gap-3">
           {detailsLink ? (
             <Link

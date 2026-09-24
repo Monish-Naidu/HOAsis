@@ -60,6 +60,28 @@ function nextDueDate(from: string, day: number): string {
   return `${Math.floor(zero / 12)}-${String((zero % 12) + 1).padStart(2, "0")}-${String(safe).padStart(2, "0")}`;
 }
 
+/**
+ * Every row a query matches, a page at a time.
+ *
+ * The API stops at a thousand rows and says nothing about it. Forty homes
+ * billed monthly pass a thousand statement lines in the second year, and a
+ * single read handed back the newest thousand: statements began mid-history,
+ * a delinquent's age was counted from whatever charge happened to be oldest in
+ * the page, and the bank balance was a sum of a fraction of the books. The id
+ * breaks ties in the ordering so no row lands on two pages or none.
+ */
+async function everyRow<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<{ data: T[] | null; error: { message: string } | null }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) return { data: null, error };
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < 1000) return { data: rows, error: null };
+  }
+}
+
 function daysBetween(from: string, to: string): number {
   const ms = new Date(`${to}T12:00:00Z`).getTime() - new Date(`${from}T12:00:00Z`).getTime();
   return Math.round(ms / 86_400_000);
@@ -93,9 +115,9 @@ export async function loadCommunity(
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
     supabase.from("memberships").select("*").eq("association_id", associationId).is("ends_on", null),
-    supabase.from("charges").select("*").eq("association_id", associationId).order("due_on", { ascending: false }),
+    everyRow((from, to) => supabase.from("charges").select("*").eq("association_id", associationId).order("due_on", { ascending: false }).order("id").range(from, to)),
     supabase.from("bank_accounts").select("*").eq("association_id", associationId),
-    supabase.from("ledger_entries").select("*").eq("association_id", associationId).order("occurred_on", { ascending: false }),
+    everyRow((from, to) => supabase.from("ledger_entries").select("*").eq("association_id", associationId).order("occurred_on", { ascending: false }).order("id").range(from, to)),
     supabase.from("unit_balances").select("*").eq("association_id", associationId),
     supabase.from("requests").select("*").eq("association_id", associationId).order("submitted_on", { ascending: false }),
     supabase.from("documents").select("*").eq("association_id", associationId).order("updated_on", { ascending: false }),
@@ -112,10 +134,10 @@ export async function loadCommunity(
     // a resident's instruments are their own, a report is its reporter's, and
     // the board's tables come back empty for anyone else.
     supabase.from("payment_instruments").select("*").eq("association_id", associationId).order("added_on"),
-    supabase.from("payouts").select("*").eq("association_id", associationId).order("issued_on", { ascending: false }),
+    everyRow((from, to) => supabase.from("payouts").select("*").eq("association_id", associationId).order("issued_on", { ascending: false }).order("id").range(from, to)),
     supabase.from("violation_reports").select("*").eq("association_id", associationId).order("submitted_on", { ascending: false }),
     supabase.from("violations").select("*").eq("association_id", associationId).order("opened_on", { ascending: false }),
-    supabase.from("threads").select("*").eq("association_id", associationId).order("updated_on", { ascending: false }),
+    everyRow((from, to) => supabase.from("threads").select("*").eq("association_id", associationId).order("updated_on", { ascending: false }).order("id").range(from, to)),
     supabase.from("governing_articles").select("*").eq("association_id", associationId).order("position"),
     supabase.from("budget_lines").select("*").eq("association_id", associationId).order("position"),
     supabase.from("reserve_components").select("*").eq("association_id", associationId).order("remaining_life_years"),
@@ -126,7 +148,7 @@ export async function loadCommunity(
     // Money in flight. RLS scopes a resident to their own unit's rows; settled
     // payments already show as statement lines, so only the unfinished matter.
     supabase.from("payments").select("*").eq("association_id", associationId).in("state", ["pending", "failed"]).order("created_at", { ascending: false }),
-    supabase.from("post_replies").select("*").eq("association_id", associationId).order("created_at"),
+    everyRow((from, to) => supabase.from("post_replies").select("*").eq("association_id", associationId).order("created_at").order("id").range(from, to)),
     // Board-only rows. RLS hands a resident nothing here, and nothing is
     // what their screens show, so the same query serves both.
     supabase.from("action_items").select("*").eq("association_id", associationId).order("created_at"),
@@ -212,6 +234,7 @@ export async function loadCommunity(
       mailingAddress: holder?.mailing_address || undefined,
       unit: unit.label,
       address: unit.address,
+      homeType: unit.home_type ?? undefined,
       moveInDate: holder?.starts_on ?? unit.created_at.slice(0, 10),
       balanceCents,
       autopay: Boolean(holder?.autopay),
@@ -279,6 +302,7 @@ export async function loadCommunity(
       unitCount: unitRows.length,
       fiscalYearStart: a.fiscal_year_start,
       duesCents: a.dues_cents,
+      duesByType: (a.dues_by_type ?? {}) as Community["association"]["duesByType"],
       duesCadence: a.dues_cadence,
       addressLine: `${a.city}, ${a.state}`,
       managedBy: "self",
@@ -450,6 +474,7 @@ export async function loadCommunity(
     })),
     profile: {
       propertyType: a.property_type ?? undefined,
+      homeTypes: a.home_types?.length ? a.home_types : undefined,
       origin: a.origin ?? undefined,
       collects: a.collects ?? [],
       sharedSpaces: a.shared_spaces ?? [],

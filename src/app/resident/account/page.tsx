@@ -10,6 +10,7 @@ import { ContactCard } from "@/components/app/contact-card";
 import { formatDate, money, today } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
+import { HOME_TYPE_LABEL, isMixed, ownerDues } from "@/lib/home-types";
 
 export default function ResidentAccount() {
   const { community } = useAppState();
@@ -27,7 +28,15 @@ export default function ResidentAccount() {
     <div className="animate-rise space-y-6">
       <ResidentTitle
         title="Account"
-        subtitle={`${homeLabel(community, currentOwner.unit)} · ${currentOwner.displayName}`}
+        subtitle={[
+          homeLabel(community, currentOwner.unit),
+          isMixed(community.profile) && currentOwner.homeType
+            ? HOME_TYPE_LABEL[currentOwner.homeType].one
+            : null,
+          currentOwner.displayName,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       />
 
       <div className="grid grid-cols-2 gap-3">
@@ -63,7 +72,13 @@ export default function ResidentAccount() {
             {money(paidThisYear, { cents: false })}
           </p>
           <p className="mt-2 text-[13px] text-fg-muted">
-            {money(association.duesCents, { cents: false })} a month in dues
+            {money(ownerDues(association, currentOwner), { cents: false })} a{" "}
+            {association.duesCadence === "monthly"
+              ? "month"
+              : association.duesCadence === "quarterly"
+                ? "quarter"
+                : "year"}{" "}
+            in dues
           </p>
         </Card>
       </div>

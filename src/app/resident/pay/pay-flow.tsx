@@ -35,6 +35,7 @@ import { useToast } from "@/components/app/toast";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { policyFor } from "@/lib/collections";
 import { moduleOn } from "@/lib/modules";
+import { ownerDues } from "@/lib/home-types";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
@@ -58,7 +59,9 @@ export function PayFlow() {
     setAutopay,
   } = useAppState();
   const collections = policyFor(settings);
-  const duesCents = community.association.duesCents;
+  // This home's own amount: in a mixed community a condo and a townhome
+  // can pay different dues.
+  const duesCents = ownerDues(community.association, owner ?? undefined);
   const nextCharge = community.nextChargeDate;
   const { notify } = useToast();
 

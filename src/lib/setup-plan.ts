@@ -6,6 +6,7 @@ import type {
   PropertyType,
 } from "@/lib/data/new-community";
 import { SETUP_TASKS, type SetupTask } from "@/lib/setup";
+import { homeTypesOf } from "@/lib/home-types";
 
 /**
  * A plan, built from what a board told us about their situation.
@@ -52,6 +53,8 @@ export interface PlanTask extends SetupTask {
 /** The three answers the plan is built from. */
 export interface AssociationProfile {
   propertyType?: PropertyType;
+  /** Every kind present; one for most associations, two or three for a mix. */
+  homeTypes?: PropertyType[];
   origin?: AssociationOrigin;
   previously?: PreviousSetup;
   collects: string[];
@@ -72,6 +75,7 @@ export function profileFromCommunity(community: Community): AssociationProfile {
   const answers = community.profile;
   return {
     propertyType: answers?.propertyType,
+    homeTypes: homeTypesOf(answers),
     origin: answers?.origin,
     previously: answers?.previously,
     collects: answers?.collects ?? [],
@@ -86,6 +90,7 @@ export function profileFromCommunity(community: Community): AssociationProfile {
 export function profileFromDraft(draft: CommunityDraft): AssociationProfile {
   return {
     propertyType: draft.propertyType,
+    homeTypes: homeTypesOf(draft),
     origin: draft.origin,
     previously: draft.previously,
     collects: draft.collects,
@@ -117,6 +122,12 @@ const RESERVE_STUDY_STATES = new Set([
  * not apply to them.
  */
 function applies(task: SetupTask, p: AssociationProfile): boolean {
+  // A mixed community gets every task any of its kinds needs: the condo
+  // building's structural review does not stop mattering because there are
+  // detached houses down the road.
+  const types = homeTypesOf(p);
+  const has = (t: PropertyType) => types.includes(t);
+  const known = types.length > 0;
   switch (task.key) {
     case "vendors":
       // A builder standing an association up has not hired the landscaper yet;
@@ -131,17 +142,17 @@ function applies(task: SetupTask, p: AssociationProfile): boolean {
     case "reserves":
       // Detached homes on their own lots have far less in common to replace,
       // and plenty of those associations genuinely have no reserve obligation.
-      return p.propertyType !== "single-family" || RESERVE_STUDY_STATES.has(p.stateName);
+      return !known || has("townhomes") || has("condos") || RESERVE_STUDY_STATES.has(p.stateName);
 
     case "maintenance-matrix":
       // Detached homes have no shared wall and no shared roof, so the question
       // this answers does not arise.
-      return p.propertyType === "townhomes" || p.propertyType === "condos";
+      return has("townhomes") || has("condos");
 
     case "structural":
       // A condominium association owns the building. A planned community
       // owning an entry monument and some parkland does not.
-      return p.propertyType === "condos";
+      return has("condos");
 
     case "insurance":
       return true;
@@ -158,8 +169,17 @@ function applies(task: SetupTask, p: AssociationProfile): boolean {
 
 /** The sentence that names their own situation back to them. */
 function because(task: SetupTask, p: AssociationProfile): string | undefined {
+  const types = homeTypesOf(p);
+  const has = (t: PropertyType) => types.includes(t);
+  const mixed = types.length > 1;
   switch (task.key) {
     case "reserves":
+      if (mixed && has("condos")) {
+        return "The condo buildings are the association's to replace, roof to foundation. They will dominate the study, so start with them.";
+      }
+      if (mixed) {
+        return "The townhome roofs and shared walls are the association's, and they are the expensive ones. The detached homes add little beyond the common areas.";
+      }
       if (p.propertyType === "condos") {
         return `The association owns the building, so the whole of it is your obligation. ${
           RESERVE_STUDY_STATES.has(p.stateName)
@@ -178,6 +198,9 @@ function because(task: SetupTask, p: AssociationProfile): string | undefined {
       // The single most misunderstood thing in the category. What the
       // association's policy covers is entirely different in each of these,
       // and an owner buying the wrong policy finds out during a claim.
+      if (mixed) {
+        return "Each kind of home needs a different owner policy. Condo owners need an HO-6, townhome owners need to know if the master policy reaches their roof, detached owners insure the whole house. Tell each group in writing.";
+      }
       if (p.propertyType === "condos") {
         return "The association insures the building. Owners need their own HO-6 for the interior, and most do not know that until a claim.";
       }
@@ -187,6 +210,9 @@ function because(task: SetupTask, p: AssociationProfile): string | undefined {
       return "Common areas, the board itself, and a fidelity bond over whoever touches the money. Owners insure their own homes.";
 
     case "maintenance-matrix":
+      if (mixed) {
+        return "Write one line per kind of home. Where the association's job stops is different for a condo, a townhome and a house, and owners compare notes.";
+      }
       return p.propertyType === "condos"
         ? "In a condominium the line usually runs at the unfinished surface of the walls. Saying so plainly saves the argument."
         : "Shared roofs and party walls are where this bites. An owner and a board each assuming the other pays is the most expensive misunderstanding in townhome housing.";

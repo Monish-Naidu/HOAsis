@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, HardHat, Home, KeyRound, Plus, Rows3, X } from "lucide-react";
+import { Building2, Check, HardHat, Home, KeyRound, Plus, Rows3, X } from "lucide-react";
 import type {
   AssociationOrigin,
   CommunityDraft,
@@ -11,6 +11,7 @@ import type {
   SharedSpace,
 } from "@/lib/data/new-community";
 import { cn } from "@/lib/utils";
+import { HOME_TYPES, homeTypesOf, soleType } from "@/lib/home-types";
 
 /**
  * Four questions of fact, one to a screen, which decide what the plan
@@ -126,28 +127,67 @@ function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
-/** What kind of homes. One answer, and it changes the plan the most. */
+/**
+ * What kind of homes. Changes the plan the most.
+ *
+ * More than one answer is allowed, because a new build is often townhomes
+ * and condos, or condos and detached homes, under one association. Each
+ * kind picked here becomes something every home can be on the homes screen.
+ */
 export function PropertyPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
+  const picked = homeTypesOf(draft);
+  function pick(id: PropertyType) {
+    const next = HOME_TYPES.filter((t) => (t === id ? !picked.includes(t) : picked.includes(t)));
+    // A kind dropped here takes its dues amount with it, and a community
+    // back to one kind bills one amount.
+    const byType = draft.duesByType
+      ? (Object.fromEntries(
+          Object.entries(draft.duesByType).filter(([t]) => next.includes(t as PropertyType)),
+        ) as CommunityDraft["duesByType"])
+      : undefined;
+    patch({
+      homeTypes: next,
+      propertyType: soleType(next),
+      duesByType: next.length > 1 ? byType : undefined,
+    });
+  }
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
-      {PROPERTY.map(({ id, label, detail, icon: Icon }) => (
-        <button
-          key={id}
-          type="button"
-          aria-pressed={draft.propertyType === id}
-          onClick={() => patch({ propertyType: id })}
-          className={cn(
-            "rounded-card border p-4 text-left transition-colors",
-            draft.propertyType === id
-              ? "border-brand bg-brand-soft"
-              : "border-border-2 hover:bg-surface-2",
-          )}
-        >
-          <Icon className="size-5 text-fg-muted" />
-          <span className="mt-2 block text-[15px] font-semibold text-fg">{label}</span>
-          <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">{detail}</span>
-        </button>
-      ))}
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-2 sm:grid-cols-3">
+        {PROPERTY.map(({ id, label, detail, icon: Icon }) => {
+          const on = picked.includes(id);
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => pick(id)}
+              className={cn(
+                "relative rounded-card border p-4 text-left transition-colors",
+                on ? "border-brand bg-brand-soft" : "border-border-2 hover:bg-surface-2",
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "absolute right-3 top-3 grid size-5 place-items-center rounded-full border transition-colors",
+                  on ? "border-brand bg-brand text-brand-fg" : "border-border-2",
+                )}
+              >
+                {on ? <Check className="size-3" strokeWidth={3} /> : null}
+              </span>
+              <Icon className="size-5 text-fg-muted" />
+              <span className="mt-2 block text-[15px] font-semibold text-fg">{label}</span>
+              <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">{detail}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[13px] text-fg-subtle" aria-live="polite">
+        {picked.length > 1
+          ? `A mix. You will say which homes are which on the homes screen.`
+          : "Pick more than one if the community has a mix."}
+      </p>
     </div>
   );
 }

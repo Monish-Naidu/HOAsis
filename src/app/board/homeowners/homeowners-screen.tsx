@@ -36,7 +36,8 @@ import { inviteUrl, remoteInviteUrl } from "@/lib/invitations";
 import { communitySlug, delinquency } from "@/lib/metrics";
 import { policyFor } from "@/lib/collections";
 import { dueLetter, renderLetter } from "@/lib/letters";
-import type { MessageThread, Owner } from "@/lib/types";
+import type { HomeType, MessageThread, Owner } from "@/lib/types";
+import { HOME_TYPE_LABEL, HOME_TYPES, countByType, duesVary, ownerDues } from "@/lib/home-types";
 import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -66,6 +67,7 @@ export function HomeownersScreen() {
     replyToThread,
     messageOwner,
     setHouseholdOwner,
+    setHomeType,
     can,
     isRemote,
   } = useAppState();
@@ -81,13 +83,22 @@ export function HomeownersScreen() {
     community.profile?.origin !== "builder" && community.profile?.origin !== "handover";
 
   const [filter, setFilter] = useState<Filter>("all");
+  // A mixed community can narrow the roster to one kind of home.
+  const kinds = countByType(owners);
+  const mixed = kinds.length > 1;
+  const [kind, setKind] = useState<HomeType | "all">("all");
   // Search from the top bar lands here with the household's name filled in.
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [openId, setOpenId] = useState<string | null>(null);
   const [focusComposer, setFocusComposer] = useState(false);
   const [shown, setShown] = useState(PAGE);
   const [adding, setAdding] = useState(false);
-  const [entry, setEntry] = useState({ name: "", email: "", unit: "" });
+  const [entry, setEntry] = useState<{
+    name: string;
+    email: string;
+    unit: string;
+    homeType?: HomeType;
+  }>({ name: "", email: "", unit: "" });
   const [sale, setSale] = useState<{
     open: boolean;
     ownerId: string | null;
@@ -117,6 +128,7 @@ export function HomeownersScreen() {
     return sorted.filter((o) => {
       if (filter === "paid" && o.daysPastDue > 0) return false;
       if (filter === "behind" && o.daysPastDue === 0) return false;
+      if (kind !== "all" && o.homeType !== kind) return false;
       if (!needle) return true;
       return (
         o.displayName.toLowerCase().includes(needle) ||
@@ -126,7 +138,7 @@ export function HomeownersScreen() {
         o.email.toLowerCase().includes(needle)
       );
     });
-  }, [sorted, filter, query]);
+  }, [sorted, filter, query, kind]);
   const visible = matching.slice(0, shown);
 
   const segments: { key: Filter; label: string; count: number }[] = [
@@ -143,7 +155,7 @@ export function HomeownersScreen() {
 
   function saveOwner() {
     try {
-      const owner = addOwner(entry);
+      const owner = addOwner({ ...entry, homeType: mixed ? (entry.homeType ?? kinds[0].type) : undefined });
       setEntry({ name: "", email: "", unit: "" });
       setAdding(false);
       notify(`Added ${owner.displayName}, unit ${owner.unit}`, "ok", {
@@ -269,6 +281,9 @@ export function HomeownersScreen() {
       { header: "Unit", value: (o) => o.unit },
       { header: "Household", value: (o) => o.displayName },
       { header: "Address", value: (o) => o.address },
+      ...(mixed
+        ? [{ header: "Kind", value: (o: Owner) => (o.homeType ? HOME_TYPE_LABEL[o.homeType].one : "") }]
+        : []),
       { header: "Email", value: (o) => o.email },
       { header: "Phone", value: (o) => o.phone },
       { header: "Balance", value: (o) => (o.balanceCents / 100).toFixed(2) },
@@ -363,6 +378,24 @@ export function HomeownersScreen() {
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-1">
+            {mixed ? (
+              <select
+                value={kind}
+                onChange={(e) => {
+                  setKind(e.target.value as HomeType | "all");
+                  setShown(PAGE);
+                }}
+                aria-label="Kind of home"
+                className="mr-1 h-9 rounded-lg border border-border bg-surface px-2.5 text-[13px] text-fg outline-none"
+              >
+                <option value="all">All kinds</option>
+                {kinds.map(({ type, count }) => (
+                  <option key={type} value={type}>
+                    {HOME_TYPE_LABEL[type].many} ({count})
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <div className="mr-1 flex h-9 items-center gap-2 rounded-lg border border-border px-2.5">
               <Search className="size-3.5 text-fg-subtle" />
               <input
@@ -391,7 +424,14 @@ export function HomeownersScreen() {
         {adding ? (
           <div className="border-b border-border px-5 py-4">
             <p className="text-[15px] font-semibold text-fg">New household</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_6rem_auto_auto]">
+            <div
+              className={cn(
+                "mt-3 grid gap-3",
+                mixed
+                  ? "sm:grid-cols-[1fr_1fr_6rem_9rem_auto_auto]"
+                  : "sm:grid-cols-[1fr_1fr_6rem_auto_auto]",
+              )}
+            >
               <input
                 value={entry.name}
                 onChange={(e) => setEntry({ ...entry, name: e.target.value })}
@@ -417,6 +457,20 @@ export function HomeownersScreen() {
                 onKeyDown={(e) => e.key === "Enter" && saveOwner()}
                 className={input}
               />
+              {mixed ? (
+                <select
+                  value={entry.homeType ?? kinds[0].type}
+                  onChange={(e) => setEntry({ ...entry, homeType: e.target.value as HomeType })}
+                  aria-label="Kind of home"
+                  className={input}
+                >
+                  {HOME_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {HOME_TYPE_LABEL[t].one}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
               <Button
                 variant="primary"
                 size="md"
@@ -576,6 +630,7 @@ export function HomeownersScreen() {
                         </span>
                         <span className="block truncate text-[13px] text-fg-muted">
                           {homeLabel(community, o.unit)}
+                          {mixed && o.homeType ? ` · ${HOME_TYPE_LABEL[o.homeType].short}` : ""}
                           {o.address && o.address !== o.unit ? ` · ${o.address}` : ""}
                         </span>
                         <span className="block truncate text-[13px] text-fg-subtle md:hidden">
@@ -632,6 +687,21 @@ export function HomeownersScreen() {
                         })
                       }
                       onSale={() => startSale(o)}
+                      duesLine={
+                        duesVary(community.association)
+                          ? `${money(ownerDues(community.association, o))} ${community.association.duesCadence}`
+                          : undefined
+                      }
+                      onSetKind={
+                        mixed || o.homeType
+                          ? (next) => {
+                              setHomeType([o.id], next);
+                              notify(
+                                `${homeLabel(community, o.unit)} is a ${HOME_TYPE_LABEL[next].one.toLowerCase()}. It is billed that way from the next bill.`,
+                              );
+                            }
+                          : undefined
+                      }
                       onInvite={() => copyInvite(o)}
                       onEmailInvite={isRemote && o.email ? () => void emailInvites([o]) : undefined}
                       signedUp={!isRemote || accounts.some((a) => a.ownerId === o.id)}
@@ -721,6 +791,8 @@ function HouseholdDetail({
   onEmailInvite,
   signedUp,
   onRemove,
+  duesLine,
+  onSetKind,
 }: {
   owner: Owner;
   thread?: MessageThread;
@@ -735,6 +807,10 @@ function HouseholdDetail({
   onEmailInvite?: () => void;
   signedUp: boolean;
   onRemove: () => void;
+  /** What this home is billed, shown when homes pay different amounts. */
+  duesLine?: string;
+  /** Present when the community tracks kinds of home. */
+  onSetKind?: (next: HomeType) => void;
 }) {
   const [draft, setDraft] = useState("");
   // Set once the draft started from the letter: the send then opens its own
@@ -762,6 +838,24 @@ function HouseholdDetail({
             </a>
           </KeyValue>
           <KeyValue label="Address">{owner.address}</KeyValue>
+          {onSetKind ? (
+            <KeyValue label="Kind of home">
+              <select
+                value={owner.homeType ?? ""}
+                onChange={(e) => onSetKind(e.target.value as HomeType)}
+                aria-label={`Kind of home for ${owner.unit}`}
+                className="h-8 rounded-md border border-border bg-surface px-2 text-[13px] text-fg outline-none focus:border-brand"
+              >
+                {owner.homeType ? null : <option value="">Not set</option>}
+                {HOME_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {HOME_TYPE_LABEL[t].one}
+                  </option>
+                ))}
+              </select>
+            </KeyValue>
+          ) : null}
+          {duesLine ? <KeyValue label="Dues">{duesLine}</KeyValue> : null}
           {owner.mailingAddress ? (
             <KeyValue label="Mail goes to">{owner.mailingAddress}</KeyValue>
           ) : null}

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/primitives";
 import { DangerZone } from "@/components/app/danger-zone";
 import { BillingRow } from "@/components/app/billing-row";
+import { DuesSettings } from "@/components/app/dues-settings";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { useAppState } from "@/lib/app-state";
 import { AmenityRules } from "@/components/app/amenity-rules";
@@ -294,6 +295,8 @@ export function SettingsScreen() {
             </div>
           ) : null}
         </Card>
+
+        <DuesSettings />
 
         {/* Payments: billing, the bank, and who carries the fee */}
         <Card>

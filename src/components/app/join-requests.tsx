@@ -7,6 +7,7 @@ import { useToast } from "@/components/app/toast";
 import { homeLabel, homeWording } from "@/lib/wording";
 import type { JoinRequest } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { homeTypesOf } from "@/lib/home-types";
 
 /**
  * People at the door.
@@ -116,7 +117,7 @@ function RequestRow({
   const [unit, setUnit] = useState(request.unit);
   const [busy, setBusy] = useState(false);
   const taken = community.owners.some((o) => o.unit === unit.trim());
-  const noun = community.profile?.propertyType
+  const noun = homeTypesOf(community.profile).length
     ? homeWording(community).numberExample
     : "Unit";
 

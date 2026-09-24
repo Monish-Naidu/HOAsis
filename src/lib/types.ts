@@ -14,6 +14,9 @@ export type Cents = number;
 
 export type Role = "resident" | "board";
 
+/** The kind of home. Same values as the onboarding answer. */
+export type HomeType = "single-family" | "townhomes" | "condos";
+
 /* -------------------------------------------------------------------------- */
 /* Association                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -27,6 +30,11 @@ export interface Association {
   unitCount: number;
   fiscalYearStart: string;
   duesCents: Cents;
+  /**
+   * What each kind of home pays, where kinds pay differently. A kind not
+   * listed pays `duesCents`. Read through `duesFor`, never directly.
+   */
+  duesByType?: Partial<Record<HomeType, Cents>>;
   duesCadence: "monthly" | "quarterly" | "annually";
   addressLine: string;
   managedBy: "self" | "professional";
@@ -168,6 +176,8 @@ export interface Owner {
   isCorporateOwner?: boolean;
   /** No owner on record yet: the roster shows a stand-in name for the home. */
   placeholder?: boolean;
+  /** Detached, townhome or condo, where the association has said. */
+  homeType?: HomeType;
   /**
    * A photograph of the home, where the association holds one.
    *

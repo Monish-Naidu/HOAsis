@@ -198,10 +198,12 @@ export type Database = {
           deleted_at: string | null
           deletion_requested_by: string | null
           due_day: number
+          dues_by_type: Json
           dues_cadence: Database["public"]["Enums"]["dues_cadence"]
           dues_cents: number
           ein: string | null
           fiscal_year_start: string
+          home_types: Database["public"]["Enums"]["property_type"][]
           id: string
           insurance_carrier: string | null
           insurance_expires_on: string | null
@@ -242,10 +244,12 @@ export type Database = {
           deleted_at?: string | null
           deletion_requested_by?: string | null
           due_day?: number
+          dues_by_type?: Json
           dues_cadence?: Database["public"]["Enums"]["dues_cadence"]
           dues_cents: number
           ein?: string | null
           fiscal_year_start?: string
+          home_types?: Database["public"]["Enums"]["property_type"][]
           id?: string
           insurance_carrier?: string | null
           insurance_expires_on?: string | null
@@ -286,10 +290,12 @@ export type Database = {
           deleted_at?: string | null
           deletion_requested_by?: string | null
           due_day?: number
+          dues_by_type?: Json
           dues_cadence?: Database["public"]["Enums"]["dues_cadence"]
           dues_cents?: number
           ein?: string | null
           fiscal_year_start?: string
+          home_types?: Database["public"]["Enums"]["property_type"][]
           id?: string
           insurance_carrier?: string | null
           insurance_expires_on?: string | null
@@ -2109,6 +2115,7 @@ export type Database = {
           association_id: string
           bedrooms: number | null
           created_at: string
+          home_type: Database["public"]["Enums"]["property_type"] | null
           id: string
           label: string
           occupants: number | null
@@ -2120,6 +2127,7 @@ export type Database = {
           association_id: string
           bedrooms?: number | null
           created_at?: string
+          home_type?: Database["public"]["Enums"]["property_type"] | null
           id?: string
           label: string
           occupants?: number | null
@@ -2131,6 +2139,7 @@ export type Database = {
           association_id?: string
           bedrooms?: number | null
           created_at?: string
+          home_type?: Database["public"]["Enums"]["property_type"] | null
           id?: string
           label?: string
           occupants?: number | null
@@ -2604,11 +2613,14 @@ export type Database = {
           p_city: string
           p_collects?: string[]
           p_due_day: number
+          p_dues_by_type?: Json
           p_dues_cadence: Database["public"]["Enums"]["dues_cadence"]
           p_dues_cents: number
           p_founder_address?: string
+          p_founder_home_type?: Database["public"]["Enums"]["property_type"]
           p_founder_name: string
           p_founder_unit: string
+          p_home_types?: Database["public"]["Enums"]["property_type"][]
           p_households?: Json
           p_name: string
           p_origin?: Database["public"]["Enums"]["association_origin"]

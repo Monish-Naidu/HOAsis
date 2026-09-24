@@ -6,6 +6,7 @@ import { describeInstrument, type PaymentInstrument } from "@/lib/payments/instr
 import { costFor, stripe } from "@/lib/stripe/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { AutopayPlan } from "@/lib/types";
+import { duesFor } from "@/lib/home-types";
 
 /**
  * The daily autopay pass.
@@ -72,13 +73,13 @@ export async function GET(request: NextRequest) {
           admin
             .from("associations")
             .select(
-              "id, name, stripe_account_id, dues_cents, payment_fee_cents, payment_fee_paid_by, payment_fee_waived_on_ach, deleted_at",
+              "id, name, stripe_account_id, dues_cents, dues_by_type, payment_fee_cents, payment_fee_paid_by, payment_fee_waived_on_ach, deleted_at",
             )
             .eq("id", member.association_id)
             .single(),
           admin
             .from("units")
-            .select("stripe_customer_id, label")
+            .select("stripe_customer_id, label, home_type")
             .eq("id", member.unit_id)
             .single(),
           // The service role is not "somebody", so unit_balances' security
@@ -108,7 +109,14 @@ export async function GET(request: NextRequest) {
         plan,
         today,
         balanceCents,
-        duesCents: association.dues_cents,
+        // The home's own kind's amount, as issue_assessment billed it.
+        duesCents: duesFor(
+          {
+            duesCents: association.dues_cents,
+            duesByType: (association.dues_by_type ?? {}) as Record<string, number>,
+          },
+          unit?.home_type ?? undefined,
+        ),
       });
 
       if (decision.action === "wait") {

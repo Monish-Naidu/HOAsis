@@ -3,6 +3,7 @@ import type {
   AssociationProfileAnswers,
   PropertyType,
 } from "@/lib/data/new-community";
+import { homeTypesOf } from "@/lib/home-types";
 
 /**
  * What to call a home, and what to call a run of them.
@@ -34,16 +35,20 @@ export interface Wording {
 }
 
 export function wordingFor(
-  propertyType?: PropertyType,
+  propertyType?: PropertyType | PropertyType[],
   origin?: AssociationOrigin,
 ): Wording {
   const fromBuilder = origin === "builder" || origin === "handover";
+  // A mixed community answers with several kinds. Words that only fit one
+  // of them ("unit" for a detached house, "Lot" for a condo) fall back to
+  // the ones that fit all.
+  const types = Array.isArray(propertyType) ? propertyType : propertyType ? [propertyType] : [];
+  const only = (t: PropertyType) => types.length > 0 && types.every((x) => x === t);
 
   // A condominium is units to everybody, owner and builder alike. Everything
   // else is lots to a builder, who works from a numbered plan, and homes to an
   // association that has been living in them for years.
-  const home =
-    propertyType === "condos" ? "unit" : fromBuilder && origin === "builder" ? "lot" : "home";
+  const home = only("condos") ? "unit" : fromBuilder && origin === "builder" ? "lot" : "home";
 
   return {
     home,
@@ -51,7 +56,7 @@ export function wordingFor(
     Home: home.charAt(0).toUpperCase() + home.slice(1),
     // Attached homes are numbered like units whoever owns them; only a
     // detached subdivision reads "Lot" as its own word.
-    numberExample: propertyType === "single-family" ? "Lot" : "Unit",
+    numberExample: only("single-family") ? "Lot" : "Unit",
     // Phases are how land is released, so they mean something to a builder and
     // to the board taking over from one. An association that has been running
     // for twenty years just has groups of numbers.
@@ -68,7 +73,7 @@ export function wordingFor(
  * answers are kept on the community so the vocabulary can follow them.
  */
 export function homeWording(community: { profile?: AssociationProfileAnswers }): Wording {
-  return wordingFor(community.profile?.propertyType, community.profile?.origin);
+  return wordingFor(homeTypesOf(community.profile), community.profile?.origin);
 }
 
 /**
@@ -94,6 +99,6 @@ export function homeLabel(
 ): string {
   if (!isNumbered(unit)) return unit.trim();
   const w = homeWording(community);
-  const word = community.profile?.propertyType ? w.numberExample : "Unit";
+  const word = homeTypesOf(community.profile).length ? w.numberExample : "Unit";
   return `${word} ${unit.trim()}`;
 }

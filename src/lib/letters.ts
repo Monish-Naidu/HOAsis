@@ -3,6 +3,7 @@ import { renderTemplate, type MessageTemplate } from "@/lib/data/templates";
 import { type CollectionPolicy, type CollectionStage, stageFor } from "@/lib/collections";
 import type { Owner } from "@/lib/types";
 import { money } from "@/lib/utils";
+import { ownerDues } from "@/lib/home-types";
 
 /**
  * Which letter a household is owed, and what it says once filled in.
@@ -59,7 +60,7 @@ export function letterFields(
     balance: money(owner.balanceCents),
     days_past_due: String(owner.daysPastDue),
     association: community.settings.displayName,
-    dues: money(community.association.duesCents),
+    dues: money(ownerDues(community.association, owner)),
     portal_link: "yourhoasis.com/resident/pay",
   };
 }

@@ -8,6 +8,7 @@ import { useToast } from "@/components/app/toast";
 import { EmailDelivery } from "@/components/app/email-delivery";
 import { delinquency } from "@/lib/metrics";
 import { cn, money, pluralize } from "@/lib/utils";
+import { duesVary } from "@/lib/home-types";
 
 /**
  * Sending a dues run.
@@ -98,7 +99,11 @@ export function DuesMailer() {
       <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
         <Run
           title="Assessment coming due"
-          detail={`Everyone. ${money(community.association.duesCents)} due ${community.nextChargeDate}.`}
+          detail={
+            duesVary(community.association)
+              ? `Everyone, each at their own amount. Due ${community.nextChargeDate}.`
+              : `Everyone. ${money(community.association.duesCents)} due ${community.nextChargeDate}.`
+          }
           count={withEmail}
           countLabel="households"
           busy={busy?.category === "assessment" ? (busy.dryRun ? "preview" : "send") : null}

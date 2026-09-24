@@ -14,6 +14,8 @@
  * both its budget and its vote thresholds wrong.
  */
 
+import type { HomeType } from "@/lib/types";
+
 export interface LotPhase {
   /** Stable across edits so a list can key on it. */
   id: string;
@@ -22,6 +24,11 @@ export interface LotPhase {
   /** Inclusive. */
   from: number;
   to: number;
+  /**
+   * What kind of homes this run is, in a mixed community. A builder's phase
+   * or a condo building is almost always one kind throughout.
+   */
+  homeType?: HomeType;
 }
 
 /**
@@ -145,6 +152,50 @@ export function expandPhases(phases: LotPhase[], prefix = ""): string[] {
   return lots;
 }
 
+/**
+ * The range a printed number came from, or undefined.
+ *
+ * Answers "which phase is Lot 12 in", so a home generated from a range can
+ * carry that range's kind of home.
+ */
+export function phaseFor(phases: LotPhase[], prefix: string, label: string): LotPhase | undefined {
+  const problems = new Set(phaseProblems(phases).map((p) => p.phaseId));
+  const wanted = label.trim();
+  if (!wanted) return undefined;
+  return phases.find((phase) => {
+    if (problems.has(phase.id)) return false;
+    for (let n = phase.from; n <= phase.to; n += 1) {
+      if (lotLabel(prefix, n) === wanted || String(n) === wanted) return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Every lot the phases describe, each with its range's kind of home.
+ *
+ * Same order and the same de-duplication as `expandPhases`, so the two can
+ * be used side by side.
+ */
+export function typedLots(
+  phases: LotPhase[],
+  prefix = "",
+): { unit: string; homeType?: HomeType }[] {
+  const problems = new Set(phaseProblems(phases).map((p) => p.phaseId));
+  const seen = new Set<string>();
+  const lots: { unit: string; homeType?: HomeType }[] = [];
+  for (const phase of phases) {
+    if (problems.has(phase.id)) continue;
+    for (let n = phase.from; n <= phase.to; n += 1) {
+      const unit = lotLabel(prefix, n);
+      if (seen.has(unit)) continue;
+      seen.add(unit);
+      lots.push({ unit, homeType: phase.homeType });
+    }
+  }
+  return lots;
+}
+
 /** How many homes the phases add up to, for a count shown while typing. */
 export function totalLots(phases: LotPhase[], prefix = ""): number {
   return expandPhases(phases, prefix).length;
@@ -161,11 +212,15 @@ export function firstPhase(group = "Phase"): LotPhase {
 }
 
 /** The next one, numbered and starting where the last left off. */
-export function nextPhase(phases: LotPhase[], group = "Phase"): LotPhase {
+export function nextPhase(
+  phases: LotPhase[],
+  group = "Phase",
+  homeType?: HomeType,
+): LotPhase {
   const highest = phases.reduce(
     (max, phase) => (lotsInPhase(phase) > 0 ? Math.max(max, phase.to) : max),
     0,
   );
   const index = phases.length + 1;
-  return { id: `phase-${index}`, label: `${group} ${index}`, from: highest + 1, to: 0 };
+  return { id: `phase-${index}`, label: `${group} ${index}`, from: highest + 1, to: 0, homeType };
 }

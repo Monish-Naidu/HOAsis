@@ -10,7 +10,9 @@ import { useAuth } from "@/lib/auth";
 import { US_STATES } from "@/lib/data/library";
 import {
   defaultHomeNaming,
+  draftDuesTotal,
   emptyDraft,
+  founderHomeType,
   finalizeDraft,
   founderUnit,
   otherHomes,
@@ -18,6 +20,7 @@ import {
   type CommunityDraft,
   type DraftHousehold,
   type HomeNaming,
+  type PropertyType,
 } from "@/lib/data/new-community";
 import {
   expandPhases,
@@ -25,8 +28,10 @@ import {
   lotsInPhase,
   nextPhase,
   phaseProblems,
+  typedLots,
   type LotPhase,
 } from "@/lib/lots";
+import { HOME_TYPE_LABEL, homeTypesOf, isMixed } from "@/lib/home-types";
 import { BankStep } from "./bank-step";
 import { CollectsPicker, OriginPicker, PropertyPicker, SpacesPicker } from "./situation-step";
 import { AccountStep, CheckEmailPanel } from "./account-step";
@@ -91,13 +96,15 @@ const CADENCES = [
  * Somebody who said the owners run the place has no builder to name.
  */
 function questionIds(signedIn: boolean, draft: CommunityDraft): QuestionId[] {
-  const w = wordingFor(draft.propertyType, draft.origin);
+  const w = wordingFor(homeTypesOf(draft), draft.origin);
   return [
     ...(signedIn ? [] : (["account"] as const)),
     "name",
     "place",
-    "dues",
+    // Kinds of home before dues, so a mixed community can say what each
+    // kind pays on the dues screen instead of being asked twice.
     "property",
+    "dues",
     "spaces",
     "origin",
     "collects",
@@ -205,7 +212,7 @@ export function SetupWizard() {
     }
   }
 
-  const w = wordingFor(draft.propertyType, draft.origin);
+  const w = wordingFor(homeTypesOf(draft), draft.origin);
 
   const questions = useMemo(() => {
     const byId: Record<QuestionId, FlowQuestion> = {
@@ -290,13 +297,20 @@ export function SetupWizard() {
       },
       dues: {
         id: "dues",
-        group: "Your association",
+        group: "Your community",
         title: "What does each home pay?",
-        detail: "The regular assessment. Special assessments and anything else come later.",
+        detail: isMixed(draft)
+          ? "The regular assessment. Kinds of home can pay different amounts."
+          : "The regular assessment. Special assessments and anything else come later.",
         enterContinues: true,
-        canContinue: draft.duesCents > 0,
+        canContinue:
+          draft.duesCents > 0 &&
+          (!draft.duesByType || homeTypesOf(draft).every((t) => (draft.duesByType?.[t] ?? 0) > 0)),
         body: (
+          <div className="flex flex-col gap-4">
+            {isMixed(draft) ? <DuesByType draft={draft} patch={patch} /> : null}
           <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
+            {draft.duesByType ? null : (
             <Field label="Each home pays">
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
@@ -314,6 +328,7 @@ export function SetupWizard() {
                 />
               </div>
             </Field>
+            )}
             <Field label="How often">
               <select
                 value={draft.duesCadence}
@@ -343,6 +358,7 @@ export function SetupWizard() {
               </select>
             </Field>
           </div>
+          </div>
         ),
       },
       property: {
@@ -350,8 +366,8 @@ export function SetupWizard() {
         group: "Your community",
         title: "What kind of homes?",
         detail:
-          "This decides whether the association insures the buildings and whether a reserve study is a legal duty rather than good practice.",
-        canContinue: Boolean(draft.propertyType),
+          "Pick every kind you have. It decides who insures the buildings and whether a reserve study is a legal duty.",
+        canContinue: homeTypesOf(draft).length > 0,
         body: <PropertyPicker draft={draft} patch={patch} />,
       },
       spaces: {
@@ -605,7 +621,7 @@ interface StepProps {
  * thresholds that are wrong, and both failures are silent.
  */
 function HomesStep({ draft, patch }: StepProps) {
-  const w = wordingFor(draft.propertyType, draft.origin);
+  const w = wordingFor(homeTypesOf(draft), draft.origin);
   const naming = draft.homeNaming ?? defaultHomeNaming(draft);
 
   function setNaming(next: HomeNaming) {
@@ -671,6 +687,8 @@ function HomesStep({ draft, patch }: StepProps) {
  * them is a roster nobody recognises.
  */
 function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
+  const types = homeTypesOf(draft);
+  const mixed = types.length > 1;
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState("");
   const mine = founderUnit(draft);
@@ -732,6 +750,16 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
           </span>
           <span className="truncate text-[13px] text-fg-subtle">{draft.founder.email}</span>
           <span />
+          {mixed ? (
+            <div className="flex flex-wrap items-center gap-1.5 sm:col-span-4">
+              <TypeChips
+                types={types}
+                value={draft.founder.homeType ?? types[0]}
+                onChange={(homeType) => patch({ founder: { ...draft.founder, homeType } })}
+                label="Kind of home, yours"
+              />
+            </div>
+          ) : null}
         </div>
         {rows.map((row, index) => (
           <div
@@ -770,6 +798,16 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
             >
               <Trash2 className="size-3.5" />
             </button>
+            {mixed ? (
+              <div className="flex flex-wrap items-center gap-1.5 sm:col-span-4">
+                <TypeChips
+                  types={types}
+                  value={row.homeType ?? types[0]}
+                  onChange={(homeType) => editRow(index, { homeType })}
+                  label={`Kind of home ${index + 1}`}
+                />
+              </div>
+            ) : null}
           </div>
         ))}
       </Card>
@@ -812,10 +850,11 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
         {draft.duesCents > 0 ? (
           <>
             {" · "}
-            {money(draft.duesCents * (listed + 1), { cents: false })} per {cadenceNoun(draft)}
+            {money(draftDuesTotal(draft), { cents: false })} per {cadenceNoun(draft)}
           </>
         ) : null}
       </p>
+      <MixLine draft={draft} />
 
       <Callout tone="info" icon={<Users className="size-4" />} title="You can stop here">
         Your own {w.home} is already on the list. Add the rest now, or add households one at a
@@ -826,7 +865,9 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
 }
 
 function RangesStep({ draft, patch }: StepProps) {
-  const w = wordingFor(draft.propertyType, draft.origin);
+  const types = homeTypesOf(draft);
+  const mixed = types.length > 1;
+  const w = wordingFor(types, draft.origin);
   const phases = draft.phases?.length ? draft.phases : [firstPhase(w.group)];
   const prefix = draft.lotPrefix ?? "";
   const problems = phaseProblems(phases, w.Home);
@@ -852,10 +893,20 @@ function RangesStep({ draft, patch }: StepProps) {
    */
   function setPhases(next: LotPhase[], nextPrefix = prefix) {
     const known = new Map(draft.households.map((h) => [h.unit, h]));
-    const households: DraftHousehold[] = expandPhases(next, nextPrefix).map(
-      (unit) => known.get(unit) ?? { name: "", email: "", unit },
-    );
+    // Each home takes its range's kind, every time the ranges change, so
+    // moving Building A from townhomes to condos moves every home in it.
+    const households: DraftHousehold[] = typedLots(next, nextPrefix).map(({ unit, homeType }) => ({
+      ...(known.get(unit) ?? { name: "", email: "", unit }),
+      homeType: homeType ?? types[0],
+    }));
     patch({ phases: next, lotPrefix: nextPrefix, households });
+  }
+
+  /** A new range starts as a kind no range has yet, since that is usually why it was added. */
+  function nextType(): PropertyType | undefined {
+    if (!mixed) return undefined;
+    const used = new Set(phases.map((p) => p.homeType ?? types[0]));
+    return types.find((t) => !used.has(t)) ?? phases[phases.length - 1]?.homeType ?? types[0];
   }
 
   function editPhase(id: string, change: Partial<LotPhase>) {
@@ -953,6 +1004,17 @@ function RangesStep({ draft, patch }: StepProps) {
                     <span />
                   )}
                 </div>
+                {mixed ? (
+                  <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">
+                    <span className="mr-1 text-[13px] text-fg-subtle">These are</span>
+                    <TypeChips
+                      types={types}
+                      value={phase.homeType ?? types[0]}
+                      onChange={(homeType) => editPhase(phase.id, { homeType })}
+                      label={`Kind of home in ${phase.label}`}
+                    />
+                  </div>
+                ) : null}
                 {/* A phase with a problem creates nothing rather than creating
                     half of something. Two Lot 44s bills one home twice. */}
                 {problem ? (
@@ -969,7 +1031,7 @@ function RangesStep({ draft, patch }: StepProps) {
           variant="ghost"
           size="sm"
           className="w-fit"
-          onClick={() => setPhases([...phases, nextPhase(phases, w.group)])}
+          onClick={() => setPhases([...phases, nextPhase(phases, w.group, nextType())])}
         >
           <Plus className="size-3.5" />
           Add another {w.group.toLowerCase()}
@@ -988,6 +1050,11 @@ function RangesStep({ draft, patch }: StepProps) {
               <div className="flex items-center gap-3">
                 <span className="w-20 shrink-0 truncate text-[13px] font-medium text-fg-subtle">
                   {home.unit}
+                  {mixed ? (
+                    <span className="block truncate text-[12px] font-normal">
+                      {HOME_TYPE_LABEL[home.homeType ?? types[0]].short}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="min-w-0 flex-1">
                   {isMine ? (
@@ -1091,10 +1158,11 @@ function RangesStep({ draft, patch }: StepProps) {
         {draft.duesCents > 0 ? (
           <>
             {" · "}
-            {money(draft.duesCents * unitCount(draft), { cents: false })} per {cadenceNoun(draft)}
+            {money(draftDuesTotal(draft), { cents: false })} per {cadenceNoun(draft)}
           </>
         ) : null}
       </p>
+      <MixLine draft={draft} />
 
       <Callout
         tone="info"
@@ -1123,6 +1191,148 @@ function RangesStep({ draft, patch }: StepProps) {
 /* -------------------------------------------------------------------------- */
 /* Pieces                                                                     */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * One kind of home out of the community's kinds, as a row of small pills.
+ *
+ * Pills rather than a select because there are at most three answers and a
+ * builder sets forty of these; one tap each is the whole job.
+ */
+function TypeChips({
+  types,
+  value,
+  onChange,
+  label,
+}: {
+  types: PropertyType[];
+  value: PropertyType;
+  onChange: (next: PropertyType) => void;
+  label: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
+      {types.map((t) => (
+        <button
+          key={t}
+          type="button"
+          role="radio"
+          aria-checked={value === t}
+          onClick={() => onChange(t)}
+          className={cn(
+            "h-8 rounded-full border px-3 text-[13px] font-medium transition-colors",
+            value === t
+              ? "border-brand bg-brand-soft text-brand"
+              : "border-border-2 text-fg-muted hover:bg-surface-2 hover:text-fg",
+          )}
+        >
+          {HOME_TYPE_LABEL[t].many}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * What each kind pays, for a mixed community.
+ *
+ * Starts as one amount for everybody, which is still the common answer, and
+ * opens into one field per kind when the board says they differ.
+ */
+function DuesByType({ draft, patch }: StepProps) {
+  const types = homeTypesOf(draft);
+  const split = Boolean(draft.duesByType);
+  function setAmount(t: PropertyType, cents: number) {
+    const next = { ...(draft.duesByType ?? {}), [t]: cents };
+    // The association's own amount is the first kind's, so a home whose
+    // kind somehow went missing is still billed something sensible.
+    patch({ duesByType: next, duesCents: next[types[0]] ?? 0 });
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className="inline-flex w-fit gap-1 rounded-xl bg-surface-2 p-1"
+        role="radiogroup"
+        aria-label="Do kinds of home pay the same"
+      >
+        {[
+          { id: false, label: "Same for every home" },
+          { id: true, label: "Different by kind" },
+        ].map((mode) => (
+          <button
+            key={String(mode.id)}
+            type="button"
+            role="radio"
+            aria-checked={split === mode.id}
+            onClick={() =>
+              patch(
+                mode.id
+                  ? {
+                      duesByType: Object.fromEntries(
+                        types.map((t) => [t, draft.duesCents]),
+                      ) as CommunityDraft["duesByType"],
+                    }
+                  : { duesByType: undefined },
+              )
+            }
+            className={cn(
+              "rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors",
+              split === mode.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
+            )}
+          >
+            {mode.label}
+          </button>
+        ))}
+      </div>
+      {split ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {types.map((t, i) => (
+            <Field key={t} label={`${HOME_TYPE_LABEL[t].many} pay`}>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+                  $
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={draft.duesByType?.[t] ? (draft.duesByType[t] ?? 0) / 100 : ""}
+                  onChange={(e) => setAmount(t, Math.round(Number(e.target.value) * 100))}
+                  placeholder="45.00"
+                  className={cn(input, "pl-7")}
+                  autoFocus={i === 0}
+                />
+              </div>
+            </Field>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** "20 townhomes and 20 condos", under the homes list of a mixed community. */
+function MixLine({ draft }: { draft: CommunityDraft }) {
+  const types = homeTypesOf(draft);
+  if (types.length < 2) return null;
+  const founderType = founderHomeType(draft);
+  const counts = types.map((t) => ({
+    t,
+    n:
+      otherHomes(draft).filter((h) => (h.homeType ?? types[0]) === t).length +
+      (founderType === t ? 1 : 0),
+  }));
+  return (
+    <p className="-mt-3 flex flex-wrap gap-x-3 gap-y-1 pl-5.5 text-[13px] text-fg-subtle">
+      {counts.map(({ t, n }) => (
+        <span key={t}>
+          <span className="tnum font-medium text-fg-muted">{n}</span>{" "}
+          {(n === 1 ? HOME_TYPE_LABEL[t].one : HOME_TYPE_LABEL[t].many).toLowerCase()}
+          {draft.duesByType?.[t] ? ` at ${money(draft.duesByType[t] ?? 0, { cents: false })}` : ""}
+        </span>
+      ))}
+    </p>
+  );
+}
 
 const input =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";

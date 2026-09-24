@@ -2,6 +2,7 @@ import type { Community } from "@/lib/data/community";
 import type { LedgerCategory } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { daysFromToday } from "@/lib/utils";
+import { totalDues } from "@/lib/home-types";
 
 /**
  * Derived figures, as pure functions of one community.
@@ -310,9 +311,12 @@ export function categoryTrend(c: Community, category: string) {
  */
 export function duesCollection(c: Community, year: number) {
   const { unitCount, duesCents, duesCadence } = c.association;
+  // Every home at its own amount. In a mixed community kinds pay differently,
+  // and a roster that has not loaded yet falls back to the unit count.
+  const perPeriod = c.owners.length ? totalDues(c.association, c.owners) : unitCount * duesCents;
   const perMonth =
-    duesCadence === "monthly" ? duesCents : duesCadence === "quarterly" ? duesCents / 3 : duesCents / 12;
-  const expectedCents = Math.round(unitCount * perMonth);
+    duesCadence === "monthly" ? perPeriod : duesCadence === "quarterly" ? perPeriod / 3 : perPeriod / 12;
+  const expectedCents = Math.round(perMonth);
   const collected = Array.from({ length: 12 }, () => 0);
   const active = Array.from({ length: 12 }, () => false);
   for (const e of c.ledger) {

@@ -77,18 +77,19 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   // The account, skipped.
   await lookAround(page);
 
-  // The association: name, place, dues.
+  // The association: name, place.
   await page.getByLabel(/Association name/i).fill(a.name);
   await step(page);
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: a.state });
   await step(page);
-  await page.getByLabel(/Each home pays/i).fill(a.dues);
-  await step(page);
 
-  // The community: kind of homes, what is shared, who is setting up, what
-  // else is billed. The two multi-selects are legitimately empty.
+  // The community: kind of homes, then what each pays, what is shared, who
+  // is setting up, what else is billed. The two multi-selects are
+  // legitimately empty.
   await page.getByRole("button", { name: new RegExp(a.property) }).click();
+  await step(page);
+  await page.getByLabel(/Each home pays/i).fill(a.dues);
   await step(page);
   for (const space of a.spaces ?? []) {
     await page.getByRole("button", { name: new RegExp(`^${space}$`) }).click();
@@ -148,13 +149,12 @@ test.describe("the three questions", () => {
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
     await step(page);
-    await page.getByLabel(/Each home pays/i).fill("120");
-    await step(page);
-
     const go = page.getByRole("button", { name: /^Continue/ });
     await expect(go, "an unanswered kind of homes let the board through").toBeDisabled();
     await page.getByRole("button", { name: /Detached homes/ }).click();
     await expect(go, "the kind of homes was answered and still blocked").toBeEnabled();
+    await step(page);
+    await page.getByLabel(/Each home pays/i).fill("120");
     await step(page);
 
     // Shared spaces are legitimately empty, and say so.
@@ -184,9 +184,9 @@ test.describe("the three questions", () => {
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
     await step(page);
-    await page.getByLabel(/Each home pays/i).fill("120");
-    await step(page);
     await page.getByRole("button", { name: /Detached homes/ }).click();
+    await step(page);
+    await page.getByLabel(/Each home pays/i).fill("120");
     await step(page);
     await step(page);
 
@@ -633,6 +633,74 @@ test.describe("what kind of homes changes the plan", () => {
     expect(health.text, "the detached insurance position is not stated").toContain(
       "Owners insure their own homes",
     );
+  });
+});
+
+test.describe("a community with more than one kind of home", () => {
+  test("townhomes and condos, each range its own kind, each kind its own dues", async ({
+    page,
+  }) => {
+    await lookAround(page);
+    await page.getByLabel(/Association name/i).fill("Juniper Row HOA");
+    await step(page);
+    await page.getByLabel(/City/i).fill("Bothell");
+    await page.getByLabel(/State/i).selectOption({ label: "Washington" });
+    await step(page);
+
+    // Two kinds picked. Both stay pressed.
+    await page.getByRole("button", { name: /Townhomes/ }).click();
+    await page.getByRole("button", { name: /Condominiums/ }).click();
+    await expect(page.getByRole("button", { name: /Townhomes/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /Condominiums/ })).toHaveAttribute("aria-pressed", "true");
+    await step(page);
+
+    // Dues by kind.
+    await page.getByRole("radio", { name: "Different by kind" }).click();
+    await page.getByLabel("Townhomes pay").fill("300");
+    await page.getByLabel("Condos pay").fill("420");
+    await step(page);
+    await step(page); // nothing shared
+    await page.getByRole("button", { name: /We are building the community/ }).click();
+    await step(page);
+    await step(page); // just dues
+
+    await page.getByLabel("Your name").fill("Pat Founder");
+    await page.getByLabel("Your email").fill("pat@example.com");
+    await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("25");
+    await step(page);
+    await step(page); // builder, not sure yet
+
+    // Two ranges: townhomes 1 to 20, a condo building 21 to 40.
+    await page.getByLabel(/^Phase 1 first lot$/).fill("1");
+    await page.getByLabel(/^Phase 1 last lot$/).fill("20");
+    await page.getByRole("button", { name: /Add another phase/ }).click();
+    await page.getByLabel(/^Phase 2 last lot$/).fill("40");
+    // A new range starts as the kind nobody has used yet.
+    await expect(
+      page.getByRole("radiogroup", { name: "Kind of home in Phase 2" }).getByRole("radio", { name: "Condos" }),
+    ).toHaveAttribute("aria-checked", "true");
+    const summary = await inspect(page);
+    expect(summary.text).toContain("20 townhomes at $300");
+    expect(summary.text).toContain("20 condos at $420");
+    // 20 x 300 + 20 x 420, the founder's condo included.
+    expect(summary.text).toContain("$14,400 per month");
+    await step(page);
+    await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
+    await page.waitForTimeout(1200);
+
+    await page.goto("/board/homeowners");
+    await waitForHydration(page);
+    const roster = await expectHealthy(page, "roster of a mixed community");
+    expect(roster.text).toContain("Townhome");
+    expect(roster.text).toContain("Condo");
+    await page.getByLabel("Kind of home").selectOption("condos");
+    await expect(page.locator("main li", { hasText: "· Condo" })).toHaveCount(20);
+    await expect(page.locator("main li", { hasText: "· Townhome" })).toHaveCount(0);
+
+    await page.goto("/board/settings");
+    await waitForHydration(page);
+    await expect(page.getByLabel("Condos, per month")).toHaveValue("420");
+    await expect(page.getByLabel("Townhomes, per month")).toHaveValue("300");
   });
 });
 

@@ -8,7 +8,11 @@ import {
   founderUnit,
   otherHomes,
   unitCount,
+  draftDuesTotal,
 } from "@/lib/data/new-community";
+import { countByType, describeMix, duesFor, duesVary, totalDues } from "@/lib/home-types";
+import { wordingFor } from "@/lib/wording";
+import { buildPlan, profileFromDraft } from "@/lib/setup-plan";
 import type { CommunityDraft } from "@/lib/data/new-community";
 
 /**
@@ -61,7 +65,7 @@ describe("homes by address", () => {
     });
     expect(done.founder.unit).toBe("1 Alder Way");
     expect(done.households).toEqual([
-      { name: "A", email: "a@x.io", unit: "7 Alder Way", address: "7 Alder Way" },
+      { name: "A", email: "a@x.io", unit: "7 Alder Way", address: "7 Alder Way", homeType: "single-family" },
     ]);
     expect(done.customSpaces).toEqual(["Dog park"]);
   });
@@ -86,5 +90,98 @@ describe("amenities the board names", () => {
     expect(amenities.map((a) => a.name)).toEqual(["Pool", "Dog park"]);
     expect(amenities.every((a) => a.reservable)).toBe(true);
     expect(new Set(amenities.map((a) => a.id)).size).toBe(2);
+  });
+});
+
+/**
+ * A community with more than one kind of home.
+ *
+ * Townhomes by the entry, condos over the clubhouse. Each home carries its
+ * kind from the range it was generated from, each kind can pay its own
+ * dues, and the plan asks for whatever any of the kinds needs.
+ */
+function mixed(): CommunityDraft {
+  return {
+    ...emptyDraft(),
+    name: "Juniper Row",
+    city: "Bothell",
+    state: "WA",
+    stateName: "Washington",
+    duesCents: 30_000,
+    duesByType: { townhomes: 30_000, condos: 42_000 },
+    homeTypes: ["townhomes", "condos"],
+    origin: "builder",
+    founder: { name: "Pat Founder", email: "pat@example.com", unit: "22" },
+    phases: [
+      { id: "phase-1", label: "Townhomes", from: 1, to: 20, homeType: "townhomes" },
+      { id: "phase-2", label: "Building A", from: 21, to: 40, homeType: "condos" },
+    ],
+    households: Array.from({ length: 40 }, (_, i) => ({
+      name: "",
+      email: "",
+      unit: String(i + 1),
+      homeType: i < 20 ? ("townhomes" as const) : ("condos" as const),
+    })),
+  };
+}
+
+describe("a mix of homes", () => {
+  it("gives the founder the kind of the range their number is in", () => {
+    const done = finalizeDraft({ ...mixed(), founder: { ...mixed().founder, homeType: "townhomes" } });
+    expect(done.founder.homeType).toBe("condos");
+    expect(done.propertyType).toBeUndefined();
+    expect(done.homeTypes).toEqual(["townhomes", "condos"]);
+  });
+
+  it("keeps a per-kind amount only where it differs", () => {
+    const done = finalizeDraft(mixed());
+    expect(done.duesByType).toEqual({ condos: 42_000 });
+    expect(draftDuesTotal(done)).toBe(20 * 30_000 + 20 * 42_000);
+  });
+
+  it("drops per-kind amounts for a community of one kind", () => {
+    const done = finalizeDraft({ ...mixed(), homeTypes: ["townhomes"] });
+    expect(done.propertyType).toBe("townhomes");
+    expect(done.duesByType).toBeUndefined();
+    expect(done.households.every((h) => h.homeType === "townhomes")).toBe(true);
+  });
+
+  it("bills each home its own kind's dues", () => {
+    const community = buildCommunity(finalizeDraft(mixed()), "2026-08-20");
+    const condo = community.owners.find((o) => o.unit === "30")!;
+    const town = community.owners.find((o) => o.unit === "3")!;
+    expect(duesFor(community.association, condo.homeType)).toBe(42_000);
+    expect(duesFor(community.association, town.homeType)).toBe(30_000);
+    expect(duesVary(community.association)).toBe(true);
+    expect(totalDues(community.association, community.owners)).toBe(20 * 30_000 + 20 * 42_000);
+    expect(community.budget[0].annualCents).toBe((20 * 30_000 + 20 * 42_000) * 12);
+  });
+
+  it("describes the mix in plain words", () => {
+    const community = buildCommunity(finalizeDraft(mixed()), "2026-08-20");
+    expect(countByType(community.owners)).toEqual([
+      { type: "townhomes", count: 20 },
+      { type: "condos", count: 20 },
+    ]);
+    expect(describeMix(community.owners)).toBe("20 townhomes and 20 condos");
+  });
+
+  it("uses words that fit every kind", () => {
+    expect(wordingFor(["condos"]).home).toBe("unit");
+    expect(wordingFor(["condos", "single-family"]).home).toBe("home");
+    expect(wordingFor(["single-family"]).numberExample).toBe("Lot");
+    expect(wordingFor(["single-family", "townhomes"]).numberExample).toBe("Unit");
+  });
+
+  it("asks for what any of the kinds needs", () => {
+    const keys = (d: CommunityDraft) =>
+      buildPlan(buildCommunity(finalizeDraft(d), "2026-08-20"), profileFromDraft(finalizeDraft(d)))
+        .phases.flatMap((p) => p.tasks.map((t) => t.key));
+    const withCondos = keys({ ...mixed(), homeTypes: ["single-family", "condos"] });
+    expect(withCondos).toContain("structural");
+    expect(withCondos).toContain("maintenance-matrix");
+    const detached = keys({ ...mixed(), homeTypes: ["single-family"], stateName: "Idaho" });
+    expect(detached).not.toContain("structural");
+    expect(detached).not.toContain("maintenance-matrix");
   });
 });

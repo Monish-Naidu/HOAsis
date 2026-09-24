@@ -71,6 +71,7 @@ import type {
   ForumReply,
   HomeRequest,
   Owner,
+  HomeType,
   BankAccount,
   AccountRole,
   Violation,
@@ -149,7 +150,7 @@ interface AppState {
   setCapability: (accountId: string, capability: Capability, on: boolean) => void;
   resetDemo: () => void;
   /** Adds a household to the register, with the account that lets them sign in. */
-  addOwner: (input: { name: string; email: string; unit: string }) => Owner;
+  addOwner: (input: { name: string; email: string; unit: string; homeType?: HomeType }) => Owner;
   /** A neighbour telling the board about another home. Never a violation. */
   addViolationReport: (input: {
     reporterId: string;
@@ -175,6 +176,8 @@ interface AppState {
   ) => void;
   /** Names the owner of a home that has none on record yet. */
   setHouseholdOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
+  /** Which kind of home these are: detached, townhome or condo. */
+  setHomeType: (ownerIds: string[], homeType: HomeType) => void;
   removeOwner: (ownerId: string) => () => void;
   /**
    * A home changes hands. The seller's seat ends on the closing date, the
@@ -984,6 +987,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       p_shared_spaces: draft.sharedSpaces,
       p_previously: draft.previously ?? undefined,
       p_founder_address: draft.founder.address?.trim() || undefined,
+      // Every kind of home, each home's kind, and what each kind pays.
+      p_home_types: draft.homeTypes?.length ? draft.homeTypes : undefined,
+      p_dues_by_type: draft.duesByType ?? undefined,
+      p_founder_home_type: draft.founder.homeType ?? undefined,
     });
     if (error) throw new Error(error.message);
 
@@ -1325,7 +1332,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * member gets access. Splitting them lets the two drift.
    */
   const addOwner = useCallback(
-    (input: { name: string; email: string; unit: string }) => {
+    (input: { name: string; email: string; unit: string; homeType?: HomeType }) => {
       const unit = input.unit.trim();
       const existing = remote.community
         ? remote.community.owners
@@ -1350,19 +1357,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         autopay: false,
         standing: "current",
         daysPastDue: 0,
+        homeType: input.homeType,
       };
 
       if (remote.community) {
         const rc = remote.community;
-        void remoteWrite("Adding the household", () =>
-          supabaseBrowser().rpc("add_household", {
+        void remoteWrite("Adding the household", async () => {
+          const added = await supabaseBrowser().rpc("add_household", {
             p_association_id: rc.id,
             p_unit_id: ownerId,
             p_name: owner.displayName,
             p_email: owner.email,
             p_unit: unit,
-          }),
-        );
+          });
+          // The kind of home rides on the unit the function just made.
+          if (added.error || !input.homeType) return added;
+          return supabaseBrowser()
+            .from("units")
+            .update({ home_type: input.homeType })
+            .eq("id", ownerId);
+        });
         return owner;
       }
 
@@ -1423,6 +1437,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ),
       );
       return Promise.resolve(true);
+    },
+    [remote.community, communityId],
+  );
+
+  /**
+   * Correcting what kind of home a home is.
+   *
+   * The kind decides the dues it is billed from the next due date on; bills
+   * already issued keep their amount, because an owner's statement never
+   * changes behind them.
+   */
+  const setHomeType = useCallback(
+    (ownerIds: string[], homeType: HomeType) => {
+      if (!ownerIds.length) return;
+      if (remote.community) {
+        void remoteWrite("Saving the kind of home", () =>
+          supabaseBrowser().from("units").update({ home_type: homeType }).in("id", ownerIds),
+        );
+        return;
+      }
+      const ids = new Set(ownerIds);
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) => (ids.has(o.id) ? { ...o, homeType } : o)),
+      );
     },
     [remote.community, communityId],
   );
@@ -3247,6 +3285,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const COLUMN: Record<string, string> = {
           name: "name",
           duesCents: "dues_cents",
+          duesByType: "dues_by_type",
           duesCadence: "dues_cadence",
           fiscalYearStart: "fiscal_year_start",
           insuranceCarrier: "insurance_carrier",
@@ -3884,6 +3923,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     raiseNoticeFromReport,
     setOpeningBalances,
     setHouseholdOwner,
+    setHomeType,
     removeOwner,
     transferHome,
     setAccountRole,
