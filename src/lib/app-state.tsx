@@ -298,7 +298,8 @@ interface AppState {
     visibility: Community["documents"][number]["visibility"],
   ) => Promise<void>;
   /** Records a vote and returns the receipt the voter is shown. */
-  castVote: (ballotId: string, optionId: string) => string;
+  /** One choice, or up to `seats` of them in a multi seat election. */
+  castVote: (ballotId: string, optionIds: string | string[]) => string;
   updateRequestStatus: (requestId: string, status: HomeRequest["status"], note?: string) => void;
   likePost: (postId: string) => void;
   /**
@@ -3728,36 +3729,41 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const castVote = useCallback(
-    (ballotId: string, optionId: string) => {
+    (ballotId: string, optionIds: string | string[]) => {
+      const picks = Array.isArray(optionIds) ? optionIds : [optionIds];
       if (remote.community) {
         // The receipt is minted by the database, where it cannot be forged,
         // and arrives with the re-read. The screens show it from the ballot.
         const existing = remote.community.ballots.find((b) => b.id === ballotId);
         void remoteWrite("Casting your vote", () =>
-          supabaseBrowser().rpc("cast_vote", { p_ballot_id: ballotId, p_option_id: optionId }),
+          supabaseBrowser().rpc("cast_votes", { p_ballot_id: ballotId, p_option_ids: picks }),
         );
         return existing?.myVoteReceipt ?? "";
       }
       const store = sliceStore(communityId, "ballots");
       const existing = store.getSnapshot().find((b) => b.id === ballotId);
-      const receipt = existing?.myVoteReceipt ?? voteReceipt(ballotId, optionId);
+      const receipt = existing?.myVoteReceipt ?? voteReceipt(ballotId, picks[0]);
 
       store.update((all) =>
         all.map((ballot) => {
           if (ballot.id !== ballotId) return ballot;
-          const previous = ballot.myVoteOptionId;
-          if (previous === optionId) return ballot;
-          // One vote per household. Changing your mind replaces it rather than
-          // adding a second, and keeps the original receipt so the number a
-          // voter wrote down still resolves.
+          const previous = new Set(
+            ballot.myVoteOptionIds ?? (ballot.myVoteOptionId ? [ballot.myVoteOptionId] : []),
+          );
+          const next = new Set(picks);
+          // One mark per seat per household. Changing your mind replaces the
+          // marks rather than adding to them, and keeps the original receipt
+          // so the number a voter wrote down still resolves.
           return {
             ...ballot,
-            myVoteOptionId: optionId,
+            myVoteOptionId: picks[0],
+            myVoteOptionIds: picks,
             myVoteReceipt: receipt,
             options: ballot.options.map((option) => {
-              if (option.id === optionId) return { ...option, votes: option.votes + 1 };
-              if (option.id === previous)
-                return { ...option, votes: Math.max(0, option.votes - 1) };
+              const was = previous.has(option.id);
+              const is = next.has(option.id);
+              if (is && !was) return { ...option, votes: option.votes + 1 };
+              if (was && !is) return { ...option, votes: Math.max(0, option.votes - 1) };
               return option;
             }),
           };

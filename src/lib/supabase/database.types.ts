@@ -2608,6 +2608,10 @@ export type Database = {
         Args: { p_ballot_id: string; p_option_id: string }
         Returns: string
       }
+      cast_votes: {
+        Args: { p_ballot_id: string; p_option_ids: string[] }
+        Returns: string
+      }
       claim_my_seats: { Args: never; Returns: number }
       create_association: {
         Args: {

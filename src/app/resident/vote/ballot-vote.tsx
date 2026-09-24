@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Check, ChevronDown, Clock } from "lucide-react";
-import { Badge, Card, Meter } from "@/components/ui/primitives";
+import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
+import { resultLine } from "@/components/app/ballot-card";
 import { useAppState } from "@/lib/app-state";
 import type { Ballot } from "@/lib/types";
 import { cn, daysFromToday, formatDate, relativeDays } from "@/lib/utils";
@@ -10,20 +11,26 @@ import { cn, daysFromToday, formatDate, relativeDays } from "@/lib/utils";
 /**
  * A question and its choices. Tapping a choice is the vote.
  *
- * There is no separate submit step: one vote per home, changeable until the
- * ballot ends, and the card says what you chose. Receipts still exist on the
+ * There is no separate submit step for a single choice: one vote per home,
+ * changeable until the ballot ends, and the card says what you chose. An
+ * election for several seats is the exception: a home marks up to one
+ * candidate per seat, then casts them together. Receipts still exist on the
  * record for anyone who asks; they are no longer the first thing shown.
  */
 export function BallotVote({ ballot }: { ballot: Ballot }) {
   const { settings, castVote } = useAppState();
   const [expanded, setExpanded] = useState(false);
-  const mine = ballot.myVoteOptionId;
+  const seats = Math.max(1, ballot.seats ?? 1);
+  const marked = ballot.myVoteOptionIds ?? (ballot.myVoteOptionId ? [ballot.myVoteOptionId] : []);
+  const mine = marked[0];
+  // Picks not yet cast, for a multi seat race. Starts from what was cast.
+  const [draft, setDraft] = useState<string[]>(marked);
   const closed = ballot.status !== "open" || daysFromToday(ballot.closesDate) < 0;
   const votes = ballot.options.reduce((t, o) => t + o.votes, 0);
-  const cast = Math.round(votes / Math.max(1, ballot.seats ?? 1));
+  const cast = ballot.homesVoted ?? Math.round(votes / seats);
   const showResults = closed || settings.showLiveVoteResults;
-  const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
-  const tied = ballot.options.filter((o) => o.votes === leading?.votes).length > 1;
+  const changed =
+    draft.length !== marked.length || draft.some((id) => !marked.includes(id));
 
   return (
     <Card className="overflow-hidden">
@@ -77,17 +84,23 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
       {!closed ? (
         <div className="space-y-2 border-t border-border px-4 py-3">
           {ballot.options.map((o) => {
-            const picked = mine === o.id;
+            const picked = seats > 1 ? draft.includes(o.id) : mine === o.id;
+            const full = seats > 1 && !picked && draft.length >= seats;
             return (
               <button
                 key={o.id}
                 type="button"
                 aria-pressed={picked}
+                disabled={full}
                 onClick={() => {
+                  if (seats > 1) {
+                    setDraft(picked ? draft.filter((id) => id !== o.id) : [...draft, o.id]);
+                    return;
+                  }
                   if (!picked) castVote(ballot.id, o.id);
                 }}
                 className={cn(
-                  "press flex min-h-12 w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors",
+                  "press flex min-h-12 w-full items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors disabled:opacity-50",
                   picked
                     ? "border-primary bg-primary-soft ring-1 ring-inset ring-primary"
                     : "border-border hover:border-border-2 hover:bg-surface-2",
@@ -110,26 +123,38 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
               </button>
             );
           })}
-          <p className="pt-1 text-[13px] text-fg-subtle">
-            {mine
-              ? "Tap another choice to change your vote before it ends."
-              : "Tap a choice to vote. One vote per home."}
-          </p>
+          {seats > 1 ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <p className="text-[13px] text-fg-subtle">
+                {`Choose up to ${seats}. ${draft.length} of ${seats} chosen.`}
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!draft.length || !changed}
+                onClick={() => castVote(ballot.id, draft)}
+              >
+                {mine ? "Update my vote" : "Cast my vote"}
+              </Button>
+            </div>
+          ) : (
+            <p className="pt-1 text-[13px] text-fg-subtle">
+              {mine
+                ? "Tap another choice to change your vote before it ends."
+                : "Tap a choice to vote. One vote per home."}
+            </p>
+          )}
         </div>
       ) : null}
 
       {showResults && cast > 0 ? (
         <div className="space-y-2.5 border-t border-border bg-surface-2 px-4 py-3">
           <p className="text-[13px] font-semibold text-fg-muted">
-            {closed
-              ? tied
-                ? `Tied · ${cast} of ${ballot.eligible} homes voted`
-                : `${leading.label} won · ${cast} of ${ballot.eligible} homes voted`
-              : `${cast} of ${ballot.eligible} homes have voted`}
+            {closed ? resultLine(ballot) : `${cast} of ${ballot.eligible} homes have voted`}
           </p>
           {ballot.options.map((o) => {
             const share = votes ? o.votes / votes : 0;
-            const yours = o.id === mine;
+            const yours = marked.includes(o.id);
             return (
               <div key={o.id}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">

@@ -729,8 +729,15 @@ export interface Ballot {
   thresholdLabel: string;
   options: BallotOption[];
   proxiesHeld?: number;
-  /** The option this resident picked, if they have voted. */
+  /** The option this resident picked, if they have voted. The first, in a multi seat race. */
   myVoteOptionId?: ID;
+  /** Every option this resident marked; up to `seats` of them. */
+  myVoteOptionIds?: ID[];
+  /**
+   * Homes that have voted, counted by the database. Absent in the demo,
+   * whose fixtures predate it, where turnout falls back to votes over seats.
+   */
+  homesVoted?: number;
   myVoteReceipt?: string;
   meetingId?: ID;
   certifiedBy?: string;

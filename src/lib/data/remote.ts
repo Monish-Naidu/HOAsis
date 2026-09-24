@@ -127,7 +127,7 @@ export async function loadCommunity(
   // join. Fired together, so the latency is one trip's worth.
   const [
     association, units, memberships, charges, banks, ledger, balances,
-    requests, documents, meetings, ballots, ballotOptions, tallies, myVotes,
+    requests, documents, meetings, ballots, ballotOptions, tallies, turnout, myVotes,
     posts, vendors, amenities, announcementRows,
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
@@ -146,6 +146,7 @@ export async function loadCommunity(
     supabase.from("ballots").select("*").eq("association_id", associationId).order("closes_on"),
     supabase.from("ballot_options").select("*").order("position"),
     supabase.from("ballot_tallies").select("*"),
+    supabase.from("ballot_turnout").select("ballot_id, homes_voted").eq("association_id", associationId),
     supabase.from("votes").select("*"),
     supabase.from("posts").select("*").eq("association_id", associationId).order("created_at", { ascending: false }),
     supabase.from("vendors").select("*").eq("association_id", associationId),
@@ -757,7 +758,9 @@ export async function loadCommunity(
     })),
 
     ballots: (ballots.data ?? []).map((b) => {
-      const mine = (myVotes.data ?? []).find((v) => v.ballot_id === b.id);
+      // One row per candidate marked, so a two seat race has two.
+      const marks = (myVotes.data ?? []).filter((v) => v.ballot_id === b.id);
+      const mine = marks[0];
       return {
         id: b.id,
         reference: b.id.slice(0, 8).toUpperCase(),
@@ -783,6 +786,8 @@ export async function loadCommunity(
               (tallies.data ?? []).find((t) => t.option_id === o.id)?.votes ?? 0,
           })),
         myVoteOptionId: mine?.option_id ?? undefined,
+        myVoteOptionIds: marks.length ? marks.map((v) => v.option_id) : undefined,
+        homesVoted: (turnout.data ?? []).find((t) => t.ballot_id === b.id)?.homes_voted ?? 0,
         myVoteReceipt: mine?.receipt ?? undefined,
         meetingId: b.meeting_id ?? undefined,
         certifiedBy: b.certified_by ?? undefined,

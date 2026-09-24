@@ -14,9 +14,10 @@ import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
  */
 export function tally(ballot: Ballot) {
   const votes = ballot.options.reduce((total, option) => total + option.votes, 0);
-  // Quorum counts households that voted, not marks they made, so a multi
-  // seat election divides back down before it is compared.
-  const cast = Math.round(votes / Math.max(1, ballot.seats ?? 1));
+  // Quorum counts households that voted, not marks they made. A real
+  // association counts them in the database; the demo's fixtures predate
+  // that and divide the marks back down by the seats.
+  const cast = ballot.homesVoted ?? Math.round(votes / Math.max(1, ballot.seats ?? 1));
   const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
   const tied = ballot.options.filter((o) => o.votes === leading?.votes).length > 1;
   return {
