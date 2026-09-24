@@ -95,15 +95,16 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
         activeKey={activeRoute?.key ?? ""}
         className={cn(
           "flex gap-1 lg:flex-col",
-          // Rows grow to share the column on a tall display, each capped so
-          // a treasurer's six do not balloon over the whole column (that was
-          // tried with justify-evenly and fell apart); past the cap they pack
-          // from the top. Same rule as the resident rail, 2026-09-21.
-          rail && "stagger w-full flex-col gap-1.5",
+          // A list packed from the top, 44px a row, the same as the resident
+          // rail. Growing rows to share the column made 80px rows on a
+          // laptop, which read as buttons rather than a list; only a
+          // genuinely tall display spreads them out.
+          rail &&
+            "stagger min-h-full w-full flex-col justify-start gap-0.5 [@media(min-height:1100px)]:justify-evenly",
         )}
         pillClassName={
           rail
-            ? "bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
+            ? "bg-brand-gradient rounded-xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
             : "bg-primary-soft rounded-xl"
         }
       >
@@ -128,7 +129,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
               // not a class on the link, so it slides rather than cuts.
               "group relative z-10 flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors duration-200",
               rail
-                ? "min-h-11 max-h-[5.5rem] flex-1 gap-3 rounded-2xl px-3 py-2.5 text-[15px]"
+                ? "h-11 shrink-0 gap-3 rounded-xl px-3 text-[15px]"
                 : "min-h-10 shrink-0",
               rail
                 ? active
