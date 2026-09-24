@@ -18,7 +18,7 @@ import { DeliveryPanel } from "@/components/app/delivery-panel";
 import { useToast } from "@/components/app/toast";
 import { cn, formatDate, pluralize } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
-import { placeLabel } from "@/lib/wording";
+import { useHomeLabel } from "@/components/app/use-home-label";
 
 /**
  * Messages, the inbox: what owners have written to the board, and the reply.
@@ -40,6 +40,7 @@ export default function BoardCommunications() {
 }
 
 function CommunicationsScreen() {
+  const placeLabel = useHomeLabel();
   const { community, threads, replyToThread } = useAppState();
   const unread = useUnreadThreadCount();
   const { notify } = useToast();

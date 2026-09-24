@@ -18,7 +18,7 @@ import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import type { Owner, Violation } from "@/lib/types";
 import { cn, daysFromToday, formatDate, relativeDays } from "@/lib/utils";
-import { placeLabel } from "@/lib/wording";
+import { useHomeLabel } from "@/components/app/use-home-label";
 
 /**
  * Notices, the simple version.
@@ -51,6 +51,7 @@ export function NoticesBoard() {
 }
 
 function Notices() {
+  const placeLabel = useHomeLabel();
   const { community, addNotice, setViolationStage } = useAppState();
   const { notify } = useToast();
   const params = useSearchParams();
@@ -171,6 +172,7 @@ function NoticeRow({
   onResolve: (violation: Violation) => void;
   onPrint: (violation: Violation) => void;
 }) {
+  const placeLabel = useHomeLabel();
   const resolved = violation.stage === "cured";
   const fixed = !resolved && Boolean(violation.ownerFixedDate);
 
@@ -270,6 +272,7 @@ function NewNotice({
     ruleCitation?: string;
   }) => void;
 }) {
+  const placeLabel = useHomeLabel();
   const [ownerId, setOwnerId] = useState("");
   const [what, setWhat] = useState("");
   const [citation, setCitation] = useState("");

@@ -7,6 +7,7 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
 import { duesFor } from "@/lib/home-types";
+import { clockTime } from "@/lib/utils";
 
 /**
  * Loading a real association out of Postgres.
@@ -758,7 +759,7 @@ export async function loadCommunity(
       id: m.id,
       title: m.title,
       date: m.held_on,
-      time: m.held_at,
+      time: clockTime(m.held_at ?? ""),
       location: m.location,
       dialIn: m.dial_in ?? "",
       passcode: m.passcode ?? "",

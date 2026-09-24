@@ -165,7 +165,7 @@ export function HomeownersScreen() {
       const owner = addOwner({ ...entry, homeType: mixed ? (entry.homeType ?? kinds[0].type) : undefined });
       setEntry({ name: "", email: "", unit: "" });
       setAdding(false);
-      notify(`Added ${owner.displayName}, unit ${owner.unit}`, "ok", {
+      notify(`Added ${owner.displayName}, ${homeLabel(community, owner.unit)}`, "ok", {
         label: "Undo",
         onClick: () => removeOwner(owner.id)(),
       });
@@ -489,7 +489,7 @@ export function HomeownersScreen() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[15px] font-semibold text-fg">
-                  {seller ? `Record the sale of unit ${seller.unit}` : "Record a sale"}
+                  {seller ? `Record the sale of ${homeLabel(community, seller.unit)}` : "Record a sale"}
                 </p>
                 <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
                   {seller
@@ -605,7 +605,7 @@ export function HomeownersScreen() {
                       type="button"
                       onClick={() => toggle(o)}
                       aria-expanded={open}
-                      aria-label={`${o.displayName}, unit ${o.unit}`}
+                      aria-label={`${o.displayName}, ${homeLabel(community, o.unit)}`}
                       className="col-span-1 grid min-w-0 grid-cols-subgrid items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand md:col-span-3"
                     >
                       <span className="flex min-w-0 items-center gap-3">

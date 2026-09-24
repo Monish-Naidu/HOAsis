@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
-import { statusTone } from "@/lib/request-status";
+import { statusLabel, statusTone } from "@/lib/request-status";
 import { formatDate, money, relativeDays } from "@/lib/utils";
 
 export default function RequestDetail({
@@ -50,7 +50,7 @@ export default function RequestDetail({
 
       <div>
         <div className="mb-2 flex items-center gap-2">
-          <Badge tone={statusTone[request.status]}>{request.status.replace("-", " ")}</Badge>
+          <Badge tone={statusTone[request.status]}>{statusLabel[request.status]}</Badge>
           <span className="text-[13px] text-fg-subtle">{request.reference}</span>
         </div>
         <h1 className="text-[20px] font-semibold leading-snug tracking-[-0.02em] text-fg">

@@ -15,9 +15,10 @@ import { useToast } from "@/components/app/toast";
 import { WorkOrderPanel } from "@/components/app/work-order";
 import { daysFromToday, formatDate, pluralize } from "@/lib/utils";
 import { statusLabel, statusTone } from "@/lib/request-status";
+import { homeLabel } from "@/lib/wording";
 
 export default function BoardRequests() {
-  const { requests, updateRequestStatus } = useAppState();
+  const { community, requests, updateRequestStatus } = useAppState();
   const { notify } = useToast();
   const { open, decided, history } = bucketRequests(requests);
   // Work the board has taken on and not finished. Each one's panel sits in
@@ -66,7 +67,7 @@ export default function BoardRequests() {
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-medium leading-snug text-fg">{r.title}</p>
                 <p className="mt-0.5 text-[13px] text-fg-muted">
-                  {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
+                  {r.ownerName} · {homeLabel(community, r.unit)} · {formatDate(r.submittedDate)}
                 </p>
                 <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-fg-muted">
                   {r.summary}
@@ -134,7 +135,7 @@ export default function BoardRequests() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-medium text-fg">{r.title}</p>
                 <p className="text-[13px] text-fg-muted">
-                  {r.ownerName} · Unit {r.unit} · {formatDate(r.submittedDate)}
+                  {r.ownerName} · {homeLabel(community, r.unit)} · {formatDate(r.submittedDate)}
                 </p>
               </div>
               <Badge tone={statusTone[r.status]}>{statusLabel[r.status]}</Badge>

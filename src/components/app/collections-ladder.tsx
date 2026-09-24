@@ -9,7 +9,7 @@ import {
   type CollectionStage,
 } from "@/lib/collections";
 import { money, pluralize } from "@/lib/utils";
-import { placeLabel } from "@/lib/wording";
+import { useHomeLabel } from "@/components/app/use-home-label";
 
 /** The steps in the board's own words. The policy keeps its legal names. */
 const STEP: Record<CollectionStage, string> = {
@@ -47,6 +47,7 @@ const TONE: Record<CollectionStage, "neutral" | "warn" | "danger"> = {
  * everybody and every rung was dated.
  */
 export function CollectionsLadder() {
+  const placeLabel = useHomeLabel();
   const { community } = useAppState();
   const policy = policyFor(community.settings);
   const ladder = collectionsLadder(community, policy);

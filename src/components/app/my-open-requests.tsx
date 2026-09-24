@@ -5,6 +5,7 @@ import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 import { useMyRequests } from "@/lib/app-state";
 import type { RequestStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { statusLabel } from "@/lib/request-status";
 
 const tone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {
   approved: "ok",
@@ -47,7 +48,7 @@ export function MyOpenRequests() {
                 {r.reference} · submitted {formatDate(r.submittedDate)}
               </p>
             </div>
-            <Badge tone={tone[r.status]}>{r.status.replace("-", " ")}</Badge>
+            <Badge tone={tone[r.status]}>{statusLabel[r.status]}</Badge>
           </Link>
         ))}
       </Card>

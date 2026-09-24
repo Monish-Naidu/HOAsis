@@ -10,7 +10,7 @@ export default function ResidentCalendar() {
   const { community } = useAppState();
   return (
     <div className="animate-rise space-y-6">
-      <ResidentTitle title="Meetings and events" />
+      <ResidentTitle title="Meetings" />
       <LiveMeetingCard />
       <CalendarView entries={calendarEntries(community)} asOf={community.asOf} />
       <MeetingRsvps />

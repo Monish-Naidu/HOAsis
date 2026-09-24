@@ -9,7 +9,7 @@ import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
 import { formatDate, pluralize } from "@/lib/utils";
 import type { Meeting } from "@/lib/types";
-import { placeLabel } from "@/lib/wording";
+import { useHomeLabel } from "@/components/app/use-home-label";
 
 /**
  * Who said they are coming. A headcount before the day is how a board knows
@@ -17,6 +17,7 @@ import { placeLabel } from "@/lib/wording";
  * annual meeting will make quorum at all.
  */
 function Rsvps({ meeting }: { meeting: Meeting }) {
+  const placeLabel = useHomeLabel();
   const rsvps = meeting.rsvps ?? [];
   if (rsvps.length === 0) return null;
   const coming = rsvps.filter((r) => r.response === "yes");
@@ -50,6 +51,7 @@ function Rsvps({ meeting }: { meeting: Meeting }) {
  * to find it.
  */
 export default function BoardMeetings() {
+  const placeLabel = useHomeLabel();
   const { community } = useAppState();
   const [scheduling, setScheduling] = useState(false);
   const live = community.meetings.find((m) => m.status === "live");

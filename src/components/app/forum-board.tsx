@@ -11,13 +11,14 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { Avatar, Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
+import { Avatar, Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { ResidentTitle } from "@/components/app/resident-title";
 import { useAppState, usePendingPosts, useVisiblePosts } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { forumCategories } from "@/lib/data";
 import { ROLE_LABEL, type ForumCategory, type ForumPost } from "@/lib/types";
 import { cn, daysFromToday, formatDate, pluralize, relativeDays, todayIsoDate } from "@/lib/utils";
-import { placeLabel } from "@/lib/wording";
+import { useHomeLabel } from "@/components/app/use-home-label";
 
 /**
  * "today", "3 days ago", then a real date once it stops being recent.
@@ -72,6 +73,7 @@ const actionButton =
  * board, which is exactly why it is kept apart from requests.
  */
 export function ForumBoard({ moderate }: { moderate?: boolean }) {
+  const placeLabel = useHomeLabel();
   const {
     account,
     addPost,
@@ -170,21 +172,13 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
 
   return (
     <div className="animate-rise space-y-5">
-      <div>
-        {/* The board page sits beside 28px page titles; the resident page keeps
-            the phone scale. */}
-        <h1
-          className={cn(
-            "font-semibold tracking-[-0.025em] text-fg",
-            moderate ? "text-[28px]" : "text-[24px]",
-          )}
-        >
-          Community
-        </h1>
-        <p className="mt-1 text-[15px] text-fg-muted">
-          {pluralize(posts.length, "post")} from your neighbors
-        </p>
-      </div>
+      {/* The same title every other page has, lit tile and all. It was a
+          bare heading here, the one page in either shell without its tile. */}
+      {moderate ? (
+        <PageHeader title="Community" description={`${pluralize(posts.length, "post")} from your neighbors`} />
+      ) : (
+        <ResidentTitle title="Community" subtitle={`${pluralize(posts.length, "post")} from your neighbors`} />
+      )}
 
       {account ? (
         <Card className="p-3">
@@ -242,7 +236,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 <div className="flex flex-wrap items-baseline gap-x-2 text-[13px]">
                   <span className="font-semibold text-fg">{post.author}</span>
                   <span className="text-fg-subtle">
-                    Unit {post.unit} · {post.category} · {when(post.at)}
+                    {placeLabel(post.unit)} · {post.category} · {when(post.at)}
                   </span>
                 </div>
                 <p className="mt-0.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
@@ -318,7 +312,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                       ) : null}
                     </div>
                     <p className="text-[13px] text-fg-subtle">
-                      Unit {p.unit} · {when(p.at)}
+                      {placeLabel(p.unit)} · {when(p.at)}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">

@@ -2,6 +2,8 @@ import type { Community } from "@/lib/data/community";
 import type { TintName } from "@/components/ui/primitives";
 import type { Owner } from "@/lib/types";
 import { money } from "@/lib/utils";
+import { statusLabel } from "@/lib/request-status";
+import { homeLabel } from "@/lib/wording";
 
 /**
  * One search across everything the association has ever recorded.
@@ -107,7 +109,7 @@ export function boardIndex(c: Community): SearchHit[] {
       kind: "household",
       title: o.displayName,
       // Homes numbered without addresses read "Unit 4 · · $9,950.00 owed" otherwise.
-      subtitle: [`Unit ${o.unit}`, o.address, o.balanceCents > 0 ? `${money(o.balanceCents)} owed` : ""]
+      subtitle: [homeLabel(c, o.unit), o.address, o.balanceCents > 0 ? `${money(o.balanceCents)} owed` : ""]
         .filter(Boolean)
         .join(" · "),
       date: o.moveInDate,
@@ -143,7 +145,7 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `th-${t.id}`,
       kind: "thread",
       title: t.subject,
-      subtitle: `${t.participants.join(", ")}${t.unit ? ` · Unit ${t.unit}` : ""} · ${t.updatedDate}`,
+      subtitle: `${t.participants.join(", ")}${t.unit ? ` · ${homeLabel(c, t.unit)}` : ""} · ${t.updatedDate}`,
       date: t.updatedDate,
       href: `/board/communications?thread=${q(t.id)}`,
       keywords: `${t.tag} ${t.messages.map((m) => m.body).join(" ").slice(0, 600)}`,
@@ -176,7 +178,7 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `req-${r.id}`,
       kind: "request",
       title: r.title,
-      subtitle: `${r.reference} · ${r.ownerName}, unit ${r.unit} · ${r.status}`,
+      subtitle: `${r.reference} · ${r.ownerName}, ${homeLabel(c, r.unit)} · ${statusLabel[r.status]}`,
       date: r.submittedDate,
       href: `/board/requests#req-${r.id}`,
       keywords: `${r.kind} ${r.summary} ${r.submittedDate.slice(0, 4)}`,
@@ -187,7 +189,7 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `vio-${v.id}`,
       kind: "notice",
       title: v.rule,
-      subtitle: `${v.reference} · ${v.ownerName}, unit ${v.unit} · ${v.stage === "cured" ? "resolved" : "open"}`,
+      subtitle: `${v.reference} · ${v.ownerName}, ${homeLabel(c, v.unit)} · ${v.stage === "cured" ? "resolved" : "open"}`,
       date: v.openedDate,
       // The notice itself, open, not the list it is somewhere on.
       href: `/board/violations?open=${q(v.id)}#vio-${v.id}`,
@@ -259,6 +261,21 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       keywords: `${d.fileType} ${d.updatedDate.slice(0, 4)}`,
     });
   }
+  // Forms an owner fills in here. The Documents page suggests searching for
+  // "fence", and this palette answered "nothing matches" with the fence form
+  // one screen away.
+  for (const f of c.forms) {
+    if (!(f.fields ?? []).length) continue;
+    hit({
+      id: `form-${f.id}`,
+      kind: "document",
+      title: f.label,
+      subtitle: f.decisionDays ? `Form · the board answers within ${f.decisionDays} days` : "Form",
+      date: f.updatedDate,
+      href: `/resident/documents/forms/${f.id}`,
+      keywords: `form application request ${f.description}`,
+    });
+  }
   for (const m of c.meetings) {
     hit({
       id: `mtg-${m.id}`,
@@ -289,7 +306,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
         id: `req-${r.id}`,
         kind: "request",
         title: r.title,
-        subtitle: `${r.reference} · ${r.status} · ${r.submittedDate}`,
+        subtitle: `${r.reference} · ${statusLabel[r.status]} · ${r.submittedDate}`,
         date: r.submittedDate,
         href: `/resident/requests/${q(r.reference)}`,
         keywords: `${r.kind} ${r.summary}`,

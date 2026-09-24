@@ -26,7 +26,7 @@ import {
   type PaymentInstrument,
   type PlatformFeePolicy,
 } from "@/lib/payments/instruments";
-import { cn, formatDate, money, ordinal, relativeDays, today } from "@/lib/utils";
+import { cn, formatDate, money, ordinal, pluralize, relativeDays, today } from "@/lib/utils";
 import { AddMethod } from "./add-method";
 import { InstrumentMenu } from "./instrument-menu";
 import { StripePayPanel } from "./stripe-pay-panel";
@@ -205,7 +205,16 @@ export function PayFlow() {
 
   /* ---------------------------------------------------------------- form */
   const heading = (
-    <ResidentTitle title="Pay dues" subtitle={`Dues due ${formatDate(nextCharge, "long")}`} />
+    <ResidentTitle
+      title="Payments"
+      subtitle={
+        // What is owed now, before when the next bill lands. "Dues due
+        // October 1" above a past-due September balance read as all clear.
+        owner.daysPastDue > 0 && balanceCents > 0
+          ? `${money(balanceCents)} past due, ${pluralize(owner.daysPastDue, "day")}`
+          : `Next dues ${formatDate(nextCharge, "long")}`
+      }
+    />
   );
 
   // Shared between the demo and Stripe branches, as a JSX value rather than a
@@ -245,9 +254,11 @@ export function PayFlow() {
             )}
           >
             <span className="block text-[13px] font-medium text-fg-muted">Other amount</span>
-            <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
-              {amountMode === "custom" && amountCents ? money(amountCents) : "$0.00"}
-            </span>
+            {amountMode === "custom" && amountCents ? (
+              <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">{money(amountCents)}</span>
+            ) : (
+              <span className="mt-0.5 block text-[17px] font-medium text-fg-subtle">Choose</span>
+            )}
           </button>
         </div>
         {amountMode === "custom" ? (
@@ -495,14 +506,18 @@ export function PayFlow() {
                 </Button>
               </div>
             ) : (
+              // Paying with a new bank or card is the choice above. This is
+              // the other thing: keeping a method on file for autopay without
+              // paying today. Two identical-looking ways to add one was one
+              // too many.
               <Button
-                variant="secondary"
-                size="md"
+                variant="ghost"
+                size="sm"
                 className="w-full"
                 onClick={() => setAdding(true)}
               >
                 <Plus className="size-3.5" />
-                Add a payment method
+                Save a method without paying
               </Button>
             )}
             {autopaySection}

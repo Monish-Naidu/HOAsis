@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import type { Violation } from "@/lib/types";
 import { formatDate, money, todayIsoDate } from "@/lib/utils";
-import { placeLabel } from "@/lib/wording";
+import { useHomeLabel } from "@/components/app/use-home-label";
 
 /**
  * A notice as a letter, ready for an envelope.
@@ -39,6 +39,7 @@ export function NoticeLetter({
   violation: Violation;
   onClose: () => void;
 }) {
+  const placeLabel = useHomeLabel();
   const { community } = useAppState();
   const { association } = community;
   const owner = community.owners.find((o) => o.id === violation.ownerId);

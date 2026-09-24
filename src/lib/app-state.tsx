@@ -81,6 +81,7 @@ import type {
 import { canRaiseNotice } from "@/lib/violations";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 import { placeLabel } from "@/lib/wording";
+import { statusLabel } from "@/lib/request-status";
 
 export type View = "resident" | "board";
 
@@ -2744,7 +2745,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         at: todayIsoDate(),
         actor: actorName,
         actorRole: "board" as const,
-        body: note ?? `Status changed to ${status.replace("-", " ")}.`,
+        body: note ?? `Status changed to ${statusLabel[status].toLowerCase()}.`,
         kind: "status" as const,
       });
       if (remote.community) {

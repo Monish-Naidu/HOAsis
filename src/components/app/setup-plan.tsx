@@ -32,6 +32,7 @@ import { ADMIN_ROLES, ROLE_LABEL, type AccountRole } from "@/lib/types";
 import { cn, money, pluralize } from "@/lib/utils";
 import { HummingbirdArriving } from "@/components/app/hummingbird";
 import { describeMix, duesVary, isMixed, totalDues } from "@/lib/home-types";
+import { homeLabel } from "@/lib/wording";
 
 /**
  * Finishing setup, one question at a time.
@@ -989,7 +990,7 @@ function BoardInline({ task }: { task: PlanTask }) {
           <label key={account.id} className="flex items-center gap-3 px-4 py-2.5">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[15px] font-medium text-fg">{account.name}</span>
-              <span className="block text-[13px] text-fg-subtle">Unit {account.unit}</span>
+              <span className="block text-[13px] text-fg-subtle">{homeLabel(community, account.unit)}</span>
             </span>
             <select
               value={account.role}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
@@ -189,6 +189,19 @@ function BellPanel({
   // to the bell's right edge with a fixed width ran it 40px off the left of
   // a 320px screen, since the bell is not at the screen's edge.
   const [place, setPlace] = useState<{ top: number; right: number; width: number } | null>(null);
+
+  // Escape closes it, and so does opening search: the panel sat on top of
+  // the search overlay with nothing but a click to get rid of it.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   function toggle(bell: HTMLButtonElement) {
     if (open) {

@@ -474,7 +474,7 @@ function ConfirmSaved({
     <Card className="p-4">
       <dl className="mb-4 space-y-1">
         <div className="flex justify-between text-[15px]">
-          <dt className="text-fg-muted">Assessment</dt>
+          <dt className="text-fg-muted">Dues</dt>
           <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
         </div>
         <div className="flex justify-between text-[15px]">
@@ -545,7 +545,7 @@ function ConfirmForm({
     <Card className="p-4">
       <dl className="mb-4 space-y-1">
         <div className="flex justify-between text-[15px]">
-          <dt className="text-fg-muted">Assessment</dt>
+          <dt className="text-fg-muted">Dues</dt>
           <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
         </div>
         <div className="flex justify-between text-[15px]">

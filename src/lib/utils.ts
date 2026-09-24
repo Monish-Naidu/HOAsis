@@ -57,6 +57,19 @@ export function todayIsoDate(): string {
   return todayIso;
 }
 
+/**
+ * "18:30" as "6:30 PM", the way every other time in the product reads. A
+ * time input stores the 24 hour form, so a meeting scheduled here read
+ * "18:30" beside an announcement that said "6:30pm". Anything else passes
+ * through ("All day").
+ */
+export function clockTime(value: string): string {
+  const m = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(value.trim());
+  if (!m) return value;
+  const h = Number(m[1]);
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
+}
+
 export function parseDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`);
 }
