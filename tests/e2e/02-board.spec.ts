@@ -98,7 +98,7 @@ test.describe("board actions", () => {
     await page.waitForLoadState("networkidle");
 
     const before = (await inspect(page)).text;
-    const needsReview = Number(before.match(/Waiting on you\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    const needsReview = Number(before.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0");
     expect(needsReview, "nothing to confirm, so this proves nothing").toBeGreaterThan(0);
 
     await page.getByRole("button", { name: "Confirm" }).first().click();
@@ -110,7 +110,7 @@ test.describe("board actions", () => {
     await page.waitForTimeout(700);
 
     const after = (await inspect(page)).text;
-    const restored = Number(after.match(/Waiting on you\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    const restored = Number(after.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0");
     expect(restored, "undo did not restore the transaction").toBe(needsReview);
   });
 
@@ -172,10 +172,12 @@ test.describe("board actions", () => {
   });
 
   test("a past due notice fills in the household's real figures", async ({ page }) => {
-    await page.goto("/board/homeowners");
+    // Reminders are sent from Collections, which opens the composer on the roster.
+    await page.goto("/board/money/collections");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "Send reminders" }).click();
+    await page.getByRole("link", { name: "Send reminders" }).or(page.getByRole("button", { name: "Send reminders" })).first().click();
+    await page.waitForLoadState("networkidle");
     await page.waitForTimeout(500);
 
     // Every household behind is listed with the letter its rung calls for,

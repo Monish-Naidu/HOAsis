@@ -18,13 +18,13 @@ test.describe("recording a sale", () => {
 
     // Somebody who owes something. The roster puts those first, and the sale
     // button lives in the household's panel, so open the row and then press it.
-    const row = page.getByRole("button", { name: /^.+, unit \d+$/ }).nth(3);
+    const row = page.getByRole("button", { name: /^.+, (Unit|Lot|Home) \d+$/ }).nth(3);
     const label = (await row.getAttribute("aria-label")) ?? "";
-    const seller = label.replace(/, unit \d+$/, "");
+    const seller = label.replace(/, (Unit|Lot|Home) \d+$/, "");
     await row.click();
     await page.getByRole("button", { name: `Record the sale of ${seller}'s home` }).click();
 
-    await expect(page.getByText(/^Record the sale of unit/)).toBeVisible();
+    await expect(page.getByText(/^Record the sale of (Unit|Lot|Home) /)).toBeVisible();
     await page.getByLabel("Buyer name").fill("Priya Nair");
     await page.getByLabel("Buyer email").fill("priya@example.com");
     await page.getByRole("button", { name: "Record the sale", exact: true }).click();

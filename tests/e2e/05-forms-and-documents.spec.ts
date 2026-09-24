@@ -374,7 +374,7 @@ test.describe("forms", () => {
     expect(health.text, "no confirmation").toContain("Sent to the committee");
     expect(health.text, "no reference number was issued").toMatch(/REQ-\d{4}-\d+/);
     // The deadline comes from the association's own article, not a default.
-    expect(health.text, "the response deadline was not stated").toContain("to decide");
+    expect(health.text, "the response deadline was not stated").toContain("decides by");
   });
 
   test("the submitted form reaches the board as a request", async ({ page }) => {

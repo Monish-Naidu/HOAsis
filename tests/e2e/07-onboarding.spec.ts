@@ -568,8 +568,8 @@ test.describe("an association that already runs itself", () => {
     expect(roster.text, "the balance never reached the roster").toContain("1,240.50");
     // A figure typed into a box says what is owed and nothing about how long
     // it has been owed, so nobody lands on the enforcement ladder from it.
-    expect(roster.text, "an opening balance put somebody into collections").not.toContain(
-      "In collections",
+    expect(roster.text, "an opening balance put somebody into collections").not.toMatch(
+      /\d+ days? late/,
     );
   });
 });

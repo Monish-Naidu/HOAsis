@@ -81,7 +81,9 @@ export function NewRequestForm() {
     ? "Choose a type"
     : kind === "amenity" && !amenityId
       ? "Choose an amenity"
-      : kind === "architectural" && !formId
+      : kind === "amenity" && !slot
+        ? "Choose a time"
+        : kind === "architectural" && !formId
         ? "Choose a form"
         : !effectiveTitle
           ? "Add a title"

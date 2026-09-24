@@ -8,6 +8,41 @@ Playwright now runs four workers and the suite takes about two minutes rather
 than five. `fullyParallel` stays off, because several specs found an
 association in one test and read it back in the next.
 
+## 2026-09-24 afternoon: the persona walk and its fixes
+
+Monish asked for a walk of the resident and board flows as every officer,
+then for all of it to be fixed. Walked Mehr Meadows as President, Vice
+President, Treasurer, Secretary and two owners (desktop and phone), headless
+via magic links. **Committed locally (913cf40..HEAD), not pushed.**
+Migrations 0043 and 0044 are on the production database.
+
+Broken, fixed: Vendors crashed on a payout status it had no badge for;
+owners saw $0 funds because the playground stored `fiscal_year_start` as a
+full date (0043 now checks both columns); officers without Finances saw
+"$0, everyone is current" and a roster of Paid up; reserve transfers were
+booked on the operating side only, so operating read -$13k and reserves
+$525 against $170k assigned (transfers now book both sides, with a form on
+Reserves, and `Opening balance` is a category outside money in and out);
+RSVPs written by the seed in the wrong shape; notifications ignored Escape;
+search missed the forms owners fill in; raw request statuses.
+
+Built: owners message the board (`/resident/messages`, 0044
+`start_owner_thread` / `reply_as_owner`; Billing threads readable by
+Finances, so the treasurer opens the inbox and sees only those). Send
+notice for a meeting (posts an announcement, records the date, Needs you
+row within sixty days). Mark fixed for maintenance requests, Deny confirms,
+changing a vote confirms. Lot/Unit follows the community everywhere
+(`useHomeLabel`). Titles match the nav, times read 6:30 PM, past due says
+how much is late fees, interest is summed from the books.
+
+Playground data was patched in place (logins unchanged): two-sided
+transfers, opening balances, RSVPs, officers on their role's default access.
+
+Left as is, on purpose: resident phone tab bar keeps six tabs (Meetings and
+Voting are reached from the dashboard's Next up and tile, Messages from
+Requests); native date pickers keep the browser's format; the view
+switcher stays icons-only under 640px (it pushed sign out off at 320).
+
 ## 2026-09-24 overnight: mixed communities, the overhaul, five years
 
 Monish's six asks, all built. **Committed locally, not pushed**: he wants to

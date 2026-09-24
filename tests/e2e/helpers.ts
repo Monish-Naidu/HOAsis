@@ -212,7 +212,7 @@ export const ADMIN_TABS = [
 /** The pages folded under a sidebar row, as the tabs along its top. */
 export const BOARD_SECTION_TABS: Record<string, { row: string; tabs: string[] }> = {
   "/board/money": { row: "Finances", tabs: ["Overview", "Transactions", "Collections", "Reserves"] },
-  "/board/requests": { row: "Requests", tabs: ["From owners", "Notices"] },
+  "/board/requests": { row: "Requests", tabs: ["From owners", "To owners"] },
   "/board/communications": { row: "Messages", tabs: ["Inbox", "Announcements", "Community"] },
   "/board/meetings": { row: "Meetings", tabs: ["Meetings", "Voting"] },
 };
