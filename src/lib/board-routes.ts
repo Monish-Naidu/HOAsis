@@ -248,6 +248,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     // actions. The route keeps its name because links point at it. It sits
     // under Requests because both are the board answering one household.
     label: "Notices",
+    // The other direction from requests: the board writing to a home.
+    tab: "To owners",
     icon: TriangleAlert,
     key: "violations", tint: "coral",
     module: "notices",
@@ -377,4 +379,15 @@ export function sectionFor(pathname: string): BoardRoute | undefined {
 /** A section's pages in tab order: the row itself, then its children. */
 export function sectionPages(section: BoardRoute): BoardRoute[] {
   return [section, ...BOARD_ROUTES.filter((r) => r.parent === section.key)];
+}
+
+/**
+ * Whether this seat may open the page a link points at. A dashboard row or a
+ * tile that leads to "This is not yours to open" is worse than no row, and a
+ * money tile shown to somebody who cannot read the books shows zeroes that
+ * are not true.
+ */
+export function mayOpen(href: string, can: (capability: Capability) => boolean): boolean {
+  const need = capabilitiesFor(href.split(/[?#]/)[0]);
+  return !need || need.some((c) => can(c));
 }

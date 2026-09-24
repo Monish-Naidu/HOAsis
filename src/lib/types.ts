@@ -261,7 +261,9 @@ export type LedgerCategory =
   | "Management"
   | "Reserve transfer"
   | "Legal & professional"
-  | "Interest income";
+  | "Interest income"
+  /** What an account held on the day the association started its books here. */
+  | "Opening balance";
 
 export interface LedgerEntry {
   id: ID;

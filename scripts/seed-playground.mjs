@@ -137,7 +137,7 @@ await admin.from("associations").update({
   trial_ends_at: ts(monthStart(10), 9),
   subscription_status: "active",
   setup_completed_at: ts(foundedOn, 15),
-  fiscal_year_start: `${now.getUTCFullYear()}-01-01`,
+  fiscal_year_start: "01-01",
   insurance_carrier: "Evergreen Group",
   insurance_policy_no: "EG-4471-HOA",
   insurance_expires_on: days(104),
@@ -151,9 +151,11 @@ await admin.from("units").update({ address: addressOf(founder) }).eq("id", unitI
 
 // Accounts, claiming seats; roles for the board.
 const accounts = [{ name: founder.name, email: OWNER }];
+const profileId = {};
 for (const p of PEOPLE.slice(1)) {
   if (p.email.startsWith(MM)) {
     const id = await makeUser(p.name, p.email);
+    profileId[p.unit] = id;
     accounts.push({ name: p.name, email: p.email });
     await admin.from("memberships").update({ profile_id: id }).eq("association_id", A).eq("unit_id", unitId[p.unit]);
   }
@@ -236,7 +238,9 @@ months.forEach((m, i) => {
   spend.push(expense(d(9), "Common area electricity", "Puget Sound Energy", "Utilities", 58_000 + (i % 4) * 4_100));
   spend.push(expense(d(12), "Pool service and chemicals", "Northsound Pool Service", "Repairs & maintenance", 74_000));
   spend.push(expense(d(15), "Master policy, monthly installment", "Evergreen Group", "Insurance", 112_000));
-  spend.push(expense(d(20), "Transfer to reserve account", "BECU reserve ••8891", "Reserve transfer", 300_000));
+  spend.push(expense(d(20), "Transfer to reserve account", "Reserve account", "Reserve transfer", 300_000));
+  // The other half of the same transfer: without it the reserve account never grew.
+  spend.push({ association_id: A, bank_account_id: reserve, occurred_on: d(20), description: "Transfer from operating account", counterparty: "Operating account", category: "Reserve transfer", amount_cents: 300_000, confirmed_at: ts(d(20), 16), created_at: ts(d(20), 12) });
   spend.push({ association_id: A, bank_account_id: reserve, occurred_on: d(27), description: "Interest, money market", counterparty: "BECU", category: "Interest income", amount_cents: 4_180 + i * 35, confirmed_at: ts(d(27)), created_at: ts(d(27)) });
   if (i % 3 === 2) spend.push(expense(d(18), "Retainer and covenant review", "Lindgren & Park LLP", "Legal & professional", 35_000));
 });
@@ -246,7 +250,15 @@ spend.push(expense(monthStart(2).replace(/-01$/, "-06"), "Storm drain clearing, 
 spend.push({ ...expense(days(-3), "CASCADE GROUNDS CO 4417", "Cascade Grounds Co.", "Landscaping", 185_000), confirmed_at: null });
 spend.push({ ...expense(days(-2), "PSE ONLINE PMT", "Puget Sound Energy", "Utilities", 61_400), confirmed_at: null });
 spend.push({ ...expense(days(-1), "HARBOR ROOFING DEPOSIT", "Harbor Roofing", "Repairs & maintenance", 420_000), confirmed_at: null });
-await admin.from("ledger_entries").insert(spend).then(must("ledger"));
+// What each account held the day these books start, so a year of a budget
+// that spends a little more than it bills does not read as an overdrawn account
+// and the reserve account holds what the components say is set aside.
+const booksStart = (() => { const x = new Date(months[0] + "T00:00:00Z"); x.setUTCDate(x.getUTCDate() - 1); return iso(x); })();
+spend.push({ association_id: A, bank_account_id: operating, occurred_on: booksStart, description: "Opening balance", counterparty: "BECU", category: "Opening balance", amount_cents: 2_400_000, confirmed_at: ts(booksStart), created_at: ts(booksStart) });
+spend.push({ association_id: A, bank_account_id: reserve, occurred_on: booksStart, description: "Opening balance", counterparty: "BECU", category: "Opening balance", amount_cents: 13_500_000, confirmed_at: ts(booksStart), created_at: ts(booksStart) });
+// Nothing on the books after today: the current month's interest has not been paid yet.
+const booked = spend.filter((e) => e.occurred_on <= days(0));
+await admin.from("ledger_entries").insert(booked).then(must("ledger"));
 
 await admin.from("budget_lines").insert([
   ["Assessments", "income", DUES * PEOPLE.length * 12],
@@ -270,7 +282,7 @@ await admin.from("reserve_components").insert([
 ].map(([name, useful_life_years, remaining_life_years, replacement_cost_cents, funded_cents, note]) => ({ association_id: A, name, useful_life_years, remaining_life_years, replacement_cost_cents, funded_cents, note, last_inspection: monthStart(5) }))).then(must("reserves"));
 
 await admin.from("payouts").insert([
-  { association_id: A, vendor_id: vendorId["Cascade Grounds Co."], vendor_name: "Cascade Grounds Co.", invoice_number: "CG-2026-0912", amount_cents: 185_000, method: "ach", status: "pending", issued_on: days(-5), expected_on: days(9), approvals: [], approvals_required: 2 },
+  { association_id: A, vendor_id: vendorId["Cascade Grounds Co."], vendor_name: "Cascade Grounds Co.", invoice_number: "CG-2026-0912", amount_cents: 185_000, method: "ach", status: "needs-approval", issued_on: days(-5), expected_on: days(9), approvals: [], approvals_required: 2 },
   { association_id: A, vendor_id: vendorId["Harbor Roofing"], vendor_name: "Harbor Roofing", invoice_number: "HR-4471", amount_cents: 420_000, method: "check", status: "approved", issued_on: days(-9), expected_on: days(3), approvals: [{ name: "Dana Whitcomb", at: days(-4) }, { name: "Monish Naidu", at: days(-3) }], approvals_required: 2 },
   { association_id: A, vendor_id: vendorId["Northsound Pool Service"], vendor_name: "Northsound Pool Service", invoice_number: "NP-2288", amount_cents: 74_000, method: "ach", status: "paid", issued_on: days(-33), expected_on: days(-19), approvals: [{ name: "Dana Whitcomb", at: days(-30) }, { name: "Monish Naidu", at: days(-29) }], approvals_required: 2 },
 ]).then(must("payouts"));
@@ -300,7 +312,12 @@ await admin.from("announcements").insert([
 
 const { data: meetingRows } = await admin.from("meetings").insert([
   { association_id: A, title: "Board meeting", kind: "board", status: "ended", held_on: monthStart(1).replace(/-01$/, "-15"), held_at: "19:00", location: "Clubhouse", agenda: ["Approve July minutes", "Treasurer's report", "Pool resurfacing bids", "Storm drain on Maple Lane", "Open forum"], rsvps: [], notice_sent_on: monthStart(1) },
-  { association_id: A, title: "Budget workshop", kind: "workshop", status: "scheduled", held_on: days(14), held_at: "18:30", location: "Clubhouse", dial_in: "https://meet.jit.si/mehr-meadows-budget", passcode: "meadows", agenda: ["Draft operating budget", "Reserve contribution", "Questions from owners"], rsvps: [{ name: "Owen Brady", unit: "12", going: true }, { name: "Nina Okafor", unit: "4", going: true }, { name: "Rhea Calloway", unit: "15", going: false }], notice_sent_on: days(-5) },
+  { association_id: A, title: "Budget workshop", kind: "workshop", status: "scheduled", held_on: days(14), held_at: "18:30", location: "Clubhouse", dial_in: "https://meet.jit.si/mehr-meadows-budget", passcode: "meadows", agenda: ["Draft operating budget", "Reserve contribution", "Questions from owners"], rsvps: [
+    // The shape rsvp_meeting writes (0029), so the board count and each owner's own answer read them.
+    { profileId: profileId["12"], name: "Owen Brady", unit: "12", response: "yes", at: days(-3) },
+    { profileId: profileId["4"], name: "Nina Okafor", unit: "4", response: "yes", at: days(-2) },
+    { profileId: profileId["15"], name: "Rhea Calloway", unit: "15", response: "no", at: days(-2) },
+  ], notice_sent_on: days(-5) },
   { association_id: A, title: "Annual meeting and board election", kind: "annual", status: "scheduled", held_on: days(61), held_at: "19:00", location: "Clubhouse and video call", dial_in: "https://meet.jit.si/mehr-meadows-annual", passcode: "meadows", agenda: ["Year in review", "Election of two directors", "Ratify the budget", "Open forum"], rsvps: [] },
 ]).select("id, title");
 const meetingId = Object.fromEntries(meetingRows.map((m) => [m.title, m.id]));

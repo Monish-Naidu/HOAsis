@@ -115,6 +115,10 @@ export function HomeownersScreen() {
   const policy = policyFor(community.settings);
 
   const maySeeRoster = can("finances") || can("communications");
+  // Balances, standing and sales are the books. Without the finances
+  // capability the balances come back empty, and a roster of "Paid up" for
+  // every home is a false statement, so the money columns are not drawn.
+  const seesMoney = can("finances");
 
   // Behind first, furthest behind at the top, then by unit.
   const sorted = useMemo(
@@ -289,9 +293,13 @@ export function HomeownersScreen() {
         : []),
       { header: "Email", value: (o) => o.email },
       { header: "Phone", value: (o) => o.phone },
-      { header: "Balance", value: (o) => (o.balanceCents / 100).toFixed(2) },
-      { header: "Days past due", value: (o) => o.daysPastDue },
-      { header: "Autopay", value: (o) => (o.autopay ? "yes" : "no") },
+      ...(seesMoney
+        ? [
+            { header: "Balance", value: (o: Owner) => (o.balanceCents / 100).toFixed(2) },
+            { header: "Days past due", value: (o: Owner) => o.daysPastDue },
+            { header: "Autopay", value: (o: Owner) => (o.autopay ? "yes" : "no") },
+          ]
+        : []),
     ]);
     downloadCsv(`${communitySlug(community)}-roster.csv`, csv);
     notify(`Exported ${pluralize(matching.length, "household")}`);
@@ -312,11 +320,11 @@ export function HomeownersScreen() {
     <>
       <PageHeader
         title="Homeowners"
-        description="Every home, its owner, contact details, and balance."
+        description={seesMoney ? "Every home, its owner, contact details, and balance." : "Every home, its owner, and how to reach them."}
         action={
           <div className="flex gap-2">
             <Button
-              variant="secondary"
+              variant={notSignedUp.length > 0 ? "secondary" : "primary"}
               size="md"
               onClick={() => {
                 setAdding((v) => !v);
@@ -328,7 +336,7 @@ export function HomeownersScreen() {
             </Button>
             {notSignedUp.length > 0 ? (
               <Button
-                variant="secondary"
+                variant="primary"
                 size="md"
                 onClick={() => void emailInvites(notSignedUp)}
                 aria-label={`Email invitations to the ${notSignedUp.length} households not signed up`}
@@ -337,33 +345,33 @@ export function HomeownersScreen() {
                 Invite {notSignedUp.length} not signed up
               </Button>
             ) : null}
-            {delinq.past.length > 0 ? (
-              <Button variant="primary" size="md" onClick={() => setReminding((v) => !v)}>
-                <Mail className="size-3.5" />
-                Send reminders
-              </Button>
-            ) : null}
+            {/* Reminders are sent from Finances > Collections, which opens
+                the composer here with ?remind=1. One place to send them. */}
           </div>
         }
       />
 
-      {reminding ? <RemindersComposer onClose={() => setReminding(false)} /> : null}
+      {reminding && seesMoney ? <RemindersComposer onClose={() => setReminding(false)} /> : null}
 
       {maySeeRoster ? <JoinRequests /> : null}
 
       <Card className="mt-6">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
-          <Segmented
-            label="Show households"
-            value={filter}
-            onChange={(next) => {
-              setFilter(next);
-              setShown(PAGE);
-            }}
-            options={segments.map((seg) => ({ value: seg.key, label: seg.label, count: seg.count }))}
-            className="pointer-coarse:[&>button]:h-9"
-          />
+          {seesMoney ? (
+            <Segmented
+              label="Show households"
+              value={filter}
+              onChange={(next) => {
+                setFilter(next);
+                setShown(PAGE);
+              }}
+              options={segments.map((seg) => ({ value: seg.key, label: seg.label, count: seg.count }))}
+              className="pointer-coarse:[&>button]:h-9"
+            />
+          ) : (
+            <p className="tnum text-[13px] font-medium text-fg-muted">{pluralize(owners.length, "home")}</p>
+          )}
           <div className="flex flex-wrap items-center gap-1">
             {mixed ? (
               <Select
@@ -396,10 +404,12 @@ export function HomeownersScreen() {
                 className="w-40 min-w-0 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
-            <Button variant="ghost" size="sm" onClick={() => startSale(null)}>
-              <ArrowRightLeft className="size-3.5" />
-              Record a sale
-            </Button>
+            {seesMoney ? (
+              <Button variant="ghost" size="sm" onClick={() => startSale(null)}>
+                <ArrowRightLeft className="size-3.5" />
+                Record a sale
+              </Button>
+            ) : null}
             <Button variant="ghost" size="sm" onClick={exportRoster}>
               <Download className="size-3.5" />
               Export CSV
@@ -614,6 +624,9 @@ export function HomeownersScreen() {
                             {o.displayName}
                           </span>
                           {o.boardRole ? <Badge tone="brand">{o.boardRole}</Badge> : null}
+                          {isRemote && o.email && !o.placeholder && !accounts.some((a) => a.ownerId === o.id) ? (
+                            <Badge tone="neutral">Not signed up</Badge>
+                          ) : null}
                         </span>
                         <span className="block truncate text-[13px] text-fg-muted">
                           {homeLabel(community, o.unit)}
@@ -640,10 +653,12 @@ export function HomeownersScreen() {
                         contact column around from row to row. */}
                     <span className="flex shrink-0 items-center justify-end gap-2 md:grid md:grid-cols-[5.5rem_minmax(0,1fr)_2rem] md:gap-3">
                       <span className="tnum hidden text-right text-[15px] font-semibold text-fg md:block">
-                        {o.balanceCents > 0 ? money(o.balanceCents) : ""}
+                        {seesMoney && o.balanceCents > 0 ? money(o.balanceCents) : ""}
                       </span>
-                      <span className="flex justify-end md:justify-start">
-                        <DuesBadge owner={o} unsold={community.profile?.origin === "builder"} />
+                      <span className="flex justify-end whitespace-nowrap md:justify-start">
+                        {seesMoney || o.placeholder ? (
+                          <DuesBadge owner={o} unsold={community.profile?.origin === "builder"} />
+                        ) : null}
                       </span>
                       {/* A glyph, not 88 bordered buttons down the page. On a
                           desktop it shows on the row under the pointer or
@@ -682,7 +697,7 @@ export function HomeownersScreen() {
                           if (ok) notify(`${name} is on ${o.unit}`);
                         })
                       }
-                      onSale={() => startSale(o)}
+                      onSale={seesMoney ? () => startSale(o) : undefined}
                       duesLine={
                         duesVary(community.association)
                           ? `${money(ownerDues(community.association, o))} ${community.association.duesCadence}`
@@ -731,7 +746,7 @@ export function HomeownersScreen() {
             )}
           </div>
         ) : null}
-        {showOpeningBalances ? (
+        {showOpeningBalances && seesMoney ? (
           <p className="border-t border-border px-5 py-3 text-[13px] text-fg-muted">
             Switched from another system?{" "}
             <Link href="/board/homeowners/opening-balances" className="font-medium text-accent hover:underline">
@@ -756,10 +771,12 @@ function DuesBadge({ owner, unsold }: { owner: Owner; unsold: boolean }) {
   // Nobody on record: not paid up, not behind, nobody to message. It read
   // "Paid up" beside a Message button that could reach nobody.
   if (owner.placeholder) return <Badge tone="neutral">{unsold ? "Unsold" : "No owner"}</Badge>;
+  // Days late, the same fact Collections leads with. "In collections" here
+  // and "Attorney next" there read as two different states for one home.
   if (owner.standing === "collections") {
     return (
       <Badge tone="danger" dot>
-        In collections
+        {pluralize(owner.daysPastDue, "day")} late
       </Badge>
     );
   }
@@ -801,7 +818,7 @@ function HouseholdDetail({
   onSend: (body: string, subject?: string) => void;
   /** For a home with no owner on record: name them. */
   onSetOwner: (name: string, email: string) => void;
-  onSale: () => void;
+  onSale?: () => void;
   onInvite: () => void;
   onEmailInvite?: () => void;
   signedUp: boolean;
@@ -934,15 +951,17 @@ function HouseholdDetail({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-border pt-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onSale}
-          aria-label={`Record the sale of ${owner.displayName}'s home`}
-        >
-          <ArrowRightLeft className="size-3.5" />
-          Record a sale
-        </Button>
+        {onSale ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onSale}
+            aria-label={`Record the sale of ${owner.displayName}'s home`}
+          >
+            <ArrowRightLeft className="size-3.5" />
+            Record a sale
+          </Button>
+        ) : null}
         <Button
           variant="ghost"
           size="sm"

@@ -1,7 +1,7 @@
 import type { Community } from "@/lib/data/community";
 import type { LedgerCategory } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
-import { daysFromToday } from "@/lib/utils";
+import { daysFromToday, money } from "@/lib/utils";
 import { totalDues } from "@/lib/home-types";
 
 /**
@@ -46,6 +46,36 @@ export function delinquency(c: Community) {
     collectionRate: (households - past.filter((o) => !o.placeholder).length) / billed,
     autopayRate: c.owners.filter((o) => o.autopay && !o.placeholder).length / billed,
   };
+}
+
+/**
+ * Late fees inside what is owed right now.
+ *
+ * Past due is dues plus late fees, and dues collected counts dues alone, so
+ * the two figures never reconcile by eye. Each owing household's statement is
+ * read back to the last time it stood at zero, and the late fees since then
+ * are what it still owes in fees.
+ */
+export function lateFeesOwed(c: Community): number {
+  let total = 0;
+  for (const owner of c.owners) {
+    if (owner.balanceCents <= 0) continue;
+    const lines = [...(c.ownerCharges[owner.id] ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+    let since = 0;
+    lines.forEach((line, i) => {
+      if (line.balanceAfterCents <= 0) since = i + 1;
+    });
+    for (const line of lines.slice(since)) {
+      if (line.kind === "charge" && /late fee/i.test(line.label)) total += line.amountCents;
+    }
+  }
+  return total;
+}
+
+/** "4 households, $75 of it late fees": the past due figure, reconciled. */
+export function pastDueHint(households: number, feesCents: number): string {
+  const who = `${households} ${households === 1 ? "household" : "households"}`;
+  return feesCents > 0 ? `${who}, ${money(feesCents, { cents: false })} of it late fees` : who;
 }
 
 export function budgetSummary(c: Community) {
@@ -104,7 +134,8 @@ export function ledgerYears(c: Community): number[] {
  *
  * Reserve transfers are excluded from both sides: moving cash between the
  * association's own accounts is neither income nor spending, and counting it
- * would inflate every month a board does the responsible thing.
+ * would inflate every month a board does the responsible thing. Opening
+ * balances are left out for the same reason: the money was already there.
  *
  * Figures, not pixels, so the same rows can back a chart and a CSV.
  */
@@ -120,7 +151,7 @@ export function monthlyFlows(c: Community, year: number, through?: string) {
     outCents: 0,
   }));
   for (const e of c.ledger) {
-    if (e.category === "Reserve transfer") continue;
+    if (e.category === "Reserve transfer" || e.category === "Opening balance") continue;
     if (Number(e.date.slice(0, 4)) !== year) continue;
     const row = months[Number(e.date.slice(5, 7)) - 1];
     if (!row) continue;
@@ -547,7 +578,10 @@ export function filterLedger(ledger: Community["ledger"], f: LedgerFilter) {
  */
 export function ledgerTotals(rows: Community["ledger"]) {
   const counted = rows.filter((e) => e.status !== "needs-review");
-  const flows = counted.filter((e) => e.category !== "Reserve transfer");
+  // A starting balance is money the association already had, not money in.
+  const flows = counted.filter(
+    (e) => e.category !== "Reserve transfer" && e.category !== "Opening balance",
+  );
   const inCents = flows.reduce((t, e) => t + (e.amountCents > 0 ? e.amountCents : 0), 0);
   const outCents = flows.reduce((t, e) => t + (e.amountCents < 0 ? -e.amountCents : 0), 0);
   const running = new Map<string, number>();

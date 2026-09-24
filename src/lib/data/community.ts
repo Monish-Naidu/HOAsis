@@ -72,6 +72,8 @@ export interface Community {
   pendingPayments?: PendingPayment[];
 
   bankAccounts: BankAccount[];
+  /** An owner's funds summary was asked for and the call failed. */
+  fundsUnavailable?: boolean;
   ledger: LedgerEntry[];
   budget: BudgetLine[];
   /** Share of the fiscal year elapsed, used to judge whether spending is on pace. */

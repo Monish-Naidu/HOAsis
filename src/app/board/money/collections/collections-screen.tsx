@@ -6,7 +6,7 @@ import { CollectionPolicyCard } from "@/components/app/collection-policy";
 import { AgingBar } from "@/components/app/board-charts";
 import { StatTile } from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
-import { agingBuckets, delinquency, duesCollection } from "@/lib/metrics";
+import { agingBuckets, delinquency, duesCollection, lateFeesOwed, pastDueHint } from "@/lib/metrics";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -38,7 +38,7 @@ export function CollectionsScreen() {
           label="Past due"
           value={money(aging.pastDueCents, { cents: false })}
           tone={aging.pastDueCount ? "warn" : undefined}
-          hint={pluralize(aging.pastDueCount, "household")}
+          hint={pastDueHint(aging.pastDueCount, lateFeesOwed(community))}
         />
         <StatTile
           label="On autopay"

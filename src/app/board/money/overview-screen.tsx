@@ -20,6 +20,8 @@ import {
   monthName,
   monthlyFlows,
   spendingByCategory,
+  lateFeesOwed,
+  pastDueHint,
 } from "@/lib/metrics";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
@@ -125,17 +127,19 @@ export function OverviewScreen() {
           href="/board/reserves"
         />
         <StatTile
-          label="Waiting on you"
+          // The dashboard's row for the same lines says "to confirm"; "waiting
+          // on you" there means vendor bills, so this tile says what it counts.
+          label="To confirm"
           value={String(needsReview.length)}
           tone={needsReview.length ? "warn" : undefined}
-          hint="Held out of reports until confirmed"
+          hint={needsReview.length ? "Held out of reports until confirmed" : "Every transaction is confirmed"}
           href="/board/money/transactions?status=needs-review"
         />
         <StatTile
           label="Past due"
           value={money(aging.pastDueCents, { cents: false })}
           tone={aging.pastDueCount ? "warn" : undefined}
-          hint={pluralize(aging.pastDueCount, "household")}
+          hint={pastDueHint(aging.pastDueCount, lateFeesOwed(community))}
           href="/board/money/collections"
         />
       </div>

@@ -1,7 +1,7 @@
 import type { PreviousSetup } from "@/lib/data/new-community";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Community } from "./community";
-import type { Account, Capability, ChargeLine, CommunitySettings, Owner } from "@/lib/types";
+import type { Account, Capability, ChargeLine, CommunitySettings, Owner, Payout } from "@/lib/types";
 import { caps } from "./accounts";
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
@@ -81,6 +81,16 @@ async function everyRow<T>(
     rows.push(...(data ?? []));
     if ((data ?? []).length < 1000) return { data: rows, error: null };
   }
+}
+
+/**
+ * A payout's status, read defensively. The column is text, and one row with a
+ * word the board screens do not know used to take the whole Vendors page
+ * down. Anything unknown reads as the step it is actually at.
+ */
+function payoutStatus(raw: string, approvals: number, required: number): Payout["status"] {
+  if (raw === "paid" || raw === "in-transit" || raw === "scheduled" || raw === "needs-approval") return raw;
+  return approvals >= required ? "scheduled" : "needs-approval";
 }
 
 /** What `association_funds` returns: the part of the books an owner may see. */
@@ -206,11 +216,14 @@ export async function loadCommunity(
   // from one function instead: balances, this year's totals by category, and
   // recent spending. Only asked when the tables came back empty, which is
   // what they do for anyone without the finances capability.
-  const funds =
+  const fundsCall =
     (banks.data ?? []).length || (ledger.data ?? []).length
       ? null
-      : (((await supabase.rpc("association_funds", { p_association_id: associationId })).data ??
-          null) as FundsSummary | null);
+      : await supabase.rpc("association_funds", { p_association_id: associationId });
+  const funds = ((fundsCall?.data ?? null) as FundsSummary | null);
+  // A failed call is not an empty association. Saying $0 in every fund
+  // is worse than saying nothing, so the page is told it could not ask.
+  const fundsUnavailable = Boolean(fundsCall?.error);
 
   // Display preferences with no column of their own live in a jsonb patch.
   const stored = (a.settings ?? {}) as Partial<CommunitySettings>;
@@ -413,6 +426,7 @@ export async function loadCommunity(
       createdAt: p.created_at,
     })),
 
+    fundsUnavailable,
     bankAccounts: funds
       ? funds.accounts.map((b) => ({
           id: b.id,
@@ -617,7 +631,7 @@ export async function loadCommunity(
       invoiceNumber: p.invoice_number,
       amountCents: p.amount_cents,
       method: p.method,
-      status: p.status,
+      status: payoutStatus(p.status, (p.approvals ?? []).length, p.approvals_required),
       issuedDate: p.issued_on,
       expectedDate: p.expected_on,
       approvals: (p.approvals ?? []) as { name: string; at: string }[],

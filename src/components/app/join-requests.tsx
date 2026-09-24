@@ -26,7 +26,9 @@ export function JoinRequests() {
   const { notify } = useToast();
   const pending = community.joinRequests.filter((j) => j.status === "pending");
   const decided = community.joinRequests.filter((j) => j.status !== "pending");
-  if (pending.length === 0 && decided.length === 0) return null;
+  // Nobody waiting is not news. The card shows up when somebody asks, and
+  // what was decided is in each household's history.
+  if (pending.length === 0) return null;
 
   const approve = async (request: JoinRequest, unit: string) => {
     try {

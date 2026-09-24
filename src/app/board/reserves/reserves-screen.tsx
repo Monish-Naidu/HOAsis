@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, PiggyBank, Plus } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, PiggyBank, Plus } from "lucide-react";
 import { Button, Callout, Card, CardHeader, Meter, PageHeader, Stat } from "@/components/ui/primitives";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
 import { ReserveStudyCard } from "@/components/app/reserve-study-card";
+import { ReserveTransferForm } from "@/components/app/reserve-transfer-form";
 import { cashPosition, reserveSummary } from "@/lib/metrics";
 import { fundingBand } from "@/lib/reserves";
 import { useAppState } from "@/lib/app-state";
@@ -21,14 +22,30 @@ import { money, pluralize, shortMoney, today } from "@/lib/utils";
  */
 export function ReservesScreen() {
   const { community } = useAppState();
-  const [adding, setAdding] = useState(false);
-  const addButton = adding ? undefined : (
-    <Button variant="secondary" size="md" onClick={() => setAdding(true)}>
-      <Plus className="size-3.5" />
-      Add a component
-    </Button>
+  const [open, setOpen] = useState<"component" | "transfer" | null>(null);
+  const hasAccounts =
+    community.bankAccounts.some((b) => b.kind === "operating") &&
+    community.bankAccounts.some((b) => b.kind !== "operating");
+  const addButton = open ? undefined : (
+    <div className="flex flex-wrap gap-2">
+      {hasAccounts ? (
+        <Button variant="secondary" size="md" onClick={() => setOpen("transfer")}>
+          <ArrowRightLeft className="size-3.5" />
+          Move money to reserves
+        </Button>
+      ) : null}
+      <Button variant="secondary" size="md" onClick={() => setOpen("component")}>
+        <Plus className="size-3.5" />
+        Add a component
+      </Button>
+    </div>
   );
-  const addForm = adding ? <AddReserveComponent onClose={() => setAdding(false)} /> : null;
+  const addForm =
+    open === "component" ? (
+      <AddReserveComponent onClose={() => setOpen(null)} />
+    ) : open === "transfer" ? (
+      <ReserveTransferForm onClose={() => setOpen(null)} />
+    ) : null;
   const components = community.reserveComponents;
   const summary = reserveSummary(community);
   const band = fundingBand(summary.percentFunded);
@@ -155,6 +172,19 @@ export function ReservesScreen() {
           hint={next ? `${next.name}, ${shortMoney(next.replacementCostCents)}` : ""}
         />
       </div>
+
+      {/* Components cannot hold more than the accounts do. When they claim
+          to, the funding figure above is a promise, not a balance. */}
+      {summary.funded > inAccounts ? (
+        <Callout
+          tone="warn"
+          icon={<AlertTriangle className="size-4" />}
+          title={`Components claim ${money(summary.funded, { cents: false })}, the reserve account holds ${money(inAccounts, { cents: false })}`}
+          className="mt-6"
+        >
+          Record the transfers that moved money in, or lower what each component has set aside.
+        </Callout>
+      ) : null}
 
       {behind.length ? (
         <Callout

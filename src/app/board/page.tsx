@@ -16,11 +16,12 @@ import {
 import { Callout, Card, CardHeader, IconTile, Stat, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
-import { cashPosition, delinquency, duesCollection, insuranceExposure, vendorDecisions } from "@/lib/metrics";
+import { cashPosition, delinquency, duesCollection, insuranceExposure, lateFeesOwed, vendorDecisions } from "@/lib/metrics";
 import { SectionLink } from "@/components/app/finance-ui";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
+import { mayOpen } from "@/lib/board-routes";
 import { daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -36,7 +37,10 @@ import { daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib
  */
 
 export default function BoardDashboard() {
-  const { community } = useAppState();
+  const { community, can } = useAppState();
+  // The plan counts things only the finance and settings holders can see,
+  // so anybody else would be told a finished setup was two steps short.
+  const seesSetup = mayOpen("/board/setup", can);
   // Something to run: money has moved, or somebody has asked for something.
   const running =
     community.ledger.length > 0 ||
@@ -58,7 +62,7 @@ export default function BoardDashboard() {
           nothing and looks broken. The setup plan is the page for them. */}
       {!running ? (
         <>
-          <SetupPlanSummary />
+          {seesSetup ? <SetupPlanSummary /> : null}
           <Card className="p-6">
             <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
               Nothing to run yet
@@ -96,9 +100,11 @@ export default function BoardDashboard() {
           {/* One line while setup is unfinished, pointing at the list, which
               lives on its own page. Below the work, because once dues are
               moving the work is what a director opens this for. */}
-          <div className="mt-6">
-            <SetupPlanSummary />
-          </div>
+          {seesSetup ? (
+            <div className="mt-6">
+              <SetupPlanSummary />
+            </div>
+          ) : null}
         </>
       )}
     </>
@@ -117,7 +123,7 @@ export default function BoardDashboard() {
  * six zeroes.
  */
 function NeedsYou() {
-  const { community, requests } = useAppState();
+  const { community, requests, can } = useAppState();
   const recon = useReconciliation();
   const vendors = vendorDecisions(community);
   const openRequests = requests.filter(
@@ -178,7 +184,8 @@ function NeedsYou() {
       tint: "coral",
     },
   ];
-  const rows = all.filter((row) => row.count > 0);
+  // Only what this seat can act on, so the count here is work they can do.
+  const rows = all.filter((row) => row.count > 0 && mayOpen(row.href, can));
 
   return (
     <Card className="mt-6">
@@ -229,7 +236,8 @@ function NeedsYou() {
  * Each tile is the way into the page that has the rest.
  */
 function StatTiles() {
-  const { community } = useAppState();
+  const { community, can } = useAppState();
+  const seesMoney = mayOpen("/board/money", can);
   const cash = cashPosition(community);
   const delinq = delinquency(community);
   const thisYear = Number(todayIsoDate().slice(0, 4));
@@ -241,8 +249,14 @@ function StatTiles() {
       .filter((m) => m.status === "scheduled" && daysFromToday(m.date) >= 0)
       .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
 
+  // Money tiles only for those who can read the books. Without the finances
+  // capability the ledger comes back empty, and "$0, everyone is current"
+  // is a false statement, not a hidden one.
+  const columns = seesMoney ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2";
   return (
-    <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className={`stagger grid gap-4 ${columns}`}>
+      {seesMoney ? (
+        <>
       <Stat
         icon={<Landmark className="size-4" />}
         accent="teal"
@@ -259,7 +273,7 @@ function StatTiles() {
         tone={delinq.past.length > 0 ? "warn" : "neutral"}
         hint={
           delinq.past.length > 0
-            ? `${delinq.past.length === 1 ? "Household" : "Households"}, ${money(delinq.totalCents, { cents: false })} owed`
+            ? `${delinq.past.length === 1 ? "Household" : "Households"}, ${money(delinq.totalCents, { cents: false })} owed${lateFeesOwed(community) ? `, ${money(lateFeesOwed(community), { cents: false })} of it fees` : ""}`
             : "Everyone is current"
         }
         href="/board/money/collections"
@@ -277,6 +291,8 @@ function StatTiles() {
         }
         href="/board/money/collections"
       />
+        </>
+      ) : null}
       <Stat
         icon={<CalendarDays className="size-4" />}
         accent="amber"
@@ -292,7 +308,7 @@ function StatTiles() {
         }
         tone={liveMeeting ? "ok" : "neutral"}
         hint={nextMeeting ? `${nextMeeting.title} · ${nextMeeting.time}` : "Schedule one from Meetings"}
-        href="/board/meetings"
+        href={mayOpen("/board/meetings", can) ? "/board/meetings" : undefined}
       />
     </div>
   );

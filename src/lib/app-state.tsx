@@ -241,6 +241,12 @@ interface AppState {
     category?: Community["ledger"][number]["category"],
   ) => () => void;
   dismissLedgerEntry: (entryId: string) => () => void;
+  /**
+   * Money moved from operating into reserves: two lines, one per account, so
+   * both balances move. A transfer booked on the operating side alone read
+   * as a negative operating balance and a reserve account that never grew.
+   */
+  recordReserveTransfer: (amountCents: number, date: string) => void;
   approvePayout: (payoutId: string) => void;
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
@@ -2955,6 +2961,66 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
+  const recordReserveTransfer = useCallback(
+    (amountCents: number, date: string) => {
+      if (amountCents <= 0) throw new ValidationError("Enter an amount", { amount: "Enter an amount" });
+      const source = remote.community ?? null;
+      const accounts = source ? source.bankAccounts : bankAccountList;
+      const operating = accounts.find((b) => b.kind === "operating");
+      const reserve = accounts.find((b) => b.kind !== "operating");
+      if (!operating || !reserve) {
+        throw new ValidationError("Add an operating and a reserve account first", {});
+      }
+      const pair = [
+        { accountId: operating.id, amountCents: -amountCents, description: "Transfer to reserve account", counterparty: reserve.name },
+        { accountId: reserve.id, amountCents, description: "Transfer from operating account", counterparty: operating.name },
+      ];
+      if (source) {
+        void remoteWrite("Recording the transfer", () =>
+          supabaseBrowser().from("ledger_entries").insert(
+            pair.map((line) => ({
+              association_id: source.id,
+              bank_account_id: isUuid(line.accountId) ? line.accountId : null,
+              occurred_on: date,
+              description: line.description,
+              counterparty: line.counterparty,
+              category: "Reserve transfer",
+              amount_cents: line.amountCents,
+              confirmed_at: new Date().toISOString(),
+            })),
+          ),
+        );
+        return;
+      }
+      sliceStore(communityId, "ledger").update((all) =>
+        [
+          ...pair.map((line) => ({
+            id: newId(),
+            date,
+            description: line.description,
+            counterparty: line.counterparty,
+            category: "Reserve transfer" as const,
+            accountId: line.accountId,
+            amountCents: line.amountCents,
+            status: "cleared" as const,
+          })),
+          ...all,
+        ].sort((a, b) => b.date.localeCompare(a.date)),
+      );
+      // The demo's balances are stored, not summed, so they move by hand.
+      sliceStore(communityId, "bankAccounts").update((all) =>
+        all.map((b) =>
+          b.id === operating.id
+            ? { ...b, balanceCents: b.balanceCents - amountCents }
+            : b.id === reserve.id
+              ? { ...b, balanceCents: b.balanceCents + amountCents }
+              : b,
+        ),
+      );
+    },
+    [remote.community, bankAccountList, communityId],
+  );
+
   const approvePayout = useCallback(
     (payoutId: string) => {
       if (remote.community) {
@@ -3964,6 +4030,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     removeInstrument,
     setDefaultInstrument,
     confirmLedgerEntry,
+    recordReserveTransfer,
     dismissLedgerEntry,
     approvePayout,
     markW9Requested,
