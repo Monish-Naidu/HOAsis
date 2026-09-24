@@ -429,7 +429,7 @@ export async function loadCommunity(
 
     fundsUnavailable,
     bankAccounts: funds
-      ? funds.accounts.map((b) => ({
+      ? funds.accounts.map((b, i, all) => ({
           id: b.id,
           name: `${b.kind[0].toUpperCase()}${b.kind.slice(1)} account`,
           institution: b.institution,
@@ -441,7 +441,12 @@ export async function loadCommunity(
           reconciledThroughDate: today,
           unreconciledCount: 0,
           apy: 0,
-          interestYtdCents: 0,
+          // The owner's summary has interest by category, not by account, so
+          // this year's total sits on the first reserve account.
+          interestYtdCents:
+            b.kind !== "operating" && all.findIndex((x) => x.kind !== "operating") === i
+              ? fundsActual(funds, "Interest income", "income")
+              : 0,
           insuredLimitCents: 250_000_00,
         }))
       : (banks.data ?? []).map((b) => ({
@@ -453,15 +458,28 @@ export async function loadCommunity(
       // What the books say is in the account. There is no bank feed yet, so
       // the ledger is the only source; a fixed zero read as "broke" on the
       // dashboard of an association with a year of dues behind it.
+      // Confirmed lines only, as association_funds counts them for owners,
+      // so a line waiting on review cannot make the two balances differ.
       balanceCents: (ledger.data ?? [])
-        .filter((e) => e.bank_account_id === b.id)
+        .filter((e) => e.bank_account_id === b.id && e.confirmed_at !== null)
         .reduce((total, e) => total + e.amount_cents, 0),
       syncedMinutesAgo: 0,
       status: "live" as const,
       reconciledThroughDate: today,
       unreconciledCount: 0,
       apy: 0,
-      interestYtdCents: 0,
+      // From the books, this fiscal year. It was a fixed zero beside a
+      // list of interest payments.
+      interestYtdCents: (ledger.data ?? [])
+        .filter(
+          (e) =>
+            e.bank_account_id === b.id &&
+            e.category === "Interest income" &&
+            e.amount_cents > 0 &&
+            e.confirmed_at !== null &&
+            e.occurred_on >= fiscalYearFrom,
+        )
+        .reduce((total, e) => total + e.amount_cents, 0),
       insuredLimitCents: 250_000_00,
     })),
 

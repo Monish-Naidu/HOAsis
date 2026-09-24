@@ -13,6 +13,7 @@ import {
   Receipt,
   ShieldAlert,
   UserPlus,
+  Users,
 } from "lucide-react";
 import { Callout, Card, CardHeader, IconTile, Stat, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
@@ -256,6 +257,10 @@ function NeedsYou() {
 function StatTiles() {
   const { community, can } = useAppState();
   const seesMoney = mayOpen("/board/money", can);
+  const households = community.owners.filter((o) => !o.placeholder).length;
+  const signedUp = community.owners.filter(
+    (o) => !o.placeholder && community.accounts.some((a) => a.ownerId === o.id),
+  ).length;
   const cash = cashPosition(community);
   const delinq = delinquency(community);
   const thisYear = Number(todayIsoDate().slice(0, 4));
@@ -312,7 +317,18 @@ function StatTiles() {
         href="/board/money/collections"
       />
         </>
-      ) : null}
+      ) : (
+        // In place of the money: who is here yet. The officers who keep
+        // owners informed are the ones who chase the sign-ups.
+        <Stat
+          icon={<Users className="size-4" />}
+          accent="violet"
+          label="Homes signed up"
+          value={<CountUp kind="number" value={signedUp} />}
+          hint={`of ${pluralize(households, "home")}`}
+          href={mayOpen("/board/homeowners", can) ? "/board/homeowners" : undefined}
+        />
+      )}
       <Stat
         icon={<CalendarDays className="size-4" />}
         accent="amber"

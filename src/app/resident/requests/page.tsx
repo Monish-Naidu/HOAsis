@@ -31,7 +31,8 @@ export default function ResidentRequests() {
         action={
           <ButtonLink href="/resident/requests/new" variant="primary" size="md">
             <Plus className="size-3.5" />
-            New request
+            <span className="sm:hidden">New</span>
+            <span className="hidden sm:inline">New request</span>
           </ButtonLink>
         }
       />

@@ -164,7 +164,9 @@ export function SettingsScreen() {
         description="Name, visibility, board members, and billing."
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      {/* Cards keep their own height. Stretched to their row partner, Dues
+          and Resident home were two thirds empty space. */}
+      <div className="grid items-start gap-6 xl:grid-cols-2">
         {/* Identity */}
         <Card>
           <CardHeader title="Identity" subtitle="The join code, the name, and the photo" />

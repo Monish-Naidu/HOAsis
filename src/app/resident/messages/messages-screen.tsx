@@ -65,12 +65,14 @@ export function MessagesScreen() {
     <div className="animate-rise space-y-6">
       <ResidentTitle
         title="Messages"
-        subtitle="Questions for the board, and their answers."
+        subtitle="Questions for the board."
         action={
           composing ? undefined : (
             <Button variant="primary" size="md" onClick={() => setComposing(true)}>
               <Plus className="size-3.5" />
-              New message
+              {/* One word on a phone, where the title shares the row. */}
+              <span className="sm:hidden">New</span>
+              <span className="hidden sm:inline">New message</span>
             </Button>
           )
         }
@@ -172,7 +174,11 @@ function ThreadRow({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="truncate text-[15px] font-medium text-fg">{thread.subject}</span>
-            {waitingOnBoard ? <Badge tone="neutral">Sent</Badge> : <Badge tone="info">Board replied</Badge>}
+            {waitingOnBoard ? (
+              <Badge tone="neutral">Waiting on the board</Badge>
+            ) : (
+              <Badge tone="info">Board replied</Badge>
+            )}
           </span>
           <span className="mt-0.5 line-clamp-1 block text-[13px] text-fg-muted">
             {last ? `${last.fromRole === "resident" ? "You" : last.from}: ${last.body}` : ""}

@@ -47,29 +47,35 @@ export default function ResidentFinances() {
 
       <SharedCostCard community={community} />
 
-      {/* Interest */}
+      {/* Interest. The rate and the full-year figure need the bank's APY,
+          which only a bank feed knows; without one they read 0.00% and $0
+          beside real interest payments, so only what the books show is shown. */}
       <section>
         <SectionTitle>What the reserves earn</SectionTitle>
         <Card className="p-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className={interest.blendedApy > 0 ? "grid grid-cols-3 gap-3" : ""}>
+            {interest.blendedApy > 0 ? (
+              <div>
+                <p className="text-[13px] text-fg-subtle">Blended rate</p>
+                <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
+                  {interest.blendedApy.toFixed(2)}%
+                </p>
+              </div>
+            ) : null}
             <div>
-              <p className="text-[13px] text-fg-subtle">Blended rate</p>
-              <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
-                {interest.blendedApy.toFixed(2)}%
-              </p>
-            </div>
-            <div>
-              <p className="text-[13px] text-fg-subtle">Interest YTD</p>
+              <p className="text-[13px] text-fg-subtle">Interest this year</p>
               <p className="tnum mt-1 text-[17px] font-semibold leading-none text-ok">
                 {money(interest.earnedYtd, { cents: false })}
               </p>
             </div>
-            <div>
-              <p className="text-[13px] text-fg-subtle">Full year</p>
-              <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
-                {money(interest.projectedAnnual, { cents: false })}
-              </p>
-            </div>
+            {interest.blendedApy > 0 ? (
+              <div>
+                <p className="text-[13px] text-fg-subtle">Full year</p>
+                <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
+                  {money(interest.projectedAnnual, { cents: false })}
+                </p>
+              </div>
+            ) : null}
           </div>
         </Card>
       </section>
@@ -93,16 +99,19 @@ export default function ResidentFinances() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
                 <p className="truncate text-[13px] text-fg-muted">
-                  {a.institution} · {a.apy.toFixed(2)}% APY
+                  {a.institution}
+                  {a.apy > 0 ? ` · ${a.apy.toFixed(2)}% APY` : ""}
                 </p>
               </div>
               <div className="shrink-0 text-right">
                 <p className="tnum text-[15px] font-semibold text-fg">
                   {money(a.balanceCents, { cents: false })}
                 </p>
-                <p className="tnum text-[13px] text-ok">
-                  {money(a.interestYtdCents, { cents: false })} earned
-                </p>
+                {a.interestYtdCents > 0 ? (
+                  <p className="tnum text-[13px] text-ok">
+                    {money(a.interestYtdCents, { cents: false })} earned
+                  </p>
+                ) : null}
               </div>
             </div>
           ))}
