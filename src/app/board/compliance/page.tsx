@@ -12,16 +12,7 @@ import {
   Info,
   Scale,
 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Meter,
-  PageHeader,
-  Stat,
-} from "@/components/ui/primitives";
+import { Badge, Button, ButtonLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from "@/components/ui/primitives";
 import { interestSummary } from "@/lib/metrics";
 import { complianceRegister } from "@/lib/compliance";
 import type { ObligationCadence } from "@/lib/data/obligations";
@@ -235,13 +226,14 @@ export default function BoardCompliance() {
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {item.href ? (
-                        <Link
+                        <ButtonLink
                           href={item.href}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-semibold text-brand-fg"
+                          variant="primary"
+                          size="sm"
                         >
                           Open the screen that holds it
                           <ArrowRight className="size-3.5" />
-                        </Link>
+                        </ButtonLink>
                       ) : null}
                       {item.article ? (
                         <Link

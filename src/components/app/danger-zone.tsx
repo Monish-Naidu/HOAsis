@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRightLeft, LogOut, RotateCcw, Trash2 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, Select } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { useToast } from "@/components/app/toast";
@@ -115,10 +115,10 @@ export function DangerZone() {
               <span className="mb-1.5 block text-[13px] font-medium text-fg">
                 Who takes over
               </span>
-              <select
+              <Select
                 value={successor}
                 onChange={(e) => setSuccessor(e.target.value)}
-                className={inputClass}
+                className="w-full [&>select]:h-10"
               >
                 <option value="">Choose a household</option>
                 {others.map((a) => (
@@ -126,7 +126,7 @@ export function DangerZone() {
                     {a.name} · {homeLabel(community, a.unit)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             {!others.length ? (
               <Callout tone="warn" title="There is nobody else yet">

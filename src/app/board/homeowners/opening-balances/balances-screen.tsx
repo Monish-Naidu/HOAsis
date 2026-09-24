@@ -3,14 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Scale } from "lucide-react";
-import {
-  Button,
-  Callout,
-  Card,
-  CardHeader,
-  EmptyState,
-  PageHeader,
-} from "@/components/ui/primitives";
+import { Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { money, pluralize } from "@/lib/utils";
@@ -91,12 +84,13 @@ export function BalancesScreen() {
             title="No homes on the register yet"
             description="Add homes first, then enter their balances."
             action={
-              <Link
+              <ButtonLink
                 href="/board/homeowners"
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90"
+                variant="primary"
+                size="md"
               >
                 Go to the roster
-              </Link>
+              </ButtonLink>
             }
           />
         </Card>

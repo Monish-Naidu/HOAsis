@@ -80,7 +80,7 @@ export const MODULES: Record<ModuleKey, ModuleFlag> = {
   },
   vendors: { label: "Vendors", on: true },
   requests: { label: "Requests", on: true },
-  reserves: { label: "Reserve Study", on: true },
+  reserves: { label: "Reserves", on: true },
   compliance: {
     label: "Compliance",
     on: false,

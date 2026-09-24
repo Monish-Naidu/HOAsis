@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalendarOff, Clock, Plus, SlidersHorizontal, X } from "lucide-react";
-import { Button, Select } from "@/components/ui/primitives";
+import { Button, Checkbox, Select } from "@/components/ui/primitives";
 import { describeRules, formatMinute, rulesFor } from "@/lib/bookings";
 import type { Blackout, BookingRules, CommunityAmenity } from "@/lib/types";
 import { formatDate, todayIsoDate } from "@/lib/utils";
@@ -165,11 +165,10 @@ export function AmenityRules({
           </div>
 
           <label className="mt-4 flex items-start gap-2.5">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={rules.needsApproval ?? false}
               onChange={(e) => set({ needsApproval: e.target.checked })}
-              className="mt-0.5 size-4 rounded border-border-2"
+              className="mt-0.5"
             />
             <span className="min-w-0">
               <span className="block text-[15px] font-medium text-fg">

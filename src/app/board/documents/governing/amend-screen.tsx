@@ -13,6 +13,7 @@ import {
   EmptyState,
   PageHeader,
   Segmented,
+  Select,
 } from "@/components/ui/primitives";
 import { GoverningReader } from "@/components/app/governing-reader";
 import { AmendmentDiff } from "@/components/app/amendment-diff";
@@ -312,17 +313,17 @@ export function AmendScreen() {
             {drafting !== "add" ? (
               <label className="block">
                 <span className="text-[13px] font-semibold text-fg-muted">Which article</span>
-                <select
+                <Select
                   value={targetId}
                   onChange={(e) => pickTarget(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+                  className="mt-1.5 w-full [&>select]:h-10"
                 >
                   {articles.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.number}: {a.title}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">

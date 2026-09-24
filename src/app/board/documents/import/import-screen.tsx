@@ -16,8 +16,10 @@ import {
   Callout,
   Card,
   CardHeader,
+  Checkbox,
   EmptyState,
   PageHeader,
+  Select,
 } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -406,13 +408,12 @@ function ArticleRow({
   return (
     <div className={cn("px-5 py-4", !keeping && "opacity-60")}>
       <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={keeping}
           disabled={alreadyOnFile || empty}
           onChange={(e) => onChange({ keep: e.target.checked })}
           aria-label={`Keep ${article.number}`}
-          className="mt-1 size-4 shrink-0 accent-[var(--brand)] disabled:opacity-50"
+          className="mt-1 disabled:opacity-50"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -457,31 +458,31 @@ function ArticleRow({
             <div className="mt-3 space-y-3 rounded-lg border border-border bg-surface-2 px-3 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13px] font-semibold text-fg-muted">Filed under</span>
-                <select
+                <Select
+                  size="sm"
                   value={choice.topic}
                   onChange={(e) => onChange({ topic: e.target.value as GoverningTopic })}
                   aria-label={`Topic for ${article.number}`}
-                  className="h-7 rounded-md border border-border bg-surface px-2 text-[13px] font-medium text-fg outline-none"
                 >
                   {(Object.keys(TOPIC_LABEL) as GoverningTopic[]).map((topic) => (
                     <option key={topic} value={topic}>
                       {TOPIC_LABEL[topic]}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <span className="text-[13px] font-semibold text-fg-muted">Applies to</span>
-                <select
+                <Select
+                  size="sm"
                   value={choice.affects}
                   onChange={(e) =>
                     onChange({ affects: e.target.value as Choice["affects"] })
                   }
                   aria-label={`Who ${article.number} applies to`}
-                  className="h-7 rounded-md border border-border bg-surface px-2 text-[13px] font-medium text-fg outline-none"
                 >
                   <option value="owners">Owners</option>
                   <option value="board">The board</option>
                   <option value="both">Everyone</option>
-                </select>
+                </Select>
               </div>
 
               <div>
@@ -509,7 +510,7 @@ function ArticleRow({
                         className={cn(
                           "rounded-full border px-2.5 py-1 text-[13px] font-medium transition-colors",
                           on
-                            ? "border-brand bg-brand text-brand-fg"
+                            ? "border-primary bg-primary-soft text-primary"
                             : suggested
                               ? "border-warn/40 bg-warn-soft text-fg-muted hover:text-fg"
                               : "border-border-2 bg-surface text-fg-subtle hover:text-fg",

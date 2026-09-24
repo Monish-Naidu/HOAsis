@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, Copy, FileText, Scale } from "lucide-react";
-import {
-  Button,
-  Callout,
-  Card,
-  CardHeader,
-  EmptyState,
-  PageHeader,
-} from "@/components/ui/primitives";
+import { Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { DisclosureSummary } from "@/components/app/disclosure-summary";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -110,12 +103,13 @@ export function NewOwnerScreen() {
             title="Your documents are files, not text"
             description="Import the text of your declaration and rules to answer these."
             action={
-              <Link
+              <ButtonLink
                 href="/board/documents/import"
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-medium text-brand-fg transition-opacity hover:opacity-90"
+                variant="primary"
+                size="md"
               >
                 Import the text
-              </Link>
+              </ButtonLink>
             }
           />
         </Card>

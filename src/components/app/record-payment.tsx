@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Receipt, X } from "lucide-react";
-import { Button, Card, CardHeader, Select } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Checkbox, Select } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { money, todayIsoDate } from "@/lib/utils";
@@ -132,11 +132,10 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
         </label>
 
         <label className="flex items-start gap-2.5">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={throughUs}
             onChange={(e) => setThroughUs(e.target.checked)}
-            className="mt-0.5 size-4 rounded border-border-2"
+            className="mt-0.5"
           />
           <span className="min-w-0">
             <span className="block text-[15px] font-medium text-fg">

@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { ListChecks, Plus, X } from "lucide-react";
-import { Button, Card, CardHeader, EmptyState, Select } from "@/components/ui/primitives";
+import {
+  Button,
+  Card,
+  CardHeader,
+  Checkbox,
+  EmptyState,
+  Select,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { ActionItem } from "@/lib/types";
@@ -142,12 +149,11 @@ function Row({
   const late = !done && item.dueOn ? daysFromToday(item.dueOn) < 0 : false;
   return (
     <div className="group flex items-start gap-3 border-t border-border px-5 py-3 first:border-t-0">
-      <input
-        type="checkbox"
+      <Checkbox
         checked={Boolean(done)}
         onChange={onToggle}
         aria-label={done ? `Reopen: ${item.title}` : `Done: ${item.title}`}
-        className="mt-1 size-4 shrink-0 rounded border-border-2 accent-[var(--color-brand)]"
+        className="mt-1"
       />
       <div className="min-w-0 flex-1">
         <p

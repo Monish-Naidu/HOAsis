@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, CalendarClock, CreditCard } from "lucide-react";
-import { Callout } from "@/components/ui/primitives";
+import { ButtonLink, Callout } from "@/components/ui/primitives";
 import { billingPhase, type BillingPhase } from "@/lib/billing";
 import { useAppState } from "@/lib/app-state";
 import { monthlyFor } from "@/lib/pricing";
@@ -44,13 +44,14 @@ export function TrialBanner() {
   const price = `${money(monthlyFor(homes), { cents: false })} a month for ${homes} ${homes === 1 ? "home" : "homes"}`;
 
   const action = (
-    <Link
+    <ButtonLink
       href="/board/settings#billing"
-      className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-semibold text-brand-fg"
+      variant="secondary"
+      size="sm"
     >
       Add a card
       <ArrowRight className="size-3.5" />
-    </Link>
+    </ButtonLink>
   );
 
   if (phase.phase === "trialing") {
@@ -102,13 +103,14 @@ export function TrialBanner() {
         icon={<CreditCard className="size-4" />}
         title="The last payment for Your HOAsis did not go through"
         action={
-          <Link
+          <ButtonLink
             href="/board/settings#billing"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-[13px] font-semibold text-brand-fg"
+            variant="secondary"
+            size="sm"
           >
             Update the card
             <ArrowRight className="size-3.5" />
-          </Link>
+          </ButtonLink>
         }
       >
         Stripe will retry. Updating the card on file clears it sooner.
