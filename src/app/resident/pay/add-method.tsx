@@ -86,9 +86,9 @@ export function AddMethod({ onDone }: { onDone: () => void }) {
             onClick={() => setRail(id)}
             aria-pressed={rail === id}
             className={cn(
-              "flex flex-col items-center gap-1 py-3 text-[13px] font-medium transition-colors",
+              "-mb-px flex flex-col items-center gap-1 border-b-2 border-transparent py-3 text-[13px] font-medium transition-colors",
               rail === id
-                ? "border-b-2 border-navy-900 text-fg dark:border-navy-100"
+                ? "border-b-2 border-primary text-fg"
                 : "text-fg-muted hover:text-fg",
             )}
           >

@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { CheckCircle2, Clock3, CreditCard, ExternalLink, Info, Landmark } from "lucide-react";
-import { Badge, Button, Callout, Card } from "@/components/ui/primitives";
+import { Badge, Button, ButtonLink, Callout, Card } from "@/components/ui/primitives";
 import type { PaymentCost, PaymentInstrument } from "@/lib/payments/instruments";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -289,8 +288,8 @@ export function StripePayPanel({
   ];
   const rowClass = (active: boolean, disabled = false) =>
     cn(
-      "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-      active ? "border-navy-700 bg-brand-soft dark:border-navy-300" : "border-border",
+      "flex min-h-12 w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+      active ? "border-primary bg-primary-soft ring-1 ring-inset ring-primary" : "border-border",
       disabled ? "opacity-60" : !active && "hover:bg-surface-2",
     );
   return (
@@ -338,7 +337,7 @@ export function StripePayPanel({
                   href={instrument.verifyUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-brand hover:bg-surface-2"
+                  className="flex h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-accent hover:bg-surface-2"
                 >
                   Verify
                   <ExternalLink className="size-3" />
@@ -606,24 +605,13 @@ function Receipt({
         <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">{detail}</p>
         <div className="mt-5 flex flex-col gap-2">
           {link ? (
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex h-9 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
-            >
+            <ButtonLink href={link.url} target="_blank" rel="noreferrer" variant="primary" size="lg">
               {link.label}
-            </a>
+            </ButtonLink>
           ) : null}
-          <Link
-            href="/resident/account"
-            className={cn(
-              "flex h-9 items-center justify-center rounded-lg text-[15px] font-medium",
-              link ? "border border-border text-fg" : "bg-brand text-brand-fg",
-            )}
-          >
+          <ButtonLink href="/resident/account" variant={link ? "secondary" : "primary"} size="lg">
             View account
-          </Link>
+          </ButtonLink>
         </div>
       </Card>
       {tone === "ok" ? (
