@@ -57,14 +57,14 @@ export function StripeSetupPanel({
   if (problem) {
     return (
       <Card className="p-4">
-        <p className="text-[13px] font-medium text-danger">{problem}</p>
+        <p className="text-footnote font-medium text-danger">{problem}</p>
       </Card>
     );
   }
   if (!setup) {
     return (
       <Card className="p-4">
-        <p className="text-[13px] text-fg-muted">Opening a secure form…</p>
+        <p className="text-footnote text-fg-muted">Opening a secure form…</p>
       </Card>
     );
   }
@@ -172,10 +172,10 @@ function SetupForm({
   if (verifying) {
     return (
       <Card className="p-4">
-        <p className="text-[15px] font-medium text-fg">Verification started</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-          Two small deposits will land in that account in a day or two. Confirm the amounts and
-          the account is ready; until then it shows here as verifying.
+        <p className="text-body font-medium text-fg">One more step: confirm your bank</p>
+        <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
+          We will send two small deposits to that account in a day or two. Enter the amounts and
+          the account is ready. Until then it shows here as verifying.
         </p>
         <div className="mt-3 flex gap-2">
           {verifying.url ? (
@@ -183,7 +183,7 @@ function SetupForm({
               href={verifying.url}
               target="_blank"
               rel="noreferrer"
-              className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+              className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand text-body font-medium text-brand-fg"
             >
               Confirm deposits
               <ExternalLink className="size-3.5" />
@@ -205,7 +205,7 @@ function SetupForm({
           setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")
         }
       />
-      {problem ? <p className="mt-3 text-[13px] font-medium text-danger">{problem}</p> : null}
+      {problem ? <p className="mt-3 text-footnote font-medium text-danger">{problem}</p> : null}
       <Button
         variant="primary"
         size="lg"
@@ -215,7 +215,7 @@ function SetupForm({
       >
         {busy ? "Saving…" : "Save payment method"}
       </Button>
-      <p className="mt-2.5 flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
+      <p className="mt-2.5 flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
         <ShieldCheck className="mt-px size-3 shrink-0" />
         Handled by Stripe. Your card number or bank login never reaches Your HOAsis.
       </p>

@@ -27,14 +27,14 @@ export function BudgetScreen() {
     <>
       <PageHeader
         title="Budget"
-        description={`FY${year} adopted budget against actual, with ${elapsedPct}% of the year gone.`}
+        description={`The ${year} budget compared with actual spending, with ${elapsedPct}% of the year gone.`}
         action={<AddBudgetLine />}
       />
 
       {!v.hasBudget ? (
         <Card className="p-6">
-          <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">No budget yet</p>
-          <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-fg-muted">
+          <p className="text-headline font-semibold tracking-[-0.015em] text-fg">No budget yet</p>
+          <p className="mt-1.5 max-w-[60ch] text-body leading-relaxed text-fg-muted">
             Add the lines the association spends on and each one is measured against the share of
             the year gone, so an overrun shows in March rather than December.
           </p>
@@ -83,10 +83,10 @@ export function BudgetScreen() {
             kind="expense"
           />
 
-          <p className="mt-4 text-[13px] text-fg-muted">
+          <p className="mt-4 text-footnote text-fg-muted">
             Pace is the share of a line&apos;s annual budget used so far, against {elapsedPct}% of the
-            year gone. Variance is against the to-date allowance, positive when it favours the
-            association.
+            year gone. Difference is against the budget so far, positive when the association
+            is ahead.
           </p>
         </>
       )}
@@ -118,12 +118,12 @@ function BudgetTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left">
           <thead>
-            <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
+            <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
               <th className="px-5 py-2.5 font-semibold">Line</th>
               <th className="px-3 py-2.5 text-right font-semibold">Budget</th>
               <th className="px-3 py-2.5 text-right font-semibold">Actual</th>
               <th className="w-56 px-3 py-2.5 font-semibold">Pace</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Variance</th>
+              <th className="px-3 py-2.5 text-right font-semibold">Difference</th>
               <th className="px-5 py-2.5 text-right font-semibold">Left</th>
             </tr>
           </thead>
@@ -131,7 +131,7 @@ function BudgetTable({
             {rows.map((r) => {
               const flag = r.overPace || r.behind;
               return (
-                <tr key={r.category} className="border-b border-border text-[15px] transition-colors hover:bg-surface-2">
+                <tr key={r.category} className="border-b border-border text-body transition-colors hover:bg-surface-2">
                   <td className="px-5 py-3">
                     <span className="flex items-center gap-2 font-medium text-fg">
                       {r.category}
@@ -156,7 +156,7 @@ function BudgetTable({
                           style={{ left: `${Math.min(100, elapsed * 100)}%` }}
                         />
                       </div>
-                      <span className="tnum w-10 text-right text-[13px] text-fg-muted">{Math.round(r.pace * 100)}%</span>
+                      <span className="tnum w-10 text-right text-footnote text-fg-muted">{Math.round(r.pace * 100)}%</span>
                     </div>
                   </td>
                   <td
@@ -173,11 +173,11 @@ function BudgetTable({
             })}
           </tbody>
           <tfoot>
-            <tr className="text-[15px] font-semibold text-fg">
+            <tr className="text-body font-semibold text-fg">
               <td className="px-5 py-3">Total</td>
               <td className="tnum px-3 py-3 text-right">{money(total.annualCents, { cents: false })}</td>
               <td className="tnum px-3 py-3 text-right">{money(total.ytdActualCents, { cents: false })}</td>
-              <td className="tnum px-3 py-3 text-right text-[13px] text-fg-muted">{Math.round(total.pace * 100)}%</td>
+              <td className="tnum px-3 py-3 text-right text-footnote text-fg-muted">{Math.round(total.pace * 100)}%</td>
               <td
                 className={cn(
                   "tnum px-3 py-3 text-right",

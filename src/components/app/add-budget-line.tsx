@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Button, Card, CardHeader, Select } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Select, fieldClass } from "@/components/ui/primitives";
+import { cn } from "@/lib/utils";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { LedgerCategory } from "@/lib/types";
@@ -32,7 +33,7 @@ export function AddBudgetLine() {
   const [annual, setAnnual] = useState("");
 
   const field =
-    "h-10 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    cn(fieldClass, "w-auto");
   const cents = Math.round((Number(annual) || 0) * 100);
 
   function submit() {
@@ -79,7 +80,7 @@ export function AddBudgetLine() {
         }}
       >
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Category</span>
+          <span className="text-footnote font-semibold text-fg-muted">Category</span>
           <Select
             value={category}
             onChange={(e) => setCategory(e.target.value as (typeof CATEGORIES)[number])}
@@ -94,7 +95,7 @@ export function AddBudgetLine() {
           </Select>
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">A year</span>
+          <span className="text-footnote font-semibold text-fg-muted">A year</span>
           <input
             type="number"
             min="0"

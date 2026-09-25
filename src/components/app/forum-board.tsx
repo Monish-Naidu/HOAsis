@@ -54,7 +54,7 @@ function Chip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
+        "shrink-0 rounded-full px-3 py-1.5 text-footnote font-medium transition-colors",
         active
           ? "bg-brand-soft text-brand-soft-fg"
           : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -66,7 +66,7 @@ function Chip({
 }
 
 const actionButton =
-  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg";
+  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg";
 
 /**
  * Neighbor to neighbor. Nothing posted here creates an obligation for the
@@ -191,7 +191,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 onFocus={() => setComposing(true)}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Share something with your neighbors"
-                className="mt-1 w-full resize-none bg-transparent text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
+                className="mt-1 w-full resize-none bg-transparent text-body leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
               />
               {composing ? (
                 <>
@@ -203,7 +203,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                     ))}
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
-                    <p className="text-[13px] text-fg-subtle">
+                    <p className="text-footnote text-fg-subtle">
                       {isResident ? "A board member reviews it first." : "Posts right away."}
                     </p>
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -226,20 +226,20 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
       {moderate && pending.length > 0 ? (
         <Card as="section" className="divide-y divide-border">
           <div className="flex items-center gap-2 px-4 py-2.5">
-            <span className="text-[13px] font-semibold text-fg">Waiting for review</span>
-            <span className="text-[13px] text-fg-subtle">{pending.length}</span>
+            <span className="text-footnote font-semibold text-fg">Waiting for review</span>
+            <span className="text-footnote text-fg-subtle">{pending.length}</span>
           </div>
           {pending.map((post) => (
             <div key={post.id} className="flex items-start gap-3 px-4 py-3">
               <Avatar name={post.author} tone="neutral" />
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2 text-[13px]">
+                <div className="flex flex-wrap items-baseline gap-x-2 text-footnote">
                   <span className="font-semibold text-fg">{post.author}</span>
                   <span className="text-fg-subtle">
                     {placeLabel(post.unit)} · {post.category} · {when(post.at)}
                   </span>
                 </div>
-                <p className="mt-0.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
+                <p className="mt-0.5 line-clamp-2 text-body leading-relaxed text-fg-muted">
                   {post.body || post.title}
                 </p>
               </div>
@@ -299,7 +299,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 <div className="flex items-start gap-3">
                   <Avatar name={p.author} tone={p.authorRole ? "brand" : "neutral"} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote">
                       <span className="font-semibold text-fg">{p.author}</span>
                       {p.authorRole ? (
                         <Badge tone="brand">
@@ -311,7 +311,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                         <Pin className="size-3 text-fg-subtle" aria-label="Pinned" />
                       ) : null}
                     </div>
-                    <p className="text-[13px] text-fg-subtle">
+                    <p className="text-footnote text-fg-subtle">
                       {placeLabel(p.unit)} · {when(p.at)}
                     </p>
                   </div>
@@ -322,13 +322,13 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 </div>
 
                 {showTitle ? (
-                  <h2 className="mt-3 text-[17px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+                  <h2 className="mt-3 text-headline font-semibold leading-snug tracking-[-0.01em] text-fg">
                     {p.title}
                   </h2>
                 ) : null}
                 <p
                   className={cn(
-                    "whitespace-pre-line text-[15px] leading-relaxed text-fg",
+                    "whitespace-pre-line text-body leading-relaxed text-fg",
                     showTitle ? "mt-1" : "mt-3",
                     !expanded && "line-clamp-4",
                   )}
@@ -390,7 +390,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                         className="size-7 text-[11px]"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-footnote">
                           <span className="font-semibold text-fg">{r.author}</span>
                           {r.authorRole ? <Badge tone="brand">{r.authorRole}</Badge> : null}
                           <span className="text-fg-subtle">
@@ -398,7 +398,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                             {when(r.at)}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[15px] leading-relaxed text-fg">{r.body}</p>
+                        <p className="mt-0.5 text-body leading-relaxed text-fg">{r.body}</p>
                       </div>
                     </div>
                   ))}
@@ -420,7 +420,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                         onChange={(e) => setDraftReply(e.target.value)}
                         placeholder="Write a reply"
                         aria-label="Write a reply"
-                        className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-border-2"
+                        className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 text-body text-fg outline-none placeholder:text-fg-subtle focus:border-border-2"
                       />
                       <Button
                         type="submit"
@@ -434,7 +434,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                     </form>
                   ) : null}
                   {replyNote === p.id ? (
-                    <p className="text-[13px] text-fg-subtle">
+                    <p className="text-footnote text-fg-subtle">
                       Replies are not saved for this community yet.
                     </p>
                   ) : null}
@@ -447,7 +447,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
 
       {/* For a resident, the way to the board. The board is the board. */}
       {moderate ? null : (
-        <p className="text-[13px] text-fg-subtle">
+        <p className="text-footnote text-fg-subtle">
           Need a board decision? Send a request instead. Posts here carry no deadline.
         </p>
       )}

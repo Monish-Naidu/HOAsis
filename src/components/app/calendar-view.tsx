@@ -53,16 +53,16 @@ export function CalendarView({
             type="button"
             aria-label="Previous month"
             onClick={() => shift(-1)}
-            className="flex size-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
+            className="flex size-10 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <p className="text-[15px] font-semibold text-fg">{monthName(year, month)}</p>
+          <p className="text-body font-semibold text-fg">{monthName(year, month)}</p>
           <button
             type="button"
             aria-label="Next month"
             onClick={() => shift(1)}
-            className="flex size-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
+            className="flex size-10 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -72,7 +72,7 @@ export function CalendarView({
           {WEEKDAYS.map((d, i) => (
             <span
               key={i}
-              className="text-center text-[12px] font-semibold uppercase tracking-wide text-fg-subtle"
+              className="text-center text-caption font-semibold uppercase tracking-wide text-fg-subtle"
             >
               {d}
             </span>
@@ -97,7 +97,7 @@ export function CalendarView({
               >
                 <span
                   className={cn(
-                    "tnum flex size-6 items-center justify-center rounded-full text-[13px]",
+                    "tnum flex size-6 items-center justify-center rounded-full text-footnote",
                     c.isToday
                       ? "bg-navy-900 font-semibold text-navy-50 dark:bg-navy-100 dark:text-navy-950"
                       : "font-medium text-fg",
@@ -131,7 +131,7 @@ export function CalendarView({
 
       {selected ? (
         <Card>
-          <p className="border-b border-border px-4 py-2.5 text-[13px] font-semibold text-fg-muted">
+          <p className="border-b border-border px-4 py-2.5 text-footnote font-semibold text-fg-muted">
             {formatDate(selected, "long")}
           </p>
           {selectedEntries.length ? (
@@ -149,7 +149,7 @@ export function CalendarView({
 
       {showUpcoming ? (
       <div>
-        <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">
+        <h2 className="mb-3 text-footnote font-semibold text-fg-muted">
           Next up
         </h2>
         <Card>
@@ -182,10 +182,10 @@ export function EntryRow({
     <>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[15px] font-medium text-fg">{entry.title}</p>
+          <p className="text-body font-medium text-fg">{entry.title}</p>
           <Badge tone={kindTone[entry.kind]}>{kindLabel[entry.kind]}</Badge>
         </div>
-        <p className="mt-0.5 text-[13px] text-fg-muted">
+        <p className="mt-0.5 text-footnote text-fg-muted">
           {showDate ? `${formatDate(entry.date, "long")} · ${relativeDays(entry.date)}` : null}
           {showDate && entry.detail ? " · " : null}
           {entry.detail}

@@ -64,12 +64,12 @@ export function Assistant({ variant = "fixed" }: { variant?: "fixed" | "inset" }
     >
       <header className="flex items-center gap-2 border-b border-border px-4 py-3">
         <Sparkles className="size-4 shrink-0 text-fg-muted" />
-        <p className="flex-1 text-[15px] font-semibold text-fg">Ask about your account</p>
+        <p className="flex-1 text-body font-semibold text-fg">Ask about your account</p>
         <button
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Close"
-          className="flex size-7 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-2 hover:text-fg"
+          className="flex size-10 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-2 hover:text-fg"
         >
           <X className="size-4" />
         </button>
@@ -77,7 +77,7 @@ export function Assistant({ variant = "fixed" }: { variant?: "fixed" | "inset" }
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {turns.length === 0 ? (
-          <p className="text-[15px] leading-relaxed text-fg-muted">
+          <p className="text-body leading-relaxed text-fg-muted">
             I read your account and the association&apos;s records directly, so the numbers here
             are the real ones.
           </p>
@@ -86,18 +86,18 @@ export function Assistant({ variant = "fixed" }: { variant?: "fixed" | "inset" }
         {turns.map((t) => (
           <div key={t.id} className="space-y-2">
             <div className="flex justify-end">
-              <p className="max-w-[85%] rounded-xl rounded-br-sm bg-navy-900 px-3 py-2 text-[15px] text-navy-50 dark:bg-navy-100 dark:text-navy-950">
+              <p className="max-w-[85%] rounded-xl rounded-br-sm bg-navy-900 px-3 py-2 text-body text-navy-50 dark:bg-navy-100 dark:text-navy-950">
                 {t.question}
               </p>
             </div>
             <div className="max-w-[92%] rounded-xl rounded-bl-sm bg-surface-2 px-3 py-2.5">
-              <p className="text-[15px] leading-relaxed text-fg">{t.answer.text}</p>
+              <p className="text-body leading-relaxed text-fg">{t.answer.text}</p>
               {t.answer.facts?.length ? (
                 <dl className="mt-2 space-y-1 border-t border-border pt-2">
                   {t.answer.facts.map((f) => (
                     <div key={f.label} className="flex items-baseline justify-between gap-3">
-                      <dt className="min-w-0 truncate text-[13px] text-fg-muted">{f.label}</dt>
-                      <dd className="tnum shrink-0 text-[13px] font-medium text-fg">{f.value}</dd>
+                      <dt className="min-w-0 truncate text-footnote text-fg-muted">{f.label}</dt>
+                      <dd className="tnum shrink-0 text-footnote font-medium text-fg">{f.value}</dd>
                     </div>
                   ))}
                 </dl>
@@ -106,7 +106,7 @@ export function Assistant({ variant = "fixed" }: { variant?: "fixed" | "inset" }
                 <Link
                   href={t.answer.action.href}
                   onClick={() => setOpen(false)}
-                  className="mt-2.5 inline-flex h-7 items-center rounded-md bg-brand px-2.5 text-[13px] font-semibold text-brand-fg"
+                  className="mt-2.5 inline-flex h-7 items-center rounded-md bg-brand px-2.5 text-footnote font-semibold text-brand-fg"
                 >
                   {t.answer.action.label}
                 </Link>
@@ -123,7 +123,7 @@ export function Assistant({ variant = "fixed" }: { variant?: "fixed" | "inset" }
             key={s}
             type="button"
             onClick={() => ask(s)}
-            className="shrink-0 rounded-full border border-border px-2.5 py-1 text-[13px] font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            className="shrink-0 rounded-full border border-border px-2.5 py-1 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
           >
             {s}
           </button>
@@ -142,13 +142,13 @@ export function Assistant({ variant = "fixed" }: { variant?: "fixed" | "inset" }
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask a question"
           aria-label="Ask a question"
-          className="min-w-0 flex-1 bg-transparent px-1 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
+          className="min-w-0 flex-1 bg-transparent px-1 text-body text-fg outline-none placeholder:text-fg-subtle"
         />
         <button
           type="submit"
           disabled={!input.trim()}
           aria-label="Send"
-          className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-fg disabled:opacity-40"
+          className="flex size-10 shrink-0 items-center justify-center rounded-md bg-brand text-brand-fg disabled:opacity-40"
         >
           <ArrowUp className="size-4" />
         </button>

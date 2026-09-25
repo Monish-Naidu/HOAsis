@@ -1,4 +1,4 @@
-import type { ComponentProps, FormEventHandler, ReactNode } from "react";
+import { cloneElement, useId, type ComponentProps, type FormEventHandler, type ReactElement, type ReactNode } from "react";
 import Link from "next/link";
 import { UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -80,11 +80,11 @@ export function CardHeader({
           </IconTile>
         ) : null}
         <div className="min-w-0">
-          <h2 className="truncate text-[17px] font-semibold tracking-[-0.01em] text-fg">
+          <h2 className="text-headline font-semibold tracking-[-0.01em] break-words text-fg">
             {title}
           </h2>
           {subtitle ? (
-            <p className="mt-0.5 text-[15px] leading-snug text-fg-muted">{subtitle}</p>
+            <p className="mt-0.5 text-body leading-snug text-fg-muted">{subtitle}</p>
           ) : null}
         </div>
       </div>
@@ -106,7 +106,7 @@ export function SectionTitle({
 }) {
   return (
     <div className={cn("mb-3 flex items-baseline justify-between gap-4", className)}>
-      <h2 className="text-[13px] font-semibold text-fg-muted">
+      <h2 className="text-footnote font-semibold text-fg-muted">
         {children}
       </h2>
       {action}
@@ -137,15 +137,15 @@ export function PageHeader({
         {icon === false ? null : icon === undefined ? <RouteTile /> : icon}
         <div className="min-w-0">
           {eyebrow ? (
-            <p className="mb-1 text-[13px] font-semibold text-fg-muted">
+            <p className="mb-1 text-footnote font-semibold text-fg-muted">
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em] text-fg">
+          <h1 className="text-title1 font-semibold leading-tight tracking-[-0.025em] text-fg">
             {title}
           </h1>
           {description ? (
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-fg-muted">{description}</p>
+            <p className="mt-1 max-w-2xl text-callout leading-relaxed text-fg-muted">{description}</p>
           ) : null}
         </div>
       </div>
@@ -302,7 +302,7 @@ export function SuccessMark({
 /* -------------------------------------------------------------------------- */
 
 const buttonStyles = {
-  base: "press inline-flex items-center justify-center gap-2 rounded-lg text-[15px] font-medium disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap",
+  base: "press inline-flex items-center justify-center gap-2 rounded-lg py-1.5 text-center text-body font-medium leading-snug text-balance disabled:pointer-events-none disabled:opacity-50",
   variant: {
     // The one filled button on a screen: the brand gradient, lit on hover.
     primary:
@@ -315,10 +315,12 @@ const buttonStyles = {
     hero: "shimmer bg-brand-gradient font-semibold text-primary-fg shadow-raised hover:shadow-glow hover:brightness-[1.05]",
   },
   size: {
-    sm: "h-8 px-3",
-    md: "h-9 px-4",
-    lg: "h-11 px-5 text-sm",
-    xl: "h-12 rounded-xl px-6 text-[17px] font-semibold",
+    // min-h, not h, so a larger text size grows the button instead of
+    // spilling out of it. 44px under a finger, Apple's floor.
+    sm: "min-h-9 px-3 pointer-coarse:min-h-11",
+    md: "min-h-10 px-4 pointer-coarse:min-h-11",
+    lg: "min-h-11 px-5 text-body",
+    xl: "min-h-12 rounded-xl px-6 text-headline font-semibold",
   },
 } as const;
 
@@ -411,7 +413,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-semibold tracking-[0.01em]",
+        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-footnote font-semibold tracking-[0.01em]",
         tones[tone],
         className,
       )}
@@ -477,7 +479,7 @@ export function Stat({
         <span className={cn("absolute inset-x-0 top-0 h-[3px]", STAT_ACCENT[accent])} aria-hidden />
       ) : null}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-semibold text-fg-muted">
+        <p className="text-footnote font-semibold text-fg-muted">
           {label}
         </p>
         {icon ? (
@@ -492,7 +494,7 @@ export function Stat({
       </div>
       <p
         className={cn(
-          "tnum mt-2 text-[24px] font-semibold leading-none tracking-[-0.03em]",
+          "tnum mt-2 text-title2 font-semibold leading-none tracking-[-0.03em]",
           tone === "ok" && "text-ok",
           tone === "danger" && "text-danger",
           tone === "warn" && "text-warn",
@@ -503,7 +505,7 @@ export function Stat({
       >
         {value}
       </p>
-      {hint ? <p className="mt-1.5 text-[13px] leading-snug text-fg-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-footnote leading-snug text-fg-muted">{hint}</p> : null}
     </As>
   );
 }
@@ -576,7 +578,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-footnote font-semibold",
         tone === "brand" ? "bg-brand-soft text-brand-soft-fg" : "bg-surface-3 text-fg-muted",
         className,
       )}
@@ -610,8 +612,8 @@ export function Row({
 export function KeyValue({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <dt className="text-[15px] text-fg-muted">{label}</dt>
-      <dd className="tnum text-[15px] font-medium text-fg">{children}</dd>
+      <dt className="text-body text-fg-muted">{label}</dt>
+      <dd className="tnum text-body font-medium text-fg">{children}</dd>
     </div>
   );
 }
@@ -638,9 +640,9 @@ export function EmptyState({
           {icon}
         </IconTile>
       ) : null}
-      <p className="text-sm font-medium text-fg">{title}</p>
+      <p className="text-callout font-medium text-fg">{title}</p>
       {description ? (
-        <p className="mt-1 max-w-sm text-[15px] text-fg-muted">{description}</p>
+        <p className="mt-1 max-w-sm text-body text-fg-muted">{description}</p>
       ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
@@ -677,17 +679,22 @@ export function Callout({
   }[tone];
   return (
     <div className={cn("rounded-card border p-4", border, tones[tone], className)}>
-      <div className="flex items-start gap-3">
+      {/* The action sits beside the text where there is room and drops
+          under it on a phone; beside a narrow column it squeezed the words
+          into a strip three or four wide. */}
+      <div className="flex flex-wrap items-start gap-3">
         {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold">{title}</p>
+        <div className="min-w-[14rem] flex-1">
+          <p className="text-body font-semibold">{title}</p>
           {children ? (
-            <div className="mt-1 text-[15px] leading-relaxed opacity-90">{children}</div>
+            <div className="mt-1 text-body leading-relaxed opacity-90">{children}</div>
           ) : null}
         </div>
         {action ? (
-        <div className="flex min-w-0 max-w-full flex-wrap gap-2 [&>div]:flex-wrap">{action}</div>
-      ) : null}
+          <div className="flex min-w-0 max-w-full basis-full flex-wrap gap-2 sm:basis-auto [&>div]:flex-wrap">
+            {action}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -713,8 +720,8 @@ export function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "press relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50",
-        checked ? "bg-brand-gradient shadow-[inset_0_1px_2px_rgb(0_0_0/0.15)]" : "bg-surface-3",
+        "press relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 before:absolute before:-inset-2.5 before:content-[''] disabled:cursor-not-allowed disabled:opacity-50",
+        checked ? "bg-brand-gradient shadow-[inset_0_1px_2px_rgb(0_0_0/0.15)]" : "bg-border-2",
       )}
     >
       <span
@@ -748,9 +755,9 @@ export function SettingRow({
       )}
     >
       <div className="min-w-[12rem] flex-1">
-        <p className="text-[15px] font-medium text-fg">{title}</p>
+        <p className="text-body font-medium text-fg">{title}</p>
         {description ? (
-          <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{description}</p>
+          <p className="mt-0.5 text-footnote leading-snug text-fg-muted">{description}</p>
         ) : null}
       </div>
       <div className="min-w-0 max-w-full shrink-0">{children}</div>
@@ -806,7 +813,7 @@ export function Segmented<T extends string>({
           className={cn(
             "inline-flex shrink-0 items-center gap-1.5 rounded-md font-medium transition-colors",
             // A finger needs more than a pointer does.
-            size === "lg" ? "h-9 px-4 text-[14px]" : "h-7 px-3 text-[13px] pointer-coarse:h-9",
+            size === "lg" ? "min-h-10 px-4 text-callout pointer-coarse:min-h-11" : "min-h-8 px-3 text-footnote pointer-coarse:min-h-11",
             value === o.value ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
           )}
         >
@@ -814,6 +821,76 @@ export function Segmented<T extends string>({
           {o.count !== undefined ? <span className="tnum text-fg-subtle">{o.count}</span> : null}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The one look for a text field: a clear edge (border-2 clears 3:1), 44px
+ * tall, body-size text. Focus wears the ring from globals.css. Add layout
+ * classes beside it (`cn(fieldClass, "mt-1.5")`), never a second style.
+ */
+export const fieldClass =
+  "min-h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-body text-fg outline-none transition-colors placeholder:text-fg-subtle hover:border-fg-subtle focus:border-primary";
+
+/** The same field, for several lines. */
+export const textareaClass = cn(fieldClass, "py-2.5 leading-relaxed");
+
+/**
+ * A field with its words: a visible label above, an optional hint, and an
+ * error a screen reader hears. The control is passed as the child and gets
+ * its id, aria-describedby and aria-invalid from here, so a placeholder is
+ * never the only thing saying what goes in the box.
+ */
+export function Field({
+  label,
+  hint,
+  error,
+  required,
+  srOnlyLabel,
+  className,
+  children,
+}: {
+  label: ReactNode;
+  hint?: ReactNode;
+  error?: ReactNode;
+  required?: boolean;
+  /** For a grid whose column headers already name the field. */
+  srOnlyLabel?: boolean;
+  className?: string;
+  children: ReactElement<{ id?: string; "aria-describedby"?: string; "aria-invalid"?: boolean; required?: boolean }>;
+}) {
+  const id = useId();
+  const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
+  return (
+    <div className={className}>
+      <label
+        htmlFor={id}
+        className={cn(
+          "mb-1 block text-footnote font-semibold text-fg-muted",
+          srOnlyLabel && "sr-only",
+        )}
+      >
+        {label}
+      </label>
+      {cloneElement(children, {
+        id,
+        "aria-describedby": describedBy,
+        "aria-invalid": error ? true : undefined,
+        required: required ?? children.props.required,
+      })}
+      {hint ? (
+        <p id={hintId} className="mt-1 text-footnote text-fg-muted">
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} role="alert" className="mt-1 text-footnote font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -829,8 +906,8 @@ export function Select({
     <span className={cn("relative inline-flex min-w-0", className)}>
       <select
         className={cn(
-          "w-full min-w-0 appearance-none rounded-lg border border-border-2 bg-surface pl-3 pr-8 text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary",
-          size === "sm" ? "h-8 text-[13px] pointer-coarse:h-9" : "h-9 text-[14px]",
+          "w-full min-w-0 appearance-none rounded-lg border border-border-2 bg-surface pl-3 pr-8 text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary focus-visible:ring-2 focus-visible:ring-ring/40",
+          size === "sm" ? "min-h-9 text-footnote pointer-coarse:min-h-11" : "min-h-10 text-callout pointer-coarse:min-h-11",
         )}
         {...props}
       >
@@ -861,7 +938,7 @@ export function Checkbox({
     <input
       type="checkbox"
       className={cn(
-        "size-4 shrink-0 cursor-pointer rounded-[5px] border-border-2 accent-[var(--primary)]",
+        "size-5 shrink-0 cursor-pointer rounded-[5px] border-border-2 accent-[var(--primary)]",
         className,
       )}
       {...props}

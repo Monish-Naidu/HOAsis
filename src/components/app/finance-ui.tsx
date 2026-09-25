@@ -45,7 +45,7 @@ export function DeltaChip({
     <span
       title={money(delta.cents, { sign: true })}
       className={cn(
-        "tnum inline-flex h-6 items-center gap-0.5 rounded-full px-2 text-[12px] font-semibold",
+        "tnum inline-flex h-6 items-center gap-0.5 rounded-full px-2 text-caption font-semibold",
         flat || good === null
           ? "bg-surface-3 text-fg-muted"
           : good
@@ -88,18 +88,18 @@ export function StatTile({
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-semibold text-fg-muted">{label}</p>
+        <p className="text-footnote font-semibold text-fg-muted">{label}</p>
         {delta ? <DeltaChip delta={delta} goodWhen={goodWhen} /> : null}
       </div>
       <p
         className={cn(
-          "tnum mt-2 text-[24px] font-semibold leading-none tracking-[-0.03em]",
+          "tnum mt-2 text-title2 font-semibold leading-none tracking-[-0.03em]",
           tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : tone === "danger" ? "text-danger" : "text-fg",
         )}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1.5 truncate text-[13px] leading-snug text-fg-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 truncate text-footnote leading-snug text-fg-muted">{hint}</p> : null}
     </>
   );
   const styles = cn(
@@ -247,7 +247,7 @@ export function PeriodPicker({
   onRange: (range: { from: string; to: string }) => void;
 }) {
   const field =
-    "tnum h-8 rounded-lg border border-border-2 bg-surface px-2 text-[13px] text-fg outline-none focus:border-brand";
+    "tnum h-8 rounded-lg border border-border-2 bg-surface px-2 text-footnote text-fg outline-none focus:border-brand";
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Segmented
@@ -266,7 +266,7 @@ export function PeriodPicker({
             onChange={(e) => onRange({ ...range, from: e.target.value })}
             className={field}
           />
-          <span className="text-[13px] text-fg-subtle">to</span>
+          <span className="text-footnote text-fg-subtle">to</span>
           <input
             type="date"
             aria-label="To"
@@ -316,7 +316,7 @@ export function SectionLink({ href, children }: { href: string; children: React.
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
+      className="inline-flex items-center gap-0.5 text-footnote font-semibold text-accent hover:underline"
     >
       {children}
       <ChevronRight className="size-3.5" />

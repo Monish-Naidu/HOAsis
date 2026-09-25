@@ -546,7 +546,10 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     amenityStatus: [],
     // Baseline forms ship with the product, so the architectural request
     // dropdown is useful before the board has uploaded anything of their own.
-    forms: architecturalForms.map((form) => ({ ...form, updatedDate: asOf })),
+    // The fixture's "uploaded" examples are the demo board's, not this one's.
+    forms: architecturalForms
+      .filter((form) => form.source === "baseline")
+      .map((form) => ({ ...form, updatedDate: asOf })),
     templates: messageTemplates.map((template) => ({ ...template, updatedDate: asOf })),
 
     ownerCharges: Object.fromEntries(owners.map((owner) => [owner.id, []])),

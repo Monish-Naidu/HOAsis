@@ -41,7 +41,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <Link
           href="/library"
-          className="inline-flex items-center gap-1.5 text-[15px] font-medium text-fg-muted hover:text-fg"
+          className="inline-flex items-center gap-1.5 text-body font-medium text-fg-muted hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           Library
@@ -59,8 +59,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <h1 className="mt-3 text-[34px] font-semibold leading-[1.12] tracking-[-0.035em] text-fg sm:text-[40px]">
             {article.title}
           </h1>
-          <p className="mt-3 text-[17px] leading-relaxed text-fg-muted">{article.summary}</p>
-          <p className="mt-4 text-[13px] text-fg-subtle">
+          <p className="mt-3 text-headline leading-relaxed text-fg-muted">{article.summary}</p>
+          <p className="mt-4 text-footnote text-fg-subtle">
             {formatDate(article.publishedDate, "long")} · {article.readMinutes} minute read
           </p>
         </header>
@@ -70,12 +70,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             block.startsWith("## ") ? (
               <h2
                 key={index}
-                className="mt-8 text-[20px] font-semibold tracking-[-0.02em] text-fg"
+                className="mt-8 text-title3 font-semibold tracking-[-0.02em] text-fg"
               >
                 {block.replace("## ", "")}
               </h2>
             ) : (
-              <p key={index} className="mt-4 text-[17px] leading-[1.75] text-fg-muted">
+              <p key={index} className="mt-4 text-headline leading-[1.75] text-fg-muted">
                 {block}
               </p>
             ),
@@ -91,10 +91,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         {article.sources?.length ? (
           <section className="mt-12 border-t border-border pt-8">
-            <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+            <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">
               Where this comes from
             </h2>
-            <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
+            <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
               Every statute number, deadline and threshold above was read on the page linked
               here, on the date shown. Statutes change, so check the date before you rely on
               one.
@@ -102,7 +102,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <ol className="mt-4 space-y-2.5">
               {article.sources.map((source, index) => (
                 <li key={source.url} className="flex gap-3">
-                  <span className="tnum shrink-0 text-[13px] font-semibold text-fg-subtle">
+                  <span className="tnum shrink-0 text-footnote font-semibold text-fg-subtle">
                     {index + 1}
                   </span>
                   <span className="min-w-0">
@@ -112,13 +112,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                       rel="noopener noreferrer"
                       // Inline, not inline-flex, and break-all: a long statute
                       // URL has no spaces to wrap at and ran off a 320px phone.
-                      className="break-all text-[15px] font-medium text-primary hover:underline"
+                      className="break-all text-body font-medium text-primary hover:underline"
                     >
                       {sourceLabel(source.url)}
                       <ExternalLink className="ml-1 inline size-3 align-[-1px]" />
                     </a>
                     {source.note ? (
-                      <span className="block text-[13px] leading-snug text-fg-muted">
+                      <span className="block text-footnote leading-snug text-fg-muted">
                         {source.note}
                         {/* The year matters. A citation read date without one
                             cannot be compared against a statute's amendment
@@ -135,7 +135,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         {related.length ? (
           <section className="mt-12 border-t border-border pt-8">
-            <h2 className="text-[13px] font-semibold text-fg-muted">
+            <h2 className="text-footnote font-semibold text-fg-muted">
               More on {article.topic.toLowerCase()}
             </h2>
             <div className="mt-4 space-y-3">
@@ -145,8 +145,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   href={`/library/${other.slug}`}
                   className="block rounded-card border border-border bg-surface p-4 transition-colors hover:bg-surface-2"
                 >
-                  <p className="text-[15px] font-medium text-fg">{other.title}</p>
-                  <p className="mt-1 text-[15px] text-fg-muted">{other.summary}</p>
+                  <p className="text-body font-medium text-fg">{other.title}</p>
+                  <p className="mt-1 text-body text-fg-muted">{other.summary}</p>
                 </Link>
               ))}
             </div>

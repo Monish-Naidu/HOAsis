@@ -41,11 +41,11 @@ export function CommunityPanel() {
         <h1 className="text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-white xl:text-[52px]">
           {settings.displayName}
         </h1>
-        <p className="mt-3 text-[17px] text-white/75">
+        <p className="mt-3 text-headline text-white/75">
           {community.association.addressLine} · {pluralize(community.association.unitCount, "home")}
         </p>
         {settings.photoCredit ? (
-          <p className="mt-8 text-[13px] text-white/45">Photo, {settings.photoCredit}</p>
+          <p className="mt-8 text-footnote text-white/45">Photo, {settings.photoCredit}</p>
         ) : null}
       </div>
     </aside>
@@ -57,10 +57,10 @@ export function CommunityMasthead() {
   const { settings, community } = useAppState();
   return (
     <div className="mb-7 lg:hidden">
-      <h1 className="text-[28px] font-semibold tracking-[-0.03em] text-fg">
+      <h1 className="text-title1 font-semibold tracking-[-0.03em] text-fg">
         {settings.displayName}
       </h1>
-      <p className="mt-1 text-[15px] text-fg-muted">
+      <p className="mt-1 text-body text-fg-muted">
         {community.association.addressLine} · {pluralize(community.association.unitCount, "home")}
       </p>
     </div>

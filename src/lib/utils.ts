@@ -1,5 +1,15 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// The type scale in globals.css. Without this, tailwind-merge reads
+// `text-footnote` as a colour and drops it next to `text-fg-muted`.
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ["caption", "footnote", "callout", "body", "headline", "title3", "title2", "title1"],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

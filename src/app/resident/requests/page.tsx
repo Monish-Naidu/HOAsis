@@ -45,8 +45,8 @@ export default function ResidentRequests() {
       >
         <IconTile icon={Mail} tint="coral" size="sm" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-fg">Message the board</span>
-          <span className="block text-[13px] leading-snug text-fg-muted">
+          <span className="block text-body font-semibold text-fg">Message the board</span>
+          <span className="block text-footnote leading-snug text-fg-muted">
             {myThreads > 0 ? `${pluralize(myThreads, "conversation")}` : "Ask a question, no decision needed"}
           </span>
         </span>
@@ -70,15 +70,15 @@ export default function ResidentRequests() {
             <Gavel className="size-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-fg">
+            <span className="block text-body font-semibold text-fg">
               {openNotices.length > 0
                 ? `${pluralize(openNotices.length, "open notice")} about your home`
                 : "Notices about your home"}
             </span>
-            <span className="block text-[13px] leading-snug text-fg-muted">
+            <span className="block text-footnote leading-snug text-fg-muted">
               {openNotices.length > 0
-                ? "See what the board is relying on, including every photograph"
-                : "Nothing outstanding. The record is kept here."}
+                ? "See what the board raised, with every photo"
+                : "No notices. Past ones are kept here."}
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
@@ -109,7 +109,7 @@ export default function ResidentRequests() {
 
       {history.length ? (
         <details className="group">
-          <summary className="mb-3 flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-semibold text-fg-muted [&::-webkit-details-marker]:hidden">
+          <summary className="mb-3 flex cursor-pointer list-none items-center gap-1.5 text-footnote font-semibold text-fg-muted [&::-webkit-details-marker]:hidden">
             History ({history.length})
             <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
           </summary>
@@ -124,7 +124,7 @@ export default function ResidentRequests() {
       {!mine.length ? (
         <EmptyState
           title="No requests yet"
-          description="Repairs, approvals, and other requests. Tap plus to start one."
+          description="Repairs, approvals, and other requests. Tap the + button to start one."
         />
       ) : null}
     </div>
@@ -147,17 +147,17 @@ function RequestRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-[13px] font-medium text-fg-subtle">
+          <span className="text-footnote font-medium text-fg-subtle">
             {kindLabel[request.kind]}
           </span>
           {request.dueDate && !["approved", "denied", "closed"].includes(request.status) ? (
-            <span className="text-[13px] font-medium text-warn">
-              answer due {relativeDays(request.dueDate)}
+            <span className="text-footnote font-medium text-warn">
+              board reply due {relativeDays(request.dueDate)}
             </span>
           ) : null}
         </div>
-        <p className="mt-0.5 truncate text-[15px] font-medium text-fg">{request.title}</p>
-        <p className="mt-0.5 text-[13px] text-fg-muted">
+        <p className="mt-0.5 truncate text-body font-medium text-fg">{request.title}</p>
+        <p className="mt-0.5 text-footnote text-fg-muted">
           {request.reference} · {formatDate(request.submittedDate)}
         </p>
       </div>

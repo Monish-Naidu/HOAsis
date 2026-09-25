@@ -16,18 +16,7 @@ import {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import {
-  Avatar,
-  Badge,
-  Button,
-  Callout,
-  Card,
-  EmptyState,
-  KeyValue,
-  PageHeader,
-  Segmented,
-  Select,
-} from "@/components/ui/primitives";
+import { Avatar, Badge, Button, Callout, Card, EmptyState, KeyValue, PageHeader, Segmented, Select, Field, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { RemindersComposer } from "@/components/app/reminders-composer";
 import { JoinRequests } from "@/components/app/join-requests";
 import { useToast } from "@/components/app/toast";
@@ -55,7 +44,7 @@ type Filter = "all" | "paid" | "behind";
 const PAGE = 50;
 
 const input =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand";
+  fieldClass;
 
 export function HomeownersScreen() {
   const {
@@ -370,7 +359,7 @@ export function HomeownersScreen() {
               className="pointer-coarse:[&>button]:h-9"
             />
           ) : (
-            <p className="tnum text-[13px] font-medium text-fg-muted">{pluralize(owners.length, "home")}</p>
+            <p className="tnum text-footnote font-medium text-fg-muted">{pluralize(owners.length, "home")}</p>
           )}
           <div className="flex flex-wrap items-center gap-1">
             {mixed ? (
@@ -401,7 +390,7 @@ export function HomeownersScreen() {
                 }}
                 placeholder="Search owners"
                 aria-label="Search owners"
-                className="w-40 min-w-0 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
+                className="w-40 min-w-0 bg-transparent text-footnote text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
             {seesMoney ? (
@@ -420,53 +409,61 @@ export function HomeownersScreen() {
         {/* Add a household */}
         {adding ? (
           <div className="border-b border-border px-5 py-4">
-            <p className="text-[15px] font-semibold text-fg">New household</p>
+            <p className="text-body font-semibold text-fg">New household</p>
             <div
               className={cn(
-                "mt-3 grid gap-3",
+                "mt-3 grid items-end gap-3",
                 mixed
                   ? "sm:grid-cols-[1fr_1fr_6rem_9rem_auto_auto]"
                   : "sm:grid-cols-[1fr_1fr_6rem_auto_auto]",
               )}
             >
-              <input
-                value={entry.name}
-                onChange={(e) => setEntry({ ...entry, name: e.target.value })}
-                placeholder="Household name"
-                aria-label="Household name"
-                onKeyDown={(e) => e.key === "Enter" && saveOwner()}
-                className={input}
-              />
-              <input
-                type="email"
-                value={entry.email}
-                onChange={(e) => setEntry({ ...entry, email: e.target.value })}
-                placeholder="Email"
-                aria-label="Household email"
-                onKeyDown={(e) => e.key === "Enter" && saveOwner()}
-                className={input}
-              />
-              <input
-                value={entry.unit}
-                onChange={(e) => setEntry({ ...entry, unit: e.target.value })}
-                placeholder="Unit"
-                aria-label="Unit"
-                onKeyDown={(e) => e.key === "Enter" && saveOwner()}
-                className={input}
-              />
+              <Field label="Household name">
+                <input
+                  value={entry.name}
+                  onChange={(e) => setEntry({ ...entry, name: e.target.value })}
+                  placeholder="Household name"
+                  aria-label="Household name"
+                  onKeyDown={(e) => e.key === "Enter" && saveOwner()}
+                  className={input}
+                />
+              </Field>
+              <Field label="Email">
+                <input
+                  type="email"
+                  value={entry.email}
+                  onChange={(e) => setEntry({ ...entry, email: e.target.value })}
+                  placeholder="Email"
+                  aria-label="Household email"
+                  onKeyDown={(e) => e.key === "Enter" && saveOwner()}
+                  className={input}
+                />
+              </Field>
+              <Field label="Unit">
+                <input
+                  value={entry.unit}
+                  onChange={(e) => setEntry({ ...entry, unit: e.target.value })}
+                  placeholder="Unit"
+                  aria-label="Unit"
+                  onKeyDown={(e) => e.key === "Enter" && saveOwner()}
+                  className={input}
+                />
+              </Field>
               {mixed ? (
-                <Select
-                  value={entry.homeType ?? kinds[0].type}
-                  onChange={(e) => setEntry({ ...entry, homeType: e.target.value as HomeType })}
-                  aria-label="Kind of home"
-                  className="[&>select]:h-10"
-                >
-                  {HOME_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {HOME_TYPE_LABEL[t].one}
-                    </option>
-                  ))}
-                </Select>
+                <Field label="Kind of home">
+                  <Select
+                    value={entry.homeType ?? kinds[0].type}
+                    onChange={(e) => setEntry({ ...entry, homeType: e.target.value as HomeType })}
+                    aria-label="Kind of home"
+                    className="w-full [&>select]:min-h-11"
+                  >
+                    {HOME_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {HOME_TYPE_LABEL[t].one}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
               ) : null}
               <Button
                 variant="primary"
@@ -488,10 +485,10 @@ export function HomeownersScreen() {
           <div className="border-b border-border px-5 py-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[15px] font-semibold text-fg">
+                <p className="text-body font-semibold text-fg">
                   {seller ? `Record the sale of ${homeLabel(community, seller.unit)}` : "Record a sale"}
                 </p>
-                <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+                <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
                   {seller
                     ? `${seller.displayName} moves out on the closing date. The home keeps its history and the buyer starts with a clean statement.`
                     : "Pick the home. The seller moves out on the closing date and the buyer starts with a clean statement."}
@@ -505,44 +502,52 @@ export function HomeownersScreen() {
                 Cancel
               </Button>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_10rem_auto]">
-              <Select
-                value={sale.ownerId ?? ""}
-                onChange={(e) => setSale({ ...sale, ownerId: e.target.value || null })}
-                aria-label="Home being sold"
-                className="[&>select]:h-10"
-              >
-                <option value="">Which home?</option>
-                {[...owners]
-                  .sort((a, b) => Number(a.unit) - Number(b.unit))
-                  .map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {homeLabel(community, o.unit)} · {o.displayName}
-                    </option>
-                  ))}
-              </Select>
-              <input
-                value={sale.name}
-                onChange={(e) => setSale({ ...sale, name: e.target.value })}
-                placeholder="Buyer name"
-                aria-label="Buyer name"
-                className={input}
-              />
-              <input
-                type="email"
-                value={sale.email}
-                onChange={(e) => setSale({ ...sale, email: e.target.value })}
-                placeholder="Buyer email"
-                aria-label="Buyer email"
-                className={input}
-              />
-              <input
-                type="date"
-                value={sale.closingDate}
-                onChange={(e) => setSale({ ...sale, closingDate: e.target.value })}
-                aria-label="Closing date"
-                className={input}
-              />
+            <div className="mt-3 grid items-end gap-3 sm:grid-cols-[1fr_1fr_1fr_10rem_auto]">
+              <Field label="Home being sold">
+                <Select
+                  value={sale.ownerId ?? ""}
+                  onChange={(e) => setSale({ ...sale, ownerId: e.target.value || null })}
+                  aria-label="Home being sold"
+                  className="w-full [&>select]:min-h-11"
+                >
+                  <option value="">Which home?</option>
+                  {[...owners]
+                    .sort((a, b) => Number(a.unit) - Number(b.unit))
+                    .map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {homeLabel(community, o.unit)} · {o.displayName}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+              <Field label="Buyer name">
+                <input
+                  value={sale.name}
+                  onChange={(e) => setSale({ ...sale, name: e.target.value })}
+                  placeholder="Buyer name"
+                  aria-label="Buyer name"
+                  className={input}
+                />
+              </Field>
+              <Field label="Buyer email">
+                <input
+                  type="email"
+                  value={sale.email}
+                  onChange={(e) => setSale({ ...sale, email: e.target.value })}
+                  placeholder="Buyer email"
+                  aria-label="Buyer email"
+                  className={input}
+                />
+              </Field>
+              <Field label="Closing date">
+                <input
+                  type="date"
+                  value={sale.closingDate}
+                  onChange={(e) => setSale({ ...sale, closingDate: e.target.value })}
+                  aria-label="Closing date"
+                  className={input}
+                />
+              </Field>
               <Button
                 variant="primary"
                 size="md"
@@ -553,7 +558,7 @@ export function HomeownersScreen() {
               </Button>
             </div>
             {seller && seller.balanceCents > 0 ? (
-              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
+              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-footnote">
                 <span className="font-medium text-fg">
                   {money(seller.balanceCents)} is owed on this home.
                 </span>
@@ -620,7 +625,7 @@ export function HomeownersScreen() {
                       )}
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
-                          <span className="truncate text-[15px] font-medium text-fg">
+                          <span className="truncate text-body font-medium text-fg">
                             {o.displayName}
                           </span>
                           {o.boardRole ? <Badge tone="brand">{o.boardRole}</Badge> : null}
@@ -628,19 +633,21 @@ export function HomeownersScreen() {
                             <Badge tone="neutral">Not signed up</Badge>
                           ) : null}
                         </span>
-                        <span className="block truncate text-[13px] text-fg-muted">
+                        <span className="block truncate text-footnote text-fg-muted">
                           {homeLabel(community, o.unit)}
                           {mixed && o.homeType ? ` · ${HOME_TYPE_LABEL[o.homeType].short}` : ""}
-                          {o.address && o.address !== o.unit ? ` · ${o.address}` : ""}
+                          {o.address && o.address !== o.unit && o.address !== homeLabel(community, o.unit)
+                            ? ` · ${o.address}`
+                            : ""}
                         </span>
-                        <span className="block truncate text-[13px] text-fg-subtle md:hidden">
+                        <span className="block truncate text-footnote text-fg-subtle md:hidden">
                           {o.email}
                         </span>
                       </span>
                       </span>
                       <span className="hidden min-w-0 md:block">
-                        <span className="block truncate text-[13px] text-fg-muted">{o.email}</span>
-                        <span className="tnum block text-[13px] text-fg-subtle">{o.phone}</span>
+                        <span className="block truncate text-footnote text-fg-muted">{o.email}</span>
+                        <span className="tnum block text-footnote text-fg-subtle">{o.phone}</span>
                       </span>
                       <ChevronDown
                         className={cn(
@@ -652,7 +659,7 @@ export function HomeownersScreen() {
                     {/* Fixed width, so the trailing column never pushes the
                         contact column around from row to row. */}
                     <span className="flex shrink-0 items-center justify-end gap-2 md:grid md:grid-cols-[5.5rem_minmax(0,1fr)_2rem] md:gap-3">
-                      <span className="tnum hidden text-right text-[15px] font-semibold text-fg md:block">
+                      <span className="tnum hidden text-right text-body font-semibold text-fg md:block">
                         {seesMoney && o.balanceCents > 0 ? money(o.balanceCents) : ""}
                       </span>
                       <span className="flex justify-end whitespace-nowrap md:justify-start">
@@ -727,7 +734,7 @@ export function HomeownersScreen() {
 
         {matching.length > PAGE ? (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
-            <p className="tnum text-[13px] text-fg-muted">
+            <p className="tnum text-footnote text-fg-muted">
               Showing {visible.length} of {matching.length}
             </p>
             {visible.length < matching.length ? (
@@ -747,7 +754,7 @@ export function HomeownersScreen() {
           </div>
         ) : null}
         {showOpeningBalances && seesMoney ? (
-          <p className="border-t border-border px-5 py-3 text-[13px] text-fg-muted">
+          <p className="border-t border-border px-5 py-3 text-footnote text-fg-muted">
             Switched from another system?{" "}
             <Link href="/board/homeowners/opening-balances" className="font-medium text-accent hover:underline">
               Enter what each home owed on day one
@@ -895,7 +902,7 @@ function HouseholdDetail({
         ) : (
         <div>
           <label className="block">
-            <span className="mb-1.5 flex items-center justify-between gap-3 text-[13px] font-semibold text-fg-muted">
+            <span className="mb-1.5 flex items-center justify-between gap-3 text-footnote font-semibold text-fg-muted">
               <span>Message {owner.members[0]?.split(" ")[0] ?? owner.displayName}</span>
               {letter && !subject ? (
                 <button
@@ -914,11 +921,11 @@ function HouseholdDetail({
               autoFocus={focusComposer}
               aria-label={`Message to ${owner.displayName}`}
               placeholder="Write a short note. They can reply by email."
-              className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+              className={cn(textareaClass, "resize-none")}
             />
           </label>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-[13px] text-fg-muted">
+            <p className="min-w-0 flex-1 truncate text-footnote text-fg-muted">
               {subject ? (
                 <>Subject: {subject}</>
               ) : thread ? (
@@ -1020,22 +1027,26 @@ function AddOwnerForm({
         onSave(name.trim(), email.trim());
       }}
     >
-      <p className="text-[13px] font-semibold text-fg-muted">Who owns {unit}?</p>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Owner name"
-        aria-label="Owner name"
-        className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
-      />
-      <input
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        type="email"
-        placeholder="Email, so they can sign in and pay"
-        aria-label="Owner email"
-        className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
-      />
+      <p className="text-footnote font-semibold text-fg-muted">Who owns {unit}?</p>
+      <Field label="Owner name">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Owner name"
+          aria-label="Owner name"
+          className={fieldClass}
+        />
+      </Field>
+      <Field label="Email">
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          placeholder="Email, so they can sign in and pay"
+          aria-label="Owner email"
+          className={fieldClass}
+        />
+      </Field>
       <div className="flex justify-end">
         <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
           Save owner

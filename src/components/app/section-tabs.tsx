@@ -54,7 +54,7 @@ export function SectionTabs() {
               href={tab.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "inline-flex h-10 shrink-0 items-center whitespace-nowrap text-[14px] font-medium transition-colors duration-200",
+                "inline-flex h-10 shrink-0 items-center whitespace-nowrap text-callout font-medium transition-colors duration-200",
                 active
                   ? "text-fg shadow-[inset_0_-2px_0_var(--primary)]"
                   : "text-fg-muted hover:text-fg",

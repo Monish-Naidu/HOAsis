@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, MessagesSquare, Plus, Send } from "lucide-react";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useToast } from "@/components/app/toast";
-import { Badge, Button, Card, EmptyState, SectionTitle, Select } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, SectionTitle, Select, fieldClass } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { MessageThread } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
@@ -18,7 +18,7 @@ const TOPICS: { value: MessageThread["tag"]; label: string }[] = [
 ];
 
 const field =
-  "w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-primary";
+  fieldClass;
 
 /**
  * An owner's conversations with the board.
@@ -81,7 +81,7 @@ export function MessagesScreen() {
       {composing ? (
         <Card className="space-y-3 p-4">
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">About</span>
+            <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">About</span>
             <Select
               value={topic}
               onChange={(e) => setTopic(e.target.value as MessageThread["tag"])}
@@ -96,7 +96,7 @@ export function MessagesScreen() {
             </Select>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">Subject</span>
+            <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">Subject</span>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -105,7 +105,7 @@ export function MessagesScreen() {
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">Message</span>
+            <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">Message</span>
             <textarea
               rows={5}
               value={body}
@@ -173,18 +173,18 @@ function ThreadRow({
       <summary className="flex cursor-pointer list-none items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-[15px] font-medium text-fg">{thread.subject}</span>
+            <span className="truncate text-body font-medium text-fg">{thread.subject}</span>
             {waitingOnBoard ? (
               <Badge tone="neutral">Waiting on the board</Badge>
             ) : (
               <Badge tone="info">Board replied</Badge>
             )}
           </span>
-          <span className="mt-0.5 line-clamp-1 block text-[13px] text-fg-muted">
+          <span className="mt-0.5 line-clamp-1 block text-footnote text-fg-muted">
             {last ? `${last.fromRole === "resident" ? "You" : last.from}: ${last.body}` : ""}
           </span>
         </span>
-        <span className="flex shrink-0 items-center gap-2 text-[13px] text-fg-subtle">
+        <span className="flex shrink-0 items-center gap-2 text-footnote text-fg-subtle">
           {relativeDays(thread.updatedDate)}
           <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
         </span>
@@ -192,11 +192,11 @@ function ThreadRow({
       <div className="space-y-3 border-t border-border bg-surface-2 px-4 py-3">
         {thread.messages.map((m) => (
           <div key={m.id}>
-            <p className="text-[13px]">
+            <p className="text-footnote">
               <span className="font-semibold text-fg">{m.fromRole === "resident" ? "You" : m.from}</span>{" "}
               <span className="text-fg-subtle">{formatDate(m.at, "medium")}</span>
             </p>
-            <p className="mt-0.5 whitespace-pre-line text-[15px] leading-relaxed text-fg">{m.body}</p>
+            <p className="mt-0.5 whitespace-pre-line text-body leading-relaxed text-fg">{m.body}</p>
           </div>
         ))}
         <form

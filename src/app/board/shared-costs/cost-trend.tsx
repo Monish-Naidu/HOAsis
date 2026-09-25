@@ -78,15 +78,15 @@ export function CostTrend({
 
         {/* Only the ends are labelled. A tick under every month is unreadable
             at this width and nobody reads them anyway. */}
-        <text x={0} y={height - 6} className="fill-fg-subtle text-[11px]">
+        <text x={0} y={height - 6} className="fill-fg-subtle text-caption">
           {formatDate(bills[0].periodStart, "short")}
         </text>
-        <text x={width} y={height - 6} textAnchor="end" className="fill-fg-subtle text-[11px]">
+        <text x={width} y={height - 6} textAnchor="end" className="fill-fg-subtle text-caption">
           {formatDate(bills.at(-1)!.periodStart, "short")}
         </text>
       </svg>
 
-      <p className="tnum mt-1 min-h-[20px] text-[13px] text-fg-muted">
+      <p className="tnum mt-1 min-h-[20px] text-footnote text-fg-muted">
         {active ? (
           <>
             <span className="font-semibold text-fg">{formatDate(active.periodStart, "medium")}</span>

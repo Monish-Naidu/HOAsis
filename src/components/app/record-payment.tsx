@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Receipt, X } from "lucide-react";
-import { Button, Card, CardHeader, Checkbox, Select } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Checkbox, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { money, todayIsoDate } from "@/lib/utils";
+import { cn, money, todayIsoDate } from "@/lib/utils";
 
 /**
  * A payment that already happened, entered after the fact.
@@ -29,7 +29,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
   const [note, setNote] = useState("");
 
   const field =
-    "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    fieldClass;
   const cents = Math.round((Number(amount) || 0) * 100);
   const vendor = vendors.find((v) => v.id === vendorId);
   const ready = Boolean(vendor) && cents > 0 && Boolean(paidOn);
@@ -50,7 +50,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
       <div className="space-y-4 px-5 py-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">Who you paid</span>
+            <span className="text-footnote font-semibold text-fg-muted">Who you paid</span>
             <Select
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
@@ -65,7 +65,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
             </Select>
           </label>
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">How much</span>
+            <span className="text-footnote font-semibold text-fg-muted">How much</span>
             <input
               type="number"
               min="0"
@@ -83,7 +83,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
           <label className="block">
             {/* Their date, not today's. A payment entered in April for a
                 February invoice belongs in February or the books are wrong. */}
-            <span className="text-[13px] font-semibold text-fg-muted">Date it left</span>
+            <span className="text-footnote font-semibold text-fg-muted">Date it left</span>
             <input
               type="date"
               value={paidOn}
@@ -93,7 +93,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
             />
           </label>
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">How</span>
+            <span className="text-footnote font-semibold text-fg-muted">How</span>
             <Select
               value={method}
               onChange={(e) => setMethod(e.target.value as typeof method)}
@@ -106,7 +106,7 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
             </Select>
           </label>
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">
+            <span className="text-footnote font-semibold text-fg-muted">
               {method === "check" ? "Check number" : "Invoice or reference"}
             </span>
             <input
@@ -120,14 +120,14 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
         </div>
 
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Note (optional)</span>
+          <span className="text-footnote font-semibold text-fg-muted">Note (optional)</span>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
             placeholder="Anything the next treasurer should know"
             aria-label="Note on this payment"
-            className="mt-1.5 w-full resize-none rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] text-fg outline-none focus:border-brand"
+            className={cn(textareaClass, "mt-1.5 resize-none")}
           />
         </label>
 
@@ -138,10 +138,10 @@ export function RecordPayment({ onClose }: { onClose: () => void }) {
             className="mt-0.5"
           />
           <span className="min-w-0">
-            <span className="block text-[15px] font-medium text-fg">
+            <span className="block text-body font-medium text-fg">
               Send this payment through Your HOAsis
             </span>
-            <span className="block text-[13px] leading-snug text-fg-muted">
+            <span className="block text-footnote leading-snug text-fg-muted">
               Leave it off to record a payment you already made yourself. The books are the
               same either way, which is the point.
             </span>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { themeScript } from "@/components/app/theme";
+import { textSizeScript } from "@/components/app/text-size-script";
 import { AppStateProvider } from "@/lib/app-state";
 import { ErrorBoundary } from "@/components/app/error-boundary";
 import { ToastProvider } from "@/components/app/toast";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: textSizeScript }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <ErrorBoundary label="The app">

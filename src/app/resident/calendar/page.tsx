@@ -10,7 +10,7 @@ export default function ResidentCalendar() {
   const { community } = useAppState();
   return (
     <div className="animate-rise space-y-6">
-      <ResidentTitle title="Meetings" />
+      <ResidentTitle title="Meetings" subtitle="Board meetings and what is on the calendar" />
       <LiveMeetingCard />
       {/* What is coming first, with the RSVPs; the month underneath for
           anybody looking for a date. */}

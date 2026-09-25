@@ -130,7 +130,7 @@ export function NewOwnerScreen() {
                     : "Nothing outstanding. A buyer's agent can be answered the same day."
               }
               action={
-                <span className="tnum text-[15px] font-semibold text-fg">
+                <span className="tnum text-body font-semibold text-fg">
                   {answered} / {DISCLOSURE_TOPICS.length}
                 </span>
               }
@@ -143,7 +143,7 @@ export function NewOwnerScreen() {
         </>
       )}
 
-      <p className="mt-8 text-[13px] text-fg-subtle">
+      <p className="mt-8 text-footnote text-fg-subtle">
         <Link href="/board/documents" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to documents

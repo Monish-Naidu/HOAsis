@@ -25,14 +25,14 @@ export default function RouteError({
       <main className="flex flex-1 items-center justify-center px-5 pb-20">
         <Card className="w-full max-w-md p-6">
           <IconTile icon={AlertTriangle} tint="amber" size="md" className="mb-4" />
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+          <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
             This page did not load
           </h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
             Nothing was lost. Try again, or head back and come at it from another direction.
           </p>
           {error.digest ? (
-            <p className="mt-2 font-mono text-[13px] text-fg-subtle">Reference {error.digest}</p>
+            <p className="mt-2 font-mono text-footnote text-fg-subtle">Reference {error.digest}</p>
           ) : null}
           <div className="mt-5 flex flex-wrap gap-2">
             <Button variant="primary" size="lg" onClick={reset}>

@@ -24,7 +24,7 @@ export function CommunityName() {
 
   if (communities.length < 2) {
     return (
-      <span className="hidden items-center px-2 py-1 text-[15px] font-medium text-fg sm:inline-flex">
+      <span className="hidden items-center px-2 py-1 text-body font-medium text-fg sm:inline-flex">
         {settings.displayName}
       </span>
     );
@@ -37,7 +37,7 @@ export function CommunityName() {
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[15px] font-medium text-fg hover:bg-surface-2"
+        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-body font-medium text-fg hover:bg-surface-2"
       >
         {settings.displayName}
         <ChevronDown className={cn("size-3.5 text-fg-subtle transition-transform", open && "rotate-180")} />
@@ -75,7 +75,7 @@ export function CommunityName() {
                       router.push("/signin");
                     }
                   }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[15px] transition-colors hover:bg-surface-2"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-body transition-colors hover:bg-surface-2"
                 >
                   <Building2 className="size-3.5 shrink-0 text-fg-subtle" />
                   <span className="min-w-0 flex-1 truncate font-medium text-fg">
@@ -89,7 +89,7 @@ export function CommunityName() {
             ))}
             {!isRemote ? (
               <li className="border-t border-border px-3 py-2">
-                <p className="text-[13px] leading-snug text-fg-subtle">
+                <p className="text-footnote leading-snug text-fg-subtle">
                   Switching signs you out. Accounts belong to one association.
                 </p>
               </li>
@@ -197,13 +197,13 @@ export function CommunityHero({
           <h1
             className={cn(
               "font-semibold tracking-[-0.03em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35),0_8px_24px_rgb(0_0_0/0.25)]",
-              compact ? "text-[22px]" : "text-[30px] sm:text-[36px]",
+              compact ? "text-title2" : "text-[30px] sm:text-[36px]",
             )}
           >
             {settings.displayName}
           </h1>
           {line ? (
-            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[12px] font-medium text-white/95 backdrop-blur-md sm:text-[13px]">
+            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-caption font-medium text-white/95 backdrop-blur-md sm:text-footnote">
               <Building2 className="size-3" strokeWidth={2.2} />
               {line}
             </p>

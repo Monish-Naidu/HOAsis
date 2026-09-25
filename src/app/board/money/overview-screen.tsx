@@ -23,7 +23,7 @@ import {
   lateFeesOwed,
   pastDueHint,
 } from "@/lib/metrics";
-import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 
 /**
@@ -88,7 +88,7 @@ export function OverviewScreen() {
           tone="warn"
           className="mb-6"
           icon={<ShieldAlert className="size-4" />}
-          title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
+          title={`${money(exposure.totalUninsured, { cents: false })} is over the insured limit`}
         >
           {exposure.rows
             .filter((row) => row.uninsured > 0)
@@ -147,10 +147,10 @@ export function OverviewScreen() {
       {!primary ? (
         <Card className="mt-6 p-5">
           <div className="mb-4">
-            <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+            <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">
               Connect the association&apos;s bank account
             </h2>
-            <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
+            <p className="mt-1 text-body leading-relaxed text-fg-muted">
               Dues have nowhere to land until an account in the association&apos;s name is
               connected.
             </p>
@@ -181,14 +181,14 @@ export function OverviewScreen() {
                     the two buttons drop under it instead of squeezing it to a
                     word per line. */}
                 <span className="min-w-[12rem] flex-1">
-                  <span className="block truncate text-[15px] font-medium text-fg">{e.description}</span>
-                  <span className="block text-[13px] text-fg-subtle">
+                  <span className="block truncate text-body font-medium text-fg">{e.description}</span>
+                  <span className="block text-footnote text-fg-subtle">
                     <span className="tnum">{formatDate(e.date)}</span> · {e.counterparty}
                     {e.duplicateOfId ? " · looks like a duplicate" : null}
                     {e.suggestedCategory ? ` · ${e.suggestedCategory}?` : null}
                   </span>
                 </span>
-                <span className={`tnum text-[15px] font-semibold ${e.amountCents >= 0 ? "text-ok" : "text-fg"}`}>
+                <span className={`tnum text-body font-semibold ${e.amountCents >= 0 ? "text-ok" : "text-fg"}`}>
                   {money(e.amountCents, { sign: e.amountCents > 0 })}
                 </span>
                 <span className="ml-auto flex gap-1.5">
@@ -208,7 +208,7 @@ export function OverviewScreen() {
                     className="text-danger hover:bg-danger-soft hover:text-danger"
                     onClick={() => {
                       const undo = dismissLedgerEntry(e.id);
-                      notify("Removed from the ledger", "warn", { label: "Undo", onClick: undo });
+                      notify("Transaction removed", "warn", { label: "Undo", onClick: undo });
                     }}
                   >
                     Remove
@@ -239,14 +239,14 @@ export function OverviewScreen() {
               { label: "Net", now: cmp.b.netCents, then: cmp.a.netCents, delta: cmp.net, goodWhen: "up" as const },
             ].map((row) => (
               <div key={row.label} className="bg-surface px-5 py-4">
-                <dt className="flex items-center justify-between text-[13px] font-semibold text-fg-muted">
+                <dt className="flex items-center justify-between text-footnote font-semibold text-fg-muted">
                   {row.label}
                   <DeltaChip delta={row.delta} goodWhen={row.goodWhen} />
                 </dt>
-                <dd className="tnum mt-2 text-[24px] font-semibold leading-none tracking-[-0.03em] text-fg">
+                <dd className="tnum mt-2 text-title2 font-semibold leading-none tracking-[-0.03em] text-fg">
                   {money(row.now, { cents: false })}
                 </dd>
-                <dd className="tnum mt-1.5 text-[13px] text-fg-muted">
+                <dd className="tnum mt-1.5 text-footnote text-fg-muted">
                   {money(row.then, { cents: false })} in {lastYear}
                 </dd>
               </div>
@@ -259,14 +259,14 @@ export function OverviewScreen() {
       {hasFlows || spending.rows.length > 0 ? (
         <section className="mt-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">Through the year</h2>
+            <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">Through the year</h2>
             {years.length > 1 ? (
               <YearControl years={years} value={year} onChange={setYear} thisYear={thisYear} />
             ) : null}
           </div>
           <div className="grid gap-4 xl:grid-cols-5">
             {hasFlows ? (
-              <Card className={spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5"}>
+              <Card className={cn("flex flex-col", spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
                 <CardHeader title="Money in and out" />
                 <MoneyFlowChart months={flows} />
               </Card>
@@ -303,8 +303,8 @@ export function OverviewScreen() {
                 ].map((row) => (
                   <div key={row.label}>
                     <div className="flex items-baseline justify-between gap-3">
-                      <p className="text-[13px] font-semibold text-fg-muted">{row.label}</p>
-                      <p className="tnum text-[13px] text-fg-muted">
+                      <p className="text-footnote font-semibold text-fg-muted">{row.label}</p>
+                      <p className="tnum text-footnote text-fg-muted">
                         <span className="font-semibold text-fg">{money(row.total.ytdActualCents, { cents: false })}</span>{" "}
                         of {money(row.total.annualCents, { cents: false })} · {Math.round(row.total.pace * 100)}%
                       </p>
@@ -317,7 +317,7 @@ export function OverviewScreen() {
                     />
                   </div>
                 ))}
-                <p className="text-[13px] text-fg-muted">
+                <p className="text-footnote text-fg-muted">
                   {budget.flagged.length
                     ? `${pluralize(budget.flagged.length, "line")} off pace: ${budget.flagged.map((r) => r.category).join(", ")}.`
                     : "Every line is on pace."}
@@ -325,7 +325,7 @@ export function OverviewScreen() {
               </div>
             ) : (
               <div className="px-5 py-4">
-                <p className="mb-3 text-[15px] text-fg-muted">
+                <p className="mb-3 text-body text-fg-muted">
                   No budget yet. Add the lines you spend on and this page starts measuring against them.
                 </p>
                 <AddBudgetLine />
@@ -335,7 +335,7 @@ export function OverviewScreen() {
       ) : null}
 
       {primary && recon.staleFeeds.length ? (
-        <p className="mt-4 flex items-center gap-1.5 text-[13px] text-fg-muted">
+        <p className="mt-4 flex items-center gap-1.5 text-footnote text-fg-muted">
           <Landmark className="size-3.5" />
           {recon.staleFeeds.map((a) => `${a.institution} ••${a.mask}`).join(", ")}{" "}
           {recon.staleFeeds.length === 1 ? "has" : "have"} not synced recently.

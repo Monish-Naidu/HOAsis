@@ -14,21 +14,12 @@ import {
   Trash2,
   Upload,
   X,
+  Image as ImageIcon,
 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Callout,
-  Card,
-  CardHeader,
-  Checkbox,
-  PageHeader,
-  Select,
-  SettingRow,
-  Toggle,
-} from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, Checkbox, PageHeader, SectionTitle, Select, SettingRow, Toggle, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { DangerZone } from "@/components/app/danger-zone";
 import { BillingRow } from "@/components/app/billing-row";
+import { DisplaySettings } from "@/components/app/display-settings";
 import { DuesSettings } from "@/components/app/dues-settings";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { useAppState } from "@/lib/app-state";
@@ -42,9 +33,20 @@ import {
   type ArchitecturalForm,
   type CommunityAmenity,
 } from "@/lib/types";
-import { cn, formatDate, todayIsoDate } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { moduleOn } from "@/lib/modules";
+
+/** The jump row under the title, in page order. */
+const SECTIONS: { id: string; label: string }[] = [
+  { id: "display", label: "Display" },
+  { id: "community", label: "Community" },
+  { id: "money", label: "Money" },
+  { id: "residents", label: "Residents" },
+  { id: "board", label: "The board" },
+  { id: "amenities", label: "Amenities and forms" },
+  { id: "leaving", label: "Leaving and closing" },
+];
 
 export function SettingsScreen() {
   const {
@@ -72,6 +74,7 @@ export function SettingsScreen() {
   const { notify } = useToast();
 
   const [newAmenity, setNewAmenity] = useState("");
+  const [name, setName] = useState(settings.displayName);
   const [newFormLabel, setNewFormLabel] = useState("");
   const [appointing, setAppointing] = useState<{ ownerId: string; role: AccountRole } | null>(null);
 
@@ -111,7 +114,7 @@ export function SettingsScreen() {
       <Callout
         tone="warn"
         icon={<Lock className="size-4" />}
-        title="You do not have the settings capability"
+        title="You can't change settings"
       >
         The President grants this one. Ask them to turn it on for your account.
       </Callout>
@@ -159,14 +162,37 @@ export function SettingsScreen() {
 
   return (
     <>
+      {/* One column, full width like every other board tab. Two columns
+          left a hole beside every short card, and a settings page is read
+          top to bottom by heading, so the jump row under the title is the
+          map. */}
+      <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Name, visibility, board members, and billing."
+        description="Text size, name, visibility, board members, and billing."
       />
 
-      {/* Cards keep their own height. Stretched to their row partner, Dues
-          and Resident home were two thirds empty space. */}
-      <div className="grid items-start gap-6 xl:grid-cols-2">
+      <nav aria-label="On this page" className="-mt-2 flex flex-wrap gap-x-1 gap-y-1">
+        {SECTIONS.map((x) => (
+          <a
+            key={x.id}
+            href={`#${x.id}`}
+            className="rounded-lg px-2.5 py-1.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          >
+            {x.label}
+          </a>
+        ))}
+      </nav>
+
+      {/* Yours, not the association's: first, because it is the setting a
+          board member is most likely to come here looking for. */}
+      <section id="display" className="scroll-mt-32 lg:scroll-mt-24">
+        <SectionTitle>Display on this device</SectionTitle>
+        <DisplaySettings />
+      </section>
+
+      <section id="community" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+        <SectionTitle>Community</SectionTitle>
         {/* Identity */}
         <Card>
           <CardHeader title="Identity" subtitle="The join code, the name, and the photo" />
@@ -175,7 +201,7 @@ export function SettingsScreen() {
             description="Share it with owners. They create their account with it, and you confirm their home under Homeowners."
           >
             <div className="flex items-center gap-2">
-              <span className="tnum rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-[15px] font-semibold tracking-[0.2em] text-fg">
+              <span className="tnum rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-body font-semibold tracking-[0.2em] text-fg">
                 {community.association.joinCode ?? "Not set"}
               </span>
               {community.association.joinCode ? (
@@ -197,26 +223,49 @@ export function SettingsScreen() {
             </div>
           </SettingRow>
           <SettingRow title="Community name" description="Shown on the banner and on sign in">
+            {/* Saved when the field is left, with a word to say so. Saving
+                on every keystroke rewrote the banner mid-word and never
+                told the board member the change had taken. */}
             <input
-              value={settings.displayName}
-              onChange={(e) => updateSettings({ displayName: e.target.value })}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
+              onBlur={() => {
+                const next = name.trim();
+                if (!next) {
+                  setName(settings.displayName);
+                  return;
+                }
+                if (next === settings.displayName) return;
+                updateSettings({ displayName: next });
+                notify(`Saved. The community is now ${next}.`, "ok");
+              }}
               aria-label="Community name"
-              className="h-9 w-48 max-w-full rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-primary"
+              className={cn(fieldClass, "w-48 max-w-full")}
             />
           </SettingRow>
           <div className="border-b border-border px-5 py-4">
-            <p className="text-[15px] font-medium text-fg">Community photo</p>
-            <p className="mt-0.5 text-[13px] text-fg-muted">
+            <p className="text-body font-medium text-fg">Community photo</p>
+            <p className="mt-0.5 text-footnote text-fg-muted">
               Shown on the dashboard and at sign in.
             </p>
-            <div
-              className="mt-3 h-28 rounded-lg bg-cover bg-center"
-              style={{ backgroundImage: `url(${settings.photoUrl})` }}
-              role="img"
-              aria-label="Current community photo"
-            />
+            {settings.photoUrl ? (
+              <div
+                className="mt-3 h-28 rounded-lg bg-cover bg-center"
+                style={{ backgroundImage: `url(${settings.photoUrl})` }}
+                role="img"
+                aria-label="Current community photo"
+              />
+            ) : (
+              <div className="mt-3 flex h-28 flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-2 bg-surface-2 text-fg-subtle">
+                <ImageIcon className="size-5" aria-hidden />
+                <span className="text-footnote">No photo yet</span>
+              </div>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <label className="press inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-border-2 bg-surface px-3.5 text-[14px] font-medium text-fg hover:bg-surface-2">
+              <label className="press inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-border-2 bg-surface px-3.5 text-callout font-medium text-fg hover:bg-surface-2">
                 <Upload className="size-3.5" />
                 Replace photo
                 <input
@@ -237,7 +286,7 @@ export function SettingsScreen() {
                 />
               </label>
               {settings.photoCredit ? (
-                <span className="text-[13px] text-fg-subtle">{settings.photoCredit}</span>
+                <span className="text-footnote text-fg-subtle">{settings.photoCredit}</span>
               ) : null}
             </div>
           </div>
@@ -247,8 +296,8 @@ export function SettingsScreen() {
         <Card>
           <CardHeader title="Resident home" subtitle="What owners see first when they sign in" />
           <div className="border-b border-border px-5 py-4">
-            <p className="text-[15px] font-medium text-fg">Layout</p>
-            <p className="mt-0.5 text-[13px] text-fg-muted">
+            <p className="text-body font-medium text-fg">Layout</p>
+            <p className="mt-0.5 text-footnote text-fg-muted">
               A full calendar, or one banner you edit by hand.
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -269,11 +318,11 @@ export function SettingsScreen() {
                       : "border-border hover:bg-surface-2",
                   )}
                 >
-                  <span className="flex items-center gap-1.5 text-[15px] font-semibold text-fg">
+                  <span className="flex items-center gap-1.5 text-body font-semibold text-fg">
                     {o.label}
                     {settings.homeLayout === o.v ? <Check className="size-3.5" /> : null}
                   </span>
-                  <span className="mt-0.5 block text-[13px] text-fg-muted">{o.hint}</span>
+                  <span className="mt-0.5 block text-footnote text-fg-muted">{o.hint}</span>
                 </button>
               ))}
             </div>
@@ -281,7 +330,7 @@ export function SettingsScreen() {
 
           {settings.homeLayout === "banner" ? (
             <div className="border-b border-border px-5 py-4">
-              <p className="mb-2 flex items-center gap-1.5 text-[15px] font-medium text-fg">
+              <p className="mb-2 flex items-center gap-1.5 text-body font-medium text-fg">
                 <Megaphone className="size-3.5" />
                 Banner text
               </p>
@@ -291,7 +340,7 @@ export function SettingsScreen() {
                   updateSettings({ banner: { ...settings.banner, title: e.target.value } })
                 }
                 aria-label="Banner title"
-                className="h-9 w-full rounded-lg border border-border bg-surface-2 px-2.5 text-[15px] font-medium text-fg outline-none"
+                className={cn(fieldClass, "font-medium")}
               />
               <textarea
                 rows={2}
@@ -300,17 +349,83 @@ export function SettingsScreen() {
                   updateSettings({ banner: { ...settings.banner, detail: e.target.value } })
                 }
                 aria-label="Banner detail"
-                className="mt-2 w-full resize-none rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-[13px] text-fg outline-none"
+                className={cn(textareaClass, "mt-2 resize-none")}
               />
             </div>
           ) : null}
         </Card>
 
+        {/* Insurance. The setup plan sends a board here and there was nothing
+            to fill in, so the task could never be completed. */}
+        <Card id="insurance">
+          <CardHeader
+            title="Insurance"
+            subtitle="The policy and its renewal date"
+          />
+          <div className="grid gap-4 px-5 py-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="text-footnote font-semibold text-fg-muted">Carrier</span>
+              <input
+                value={community.association.insuranceCarrier ?? ""}
+                onChange={(e) => updateAssociation({ insuranceCarrier: e.target.value })}
+                placeholder="Farmers Insurance"
+                aria-label="Insurance carrier"
+                className={cn(fieldClass, "mt-1.5")}
+              />
+            </label>
+            <label className="block">
+              <span className="text-footnote font-semibold text-fg-muted">Policy number</span>
+              <input
+                value={community.association.insurancePolicyNo ?? ""}
+                onChange={(e) => updateAssociation({ insurancePolicyNo: e.target.value })}
+                placeholder="WA-CA-4471982"
+                aria-label="Policy number"
+                className={cn(fieldClass, "mt-1.5")}
+              />
+            </label>
+            <label className="block">
+              <span className="text-footnote font-semibold text-fg-muted">Renews on</span>
+              <input
+                type="date"
+                value={community.association.insuranceExpiresOn ?? ""}
+                onChange={(e) => updateAssociation({ insuranceExpiresOn: e.target.value })}
+                aria-label="Renewal date"
+                className={cn(fieldClass, "mt-1.5")}
+              />
+            </label>
+          </div>
+          {community.association.insuranceExpiresOn ? (
+            <p
+              className={cn(
+                "border-t border-border px-5 py-3 text-footnote",
+                daysFromToday(community.association.insuranceExpiresOn) <= 60
+                  ? "font-medium text-warn"
+                  : "text-fg-muted",
+              )}
+            >
+              Renews {relativeDays(community.association.insuranceExpiresOn)}
+              {daysFromToday(community.association.insuranceExpiresOn) <= 60
+                ? ". Ask the carrier for the new policy now."
+                : "."}
+            </p>
+          ) : null}
+        </Card>
+      </section>
+
+      <section id="money" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+        <SectionTitle>Money</SectionTitle>
         <DuesSettings />
 
         {/* Payments: billing, the bank, and who carries the fee */}
         <Card>
-          <CardHeader title="Payments" subtitle="Your plan, where dues land, and who pays the fee" />
+          <CardHeader
+            title="Payments"
+            subtitle={
+              isRemote
+                ? "Your plan, where dues land, and who pays the fee"
+                : "The fee on each payment, and when autopay runs"
+            }
+          />
           {isRemote ? <BillingRow /> : null}
           {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
           {isRemote ? <TestModeGuide audience="board" className="mx-4 my-3" /> : null}
@@ -355,17 +470,17 @@ export function SettingsScreen() {
             <Toggle
               checked={settings.paymentFeeWaivedOnAch}
               onChange={(v) => updateSettings({ paymentFeeWaivedOnAch: v })}
-              label="Waive the fee on ACH"
+              label="Waive the fee on bank transfers"
             />
           </SettingRow>
           <SettingRow
-            title="Autopay late day"
+            title="Last day for autopay"
             description="The latest day of the month autopay can run"
           >
             <Select
               value={settings.autopayLateAfterDay}
               onChange={(e) => updateSettings({ autopayLateAfterDay: Number(e.target.value) })}
-              aria-label="Autopay late day"
+              aria-label="Last day for autopay"
             >
               {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                 <option key={d} value={d}>
@@ -375,7 +490,10 @@ export function SettingsScreen() {
             </Select>
           </SettingRow>
         </Card>
+      </section>
 
+      <section id="residents" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+        <SectionTitle>Residents</SectionTitle>
         {/* Visibility */}
         <Card>
           <CardHeader title="What residents can see" subtitle="Switch a section on or off for every owner" />
@@ -407,48 +525,10 @@ export function SettingsScreen() {
             />
           </SettingRow>
         </Card>
+      </section>
 
-        {/* Insurance. The setup plan sends a board here and there was nothing
-            to fill in, so the task could never be completed. */}
-        <Card id="insurance" className="scroll-mt-32 lg:scroll-mt-24">
-          <CardHeader
-            title="Insurance"
-            subtitle="The policy and its renewal date"
-          />
-          <div className="grid gap-4 px-5 py-4 sm:grid-cols-3">
-            <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Carrier</span>
-              <input
-                value={community.association.insuranceCarrier ?? ""}
-                onChange={(e) => updateAssociation({ insuranceCarrier: e.target.value })}
-                placeholder="Farmers Insurance"
-                aria-label="Insurance carrier"
-                className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
-              />
-            </label>
-            <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Policy number</span>
-              <input
-                value={community.association.insurancePolicyNo ?? ""}
-                onChange={(e) => updateAssociation({ insurancePolicyNo: e.target.value })}
-                placeholder="WA-CA-4471982"
-                aria-label="Policy number"
-                className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
-              />
-            </label>
-            <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Renews on</span>
-              <input
-                type="date"
-                value={community.association.insuranceExpiresOn ?? ""}
-                onChange={(e) => updateAssociation({ insuranceExpiresOn: e.target.value })}
-                aria-label="Renewal date"
-                className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
-              />
-            </label>
-          </div>
-        </Card>
-
+      <section id="board" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+        <SectionTitle>The board</SectionTitle>
         {/* The officers, and a way to add one. It listed all 88 homes with a
             role picker each, which made the four people who hold an office
             the hardest thing on the card to find. */}
@@ -519,15 +599,24 @@ export function SettingsScreen() {
             {officers.map((row) => (
               <div key={row.ownerId} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
                 <div className="min-w-[10rem] flex-1">
-                  <p className="truncate text-[15px] font-medium text-fg">{row.name}</p>
-                  <p className="truncate text-[13px] text-fg-muted">
+                  <p className="truncate text-body font-medium text-fg">{row.name}</p>
+                  <p className="truncate text-footnote text-fg-muted">
                     {homeLabel(community, row.unit)}
                     {row.signedUp ? "" : " · not signed up yet"}
                   </p>
                   {row.opens.length ? (
-                    <p className="mt-0.5 text-[13px] text-fg-subtle">
-                      {row.role === "president" ? "Opens everything" : `Opens ${opensLine(row.opens)}`}
-                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <span className="text-footnote text-fg-subtle">Opens</span>
+                      {row.role === "president" ? (
+                        <Badge tone="neutral">Everything</Badge>
+                      ) : (
+                        sectionNames(row.opens).map((n) => (
+                          <Badge key={n} tone="neutral">
+                            {n}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
                   ) : null}
                 </div>
                 {isPresident && row.role !== "president" ? (
@@ -550,7 +639,7 @@ export function SettingsScreen() {
               </div>
             ))}
           </div>
-          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
+          <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
             The President is set apart on purpose. Handing over that office is its own step,
             because an association with no President has no way to grant access back.
           </p>
@@ -578,23 +667,90 @@ export function SettingsScreen() {
               ] as const
             ).map(([count, noun]) => (
               <div key={noun} className="bg-surface px-5 py-3">
-                <p className="tnum text-[22px] font-semibold leading-none text-fg">{count}</p>
-                <p className="mt-1 text-[13px] text-fg-muted">{noun}</p>
+                <p className="tnum text-title2 font-semibold leading-none text-fg">{count}</p>
+                <p className="mt-1 text-footnote text-fg-muted">{noun}</p>
               </div>
             ))}
           </div>
-          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
+          <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
             A new officer sees all of it the moment their office changes above. Nothing lives
             in the outgoing treasurer&apos;s inbox, and nothing leaves when they do.
           </p>
         </Card>
         ) : null}
 
+        {/* Permissions. Roles above cover month one; the per-person grid is
+            a second permission model and waits with the advanced settings. */}
+        {moduleOn("settings-advanced") ? (
+        <Card>
+          <CardHeader
+            title="What each member can do"
+            subtitle={
+              isPresident
+                ? "You hold the only capability that cannot be granted away"
+                : "Only the President can change these"
+            }
+            icon={<ShieldCheck className="size-4" />}
+          />
+          {!isPresident ? (
+            <div className="px-5 pt-4">
+              <Callout tone="neutral" icon={<Lock className="size-4" />} title="Read only">
+                Capabilities are set by the President.
+              </Callout>
+            </div>
+          ) : null}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left">
+              <thead>
+                <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
+                  <th className="px-5 py-2.5 font-semibold">Admin</th>
+                  {GRANTABLE.map((c) => (
+                    <th key={c} className="px-2 py-2.5 text-center font-semibold">
+                      {CAPABILITY_LABEL[c].split(" ")[0]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {accounts
+                  .filter((a) => a.role !== "resident")
+                  .map((a) => (
+                    <tr key={a.id} className="border-b border-border last:border-b-0">
+                      <td className="px-5 py-3">
+                        <p className="text-body font-medium text-fg">{a.name}</p>
+                        <p className="text-footnote text-fg-muted">{ROLE_LABEL[a.role]}</p>
+                      </td>
+                      {GRANTABLE.map((c) => (
+                        <td key={c} className="px-2 py-3 text-center">
+                          <Checkbox
+                            checked={a.capabilities[c]}
+                            disabled={!isPresident || a.role === "president"}
+                            onChange={(e) => setCapability(a.id, c, e.target.checked)}
+                            aria-label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
+                            className="disabled:opacity-40"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
+            The President&apos;s own row is locked on purpose. An association that can strip its
+            President of access has no way back in.
+          </p>
+        </Card>
+        ) : null}
+      </section>
+
+      <section id="amenities" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+        <SectionTitle>Amenities and forms</SectionTitle>
         {/* Amenities */}
         <Card>
           <CardHeader
             title="Amenities"
-            subtitle="Reservable ones appear in the resident request dropdown"
+            subtitle="Owners can book these from Requests"
           />
           {amenities.map((a) => (
             <div
@@ -604,8 +760,8 @@ export function SettingsScreen() {
               {/* 12rem for the name and its rules before the switch and the
                   bin wrap under, so a phone never gets a word per line. */}
               <div className="min-w-[12rem] flex-1">
-                <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
-                <p className="truncate text-[13px] text-fg-muted">{a.detail}</p>
+                <p className="truncate text-body font-medium text-fg">{a.name}</p>
+                <p className="truncate text-footnote text-fg-muted">{a.detail}</p>
                 {a.reservable ? (
                   <AmenityRules
                     amenity={a}
@@ -614,7 +770,7 @@ export function SettingsScreen() {
                 ) : null}
               </div>
               <span className="ml-auto flex shrink-0 items-center gap-2">
-                <label className="mt-0.5 flex items-center gap-1.5 text-[13px] text-fg-muted">
+                <label className="mt-0.5 flex items-center gap-1.5 text-footnote text-fg-muted">
                   Reservable
                   <Toggle
                     checked={a.reservable}
@@ -636,39 +792,47 @@ export function SettingsScreen() {
               </span>
             </div>
           ))}
-          <div className="flex items-center gap-2 border-t border-border px-5 py-3">
+          <form
+            className="flex items-center gap-2 border-t border-border px-5 py-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addAmenity();
+            }}
+          >
             <input
               value={newAmenity}
               onChange={(e) => setNewAmenity(e.target.value)}
               placeholder="Add an amenity"
               aria-label="New amenity name"
-              className="h-9 min-w-0 flex-1 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-primary"
+              className={cn(fieldClass, "min-w-0 flex-1")}
             />
-            <Button variant="secondary" size="md" className="shrink-0" onClick={addAmenity} disabled={!newAmenity.trim()}>
+            <Button type="submit" variant="secondary" size="md" className="shrink-0" disabled={!newAmenity.trim()}>
               <Plus className="size-3.5" />
               Add
             </Button>
-          </div>
+          </form>
         </Card>
 
         {/* Architectural forms */}
-        <Card className="xl:col-span-2">
+        <Card>
           <CardHeader
-            title="Architectural forms"
+            title="Home change forms"
             subtitle="Upload your own forms. The label is what residents see."
             icon={<FileText className="size-4" />}
           />
-          <div className="grid gap-px bg-border sm:grid-cols-2">
+          {/* One list, not two columns: side by side, the badge wrapped
+              under every label longer than three words. */}
+          <div className="divide-y divide-border">
             {forms.map((f) => (
-              <div key={f.id} className="flex items-start gap-3 bg-surface px-5 py-3">
+              <div key={f.id} className="flex items-start gap-3 px-5 py-3">
                 <FileText className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[15px] font-medium text-fg">{f.label}</p>
+                    <p className="text-body font-medium text-fg">{f.label}</p>
                     <Badge tone={f.source === "baseline" ? "neutral" : "brand"}>{f.source === "baseline" ? "Standard" : "Yours"}</Badge>
                   </div>
-                  <p className="mt-0.5 truncate text-[13px] text-fg-muted">{f.fileName}</p>
-                  <p className="text-[13px] text-fg-subtle">
+                  <p className="mt-0.5 truncate text-footnote text-fg-muted">{f.fileName}</p>
+                  <p className="text-footnote text-fg-subtle">
                     {f.size} · updated {formatDate(f.updatedDate, "long")}
                   </p>
                 </div>
@@ -686,92 +850,35 @@ export function SettingsScreen() {
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-2 border-t border-border px-5 py-3">
+          <form
+            className="flex items-center gap-2 border-t border-border px-5 py-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addForm();
+            }}
+          >
             <input
               value={newFormLabel}
               onChange={(e) => setNewFormLabel(e.target.value)}
               placeholder="Label residents see, like Paint color request"
               aria-label="New form label"
-              className="h-9 min-w-0 flex-1 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-primary"
+              className={cn(fieldClass, "min-w-0 flex-1")}
             />
-            <Button variant="secondary" size="md" className="shrink-0" onClick={addForm} disabled={!newFormLabel.trim()}>
+            <Button type="submit" variant="secondary" size="md" className="shrink-0" disabled={!newFormLabel.trim()}>
               <Upload className="size-3.5" />
               Upload
             </Button>
-          </div>
+          </form>
         </Card>
+      </section>
 
-        {/* Permissions. Roles above cover month one; the per-person grid is
-            a second permission model and waits with the advanced settings. */}
-        {moduleOn("settings-advanced") ? (
-        <Card className="xl:col-span-2">
-          <CardHeader
-            title="Admin capabilities"
-            subtitle={
-              isPresident
-                ? "You hold the only capability that cannot be granted away"
-                : "Only the President can change these"
-            }
-            icon={<ShieldCheck className="size-4" />}
-          />
-          {!isPresident ? (
-            <div className="px-5 pt-4">
-              <Callout tone="neutral" icon={<Lock className="size-4" />} title="Read only">
-                Capabilities are set by the President.
-              </Callout>
-            </div>
-          ) : null}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left">
-              <thead>
-                <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
-                  <th className="px-5 py-2.5 font-semibold">Admin</th>
-                  {GRANTABLE.map((c) => (
-                    <th key={c} className="px-2 py-2.5 text-center font-semibold">
-                      {CAPABILITY_LABEL[c].split(" ")[0]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {accounts
-                  .filter((a) => a.role !== "resident")
-                  .map((a) => (
-                    <tr key={a.id} className="border-b border-border last:border-b-0">
-                      <td className="px-5 py-3">
-                        <p className="text-[15px] font-medium text-fg">{a.name}</p>
-                        <p className="text-[13px] text-fg-muted">{ROLE_LABEL[a.role]}</p>
-                      </td>
-                      {GRANTABLE.map((c) => (
-                        <td key={c} className="px-2 py-3 text-center">
-                          <Checkbox
-                            checked={a.capabilities[c]}
-                            disabled={!isPresident || a.role === "president"}
-                            onChange={(e) => setCapability(a.id, c, e.target.checked)}
-                            aria-label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
-                            className="disabled:opacity-40"
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
-            The President&apos;s own row is locked on purpose. An association that can strip its
-            President of access has no way back in.
-          </p>
-        </Card>
-        ) : null}
-      </div>
           {/* Folded. Deleting the association sat one scroll below the dues
               amount, open, on a page a treasurer visits monthly. */}
-          <details className="group mt-6">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-card border border-border bg-surface px-5 py-3.5 text-[15px] font-medium text-fg shadow-card transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+          <details id="leaving" className="group scroll-mt-32 lg:scroll-mt-24">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-card border border-border bg-surface px-5 py-3.5 text-body font-medium text-fg shadow-card transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
               <span>
                 Leaving and closing
-                <span className="ml-2 text-[13px] font-normal text-fg-muted">
+                <span className="ml-2 text-footnote font-normal text-fg-muted">
                   Hand over the presidency, leave, cancel, or delete
                 </span>
               </span>
@@ -779,7 +886,8 @@ export function SettingsScreen() {
             </summary>
             <DangerZone />
           </details>
-</>
+      </div>
+    </>
   );
 }
 
@@ -850,11 +958,11 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
       }
     >
       {status.name === "loading" ? (
-        <span className="text-[13px] text-fg-subtle">Checking…</span>
+        <span className="text-footnote text-fg-subtle">Checking…</span>
       ) : status.name === "live" ? (
         <Badge tone="ok">Payments are live</Badge>
       ) : status.name === "error" ? (
-        <span className="text-[13px] font-medium text-danger">Could not reach Stripe</span>
+        <span className="text-footnote font-medium text-danger">Could not reach Stripe</span>
       ) : (
         <Button variant="primary" size="sm" onClick={openOnboarding} disabled={redirecting}>
           {redirecting
@@ -880,8 +988,6 @@ const SECTION_NAME: Partial<Record<Capability, string>> = {
   settings: "Settings",
 };
 
-function opensLine(capabilities: Capability[]): string {
-  const names = capabilities.map((c) => SECTION_NAME[c]).filter((n): n is string => Boolean(n));
-  if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+function sectionNames(capabilities: Capability[]): string[] {
+  return capabilities.map((c) => SECTION_NAME[c]).filter((n): n is string => Boolean(n));
 }

@@ -98,7 +98,7 @@ export function EmailDelivery() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-[13px]">
+        <table className="w-full text-left text-footnote">
           <thead>
             <tr className="border-b border-border text-fg-subtle">
               <th className="px-5 py-2 font-semibold">When</th>
@@ -143,7 +143,7 @@ export function EmailDelivery() {
         </table>
       </div>
 
-      <p className="border-t border-border px-5 py-3 text-[13px] leading-snug text-fg-subtle">
+      <p className="border-t border-border px-5 py-3 text-footnote leading-snug text-fg-subtle">
         Delivery status comes from the mail provider&apos;s webhook. Set RESEND_WEBHOOK_SECRET and
         point Resend at /api/email/webhook.
       </p>
@@ -166,11 +166,11 @@ function Figure({
     tone === "ok" ? "text-ok" : tone === "danger" ? "text-danger" : "text-fg";
   return (
     <div className="rounded-lg bg-surface-2 px-3.5 py-3">
-      <p className="text-[13px] font-semibold text-fg-muted">{label}</p>
-      <p className={`tnum mt-0.5 text-[22px] font-semibold tracking-[-0.02em] ${color}`}>
+      <p className="text-footnote font-semibold text-fg-muted">{label}</p>
+      <p className={`tnum mt-0.5 text-title2 font-semibold tracking-[-0.02em] ${color}`}>
         {value}
       </p>
-      {hint ? <p className="text-[13px] text-fg-subtle">{hint}</p> : null}
+      {hint ? <p className="text-footnote text-fg-subtle">{hint}</p> : null}
     </div>
   );
 }

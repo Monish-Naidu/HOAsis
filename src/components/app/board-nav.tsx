@@ -137,11 +137,11 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
             className={cn(
               // The selected background is the travelling pill behind the row,
               // not a class on the link, so it slides rather than cuts.
-              "group relative z-10 flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors duration-200",
+              "group relative z-10 flex items-center gap-2.5 rounded-xl px-3 py-2 text-callout font-medium transition-colors duration-200",
               rail
                 ? // The row height the rail had with thirteen rows. With nine
                   // they would stretch to 70px, which read as zoomed in.
-                  "min-h-11 max-h-12 flex-1 gap-3 rounded-2xl px-3 py-2.5 text-[15px]"
+                  "min-h-11 max-h-12 flex-1 gap-3 rounded-2xl px-3 py-2.5 text-body"
                 : "min-h-10 shrink-0",
               rail
                 ? active
@@ -168,7 +168,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
             {badge && badge.count > 0 ? (
               <span
                 className={cn(
-                  "tnum ml-auto hidden rounded px-1.5 py-0.5 text-[12px] font-bold lg:inline-block",
+                  "tnum ml-auto hidden rounded px-1.5 py-0.5 text-caption font-bold lg:inline-block",
                   rail
                     ? cn(
                         "bg-navy-800",

@@ -48,7 +48,7 @@ export function SlotPicker({
 
   return (
     <div className="rounded-card border border-border bg-surface-2 p-4">
-      <p className="flex items-start gap-1.5 text-[13px] leading-snug text-fg-muted">
+      <p className="flex items-start gap-1.5 text-footnote leading-snug text-fg-muted">
         <CalendarDays className="mt-0.5 size-3.5 shrink-0" />
         {describeRules(amenity)}
       </p>
@@ -75,10 +75,10 @@ export function SlotPicker({
               isBlackedOut(amenity, day) && date !== day && "opacity-40",
             )}
           >
-            <span className="block text-[11px] font-medium uppercase tracking-wide opacity-75">
+            <span className="block text-caption font-medium uppercase tracking-wide opacity-75">
               {formatDate(day, "short").split(" ")[0]}
             </span>
-            <span className="block text-[15px] font-semibold">{Number(day.slice(8, 10))}</span>
+            <span className="block text-body font-semibold">{Number(day.slice(8, 10))}</span>
           </button>
         ))}
       </div>
@@ -96,7 +96,7 @@ export function SlotPicker({
                 onChange({ date, startMinute: slot.startMinute, endMinute: slot.endMinute })
               }
               className={cn(
-                "rounded-lg border px-2 py-2.5 text-[15px] font-medium transition-colors",
+                "rounded-lg border px-2 py-2.5 text-body font-medium transition-colors",
                 picked
                   ? "border-brand bg-brand text-brand-fg"
                   : slot.allowed
@@ -111,19 +111,19 @@ export function SlotPicker({
       </div>
 
       {closed ? (
-        <p className="mt-3 text-[13px] text-warn">
+        <p className="mt-3 text-footnote text-warn">
           Closed {formatDate(date, "medium")}
           {closed.reason ? `: ${closed.reason}` : ""}. Try another day.
         </p>
       ) : free === 0 ? (
-        <p className="mt-3 text-[13px] text-warn">
+        <p className="mt-3 text-footnote text-warn">
           {slots[0]?.blockedBecause ?? "Nothing free"} on{" "}
           {formatDate(date, "medium")}. Try another day.
         </p>
       ) : null}
 
       {rules.feeCents || rules.depositCents ? (
-        <p className="mt-3 flex items-start gap-1.5 text-[13px] leading-snug text-fg-muted">
+        <p className="mt-3 flex items-start gap-1.5 text-footnote leading-snug text-fg-muted">
           <Receipt className="mt-0.5 size-3.5 shrink-0" />
           <span>
             {rules.feeCents
@@ -138,7 +138,7 @@ export function SlotPicker({
       ) : null}
 
       {value ? (
-        <p className="mt-3 text-[13px] text-fg-muted">
+        <p className="mt-3 text-footnote text-fg-muted">
           <span className="font-semibold text-fg">
             {formatDate(value.date, "medium")}, {formatMinute(value.startMinute)}
           </span>{" "}

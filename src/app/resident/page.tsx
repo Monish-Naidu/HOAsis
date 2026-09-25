@@ -13,8 +13,7 @@ import {
   Vote,
   Wrench,
 } from "lucide-react";
-import { Card, CardHeader, IconTile, SectionTitle, TINT_FIELD, type TintName } from "@/components/ui/primitives";
-import { CountUp } from "@/components/ui/count-up";
+import { Card, CardHeader, EmptyState, IconTile, SectionTitle, TINT_FIELD, type TintName } from "@/components/ui/primitives";
 import { calendarEntries } from "@/lib/metrics";
 import {
   useAppState,
@@ -52,9 +51,9 @@ export default function ResidentHome() {
             >
               <IconTile icon={Radio} tint="teal" size="sm" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-semibold text-fg">{live.title}</span>
-                <span className="block text-[13px] text-ok">
-                  Live now · {live.attendees.length} joined
+                <span className="line-clamp-2 block text-body font-semibold text-fg">{live.title}</span>
+                <span className="block text-footnote text-ok">
+                  Meeting on now · {live.attendees.length} joined
                 </span>
               </span>
               <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
@@ -67,10 +66,10 @@ export default function ResidentHome() {
             >
               <IconTile icon={Vote} tint="violet" size="sm" />
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold text-fg">
+                <span className="block text-body font-semibold text-fg">
                   {toVote.length === 1 ? "A ballot needs your vote" : `${toVote.length} ballots need your vote`}
                 </span>
-                <span className="block truncate text-[13px] text-fg-muted">
+                <span className="line-clamp-2 block text-footnote text-fg-muted">
                   {toVote[0].title} · closes {relativeDays(toVote[0].closesDate)}
                 </span>
               </span>
@@ -130,7 +129,7 @@ function AccountSummary() {
         action={
           <Link
             href="/resident/account"
-            className="text-[13px] font-medium text-accent hover:underline"
+            className="text-footnote font-medium text-accent hover:underline"
           >
             View details
           </Link>
@@ -140,7 +139,7 @@ function AccountSummary() {
         <div className="flex items-center gap-3.5 @xl:flex-1">
           <IconTile icon={CreditCard} tint={past ? "coral" : "blue"} variant="solid" size="lg" />
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold text-fg-muted">
+            <p className="text-footnote font-semibold text-fg-muted">
               {past ? "Past due" : "Current balance"}
             </p>
             <p
@@ -149,25 +148,27 @@ function AccountSummary() {
                 past ? "text-danger" : "text-fg",
               )}
             >
-              <CountUp cents={owner.balanceCents} showCents />
+              {/* The figure itself, not a count up from $0: a glance
+                  mid-animation read a wrong balance. */}
+              {money(owner.balanceCents)}
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-1 @xl:items-end">
           {owner.autopay ? (
-            <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ok">
+            <p className="inline-flex items-center gap-1.5 text-footnote font-semibold text-ok">
               <CheckCircle2 className="size-3.5" />
               Autopay is on
             </p>
           ) : (
             <Link
               href="/resident/pay#autopay"
-              className="text-[13px] font-semibold text-accent hover:underline"
+              className="text-footnote font-semibold text-accent hover:underline"
             >
               Turn on autopay
             </Link>
           )}
-          <p className="text-[13px] text-fg-muted">
+          <p className="text-footnote text-fg-muted">
             {past
               ? `${owner.daysPastDue} days past due`
               : `Next dues ${formatDate(nextCharge, "long")}`}
@@ -182,7 +183,7 @@ function AccountSummary() {
         <Link
           href="/resident/pay"
           className={cn(
-            "press inline-flex h-11 shrink-0 items-center justify-center rounded-lg px-6 text-[16px] font-semibold",
+            "press inline-flex h-11 shrink-0 items-center justify-center rounded-lg px-6 text-body font-semibold",
             covered
               ? "border border-border-2 bg-surface text-fg hover:bg-surface-2"
               : "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow",
@@ -226,7 +227,7 @@ function QuickActions() {
             size="md"
             className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
           />
-          <span className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-fg @xl:text-[16px]">
+          <span className="text-callout font-semibold leading-tight tracking-[-0.01em] text-fg @xl:text-body">
             {label}
           </span>
         </Link>
@@ -269,7 +270,9 @@ function RecentActivity() {
       href: "/resident/account",
       icon: c.kind === "payment" ? CircleDollarSign : Receipt,
       tint: c.kind === "payment" ? "teal" : "neutral",
-      amount: money(Math.abs(c.amountCents)),
+      // A payment carries a minus, as on the statement, so the colour is
+      // not the only thing that says which way the money went.
+      amount: `${c.kind === "payment" ? "−" : ""}${money(Math.abs(c.amountCents))}`,
       amountTone: c.kind === "payment" ? "text-ok" : "text-fg",
     }));
 
@@ -283,7 +286,14 @@ function RecentActivity() {
       date: withUpdate.last.at,
       // The request by its name, and who moved it. "Request REQ-2026-121
       // updated" was an ID, and the update was usually the owner's own note.
-      title: `${withUpdate.r.title}: ${withUpdate.last.actorRole === "resident" ? "you added a note" : "the board answered"}`,
+      // The routing line the app writes on submission is not an answer.
+      title: `${withUpdate.r.title}: ${
+        withUpdate.last.actorRole === "resident"
+          ? "you added a note"
+          : withUpdate.last.actorRole === "system"
+            ? "sent to the board"
+            : "the board answered"
+      }`,
       href: `/resident/requests/${encodeURIComponent(withUpdate.r.reference)}`,
       icon: Wrench,
       tint: "blue",
@@ -294,7 +304,20 @@ function RecentActivity() {
   // as a different item.
   // Four rows. The account page has the rest, one tap away.
   const feed = rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4);
-  if (feed.length === 0) return null;
+  if (feed.length === 0) {
+    // Returning nothing left Next up alone in a two column grid with an
+    // empty half beside it. The card stays, and says what will fill it.
+    return (
+      <Card className="h-full">
+        <CardHeader accent="teal" title="Recent activity" />
+        <EmptyState
+          icon={<Receipt className="size-5" />}
+          title="Nothing yet"
+          description="Dues, payments, and answers to your requests show up here."
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full">
@@ -304,7 +327,7 @@ function RecentActivity() {
         action={
           <Link
             href="/resident/account"
-            className="text-[13px] font-medium text-accent hover:underline"
+            className="text-footnote font-medium text-accent hover:underline"
           >
             View all
           </Link>
@@ -318,11 +341,11 @@ function RecentActivity() {
         >
           <IconTile icon={icon} tint={row.tint} size="sm" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-medium text-fg">{row.title}</span>
-            <span className="block text-[13px] text-fg-muted">{formatDate(row.date)}</span>
+            <span className="line-clamp-2 block text-body font-medium text-fg">{row.title}</span>
+            <span className="block text-footnote text-fg-muted">{formatDate(row.date)}</span>
           </span>
           {row.amount ? (
-            <span className={cn("tnum shrink-0 text-[15px] font-semibold", row.amountTone)}>
+            <span className={cn("tnum shrink-0 text-body font-semibold", row.amountTone)}>
               {row.amount}
             </span>
           ) : (
@@ -355,15 +378,15 @@ function Announcements() {
             <div className="p-4 pl-5">
               <div className="mb-1.5 flex items-center gap-2">
                 <IconTile icon={Megaphone} tint="coral" size="xs" />
-                <span className="text-[13px] font-semibold text-fg-muted">
+                <span className="text-footnote font-semibold text-fg-muted">
                   Pinned · {pinned.category}
                 </span>
               </div>
-              <h3 className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+              <h3 className="text-body font-semibold leading-snug tracking-[-0.01em] text-fg">
                 {pinned.title}
               </h3>
-              <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{pinned.body}</p>
-              <p className="mt-2.5 text-[13px] text-fg-subtle">
+              <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{pinned.body}</p>
+              <p className="mt-2.5 text-footnote text-fg-subtle">
                 {pinned.author} · {formatDate(pinned.postedDate)}
               </p>
             </div>
@@ -372,16 +395,16 @@ function Announcements() {
         {rest.map((a) => (
           <Card key={a.id}>
             <div className="p-4">
-              <span className="text-[13px] font-semibold text-fg-muted">
+              <span className="text-footnote font-semibold text-fg-muted">
                 {a.category}
               </span>
-              <h3 className="mt-1 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+              <h3 className="mt-1 text-body font-semibold leading-snug tracking-[-0.01em] text-fg">
                 {a.title}
               </h3>
-              <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
+              <p className="mt-1.5 line-clamp-2 text-body leading-relaxed text-fg-muted">
                 {a.body}
               </p>
-              <p className="mt-2.5 text-[13px] text-fg-subtle">
+              <p className="mt-2.5 text-footnote text-fg-subtle">
                 {a.author} · {formatDate(a.postedDate)}
               </p>
             </div>

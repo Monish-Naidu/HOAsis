@@ -44,16 +44,19 @@
   --surface-2:   var(--neutral-50);
   --surface-3:   var(--neutral-200);
   --border:      #e4e3df;
-  --border-2:    #d5d3ce;
+  /* border-2 outlines fields and secondary buttons, so it clears 3:1
+     against the card. Muted text clears 7:1 and subtle 5:1 (2026-09-24,
+     for older eyes; subtle was 2.96:1 and failed AA). */
+  --border-2:    #96938c;
   --fg:          #16202e;
-  --fg-muted:    #6b6f78;
-  --fg-subtle:   #9296a0;
+  --fg-muted:    #50545d;
+  --fg-subtle:   #63676f;
   --brand:       var(--navy-800);
   --brand-fg:    #ffffff;
   --brand-soft:  var(--navy-50);
   --brand-soft-fg: var(--navy-700);
-  --accent:      #2c6cd1;
-  --ring:        #2c6cd1;
+  --accent:      #2360c8;
+  --ring:        #2360c8;
 
   /* The primary action. One saturated blue, painted, so the filled button
      on a screen is the one thing that is not navy or neutral. The gradient
@@ -101,13 +104,13 @@
   --hero-field:  #eef2f9;
   --hero-accent: #2f68d8;
 
-  --ok:        #1f8a5f;
+  --ok:        #16704c;
   --ok-soft:   #e2f4eb;
-  --warn:      #a8710f;
+  --warn:      #875a06;
   --warn-soft: #fbf1de;
-  --danger:    #c9463a;
+  --danger:    #b3382d;
   --danger-soft: #fbeae8;
-  --info:      #2c6cd1;
+  --info:      #2360c8;
   --info-soft: #e8f0fc;
 
   /* Chart series. Categorical identity only, assigned in this fixed order and
@@ -140,10 +143,10 @@
   --surface-2:   var(--navy-900);
   --surface-3:   var(--navy-800);
   --border:      #1f3050;
-  --border-2:    #2a4064;
+  --border-2:    #4d6793;
   --fg:          #e9edf3;
   --fg-muted:    #9aa8bd;
-  --fg-subtle:   #6c7d96;
+  --fg-subtle:   #8494ad;
   --brand:       var(--navy-100);
   --brand-fg:    var(--navy-950);
   --brand-soft:  var(--navy-800);
@@ -284,6 +287,19 @@
 
   --radius-card: 0.875rem;
 
+  /* The type scale, in rem so a browser's own font size setting carries
+     through, times --type-scale so the Text size control can grow every
+     word without zooming the layout. Floors set for older eyes: nothing
+     under 13px, secondary text 14, body 16. */
+  --text-caption:  calc(0.8125rem * var(--type-scale));
+  --text-footnote: calc(0.875rem * var(--type-scale));
+  --text-callout:  calc(0.9375rem * var(--type-scale));
+  --text-body:     calc(1rem * var(--type-scale));
+  --text-headline: calc(1.125rem * var(--type-scale));
+  --text-title3:   calc(1.25rem * var(--type-scale));
+  --text-title2:   calc(1.5rem * var(--type-scale));
+  --text-title1:   calc(1.75rem * var(--type-scale));
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -309,6 +325,14 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    --type-scale: 1;
+  }
+  /* Set before paint by textSizeScript in text-size.tsx. */
+  html[data-text-size="large"] {
+    --type-scale: 1.125;
+  }
+  html[data-text-size="largest"] {
+    --type-scale: 1.25;
   }
   body {
     background: var(--bg);
@@ -419,10 +443,11 @@
   from { transform: scale(1) translate(0, 0); }
   to   { transform: scale(1.08) translate(-1.5%, 1%); }
 }
+/* One slow push in on arrival, then still. It used to drift forever, and a
+   picture that never stops moving pulls the eye off the words beside it. */
 .ken-burns {
-  animation: hoasis-ken-burns 40s ease-in-out infinite alternate;
+  animation: hoasis-ken-burns 12s var(--ease-out-soft) 1 both;
   transform-origin: 60% 40%;
-  will-change: transform;
 }
 
 /* One question at a time. The answered question slips away in the direction
@@ -822,7 +847,10 @@
   .rail-tile,
   .page-from-right,
   .page-from-left,
-  .ken-burns {
+  .ken-burns,
+  .animate-pulse,
+  .animate-spin,
+  [role="progressbar"] > * {
     animation: none !important;
     transition: none !important;
   }
@@ -866,14 +894,34 @@
 
 /* ---------------------------------------------------------------------------
    Phones zoom into any field whose text is smaller than 16px and never zoom
-   back out. Most fields here are 13 to 15px, which is right on a desktop, so
-   only a touch screen gets the larger size. Unlayered, so it wins over the
-   size utilities without !important.
+   back out. A few fields here are 14 or 15px, which is right on a desktop,
+   so only a touch screen gets the larger size, and never smaller than the
+   reader's chosen text size. Unlayered, so it wins over the size utilities
+   without !important.
 --------------------------------------------------------------------------- */
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   select,
   textarea {
-    font-size: 16px;
+    font-size: max(16px, calc(1rem * var(--type-scale)));
   }
+}
+
+/* ---------------------------------------------------------------------------
+   A field with focus wears the ring, whatever its own classes say. Most
+   fields here set outline-none and only tint the border on focus, which is
+   too faint for older eyes to find where they are typing. Bare fields
+   (bg-transparent) sit inside a box that draws its own edge. Unlayered, so
+   it wins over outline-none.
+--------------------------------------------------------------------------- */
+:where(input, select, textarea):not(.bg-transparent):not([type="checkbox"]):not([type="radio"]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* A borderless field sits in a box that is the field, as far as the reader
+   can tell, so the box wears the ring. */
+:has(> :is(input, textarea).bg-transparent:focus-visible):not([data-bare-focus]) {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
 }

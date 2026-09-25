@@ -938,7 +938,7 @@ export default function MarketingHome() {
           </div>
           <Reveal delay={160}>
             <MonitorFrame
-              src="/marketing/product-dashboard.png"
+              src="/marketing/product-finances.png"
               alt="The Your HOAsis board dashboard: money in and out by month, spending by category, and the association's balances"
             />
           </Reveal>

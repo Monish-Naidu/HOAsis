@@ -202,11 +202,13 @@ export function ThemeToggle({
           title={hint}
           onClick={() => setMode(value)}
           className={cn(
-            "flex size-7 items-center justify-center rounded-md transition-colors",
-            mode === value ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
+            "flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-2 text-footnote font-medium transition-colors",
+            mode === value ? "bg-surface-3 text-fg" : "text-fg-muted hover:text-fg",
           )}
         >
-          <Icon className="size-3.5" strokeWidth={2} />
+          <Icon className="size-4" strokeWidth={2} />
+          {/* Words, not only glyphs: a moon and a monitor mean little on their own. */}
+          <span className="hidden min-[400px]:inline">{label}</span>
         </button>
       ))}
     </div>

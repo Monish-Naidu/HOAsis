@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Copy, Download, FileText, Paperclip, Search } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, PageHeader, fieldClass } from "@/components/ui/primitives";
 import { PeriodPicker, SelectField } from "@/components/app/finance-ui";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
@@ -89,7 +89,7 @@ export function TransactionsScreen() {
 
   function remove(e: (typeof rows)[number]) {
     const undo = dismissLedgerEntry(e.id);
-    notify("Removed from the ledger", "warn", { label: "Undo", onClick: undo });
+    notify("Transaction removed", "warn", { label: "Undo", onClick: undo });
   }
 
   function exportRows() {
@@ -150,7 +150,7 @@ export function TransactionsScreen() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search description or payee"
                 aria-label="Search transactions"
-                className="h-9 w-full rounded-lg border border-border-2 bg-surface pl-8 pr-2 text-[13px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+                className={cn(fieldClass, "pl-8 pr-2 text-footnote")}
               />
             </label>
           </div>
@@ -169,8 +169,8 @@ export function TransactionsScreen() {
             { label: "Lines", value: String(totals.count), tone: "text-fg" },
           ].map((s) => (
             <div key={s.label} className="min-w-0 bg-surface px-5 py-3">
-              <dt className="text-[13px] font-medium text-fg-muted">{s.label}</dt>
-              <dd className={cn("tnum mt-0.5 text-[17px] font-semibold tracking-[-0.02em]", s.tone)}>{s.value}</dd>
+              <dt className="text-footnote font-medium text-fg-muted">{s.label}</dt>
+              <dd className={cn("tnum mt-0.5 text-headline font-semibold tracking-[-0.02em]", s.tone)}>{s.value}</dd>
             </div>
           ))}
         </dl>
@@ -208,17 +208,17 @@ export function TransactionsScreen() {
                   <li key={e.id} className={cn(e.status === "needs-review" && "bg-warn-soft/40")}>
                     <div className="px-4 py-2.5">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="min-w-0 truncate text-[14px] font-medium text-fg">{e.description}</p>
+                        <p className="min-w-0 truncate text-callout font-medium text-fg">{e.description}</p>
                         <p
                           className={cn(
-                            "tnum shrink-0 text-[14px] font-semibold",
+                            "tnum shrink-0 text-callout font-semibold",
                             e.amountCents >= 0 ? "text-ok" : "text-fg",
                           )}
                         >
                           {money(e.amountCents, { sign: e.amountCents > 0 })}
                         </p>
                       </div>
-                      <p className="mt-0.5 truncate text-[12px] text-fg-muted">
+                      <p className="mt-0.5 truncate text-caption text-fg-muted">
                         <span className="tnum">{formatDate(e.date)}</span> · {e.counterparty} ·{" "}
                         {e.status === "needs-review" && e.suggestedCategory
                           ? `${e.suggestedCategory}?`
@@ -250,7 +250,7 @@ export function TransactionsScreen() {
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[720px] text-left">
                 <thead>
-                  <tr className="border-b border-border text-[12px] font-semibold text-fg-muted">
+                  <tr className="border-b border-border text-caption font-semibold text-fg-muted">
                     <th className="px-5 py-2 font-semibold">Date</th>
                     <th className="px-3 py-2 font-semibold">Description</th>
                     <th className="px-3 py-2 font-semibold">Category</th>
@@ -269,12 +269,12 @@ export function TransactionsScreen() {
                       <RowGroup key={e.id}>
                         <tr
                           className={cn(
-                            "border-b border-border text-[14px] transition-colors hover:bg-surface-2",
+                            "border-b border-border text-callout transition-colors hover:bg-surface-2",
                             e.status === "needs-review" && "bg-warn-soft/40",
                             expanded && "border-b-0 bg-surface-2",
                           )}
                         >
-                          <td className="tnum whitespace-nowrap px-5 py-2.5 text-[13px] text-fg-muted">
+                          <td className="tnum whitespace-nowrap px-5 py-2.5 text-footnote text-fg-muted">
                             {formatDate(e.date)}
                           </td>
                           <td className="px-3 py-2.5">
@@ -287,9 +287,9 @@ export function TransactionsScreen() {
                                 />
                               ) : null}
                             </div>
-                            <span className="block text-[12px] text-fg-subtle">{e.counterparty}</span>
+                            <span className="block text-caption text-fg-subtle">{e.counterparty}</span>
                           </td>
-                          <td className="px-3 py-2.5 text-[12px] text-fg-muted">
+                          <td className="px-3 py-2.5 text-caption text-fg-muted">
                             {e.status === "needs-review" && e.suggestedCategory ? (
                               <span className="italic">{e.suggestedCategory}?</span>
                             ) : (
@@ -297,7 +297,7 @@ export function TransactionsScreen() {
                             )}
                           </td>
                           {accounts.length > 1 ? (
-                            <td className="px-3 py-2.5 text-[12px] text-fg-muted">{accountName(e.accountId)}</td>
+                            <td className="px-3 py-2.5 text-caption text-fg-muted">{accountName(e.accountId)}</td>
                           ) : null}
                           <td
                             className={cn(
@@ -307,8 +307,10 @@ export function TransactionsScreen() {
                           >
                             {money(e.amountCents, { sign: e.amountCents > 0 })}
                           </td>
-                          <td className="px-5 py-2.5">
-                            <span className="flex flex-wrap items-center gap-1.5">
+                          <td className="px-5 py-2.5 text-right">
+                            {/* One line: wrapped, Confirm sat under the badge and
+                                Remove under that, three rows for one decision. */}
+                            <span className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                               <StatusCell entry={e} onConfirm={() => confirm(e)} onRemove={() => remove(e)} />
                             </span>
                           </td>
@@ -331,7 +333,7 @@ export function TransactionsScreen() {
           </>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-[13px] text-fg-muted">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-footnote text-fg-muted">
           <span>
             {formatDate(range.from, "long")} to {formatDate(range.to, "long")}
           </span>
@@ -425,7 +427,7 @@ function AttachmentPanel({
   attachment: NonNullable<ReturnType<typeof ledgerAttachment>>;
 }) {
   return (
-    <div className="grid gap-4 rounded-xl border border-border bg-surface p-4 text-[13px] sm:grid-cols-[1fr_auto]">
+    <div className="grid gap-4 rounded-xl border border-border bg-surface p-4 text-footnote sm:grid-cols-[1fr_auto]">
       <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
         <div>
           <dt className="text-fg-muted">Paid to</dt>

@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Gavel, ShieldCheck } from "lucide-react";
-import { Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, textareaClass } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { useToast } from "@/components/app/toast";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { resolveCitation } from "@/lib/governing";
 import type { Violation } from "@/lib/types";
-import { formatDate, money, relativeDays } from "@/lib/utils";
+import { cn, formatDate, money, relativeDays } from "@/lib/utils";
 
 const STAGE: Record<
   Violation["stage"],
@@ -23,17 +23,17 @@ const STAGE: Record<
   "first-notice": {
     label: "Formal notice",
     tone: "warn",
-    what: "The formal step. Fix it by the date below and no fine can be imposed for it.",
+    what: "The formal step. Fix it by the date below and there is no fine.",
   },
   hearing: {
     label: "Hearing scheduled",
     tone: "danger",
-    what: "You are entitled to attend, to bring somebody, and to see everything the board is relying on. It is all below.",
+    what: "You can attend, bring someone with you, and see all the board's evidence. It is all below.",
   },
   fined: {
     label: "Fined",
     tone: "danger",
-    what: "A fine has been imposed. You can appeal it, and the appeal goes to the board rather than to whoever raised it.",
+    what: "You have been fined. You can appeal. The appeal goes to the board, not to whoever raised it.",
   },
   cured: {
     label: "Closed",
@@ -69,16 +69,16 @@ export function NoticesScreen() {
       <div>
         <Link
           href="/resident/requests"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-body font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           Requests
         </Link>
-        <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.025em] text-fg">
+        <h1 className="mt-2 text-title2 font-semibold tracking-[-0.025em] text-fg">
           Notices about your home
         </h1>
-        <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
-          Anything the association has raised, with everything it is relying on.
+        <p className="mt-1 text-body leading-relaxed text-fg-muted">
+          Anything the association has raised about your home, with its evidence.
         </p>
       </div>
 
@@ -86,7 +86,7 @@ export function NoticesScreen() {
         <Card>
           <EmptyState
             icon={<ShieldCheck className="size-6" />}
-            title="Nothing outstanding"
+            title="No notices"
             description="Notices about your home appear here, with any photos attached."
           />
         </Card>
@@ -100,23 +100,23 @@ export function NoticesScreen() {
                 <div className="border-b border-border px-4 py-3.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={stage.tone}>{stage.label}</Badge>
-                    <span className="text-[13px] text-fg-subtle">
+                    <span className="text-footnote text-fg-subtle">
                       {violation.reference} · opened{" "}
                       {formatDate(violation.openedDate, "medium")}
                     </span>
                   </div>
-                  <p className="mt-1.5 text-[17px] font-semibold tracking-[-0.01em] text-fg">
+                  <p className="mt-1.5 text-headline font-semibold tracking-[-0.01em] text-fg">
                     {violation.rule}
                   </p>
-                  <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">{stage.what}</p>
+                  <p className="mt-1 text-body leading-relaxed text-fg-muted">{stage.what}</p>
 
                   {/* The provision, resolved so it can be read rather than
                       taken on trust. A notice that names a section nobody can
                       produce is one worth questioning. */}
-                  <p className="mt-2 text-[13px] text-fg-muted">
+                  <p className="mt-2 text-footnote text-fg-muted">
                     {cited.article ? (
                       <>
-                        Relies on{" "}
+                        Rule:{" "}
                         <Link
                           href="/resident/documents/governing"
                           className="font-medium text-brand hover:underline"
@@ -126,23 +126,23 @@ export function NoticesScreen() {
                         , {cited.article.title}
                       </>
                     ) : (
-                      <>Relies on {violation.ruleCitation}</>
+                      <>Rule: {violation.ruleCitation}</>
                     )}
                   </p>
 
                   {violation.stage !== "cured" ? (
-                    <p className="mt-1 text-[13px] font-medium text-fg">
+                    <p className="mt-1 text-footnote font-medium text-fg">
                       Next step {relativeDays(violation.nextActionDate)}
                       {violation.fineCents > 0
-                        ? ` · ${money(violation.fineCents)} imposed`
+                        ? ` · ${money(violation.fineCents)} fine`
                         : ""}
                     </p>
                   ) : null}
                 </div>
 
                 <div className="px-4 py-4">
-                  <p className="mb-2.5 text-[13px] font-semibold text-fg-muted">
-                    What the board is relying on
+                  <p className="mb-2.5 text-footnote font-semibold text-fg-muted">
+                    The board&apos;s evidence
                   </p>
                   <EvidenceViewer
                     photos={violation.photos}
@@ -185,7 +185,7 @@ function OpenFooter({ violation }: { violation: Violation }) {
   return (
     <div className="border-t border-border bg-surface-2 px-4 py-3.5">
       {violation.ownerFixedDate ? (
-        <p className="flex items-start gap-1.5 text-[13px] leading-relaxed text-fg-muted">
+        <p className="flex items-start gap-1.5 text-footnote leading-relaxed text-fg-muted">
           <Check className="mt-0.5 size-3.5 shrink-0 text-ok" />
           <span>
             You told the board this was fixed on {formatDate(violation.ownerFixedDate, "long")}
@@ -201,7 +201,7 @@ function OpenFooter({ violation }: { violation: Violation }) {
           }}
         >
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">
+            <span className="text-footnote font-semibold text-fg-muted">
               Anything the board should know (optional)
             </span>
             <textarea
@@ -210,7 +210,7 @@ function OpenFooter({ violation }: { violation: Violation }) {
               rows={2}
               autoFocus
               placeholder="Replaced the fence boards on Saturday."
-              className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+              className={cn(textareaClass, "mt-1.5")}
             />
           </label>
           <div className="mt-2 flex gap-2">
@@ -224,9 +224,9 @@ function OpenFooter({ violation }: { violation: Violation }) {
         </form>
       ) : (
         <>
-          <p className="text-[13px] leading-relaxed text-fg-muted">
-            Fixed it? Tell the board and they will close this. If you disagree, ask the board.
-            It is answered on the record.
+          <p className="text-footnote leading-relaxed text-fg-muted">
+            Fixed it? Tell the board and they will close this. Disagree? Ask the board. They
+            reply in writing.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => setSaying(true)}>
@@ -234,7 +234,7 @@ function OpenFooter({ violation }: { violation: Violation }) {
             </Button>
             <Link
               href="/resident/requests/new"
-              className="inline-flex h-8 items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg transition-colors hover:bg-surface-3"
+              className="inline-flex h-8 items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-footnote font-medium text-fg transition-colors hover:bg-surface-3"
             >
               <Gavel className="size-3.5" />
               Ask the board

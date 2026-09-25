@@ -3,18 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, FilePlus2, FileText, Send, Trash2, Vote } from "lucide-react";
-import {
-  Badge,
-  Button,
-  ButtonLink,
-  Callout,
-  Card,
-  CardHeader,
-  EmptyState,
-  PageHeader,
-  Segmented,
-  Select,
-} from "@/components/ui/primitives";
+import { Badge, Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader, Segmented, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { GoverningReader } from "@/components/app/governing-reader";
 import { AmendmentDiff } from "@/components/app/amendment-diff";
 import { useAppState } from "@/lib/app-state";
@@ -28,7 +17,7 @@ import {
 } from "@/lib/governing";
 import { policyTemplates } from "@/lib/data/policy-templates";
 import type { PolicyTemplate } from "@/lib/data/policy-templates";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 const STAGE_TONE = {
   draft: "neutral",
@@ -261,13 +250,13 @@ export function AmendScreen() {
                 <div key={template.id} className="flex items-start gap-3 px-5 py-3.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[15px] font-semibold text-fg">{template.title}</p>
+                      <p className="text-body font-semibold text-fg">{template.title}</p>
                       {already ? <Badge tone="ok">Already adopted</Badge> : null}
                     </div>
-                    <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+                    <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
                       {template.why}
                     </p>
-                    <p className="mt-1 text-[13px] leading-relaxed text-fg-subtle">
+                    <p className="mt-1 text-footnote leading-relaxed text-fg-subtle">
                       {template.basis}
                     </p>
                   </div>
@@ -282,7 +271,7 @@ export function AmendScreen() {
               );
             })}
           </div>
-          <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
+          <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
             These are starting points, not legal advice, and they are offered for rules
             only. Check each one against your declaration before adopting it: a rule that
             goes further than the document above it is void. We do not supply covenant or
@@ -312,7 +301,7 @@ export function AmendScreen() {
           <div className="space-y-4 px-5 py-4">
             {drafting !== "add" ? (
               <label className="block">
-                <span className="text-[13px] font-semibold text-fg-muted">Which article</span>
+                <span className="text-footnote font-semibold text-fg-muted">Which article</span>
                 <Select
                   value={targetId}
                   onChange={(e) => pickTarget(e.target.value)}
@@ -328,21 +317,21 @@ export function AmendScreen() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-[13px] font-semibold text-fg-muted">Number</span>
+                  <span className="text-footnote font-semibold text-fg-muted">Number</span>
                   <input
                     value={number}
                     onChange={(e) => setNumber(e.target.value)}
                     placeholder="Article XIV"
-                    className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+                    className={cn(fieldClass, "mt-1.5")}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-[13px] font-semibold text-fg-muted">Title</span>
+                  <span className="text-footnote font-semibold text-fg-muted">Title</span>
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Leasing"
-                    className="mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+                    className={cn(fieldClass, "mt-1.5")}
                   />
                 </label>
               </div>
@@ -350,20 +339,20 @@ export function AmendScreen() {
 
             {drafting !== "remove" ? (
               <label className="block">
-                <span className="text-[13px] font-semibold text-fg-muted">
+                <span className="text-footnote font-semibold text-fg-muted">
                   The wording, one paragraph per block
                 </span>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={8}
-                  className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+                  className={cn(textareaClass, "mt-1.5")}
                 />
               </label>
             ) : null}
 
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">
+              <span className="text-footnote font-semibold text-fg-muted">
                 What this means, in plain words
               </span>
               <textarea
@@ -371,24 +360,24 @@ export function AmendScreen() {
                 onChange={(e) => setPlain(e.target.value)}
                 rows={2}
                 placeholder="A neighbor should understand this without a lawyer."
-                className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+                className={cn(textareaClass, "mt-1.5")}
               />
             </label>
 
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Why</span>
+              <span className="text-footnote font-semibold text-fg-muted">Why</span>
               <textarea
                 value={rationale}
                 onChange={(e) => setRationale(e.target.value)}
                 rows={2}
                 placeholder="What happened that makes this worth changing."
-                className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+                className={cn(textareaClass, "mt-1.5")}
               />
             </label>
 
             {/* The board sees the same diff owners will, before sending it. */}
             <div className="rounded-card border border-border bg-surface-2 p-4">
-              <p className="text-[13px] font-semibold text-fg-muted">
+              <p className="text-footnote font-semibold text-fg-muted">
                 What owners will see
               </p>
               <div className="mt-3">
@@ -435,32 +424,32 @@ export function AmendScreen() {
 
       {amendments.length > 0 ? (
         <div className="mt-6 space-y-3">
-          <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-fg">
+          <h2 className="text-headline font-semibold tracking-[-0.01em] text-fg">
             Proposed changes
           </h2>
           {amendments.map((amendment) => (
             <Card key={amendment.id} className="p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={STAGE_TONE[amendment.stage]}>{STAGE_LABEL[amendment.stage]}</Badge>
-                <span className="text-[13px] text-fg-muted">
+                <span className="text-footnote text-fg-muted">
                   {amendment.kind === "add"
                     ? "Adds an article"
                     : amendment.kind === "remove"
                       ? "Removes an article"
                       : "Changes the wording"}
                 </span>
-                <span className="text-[13px] text-fg-subtle">
+                <span className="text-footnote text-fg-subtle">
                   {amendment.proposedBy}, {formatDate(amendment.proposedOn, "medium")}
                 </span>
               </div>
-              <p className="mt-2 text-[17px] font-semibold tracking-[-0.01em] text-fg">
+              <p className="mt-2 text-headline font-semibold tracking-[-0.01em] text-fg">
                 {amendment.number}: {amendment.title}
               </p>
-              <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
+              <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
                 {amendment.plain}
               </p>
               <details className="mt-3">
-                <summary className="cursor-pointer text-[13px] font-medium text-brand">
+                <summary className="cursor-pointer text-footnote font-medium text-brand">
                   See exactly what changes
                 </summary>
                 <div className="mt-3">
@@ -476,7 +465,7 @@ export function AmendScreen() {
       ) : null}
 
       <div className="mt-8">
-        <h2 className="mb-3 text-[17px] font-semibold tracking-[-0.01em] text-fg">
+        <h2 className="mb-3 text-headline font-semibold tracking-[-0.01em] text-fg">
           {meta.label} as it stands
         </h2>
         <GoverningReader
@@ -490,7 +479,7 @@ export function AmendScreen() {
 
       {/* Importing lives here, with the text it produces, rather than as a
           card on Documents beside the files. */}
-      <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-fg-subtle">
+      <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-footnote text-fg-subtle">
         <Link href="/board/documents" className="text-accent hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to documents

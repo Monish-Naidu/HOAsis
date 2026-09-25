@@ -37,16 +37,16 @@ export function PortingCard() {
         <ol className="divide-y divide-border">
           {plan.steps.map((step, index) => (
             <li key={step.key} className="flex items-start gap-3 px-5 py-4">
-              <span className="tnum mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[13px] font-semibold text-fg-muted">
+              <span className="tnum mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-3 text-footnote font-semibold text-fg-muted">
                 {index + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-semibold text-fg">{step.title}</p>
-                <p className="mt-0.5 text-[15px] leading-relaxed text-fg-muted">{step.detail}</p>
+                <p className="text-body font-semibold text-fg">{step.title}</p>
+                <p className="mt-0.5 text-body leading-relaxed text-fg-muted">{step.detail}</p>
                 {/* Order is the whole argument at a handover, so the reason a
                     step sits where it does is stated rather than implied. */}
                 {step.because ? (
-                  <p className="mt-1.5 border-l-2 border-border-2 pl-3 text-[13px] leading-relaxed text-fg-muted">
+                  <p className="mt-1.5 border-l-2 border-border-2 pl-3 text-footnote leading-relaxed text-fg-muted">
                     {step.because}
                   </p>
                 ) : null}
@@ -54,7 +54,7 @@ export function PortingCard() {
                 {step.href ? (
                   <Link
                     href={step.href}
-                    className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"
+                    className="mt-2 inline-flex items-center gap-1.5 text-footnote font-medium text-primary hover:underline"
                   >
                     Open
                     <ArrowRight className="size-3" />

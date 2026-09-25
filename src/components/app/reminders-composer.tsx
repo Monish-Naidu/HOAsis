@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Send, Wand2 } from "lucide-react";
-import { Avatar, Badge, Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Avatar, Badge, Button, Card, CardHeader, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { TEMPLATE_TOKENS } from "@/lib/data";
@@ -121,10 +121,10 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
                 >
                   <Avatar name={row.owner.members[0] ?? row.owner.displayName} className="size-8" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-medium text-fg">
+                    <span className="block truncate text-body font-medium text-fg">
                       {row.owner.displayName}
                     </span>
-                    <span className="tnum block truncate text-[13px] text-fg-muted">
+                    <span className="tnum block truncate text-footnote text-fg-muted">
                       {homeLabel(community, row.owner.unit)} · {money(row.owner.balanceCents)} ·{" "}
                       {pluralize(row.owner.daysPastDue, "day")} late
                     </span>
@@ -138,15 +138,15 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
             <li key={row.owner.id} className="flex items-center gap-3 px-5 py-3 opacity-70">
               <Avatar name={row.owner.members[0] ?? row.owner.displayName} className="size-8" tone="neutral" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-medium text-fg">
+                <span className="block truncate text-body font-medium text-fg">
                   {row.owner.displayName}
                 </span>
-                <span className="tnum block truncate text-[13px] text-fg-muted">
+                <span className="tnum block truncate text-footnote text-fg-muted">
                   {homeLabel(community, row.owner.unit)} · {money(row.owner.balanceCents)} ·{" "}
                   {pluralize(row.owner.daysPastDue, "day")} late
                 </span>
               </span>
-              <span className="shrink-0 text-[13px] text-fg-subtle">
+              <span className="shrink-0 text-footnote text-fg-subtle">
                 {row.daysToFirst !== undefined
                   ? `Reminder in ${pluralize(row.daysToFirst, "day")}`
                   : "Not due yet"}
@@ -172,14 +172,14 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => startEditing(selected.letter!)}
-                  className="text-[13px] font-medium text-accent hover:underline"
+                  className="text-footnote font-medium text-accent hover:underline"
                 >
                   Edit the &ldquo;{selected.letter.name}&rdquo; letter
                 </button>
               </LetterPreview>
             ) : null
           ) : (
-            <p className="text-[15px] leading-relaxed text-fg-muted">
+            <p className="text-body leading-relaxed text-fg-muted">
               The ladder starts at {policy.reminderDay} days past due. Nothing goes out before
               that, and every household gets the same steps on the same days.
             </p>
@@ -188,7 +188,7 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-border px-5 py-3">
-        <p className="text-[13px] text-fg-muted">
+        <p className="text-footnote text-fg-muted">
           {due.length
             ? `Lands on each household's thread under Communications.`
             : ""}
@@ -223,12 +223,12 @@ function LetterPreview({
 }) {
   return (
     <div>
-      <p className="truncate text-[13px] text-fg-muted">
+      <p className="truncate text-footnote text-fg-muted">
         To {owner.displayName}
         {owner.email ? ` · ${owner.email}` : ""}
       </p>
-      <p className="mt-2 text-[15px] font-semibold text-fg">{letter.subject}</p>
-      <div className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-fg">{letter.body}</div>
+      <p className="mt-2 text-body font-semibold text-fg">{letter.subject}</p>
+      <div className="mt-3 whitespace-pre-wrap text-body leading-relaxed text-fg">{letter.body}</div>
       {children ? <div className="mt-4">{children}</div> : null}
     </div>
   );
@@ -251,15 +251,15 @@ function LetterEditor({
   onCancel: () => void;
 }) {
   const field =
-    "w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    fieldClass;
   return (
     <div>
-      <p className="text-[13px] text-fg-muted">
+      <p className="text-footnote text-fg-muted">
         Editing &ldquo;{template.name}&rdquo;. The change applies to every household getting this
         letter, now and next month.
       </p>
       <label className="mt-3 block">
-        <span className="mb-1 block text-[13px] font-semibold text-fg-muted">Subject</span>
+        <span className="mb-1 block text-footnote font-semibold text-fg-muted">Subject</span>
         <input
           value={subject}
           onChange={(e) => onChange({ subject: e.target.value })}
@@ -268,7 +268,7 @@ function LetterEditor({
         />
       </label>
       <label className="mt-3 block">
-        <span className="mb-1 block text-[13px] font-semibold text-fg-muted">Letter</span>
+        <span className="mb-1 block text-footnote font-semibold text-fg-muted">Letter</span>
         <textarea
           value={body}
           onChange={(e) => onChange({ body: e.target.value })}
@@ -277,7 +277,7 @@ function LetterEditor({
           className={cn(field, "resize-none py-2 leading-relaxed")}
         />
       </label>
-      <p className="mt-3 mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
+      <p className="mt-3 mb-1.5 flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
         <Wand2 className="size-3" />
         Filled in per household
       </p>
@@ -288,7 +288,7 @@ function LetterEditor({
             type="button"
             title={t.meaning}
             onClick={() => onChange({ body: `${body}${t.token}` })}
-            className="rounded-md border border-border px-2 py-0.5 font-mono text-[13px] text-fg-muted hover:bg-surface-2 hover:text-fg"
+            className="rounded-md border border-border px-2 py-0.5 font-mono text-footnote text-fg-muted hover:bg-surface-2 hover:text-fg"
           >
             {t.token}
           </button>

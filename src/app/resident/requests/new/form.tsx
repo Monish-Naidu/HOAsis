@@ -4,7 +4,7 @@ import { useState } from "react";
 import { formatSize } from "@/lib/documents";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
-import { Button, Callout, Card, SectionTitle, Select } from "@/components/ui/primitives";
+import { Button, Callout, Card, SectionTitle, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -18,30 +18,30 @@ const kinds = [
     label: "Maintenance",
     hint: "Something broken in a common area",
     icon: Hammer,
-    clock: "No statutory clock. Most are triaged within 2 business days.",
+    clock: "The board usually replies within 2 business days.",
   },
   {
     id: "architectural",
-    label: "Architectural",
+    label: "Home changes",
     hint: "Change to your home's exterior",
     icon: ClipboardList,
-    clock: "CC&Rs Art. VII §3: the committee must answer within 30 days.",
+    clock: "The board must answer within 30 days.",
   },
   {
     id: "records",
     label: "Records",
     hint: "Inspect association records",
     icon: FileSearch,
-    clock: "Association policy: the board responds within 10 business days.",
+    clock: "The board replies within 10 business days.",
     // A statutory records request is not a month-one homeowner action.
     module: "request-records" as const,
   },
   {
     id: "amenity",
-    label: "Amenity",
+    label: "Booking",
     hint: "Reserve the clubhouse or a court",
     icon: PartyPopper,
-    clock: "Reservations are confirmed or declined within 3 days.",
+    clock: "The board confirms or declines within 3 days.",
   },
 ] as const;
 
@@ -97,17 +97,17 @@ export function NewRequestForm() {
           <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
             <CheckCircle2 className="size-6" />
           </span>
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">Request submitted</h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">Reference {reference}</p>
+          <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">Request submitted</h1>
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">Reference {reference}</p>
           <Link
             href="/resident/requests"
-            className="mt-5 flex h-10 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+            className="mt-5 flex h-10 items-center justify-center rounded-lg bg-brand text-body font-medium text-brand-fg"
           >
             Track it
           </Link>
         </Card>
         {chosen ? (
-          <Callout tone="info" title="Response clock started">
+          <Callout tone="info" title="The board has your request">
             {chosen.clock}
           </Callout>
         ) : null}
@@ -181,14 +181,14 @@ export function NewRequestForm() {
     <form className="animate-rise space-y-6" onSubmit={(e) => e.preventDefault()}>
       <Link
         href="/resident/requests"
-        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
+        className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-body font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
       >
         <ArrowLeft className="size-3.5" />
         Cancel
       </Link>
 
       <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">New request</h1>
+        <h1 className="text-title2 font-semibold tracking-[-0.025em] text-fg">New request</h1>
         
       </div>
 
@@ -208,8 +208,8 @@ export function NewRequestForm() {
               )}
             >
               <Icon className="mb-2 size-4 text-fg-muted" />
-              <p className="text-[15px] font-semibold text-fg">{label}</p>
-              <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{hint}</p>
+              <p className="text-body font-semibold text-fg">{label}</p>
+              <p className="mt-0.5 text-footnote leading-snug text-fg-muted">{hint}</p>
             </button>
           ))}
         </div>
@@ -227,7 +227,7 @@ export function NewRequestForm() {
               value={amenityId}
               onChange={(e) => setAmenityId(e.target.value)}
               aria-label="Amenity"
-              className="w-full [&>select]:h-11 [&>select]:text-[15px]"
+              className="w-full [&>select]:h-11 [&>select]:text-body"
             >
               <option value="">Select an amenity</option>
               {reservable.map((a) => (
@@ -237,7 +237,7 @@ export function NewRequestForm() {
               ))}
             </Select>
             {reservable.length === 0 ? (
-              <p className="mt-2 text-[13px] text-fg-muted">
+              <p className="mt-2 text-footnote text-fg-muted">
                 The board has not made any amenities reservable yet.
               </p>
             ) : selectedAmenity ? (
@@ -253,7 +253,7 @@ export function NewRequestForm() {
                 />
               </div>
             ) : (
-              <p className="mt-2 text-[13px] text-fg-subtle">
+              <p className="mt-2 text-footnote text-fg-subtle">
                 Pick one and we will show you what times are free.
               </p>
             )}
@@ -269,7 +269,7 @@ export function NewRequestForm() {
               value={formId}
               onChange={(e) => setFormId(e.target.value)}
               aria-label="Architectural form"
-              className="w-full [&>select]:h-11 [&>select]:text-[15px]"
+              className="w-full [&>select]:h-11 [&>select]:text-body"
             >
               <option value="">Select a form</option>
               {forms.map((f) => (
@@ -283,7 +283,7 @@ export function NewRequestForm() {
               // the answers the board needs. Sending the PDF is the fallback.
               <Link
                 href={`/resident/documents/forms/${selectedForm.id}`}
-                className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2.5 text-[15px] font-medium text-primary hover:bg-primary-soft/70"
+                className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2.5 text-body font-medium text-primary hover:bg-primary-soft/70"
               >
                 Fill in {selectedForm.label.toLowerCase()} here instead
                 <ArrowRight className="size-4 shrink-0" />
@@ -294,20 +294,20 @@ export function NewRequestForm() {
                 <div className="flex items-start gap-2">
                   <FileText className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-fg">
+                    <p className="truncate text-body font-medium text-fg">
                       {selectedForm.fileName}
                     </p>
-                    <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
+                    <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
                       {selectedForm.description}
                     </p>
-                    <p className="mt-1 text-[13px] text-fg-subtle">
+                    <p className="mt-1 text-footnote text-fg-subtle">
                       {selectedForm.size} · updated {formatDate(selectedForm.updatedDate, "long")}
                       {selectedForm.source === "uploaded" ? " · uploaded by the board" : ""}
                     </p>
                   </div>
                   <button
                     type="button"
-                    className="shrink-0 rounded-md border border-border-2 px-2 py-1 text-[13px] font-medium text-fg hover:bg-surface"
+                    className="shrink-0 rounded-md border border-border-2 px-2 py-1 text-footnote font-medium text-fg hover:bg-surface"
                   >
                     <Download className="mr-1 inline size-3" />
                     Open
@@ -324,19 +324,19 @@ export function NewRequestForm() {
         <Card className="divide-y divide-border">
           {kind === "amenity" ? null : (
             <label className="block p-4">
-              <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">
+              <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">
                 Title
               </span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Short summary"
-                className="w-full bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-subtle"
+                className={fieldClass}
               />
             </label>
           )}
           <label className="block p-4">
-            <span className="mb-1.5 block text-[13px] font-semibold text-fg-muted">
+            <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">
               {kind === "amenity" ? "Anything the board should know" : "Description"}
             </span>
             <textarea
@@ -344,10 +344,10 @@ export function NewRequestForm() {
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder={kind === "amenity" ? "Optional. How many guests, what for." : "What's going on, where, and since when?"}
-              className="w-full resize-none bg-transparent text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
+              className={cn(textareaClass, "resize-none")}
             />
           </label>
-          <label className="flex w-full cursor-pointer items-center gap-2 p-4 text-left text-[15px] font-medium text-fg-muted hover:bg-surface-2">
+          <label className="flex w-full cursor-pointer items-center gap-2 p-4 text-left text-body font-medium text-fg-muted hover:bg-surface-2">
             <Paperclip className="size-3.5" />
             {files.length ? "Add another" : "Add photos or documents"}
             <input
@@ -369,7 +369,7 @@ export function NewRequestForm() {
           {files.length ? (
             <ul className="divide-y divide-border border-t border-border">
               {files.map((f, i) => (
-                <li key={`${f.name}-${i}`} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+                <li key={`${f.name}-${i}`} className="flex items-center gap-3 px-4 py-2.5 text-footnote">
                   <span className="min-w-0 flex-1 truncate text-fg">{f.name}</span>
                   <span className="shrink-0 text-fg-subtle">{f.size}</span>
                   <button
@@ -398,7 +398,7 @@ export function NewRequestForm() {
         {kind === "amenity" ? "Ask to book it" : "Send request"}
       </Button>
       {missing ? (
-        <p className="-mt-3 text-center text-[13px] text-fg-subtle">{missing} to send it.</p>
+        <p className="-mt-3 text-center text-footnote text-fg-subtle">{missing} to send it.</p>
       ) : null}
     </form>
   );

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { money, todayIsoDate } from "@/lib/utils";
+import { cn, money, todayIsoDate } from "@/lib/utils";
 
 /**
  * Money moved from operating into reserves.
@@ -21,7 +21,7 @@ export function ReserveTransferForm({ onClose }: { onClose: () => void }) {
   const cents = Math.round((Number(amount) || 0) * 100);
 
   const field =
-    "h-10 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    cn(fieldClass, "w-auto");
 
   return (
     <Card className="mb-6">
@@ -49,7 +49,7 @@ export function ReserveTransferForm({ onClose }: { onClose: () => void }) {
         }}
       >
         <label className="block">
-          <span className="text-[13px] font-medium text-fg">Amount</span>
+          <span className="text-footnote font-medium text-fg">Amount</span>
           <input
             type="number"
             min="0"
@@ -62,7 +62,7 @@ export function ReserveTransferForm({ onClose }: { onClose: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-medium text-fg">Date</span>
+          <span className="text-footnote font-medium text-fg">Date</span>
           <input
             type="date"
             value={date}

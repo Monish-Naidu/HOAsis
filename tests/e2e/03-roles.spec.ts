@@ -182,7 +182,7 @@ test.describe("booking an amenity", () => {
     await page.goto("/resident/requests/new");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: /Amenity|Reserve/i }).first().click();
+    await page.getByRole("button", { name: /Booking|Reserve/i }).first().click();
     await page.waitForTimeout(400);
     await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
     await page.waitForTimeout(500);
@@ -200,7 +200,7 @@ test.describe("booking an amenity", () => {
     await page.goto("/resident/requests/new");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: /Amenity|Reserve/i }).first().click();
+    await page.getByRole("button", { name: /Booking|Reserve/i }).first().click();
     await page.waitForTimeout(400);
     await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
     await page.waitForTimeout(500);

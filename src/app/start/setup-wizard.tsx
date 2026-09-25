@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Map as MapIcon, Plus, Trash2, Users } from "lucide-react";
-import { Button, Callout, Card } from "@/components/ui/primitives";
+import { Button, Callout, Card, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/app/question-flow";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
@@ -305,7 +305,7 @@ function WizardQuestions({
               value={draft.name}
               onChange={(e) => patch({ name: e.target.value })}
               placeholder="Oak Ridge Homeowners Association"
-              className={cn(input, "h-12 text-[17px]")}
+              className={cn(input, "h-12 text-headline")}
               autoFocus
             />
           </Field>
@@ -367,7 +367,7 @@ function WizardQuestions({
             {draft.duesByType ? null : (
             <Field label="Each home pays">
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
                   $
                 </span>
                 <input
@@ -521,7 +521,7 @@ function WizardQuestions({
               value={draft.builderName ?? ""}
               onChange={(e) => patch({ builderName: e.target.value })}
               placeholder="Ridgeline Homes"
-              className={cn(input, "h-12 text-[17px]")}
+              className={cn(input, "h-12 text-headline")}
               autoFocus
             />
           </Field>
@@ -705,7 +705,7 @@ function HomesStep({ draft, patch }: StepProps) {
           aria-checked={naming === mode.id}
           onClick={() => setNaming(mode.id)}
           className={cn(
-            "rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors",
+            "rounded-lg px-3.5 py-2 text-body font-medium transition-colors",
             naming === mode.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
           )}
         >
@@ -788,21 +788,21 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="divide-y divide-border overflow-hidden">
-        <div className="hidden grid-cols-[1.4fr_1fr_1fr_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-[13px] font-semibold text-fg-muted sm:grid">
+        <div className="hidden grid-cols-[1.4fr_1fr_1fr_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-footnote font-semibold text-fg-muted sm:grid">
           <span>Address</span>
           <span>Owner</span>
           <span>Email</span>
           <span />
         </div>
         <div className="grid grid-cols-1 items-center gap-2 px-3.5 py-2.5 sm:grid-cols-[1.4fr_1fr_1fr_2rem]">
-          <span className="truncate text-[15px] font-medium text-fg">
+          <span className="truncate text-body font-medium text-fg">
             {draft.founder.address?.trim() || mine || `Your ${w.home}`}
           </span>
-          <span className="truncate text-[15px] text-fg">
+          <span className="truncate text-body text-fg">
             {draft.founder.name.trim() || "You"}
-            <span className="ml-1.5 text-[13px] text-fg-subtle">yours</span>
+            <span className="ml-1.5 text-footnote text-fg-subtle">yours</span>
           </span>
-          <span className="truncate text-[13px] text-fg-subtle">{draft.founder.email}</span>
+          <span className="truncate text-footnote text-fg-subtle">{draft.founder.email}</span>
           <span />
           {mixed ? (
             <div className="flex flex-wrap items-center gap-1.5 sm:col-span-4">
@@ -820,30 +820,40 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
             key={index}
             className="grid grid-cols-1 items-center gap-2 px-3.5 py-2.5 sm:grid-cols-[1.4fr_1fr_1fr_2rem]"
           >
-            <input
-              value={row.address ?? row.unit}
-              onChange={(e) => editRow(index, { address: e.target.value })}
-              placeholder="1430 Mehr Meadows Lane"
-              aria-label={`Address of home ${index + 1}`}
-              autoComplete="off"
-              autoFocus={index === rows.length - 1 && !row.address}
-              className={cn(input, "h-9")}
-            />
-            <input
-              value={row.name}
-              onChange={(e) => editRow(index, { name: e.target.value })}
-              placeholder="Owner name"
-              aria-label={`Owner of home ${index + 1}`}
-              className={cn(input, "h-9")}
-            />
-            <input
-              type="email"
-              value={row.email}
-              onChange={(e) => editRow(index, { email: e.target.value })}
-              placeholder="Email"
-              aria-label={`Email for home ${index + 1}`}
-              className={cn(input, "h-9")}
-            />
+            <label className="block">
+              {/* The column headers hide on a phone; the words come back here. */}
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Address</span>
+              <input
+                value={row.address ?? row.unit}
+                onChange={(e) => editRow(index, { address: e.target.value })}
+                placeholder="1430 Mehr Meadows Lane"
+                aria-label={`Address of home ${index + 1}`}
+                autoComplete="off"
+                autoFocus={index === rows.length - 1 && !row.address}
+                className={input}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Owner</span>
+              <input
+                value={row.name}
+                onChange={(e) => editRow(index, { name: e.target.value })}
+                placeholder="Owner name"
+                aria-label={`Owner of home ${index + 1}`}
+                className={input}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Email</span>
+              <input
+                type="email"
+                value={row.email}
+                onChange={(e) => editRow(index, { email: e.target.value })}
+                placeholder="Email"
+                aria-label={`Email for home ${index + 1}`}
+                className={input}
+              />
+            </label>
             <button
               type="button"
               aria-label={`Remove home ${index + 1}`}
@@ -884,7 +894,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
             rows={5}
             placeholder={"One address per line\n1430 Mehr Meadows Lane\n1432 Mehr Meadows Lane"}
             aria-label="Addresses, one per line"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
+            className={textareaClass}
           />
           <div className="flex gap-2">
             <Button variant="primary" size="sm" disabled={!pasted.trim()} onClick={addPasted}>
@@ -897,7 +907,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
         </div>
       ) : null}
 
-      <p className="flex items-center gap-2 text-[13px] text-fg-muted">
+      <p className="flex items-center gap-2 text-footnote text-fg-muted">
         <MapIcon className="size-3.5 shrink-0" />
         {pluralHomes(listed + 1)}
         {named > 0 ? `, ${named} with an owner listed` : ", owners can come later"}
@@ -996,7 +1006,7 @@ function RangesStep({ draft, patch }: StepProps) {
               className={cn(input, "w-32")}
             />
           </Field>
-          <p className="pb-1 text-[13px] text-fg-subtle">
+          <p className="pb-1 text-footnote text-fg-subtle">
             {lots.length > 0
               ? `First one is ${lots[0]}`
               : `For example ${w.numberExample}, Building B or A-`}
@@ -1008,7 +1018,7 @@ function RangesStep({ draft, patch }: StepProps) {
               rows, the name and then first, last and count, each field with
               its own small label: five columns in 335px left the name field
               25px wide. */}
-          <div className="hidden grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-[13px] font-semibold text-fg-muted sm:grid">
+          <div className="hidden grid-cols-[1fr_5rem_5rem_4.5rem_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-footnote font-semibold text-fg-muted sm:grid">
             <span>{w.group}</span>
             <span>First</span>
             <span>Last</span>
@@ -1029,7 +1039,7 @@ function RangesStep({ draft, patch }: StepProps) {
                     className={cn(input, "col-span-3 h-9 font-medium sm:col-span-1 sm:font-normal")}
                   />
                   <label className="order-3 min-w-0 sm:order-none">
-                    <span className="mb-1 block text-[12px] font-medium text-fg-subtle sm:hidden">
+                    <span className="mb-1 block text-caption font-medium text-fg-subtle sm:hidden">
                       First
                     </span>
                     <input
@@ -1044,7 +1054,7 @@ function RangesStep({ draft, patch }: StepProps) {
                     />
                   </label>
                   <label className="order-4 min-w-0 sm:order-none">
-                    <span className="mb-1 block text-[12px] font-medium text-fg-subtle sm:hidden">
+                    <span className="mb-1 block text-caption font-medium text-fg-subtle sm:hidden">
                       Last
                     </span>
                     <input
@@ -1058,7 +1068,7 @@ function RangesStep({ draft, patch }: StepProps) {
                       className={cn(input, "h-9 tnum")}
                     />
                   </label>
-                  <span className="tnum order-5 flex h-9 items-center justify-end whitespace-nowrap text-[15px] font-medium text-fg-muted sm:order-none">
+                  <span className="tnum order-5 flex h-9 items-center justify-end whitespace-nowrap text-body font-medium text-fg-muted sm:order-none">
                     {count}
                     <span className="ml-1 sm:hidden">{count === 1 ? w.home : w.homes}</span>
                   </span>
@@ -1077,7 +1087,7 @@ function RangesStep({ draft, patch }: StepProps) {
                 </div>
                 {mixed ? (
                   <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">
-                    <span className="mr-1 text-[13px] text-fg-subtle">These are</span>
+                    <span className="mr-1 text-footnote text-fg-subtle">These are</span>
                     <TypeChips
                       types={types}
                       value={phase.homeType ?? types[0]}
@@ -1089,7 +1099,7 @@ function RangesStep({ draft, patch }: StepProps) {
                 {/* A phase with a problem creates nothing rather than creating
                     half of something. Two Lot 44s bills one home twice. */}
                 {problem ? (
-                  <p className="px-3.5 pb-2.5 text-[13px] leading-relaxed text-warn">
+                  <p className="px-3.5 pb-2.5 text-footnote leading-relaxed text-warn">
                     {problem.message}
                   </p>
                 ) : null}
@@ -1119,39 +1129,39 @@ function RangesStep({ draft, patch }: StepProps) {
             return (
             <div key={home.unit} className="px-3.5 py-2.5">
               <div className="flex items-center gap-3">
-                <span className="w-16 shrink-0 truncate text-[13px] font-medium text-fg-subtle sm:w-20">
+                <span className="w-16 shrink-0 truncate text-footnote font-medium text-fg-subtle sm:w-20">
                   {home.unit}
                   {mixed ? (
-                    <span className="block truncate text-[12px] font-normal">
+                    <span className="block truncate text-caption font-normal">
                       {HOME_TYPE_LABEL[home.homeType ?? types[0]].short}
                     </span>
                   ) : null}
                 </span>
                 <span className="min-w-0 flex-1">
                   {isMine ? (
-                    <span className="block text-[15px] font-medium text-fg">
+                    <span className="block text-body font-medium text-fg">
                       {draft.founder.name.trim() || "You"}
-                      <span className="ml-1.5 text-[13px] font-normal text-fg-subtle">
+                      <span className="ml-1.5 text-footnote font-normal text-fg-subtle">
                         yours
                       </span>
                     </span>
                   ) : home.name.trim() ? (
                     <>
-                      <span className="block truncate text-[15px] font-medium text-fg">
+                      <span className="block truncate text-body font-medium text-fg">
                         {home.name}
                       </span>
                       {home.email ? (
-                        <span className="block truncate text-[13px] text-fg-subtle">
+                        <span className="block truncate text-footnote text-fg-subtle">
                           {home.email}
                         </span>
                       ) : (
-                        <span className="block text-[13px] text-warn">
+                        <span className="block text-footnote text-warn">
                           No email, so no invitation
                         </span>
                       )}
                     </>
                   ) : (
-                    <span className="block truncate text-[15px] text-fg-subtle">
+                    <span className="block truncate text-body text-fg-subtle">
                       {w.fromBuilder
                         ? `Not sold yet${draft.builderName?.trim() ? `, ${draft.builderName.trim()}` : ""}`
                         : "No owner listed"}
@@ -1165,7 +1175,7 @@ function RangesStep({ draft, patch }: StepProps) {
                       setNamingUnit(namingUnit === home.unit ? null : home.unit);
                       setBuyer({ name: home.name, email: home.email });
                     }}
-                    className="shrink-0 text-[13px] font-medium text-primary hover:underline"
+                    className="shrink-0 text-footnote font-medium text-primary hover:underline"
                   >
                     {home.name.trim() ? "Edit" : w.fromBuilder ? "It has sold" : "Add the owner"}
                   </button>
@@ -1174,28 +1184,32 @@ function RangesStep({ draft, patch }: StepProps) {
 
               {namingUnit === home.unit && !isMine ? (
                 <form
-                  className="mt-2.5 grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+                  className="mt-2.5 grid items-end gap-2 sm:grid-cols-[1fr_1fr_auto]"
                   onSubmit={(e) => {
                     e.preventDefault();
                     saveBuyer(home.unit);
                   }}
                 >
-                  <input
-                    value={buyer.name}
-                    onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
-                    placeholder={w.fromBuilder ? "Buyer name" : "Owner name"}
-                    aria-label={`Owner of ${home.unit}`}
-                    autoFocus
-                    className={cn(input, "h-9")}
-                  />
-                  <input
-                    type="email"
-                    value={buyer.email}
-                    onChange={(e) => setBuyer({ ...buyer, email: e.target.value })}
-                    placeholder="Email"
-                    aria-label={`Email for ${home.unit}`}
-                    className={cn(input, "h-9")}
-                  />
+                  <Field label={w.fromBuilder ? "Buyer name" : "Owner name"}>
+                    <input
+                      value={buyer.name}
+                      onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
+                      placeholder={w.fromBuilder ? "Buyer name" : "Owner name"}
+                      aria-label={`Owner of ${home.unit}`}
+                      autoFocus
+                      className={input}
+                    />
+                  </Field>
+                  <Field label="Email">
+                    <input
+                      type="email"
+                      value={buyer.email}
+                      onChange={(e) => setBuyer({ ...buyer, email: e.target.value })}
+                      placeholder="Email"
+                      aria-label={`Email for ${home.unit}`}
+                      className={input}
+                    />
+                  </Field>
                   <Button type="submit" variant="secondary" size="sm">
                     Save
                   </Button>
@@ -1208,7 +1222,7 @@ function RangesStep({ draft, patch }: StepProps) {
             <button
               type="button"
               onClick={() => setShown(draft.households.length)}
-              className="w-full px-3.5 py-3 text-left text-[13px] font-medium text-primary transition-colors hover:bg-surface-2"
+              className="w-full px-3.5 py-3 text-left text-footnote font-medium text-primary transition-colors hover:bg-surface-2"
             >
               Show the other {draft.households.length - shown} {w.homes}
             </button>
@@ -1216,7 +1230,7 @@ function RangesStep({ draft, patch }: StepProps) {
         </Card>
       ) : null}
 
-      <p className="flex items-center gap-2 text-[13px] text-fg-muted">
+      <p className="flex items-center gap-2 text-footnote text-fg-muted">
         <MapIcon className="size-3.5 shrink-0" />
         {pluralHomes(unitCount(draft))}
         {w.fromBuilder
@@ -1290,7 +1304,7 @@ function TypeChips({
           aria-checked={value === t}
           onClick={() => onChange(t)}
           className={cn(
-            "h-8 rounded-full border px-3 text-[13px] font-medium transition-colors",
+            "h-8 rounded-full border px-3 text-footnote font-medium transition-colors",
             value === t
               ? "border-primary bg-primary-soft text-primary"
               : "border-border-2 text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -1346,7 +1360,7 @@ function DuesByType({ draft, patch }: StepProps) {
               )
             }
             className={cn(
-              "rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors",
+              "rounded-lg px-3.5 py-2 text-body font-medium transition-colors",
               split === mode.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
             )}
           >
@@ -1359,7 +1373,7 @@ function DuesByType({ draft, patch }: StepProps) {
           {types.map((t, i) => (
             <Field key={t} label={`${HOME_TYPE_LABEL[t].many} pay`}>
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
                   $
                 </span>
                 <input
@@ -1393,7 +1407,7 @@ function MixLine({ draft }: { draft: CommunityDraft }) {
       (founderType === t ? 1 : 0),
   }));
   return (
-    <p className="-mt-3 flex flex-wrap gap-x-3 gap-y-1 pl-5.5 text-[13px] text-fg-subtle">
+    <p className="-mt-3 flex flex-wrap gap-x-3 gap-y-1 pl-5.5 text-footnote text-fg-subtle">
       {counts.map(({ t, n }) => (
         <span key={t}>
           <span className="tnum font-medium text-fg-muted">{n}</span>{" "}
@@ -1406,7 +1420,7 @@ function MixLine({ draft }: { draft: CommunityDraft }) {
 }
 
 const input =
-  "h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary";
+  fieldClass;
 
 /**
  * The founder's number and address, ordered and worded by who is asking.
@@ -1485,10 +1499,10 @@ function Field({
   return (
     <div>
       <label className="block">
-        <span className="mb-1.5 block text-[13px] font-medium text-fg">{label}</span>
+        <span className="mb-1.5 block text-footnote font-medium text-fg">{label}</span>
         {children}
       </label>
-      {hint ? <span className="mt-1 block text-[13px] text-fg-subtle">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-footnote text-fg-subtle">{hint}</span> : null}
     </div>
   );
 }

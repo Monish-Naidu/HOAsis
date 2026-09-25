@@ -30,7 +30,7 @@ export function InstrumentMenu({
         aria-label={`Options for ${label}`}
         aria-expanded={open}
         onClick={onToggle}
-        className="flex size-8 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg"
+        className="flex size-10 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg"
       >
         <MoreHorizontal className="size-4" />
       </button>
@@ -47,7 +47,7 @@ export function InstrumentMenu({
               type="button"
               disabled={isDefault}
               onClick={onMakeDefault}
-              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[15px] text-fg hover:bg-surface-2 disabled:opacity-40"
+              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-body text-fg hover:bg-surface-2 disabled:opacity-40"
             >
               <Star className={cn("size-3.5", isDefault && "fill-current")} />
               {isDefault ? "Already default" : "Make default"}
@@ -55,7 +55,7 @@ export function InstrumentMenu({
             <button
               type="button"
               onClick={onRemove}
-              className="flex w-full items-center gap-2.5 border-t border-border px-3.5 py-2.5 text-left text-[15px] text-danger hover:bg-danger-soft"
+              className="flex w-full items-center gap-2.5 border-t border-border px-3.5 py-2.5 text-left text-body text-danger hover:bg-danger-soft"
             >
               <Trash2 className="size-3.5" />
               Remove

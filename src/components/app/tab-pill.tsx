@@ -76,6 +76,9 @@ export function TabPill({
         frame.current = requestAnimationFrame(park);
       });
       observer.current.observe(node);
+      // And each row: a larger text size re-wraps rows inside a container
+      // whose own size never changes, and the pill was left behind.
+      node.querySelectorAll("[data-tab-key], a").forEach((row) => observer.current?.observe(row));
     }
   }, [activeKey]);
 

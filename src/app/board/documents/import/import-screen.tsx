@@ -10,17 +10,7 @@ import {
   ScanLine,
   Upload,
 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Callout,
-  Card,
-  CardHeader,
-  Checkbox,
-  EmptyState,
-  PageHeader,
-  Select,
-} from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, Checkbox, EmptyState, PageHeader, Select, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { GOVERNING_DOCS, DOC_ORDER, DISCLOSURE_TOPICS } from "@/lib/governing";
@@ -204,7 +194,7 @@ export function ImportScreen() {
           title="The document"
           subtitle={fileName ? `Read from ${fileName}` : "Upload a text file, or paste the text"}
           action={
-            <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg transition-colors hover:bg-surface-2">
+            <label className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-footnote font-medium text-fg transition-colors hover:bg-surface-2">
               <Upload className="size-3.5" />
               Choose a file
               <input
@@ -222,7 +212,7 @@ export function ImportScreen() {
         />
         <div className="px-5 py-4">
           {readError ? (
-            <p className="mb-3 flex items-start gap-2 rounded-lg border border-warn/30 bg-warn-soft px-3 py-2.5 text-[13px] leading-relaxed text-fg">
+            <p className="mb-3 flex items-start gap-2 rounded-lg border border-warn/30 bg-warn-soft px-3 py-2.5 text-footnote leading-relaxed text-fg">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warn" />
               {readError}
             </p>
@@ -233,7 +223,7 @@ export function ImportScreen() {
             rows={source ? 6 : 10}
             placeholder={"ARTICLE I\nName and purpose\n\nSection 1. The Association is..."}
             aria-label="The text of the document"
-            className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 font-mono text-[13px] leading-relaxed text-fg outline-none focus:border-brand"
+            className={cn(textareaClass, "font-mono text-footnote")}
           />
         </div>
       </Card>
@@ -256,10 +246,10 @@ export function ImportScreen() {
             />
 
             <div className="border-b border-border px-5 py-4">
-              <span className="text-[13px] font-semibold text-fg-muted">
+              <span className="text-footnote font-semibold text-fg-muted">
                 Which document is this?
               </span>
-              <p className="mt-0.5 text-[13px] leading-relaxed text-fg-subtle">
+              <p className="mt-0.5 text-footnote leading-relaxed text-fg-subtle">
                 {GOVERNING_DOCS[doc].plain}
               </p>
               <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -270,7 +260,7 @@ export function ImportScreen() {
                     onClick={() => setDoc(kind)}
                     aria-pressed={doc === kind}
                     className={cn(
-                      "rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                      "rounded-lg border px-3 py-1.5 text-footnote font-medium transition-colors",
                       doc === kind
                         ? "border-brand bg-brand-soft text-brand-soft-fg"
                         : "border-border-2 bg-surface text-fg-muted hover:text-fg",
@@ -285,12 +275,12 @@ export function ImportScreen() {
 
             {collisions.length > 0 ? (
               <div className="border-b border-border bg-warn-soft/30 px-5 py-4">
-                <p className="flex items-center gap-2 text-[13px] font-semibold text-fg">
+                <p className="flex items-center gap-2 text-footnote font-semibold text-fg">
                   <AlertTriangle className="size-3.5 text-warn" />
                   {collisions.map((a) => a.number).join(", ")} already{" "}
                   {collisions.length === 1 ? "exists" : "exist"} in {GOVERNING_DOCS[doc].short}
                 </p>
-                <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+                <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
                   These will not be imported and the text on file will not be replaced. If
                   this file is an amended copy, edit the article in the reader so the change
                   is recorded as an amendment rather than as a second Article of the same
@@ -303,7 +293,7 @@ export function ImportScreen() {
               <div className="border-b border-border bg-warn-soft/30 px-5 py-4">
                 {/* A gap shown is a gap a board can go and check. A gap
                     quietly filled in is a section number they will cite. */}
-                <p className="flex items-center gap-2 text-[13px] font-semibold text-fg">
+                <p className="flex items-center gap-2 text-footnote font-semibold text-fg">
                   <AlertTriangle className="size-3.5 text-warn" />
                   {extraction.gaps.length} part
                   {extraction.gaps.length === 1 ? "" : "s"} of the file could not be read as
@@ -311,11 +301,11 @@ export function ImportScreen() {
                 </p>
                 <div className="mt-2 space-y-2">
                   {extraction.gaps.map((gap, index) => (
-                    <div key={index} className="text-[13px] leading-relaxed">
+                    <div key={index} className="text-footnote leading-relaxed">
                       <span className="font-semibold text-fg-muted">{gap.where}: </span>
                       <span className="text-fg-muted">{gap.reason}</span>
                       {gap.preview ? (
-                        <p className="mt-0.5 truncate font-mono text-[13px] text-fg-subtle">
+                        <p className="mt-0.5 truncate font-mono text-footnote text-fg-subtle">
                           {gap.preview}
                         </p>
                       ) : null}
@@ -357,19 +347,19 @@ export function ImportScreen() {
               {imported ? (
                 <Link
                   href="/board/documents/governing"
-                  className="text-[13px] font-medium text-brand hover:underline"
+                  className="text-footnote font-medium text-brand hover:underline"
                 >
                   See them in the reader
                 </Link>
               ) : kept.length === 0 ? (
-                <p className="text-[13px] leading-relaxed text-fg-muted">
+                <p className="text-footnote leading-relaxed text-fg-muted">
                   Nothing is ticked. Anything marked{" "}
                   <span className="font-semibold">Needs a look</span> starts off, on purpose:
                   open it, check it against your own file, and tick the ones that came
                   through right.
                 </p>
               ) : (
-                <p className="text-[13px] text-fg-subtle">
+                <p className="text-footnote text-fg-subtle">
                   No plain summary is written for you. Each article lands showing its exact
                   wording, and a board member writes the plain reading.
                 </p>
@@ -379,7 +369,7 @@ export function ImportScreen() {
         </>
       ) : null}
 
-      <p className="mt-8 text-[13px] text-fg-subtle">
+      <p className="mt-8 text-footnote text-fg-subtle">
         <Link href="/board/documents" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to documents
@@ -417,7 +407,7 @@ function ArticleRow({
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[13px] font-semibold text-fg-muted">{article.number}</span>
+            <span className="text-footnote font-semibold text-fg-muted">{article.number}</span>
             {alreadyOnFile ? (
               <Badge tone="warn">Already on file</Badge>
             ) : empty ? (
@@ -427,14 +417,14 @@ function ArticleRow({
             ) : (
               <Badge tone="warn">Needs a look</Badge>
             )}
-            <span className="text-[13px] text-fg-subtle">line {article.startLine}</span>
+            <span className="text-footnote text-fg-subtle">line {article.startLine}</span>
           </div>
-          <p className="mt-0.5 text-[15px] font-semibold text-fg">{article.title}</p>
+          <p className="mt-0.5 text-body font-semibold text-fg">{article.title}</p>
 
           {article.concerns.length > 0 ? (
             <ul className="mt-1.5 space-y-1">
               {article.concerns.map((concern, index) => (
-                <li key={index} className="text-[13px] leading-relaxed text-warn">
+                <li key={index} className="text-footnote leading-relaxed text-warn">
                   {concern}
                 </li>
               ))}
@@ -442,12 +432,12 @@ function ArticleRow({
           ) : null}
 
           <details className="mt-2">
-            <summary className="cursor-pointer text-[13px] font-medium text-brand">
+            <summary className="cursor-pointer text-footnote font-medium text-brand">
               {article.text.length} paragraph{article.text.length === 1 ? "" : "s"}, as read
             </summary>
             <div className="mt-2 space-y-2">
               {article.text.map((paragraph, index) => (
-                <p key={index} className="text-[13px] leading-relaxed text-fg-muted">
+                <p key={index} className="text-footnote leading-relaxed text-fg-muted">
                   {paragraph}
                 </p>
               ))}
@@ -457,7 +447,7 @@ function ArticleRow({
           {keeping ? (
             <div className="mt-3 space-y-3 rounded-lg border border-border bg-surface-2 px-3 py-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[13px] font-semibold text-fg-muted">Filed under</span>
+                <span className="text-footnote font-semibold text-fg-muted">Filed under</span>
                 <Select
                   size="sm"
                   value={choice.topic}
@@ -470,7 +460,7 @@ function ArticleRow({
                     </option>
                   ))}
                 </Select>
-                <span className="text-[13px] font-semibold text-fg-muted">Applies to</span>
+                <span className="text-footnote font-semibold text-fg-muted">Applies to</span>
                 <Select
                   size="sm"
                   value={choice.affects}
@@ -486,7 +476,7 @@ function ArticleRow({
               </div>
 
               <div>
-                <p className="text-[13px] font-semibold text-fg-muted">
+                <p className="text-footnote font-semibold text-fg-muted">
                   Does this settle one of the eight a buyer must be told?
                 </p>
                 {/* Suggested by a word match, ticked by a person. The gap
@@ -508,7 +498,7 @@ function ArticleRow({
                           })
                         }
                         className={cn(
-                          "rounded-full border px-2.5 py-1 text-[13px] font-medium transition-colors",
+                          "rounded-full border px-2.5 py-1 text-footnote font-medium transition-colors",
                           on
                             ? "border-primary bg-primary-soft text-primary"
                             : suggested
@@ -522,7 +512,7 @@ function ArticleRow({
                     );
                   })}
                 </div>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-fg-subtle">
+                <p className="mt-1.5 text-footnote leading-relaxed text-fg-subtle">
                   The highlighted ones are where the words appear. That is a place to look,
                   not an answer, so nothing is ticked for you.
                 </p>

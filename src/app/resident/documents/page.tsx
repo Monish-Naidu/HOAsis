@@ -12,9 +12,9 @@ import {
   PenLine,
   Search,
 } from "lucide-react";
-import { Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
+import { Card, EmptyState, IconTile, SectionTitle, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import type { DocumentRecord, GoverningDoc } from "@/lib/types";
 
 /** Short enough to sit in front of an article number in a search result. */
@@ -90,7 +90,7 @@ function DocumentsScreen() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search, for example fence, late fee, or minutes"
           aria-label="Search documents and governing documents"
-          className="h-11 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
+          className={cn(fieldClass, "pl-9 pr-3")}
         />
       </label>
 
@@ -104,12 +104,12 @@ function DocumentsScreen() {
                 href="/resident/documents/governing"
                 className="block px-4 py-3 transition-colors hover:bg-surface-2"
               >
-                <p className="text-[13px] font-semibold text-fg-muted">
+                <p className="text-footnote font-semibold text-fg-muted">
                   {DOC_SHORT[article.document]} {article.number}
                 </p>
-                <p className="mt-0.5 text-[15px] font-semibold text-fg">{article.title}</p>
+                <p className="mt-0.5 text-body font-semibold text-fg">{article.title}</p>
                 {article.plain ? (
-                  <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+                  <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
                     {article.plain}
                   </p>
                 ) : null}
@@ -126,10 +126,10 @@ function DocumentsScreen() {
         >
           <IconTile icon={BookOpen} tint="violet" size="md" className="shrink-0" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-fg">
+            <span className="block text-body font-semibold text-fg">
               Read the rules you live under
             </span>
-            <span className="block text-[13px] leading-snug text-fg-muted">
+            <span className="block text-footnote leading-snug text-fg-muted">
               The CC&amp;Rs, the bylaws and the rules, in plain words, searchable, with the
               exact wording one tap away
             </span>
@@ -150,10 +150,10 @@ function DocumentsScreen() {
               >
                 <IconTile icon={PenLine} tint="teal" size="sm" className="shrink-0" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold text-fg">
+                  <span className="block truncate text-body font-semibold text-fg">
                     {form.label}
                   </span>
-                  <span className="block truncate text-[13px] text-fg-muted">
+                  <span className="block truncate text-footnote text-fg-muted">
                     {form.decisionDays
                       ? `The board answers within ${form.decisionDays} days`
                       : form.description}
@@ -162,6 +162,19 @@ function DocumentsScreen() {
                 <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
               </Link>
             ))}
+          </Card>
+        </section>
+      ) : null}
+
+      {!q && grouped.length === 0 ? (
+        <section>
+          <SectionTitle>From the board</SectionTitle>
+          <Card>
+            <EmptyState
+              icon={<FileText className="size-5" />}
+              title="No documents yet"
+              description="The declaration, bylaws, budget, and minutes appear here as the board uploads them."
+            />
           </Card>
         </section>
       ) : null}
@@ -194,8 +207,8 @@ function DocumentsScreen() {
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-medium text-fg">{d.name}</span>
-                    <span className="block truncate text-[13px] text-fg-muted">
+                    <span className="block truncate text-body font-medium text-fg">{d.name}</span>
+                    <span className="block truncate text-footnote text-fg-muted">
                       {formatDate(d.updatedDate, "medium")} · {d.size}
                     </span>
                   </span>

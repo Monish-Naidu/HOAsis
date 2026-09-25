@@ -116,7 +116,7 @@ export async function signUp(
     }
     if (response.status !== 503) {
       const body = (await response.json().catch(() => ({}))) as { message?: string };
-      return { ok: false, message: readable(body.message ?? "That did not work.") };
+      return { ok: false, message: readable(body.message ?? "Something went wrong. Please try again.") };
     }
   } catch {
     // Network trouble reaching our own route. Supabase's path is still there.

@@ -65,15 +65,15 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
           onClick={() => input.current?.click()}
           aria-label={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
           title={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
-          className="absolute bottom-1.5 right-1.5 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
+          className="absolute bottom-1.5 right-1.5 flex size-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
         >
           <Camera className="size-3.5" />
         </button>
       </div>
       <div className="min-w-0 flex-1 p-4">
-        <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">My Home</p>
-        <p className="mt-0.5 truncate text-[15px] text-fg-muted">{owner.address}</p>
-        <p className="truncate text-[13px] text-fg-subtle">
+        <p className="text-headline font-semibold tracking-[-0.015em] text-fg">My Home</p>
+        <p className="mt-0.5 truncate text-body text-fg-muted">{owner.address}</p>
+        <p className="truncate text-footnote text-fg-subtle">
           {kind ? `${kind} · ` : ""}
           {settings.displayName}
         </p>
@@ -81,7 +81,7 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
           {detailsLink ? (
             <Link
               href="/resident/account"
-              className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent hover:underline"
+              className="inline-flex items-center gap-0.5 text-footnote font-semibold text-accent hover:underline"
             >
               View home details
               <ChevronRight className="size-3.5" />
@@ -94,7 +94,7 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
                 setPhoto(null);
                 notify("Photo removed");
               }}
-              className="text-[13px] font-medium text-fg-subtle hover:text-fg-muted hover:underline"
+              className="text-footnote font-medium text-fg-muted underline underline-offset-2 hover:text-fg"
             >
               Remove photo
             </button>

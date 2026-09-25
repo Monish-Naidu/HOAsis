@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ message: "That did not work." }, { status: 400 });
+    return NextResponse.json({ message: "Something went wrong. Please try again." }, { status: 400 });
   }
 
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";

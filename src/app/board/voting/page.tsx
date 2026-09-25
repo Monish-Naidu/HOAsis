@@ -53,10 +53,10 @@ export default function BoardVoting() {
 
       <section>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 className="text-[13px] font-semibold text-fg-muted">Open</h2>
+          <h2 className="text-footnote font-semibold text-fg-muted">Open</h2>
           {/* Said once for the group rather than on every card. */}
           {open.length > 0 && !settings.showLiveVoteResults ? (
-            <p className="inline-flex items-center gap-1.5 text-[13px] text-fg-subtle">
+            <p className="inline-flex items-center gap-1.5 text-footnote text-fg-subtle">
               <Lock className="size-3" />
               Results show when voting ends. Live results are a switch in Settings.
             </p>
@@ -90,7 +90,7 @@ export default function BoardVoting() {
 
       {scheduled.length > 0 ? (
         <section className="mt-6">
-          <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">Scheduled</h2>
+          <h2 className="mb-3 text-footnote font-semibold text-fg-muted">Scheduled</h2>
           <div className={cn("grid gap-4", scheduled.length > 1 && "xl:grid-cols-2")}>
             {scheduled.map((b) => (
               <div key={b.id} id={`ballot-${b.id}`} className="scroll-mt-32 lg:scroll-mt-24">
@@ -103,7 +103,7 @@ export default function BoardVoting() {
 
       {closed.length > 0 ? (
         <section className="mt-6">
-          <h2 className="mb-3 text-[13px] font-semibold text-fg-muted">Closed</h2>
+          <h2 className="mb-3 text-footnote font-semibold text-fg-muted">Closed</h2>
           <Card>
             <div className="divide-y divide-border">
               {closed.map((b) => (
@@ -113,10 +113,10 @@ export default function BoardVoting() {
                   className="flex scroll-mt-32 lg:scroll-mt-24 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3.5"
                 >
                   <div className="min-w-0">
-                    <p className="text-[15px] font-medium text-fg">{b.title}</p>
-                    <p className="text-[13px] text-fg-muted">{resultLine(b)}</p>
+                    <p className="text-body font-medium text-fg">{b.title}</p>
+                    <p className="text-footnote text-fg-muted">{resultLine(b)}</p>
                   </div>
-                  <span className="tnum text-[13px] text-fg-subtle">
+                  <span className="tnum text-footnote text-fg-subtle">
                     Ended {formatDate(b.closesDate)}
                   </span>
                 </div>

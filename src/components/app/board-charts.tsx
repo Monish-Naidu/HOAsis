@@ -50,21 +50,23 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
   const peak = niceCeil(Math.max(...months.map((m) => Math.max(m.inCents, m.outCents))));
   const h = (cents: number) => (peak ? Math.max(cents > 0 ? 1.5 : 0, (cents / peak) * 100) : 0);
 
+  // Grows to the card's height, so beside a taller neighbour the bars fill
+  // the card instead of leaving its lower half empty.
   return (
-    <div>
+    <div className="flex flex-1 flex-col">
       <div className="flex items-center gap-4 px-5 pt-4" aria-hidden>
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+        <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
           <span className="size-2.5 rounded-sm bg-chart-3" />
           Money In
         </span>
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+        <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
           <span className="size-2.5 rounded-sm bg-chart-1" />
           Money Out
         </span>
       </div>
 
-      <div className="px-5 pb-4 pt-3" aria-hidden>
-        <div className="relative h-44">
+      <div className="flex flex-1 flex-col px-5 pb-4 pt-3" aria-hidden>
+        <div className="relative min-h-44 flex-1">
           {/* Gridlines at thirds, quiet, with the scale written at the left. */}
           {[0, 1 / 3, 2 / 3, 1].map((t) => (
             <div
@@ -72,7 +74,7 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
               className="absolute inset-x-0 flex items-end"
               style={{ bottom: `${t * 100}%` }}
             >
-              <span className="tnum w-10 shrink-0 translate-y-[0.4em] pr-2 text-right text-[11px] text-fg-subtle">
+              <span className="tnum w-10 shrink-0 translate-y-[0.4em] pr-2 text-right text-caption text-fg-subtle">
                 {t === 0 ? "$0" : shortMoney(peak * t)}
               </span>
               <span className="h-px flex-1 bg-border" />
@@ -95,17 +97,17 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
                 />
                 {/* The hover layer. The hit target is the whole month column. */}
                 <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-surface px-3 py-2 text-left shadow-float group-hover:block">
-                  <p className="text-[12px] font-semibold text-fg">
+                  <p className="text-caption font-semibold text-fg">
                     {monthLabel(m.month)} {m.month.slice(0, 4)}
                   </p>
-                  <p className="mt-1 flex items-center gap-1.5 text-[12px] text-fg-muted">
+                  <p className="mt-1 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-3" />
                     Money In
                     <span className="tnum ml-auto pl-3 font-semibold text-fg">
                       {money(m.inCents, { cents: false })}
                     </span>
                   </p>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-fg-muted">
+                  <p className="mt-0.5 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-1" />
                     Money Out
                     <span className="tnum ml-auto pl-3 font-semibold text-fg">
@@ -124,7 +126,7 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
             <span
               key={m.month}
               className={cn(
-                "flex-1 text-center text-[11px] text-fg-subtle",
+                "flex-1 text-center text-caption text-fg-subtle",
                 months.length > 6 && i % 2 === 1 && "max-sm:invisible",
               )}
             >
@@ -215,7 +217,7 @@ export function SpendingDonut({
   return (
     <div className="flex flex-col px-5 py-4">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
-        <div className="relative size-36 shrink-0" aria-hidden>
+        <div className="relative size-40 shrink-0" aria-hidden>
           <svg viewBox="0 0 168 168" className="size-full -rotate-90">
             {slices.map(({ row, i, start, length }) => (
               <circle
@@ -239,10 +241,12 @@ export function SpendingDonut({
             ))}
           </svg>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-            <p className="max-w-24 text-[11px] font-medium leading-tight text-fg-muted">
-              {shown ? shown.category : "Total Spending"}
+            {/* Narrower than the hole, so a long category wraps instead of
+                running over the ring. */}
+            <p className="max-w-[5.5rem] text-caption font-medium leading-tight text-fg-muted">
+              {shown ? shown.category : "Total spent"}
             </p>
-            <p className="tnum mt-0.5 text-[17px] font-semibold tracking-[-0.02em] text-fg">
+            <p className="tnum mt-0.5 text-headline font-semibold tracking-[-0.02em] text-fg">
               {money(shown ? shown.cents : totalCents, { cents: false })}
             </p>
           </div>
@@ -262,13 +266,13 @@ export function SpendingDonut({
               )}
             >
               <span className={cn("size-2.5 shrink-0 rounded-sm", sliceClass(row, i, "chip"))} />
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg">
+              <span className="min-w-0 flex-1 truncate text-footnote font-medium text-fg">
                 {row.category}
               </span>
-              <span className="tnum text-[13px] font-semibold text-fg">
+              <span className="tnum text-footnote font-semibold text-fg">
                 {money(row.cents, { cents: false })}
               </span>
-              <span className="tnum w-8 text-right text-[12px] text-fg-subtle">
+              <span className="tnum w-8 text-right text-caption text-fg-subtle">
                 {Math.round(row.share * 100)}%
               </span>
             </li>
@@ -280,7 +284,7 @@ export function SpendingDonut({
         <div className="mt-3 border-t border-border pt-3 text-right">
           <Link
             href={reportHref}
-            className="inline-flex items-center gap-1 text-[13px] font-semibold text-accent hover:underline"
+            className="inline-flex items-center gap-1 text-footnote font-semibold text-accent hover:underline"
           >
             See the transactions
             <ArrowRight className="size-3.5" />
@@ -324,11 +328,11 @@ export function YearCompareChart({
   return (
     <div>
       <div className="flex items-center gap-4 px-5 pt-4" aria-hidden>
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+        <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
           <span className="size-2.5 rounded-sm bg-chart-other" />
           {aLabel}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+        <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
           <span className="size-2.5 rounded-sm bg-chart-1" />
           {bLabel}
         </span>
@@ -338,7 +342,7 @@ export function YearCompareChart({
         <div className="relative h-48">
           {[0, 1 / 3, 2 / 3, 1].map((t) => (
             <div key={t} className="absolute inset-x-0 flex items-end" style={{ bottom: `${t * 100}%` }}>
-              <span className="tnum w-10 shrink-0 translate-y-[0.4em] pr-2 text-right text-[11px] text-fg-subtle">
+              <span className="tnum w-10 shrink-0 translate-y-[0.4em] pr-2 text-right text-caption text-fg-subtle">
                 {t === 0 ? "$0" : shortMoney(peak * t)}
               </span>
               <span className="h-px flex-1 bg-border" />
@@ -353,18 +357,18 @@ export function YearCompareChart({
                 <div className="w-2 rounded-t-[3px] bg-chart-other sm:w-2.5" style={{ height: `${h(m.a)}%` }} />
                 <div className="w-2 rounded-t-[3px] bg-chart-1 sm:w-2.5" style={{ height: `${h(m.b)}%` }} />
                 <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-surface px-3 py-2 text-left shadow-float group-hover:block">
-                  <p className="text-[12px] font-semibold text-fg">{m.label}</p>
-                  <p className="mt-1 flex items-center gap-1.5 text-[12px] text-fg-muted">
+                  <p className="text-caption font-semibold text-fg">{m.label}</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-other" />
                     {aLabel}
                     <span className="tnum ml-auto pl-3 font-semibold text-fg">{money(m.a, { cents: false })}</span>
                   </p>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-fg-muted">
+                  <p className="mt-0.5 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-1" />
                     {bLabel}
                     <span className="tnum ml-auto pl-3 font-semibold text-fg">{money(m.b, { cents: false })}</span>
                   </p>
-                  <p className="tnum mt-1 border-t border-border pt-1 text-right text-[12px] font-medium text-fg-muted">
+                  <p className="tnum mt-1 border-t border-border pt-1 text-right text-caption font-medium text-fg-muted">
                     {money(m.b - m.a, { sign: true, cents: false })}
                   </p>
                 </div>
@@ -377,7 +381,7 @@ export function YearCompareChart({
             <span
               key={m.label}
               className={cn(
-                "flex-1 text-center text-[11px] text-fg-subtle",
+                "flex-1 text-center text-caption text-fg-subtle",
                 months.length > 6 && i % 2 === 1 && "max-sm:invisible",
               )}
             >
@@ -439,7 +443,7 @@ export function NetTrendChart({ years }: { years: YearNet[] }) {
       <div className="relative h-40" aria-hidden>
         {[1, zero / 100, ...(hasNegative ? [0] : [])].map((t) => (
           <div key={t} className="absolute inset-x-0 flex items-end" style={{ bottom: `${t * 100}%` }}>
-            <span className="tnum w-12 shrink-0 translate-y-[0.4em] pr-2 text-right text-[11px] text-fg-subtle">
+            <span className="tnum w-12 shrink-0 translate-y-[0.4em] pr-2 text-right text-caption text-fg-subtle">
               {t === zero / 100 ? "$0" : t === 1 ? shortMoney(peak) : `-${shortMoney(peak)}`}
             </span>
             <span className={cn("h-px flex-1", t === zero / 100 ? "bg-border-2" : "bg-border")} />
@@ -461,11 +465,11 @@ export function NetTrendChart({ years }: { years: YearNet[] }) {
                 }
               />
               <div className="pointer-events-none absolute left-1/2 top-0 z-10 hidden -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-border bg-surface px-3 py-2 shadow-float group-hover:block">
-                <p className="text-[12px] font-semibold text-fg">
+                <p className="text-caption font-semibold text-fg">
                   {y.year}
                   {y.partial ? ` through ${MONTH_NAMES[y.throughMonth - 1]}` : ""}
                 </p>
-                <p className="tnum mt-0.5 text-[12px] font-semibold text-fg">
+                <p className="tnum mt-0.5 text-caption font-semibold text-fg">
                   {money(y.netCents, { sign: true, cents: false })}
                 </p>
               </div>
@@ -475,9 +479,9 @@ export function NetTrendChart({ years }: { years: YearNet[] }) {
       </div>
       <div className="ml-12 flex justify-around pt-1.5" aria-hidden>
         {years.map((y) => (
-          <span key={y.year} className="flex-1 text-center text-[11px] text-fg-subtle">
+          <span key={y.year} className="flex-1 text-center text-caption text-fg-subtle">
             {y.year}
-            {y.partial ? <span className="block text-[10px]">to {MONTH_NAMES[y.throughMonth - 1]}</span> : null}
+            {y.partial ? <span className="block text-caption">to {MONTH_NAMES[y.throughMonth - 1]}</span> : null}
           </span>
         ))}
       </div>
@@ -543,14 +547,14 @@ export function AgingBar({ buckets }: { buckets: AgingSegment[] }) {
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         {buckets.map((b) => (
           <div key={b.key}>
-            <dt className="flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+            <dt className="flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
               <span className={cn("size-2.5 rounded-sm", AGING_CHIP[b.key] ?? "bg-chart-other")} aria-hidden />
               {b.label}
             </dt>
-            <dd className="tnum mt-1 text-[17px] font-semibold tracking-[-0.02em] text-fg">
+            <dd className="tnum mt-1 text-headline font-semibold tracking-[-0.02em] text-fg">
               {money(b.cents, { cents: false })}
             </dd>
-            <dd className="text-[12px] text-fg-subtle">
+            <dd className="text-caption text-fg-subtle">
               {b.count} {b.count === 1 ? "household" : "households"}
             </dd>
           </div>

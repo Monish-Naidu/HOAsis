@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, Pencil } from "lucide-react";
-import { Button } from "@/components/ui/primitives";
+import { Button, fieldClass } from "@/components/ui/primitives";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import {
@@ -55,10 +55,10 @@ export function CollectionPolicyCard() {
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold tracking-[-0.01em] text-fg">
+          <span className="block text-body font-semibold tracking-[-0.01em] text-fg">
             Collections policy
           </span>
-          <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">
+          <span className="mt-0.5 block text-footnote leading-snug text-fg-muted">
             {isDefault
               ? "The default steps. Change the days or the fee to match your bylaws."
               : "Your steps. Every household runs the same ones."}
@@ -90,9 +90,9 @@ export function CollectionPolicyCard() {
             <DayField label="Final notice" value={draft.demandDay} onChange={(v) => set({ demandDay: v })} />
             <DayField label="Attorney" value={draft.counselDay} onChange={(v) => set({ counselDay: v })} />
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">Late fee</span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">Late fee</span>
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
                   $
                 </span>
                 <input
@@ -105,10 +105,10 @@ export function CollectionPolicyCard() {
                   className={cn(field, "pl-7")}
                 />
               </div>
-              <span className="mt-1 block text-[13px] text-fg-subtle">Charged once, with the notice</span>
+              <span className="mt-1 block text-footnote text-fg-subtle">Charged once, with the notice</span>
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">Shortest plan</span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">Shortest plan</span>
               <div className="relative">
                 <input
                   type="number"
@@ -118,16 +118,16 @@ export function CollectionPolicyCard() {
                   aria-label="Shortest payment plan in months"
                   className={cn(field, "pr-16")}
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-fg-subtle">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-footnote text-fg-subtle">
                   months
                 </span>
               </div>
-              <span className="mt-1 block text-[13px] text-fg-subtle">Offered with the final notice</span>
+              <span className="mt-1 block text-footnote text-fg-subtle">Offered with the final notice</span>
             </label>
           </div>
 
           {problems.length ? (
-            <ul className="mt-3 space-y-1 text-[13px] text-warn" role="alert">
+            <ul className="mt-3 space-y-1 text-footnote text-warn" role="alert">
               {problems.map((problem) => (
                 <li key={problem}>{problem}</li>
               ))}
@@ -174,7 +174,7 @@ export function CollectionPolicyCard() {
 }
 
 const field =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand tnum";
+  cn(fieldClass, "tnum");
 
 function DayField({
   label,
@@ -187,7 +187,7 @@ function DayField({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-fg">{label}</span>
+      <span className="mb-1.5 block text-footnote font-medium text-fg">{label}</span>
       <div className="relative">
         <input
           type="number"
@@ -197,7 +197,7 @@ function DayField({
           aria-label={`${label} day`}
           className={cn(field, "pr-24")}
         />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-fg-subtle">
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-footnote text-fg-subtle">
           days past due
         </span>
       </div>
@@ -208,12 +208,12 @@ function DayField({
 function Rung({ day, label, detail }: { day: number; label: string; detail: string }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="tnum mt-0.5 w-14 shrink-0 text-[13px] font-semibold text-fg-muted">
+      <span className="tnum mt-0.5 w-14 shrink-0 text-footnote font-semibold text-fg-muted">
         Day {day}
       </span>
       <span className="min-w-0">
-        <span className="block text-[15px] font-medium text-fg">{label}</span>
-        <span className="block text-[13px] text-fg-subtle">{detail}</span>
+        <span className="block text-body font-medium text-fg">{label}</span>
+        <span className="block text-footnote text-fg-subtle">{detail}</span>
       </span>
     </li>
   );

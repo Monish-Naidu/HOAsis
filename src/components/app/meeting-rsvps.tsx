@@ -51,14 +51,14 @@ export function MeetingRsvps() {
               className={cn("scroll-mt-24 px-4 py-3", i > 0 && "border-t border-border")}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[15px] font-medium text-fg">{m.title}</p>
+                <p className="text-body font-medium text-fg">{m.title}</p>
                 <Badge tone={kindTone.meeting}>{kindLabel.meeting}</Badge>
               </div>
-              <p className="mt-0.5 text-[13px] text-fg-muted">
+              <p className="mt-0.5 text-footnote text-fg-muted">
                 {formatDate(m.date, "long")} · {relativeDays(m.date)} · {m.time} · {m.location}
               </p>
               {m.dialIn ? (
-                <p className="mt-1 text-[13px] text-fg-subtle">
+                <p className="mt-1 text-footnote text-fg-subtle">
                   Video call:{" "}
                   <a
                     href={m.dialIn}
@@ -98,7 +98,7 @@ export function MeetingRsvps() {
                   Can&apos;t make it
                 </Button>
                 {coming > 0 ? (
-                  <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
+                  <span className="inline-flex items-center gap-1 text-footnote text-fg-subtle">
                     <Users className="size-3" />
                     {coming} coming
                   </span>
@@ -122,9 +122,9 @@ export function LiveMeetingCard() {
       <div className="flex items-center gap-2 bg-ok-soft px-4 py-2.5">
         <Radio className="size-3.5 shrink-0 text-ok" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-ok">{live.title}</p>
-          <p className="text-[13px] text-ok opacity-90">
-            Live now · {live.attendees.length} joined
+          <p className="truncate text-body font-semibold text-ok">{live.title}</p>
+          <p className="text-footnote text-ok opacity-90">
+            Meeting on now · {live.attendees.length} joined
           </p>
         </div>
       </div>

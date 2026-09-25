@@ -4,12 +4,12 @@ import { Suspense, use, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowRight, DoorOpen, ShieldCheck } from "lucide-react";
-import { Button, ButtonLink, Card, SuccessMark } from "@/components/ui/primitives";
+import { Button, ButtonLink, Card, SuccessMark, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState, useCommunityById, useStorageReady } from "@/lib/app-state";
 import { useAuth, signUp } from "@/lib/auth";
 import { parseInvitation } from "@/lib/invitations";
 import { hasSupabase } from "@/lib/supabase/env";
-import { money } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 
 /**
  * Three ways in, one screen.
@@ -59,11 +59,11 @@ export function JoinPanel() {
   if (!invitation || !community || !owner || !account) {
     return (
       <Card className="p-6">
-        <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+        <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
           This invitation is not valid
         </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
-          The link may have been mistyped or the household may no longer be on the register. Ask
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
+          The link may have been mistyped, or the home may no longer be on the board&apos;s list. Ask
           your board to send it again, or join with the association&apos;s code.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
@@ -87,11 +87,11 @@ export function JoinPanel() {
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-border px-6 py-5">
-        <p className="text-[13px] font-semibold text-fg-muted">You have been invited to</p>
-        <h1 className="mt-1 text-[20px] font-semibold leading-tight tracking-[-0.02em] text-fg">
+        <p className="text-footnote font-semibold text-fg-muted">You have been invited to</p>
+        <h1 className="mt-1 text-title3 font-semibold leading-tight tracking-[-0.02em] text-fg">
           {community.settings.displayName}
         </h1>
-        <p className="mt-1 text-[15px] text-fg-muted">{community.association.addressLine}</p>
+        <p className="mt-1 text-body text-fg-muted">{community.association.addressLine}</p>
       </div>
 
       <div className="space-y-3 px-6 py-5">
@@ -107,7 +107,7 @@ export function JoinPanel() {
           <ArrowRight className="size-4" />
         </Button>
 
-        <p className="flex items-start gap-2 pt-1 text-[13px] leading-snug text-fg-subtle">
+        <p className="flex items-start gap-2 pt-1 text-footnote leading-snug text-fg-subtle">
           <ShieldCheck className="mt-px size-3.5 shrink-0" />
           This link was issued for your unit. Your board sees your balance and your requests;
           neighbors do not.
@@ -118,8 +118,8 @@ export function JoinPanel() {
 }
 
 const field =
-  "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-primary disabled:bg-surface-2 disabled:text-fg-muted";
-const label = "mb-1 block text-[13px] font-semibold text-fg-muted";
+  cn(fieldClass, "disabled:bg-surface-2 disabled:text-fg-muted");
+const label = "mb-1 block text-footnote font-semibold text-fg-muted";
 
 /* ------------------------------------------------------------------ code */
 
@@ -175,14 +175,14 @@ function JoinWithCode({
       }}
     >
       <div className="border-b border-border px-6 py-5">
-        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
+        <p className="flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
           <DoorOpen className="size-3.5" />
           Join your community
         </p>
-        <h1 className="mt-1 text-[20px] font-semibold leading-tight tracking-[-0.02em] text-fg">
+        <h1 className="mt-1 text-title3 font-semibold leading-tight tracking-[-0.02em] text-fg">
           Enter your join code
         </h1>
-        <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-1 text-body leading-relaxed text-fg-muted">
           Six characters, from your board or the welcome letter.
         </p>
       </div>
@@ -206,7 +206,7 @@ function JoinWithCode({
           Continue
           <ArrowRight className="size-4" />
         </Button>
-        <p className="text-center text-[13px] text-fg-subtle">
+        <p className="text-center text-footnote text-fg-subtle">
           Already have an account?{" "}
           <Link href="/signin" className="font-medium text-primary hover:underline">
             Sign in
@@ -252,10 +252,10 @@ function JoinForm({
   if (!found) {
     return (
       <Card className="p-6">
-        <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+        <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
           No association has the code {code}
         </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
           Check the letter or ask your board. Codes are six letters and numbers.
         </p>
         <Button variant="secondary" size="md" className="mt-5" onClick={onRetry}>
@@ -280,7 +280,7 @@ function JoinForm({
       if (needsAccount) {
         const made = await signUp(email, password, name);
         if (!made.ok) {
-          setError(made.message ?? "That did not work.");
+          setError(made.message ?? "Something went wrong. Please try again.");
           return;
         }
       }
@@ -307,10 +307,10 @@ function JoinForm({
     return (
       <Card className="p-6">
         <SuccessMark size={48} className="mb-3" />
-        <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+        <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
           {done === "check-email" ? "Check your email" : `Sent to the board of ${found.name}`}
         </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
           {done === "check-email"
             ? invited
               ? `One tap on the link we sent to ${effectiveEmail} confirms your address and opens your home at ${found.name}.`
@@ -341,15 +341,15 @@ function JoinForm({
       }}
     >
       <div className="border-b border-border px-6 py-5">
-        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
+        <p className="flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
           <DoorOpen className="size-3.5" />
           {invited ? "You were invited to" : "Join"}
         </p>
-        <h1 className="mt-1 text-[20px] font-semibold leading-tight tracking-[-0.02em] text-fg">
+        <h1 className="mt-1 text-title3 font-semibold leading-tight tracking-[-0.02em] text-fg">
           {found.name}
         </h1>
-        {found.place ? <p className="mt-1 text-[15px] text-fg-muted">{found.place}</p> : null}
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
+        {found.place ? <p className="mt-1 text-body text-fg-muted">{found.place}</p> : null}
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
           {invited
             ? signedIn
               ? "Your board added your home. Your account is signed in, so it opens on its own."
@@ -362,7 +362,7 @@ function JoinForm({
 
       <div className="space-y-4 px-6 py-5">
         {signedIn ? (
-          <p className="rounded-lg bg-surface-2 px-3 py-2 text-[13px] text-fg-muted">
+          <p className="rounded-lg bg-surface-2 px-3 py-2 text-footnote text-fg-muted">
             Signed in as <span className="font-medium text-fg">{signedInEmail}</span>
           </p>
         ) : (
@@ -390,7 +390,7 @@ function JoinForm({
                 className={field}
               />
               {invited && invitedEmail ? (
-                <span className="mt-1 block text-[13px] leading-snug text-fg-subtle">
+                <span className="mt-1 block text-footnote leading-snug text-fg-subtle">
                   The address your board used. Sign up with it and your home is waiting.
                 </span>
               ) : null}
@@ -430,14 +430,14 @@ function JoinForm({
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
                 placeholder="We closed on the 14th."
-                className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
+                className={textareaClass}
               />
             </label>
           </>
         ) : null}
 
         {error ? (
-          <p role="alert" className="text-[13px] font-medium text-danger">
+          <p role="alert" className="text-footnote font-medium text-danger">
             {error}
             {alreadyRegistered ? (
               <>
@@ -467,7 +467,7 @@ function JoinForm({
         </Button>
 
         {!signedIn ? (
-          <p className="text-center text-[13px] text-fg-subtle">
+          <p className="text-center text-footnote text-fg-subtle">
             Already have an account?{" "}
             <Link
               href={`/signin?next=${encodeURIComponent(`/join?${invited ? "invite" : "code"}=${code}`)}`}
@@ -485,8 +485,8 @@ function JoinForm({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="text-[13px] text-fg-muted">{label}</span>
-      <span className="text-[15px] font-medium text-fg">{value}</span>
+      <span className="text-footnote text-fg-muted">{label}</span>
+      <span className="text-body font-medium text-fg">{value}</span>
     </div>
   );
 }

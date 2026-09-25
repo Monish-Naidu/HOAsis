@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { CalendarClock, FileText, Upload } from "lucide-react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, fieldClass } from "@/components/ui/primitives";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { DOCUMENT_ACCEPT } from "@/lib/documents";
-import { addYears, formatDate, todayIsoDate } from "@/lib/utils";
+import { cn, addYears, formatDate, todayIsoDate } from "@/lib/utils";
 
 /** Most states and every lender expect a fresh study on this cadence. */
 const STUDY_YEARS = 3;
@@ -55,7 +55,7 @@ export function ReserveStudyCard() {
       aria-busy={busy}
       aria-disabled={needsDate && !studyDate}
       title={needsDate && !studyDate ? "Enter the date on the study first" : undefined}
-      className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border-2 px-3.5 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2 aria-busy:cursor-progress aria-busy:opacity-70 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+      className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border-2 px-3.5 text-body font-medium text-fg transition-colors hover:bg-surface-2 aria-busy:cursor-progress aria-busy:opacity-70 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
     >
       <Upload className="size-3.5" />
       {busy ? "Uploading" : label}
@@ -83,14 +83,14 @@ export function ReserveStudyCard() {
         />
         <div className="flex flex-wrap items-end gap-3 px-5 py-4">
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-fg">Date on the study</span>
+            <span className="mb-1.5 block text-footnote font-medium text-fg">Date on the study</span>
             <input
               type="date"
               value={studyDate}
               max={todayIsoDate()}
               onChange={(e) => setStudyDate(e.target.value)}
               aria-label="Date on the study"
-              className="h-9 rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+              className={cn(fieldClass, "w-auto")}
             />
           </label>
           {input("Upload the study", true)}
@@ -117,19 +117,19 @@ export function ReserveStudyCard() {
               href={document.url}
               target="_blank"
               rel="noreferrer"
-              className="text-[15px] font-medium text-brand hover:underline"
+              className="text-body font-medium text-brand hover:underline"
             >
               {study.name}
             </a>
           ) : (
-            <p className="text-[15px] font-medium text-fg">{study.name}</p>
+            <p className="text-body font-medium text-fg">{study.name}</p>
           )}
-          <p className="text-[13px] text-fg-muted">
+          <p className="text-footnote text-fg-muted">
             {document ? `Under Documents, ${document.visibility === "board" ? "board only" : "shared with owners"}.` : "Filed under Documents."}
           </p>
         </div>
         <p
-          className={`flex items-center gap-1.5 text-[13px] font-medium ${overdue ? "text-warn" : "text-fg-muted"}`}
+          className={`flex items-center gap-1.5 text-footnote font-medium ${overdue ? "text-warn" : "text-fg-muted"}`}
         >
           <CalendarClock className="size-3.5" />
           {overdue

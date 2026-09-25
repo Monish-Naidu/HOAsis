@@ -17,12 +17,12 @@ export default function WhatYouAgreedTo() {
       <div>
         <Link
           href="/resident/documents/governing"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-body font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           The rules you live under
         </Link>
-        <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.025em] text-fg">
+        <h1 className="mt-2 text-title2 font-semibold tracking-[-0.025em] text-fg">
           What you agreed to when you bought here
         </h1>
         {/* 46% of owners in an association have been fined, warned or cited,
@@ -30,7 +30,7 @@ export default function WhatYouAgreedTo() {
             one. The gap between those two numbers is this screen. An owner who
             does not know a rule exists cannot ask for the approval that would
             have made their project legal. */}
-        <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-1 text-body leading-relaxed text-fg-muted">
           Eight questions that catch most people out. You signed up to these at closing,
           whether or not anyone showed them to you.
         </p>
@@ -50,14 +50,12 @@ export default function WhatYouAgreedTo() {
 
           {coverage.gaps.length > 0 ? (
             <Callout tone="info" title="Some of these have no answer on file">
-              {coverage.answered} of {coverage.total} are settled by a provision somebody
-              has confirmed. The rest are left blank rather than guessed at, because a
-              summary of a covenant is an interpretation and this page does not make those.
-              Ask the board.
+              {coverage.answered} of {coverage.total} have a confirmed answer. The rest are
+              left blank rather than guessed at. Ask the board.
             </Callout>
           ) : null}
 
-          <p className="text-[13px] leading-relaxed text-fg-subtle">
+          <p className="text-footnote leading-relaxed text-fg-subtle">
             This is a reading aid, not legal advice, and it does not replace the documents
             themselves. Every answer here links to the provision it came from so you can
             read the words that actually bind.

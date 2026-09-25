@@ -10,7 +10,7 @@ import { SearchButton, SearchPalette } from "@/components/app/search-palette";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { Rail, RailIcon } from "@/components/app/rail";
-import { residentModuleFor, residentTabs } from "@/components/app/resident-nav";
+import { residentModuleFor, residentTabs, visibleResidentTabs } from "@/components/app/resident-nav";
 import { ModuleOff } from "@/components/app/module-gate";
 import { PageTransition } from "@/components/app/page-transition";
 import { moduleOn } from "@/lib/modules";
@@ -20,12 +20,8 @@ import { CommunityHero, CommunityName } from "@/components/app/community-hero";
 import { HomeBadge } from "@/components/app/home-badge";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
-import type { CommunitySettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-function visibleTabs(settings: CommunitySettings) {
-  return residentTabs.filter((t) => moduleOn(t.module) && (!t.visible || t.visible(settings)));
-}
 
 /** Only for the pages of a module that is off: the same words for everyone. */
 function Gated({ pathname, children }: { pathname: string; children: React.ReactNode }) {
@@ -52,7 +48,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const { settings, community } = useAppState();
   const owner = useCurrentOwner();
   const associationName = settings.displayName;
-  const tabs = visibleTabs(settings);
+  const tabs = visibleResidentTabs(settings);
   const ownerName = owner?.members[0] ?? "";
   const unit = owner?.unit ?? "";
   const address = owner?.address ?? "";
@@ -81,7 +77,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                 data-tab-key="web"
                 onClick={() => setPhonePreview(false)}
                 className={cn(
-                  "relative z-10 inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
+                  "relative z-10 inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-footnote font-medium transition-colors",
                   !phonePreview ? "text-fg" : "text-fg-subtle hover:text-fg-muted",
                 )}
               >
@@ -95,7 +91,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                 data-tab-key="app"
                 onClick={() => setPhonePreview(true)}
                 className={cn(
-                  "relative z-10 inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors",
+                  "relative z-10 inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-footnote font-medium transition-colors",
                   phonePreview ? "text-fg" : "text-fg-subtle hover:text-fg-muted",
                 )}
               >
@@ -133,7 +129,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               <div className="-ml-2">
                 <CommunityName />
               </div>
-              <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
+              <p className="truncate text-footnote text-fg-muted">{homeLine}</p>
             </div>
           )}
         </div>
@@ -147,15 +143,19 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const appHeader = (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md lg:hidden">
       <div className="min-w-0">
-        <p className="truncate text-[17px] font-semibold tracking-[-0.015em] text-fg">
+        <p className="truncate text-headline font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
+        <p className="truncate text-footnote text-fg-muted">{homeLine}</p>
       </div>
       <div className="flex items-center gap-1.5">
         <SearchButton compact />
         <ResidentBell compact />
-        <Avatar name={ownerName} />
+        {/* The avatar opens Settings, where text size lives: the place a
+            phone user reaches for when something is hard to read. */}
+        <Link href="/resident/settings" aria-label="Settings" className="press rounded-full">
+          <Avatar name={ownerName} />
+        </Link>
       </div>
     </header>
   );
@@ -177,7 +177,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                 narrow website. Apple's marketing clock, because every phone
                 render since the first keynote says 9:41. */}
             <div
-              className="hidden items-center justify-between bg-surface px-7 pb-0.5 pt-2.5 text-[12px] font-semibold text-fg lg:flex"
+              className="hidden items-center justify-between bg-surface px-7 pb-0.5 pt-2.5 text-caption font-semibold text-fg lg:flex"
               aria-hidden
             >
               <span className="tnum">9:41</span>
@@ -201,7 +201,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             <TabBar pathname={pathname} tabs={tabs} />
           </div>
         </div>
-        <p className="hidden pb-10 text-center text-[13px] text-fg-subtle lg:block">
+        <p className="hidden pb-10 text-center text-footnote text-fg-subtle lg:block">
           The same screens and tokens carry into the native app.
         </p>
       </div>
@@ -234,7 +234,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             className="stagger flex min-h-full w-full flex-col justify-evenly gap-1.5"
             pillClassName="bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
           >
-            {tabs.map(({ href, label, icon: Icon, webLabel, tint }) => {
+            {tabs.filter((t) => !t.phoneOnly).map(({ href, label, icon: Icon, webLabel, tint }) => {
               const active =
                 href === "/resident" ? pathname === href : pathname.startsWith(href);
               return (
@@ -244,7 +244,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   data-tab-key={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative z-10 flex min-h-11 max-h-[5.5rem] flex-1 items-center gap-3 rounded-2xl px-3 py-2.5 text-[15px] font-medium transition-colors duration-200",
+                    "group relative z-10 flex min-h-11 max-h-[5.5rem] flex-1 items-center gap-3 rounded-2xl px-3 py-2.5 text-body font-medium transition-colors duration-200",
                     active
                       ? "text-white"
                       : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
@@ -312,15 +312,19 @@ function PhoneHeader({
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md">
       <div className="min-w-0">
-        <p className="truncate text-[17px] font-semibold tracking-[-0.015em] text-fg">
+        <p className="truncate text-headline font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-[13px] text-fg-muted">{homeLine}</p>
+        <p className="truncate text-footnote text-fg-muted">{homeLine}</p>
       </div>
       <div className="flex items-center gap-1.5">
         <SearchButton compact />
         <ResidentBell compact />
-        <Avatar name={ownerName} />
+        {/* The avatar opens Settings, where text size lives: the place a
+            phone user reaches for when something is hard to read. */}
+        <Link href="/resident/settings" aria-label="Settings" className="press rounded-full">
+          <Avatar name={ownerName} />
+        </Link>
       </div>
     </header>
   );
@@ -366,6 +370,7 @@ function TabBar({
    */
   pinned?: boolean;
 }) {
+  const moreHrefs = tabs.filter((t) => t.webOnly).map((t) => t.href);
   return (
     <nav
       className={cn(
@@ -387,7 +392,14 @@ function TabBar({
         {tabs
           .filter((t) => !t.webOnly)
           .map(({ href, label, tabLabel, icon: Icon, tint = "blue" }) => {
-          const active = href === "/resident" ? pathname === href : pathname.startsWith(href);
+          // More stays lit on any page it lists, so the reader knows where
+          // they came from and how to get back.
+          const active =
+            href === "/resident"
+              ? pathname === href
+              : href === "/resident/more"
+                ? pathname.startsWith(href) || moreHrefs.some((m) => pathname.startsWith(m))
+                : pathname.startsWith(href);
           return (
             <li key={href}>
               <Link
@@ -395,7 +407,7 @@ function TabBar({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "press flex min-h-14 flex-col items-center gap-1 pb-2 pt-2 transition-colors",
-                  active ? TAB_ACTIVE[tint] : "text-fg-subtle hover:text-fg-muted",
+                  active ? TAB_ACTIVE[tint] : "text-fg-muted hover:text-fg",
                 )}
               >
                 {/* Remounts when it becomes selected, so the tab pops once
@@ -411,9 +423,10 @@ function TabBar({
                 </span>
                 <span
                   className={cn(
-                    // 10px on the narrowest phones, the size iOS sets its own tab
-                    // labels in, so "Community" fits a sixth of 320px whole.
-                    "block max-w-full truncate text-[10px] tracking-[-0.01em] min-[375px]:text-[11px] min-[430px]:text-[12px] min-[430px]:tracking-normal",
+                    // Fixed px, not the type scale: a sixth of 320px is the
+                    // hard limit. 11px is the least that "Community" fits in
+                    // whole; wider phones get more.
+                    "block max-w-full truncate text-[11px] tracking-[-0.01em] min-[375px]:text-[12px] min-[430px]:text-[13px] min-[430px]:tracking-normal",
                     active ? "font-semibold" : "font-medium",
                   )}
                 >

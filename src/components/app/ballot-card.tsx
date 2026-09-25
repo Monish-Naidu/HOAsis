@@ -73,13 +73,13 @@ export function BallotCard({
   const showResults = (!open && !scheduled) || settings.showLiveVoteResults || t.daysLeft < 0;
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="flex h-full flex-col overflow-hidden">
       <div className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={open ? "ok" : "neutral"}>
             {open ? "Open" : scheduled ? "Scheduled" : "Closed"}
           </Badge>
-          <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
+          <span className="inline-flex items-center gap-1 text-footnote text-fg-subtle">
             <Clock className="size-3" />
             {open
               ? `Ends ${relativeDays(ballot.closesDate)}`
@@ -88,17 +88,17 @@ export function BallotCard({
                 : `Ended ${formatDate(ballot.closesDate, "long")}`}
           </span>
           {scheduled ? null : (
-            <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
+            <span className="inline-flex items-center gap-1 text-footnote text-fg-subtle">
               <Users className="size-3" />
               {t.cast} of {ballot.eligible} {who} voted
             </span>
           )}
         </div>
-        <h3 className="mt-1.5 text-[17px] font-semibold leading-snug tracking-[-0.015em] text-fg">
+        <h3 className="mt-1.5 text-headline font-semibold leading-snug tracking-[-0.015em] text-fg">
           {ballot.title}
         </h3>
         {ballot.body[0] ? (
-          <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-fg-muted">
+          <p className="mt-1.5 line-clamp-2 text-body leading-relaxed text-fg-muted">
             {ballot.body[0]}
           </p>
         ) : null}
@@ -112,11 +112,11 @@ export function BallotCard({
             return (
               <div key={o.id}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-1.5 text-[15px] text-fg">
-                    <span className="truncate">{o.label}</span>
+                  <span className="flex min-w-0 items-center gap-1.5 text-body text-fg">
+                    <span className="min-w-0 break-words">{o.label}</span>
                     {winning ? <Check className="size-3.5 shrink-0 text-ok" /> : null}
                   </span>
-                  <span className="tnum shrink-0 text-[13px] font-medium text-fg-muted">
+                  <span className="tnum shrink-0 text-footnote font-medium text-fg-muted">
                     {o.votes} · {Math.round(share * 100)}%
                   </span>
                 </div>
@@ -134,15 +134,15 @@ export function BallotCard({
       {open && !showResults && sealedNote ? (
         <div className="flex items-start gap-2 border-t border-border px-5 py-3">
           <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
-          <p className="text-[13px] leading-snug text-fg-muted">
+          <p className="text-footnote leading-snug text-fg-muted">
             Results show when voting ends. Turn on live results in Settings to see them now.
           </p>
         </div>
       ) : null}
 
       {open && onClose ? (
-        <div className="flex items-center justify-between gap-3 border-t border-border bg-surface-2 px-5 py-2.5">
-          <span className="text-[13px] text-fg-muted">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border bg-surface-2 px-5 py-2.5">
+          <span className="text-footnote text-fg-muted">
             Ends on its own {formatDate(ballot.closesDate, "long")}.
           </span>
           <Button variant="secondary" size="sm" onClick={() => onClose(ballot)}>

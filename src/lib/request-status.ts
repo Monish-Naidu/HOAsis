@@ -11,10 +11,10 @@ export const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn"
 };
 
 export const kindLabel = {
-  architectural: "Architectural",
+  architectural: "Home changes",
   maintenance: "Maintenance",
   records: "Records",
-  amenity: "Amenity",
+  amenity: "Booking",
   "violation-appeal": "Appeal",
 } as const;
 

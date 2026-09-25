@@ -40,13 +40,13 @@ export function TestModeGuide({
         className,
       )}
     >
-      <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-[15px] font-semibold text-warn [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-body font-semibold text-warn [&::-webkit-details-marker]:hidden">
         <FlaskConical className="size-4 shrink-0" />
         Test mode: no real money moves. How to try it
-        <span className="ml-auto text-[13px] font-medium opacity-70 group-open:hidden">Show</span>
-        <span className="ml-auto hidden text-[13px] font-medium opacity-70 group-open:inline">Hide</span>
+        <span className="ml-auto text-footnote font-medium opacity-70 group-open:hidden">Show</span>
+        <span className="ml-auto hidden text-footnote font-medium opacity-70 group-open:inline">Hide</span>
       </summary>
-      <div className="space-y-3 border-t border-warn/20 px-4 py-3 text-[15px] leading-relaxed">
+      <div className="space-y-3 border-t border-warn/20 px-4 py-3 text-body leading-relaxed">
         {audience === "board" ? (
           <ol className="list-decimal space-y-1 pl-5">
             <li>Press <strong>Set up payments</strong>. Stripe opens its onboarding form.</li>
@@ -83,7 +83,7 @@ export function TestModeGuide({
           </ol>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full text-[13px]">
+          <table className="w-full text-footnote">
             <tbody>
               {NUMBERS.map((n) => (
                 <tr key={n.label} className="border-t border-warn/15">

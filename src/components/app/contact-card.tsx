@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Pencil } from "lucide-react";
-import { Button, Card, SectionTitle } from "@/components/ui/primitives";
+import { Button, Card, SectionTitle, fieldClass } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/app/toast";
@@ -31,7 +31,7 @@ export function ContactCard() {
   if (!owner) return null;
 
   const field =
-    "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    fieldClass;
 
   function save() {
     void updateMyContact({ phone: phone.trim(), mailingAddress: mailing.trim() }).then((ok) => {
@@ -71,7 +71,7 @@ export function ContactCard() {
         {editing ? (
           <div className="space-y-4 px-4 py-4">
             <label className="block">
-              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">Phone</span>
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted">Phone</span>
               <input
                 type="tel"
                 autoComplete="tel"
@@ -83,7 +83,7 @@ export function ContactCard() {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted">
                 Mailing address, if not the home
               </span>
               <input
@@ -93,7 +93,7 @@ export function ContactCard() {
                 placeholder="PO Box 210, Dayton, OH 45401"
                 className={field}
               />
-              <span className="mt-1 block text-[13px] leading-snug text-fg-subtle">
+              <span className="mt-1 block text-footnote leading-snug text-fg-subtle">
                 Anything the association must send on paper goes here.
               </span>
             </label>
@@ -109,18 +109,18 @@ export function ContactCard() {
         ) : (
           <dl className="divide-y divide-border">
             <div className="flex items-start justify-between gap-4 px-4 py-3">
-              <dt className="text-[13px] text-fg-muted">Email</dt>
-              <dd className="min-w-0 truncate text-right text-[15px] text-fg">
+              <dt className="text-footnote text-fg-muted">Email</dt>
+              <dd className="min-w-0 truncate text-right text-body text-fg">
                 {email || "Not on file"}
               </dd>
             </div>
             <div className="flex items-start justify-between gap-4 px-4 py-3">
-              <dt className="text-[13px] text-fg-muted">Phone</dt>
-              <dd className="text-right text-[15px] text-fg">{owner.phone || "Not on file"}</dd>
+              <dt className="text-footnote text-fg-muted">Phone</dt>
+              <dd className="text-right text-body text-fg">{owner.phone || "Not on file"}</dd>
             </div>
             <div className="flex items-start justify-between gap-4 px-4 py-3">
-              <dt className="text-[13px] text-fg-muted">Mail goes to</dt>
-              <dd className="min-w-0 text-right text-[15px] text-fg">
+              <dt className="text-footnote text-fg-muted">Mail goes to</dt>
+              <dd className="min-w-0 text-right text-body text-fg">
                 {owner.mailingAddress || owner.address || "The home"}
               </dd>
             </div>

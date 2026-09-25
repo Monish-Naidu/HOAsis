@@ -13,21 +13,12 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Meter,
-  PageHeader,
-  Stat,
-} from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, EmptyState, Meter, PageHeader, Stat, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { assessmentProgress, communitySlug, sharedCostSummary } from "@/lib/metrics";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { useToast } from "@/components/app/toast";
-import { formatDate, money, shortMoney, todayIsoDate } from "@/lib/utils";
+import { cn, formatDate, money, shortMoney, todayIsoDate } from "@/lib/utils";
 import type {
   AllocationMethod,
   SharedCost,
@@ -241,29 +232,29 @@ export function SharedCostsScreen() {
                 />
                 <div className="grid gap-4 px-5 py-4 sm:grid-cols-3">
                   <div>
-                    <p className="text-[13px] font-semibold text-fg-muted">Latest bill</p>
-                    <p className="tnum mt-1 text-[20px] font-semibold text-fg">
+                    <p className="text-footnote font-semibold text-fg-muted">Latest bill</p>
+                    <p className="tnum mt-1 text-title3 font-semibold text-fg">
                       {money(row.latest?.totalCents ?? 0)}
                     </p>
-                    <p className="mt-0.5 text-[13px] text-fg-muted">
+                    <p className="mt-0.5 text-footnote text-fg-muted">
                       {row.latest ? formatDate(row.latest.periodStart, "medium") : ""}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[13px] font-semibold text-fg-muted">Each home</p>
-                    <p className="tnum mt-1 text-[20px] font-semibold text-fg">
+                    <p className="text-footnote font-semibold text-fg-muted">Each home</p>
+                    <p className="tnum mt-1 text-title3 font-semibold text-fg">
                       {money(row.latest?.averageShareCents ?? 0)}
                     </p>
-                    <p className="mt-0.5 text-[13px] text-fg-muted">
+                    <p className="mt-0.5 text-footnote text-fg-muted">
                       Across {row.latest?.homes ?? 0} homes
                     </p>
                   </div>
                   <div>
-                    <p className="text-[13px] font-semibold text-fg-muted">Last twelve months</p>
-                    <p className="tnum mt-1 text-[20px] font-semibold text-fg">
+                    <p className="text-footnote font-semibold text-fg-muted">Last twelve months</p>
+                    <p className="tnum mt-1 text-title3 font-semibold text-fg">
                       {shortMoney(row.trailingYearCents)}
                     </p>
-                    <p className="mt-0.5 text-[13px] text-fg-muted">
+                    <p className="mt-0.5 text-footnote text-fg-muted">
                       {money(row.perHomeYearCents)} a home
                     </p>
                   </div>
@@ -304,7 +295,7 @@ export function SharedCostsScreen() {
 
       {assessments.enabled ? (
         <div className="mt-8 space-y-4">
-          <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-fg">
+          <h2 className="text-headline font-semibold tracking-[-0.01em] text-fg">
             Special assessments
           </h2>
           {assessments.rows.map((row) => (
@@ -322,17 +313,17 @@ export function SharedCostsScreen() {
                 }
               />
               <div className="px-5 py-4">
-                <p className="text-[15px] leading-relaxed text-fg-muted">
+                <p className="text-body leading-relaxed text-fg-muted">
                   {row.assessment.reason}
                 </p>
                 <div className="mt-4 flex items-baseline justify-between gap-3">
-                  <p className="tnum text-[20px] font-semibold text-fg">
+                  <p className="tnum text-title3 font-semibold text-fg">
                     {shortMoney(row.collectedCents)}{" "}
-                    <span className="text-[15px] font-normal text-fg-muted">
+                    <span className="text-body font-normal text-fg-muted">
                       of {shortMoney(row.assessment.totalCents)}
                     </span>
                   </p>
-                  <p className="tnum text-[13px] text-fg-muted">
+                  <p className="tnum text-footnote text-fg-muted">
                     {row.installmentsLeft} payments left
                   </p>
                 </div>
@@ -342,7 +333,7 @@ export function SharedCostsScreen() {
                   className="mt-2"
                   aria-label={`${Math.round(row.percent * 100)}% collected`}
                 />
-                <p className="mt-2 text-[13px] text-fg-muted">
+                <p className="mt-2 text-footnote text-fg-muted">
                   About {money(row.perHomeRemainingCents)} a home still to come. A buyer&apos;s
                   lender asks for this figure by name.
                 </p>
@@ -378,7 +369,7 @@ function AddSharedCost({
   const [markup, setMarkup] = useState("0");
 
   const field =
-    "mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors focus:border-brand";
+    cn(fieldClass, "mt-1.5");
 
   return (
     <Card as="form" onSubmit={(e) => e.preventDefault()} className="mt-5">
@@ -395,7 +386,7 @@ function AddSharedCost({
       <div className="space-y-4 px-5 py-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">
+            <span className="text-footnote font-semibold text-fg-muted">
               What owners will see on their statement
             </span>
             <input
@@ -406,7 +397,7 @@ function AddSharedCost({
             />
           </label>
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">Kind</span>
+            <span className="text-footnote font-semibold text-fg-muted">Kind</span>
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as SharedCostKind)}
@@ -423,7 +414,7 @@ function AddSharedCost({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">
+            <span className="text-footnote font-semibold text-fg-muted">
               Who the association pays
             </span>
             <input
@@ -432,13 +423,13 @@ function AddSharedCost({
               placeholder="Cascade Water District"
               className={field}
             />
-            <span className="mt-1.5 block text-[13px] text-fg-muted">
+            <span className="mt-1.5 block text-footnote text-fg-muted">
               Shown to owners. It is the question they ask most and the one no other
               product answers.
             </span>
           </label>
           <label className="block">
-            <span className="text-[13px] font-semibold text-fg-muted">
+            <span className="text-footnote font-semibold text-fg-muted">
               Account number, if you have it
             </span>
             <input
@@ -451,7 +442,7 @@ function AddSharedCost({
         </div>
 
         <div>
-          <span className="text-[13px] font-semibold text-fg-muted">How it is divided</span>
+          <span className="text-footnote font-semibold text-fg-muted">How it is divided</span>
           <div className="mt-1.5 space-y-1.5">
             {(Object.keys(ALLOCATION_HELP) as AllocationMethod[]).map((method) => (
               <label
@@ -470,10 +461,10 @@ function AddSharedCost({
                   className="mt-0.5 size-4"
                 />
                 <span className="min-w-0">
-                  <span className="block text-[15px] font-medium text-fg">
+                  <span className="block text-body font-medium text-fg">
                     {ALLOCATION_LABEL[method]}
                   </span>
-                  <span className="block text-[13px] leading-snug text-fg-muted">
+                  <span className="block text-footnote leading-snug text-fg-muted">
                     {ALLOCATION_HELP[method]}
                   </span>
                 </span>
@@ -483,7 +474,7 @@ function AddSharedCost({
         </div>
 
         <label className="block max-w-[16rem]">
-          <span className="text-[13px] font-semibold text-fg-muted">
+          <span className="text-footnote font-semibold text-fg-muted">
             Administration markup
           </span>
           <input
@@ -495,7 +486,7 @@ function AddSharedCost({
             onChange={(e) => setMarkup(e.target.value)}
             className={field}
           />
-          <span className="mt-1.5 block text-[13px] leading-snug text-fg-muted">
+          <span className="mt-1.5 block text-footnote leading-snug text-fg-muted">
             A percentage on top, recorded separately rather than hidden in the rate.
             Several states cap or forbid it, so leave it at zero unless your documents
             allow it.
@@ -552,14 +543,14 @@ function PostBill({
   const cents = Math.round((Number(amount) || 0) * 100);
   const perHome = homes > 0 ? Math.round(cents / homes) : 0;
   const field =
-    "mt-1.5 h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    cn(fieldClass, "mt-1.5");
 
   return (
     <div className="border-t border-border bg-surface-2 px-5 py-4">
-      <p className="text-[15px] font-semibold text-fg">Post a {costName} bill</p>
+      <p className="text-body font-semibold text-fg">Post a {costName} bill</p>
       <div className="mt-3 grid gap-4 sm:grid-cols-3">
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Period</span>
+          <span className="text-footnote font-semibold text-fg-muted">Period</span>
           <input
             type="month"
             value={period}
@@ -568,7 +559,7 @@ function PostBill({
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">
+          <span className="text-footnote font-semibold text-fg-muted">
             What the provider charged
           </span>
           <input
@@ -582,7 +573,7 @@ function PostBill({
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">
+          <span className="text-footnote font-semibold text-fg-muted">
             Usage {unit ? `(${unit})` : "(optional)"}
           </span>
           <input
@@ -596,7 +587,7 @@ function PostBill({
       </div>
 
       {cents > 0 ? (
-        <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-[15px] text-fg">
+        <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-body text-fg">
           {money(cents)} across {homes} homes is{" "}
           <span className="font-semibold">{money(perHome)}</span> each. Shares are worked
           out to the cent, so they add up to the bill exactly.

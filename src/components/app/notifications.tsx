@@ -53,7 +53,7 @@ function useBoardNotices(): Notice[] {
     notices.push({
       id: "live",
       title: live.title,
-      detail: `Live now · ${live.attendees.length} joined`,
+      detail: `Meeting on now · ${live.attendees.length} joined`,
       href: "/board/meetings",
       icon: Radio,
       tone: "bg-ok-soft text-ok",
@@ -115,7 +115,7 @@ function useResidentNotices(): Notice[] {
     notices.push({
       id: "live",
       title: live.title,
-      detail: `Live now · ${live.attendees.length} joined`,
+      detail: `Meeting on now · ${live.attendees.length} joined`,
       href: "/resident/calendar",
       icon: Radio,
       tone: "bg-ok-soft text-ok",
@@ -162,7 +162,14 @@ function useResidentNotices(): Notice[] {
   const mine = owner ? requests.filter((r) => r.ownerId === owner.id) : [];
   const updated = mine
     .map((r) => ({ r, last: [...r.thread].sort((a, b) => (a.at < b.at ? 1 : -1))[0] }))
-    .filter((x) => x.last && x.last.actorRole !== "resident" && daysFromToday(x.last.at) >= -14)
+    // The app's own routing line on a new request is not news from the board.
+    .filter(
+      (x) =>
+        x.last &&
+        x.last.actorRole !== "resident" &&
+        x.last.actorRole !== "system" &&
+        daysFromToday(x.last.at) >= -14,
+    )
     .sort((a, b) => (a.last.at < b.last.at ? 1 : -1))[0];
   const answered = owner
     ? community.threads
@@ -275,11 +282,11 @@ function BellPanel({
                 className="fixed z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-card border border-border bg-surface shadow-float"
                 style={{ top: place.top, right: place.right, width: place.width }}
               >
-                <p className="border-b border-border px-4 py-2.5 text-[13px] font-semibold text-fg-muted">
+                <p className="border-b border-border px-4 py-2.5 text-footnote font-semibold text-fg-muted">
                   Notifications
                 </p>
                 {notices.length === 0 ? (
-                  <p className="px-4 py-6 text-center text-[14px] text-fg-muted">
+                  <p className="px-4 py-6 text-center text-callout text-fg-muted">
                     Nothing needs you right now.
                   </p>
                 ) : (
@@ -299,10 +306,10 @@ function BellPanel({
                         <Icon className="size-4" strokeWidth={2} />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-medium leading-snug text-fg">
+                        <span className="block truncate text-callout font-medium leading-snug text-fg">
                           {n.title}
                         </span>
-                        <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-fg-muted">
+                        <span className="mt-0.5 line-clamp-2 text-caption leading-snug text-fg-muted">
                           {n.detail}
                         </span>
                       </span>

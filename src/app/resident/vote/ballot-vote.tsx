@@ -49,21 +49,21 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
           ) : (
             <Badge tone="warn">Your vote is needed</Badge>
           )}
-          <span className="inline-flex items-center gap-1 text-[13px] text-fg-subtle">
+          <span className="inline-flex items-center gap-1 text-footnote text-fg-subtle">
             <Clock className="size-3" />
             {closed
               ? `Ended ${formatDate(ballot.closesDate, "long")}`
               : `Ends ${relativeDays(ballot.closesDate)}`}
           </span>
         </div>
-        <h3 className="mt-1.5 text-[17px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+        <h3 className="mt-1.5 text-headline font-semibold leading-snug tracking-[-0.01em] text-fg">
           {ballot.title}
         </h3>
         {ballot.body.length ? (
           <>
             <div className="mt-2 space-y-2">
               {(expanded ? ballot.body : ballot.body.slice(0, 1)).map((p) => (
-                <p key={p} className="text-[15px] leading-relaxed text-fg-muted">
+                <p key={p} className="text-body leading-relaxed text-fg-muted">
                   {p}
                 </p>
               ))}
@@ -72,7 +72,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
               <button
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
-                className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-accent"
+                className="mt-1.5 inline-flex items-center gap-1 text-footnote font-medium text-accent"
               >
                 {expanded ? "Show less" : "Read more"}
                 <ChevronDown
@@ -120,9 +120,9 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                   {picked ? <Check className="pop-in size-3" strokeWidth={3} /> : null}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium text-fg">{o.label}</span>
+                  <span className="block text-body font-medium text-fg">{o.label}</span>
                   {o.detail ? (
-                    <span className="block text-[13px] text-fg-muted">{o.detail}</span>
+                    <span className="block text-footnote text-fg-muted">{o.detail}</span>
                   ) : null}
                 </span>
               </button>
@@ -130,7 +130,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
           })}
           {seats > 1 ? (
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <p className="text-[13px] text-fg-subtle">
+              <p className="text-footnote text-fg-subtle">
                 {`Choose up to ${seats}. ${draft.length} of ${seats} chosen.`}
               </p>
               <Button
@@ -144,7 +144,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
             </div>
           ) : switchTo ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2.5">
-              <p className="text-[13px] text-fg">
+              <p className="text-footnote text-fg">
                 Change your vote to{" "}
                 <span className="font-semibold">
                   {ballot.options.find((o) => o.id === switchTo)?.label}
@@ -168,7 +168,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
               </div>
             </div>
           ) : (
-            <p className="pt-1 text-[13px] text-fg-subtle">
+            <p className="pt-1 text-footnote text-fg-subtle">
               {mine
                 ? "You can change your vote until it ends."
                 : "Tap a choice to vote. One vote per home."}
@@ -179,7 +179,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
 
       {showResults && cast > 0 ? (
         <div className="space-y-2.5 border-t border-border bg-surface-2 px-4 py-3">
-          <p className="text-[13px] font-semibold text-fg-muted">
+          <p className="text-footnote font-semibold text-fg-muted">
             {closed ? resultLine(ballot) : `${cast} of ${ballot.eligible} homes have voted`}
           </p>
           {ballot.options.map((o) => {
@@ -188,11 +188,11 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
             return (
               <div key={o.id}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
-                  <span className="truncate text-[13px] text-fg">
+                  <span className="min-w-0 break-words text-footnote text-fg">
                     {o.label}
                     {yours ? " · your vote" : ""}
                   </span>
-                  <span className="tnum shrink-0 text-[13px] text-fg-muted">
+                  <span className="tnum shrink-0 text-footnote text-fg-muted">
                     {o.votes} · {Math.round(share * 100)}%
                   </span>
                 </div>
@@ -202,7 +202,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
           })}
         </div>
       ) : closed && cast === 0 ? (
-        <p className="border-t border-border px-4 py-2.5 text-[13px] text-fg-muted">Nobody voted.</p>
+        <p className="border-t border-border px-4 py-2.5 text-footnote text-fg-muted">Nobody voted.</p>
       ) : null}
     </Card>
   );

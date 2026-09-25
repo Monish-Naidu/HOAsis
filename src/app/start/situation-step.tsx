@@ -12,6 +12,7 @@ import type {
 } from "@/lib/data/new-community";
 import { cn } from "@/lib/utils";
 import { HOME_TYPES, homeTypesOf, soleType } from "@/lib/home-types";
+import { fieldClass } from "@/components/ui/primitives";
 
 /**
  * Four questions of fact, one to a screen, which decide what the plan
@@ -177,13 +178,13 @@ export function PropertyPicker({ draft, patch }: { draft: CommunityDraft; patch:
                 {on ? <Check className="size-3" strokeWidth={3} /> : null}
               </span>
               <Icon className="size-5 text-fg-muted" />
-              <span className="mt-2 block text-[15px] font-semibold text-fg">{label}</span>
-              <span className="mt-0.5 block text-[13px] leading-snug text-fg-muted">{detail}</span>
+              <span className="mt-2 block text-body font-semibold text-fg">{label}</span>
+              <span className="mt-0.5 block text-footnote leading-snug text-fg-muted">{detail}</span>
             </button>
           );
         })}
       </div>
-      <p className="text-[13px] text-fg-subtle" aria-live="polite">
+      <p className="text-footnote text-fg-subtle" aria-live="polite">
         {picked.length > 1
           ? `A mix. You will say which homes are which on the homes screen.`
           : "Pick more than one if the community has a mix."}
@@ -224,7 +225,7 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
             aria-pressed={draft.sharedSpaces.includes(id)}
             onClick={() => patch({ sharedSpaces: toggle(draft.sharedSpaces, id) })}
             className={cn(
-              "rounded-full border px-4 py-2 text-[15px] font-medium transition-colors",
+              "rounded-full border px-4 py-2 text-body font-medium transition-colors",
               draft.sharedSpaces.includes(id)
                 ? "border-primary bg-primary text-primary-fg"
                 : "border-border-2 text-fg-muted hover:text-fg",
@@ -236,7 +237,7 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
         {custom.map((name) => (
           <span
             key={name}
-            className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary py-2 pl-4 pr-2 text-[15px] font-medium text-primary-fg"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary py-2 pl-4 pr-2 text-body font-medium text-primary-fg"
           >
             {name}
             <button
@@ -262,12 +263,12 @@ export function SpacesPicker({ draft, patch }: { draft: CommunityDraft; patch: P
           onChange={(e) => setOwn(e.target.value)}
           placeholder="Something else, like a dog park"
           aria-label="Another shared space"
-          className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary"
+          className={fieldClass}
         />
         <button
           type="submit"
           disabled={!own.trim()}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-2 px-3.5 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg disabled:opacity-50"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border-2 px-3.5 text-body font-medium text-fg-muted transition-colors hover:text-fg disabled:opacity-50"
         >
           <Plus className="size-4" />
           Add
@@ -292,7 +293,7 @@ export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: P
               three cards stay comparable until then. */}
           {option.id === "existing" && draft.origin === "existing" ? (
             <div className="animate-rise mt-2 rounded-card border border-border-2 bg-surface-2/60 p-4 sm:ml-12">
-              <p className="text-[15px] font-semibold text-fg">Where are you coming from?</p>
+              <p className="text-body font-semibold text-fg">Where are you coming from?</p>
               <div className="mt-2.5 space-y-2">
                 {PREVIOUSLY.map(({ id, label, detail }) => {
                   const picked = draft.previously === id;
@@ -310,8 +311,8 @@ export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: P
                       )}
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[15px] font-semibold text-fg">{label}</span>
-                        <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
+                        <span className="block text-body font-semibold text-fg">{label}</span>
+                        <span className="block text-footnote leading-snug text-fg-muted">{detail}</span>
                       </span>
                       <span
                         className={cn(
@@ -361,8 +362,8 @@ export function CollectsPicker({ draft, patch }: { draft: CommunityDraft; patch:
           {justDues ? <span className="block size-1.5 rounded-full bg-current" /> : null}
         </span>
         <span className="min-w-0">
-          <span className="block text-[15px] font-semibold text-fg">Just dues</span>
-          <span className="block text-[13px] leading-snug text-fg-muted">
+          <span className="block text-body font-semibold text-fg">Just dues</span>
+          <span className="block text-footnote leading-snug text-fg-muted">
             One flat amount per home, and nothing else
           </span>
         </span>
@@ -381,8 +382,8 @@ export function CollectsPicker({ draft, patch }: { draft: CommunityDraft; patch:
               {picked ? <span className="block size-1.5 rounded-[1px] bg-current" /> : null}
             </span>
             <span className="min-w-0">
-              <span className="block text-[15px] font-semibold text-fg">{label}</span>
-              <span className="block text-[13px] leading-snug text-fg-muted">{detail}</span>
+              <span className="block text-body font-semibold text-fg">{label}</span>
+              <span className="block text-footnote leading-snug text-fg-muted">{detail}</span>
             </span>
           </button>
         );
@@ -425,15 +426,15 @@ function OriginCard({
         <Icon className={compact ? "size-4" : "size-4.5"} strokeWidth={1.9} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-fg">{option.label}</span>
-        <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
+        <span className="block text-body font-semibold text-fg">{option.label}</span>
+        <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
           {option.detail}
         </span>
         {/* What picking it does, shown only once picked, so the cards stay
             comparable and the consequence is confirmed rather than competing
             for attention. */}
         {picked ? (
-          <span className="mt-2 block border-t border-primary/25 pt-2 text-[13px] leading-relaxed text-primary">
+          <span className="mt-2 block border-t border-primary/25 pt-2 text-footnote leading-relaxed text-primary">
             <span className="font-semibold">What that changes: </span>
             {option.changes}
           </span>

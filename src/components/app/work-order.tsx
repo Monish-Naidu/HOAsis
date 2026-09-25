@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Pencil, Trash2, Wrench } from "lucide-react";
-import { Badge, Button, Card, Select } from "@/components/ui/primitives";
+import { Badge, Button, Card, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { HomeRequest, WorkOrder } from "@/lib/types";
@@ -19,8 +19,8 @@ import { formatDate, money, relativeDays, todayIsoDate } from "@/lib/utils";
  */
 
 const FIELD =
-  "h-9 w-full rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand";
-const LABEL = "mb-1 block text-[13px] font-semibold text-fg-muted";
+  fieldClass;
+const LABEL = "mb-1 block text-footnote font-semibold text-fg-muted";
 
 function dollarsToCents(value: string): number | undefined {
   const parsed = Math.round(Number(value.replace(/[^0-9.]/g, "")) * 100);
@@ -31,16 +31,34 @@ function centsToDollars(cents?: number): string {
   return cents ? (cents / 100).toFixed(2) : "";
 }
 
-export function WorkOrderPanel({ request }: { request: HomeRequest }) {
+export function WorkOrderPanel({
+  request,
+  editing: controlled,
+  onEditingChange,
+}: {
+  request: HomeRequest;
+  /**
+   * Owned by the page when the "Open a work order" button lives in its
+   * action row, beside Mark fixed, rather than on a row of its own.
+   */
+  editing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
+}) {
   const { community, setWorkOrder } = useAppState();
   const { notify } = useToast();
   const order = request.workOrder;
-  const [editing, setEditing] = useState(false);
+  const [ownEditing, setOwnEditing] = useState(false);
+  const editing = controlled ?? ownEditing;
+  const setEditing = (next: boolean) => {
+    setOwnEditing(next);
+    onEditingChange?.(next);
+  };
   const [finishing, setFinishing] = useState(false);
 
   if (request.kind !== "maintenance") return null;
 
   if (!order && !editing) {
+    if (onEditingChange) return null;
     return (
       <div className="mt-2">
         <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
@@ -77,12 +95,12 @@ export function WorkOrderPanel({ request }: { request: HomeRequest }) {
     <div className="mt-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <Wrench className="size-3.5 text-fg-muted" />
-        <span className="text-[13px] font-semibold text-fg">Work order</span>
+        <span className="text-footnote font-semibold text-fg">Work order</span>
         <Badge tone={done ? "ok" : order.scheduledOn ? "info" : "neutral"}>
           {done ? "Done" : order.scheduledOn ? "Scheduled" : "Open"}
         </Badge>
       </div>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
+      <p className="mt-1.5 text-footnote leading-relaxed text-fg-muted">
         {order.vendorName || "No vendor chosen yet"}
         {order.scheduledOn
           ? ` · ${formatDate(order.scheduledOn, "medium")}${done ? "" : ` (${relativeDays(order.scheduledOn)})`}`
@@ -95,7 +113,7 @@ export function WorkOrderPanel({ request }: { request: HomeRequest }) {
         {done ? ` · finished ${formatDate(order.completedOn!, "medium")}` : ""}
       </p>
       {order.notes ? (
-        <p className="mt-1 text-[13px] leading-relaxed text-fg-subtle">{order.notes}</p>
+        <p className="mt-1 text-footnote leading-relaxed text-fg-subtle">{order.notes}</p>
       ) : null}
 
       {finishing ? (
@@ -177,7 +195,7 @@ function WorkOrderForm({
       }}
     >
       <div className="space-y-3 px-4 py-3.5">
-        <p className="text-[13px] font-semibold text-fg">
+        <p className="text-footnote font-semibold text-fg">
           {initial ? "Edit the work order" : `Work order for ${request.reference}`}
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -231,7 +249,7 @@ function WorkOrderForm({
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Access through the side gate. Owner will be home after 4."
-            className="w-full rounded-lg border border-border-2 bg-surface px-2.5 py-2 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+            className={textareaClass}
           />
         </label>
         <div className="flex gap-2">

@@ -105,7 +105,7 @@ export const announcements: Announcement[] = [
   {
     id: "ann-4",
     title: "New: pay dues from your phone with Apple Pay",
-    body: "Autopay and one-time payments now work with Apple Pay and Google Pay. ACH stays free for you and costs the association $0.35, by far the cheapest way to pay.",
+    body: "Autopay and one-time payments now work with Apple Pay and Google Pay. Bank transfers stay free for you and cost the association $0.35, by far the cheapest way to pay.",
     postedDate: "2026-08-04",
     author: "Mehr Meadows Board",
     category: "Notice",

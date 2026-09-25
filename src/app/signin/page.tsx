@@ -32,7 +32,7 @@ export default function AuthLanding() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-body font-medium text-fg-muted transition-colors hover:text-fg"
             >
               <ArrowLeft className="size-3.5" />
               <span className="hidden sm:inline">Home</span>

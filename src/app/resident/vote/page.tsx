@@ -25,7 +25,7 @@ export default function ResidentVote() {
 
   return (
     <div className="animate-rise space-y-6">
-      <ResidentTitle title="Voting" />
+      <ResidentTitle title="Voting" subtitle="Open ballots and past results" />
 
       {open.length ? (
         <section className="space-y-3">

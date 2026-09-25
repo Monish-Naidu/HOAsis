@@ -26,8 +26,8 @@ export function PlanScreen() {
   if (communities.length === 0) {
     return (
       <div className="mx-auto w-full max-w-2xl px-5 py-16 text-center">
-        <p className="text-[17px] font-semibold text-fg">No association yet</p>
-        <p className="mt-1.5 text-[15px] text-fg-muted">
+        <p className="text-headline font-semibold text-fg">No association yet</p>
+        <p className="mt-1.5 text-body text-fg-muted">
           Set one up and this becomes your plan.
         </p>
         <Button className="mt-5" onClick={() => router.push("/start")}>

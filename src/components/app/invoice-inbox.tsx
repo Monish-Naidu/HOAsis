@@ -2,16 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy, Inbox, Paperclip, Plus, X } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Segmented,
-  Select,
-  type Tone,
-} from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, EmptyState, Segmented, Select, type Tone, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { communitySlug, vendorDecisions } from "@/lib/metrics";
@@ -48,8 +39,8 @@ const STATUS: Record<InvoiceStatus, { label: string; tone: Tone }> = {
 };
 
 const field =
-  "h-9 w-full rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand";
-const label = "mb-1 block text-[13px] font-semibold text-fg-muted";
+  fieldClass;
+const label = "mb-1 block text-footnote font-semibold text-fg-muted";
 
 function fileSize(bytes: number) {
   if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
@@ -126,7 +117,7 @@ export function InvoiceInbox() {
         subtitle={
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>Vendors email bills to</span>
-            <code className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[13px] text-fg">
+            <code className="rounded-md bg-surface-2 px-1.5 py-0.5 text-footnote text-fg">
               {address}
             </code>
             <button
@@ -150,7 +141,7 @@ export function InvoiceInbox() {
       />
 
       {isRemote ? (
-        <p className="border-b border-border bg-surface-2 px-5 py-2.5 text-[13px] text-fg-muted">
+        <p className="border-b border-border bg-surface-2 px-5 py-2.5 text-footnote text-fg-muted">
           Email-in and invoice storage are coming. Nothing sent to this address is kept yet.
         </p>
       ) : null}
@@ -285,13 +276,13 @@ function InvoiceRow({
       <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
         <div className="min-w-[12rem] flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[15px] font-medium text-fg">{invoice.vendor}</p>
+            <p className="text-body font-medium text-fg">{invoice.vendor}</p>
             <Badge tone={status.tone}>{status.label}</Badge>
           </div>
-          <p className="mt-0.5 text-[13px] text-fg-muted">
+          <p className="mt-0.5 text-footnote text-fg-muted">
             {invoice.number}, {invoice.description}
           </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-footnote text-fg-subtle">
             <span>Received {formatDate(invoice.receivedDate)}</span>
             <span className={cn(dueSoon && "font-medium text-warn")}>
               Due {formatDate(invoice.dueDate)}
@@ -308,7 +299,7 @@ function InvoiceRow({
         </div>
 
         <div className="ml-auto shrink-0 text-right">
-          <p className="tnum text-[15px] font-semibold text-fg">{money(invoice.amountCents)}</p>
+          <p className="tnum text-body font-semibold text-fg">{money(invoice.amountCents)}</p>
           {readOnly || panel ? null : invoice.status === "new" ? (
             <div className="mt-1.5 flex justify-end gap-1.5">
               <Button variant="ghost" size="sm" onClick={() => onPanel("reject")}>
@@ -330,7 +321,7 @@ function InvoiceRow({
       </div>
 
       {invoice.status === "paid" && payout ? (
-        <p className="mt-2 text-[13px] text-fg-muted">
+        <p className="mt-2 text-footnote text-fg-muted">
           Paid by ACH, {payout.status === "paid" ? "landed" : "lands"}{" "}
           {daysFromToday(payout.expectedDate) >= -60
             ? relativeDays(payout.expectedDate)
@@ -344,11 +335,11 @@ function InvoiceRow({
       ) : null}
 
       {invoice.status === "rejected" && invoice.rejectedReason ? (
-        <p className="mt-2 text-[13px] text-fg-muted">Rejected: {invoice.rejectedReason}</p>
+        <p className="mt-2 text-footnote text-fg-muted">Rejected: {invoice.rejectedReason}</p>
       ) : null}
 
       {invoice.status === "approved" && invoice.notes && panel !== "pay" ? (
-        <p className="mt-2 text-[13px] text-fg-muted">{invoice.notes}</p>
+        <p className="mt-2 text-footnote text-fg-muted">{invoice.notes}</p>
       ) : null}
 
       {panel === "reject" ? <RejectPanel onCancel={() => onPanel(null)} onReject={onReject} /> : null}
@@ -379,19 +370,19 @@ function SignRow({
     >
       <div className="min-w-[12rem] flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[15px] font-medium text-fg">{payout.vendor}</p>
+          <p className="text-body font-medium text-fg">{payout.vendor}</p>
           <Badge tone="warn">Needs a signature</Badge>
         </div>
-        <p className="mt-0.5 text-[13px] text-fg-muted">
-          {payout.invoiceNumber}, {payout.method === "ach" ? "ACH" : "check"}
+        <p className="mt-0.5 text-footnote text-fg-muted">
+          {payout.invoiceNumber}, {payout.method === "ach" ? "bank transfer" : "check"}
         </p>
-        <p className="mt-1.5 text-[13px] text-fg-subtle">
+        <p className="mt-1.5 text-footnote text-fg-subtle">
           {payout.approvals.length} of {payout.approvalsRequired} approvals
           {signed ? `, ${signed} signed` : ""}
         </p>
       </div>
       <div className="ml-auto shrink-0 text-right">
-        <p className="tnum text-[15px] font-semibold text-fg">{money(payout.amountCents)}</p>
+        <p className="tnum text-body font-semibold text-fg">{money(payout.amountCents)}</p>
         {readOnly ? null : (
           <div className="mt-1.5 flex justify-end">
             <Button variant={primary ? "primary" : "secondary"} size="sm" onClick={onApprove}>
@@ -455,13 +446,13 @@ function PayPanel({
 
   return (
     <div className="mt-3 rounded-lg border border-border bg-surface-2 p-4">
-      <dl className="grid gap-x-6 gap-y-2 text-[15px] sm:grid-cols-3">
+      <dl className="grid gap-x-6 gap-y-2 text-body sm:grid-cols-3">
         <div>
-          <dt className="text-[13px] font-semibold text-fg-muted">Amount</dt>
+          <dt className="text-footnote font-semibold text-fg-muted">Amount</dt>
           <dd className="tnum font-semibold text-fg">{money(invoice.amountCents)}</dd>
         </div>
         <div>
-          <dt className="text-[13px] font-semibold text-fg-muted">From</dt>
+          <dt className="text-footnote font-semibold text-fg-muted">From</dt>
           <dd className="text-fg">
             {from ? (
               <>
@@ -473,7 +464,7 @@ function PayPanel({
           </dd>
         </div>
         <div>
-          <dt className="text-[13px] font-semibold text-fg-muted">Lands</dt>
+          <dt className="text-footnote font-semibold text-fg-muted">Lands</dt>
           <dd className="text-fg">2 business days</dd>
         </div>
       </dl>
@@ -484,7 +475,7 @@ function PayPanel({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           placeholder="Anything the next treasurer should know"
-          className="w-full resize-none rounded-lg border border-border-2 bg-surface px-2.5 py-2 text-[15px] text-fg outline-none focus:border-brand"
+          className={cn(textareaClass, "resize-none")}
         />
       </label>
       <div className="mt-3 flex items-center justify-end gap-2">
@@ -608,7 +599,7 @@ function AttachForm({
               // there is somewhere to keep them.
               setFile(picked ? { name: picked.name, size: fileSize(picked.size) } : undefined);
             }}
-            className="block w-full text-[13px] text-fg-muted file:mr-3 file:h-9 file:rounded-lg file:border file:border-border-2 file:bg-surface file:px-3 file:text-[13px] file:font-medium file:text-fg"
+            className="block w-full text-footnote text-fg-muted file:mr-3 file:h-9 file:rounded-lg file:border file:border-border-2 file:bg-surface file:px-3 file:text-footnote file:font-medium file:text-fg"
           />
         </label>
       </div>

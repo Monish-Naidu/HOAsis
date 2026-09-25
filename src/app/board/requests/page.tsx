@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Inbox } from "lucide-react";
+import { Inbox, Wrench } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -28,6 +28,8 @@ export default function BoardRequests() {
   const inProgress = requests.filter((r) => r.workOrder && !r.workOrder.completedOn);
   // Denying is the one answer an owner cannot undo, so it asks once.
   const [denying, setDenying] = useState<string | null>(null);
+  // Which maintenance request has its work order form open.
+  const [ordering, setOrdering] = useState<string | null>(null);
 
   return (
     <>
@@ -69,11 +71,11 @@ export default function BoardRequests() {
             >
               <Avatar name={r.ownerName} tone="neutral" />
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium leading-snug text-fg">{r.title}</p>
-                <p className="mt-0.5 text-[13px] text-fg-muted">
+                <p className="text-body font-medium leading-snug text-fg">{r.title}</p>
+                <p className="mt-0.5 text-footnote text-fg-muted">
                   {r.ownerName} · {homeLabel(community, r.unit)} · {formatDate(r.submittedDate)}
                 </p>
-                <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-fg-muted">
+                <p className="mt-1 line-clamp-2 text-footnote leading-relaxed text-fg-muted">
                   {r.summary}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -83,7 +85,7 @@ export default function BoardRequests() {
                       {daysLeft === 0 ? "Answer today" : `${pluralize(daysLeft, "day")} to answer`}
                     </Badge>
                   ) : null}
-                  <span className="text-[13px] text-fg-subtle">
+                  <span className="text-footnote text-fg-subtle">
                     {pluralize(r.thread.length, "update")}
                     {r.attachments.length ? ` · ${pluralize(r.attachments.length, "file")}` : ""}
                   </span>
@@ -91,6 +93,13 @@ export default function BoardRequests() {
                     {r.kind === "maintenance" ? (
                       // A streetlight is not approved or denied. It is fixed,
                       // usually through the work order below.
+                      <>
+                      {!r.workOrder && ordering !== r.id ? (
+                        <Button variant="ghost" size="sm" onClick={() => setOrdering(r.id)}>
+                          <Wrench className="size-3.5" />
+                          Open a work order
+                        </Button>
+                      ) : null}
                       <Button
                         variant={open.length === 1 && index === 0 ? "primary" : "secondary"}
                         size="sm"
@@ -101,6 +110,7 @@ export default function BoardRequests() {
                       >
                         Mark fixed
                       </Button>
+                      </>
                     ) : denying === r.id ? (
                       <>
                         <Button variant="ghost" size="sm" onClick={() => setDenying(null)}>
@@ -141,7 +151,11 @@ export default function BoardRequests() {
                     )}
                   </span>
                 </div>
-                <WorkOrderPanel request={r} />
+                <WorkOrderPanel
+                  request={r}
+                  editing={ordering === r.id}
+                  onEditingChange={(v) => setOrdering(v ? r.id : null)}
+                />
               </div>
             </div>
             );
@@ -164,8 +178,8 @@ export default function BoardRequests() {
             >
               <Avatar name={r.ownerName} tone="neutral" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium text-fg">{r.title}</p>
-                <p className="text-[13px] text-fg-muted">
+                <p className="truncate text-body font-medium text-fg">{r.title}</p>
+                <p className="text-footnote text-fg-muted">
                   {r.ownerName} · {homeLabel(community, r.unit)} · {formatDate(r.submittedDate)}
                 </p>
               </div>

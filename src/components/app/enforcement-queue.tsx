@@ -16,15 +16,7 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Callout,
-  Card,
-  EmptyState,
-  PageHeader,
-  Stat,
-} from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, EmptyState, PageHeader, Stat, textareaClass } from "@/components/ui/primitives";
 import type { Tone } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
@@ -131,8 +123,8 @@ const SOURCES: { key: SourceFilter; label: string }[] = [
 ];
 
 const INPUT =
-  "mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand";
-const LABEL = "text-[13px] font-semibold text-fg-muted";
+  cn(textareaClass, "mt-1.5");
+const LABEL = "text-footnote font-semibold text-fg-muted";
 
 /** "Unit 63" for a home, the words as given for anything else. */
 function placeLabel(unit: string): string {
@@ -307,7 +299,7 @@ export function EnforcementQueue() {
           label="Resolved this year"
           value={String(resolvedThisYear.length)}
           tone="ok"
-          hint="Cured notices and reports closed after a look"
+          hint="Fixed notices, and reports closed after a look"
         />
       </div>
 
@@ -322,7 +314,7 @@ export function EnforcementQueue() {
               neighbour; reports that never do is a dispute the association is
               being used as an instrument in. Board only. */}
           {patterns.map((pattern) => (
-            <p key={`${pattern.reporterId}-${pattern.subjectUnit}`} className="text-[13px]">
+            <p key={`${pattern.reporterId}-${pattern.subjectUnit}`} className="text-footnote">
               {pattern.reporterName} has reported unit {pattern.subjectUnit} {pattern.count}{" "}
               times.{" "}
               {pattern.verified === 0
@@ -348,12 +340,12 @@ export function EnforcementQueue() {
               aria-selected={tab === t.key}
               onClick={() => switchTab(t.key)}
               className={cn(
-                "relative z-10 flex items-center gap-1.5 rounded-lg px-4 py-2 text-[15px] font-medium transition-colors duration-200",
+                "relative z-10 flex items-center gap-1.5 rounded-lg px-4 py-2 text-body font-medium transition-colors duration-200",
                 tab === t.key ? "text-fg" : "text-fg-muted hover:text-fg",
               )}
             >
               {t.label}
-              <span className="tnum text-[13px] text-fg-subtle">{buckets[t.key].length}</span>
+              <span className="tnum text-footnote text-fg-subtle">{buckets[t.key].length}</span>
             </button>
           ))}
         </TabPill>
@@ -366,7 +358,7 @@ export function EnforcementQueue() {
               aria-pressed={source === s.key}
               onClick={() => setSource(s.key)}
               className={cn(
-                "rounded-full border px-3 py-1 text-[13px] font-medium transition-colors",
+                "rounded-full border px-3 py-1 text-footnote font-medium transition-colors",
                 source === s.key
                   ? "border-transparent bg-brand-soft text-brand-soft-fg"
                   : "border-border text-fg-muted hover:text-fg",
@@ -546,11 +538,11 @@ function QueueRow({
           <SourceIcon className="size-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className={cn("block text-[15px] font-medium text-fg", !open && "truncate")}>
+          <span className={cn("block text-body font-medium text-fg", !open && "truncate")}>
             {title}
           </span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-fg-muted">
-            <Badge tone={src.tone} className="px-1.5 py-0 text-[12px]">
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-fg-muted">
+            <Badge tone={src.tone} className="px-1.5 py-0 text-caption">
               {city && item.kind === "violation"
                 ? (item.violation.agency ?? "City")
                 : src.label}
@@ -563,7 +555,7 @@ function QueueRow({
                 : ""}
             </span>
             {saysFixed ? (
-              <Badge tone="ok" className="px-1.5 py-0 text-[12px]">
+              <Badge tone="ok" className="px-1.5 py-0 text-caption">
                 <Check className="size-3" />
                 Owner says fixed
               </Badge>
@@ -572,7 +564,7 @@ function QueueRow({
           {/* Where a notice sits on contestable evidence, the board is told
               here rather than at the hearing. */}
           {concerns > 0 ? (
-            <span className="mt-1 flex items-center gap-1.5 text-[13px] font-medium text-warn">
+            <span className="mt-1 flex items-center gap-1.5 text-footnote font-medium text-warn">
               <AlertTriangle className="size-3" />
               {pluralize(concerns, "photograph")} worth checking before this goes further
             </span>
@@ -590,7 +582,7 @@ function QueueRow({
           </span>
           <span
             className={cn(
-              "tnum text-[13px]",
+              "tnum text-footnote",
               whenTone === "danger"
                 ? "font-medium text-danger"
                 : whenTone === "warn"
@@ -645,7 +637,7 @@ function ReporterLine({ report }: { report: ViolationReport }) {
   // Board only. There is no screen in this product that shows an accused
   // household who reported them.
   return (
-    <p className="flex items-center gap-1.5 text-[13px] text-fg-subtle">
+    <p className="flex items-center gap-1.5 text-footnote text-fg-subtle">
       <Eye className="size-3" />
       Reported by {report.reporterName}, unit {report.reporterUnit}. Not shown to unit{" "}
       {report.subjectUnit}.
@@ -657,10 +649,10 @@ function VerificationNote({ report }: { report: ViolationReport }) {
   if (!report.verification) return null;
   return (
     <div className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2.5">
-      <p className="text-[13px] font-semibold text-fg">
+      <p className="text-footnote font-semibold text-fg">
         {report.verification.by} looked on {formatDate(report.verification.on)}
       </p>
-      <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+      <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
         {report.verification.note}
       </p>
     </div>
@@ -702,15 +694,15 @@ function ReportDetail({
 
   return (
     <div className="space-y-3">
-      <p className="text-[15px] leading-relaxed text-fg">{report.what}</p>
-      <p className="text-[13px] text-fg-muted">
+      <p className="text-body leading-relaxed text-fg">{report.what}</p>
+      <p className="text-footnote text-fg-muted">
         Seen {formatDate(report.observedOn)}, reported {formatDate(report.submittedOn)}.
       </p>
       <ReporterLine report={report} />
       <VerificationNote report={report} />
 
       {report.dismissedReason ? (
-        <p className="border-l-2 border-border-2 pl-3 text-[13px] leading-relaxed text-fg-muted">
+        <p className="border-l-2 border-border-2 pl-3 text-footnote leading-relaxed text-fg-muted">
           {report.dismissedReason}
         </p>
       ) : null}
@@ -760,7 +752,7 @@ function ReportDetail({
             />
           </label>
           {noteMode === "verify" ? (
-            <p className="mt-1.5 text-[13px] leading-relaxed text-fg-subtle">
+            <p className="mt-1.5 text-footnote leading-relaxed text-fg-subtle">
               This is what a notice would rest on, not what the neighbour told you. Write what
               you personally observed and when.
             </p>
@@ -778,7 +770,7 @@ function ReportDetail({
 
       {raisable ? (
         <div className="space-y-2.5">
-          <p className="text-[13px] leading-relaxed text-fg-muted">
+          <p className="text-footnote leading-relaxed text-fg-muted">
             Confirmed, so a notice can be opened against unit {report.subjectUnit} on what you
             saw. It will carry your observation and your citation, and none of the reporter&apos;s
             words.
@@ -795,13 +787,13 @@ function ReportDetail({
             </Button>
           ) : null}
           {!owner ? (
-            <p className="text-[13px] text-warn">
+            <p className="text-footnote text-warn">
               No owner on file for unit {report.subjectUnit}. Add the household first.
             </p>
           ) : null}
           {editor?.mode === "notice" && owner ? (
             <div className="rounded-card border border-border bg-surface-2 p-3.5">
-              <p className="text-[13px] text-fg-muted">
+              <p className="text-footnote text-fg-muted">
                 To {owner.displayName}, unit {owner.unit}. Starts as a courtesy notice.
               </p>
               <label className="mt-3 block">
@@ -876,12 +868,12 @@ function ViolationDetail({
 
   return (
     <div className="space-y-3">
-      <p className="text-[15px] leading-relaxed text-fg">{violation.rule}</p>
+      <p className="text-body leading-relaxed text-fg">{violation.rule}</p>
 
       {/* The owner's word comes first, because it is what changed and what
           the board does next: somebody goes to look, then closes it. */}
       {openMatter && violation.ownerFixedDate ? (
-        <div className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2.5 text-[13px] leading-relaxed">
+        <div className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2.5 text-footnote leading-relaxed">
           <p className="flex items-center gap-1.5 font-semibold text-ok">
             <Check className="size-3.5" />
             Owner says fixed {formatDate(violation.ownerFixedDate, "medium")}
@@ -896,7 +888,7 @@ function ViolationDetail({
       ) : null}
 
       {city ? (
-        <div className="rounded-lg border border-info/25 bg-info-soft px-3 py-2.5 text-[13px] leading-relaxed">
+        <div className="rounded-lg border border-info/25 bg-info-soft px-3 py-2.5 text-footnote leading-relaxed">
           <p className="font-semibold text-info">
             {violation.agency ?? "City notice"}
             {violation.caseNumber ? ` · case ${violation.caseNumber}` : ""}
@@ -909,7 +901,7 @@ function ViolationDetail({
           </p>
         </div>
       ) : cited ? (
-        <p className="text-[13px] text-fg-subtle">
+        <p className="text-footnote text-fg-subtle">
           {cited.article ? (
             <>
               <Link
@@ -945,13 +937,13 @@ function ViolationDetail({
         }
       />
       {concerns.length > 0 ? (
-        <p className="flex items-center gap-1.5 text-[13px] font-medium text-warn">
+        <p className="flex items-center gap-1.5 text-footnote font-medium text-warn">
           <AlertTriangle className="size-3" />
           {pluralize(concerns.length, "photograph")} worth checking before this goes further
         </p>
       ) : null}
       {homeUnit && violation.photos.length > 0 ? (
-        <p className="text-[13px] leading-relaxed text-fg-subtle">
+        <p className="text-footnote leading-relaxed text-fg-subtle">
           Unit {violation.unit} sees exactly these photographs, with the same dates and the same
           note of where each was taken from.
         </p>
@@ -959,8 +951,8 @@ function ViolationDetail({
 
       {report ? (
         <div className="space-y-2 rounded-card border border-border bg-surface-2 p-3.5">
-          <p className="text-[13px] font-semibold text-fg-muted">Started from {report.reference}</p>
-          <p className="text-[13px] leading-relaxed text-fg-muted">{report.what}</p>
+          <p className="text-footnote font-semibold text-fg-muted">Started from {report.reference}</p>
+          <p className="text-footnote leading-relaxed text-fg-muted">{report.what}</p>
           <ReporterLine report={report} />
           <VerificationNote report={report} />
         </div>
@@ -984,18 +976,18 @@ function ViolationDetail({
               Print letter
             </Button>
           ) : null}
-          <span className="text-[13px] text-fg-subtle">
+          <span className="text-footnote text-fg-subtle">
             {city
               ? "Resolve once the agency has closed the case."
               : next
                 ? `Next is ${STAGE[next].label.toLowerCase()}. Fines are set at the hearing, never here.`
                 : violation.stage === "hearing"
                   ? "The hearing decides what happens next."
-                  : "Resolve once the fine is settled and the matter cured."}
+                  : "Resolve once the fine is paid and the problem is fixed."}
           </span>
         </div>
       ) : (
-        <p className="text-[13px] text-fg-muted">
+        <p className="text-footnote text-fg-muted">
           Resolved {formatDate(violation.resolvedDate ?? violation.nextActionDate)}.
         </p>
       )}
@@ -1042,8 +1034,8 @@ function CityNoticeForm({
           <Landmark className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold text-fg">Log a city notice</p>
-          <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+          <p className="text-body font-semibold text-fg">Log a city notice</p>
+          <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
             A notice from a city or county agency. It goes in the queue with its deadline and
             nobody has to go and look.
           </p>

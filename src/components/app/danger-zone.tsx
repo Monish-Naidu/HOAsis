@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRightLeft, LogOut, RotateCcw, Trash2 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, Select } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, Select, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { useToast } from "@/components/app/toast";
@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 type Flow = null | "transfer" | "leave" | "cancel" | "delete";
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  fieldClass;
 
 export function DangerZone() {
   const { community, account, isRemote, resetDemo } = useAppState();
@@ -52,7 +52,7 @@ export function DangerZone() {
       <Card className="mt-5">
         <CardHeader title="Start over" icon={<AlertTriangle className="size-4" />} />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
-          <p className="min-w-[12rem] flex-1 text-[15px] leading-relaxed text-fg-muted">
+          <p className="min-w-[12rem] flex-1 text-body leading-relaxed text-fg-muted">
             Put the demo back the way it started. Everything you changed in this browser goes.
           </p>
           <Button
@@ -85,7 +85,7 @@ export function DangerZone() {
       notify(label, "ok");
       return true;
     } catch (error) {
-      notify(error instanceof Error ? error.message : "That did not work", "warn");
+      notify(error instanceof Error ? error.message : "Something went wrong. Please try again.", "warn");
       return false;
     } finally {
       setBusy(false);
@@ -112,7 +112,7 @@ export function DangerZone() {
             onOpen={() => setFlow(flow === "transfer" ? null : "transfer")}
           >
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">
+              <span className="mb-1.5 block text-footnote font-medium text-fg">
                 Who takes over
               </span>
               <Select
@@ -227,7 +227,7 @@ export function DangerZone() {
           ) : (
             <>
               <label className="block">
-                <span className="mb-1.5 block text-[13px] font-medium text-fg">
+                <span className="mb-1.5 block text-footnote font-medium text-fg">
                   What made you cancel? Optional, and it goes to us rather than your board.
                 </span>
                 <input
@@ -280,7 +280,7 @@ export function DangerZone() {
               recovered.
             </Callout>
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">
+              <span className="mb-1.5 block text-footnote font-medium text-fg">
                 Type <span className="font-semibold">{community.settings.displayName}</span> to
                 confirm
               </span>
@@ -357,8 +357,8 @@ function Row({
             {icon}
           </span>
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-fg">{title}</p>
-            <p className="mt-0.5 max-w-xl text-[13px] leading-relaxed text-fg-muted">
+            <p className="text-body font-semibold text-fg">{title}</p>
+            <p className="mt-0.5 max-w-xl text-footnote leading-relaxed text-fg-muted">
               {detail}
             </p>
           </div>

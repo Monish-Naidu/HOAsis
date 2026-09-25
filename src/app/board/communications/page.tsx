@@ -1,16 +1,7 @@
 "use client";
 
 import { ArrowDownLeft, ArrowUpRight, Inbox, MailCheck, Send } from "lucide-react";
-import {
-  Avatar,
-  Badge,
-  Button,
-  Callout,
-  Card,
-  CardHeader,
-  EmptyState,
-  PageHeader,
-} from "@/components/ui/primitives";
+import { Avatar, Badge, Button, Callout, Card, CardHeader, EmptyState, PageHeader, textareaClass } from "@/components/ui/primitives";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
@@ -108,7 +99,7 @@ function CommunicationsScreen() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p
-                    className={`min-w-0 flex-1 truncate text-[15px] ${
+                    className={`min-w-0 flex-1 truncate text-body ${
                       t.unread ? "font-semibold text-fg" : "font-medium text-fg-muted"
                     }`}
                   >
@@ -116,13 +107,13 @@ function CommunicationsScreen() {
                   </p>
                   {t.unread ? <span className="size-1.5 shrink-0 rounded-full bg-accent" /> : null}
                 </div>
-                <p className="mt-0.5 truncate text-[13px] text-fg-muted">
+                <p className="mt-0.5 truncate text-footnote text-fg-muted">
                   {t.participants.join(", ")}
                   {t.unit ? ` · ${placeLabel(t.unit)}` : ""}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <Badge tone="neutral">{t.tag}</Badge>
-                  <span className="text-[13px] text-fg-subtle">{formatDate(t.updatedDate)}</span>
+                  <span className="text-footnote text-fg-subtle">{formatDate(t.updatedDate)}</span>
                 </div>
               </div>
             </button>
@@ -155,12 +146,12 @@ function CommunicationsScreen() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-[15px] font-semibold text-fg">{m.from}</span>
-                      <span className="text-[13px] text-fg-subtle">
+                      <span className="text-body font-semibold text-fg">{m.from}</span>
+                      <span className="text-footnote text-fg-subtle">
                         {formatDate(m.at, "long")} · {m.channel === "portal" ? "in the app" : m.channel}
                       </span>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed text-fg-muted">{m.body}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg-muted">{m.body}</p>
                   </div>
                 </div>
               ))}
@@ -168,7 +159,7 @@ function CommunicationsScreen() {
 
             {/* Composer */}
             <div className="border-t border-border p-4">
-              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[13px]">
+              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-footnote">
                 <span className="text-fg-subtle">To</span>
                 <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
                   {active.participants[0]}
@@ -184,7 +175,7 @@ function CommunicationsScreen() {
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Write a reply"
                 aria-label="Reply"
-                className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-brand"
+                className={cn(textareaClass, "resize-none")}
               />
               <div className="mt-2 flex justify-end">
                 <Button variant="primary" size="sm" disabled={!draft.trim()} onClick={send}>

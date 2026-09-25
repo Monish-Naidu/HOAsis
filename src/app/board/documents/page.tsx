@@ -83,7 +83,7 @@ function DocumentsScreen() {
           // primary button, which a <label> cannot borrow from the primitive.
           <label
             aria-busy={uploading}
-            className="press inline-flex h-9 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg bg-brand-gradient px-3.5 text-[14px] font-medium text-primary-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-sm)] hover:brightness-[1.06] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ring)] aria-busy:cursor-progress aria-busy:opacity-70"
+            className="press inline-flex h-9 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg bg-brand-gradient px-3.5 text-callout font-medium text-primary-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-sm)] hover:brightness-[1.06] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ring)] aria-busy:cursor-progress aria-busy:opacity-70"
           >
             <Upload className="size-3.5" />
             {uploading ? "Uploading" : "Upload"}
@@ -140,7 +140,7 @@ function DocumentsScreen() {
               : "Records owners can inspect and lenders ask for."
           }
           action={
-            <span className="tnum text-[15px] font-semibold text-fg">
+            <span className="tnum text-body font-semibold text-fg">
               {gaps.onFileCount} / {gaps.total}
             </span>
           }
@@ -151,8 +151,8 @@ function DocumentsScreen() {
               <div key={record.key} className="flex items-start gap-3 px-5 py-3">
                 <IconTile icon={AlertTriangle} tint="amber" size="xs" className="mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-fg">{record.label}</p>
-                  <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+                  <p className="text-body font-medium text-fg">{record.label}</p>
+                  <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
                     {record.why}
                   </p>
                 </div>
@@ -169,12 +169,12 @@ function DocumentsScreen() {
         >
           <IconTile icon={BookOpen} tint="violet" size="md" className="shrink-0" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-fg">
+            <span className="block text-body font-semibold text-fg">
               {docsInWords.length > 0
                 ? "Your governing documents"
                 : "Your documents are files, not text"}
             </span>
-            <span className="block text-[13px] leading-snug text-fg-muted">
+            <span className="block text-footnote leading-snug text-fg-muted">
               {governing.length > 0
                 ? `${governing.length} articles owners can search in plain words.`
                 : "Owners can download them but cannot search them."}
@@ -198,16 +198,16 @@ function DocumentsScreen() {
         >
           <IconTile icon={ShieldQuestion} tint="blue" size="md" className="shrink-0" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-fg">
+            <span className="block text-body font-semibold text-fg">
               What a new owner is told
             </span>
-            <span className="block text-[13px] leading-snug text-fg-muted">
+            <span className="block text-footnote leading-snug text-fg-muted">
               {coverage.answered === coverage.total
                 ? "All eight of the things a buyer must be warned about are answered by a provision."
                 : `${coverage.total - coverage.answered} of the ${coverage.total} things a buyer must be warned about have no confirmed answer.`}
             </span>
           </span>
-          <span className="tnum shrink-0 text-[15px] font-semibold text-fg">
+          <span className="tnum shrink-0 text-body font-semibold text-fg">
             {coverage.answered} / {coverage.total}
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
@@ -228,7 +228,7 @@ function DocumentsScreen() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search documents"
                 aria-label="Search documents"
-                className="w-40 min-w-0 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-subtle"
+                className="w-40 min-w-0 bg-transparent text-footnote text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
           }
@@ -236,7 +236,7 @@ function DocumentsScreen() {
         {grouped.map(({ category, docs }) => (
           <div key={category}>
             <div className="border-b border-border bg-surface-2 px-5 py-1.5">
-              <p className="text-[13px] font-semibold text-fg-muted">
+              <p className="text-footnote font-semibold text-fg-muted">
                 {category}
               </p>
             </div>
@@ -259,14 +259,14 @@ function DocumentsScreen() {
                         href={d.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="block truncate text-[15px] font-medium text-fg hover:underline"
+                        className="block truncate text-body font-medium text-fg hover:underline"
                       >
                         {d.name}
                       </a>
                     ) : (
-                      <p className="truncate text-[15px] font-medium text-fg">{d.name}</p>
+                      <p className="truncate text-body font-medium text-fg">{d.name}</p>
                     )}
-                    <p className="truncate text-[13px] text-fg-muted">
+                    <p className="truncate text-footnote text-fg-muted">
                       Updated {formatDate(d.updatedDate, "long")} · {d.size}
                       {d.requiredBy ? ` · required by ${d.requiredBy}` : ""}
                     </p>

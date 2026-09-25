@@ -31,10 +31,10 @@ export function AmendmentDiff({
     <div className="space-y-3">
       {kept.length > 0 ? (
         <div>
-          <p className="text-[13px] font-semibold text-fg-muted">Unchanged</p>
+          <p className="text-footnote font-semibold text-fg-muted">Unchanged</p>
           <div className="mt-1.5 space-y-2">
             {kept.map((p, i) => (
-              <p key={i} className="text-[15px] leading-relaxed text-fg-muted">
+              <p key={i} className="text-body leading-relaxed text-fg-muted">
                 {p}
               </p>
             ))}
@@ -44,7 +44,7 @@ export function AmendmentDiff({
 
       {removed.length > 0 ? (
         <div>
-          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-danger">
+          <p className="flex items-center gap-1.5 text-footnote font-semibold text-danger">
             <Minus className="size-3.5" strokeWidth={2.6} />
             {amendment.kind === "remove" ? "Struck in full" : "Struck"}
           </p>
@@ -52,7 +52,7 @@ export function AmendmentDiff({
             {removed.map((p, i) => (
               <p
                 key={i}
-                className="rounded-lg border border-danger/25 bg-danger-soft px-3 py-2 text-[15px] leading-relaxed text-fg line-through decoration-danger/50"
+                className="rounded-lg border border-danger/25 bg-danger-soft px-3 py-2 text-body leading-relaxed text-fg line-through decoration-danger/50"
               >
                 {p}
               </p>
@@ -63,7 +63,7 @@ export function AmendmentDiff({
 
       {added.length > 0 ? (
         <div>
-          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ok">
+          <p className="flex items-center gap-1.5 text-footnote font-semibold text-ok">
             <Plus className="size-3.5" strokeWidth={2.6} />
             {amendment.kind === "add" ? "New article" : "Added"}
           </p>
@@ -71,7 +71,7 @@ export function AmendmentDiff({
             {added.map((p, i) => (
               <p
                 key={i}
-                className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2 text-[15px] leading-relaxed text-fg"
+                className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2 text-body leading-relaxed text-fg"
               >
                 {p}
               </p>

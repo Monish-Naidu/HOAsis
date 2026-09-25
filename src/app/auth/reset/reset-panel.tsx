@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { Button, Card } from "@/components/ui/primitives";
+import { Button, Card, fieldClass } from "@/components/ui/primitives";
 import { setNewPassword } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ export function ResetPanel() {
     const result = await setNewPassword(password);
     setBusy(false);
     if (!result.ok) {
-      setNotice({ tone: "danger", text: result.message ?? "That did not work." });
+      setNotice({ tone: "danger", text: result.message ?? "Something went wrong. Please try again." });
       return;
     }
     setNotice({ tone: "ok", text: "Password changed. Taking you in." });
@@ -45,10 +45,10 @@ export function ResetPanel() {
   if (!auth.user) {
     return (
       <Card className="p-6">
-        <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+        <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
           This link is not valid
         </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
           Reset links expire, and each one works once. Ask for another from the sign in page.
         </p>
         <Button
@@ -65,39 +65,39 @@ export function ResetPanel() {
 
   return (
     <Card className="p-6">
-      <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+      <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
         Choose a new password
       </h1>
-      <p className="mt-1.5 text-[13px] text-fg-muted">Signing in as {auth.user.email}.</p>
+      <p className="mt-1.5 text-footnote text-fg-muted">Signing in as {auth.user.email}.</p>
 
       <form onSubmit={submit} className="mt-5 space-y-3">
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-fg">New password</span>
+          <span className="mb-1.5 block text-footnote font-medium text-fg">New password</span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
-            className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+            className={fieldClass}
           />
           {tooShort ? (
-            <span className="mt-1 block text-[13px] text-danger">
+            <span className="mt-1 block text-footnote text-danger">
               At least 8 characters.
             </span>
           ) : null}
         </label>
 
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-fg">Type it again</span>
+          <span className="mb-1.5 block text-footnote font-medium text-fg">Type it again</span>
           <input
             type="password"
             value={again}
             onChange={(e) => setAgain(e.target.value)}
             autoComplete="new-password"
-            className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+            className={fieldClass}
           />
           {mismatch ? (
-            <span className="mt-1 block text-[13px] text-danger">
+            <span className="mt-1 block text-footnote text-danger">
               These do not match.
             </span>
           ) : null}
@@ -107,7 +107,7 @@ export function ResetPanel() {
           <p
             role="status"
             className={cn(
-              "rounded-lg px-3 py-2 text-[13px]",
+              "rounded-lg px-3 py-2 text-footnote",
               notice.tone === "danger" ? "bg-danger-soft text-danger" : "bg-ok-soft text-ok",
             )}
           >

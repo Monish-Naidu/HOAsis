@@ -25,11 +25,11 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
   return (
     <Card>
       <div className="border-b border-border px-5 py-3.5">
-        <p className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+        <p className="flex items-center gap-2 text-body font-semibold text-fg">
           <Landmark className="size-4 text-fg-muted" />
           Three documents, and which one wins
         </p>
-        <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+        <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
           When two of them disagree, the one higher up this list governs. Most arguments in
           an association are really this question.
         </p>
@@ -37,12 +37,12 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
 
       <div className="divide-y divide-border">
         <div className="flex items-start gap-3 px-5 py-3.5">
-          <span className="tnum mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[13px] font-semibold text-fg-muted">
+          <span className="tnum mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-3 text-footnote font-semibold text-fg-muted">
             1
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-semibold text-fg">State law</p>
-            <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+            <p className="text-body font-semibold text-fg">State law</p>
+            <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
               Beats all three of the documents below. A covenant the legislature has since
               overridden stays printed in the declaration and stops being enforceable
               anyway, which is why a provision existing is not the same as it applying.
@@ -55,21 +55,21 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
           const count = articlesIn(articles, kind).length;
           return (
             <div key={kind} className="flex items-start gap-3 px-5 py-3.5">
-              <span className="tnum mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[13px] font-semibold text-fg-muted">
+              <span className="tnum mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-3 text-footnote font-semibold text-fg-muted">
                 {index + 2}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  <p className="text-[15px] font-semibold text-fg">{meta.label}</p>
-                  <span className="text-[13px] text-fg-subtle">
+                  <p className="text-body font-semibold text-fg">{meta.label}</p>
+                  <span className="text-footnote text-fg-subtle">
                     {pluralize(count, "article")}
                     {meta.recorded ? " · recorded with the county" : ""}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+                <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
                   {meta.plain}
                 </p>
-                <p className="mt-1 text-[13px] leading-relaxed text-fg-subtle">
+                <p className="mt-1 text-footnote leading-relaxed text-fg-subtle">
                   Changed by: {meta.changedBy.toLowerCase()}.
                 </p>
               </div>

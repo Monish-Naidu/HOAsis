@@ -108,12 +108,12 @@ export function ReservesScreen() {
               },
             ].map((step, index) => (
               <li key={step.title} className="flex gap-3 border-b border-border py-3 last:border-b-0">
-                <span className="tnum flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[13px] font-semibold text-brand-soft-fg">
+                <span className="tnum flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-footnote font-semibold text-brand-soft-fg">
                   {index + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium text-fg">{step.title}</span>
-                  <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
+                  <span className="block text-body font-medium text-fg">{step.title}</span>
+                  <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
                     {step.body}
                   </span>
                 </span>
@@ -216,12 +216,12 @@ export function ReservesScreen() {
             return (
               <li key={component.id} className="px-5 py-3">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="min-w-0 truncate text-[15px] font-medium text-fg">{component.name}</p>
-                  <p className="tnum shrink-0 text-[15px] font-semibold text-fg">
+                  <p className="min-w-0 truncate text-body font-medium text-fg">{component.name}</p>
+                  <p className="tnum shrink-0 text-body font-semibold text-fg">
                     {shortMoney(component.replacementCostCents)}
                   </p>
                 </div>
-                <p className="mt-0.5 text-[13px] text-fg-muted">
+                <p className="mt-0.5 text-footnote text-fg-muted">
                   <span
                     className={
                       component.remainingLifeYears <= 2 ? "tnum font-semibold text-warn" : "tnum"
@@ -246,7 +246,7 @@ export function ReservesScreen() {
         <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[640px] text-left">
             <thead>
-              <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
+              <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
                 <th className="px-5 py-2.5 font-semibold">Component</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Replaced</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Cost</th>
@@ -262,12 +262,12 @@ export function ReservesScreen() {
                   return (
                     <tr
                       key={component.id}
-                      className="border-b border-border text-[15px] last:border-b-0"
+                      className="border-b border-border text-body last:border-b-0"
                     >
                       <td className="px-5 py-3">
                         <p className="font-medium text-fg">{component.name}</p>
                         {component.note ? (
-                          <p className="text-[13px] text-fg-muted">{component.note}</p>
+                          <p className="text-footnote text-fg-muted">{component.note}</p>
                         ) : null}
                       </td>
                       <td className="tnum px-3 py-3 text-right">
@@ -293,7 +293,7 @@ export function ReservesScreen() {
                           tone={share >= 0.8 ? "ok" : share >= 0.4 ? "brand" : "warn"}
                           aria-label={`${component.name} ${Math.round(share * 100)} percent funded`}
                         />
-                        <span className="tnum mt-1 block text-[13px] text-fg-subtle">
+                        <span className="tnum mt-1 block text-footnote text-fg-subtle">
                           {Math.round(share * 100)}%
                         </span>
                       </td>

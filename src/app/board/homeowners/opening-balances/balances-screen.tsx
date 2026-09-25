@@ -3,10 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Scale } from "lucide-react";
-import { Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { money, pluralize } from "@/lib/utils";
+import { cn, money, pluralize } from "@/lib/utils";
 
 /** Reads a typed amount into cents, tolerating "1,240.50" and "$1240". */
 function toCents(input: string): number | null {
@@ -122,7 +122,7 @@ export function BalancesScreen() {
               value={asOf}
               onChange={(e) => setAsOf(e.target.value)}
               aria-label="Balances as of"
-              className="h-9 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand"
+              className={cn(fieldClass, "w-auto")}
             />
           }
         />
@@ -140,14 +140,14 @@ export function BalancesScreen() {
         <div className="divide-y divide-border">
           {parsed.map(({ owner, raw, cents }) => (
             <div key={owner.id} className="flex items-center gap-3 px-5 py-2.5">
-              <span className="w-20 shrink-0 truncate text-[13px] font-medium text-fg-subtle">
+              <span className="w-20 shrink-0 truncate text-footnote font-medium text-fg-subtle">
                 {owner.unit}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[15px] text-fg">
+              <span className="min-w-0 flex-1 truncate text-body text-fg">
                 {owner.displayName}
               </span>
               <label className="relative w-36 shrink-0">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
                   $
                 </span>
                 <input
@@ -159,7 +159,7 @@ export function BalancesScreen() {
                   }}
                   placeholder="0.00"
                   aria-label={`Opening balance for ${owner.displayName}, ${owner.unit}`}
-                  className={`tnum h-9 w-full rounded-lg border bg-surface pl-6 pr-3 text-right text-[15px] text-fg outline-none focus:border-brand ${
+                  className={`tnum h-9 w-full rounded-lg border bg-surface pl-6 pr-3 text-right text-body text-fg outline-none focus:border-brand ${
                     cents === null ? "border-danger" : "border-border-2"
                   }`}
                 />
@@ -175,11 +175,11 @@ export function BalancesScreen() {
           {saved ? "Saved" : `Set ${pluralize(owners.length, "balance")}`}
         </Button>
         {bad.length > 0 ? (
-          <p className="text-[13px] text-danger">
+          <p className="text-footnote text-danger">
             {pluralize(bad.length, "amount")} could not be read. Use figures only, like 1240.50.
           </p>
         ) : (
-          <p className="text-[13px] text-fg-subtle">
+          <p className="text-footnote text-fg-subtle">
             Each one appears on that owner&apos;s statement as &ldquo;Balance brought
             forward&rdquo;, dated {asOf}. Nothing is sent to anybody.
           </p>
@@ -190,13 +190,13 @@ export function BalancesScreen() {
           it has been owed, so nobody is put onto the collections ladder by it:
           that ladder runs off the calendar from the switch date, which is what
           makes it defensible at a hearing. */}
-      <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-fg-subtle">
+      <p className="mt-4 max-w-2xl text-footnote leading-relaxed text-fg-subtle">
         Setting a balance does not put anybody into collections. How far past due a
         household is comes from your own records, and the ladder here starts counting from
         the date above rather than backdating somebody on their first day.
       </p>
 
-      <p className="mt-8 text-[13px] text-fg-subtle">
+      <p className="mt-8 text-footnote text-fg-subtle">
         <Link href="/board/homeowners" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
           Back to the roster

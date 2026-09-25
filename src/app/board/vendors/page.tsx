@@ -12,23 +12,14 @@ import {
   Trash2,
   Truck,
 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Callout,
-  Card,
-  CardHeader,
-  Checkbox,
-  EmptyState,
-  PageHeader,
-} from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, Checkbox, EmptyState, PageHeader, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useState } from "react";
 import { useAppState, useVendorGaps } from "@/lib/app-state";
 import { InvoiceInbox } from "@/components/app/invoice-inbox";
 import { RecordPayment } from "@/components/app/record-payment";
 import { useToast } from "@/components/app/toast";
 import type { Payout } from "@/lib/types";
-import { daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 import { vendorDecisions } from "@/lib/metrics";
 
@@ -40,7 +31,7 @@ const PAYOUT_STATUS = {
 } as const;
 
 const field =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+  fieldClass;
 
 export default function BoardVendors() {
   const gaps = useVendorGaps();
@@ -123,7 +114,7 @@ export default function BoardVendors() {
           />
           <div className="grid gap-3 px-5 py-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">Name</span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">Name</span>
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -132,7 +123,7 @@ export default function BoardVendors() {
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">Service</span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">Service</span>
               <input
                 value={draft.service}
                 onChange={(e) => setDraft({ ...draft, service: e.target.value })}
@@ -144,14 +135,14 @@ export default function BoardVendors() {
           <div className="flex flex-wrap gap-4 border-t border-border px-5 py-3">
             {moduleOn("vendor-tax-forms") ? (
               <>
-                <label className="flex items-center gap-2 text-[15px] text-fg">
+                <label className="flex items-center gap-2 text-body text-fg">
                   <Checkbox
                     checked={draft.achEnabled}
                     onChange={(e) => setDraft({ ...draft, achEnabled: e.target.checked })}
                   />
                   Pays by ACH
                 </label>
-                <label className="flex items-center gap-2 text-[15px] text-fg">
+                <label className="flex items-center gap-2 text-body text-fg">
                   <Checkbox
                     checked={draft.w9OnFile}
                     onChange={(e) => setDraft({ ...draft, w9OnFile: e.target.checked })}
@@ -245,12 +236,12 @@ export default function BoardVendors() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="min-w-0 truncate text-[15px] font-medium text-fg">{v.name}</p>
-                        <p className="tnum shrink-0 text-[15px] font-semibold text-fg">
+                        <p className="min-w-0 truncate text-body font-medium text-fg">{v.name}</p>
+                        <p className="tnum shrink-0 text-body font-semibold text-fg">
                           {money(v.ytdPaidCents, { cents: false })}
                         </p>
                       </div>
-                      <p className="truncate text-[13px] text-fg-muted">{v.service}</p>
+                      <p className="truncate text-footnote text-fg-muted">{v.service}</p>
                       <VendorBadges vendor={v} className="mt-1.5" />
                     </div>
                     <RemoveVendor
@@ -266,7 +257,7 @@ export default function BoardVendors() {
               <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full min-w-[560px] text-left">
                   <thead>
-                    <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
+                    <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
                       <th className="px-5 py-2.5 font-semibold">Vendor</th>
                       <th className="px-3 py-2.5 font-semibold">On file</th>
                       <th className="px-5 py-2.5 text-right font-semibold">Paid this year</th>
@@ -277,11 +268,11 @@ export default function BoardVendors() {
                       <tr
                         key={v.id}
                         id={`vendor-${v.id}`}
-                        className="scroll-mt-32 border-b border-border text-[15px] transition-colors last:border-b-0 hover:bg-surface-2 lg:scroll-mt-24"
+                        className="scroll-mt-32 border-b border-border text-body transition-colors last:border-b-0 hover:bg-surface-2 lg:scroll-mt-24"
                       >
                         <td className="px-5 py-3">
                           <p className="font-medium text-fg">{v.name}</p>
-                          <p className="text-[13px] text-fg-muted">{v.service}</p>
+                          <p className="text-footnote text-fg-muted">{v.service}</p>
                         </td>
                         <td className="px-3 py-3">
                           <VendorBadges vendor={v} />
@@ -314,7 +305,7 @@ export default function BoardVendors() {
         <Card className="lg:col-span-2">
           <CardHeader title="Payments" subtitle="Every payment the association has made" />
           {payouts.length === 0 ? (
-            <p className="px-5 py-6 text-[15px] text-fg-muted">
+            <p className="px-5 py-6 text-body text-fg-muted">
               No payments yet. Paying an approved bill puts it here.
             </p>
           ) : (
@@ -397,11 +388,11 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-medium text-fg">{p.vendor}</p>
-          <p className="text-[13px] text-fg-muted">{p.invoiceNumber}</p>
+          <p className="truncate text-body font-medium text-fg">{p.vendor}</p>
+          <p className="text-footnote text-fg-muted">{p.invoiceNumber}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="tnum text-[15px] font-semibold text-fg">
+          <p className="tnum text-body font-semibold text-fg">
             {money(p.amountCents, { cents: false })}
           </p>
           <Badge tone={PAYOUT_STATUS[p.status].tone} className="mt-0.5">
@@ -410,7 +401,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-footnote text-fg-subtle">
         <span className="font-medium uppercase">{p.method}</span>
         <span>
           {p.status === "paid" ? "landed" : "lands"}{" "}
@@ -435,13 +426,13 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
       </div>
 
       {p.method === "check" ? (
-        <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-[13px] leading-snug text-warn">
+        <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-footnote leading-snug text-warn">
           Check, {daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)} days in transit.
         </p>
       ) : null}
 
       {invoice?.file ? (
-        <p className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-fg-muted">
+        <p className="mt-2 inline-flex items-center gap-1.5 text-footnote text-fg-muted">
           <Paperclip className="size-3" />
           {invoice.file.name}
           <span className="text-fg-subtle">{invoice.file.size}</span>
@@ -457,7 +448,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
             rows={2}
             placeholder="Anything the next treasurer should know"
             aria-label="Note on this payment"
-            className="w-full resize-none rounded-lg border border-border-2 bg-surface px-2.5 py-2 text-[15px] text-fg outline-none focus:border-brand"
+            className={cn(textareaClass, "resize-none")}
           />
           <div className="mt-1.5 flex justify-end gap-1.5">
             <Button
@@ -477,13 +468,13 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
         </div>
       ) : isRemote ? (
         p.notes ? (
-          <p className="mt-2 text-[13px] text-fg">{p.notes}</p>
+          <p className="mt-2 text-footnote text-fg">{p.notes}</p>
         ) : null
       ) : p.notes ? (
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="mt-2 flex w-full items-start gap-1.5 rounded-md bg-surface-2 px-2.5 py-1.5 text-left text-[13px] text-fg transition-colors hover:bg-surface-3"
+          className="mt-2 flex w-full items-start gap-1.5 rounded-md bg-surface-2 px-2.5 py-1.5 text-left text-footnote text-fg transition-colors hover:bg-surface-3"
         >
           <StickyNote className="mt-0.5 size-3 shrink-0 text-fg-subtle" />
           <span className="min-w-0 flex-1 leading-snug">{p.notes}</span>
@@ -492,7 +483,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="mt-2 inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted transition-colors hover:text-fg"
         >
           <StickyNote className="size-3" />
           Add a note

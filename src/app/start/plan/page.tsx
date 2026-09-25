@@ -16,7 +16,7 @@ export default function PlanPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/board"
-            className="inline-flex h-8 items-center rounded-lg px-3 text-[15px] font-medium text-fg-muted transition-colors hover:text-fg"
+            className="inline-flex h-8 items-center rounded-lg px-3 text-body font-medium text-fg-muted transition-colors hover:text-fg"
           >
             Skip for now
           </Link>

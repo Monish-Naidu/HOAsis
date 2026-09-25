@@ -83,18 +83,18 @@ function ReturnBar() {
     >
       <ArrowLeft className="size-4 shrink-0 text-fg-subtle" />
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-medium text-fg">
+        <span className="block text-body font-medium text-fg">
           {requested ? "Back to the question" : "Back to setting up"}
         </span>
         {requested ? (
-          <span className="block truncate text-[13px] text-fg-muted">{requested.label}</span>
+          <span className="block truncate text-footnote text-fg-muted">{requested.label}</span>
         ) : null}
       </span>
       <span className="flex shrink-0 items-center gap-2">
-        <span className="hidden text-[13px] text-fg-muted sm:inline">
+        <span className="hidden text-footnote text-fg-muted sm:inline">
           {plan.done} of {plan.total} done
         </span>
-        <span className="flex items-center gap-1 rounded-full bg-ok-soft px-2 py-0.5 text-[13px] font-semibold text-ok">
+        <span className="flex items-center gap-1 rounded-full bg-ok-soft px-2 py-0.5 text-footnote font-semibold text-ok">
           <Check className="size-3" strokeWidth={3} />
           {plan.done}
         </span>

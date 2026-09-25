@@ -20,19 +20,21 @@ mkdirSync(OUT, { recursive: true });
 
 const SHOTS = [
   {
-    file: "product-dashboard.png",
+    file: "product-finances.png",
     // The charts moved from the dashboard to Finances on 2026-09-24.
     path: "/board/money",
     seat: { accountId: "acct-arya", view: "board" },
-    // Wide enough that the two charts sit side by side (they stack under
-    // 1280), and the clip starts at them: the monitor on the front page is
-    // there to show the graphs, not the to-do list above them. The clip
-    // matches the monitor artwork's screen, which is 1.91:1, so the capture
-    // lands on it without cropping.
-    width: 1280,
-    height: 1000,
-    scrollTo: "Money in and out",
-    clipHeight: 670,
+    // The monitor on the front page is there to show the graphs, so the
+    // clip is their section alone, padded, at the artwork's 1.91:1 screen.
+    // Tall enough a viewport that nothing scrolls: the old scroll-then-clip
+    // ran past the viewport and came back short, with the rail cut in half.
+    // 1360: the charts sit side by side (they stack under 1280) and the
+    // legend still wraps under the donut, so the section is close to the
+    // screen's shape and the padding reaches neither the rail nor the edge.
+    width: 1360,
+    height: 1400,
+    section: "Money in and out",
+    ratio: 1.91,
   },
   {
     file: "product-money.png",
@@ -66,7 +68,9 @@ const SHOTS = [
 
 const browser = await chromium.launch();
 
-for (const shot of SHOTS) {
+// SHOT_ONLY=product-finances.png retakes one shot and leaves the rest.
+const only = process.env.SHOT_ONLY;
+for (const shot of SHOTS.filter((s) => !only || s.file === only)) {
   const context = await browser.newContext({
     viewport: { width: shot.width, height: shot.height },
     deviceScaleFactor: 2,
@@ -102,7 +106,27 @@ for (const shot of SHOTS) {
   // The dev-server overlay badge is not part of the product.
   await page.evaluate(() => document.querySelector("nextjs-portal")?.remove());
 
-  if (shot.scrollTo) {
+  if (shot.section) {
+    const box = await page
+      .getByText(shot.section, { exact: true })
+      .first()
+      .evaluate((el) => {
+        const r = (el.closest("section") ?? el).getBoundingClientRect();
+        return { x: r.x, y: r.y, w: r.width, h: r.height };
+      });
+    // Pad the section, then grow whichever side is short to hit the ratio.
+    const pad = 16;
+    let w = box.w + pad * 2;
+    let h = box.h + pad * 2;
+    if (w / h > shot.ratio) h = w / shot.ratio;
+    else w = h * shot.ratio;
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    await page.screenshot({
+      path: `${OUT}/${shot.file}`,
+      clip: { x: Math.max(0, cx - w / 2), y: Math.max(0, cy - h / 2), width: w, height: h },
+    });
+  } else if (shot.scrollTo) {
     // Bring the section holding that text to the top of the frame, and clip
     // from there. The dev server's stuck-on scroll restoration is not a
     // concern: the page was just opened.

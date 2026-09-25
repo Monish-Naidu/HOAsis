@@ -75,7 +75,7 @@ export function HomeBadge() {
           onClick={() => input.current?.click()}
           aria-label={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
           title={uploaded ? "Change the photo of your home" : "Add a photo of your home"}
-          className="absolute -bottom-1.5 -right-1.5 flex size-7 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/30 backdrop-blur transition-colors hover:bg-black/80"
+          className="absolute -bottom-1.5 -right-1.5 flex size-9 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/30 backdrop-blur transition-colors hover:bg-black/80"
         >
           <Camera className="size-3.5" />
         </button>
@@ -83,18 +83,18 @@ export function HomeBadge() {
       <div className="min-w-0 flex-1">
         {/* The person, not "My Home": the address on the next line already
             says it is a home, and a name on the card says whose. */}
-        <p className="truncate text-[17px] font-semibold tracking-[-0.015em] sm:text-[19px]">
+        <p className="truncate text-headline font-semibold tracking-[-0.015em] sm:text-title3">
           {account?.name ?? owner.members[0] ?? "My Home"}
         </p>
-        <p className="mt-0.5 truncate text-[15px] text-white/90">{owner.address}</p>
-        <p className="truncate text-[13px] text-white/70">
+        <p className="mt-0.5 truncate text-body text-white/90">{owner.address}</p>
+        <p className="truncate text-footnote text-white/70">
           {kind ? `${kind} · ` : ""}
           {settings.displayName}
         </p>
         <div className="mt-2 flex items-center gap-3">
           <Link
             href="/resident/account"
-            className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-[#8fc0ff] hover:underline"
+            className="inline-flex items-center gap-0.5 text-footnote font-semibold text-[#8fc0ff] hover:underline"
           >
             View home details
             <ChevronRight className="size-3.5" />
@@ -106,7 +106,7 @@ export function HomeBadge() {
                 setPhoto(null);
                 notify("Photo removed");
               }}
-              className="text-[13px] font-medium text-white/60 hover:text-white hover:underline"
+              className="text-footnote font-medium text-white/80 underline underline-offset-2 hover:text-white"
             >
               Remove photo
             </button>

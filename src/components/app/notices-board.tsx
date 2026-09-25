@@ -3,15 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, ChevronDown, Plus, Printer, ShieldQuestion, X } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  PageHeader,
-  Segmented,
-  Select,
-} from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, PageHeader, Segmented, Select, textareaClass } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
 import { useToast } from "@/components/app/toast";
@@ -37,8 +29,8 @@ import { useHomeLabel } from "@/components/app/use-home-label";
 type Tab = "open" | "resolved";
 
 const INPUT =
-  "mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand";
-const LABEL = "text-[13px] font-semibold text-fg-muted";
+  cn(textareaClass, "mt-1.5");
+const LABEL = "text-footnote font-semibold text-fg-muted";
 
 
 export function NoticesBoard() {
@@ -186,8 +178,8 @@ function NoticeRow({
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[15px] font-semibold text-fg">{placeLabel(violation.unit)}</span>
-            <span className="text-[13px] text-fg-muted">{violation.ownerName}</span>
+            <span className="text-body font-semibold text-fg">{placeLabel(violation.unit)}</span>
+            <span className="text-footnote text-fg-muted">{violation.ownerName}</span>
             {fixed ? (
               <Badge tone="ok" dot={false}>
                 <Check className="size-2.5" />
@@ -196,10 +188,10 @@ function NoticeRow({
             ) : null}
             {resolved ? <Badge tone="neutral">Resolved</Badge> : null}
           </div>
-          <p className={cn("mt-0.5 text-[15px] text-fg-muted", !open && "line-clamp-1")}>
+          <p className={cn("mt-0.5 text-body text-fg-muted", !open && "line-clamp-1")}>
             {violation.rule}
           </p>
-          <p className="mt-0.5 text-[13px] text-fg-subtle">
+          <p className="mt-0.5 text-footnote text-fg-subtle">
             {resolved
               ? `Resolved ${formatDate(violation.resolvedDate ?? violation.nextActionDate)}`
               : // A relative age only while it is recent. "1688 days ago" is a
@@ -220,7 +212,7 @@ function NoticeRow({
       {open ? (
         <div className="space-y-3 border-t border-border bg-surface-2/60 px-5 py-4">
           {fixed ? (
-            <div className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2.5 text-[13px] leading-relaxed">
+            <div className="rounded-lg border border-ok/25 bg-ok-soft px-3 py-2.5 text-footnote leading-relaxed">
               <p className="flex items-center gap-1.5 font-semibold text-ok">
                 <Check className="size-3.5" />
                 Owner says fixed {formatDate(violation.ownerFixedDate!, "medium")}
@@ -233,7 +225,7 @@ function NoticeRow({
           ) : null}
 
           {violation.ruleCitation ? (
-            <p className="text-[13px] text-fg-subtle">Rule: {violation.ruleCitation}</p>
+            <p className="text-footnote text-fg-subtle">Rule: {violation.ruleCitation}</p>
           ) : null}
 
           {violation.photos.length > 0 ? <EvidenceViewer photos={violation.photos} /> : null}
@@ -286,8 +278,8 @@ function NewNotice({
     <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[15px] font-semibold text-fg">New notice</p>
-          <p className="mt-0.5 text-[13px] leading-relaxed text-fg-muted">
+          <p className="text-body font-semibold text-fg">New notice</p>
+          <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
             The home sees it the moment you send it, with the same words you write here.
           </p>
         </div>

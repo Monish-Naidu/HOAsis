@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { ListChecks, Plus, X } from "lucide-react";
-import {
-  Button,
-  Card,
-  CardHeader,
-  Checkbox,
-  EmptyState,
-  Select,
-} from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Checkbox, EmptyState, Select, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { ActionItem } from "@/lib/types";
@@ -26,8 +19,8 @@ import { cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib
  */
 
 const FIELD =
-  "h-9 w-full rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand";
-const LABEL = "mb-1 block text-[13px] font-semibold text-fg-muted";
+  fieldClass;
+const LABEL = "mb-1 block text-footnote font-semibold text-fg-muted";
 
 export function ActionItems({
   meetingId,
@@ -95,7 +88,7 @@ export function ActionItems({
       {open.length === 0 && done.length === 0 && !adding ? (
         <EmptyState
           icon={<ListChecks className="size-5" />}
-          title="Nothing owed"
+          title="No open tasks"
           description="Tasks agreed at meetings, with an owner and a due date."
         />
       ) : null}
@@ -114,7 +107,7 @@ export function ActionItems({
 
       {done.length ? (
         <>
-          <p className="border-t border-border bg-surface-2 px-5 py-1.5 text-[12px] font-semibold uppercase tracking-wide text-fg-subtle">
+          <p className="border-t border-border bg-surface-2 px-5 py-1.5 text-caption font-semibold uppercase tracking-wide text-fg-subtle">
             Done
           </p>
           {done.map((item) => (
@@ -158,13 +151,13 @@ function Row({
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "text-[15px] leading-snug text-fg",
+            "text-body leading-snug text-fg",
             done && "text-fg-muted line-through",
           )}
         >
           {item.title}
         </p>
-        <p className="mt-0.5 text-[13px] text-fg-muted">
+        <p className="mt-0.5 text-footnote text-fg-muted">
           {item.ownerName || "Unassigned"}
           {done && item.doneOn
             ? ` · done ${formatDate(item.doneOn, "medium")}`

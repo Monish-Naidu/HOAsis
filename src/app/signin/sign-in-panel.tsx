@@ -105,7 +105,7 @@ export function SignInPanel() {
     setBusy(false);
 
     if (!result.ok) {
-      setNotice({ tone: "danger", text: result.message ?? "That did not work." });
+      setNotice({ tone: "danger", text: result.message ?? "Something went wrong. Please try again." });
       return;
     }
     if (result.message) {
@@ -124,8 +124,8 @@ export function SignInPanel() {
       {signedIn ? (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-fg">You are signed in</p>
-            <p className="truncate text-[13px] text-fg-muted">
+            <p className="text-body font-semibold text-fg">You are signed in</p>
+            <p className="truncate text-footnote text-fg-muted">
               {account?.name ? `${account.name} · ` : ""}
               {remote.community?.settings.displayName}
             </p>
@@ -152,7 +152,7 @@ export function SignInPanel() {
               type="button"
               onClick={() => setMode(m)}
               className={cn(
-                "py-3 text-[15px] font-medium transition-colors",
+                "py-3 text-body font-medium transition-colors",
                 mode === m
                   ? "-mb-px border-b-2 border-primary text-fg"
                   : "text-fg-muted hover:text-fg",
@@ -165,7 +165,7 @@ export function SignInPanel() {
 
         <form onSubmit={submit} className="space-y-3 p-5">
           {mode === "create" ? (
-            <Field label="Full name" value={name} onChange={setName} placeholder="Jane Doe" />
+            <Field label="Full name" value={name} onChange={setName} placeholder="Jane Doe" autoComplete="name" />
           ) : null}
           <Field
             label="Email"
@@ -173,6 +173,7 @@ export function SignInPanel() {
             onChange={setEmail}
             placeholder="you@example.com"
             type="email"
+            autoComplete="email"
           />
           <Field
             label="Password"
@@ -180,14 +181,15 @@ export function SignInPanel() {
             onChange={setPassword}
             placeholder="••••••••"
             type="password"
+            autoComplete={mode === "create" ? "new-password" : "current-password"}
           />
           {notice ? (
             <p
               className={cn(
-                "rounded-lg px-3 py-2 text-[13px] leading-snug",
+                "rounded-lg px-3 py-2 text-footnote leading-snug",
                 notice.tone === "danger" ? "bg-danger-soft text-danger" : "bg-ok-soft text-ok",
               )}
-              role="status"
+              role={notice.tone === "danger" ? "alert" : "status"}
             >
               {notice.text}
             </p>
@@ -203,7 +205,7 @@ export function SignInPanel() {
             <ArrowRight className="size-4" />
           </Button>
           {mode === "sign-in" ? (
-            <p className="text-center text-[13px] text-fg-muted">
+            <p className="text-center text-footnote text-fg-muted">
               <button
                 type="button"
                 className="hover:text-fg"
@@ -229,10 +231,10 @@ export function SignInPanel() {
               </button>
             </p>
           ) : (
-            <p className="text-center text-[13px] leading-snug text-fg-subtle">
+            <p className="text-center text-footnote leading-snug text-fg-subtle">
               If your board already added your home, sign up with the email they used and it
               opens on its own. Have a join code?{" "}
-              <Link href="/join" className="font-medium text-fg hover:underline">
+              <Link href="/join" className="font-medium text-fg underline underline-offset-2">
                 Join with the code
               </Link>
               .
@@ -252,11 +254,11 @@ export function SignInPanel() {
           by its id. */}
       <Card id="sample" className="scroll-mt-6 overflow-hidden">
         <div className="p-4">
-          <p className="text-[15px] font-semibold text-fg">Just looking? Try a sample community</p>
-          <p className="mt-1 text-[13px] leading-snug text-fg-muted">
+          <p className="text-body font-semibold text-fg">Just looking? Try a sample community</p>
+          <p className="mt-1 text-footnote leading-snug text-fg-muted">
             {community.settings.displayName} is built into this browser with{" "}
-            {community.association.unitCount} homes and a year of history. Pick a seat and look
-            around. Nothing you do here is saved anywhere else.
+            {community.association.unitCount} homes and a year of history. Pick a person to try it
+            as. Nothing you do here is saved anywhere else.
           </p>
           {communities.length > 1 ? (
             <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Sample community">
@@ -268,7 +270,7 @@ export function SignInPanel() {
                   aria-checked={option.id === community.id}
                   onClick={() => setCommunity(option.id)}
                   className={cn(
-                    "press rounded-lg border px-3 py-1.5 text-[13px] font-medium",
+                    "press rounded-lg border px-3 py-1.5 text-footnote font-medium",
                     option.id === community.id
                       ? "border-primary bg-primary-soft text-primary"
                       : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
@@ -293,8 +295,8 @@ export function SignInPanel() {
               size="sm"
             />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-medium text-fg">{s.name}</span>
-              <span className="block text-[13px] text-fg-muted">
+              <span className="block truncate text-body font-medium text-fg">{s.name}</span>
+              <span className="block text-footnote text-fg-muted">
                 {s.role} · Unit {s.unit}
               </span>
             </span>
@@ -319,25 +321,47 @@ function Field({
   onChange,
   placeholder,
   type = "text",
+  autoComplete,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  autoComplete?: string;
 }) {
+  // A password can be shown: typing blind with unsteady hands is where most
+  // failed sign ins come from.
+  const [shown, setShown] = useState(false);
+  const isPassword = type === "password";
   return (
     <label className="block">
-      <span className="mb-1 block text-[13px] font-semibold text-fg-muted">
+      <span className="mb-1 block text-footnote font-semibold text-fg-muted">
         {label}
       </span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="h-11 w-full rounded-lg border border-border bg-surface-2 px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
-      />
+      <span className="relative block">
+        <input
+          type={isPassword && shown ? "text" : type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          className={cn(
+            "h-11 w-full rounded-lg border border-border-2 bg-surface-2 px-3 text-body text-fg outline-none placeholder:text-fg-subtle focus:border-primary",
+            isPassword && "pr-16",
+          )}
+        />
+        {isPassword ? (
+          <button
+            type="button"
+            onClick={() => setShown((v) => !v)}
+            aria-pressed={shown}
+            className="press absolute inset-y-0.5 right-0.5 rounded-md px-3 text-footnote font-medium text-fg-muted hover:text-fg"
+          >
+            {shown ? "Hide" : "Show"}
+          </button>
+        ) : null}
+      </span>
     </label>
   );
 }

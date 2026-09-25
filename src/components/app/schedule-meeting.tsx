@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalendarPlus, X } from "lucide-react";
-import { Button, Card, CardHeader, Select } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { addDays, formatDate, todayIsoDate } from "@/lib/utils";
@@ -37,8 +37,8 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
   const [agenda, setAgenda] = useState("");
 
   const field =
-    "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
-  const label = "mb-1 block text-[13px] font-semibold text-fg-muted";
+    fieldClass;
+  const label = "mb-1 block text-footnote font-semibold text-fg-muted";
 
   const ready = title.trim().length > 0 && date >= todayIsoDate() && location.trim().length > 0;
 
@@ -111,7 +111,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
                 </option>
               ))}
             </Select>
-            <span className="mt-1 block text-[13px] text-fg-subtle">
+            <span className="mt-1 block text-footnote text-fg-subtle">
               {KINDS.find((k) => k.value === kind)?.hint}
             </span>
           </label>
@@ -176,7 +176,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
             onChange={(e) => setAgenda(e.target.value)}
             rows={4}
             placeholder={"Call to order\nTreasurer's report\nOpen forum"}
-            className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+            className={textareaClass}
           />
         </label>
 
@@ -184,7 +184,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
           <Button type="submit" variant="primary" size="md" disabled={!ready}>
             Put it on the calendar
           </Button>
-          <span className="text-[13px] text-fg-subtle">
+          <span className="text-footnote text-fg-subtle">
             Send the notice from Communications once it is scheduled.
           </span>
         </div>

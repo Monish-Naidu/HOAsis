@@ -1,10 +1,16 @@
 "use client";
 
+import { Term } from "@/components/app/term";
 import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { FundsGate } from "./guard";
 import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
 import { Badge, Card, Meter, SectionTitle } from "@/components/ui/primitives";
+
+/** A list with nothing in it yet, and the one line that says why. */
+function Waiting({ children }: { children: React.ReactNode }) {
+  return <p className="px-4 py-4 text-body text-fg-muted">{children}</p>;
+}
 import { budgetSummary, cashPosition, interestSummary, reserveSummary } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { SharedCostCard } from "@/components/app/shared-cost-card";
@@ -23,25 +29,27 @@ export default function ResidentFinances() {
   return (
     <FundsGate>
     <div className="animate-rise space-y-6">
-      <ResidentTitle title="Association funds" />
+      <ResidentTitle title="Association funds" subtitle="Where the association's money is" />
 
       {/* Totals */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg-muted">
+          <p className="text-footnote font-semibold text-fg-muted">
             Operating
           </p>
-          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
+          <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(cash.operating, { cents: false })}
           </p>
+          <p className="mt-1.5 text-footnote text-fg-muted">Everyday bills</p>
         </Card>
         <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg-muted">
-            Reserves
+          <p className="text-footnote font-semibold text-fg-muted">
+            <Term k="reserves">Reserves</Term>
           </p>
-          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
+          <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(cash.reserve, { cents: false })}
           </p>
+          <p className="mt-1.5 text-footnote text-fg-muted">Savings for big repairs</p>
         </Card>
       </div>
 
@@ -56,22 +64,22 @@ export default function ResidentFinances() {
           <div className={interest.blendedApy > 0 ? "grid grid-cols-3 gap-3" : ""}>
             {interest.blendedApy > 0 ? (
               <div>
-                <p className="text-[13px] text-fg-subtle">Blended rate</p>
-                <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
+                <p className="text-footnote text-fg-subtle">Interest rate</p>
+                <p className="tnum mt-1 text-headline font-semibold leading-none text-fg">
                   {interest.blendedApy.toFixed(2)}%
                 </p>
               </div>
             ) : null}
             <div>
-              <p className="text-[13px] text-fg-subtle">Interest this year</p>
-              <p className="tnum mt-1 text-[17px] font-semibold leading-none text-ok">
+              <p className="text-footnote text-fg-subtle">Interest this year</p>
+              <p className="tnum mt-1 text-headline font-semibold leading-none text-ok">
                 {money(interest.earnedYtd, { cents: false })}
               </p>
             </div>
             {interest.blendedApy > 0 ? (
               <div>
-                <p className="text-[13px] text-fg-subtle">Full year</p>
-                <p className="tnum mt-1 text-[17px] font-semibold leading-none text-fg">
+                <p className="text-footnote text-fg-subtle">Expected this year</p>
+                <p className="tnum mt-1 text-headline font-semibold leading-none text-fg">
                   {money(interest.projectedAnnual, { cents: false })}
                 </p>
               </div>
@@ -84,6 +92,9 @@ export default function ResidentFinances() {
       <section>
         <SectionTitle>Accounts</SectionTitle>
         <Card>
+          {bankAccounts.length === 0 ? (
+            <Waiting>No bank account connected yet. The board adds one in Finances.</Waiting>
+          ) : null}
           {bankAccounts.map((a, i) => (
             <div
               key={a.id}
@@ -97,18 +108,18 @@ export default function ResidentFinances() {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium text-fg">{a.name}</p>
-                <p className="truncate text-[13px] text-fg-muted">
+                <p className="truncate text-body font-medium text-fg">{a.name}</p>
+                <p className="truncate text-footnote text-fg-muted">
                   {a.institution}
-                  {a.apy > 0 ? ` · ${a.apy.toFixed(2)}% APY` : ""}
+                  {a.apy > 0 ? ` · ${a.apy.toFixed(2)}% interest` : ""}
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="tnum text-[15px] font-semibold text-fg">
+                <p className="tnum text-body font-semibold text-fg">
                   {money(a.balanceCents, { cents: false })}
                 </p>
                 {a.interestYtdCents > 0 ? (
-                  <p className="tnum text-[13px] text-ok">
+                  <p className="tnum text-footnote text-ok">
                     {money(a.interestYtdCents, { cents: false })} earned
                   </p>
                 ) : null}
@@ -121,13 +132,16 @@ export default function ResidentFinances() {
       {/* Where dues go */}
       <section>
         <SectionTitle>Where your dues go</SectionTitle>
-        <Card className="p-4">
+        <Card className={bud.expense.length ? "p-4" : ""}>
+          {bud.expense.length === 0 ? (
+            <Waiting>No budget yet. The board sets one before the year starts.</Waiting>
+          ) : null}
           <div className="space-y-3">
             {bud.expense.map((line) => (
               <div key={line.category}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
-                  <span className="truncate text-[15px] text-fg">{line.category}</span>
-                  <span className="tnum shrink-0 text-[13px] text-fg-muted">
+                  <span className="truncate text-body text-fg">{line.category}</span>
+                  <span className="tnum shrink-0 text-footnote text-fg-muted">
                     {shortMoney(line.ytdActualCents)}
                     <span className="text-fg-subtle"> / {shortMoney(line.annualCents)}</span>
                   </span>
@@ -146,20 +160,33 @@ export default function ResidentFinances() {
       <section>
         <SectionTitle
           action={
-            <span className="tnum text-[13px] text-fg-muted">
-              {reserve.hasStudy ? `${Math.round(reserve.percentFunded * 100)}% funded` : "No study"}
+            <span className="tnum text-footnote text-fg-muted">
+              {reserve.hasStudy ? (
+                <>
+                  {Math.round(reserve.percentFunded * 100)}% <Term k="funded">funded</Term>
+                </>
+              ) : (
+                "No reserve study yet"
+              )}
             </span>
           }
         >
           What reserves are saved for
         </SectionTitle>
         <Card>
+          {urgent.length === 0 ? (
+            <Waiting>
+              {reserve.hasStudy
+                ? "Nothing is due for replacement soon."
+                : "The roof, paving, and the like appear here once the board has a reserve study."}
+            </Waiting>
+          ) : null}
           {urgent.map((c, i) => (
             <div key={c.id} className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}>
               <div className="flex items-baseline justify-between gap-3">
-                <p className="truncate text-[15px] font-medium text-fg">{c.name}</p>
-                <p className="tnum shrink-0 text-[13px] text-fg-muted">
-                  {c.remainingLifeYears} yr left
+                <p className="truncate text-body font-medium text-fg">{c.name}</p>
+                <p className="tnum shrink-0 text-footnote text-fg-muted">
+                  {c.remainingLifeYears === 1 ? "1 year left" : `${c.remainingLifeYears} years left`}
                 </p>
               </div>
               <div className="mt-1.5">
@@ -169,7 +196,7 @@ export default function ResidentFinances() {
                   aria-label={`${c.name} funding`}
                 />
               </div>
-              <p className="tnum mt-1 text-[13px] text-fg-subtle">
+              <p className="tnum mt-1 text-footnote text-fg-subtle">
                 {shortMoney(c.fundedCents)} of {shortMoney(c.replacementCostCents)}
               </p>
             </div>
@@ -181,26 +208,29 @@ export default function ResidentFinances() {
       <section>
         <SectionTitle
           action={
-            <span className="text-[13px] text-fg-muted">{recent.length} most recent</span>
+            <span className="text-footnote text-fg-muted">{recent.length} most recent</span>
           }
         >
           Transactions
         </SectionTitle>
         <Card>
+          {recent.length === 0 ? (
+            <Waiting>Nothing has moved yet. The first dues and bills show up here.</Waiting>
+          ) : null}
           {recent.map((e, i) => (
             <div
               key={e.id}
               className={`flex items-start gap-3 px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium text-fg">{e.description}</p>
-                <p className="mt-0.5 truncate text-[13px] text-fg-muted">
+                <p className="truncate text-body font-medium text-fg">{e.description}</p>
+                <p className="mt-0.5 truncate text-footnote text-fg-muted">
                   {formatDate(e.date, "long")} · {e.category}
                 </p>
               </div>
               <div className="shrink-0 text-right">
                 <p
-                  className={`tnum text-[15px] font-semibold ${
+                  className={`tnum text-body font-semibold ${
                     e.amountCents >= 0 ? "text-ok" : "text-fg"
                   }`}
                 >
@@ -215,8 +245,8 @@ export default function ResidentFinances() {
             </div>
           ))}
         </Card>
-        <p className="mt-2 text-[13px] leading-snug text-fg-subtle">
-          Items under board review are excluded until confirmed.
+        <p className="mt-2 text-footnote leading-snug text-fg-subtle">
+          Items the board is still checking are not shown yet.
         </p>
       </section>
 
@@ -225,7 +255,7 @@ export default function ResidentFinances() {
         className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
       >
         <TrendingUp className="size-4 shrink-0 text-fg-subtle" />
-        <span className="flex-1 text-[15px] font-medium text-fg">Budget and reserve study</span>
+        <span className="flex-1 text-body font-medium text-fg">Budget and reserve study</span>
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>
     </div>

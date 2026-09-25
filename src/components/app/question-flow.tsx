@@ -140,11 +140,11 @@ export function QuestionFlow({
       <div key={question.id} className={cn("mt-8", motion)}>
         {question.title ? (
           <div className="mb-6">
-            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
+            <h1 className="text-title1 font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
               {question.title}
             </h1>
             {question.detail ? (
-              <p className="mt-2 max-w-[56ch] text-[15px] leading-relaxed text-fg-muted sm:text-[17px]">
+              <p className="mt-2 max-w-[56ch] text-body leading-relaxed text-fg-muted sm:text-headline">
                 {question.detail}
               </p>
             ) : null}
@@ -154,7 +154,7 @@ export function QuestionFlow({
         {question.body}
 
         {failure ? (
-          <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger" role="status">
+          <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-footnote text-danger" role="status">
             {failure}
           </p>
         ) : null}
@@ -237,7 +237,7 @@ function Progress({ index, total, group }: { index: number; total: number; group
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p className="mt-3 text-[13px] font-semibold text-fg-muted">
+      <p className="mt-3 text-footnote font-semibold text-fg-muted">
         Step {index + 1} of {total} · {group}
       </p>
     </div>

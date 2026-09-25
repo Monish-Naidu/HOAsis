@@ -26,10 +26,10 @@ export function NoAssociationYet() {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 text-center">
         <IconTile icon={Clock} tint="amber" size="lg" className="mx-auto mb-4 float" />
-        <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-fg">
+        <h1 className="text-title2 font-semibold tracking-[-0.02em] text-fg">
           Waiting on the board of {pending.name}
         </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
           Your account is ready. The board confirms your home
           {pending.unitLabel ? ` at ${pending.unitLabel}` : ""} and lets you in, and you will get
           an email when they do. Asked {formatDate(pending.createdAt.slice(0, 10), "medium")}.
@@ -42,7 +42,7 @@ export function NoAssociationYet() {
             loadJoinStatus(auth.user?.id ?? null, true);
             void loadRemote(auth.user?.id ?? null);
           }}
-          className="mt-6 inline-flex h-11 items-center justify-center gap-2 self-center rounded-xl border border-border-2 px-5 text-[15px] font-semibold text-fg transition-colors hover:bg-surface-2"
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 self-center rounded-xl border border-border-2 px-5 text-body font-semibold text-fg transition-colors hover:bg-surface-2"
         >
           <RefreshCw className="size-4" />
           Check again
@@ -53,10 +53,10 @@ export function NoAssociationYet() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 text-center">
-      <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-fg">
+      <h1 className="text-title2 font-semibold tracking-[-0.02em] text-fg">
         You are not in an association yet
       </h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
+      <p className="mt-2 text-body leading-relaxed text-fg-muted">
         {declined
           ? `The board of ${declined.name} did not add your home. If that is a mistake, ask them directly.`
           : "Set one up, or join yours with the code from your board."}
@@ -64,13 +64,13 @@ export function NoAssociationYet() {
       <div className="mt-6 flex flex-col items-center gap-3">
         <Link
           href="/start"
-          className="press shimmer inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-gradient px-6 text-[15px] font-semibold text-primary-fg shadow-raised hover:shadow-glow"
+          className="press shimmer inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-gradient px-6 text-body font-semibold text-primary-fg shadow-raised hover:shadow-glow"
         >
           Set up your association
         </Link>
         <Link
           href="/join"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border-2 px-6 text-[15px] font-semibold text-fg transition-colors hover:bg-surface-2"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border-2 px-6 text-body font-semibold text-fg transition-colors hover:bg-surface-2"
         >
           <DoorOpen className="size-4" />
           I have a join code

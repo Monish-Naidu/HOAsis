@@ -72,7 +72,7 @@ export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLi
 
   const seed = seedOf(owner);
   const isAch = owner.autopay || seed % 2 === 0;
-  const method = owner.autopayMethod ?? (isAch ? `ACH ••${2000 + (seed % 7000)}` : `Visa ••${1000 + (seed % 8000)}`);
+  const method = owner.autopayMethod ?? (isAch ? `Bank ••${2000 + (seed % 7000)}` : `Visa ••${1000 + (seed % 8000)}`);
   const payDay = 2 + (seed % 6);
 
   const unpaidMonths = Math.floor(owner.balanceCents / assessmentCents);
@@ -126,7 +126,7 @@ export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLi
     lines.push({
       id: nextId(),
       date: onDay(year, month, payDay),
-      label: isAch ? "ACH payment" : `Card payment, ${method}`,
+      label: isAch ? "Bank payment" : `Card payment, ${method}`,
       kind: "payment",
       amountCents: -paid,
       balanceAfterCents: (balance -= paid),

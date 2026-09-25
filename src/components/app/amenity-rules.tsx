@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { CalendarOff, Clock, Plus, SlidersHorizontal, X } from "lucide-react";
-import { Button, Checkbox, Select } from "@/components/ui/primitives";
+import { Button, Checkbox, Select, fieldClass } from "@/components/ui/primitives";
 import { describeRules, formatMinute, rulesFor } from "@/lib/bookings";
 import type { Blackout, BookingRules, CommunityAmenity } from "@/lib/types";
-import { formatDate, todayIsoDate } from "@/lib/utils";
+import { cn, formatDate, todayIsoDate } from "@/lib/utils";
 
 /** Dollars typed in a field, kept as integer cents. Blank or nonsense is zero. */
 function toCents(value: string): number {
@@ -46,7 +46,7 @@ export function AmenityRules({
     setBlackouts(blackouts.map((b, i) => (i === index ? { ...b, ...patch } : b)));
 
   const field =
-    "h-9 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand";
+    cn(fieldClass, "w-auto");
 
   return (
     <div className="mt-2">
@@ -54,7 +54,7 @@ export function AmenityRules({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand transition-opacity hover:opacity-80"
+        className="inline-flex items-center gap-1.5 text-footnote font-medium text-brand transition-opacity hover:opacity-80"
       >
         <SlidersHorizontal className="size-3.5" />
         {open ? "Hide booking rules" : "Booking rules"}
@@ -63,7 +63,7 @@ export function AmenityRules({
       {/* The rules in a sentence, always visible. A board should be able to
           check what they set without opening anything. */}
       {!open ? (
-        <p className="mt-1 flex items-start gap-1.5 text-[13px] leading-snug text-fg-muted">
+        <p className="mt-1 flex items-start gap-1.5 text-footnote leading-snug text-fg-muted">
           <Clock className="mt-0.5 size-3.5 shrink-0" />
           {describeRules(amenity)}
         </p>
@@ -73,7 +73,7 @@ export function AmenityRules({
         <div className="mt-3 rounded-card border border-border bg-surface-2 p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Open from</span>
+              <span className="text-footnote font-semibold text-fg-muted">Open from</span>
               <Select
                 value={rules.opensHour}
                 onChange={(e) => set({ opensHour: Number(e.target.value) })}
@@ -88,7 +88,7 @@ export function AmenityRules({
             </label>
 
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Until</span>
+              <span className="text-footnote font-semibold text-fg-muted">Until</span>
               <Select
                 value={rules.closesHour}
                 onChange={(e) => set({ closesHour: Number(e.target.value) })}
@@ -103,7 +103,7 @@ export function AmenityRules({
             </label>
 
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">
+              <span className="text-footnote font-semibold text-fg-muted">
                 How long is one booking
               </span>
               <Select
@@ -121,7 +121,7 @@ export function AmenityRules({
             </label>
 
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">
+              <span className="text-footnote font-semibold text-fg-muted">
                 How far ahead can they book
               </span>
               <Select
@@ -138,7 +138,7 @@ export function AmenityRules({
             </label>
 
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">
+              <span className="text-footnote font-semibold text-fg-muted">
                 Bookings per home, per day
               </span>
               <input
@@ -152,7 +152,7 @@ export function AmenityRules({
             </label>
 
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Per week</span>
+              <span className="text-footnote font-semibold text-fg-muted">Per week</span>
               <input
                 type="number"
                 min={1}
@@ -171,10 +171,10 @@ export function AmenityRules({
               className="mt-0.5"
             />
             <span className="min-w-0">
-              <span className="block text-[15px] font-medium text-fg">
+              <span className="block text-body font-medium text-fg">
                 The board approves each booking
               </span>
-              <span className="block text-[13px] leading-snug text-fg-muted">
+              <span className="block text-footnote leading-snug text-fg-muted">
                 Leave this off and a free slot is simply taken, which is what most spaces want.
                 Turn it on for anything with a deposit or a key.
               </span>
@@ -185,9 +185,9 @@ export function AmenityRules({
               are zero for most spaces, so the fields stay small. */}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Fee per booking</span>
+              <span className="text-footnote font-semibold text-fg-muted">Fee per booking</span>
               <div className="relative mt-1.5">
-                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[15px] text-fg-subtle">
+                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body text-fg-subtle">
                   $
                 </span>
                 <input
@@ -198,14 +198,14 @@ export function AmenityRules({
                   className={`w-full pl-6 ${field}`}
                 />
               </div>
-              <span className="mt-1 block text-[13px] leading-snug text-fg-subtle">
+              <span className="mt-1 block text-footnote leading-snug text-fg-subtle">
                 Goes on the home&apos;s statement once the booking is confirmed.
               </span>
             </label>
             <label className="block">
-              <span className="text-[13px] font-semibold text-fg-muted">Deposit</span>
+              <span className="text-footnote font-semibold text-fg-muted">Deposit</span>
               <div className="relative mt-1.5">
-                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[15px] text-fg-subtle">
+                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body text-fg-subtle">
                   $
                 </span>
                 <input
@@ -216,7 +216,7 @@ export function AmenityRules({
                   className={`w-full pl-6 ${field}`}
                 />
               </div>
-              <span className="mt-1 block text-[13px] leading-snug text-fg-subtle">
+              <span className="mt-1 block text-footnote leading-snug text-fg-subtle">
                 Held and returned. For anything with a key or a kitchen.
               </span>
             </label>
@@ -225,12 +225,12 @@ export function AmenityRules({
           {/* Closed days. A blackout is a sign on the door with the reason on
               it, and the reason is what the resident reads on the picker. */}
           <div className="mt-4">
-            <p className="flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
+            <p className="flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
               <CalendarOff className="size-3.5" />
               Closed days
             </p>
             {blackouts.length === 0 ? (
-              <p className="mt-1 text-[13px] leading-snug text-fg-subtle">
+              <p className="mt-1 text-footnote leading-snug text-fg-subtle">
                 None. Add one for a repair, a private event, or a holiday.
               </p>
             ) : null}
@@ -295,7 +295,7 @@ export function AmenityRules({
           </div>
 
           {/* What the resident will read, shown back to the board. */}
-          <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-[13px] leading-relaxed text-fg-muted">
+          <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-footnote leading-relaxed text-fg-muted">
             <span className="font-semibold text-fg">Residents will see: </span>
             {describeRules({ ...amenity, rules: { ...amenity.rules } })}
           </p>

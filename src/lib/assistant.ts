@@ -146,7 +146,7 @@ const intents: Intent[] = [
       "file a request",
     ],
     answer: () => ({
-      text: "Pick the type and the form walks you through it. Maintenance for anything broken in a common area, Architectural for a change to your home's exterior, Records to inspect association records, Amenity to reserve the clubhouse. Each one starts its own response clock, and the form tells you what that clock is before you submit.",
+      text: "Pick the type and the form walks you through it. Maintenance for anything broken in a common area, Home changes for a change to your home's outside, Records to see association records, Booking to reserve the clubhouse. The form tells you how soon the board will answer.",
       action: { label: "Start a request", href: "/resident/requests/new" },
     }),
   },

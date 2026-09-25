@@ -229,7 +229,7 @@ export function StripePayPanel({
       <Receipt
         icon={<Clock3 className="size-6" />}
         tone="pending"
-        title="Payment initiated"
+        title="Payment started"
         detail="Bank payments take about 4 business days to clear. It will appear on your account as soon as it does."
       />
     );
@@ -240,7 +240,7 @@ export function StripePayPanel({
         icon={<Landmark className="size-6" />}
         tone="pending"
         title="One more step: confirm your bank"
-        detail="Two small deposits will land in that account in a day or two. Confirm the amounts and the payment goes through on its own; nothing is taken until then."
+        detail="We will send two small deposits to that account in a day or two. Enter the amounts and the payment goes through. Nothing is taken until then."
         link={phase.url ? { label: "Confirm the deposits", url: phase.url } : undefined}
       />
     );
@@ -248,15 +248,15 @@ export function StripePayPanel({
   if (phase.name === "waiting") {
     return (
       <Card className="p-6 text-center">
-        <p className="text-[15px] font-medium text-fg">Finishing up…</p>
-        <p className="mt-1 text-[13px] text-fg-muted">Confirming your payment with the bank.</p>
+        <p className="text-body font-medium text-fg">Finishing up…</p>
+        <p className="mt-1 text-footnote text-fg-muted">Confirming your payment with the bank.</p>
       </Card>
     );
   }
   if (phase.name === "finish-setup") {
     return (
       <Card className="p-6 text-center">
-        <p className="text-[15px] font-medium text-fg">Saving your payment method…</p>
+        <p className="text-body font-medium text-fg">Saving your payment method…</p>
       </Card>
     );
   }
@@ -285,7 +285,7 @@ export function StripePayPanel({
   /* Method choice. The exact fee lands when the server prices the intent. */
   const fresh = [
     { value: "new-ach", label: "New bank account", hint: "Lowest fee", icon: Landmark },
-    { value: "new-card", label: "New card", hint: "Settles today", icon: CreditCard },
+    { value: "new-card", label: "New card", hint: "Paid today", icon: CreditCard },
   ];
   const rowClass = (active: boolean, disabled = false) =>
     cn(
@@ -295,7 +295,7 @@ export function StripePayPanel({
     );
   return (
     <Card className="p-4">
-      {savedNote ? <p className="mb-3 text-[13px] font-medium text-ok">{savedNote}</p> : null}
+      {savedNote ? <p className="mb-3 text-footnote font-medium text-ok">{savedNote}</p> : null}
       <div className="space-y-1.5">
         {instruments.map((instrument) => {
           const Icon = instrument.kind === "ach" ? Landmark : CreditCard;
@@ -315,18 +315,20 @@ export function StripePayPanel({
                 <Icon className="size-4 shrink-0 text-fg-muted" />
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-[15px] font-medium text-fg">
-                      {instrument.label} ••{instrument.mask}
+                    {/* The last four stay whole: they are how a person tells two cards apart. */}
+                    <span className="flex min-w-0 text-body font-medium text-fg">
+                      <span className="truncate">{instrument.label}</span>
+                      <span className="tnum shrink-0">&nbsp;••{instrument.mask}</span>
                     </span>
                     {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
                     {verifying ? <Badge tone="warn">Verifying</Badge> : null}
-                    {stale ? <Badge tone="danger">Add again</Badge> : null}
+                    {stale ? <Badge tone="danger">Needs updating</Badge> : null}
                   </span>
-                  <span className="mt-0.5 block text-[13px] text-fg-muted">
+                  <span className="mt-0.5 block text-footnote text-fg-muted">
                     {verifying
                       ? "Confirm the two small deposits to use it"
                       : stale
-                        ? "Saved before online payments"
+                        ? "Please add this card or account again"
                         : instrument.kind === "ach"
                           ? "Bank transfer"
                           : "Card"}
@@ -338,9 +340,9 @@ export function StripePayPanel({
                   href={instrument.verifyUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-brand hover:bg-surface-2"
+                  className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-footnote font-medium text-brand hover:bg-surface-2"
                 >
-                  Verify
+                  Confirm deposits
                   <ExternalLink className="size-3" />
                 </a>
               ) : null}
@@ -373,15 +375,15 @@ export function StripePayPanel({
             className={rowClass(selection === option.value)}
           >
             <option.icon className="size-4 shrink-0 text-fg-muted" />
-            <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-fg">
+            <span className="min-w-0 flex-1 truncate text-body font-medium text-fg">
               {option.label}
             </span>
-            <span className="shrink-0 text-[13px] text-fg-muted">{option.hint}</span>
+            <span className="shrink-0 text-footnote text-fg-muted">{option.hint}</span>
           </button>
         ))}
       </div>
       {problem ? (
-        <p className="mt-3 text-[13px] font-medium text-danger">{problem}</p>
+        <p className="mt-3 text-footnote font-medium text-danger">{problem}</p>
       ) : null}
       <Button
         variant="primary"
@@ -392,9 +394,9 @@ export function StripePayPanel({
       >
         {busy ? "One moment…" : `Continue to pay ${money(amountCents)}`}
       </Button>
-      <p className="mt-2.5 flex items-start gap-1.5 text-[13px] leading-snug text-fg-subtle">
+      <p className="mt-2.5 flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
         <Info className="mt-px size-3 shrink-0" />
-        The exact fee is itemized on the next step, before anything is charged.
+        You will see the fee on the next screen, before you pay.
       </p>
     </Card>
   );
@@ -473,11 +475,11 @@ function ConfirmSaved({
   return (
     <Card className="p-4">
       <dl className="mb-4 space-y-1">
-        <div className="flex justify-between text-[15px]">
+        <div className="flex justify-between text-body">
           <dt className="text-fg-muted">Dues</dt>
           <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
         </div>
-        <div className="flex justify-between text-[15px]">
+        <div className="flex justify-between text-body">
           <dt className="text-fg-muted">
             {cost.platformCents === 0 ? "Payment fee (waived)" : "Payment fee"}
           </dt>
@@ -485,13 +487,13 @@ function ConfirmSaved({
             {money(cost.residentPaysCents - cost.amountCents)}
           </dd>
         </div>
-        <div className="mt-2 flex justify-between border-t border-border pt-2 text-[17px]">
+        <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
           <dt className="font-semibold text-fg">You pay</dt>
           <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
         </div>
       </dl>
-      <p className="text-[13px] text-fg-muted">Paying with {phase.label}.</p>
-      {problem ? <p className="mt-3 text-[13px] font-medium text-danger">{problem}</p> : null}
+      <p className="text-footnote text-fg-muted">Paying with {phase.label}.</p>
+      {problem ? <p className="mt-3 text-footnote font-medium text-danger">{problem}</p> : null}
       <div className="mt-4 flex gap-2">
         <Button variant="secondary" className="flex-1" onClick={onBack} disabled={busy}>
           Back
@@ -544,17 +546,17 @@ function ConfirmForm({
   return (
     <Card className="p-4">
       <dl className="mb-4 space-y-1">
-        <div className="flex justify-between text-[15px]">
+        <div className="flex justify-between text-body">
           <dt className="text-fg-muted">Dues</dt>
           <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
         </div>
-        <div className="flex justify-between text-[15px]">
+        <div className="flex justify-between text-body">
           <dt className="text-fg-muted">
             {cost.platformCents === 0 ? "Payment fee (waived)" : "Payment fee"}
           </dt>
           <dd className="tnum font-medium text-fg">{money(cost.residentPaysCents - cost.amountCents)}</dd>
         </div>
-        <div className="mt-2 flex justify-between border-t border-border pt-2 text-[17px]">
+        <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
           <dt className="font-semibold text-fg">You pay</dt>
           <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
         </div>
@@ -564,7 +566,7 @@ function ConfirmForm({
           setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")
         }
       />
-      {problem ? <p className="mt-3 text-[13px] font-medium text-danger">{problem}</p> : null}
+      {problem ? <p className="mt-3 text-footnote font-medium text-danger">{problem}</p> : null}
       <div className="mt-4 flex gap-2">
         <Button variant="secondary" className="flex-1" onClick={onBack} disabled={busy}>
           Back
@@ -602,15 +604,15 @@ function Receipt({
         >
           {icon}
         </span>
-        <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">{title}</h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">{detail}</p>
+        <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">{title}</h1>
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">{detail}</p>
         <div className="mt-5 flex flex-col gap-2">
           {link ? (
             <a
               href={link.url}
               target="_blank"
               rel="noreferrer"
-              className="flex h-9 items-center justify-center rounded-lg bg-brand text-[15px] font-medium text-brand-fg"
+              className="flex h-9 items-center justify-center rounded-lg bg-brand text-body font-medium text-brand-fg"
             >
               {link.label}
             </a>
@@ -618,7 +620,7 @@ function Receipt({
           <Link
             href="/resident/account"
             className={cn(
-              "flex h-9 items-center justify-center rounded-lg text-[15px] font-medium",
+              "flex h-9 items-center justify-center rounded-lg text-body font-medium",
               link ? "border border-border text-fg" : "bg-brand text-brand-fg",
             )}
           >

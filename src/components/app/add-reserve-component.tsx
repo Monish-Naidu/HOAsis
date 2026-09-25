@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, fieldClass } from "@/components/ui/primitives";
+import { cn } from "@/lib/utils";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 
@@ -27,7 +28,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
   const [cost, setCost] = useState("");
 
   const field =
-    "h-10 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    cn(fieldClass, "w-auto");
   const cents = Math.round((Number(cost) || 0) * 100);
 
   function submit() {
@@ -68,7 +69,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
         }}
       >
         <label className="block">
-          <span className="text-[13px] font-medium text-fg">What it is</span>
+          <span className="text-footnote font-medium text-fg">What it is</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -78,7 +79,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-medium text-fg">Lasts</span>
+          <span className="text-footnote font-medium text-fg">Lasts</span>
           <input
             type="number"
             min="1"
@@ -89,7 +90,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-medium text-fg">Years left</span>
+          <span className="text-footnote font-medium text-fg">Years left</span>
           <input
             type="number"
             min="0"
@@ -100,7 +101,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-medium text-fg">Costs to replace</span>
+          <span className="text-footnote font-medium text-fg">Costs to replace</span>
           <input
             type="number"
             min="0"

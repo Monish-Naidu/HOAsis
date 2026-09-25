@@ -10,7 +10,7 @@ import {
   PartyPopper,
   Upload,
 } from "lucide-react";
-import { Button, ButtonLink, Callout, Card, SuccessMark } from "@/components/ui/primitives";
+import { Button, ButtonLink, Callout, Card, SuccessMark, fieldClass } from "@/components/ui/primitives";
 import { BankConnect } from "@/components/app/bank-connect";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
@@ -206,7 +206,7 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
     body: (
       <div className="flex flex-col gap-5">
         {task.complete ? (
-          <p className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-ok">
+          <p className="inline-flex items-center gap-1.5 text-body font-semibold text-ok">
             <Check className="size-4" strokeWidth={3} />
             Done
           </p>
@@ -227,17 +227,17 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
               dismissSetupTask(task.key);
               forward();
             }}
-            className="w-fit text-[13px] font-medium text-fg-muted underline-offset-2 hover:text-fg hover:underline"
+            className="w-fit text-footnote font-medium text-fg-muted underline underline-offset-2 hover:text-fg"
           >
             {task.dismissLabel}
           </button>
         ) : null}
 
         <details className="group rounded-lg bg-surface-2 px-4 py-3">
-          <summary className="cursor-pointer select-none text-[13px] font-semibold text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden">
+          <summary className="cursor-pointer select-none text-footnote font-semibold text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden">
             Why this matters
           </summary>
-          <p className="mt-2 max-w-[64ch] text-[13px] leading-relaxed text-fg-muted">{task.why}</p>
+          <p className="mt-2 max-w-[64ch] text-footnote leading-relaxed text-fg-muted">{task.why}</p>
         </details>
       </div>
     ),
@@ -261,7 +261,7 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
 /** Always available. A plan that has to be finished before the product opens is a plan people abandon. */
 function WayOut() {
   return (
-    <p className="mt-10 text-center text-[13px] text-fg-subtle">
+    <p className="mt-10 text-center text-footnote text-fg-subtle">
       Come back to this any time from Getting started.{" "}
       <Link href="/board" className="font-medium text-accent hover:underline">
         Go to the dashboard
@@ -302,7 +302,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
       <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg sm:text-[38px]">
         {local ? `${name} is set up in this browser.` : `${name} is live.`}
       </h1>
-      <p className="mt-3 max-w-[52ch] text-[17px] leading-relaxed text-fg-muted">
+      <p className="mt-3 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
         {pluralize(homes, "home")} on the register
         {isMixed(community.profile) && mix ? ` (${mix})` : ""}
         {dues > 0 && !varies ? `, ${money(dues)} ${cadence} each` : ""}.{" "}
@@ -336,8 +336,8 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
           <div className="flex items-start gap-3 px-4 py-3">
             <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-warn" />
             <span className="min-w-0">
-              <span className="block text-[15px] font-medium text-fg">No bank connected yet</span>
-              <span className="block text-[13px] text-fg-muted">
+              <span className="block text-body font-medium text-fg">No bank connected yet</span>
+              <span className="block text-footnote text-fg-muted">
                 Dues have nowhere to land until you add one. It is the first question.
               </span>
             </span>
@@ -347,7 +347,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
 
       <PortingCard />
 
-      <p className="mt-8 text-[15px] leading-relaxed text-fg-muted">
+      <p className="mt-8 text-body leading-relaxed text-fg-muted">
         {count === 0
           ? "Nothing is outstanding."
           : `${pluralize(count, "question")} left, one at a time. None of it is urgent, and anything that does not apply can be skipped.`}
@@ -372,8 +372,8 @@ function Done({ label, detail }: { label: string; detail: string }) {
         <Check className="size-2.5" strokeWidth={3} />
       </span>
       <span className="min-w-0">
-        <span className="block text-[15px] font-medium text-fg">{label}</span>
-        <span className="block text-[13px] text-fg-muted">{detail}</span>
+        <span className="block text-body font-medium text-fg">{label}</span>
+        <span className="block text-footnote text-fg-muted">{detail}</span>
       </span>
     </div>
   );
@@ -402,7 +402,7 @@ function Finished({
       <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg sm:text-[38px]">
         {plan.allDone ? "Everything is set up" : "That is everything for now"}
       </h1>
-      <p className="mt-3 max-w-[52ch] text-[17px] leading-relaxed text-fg-muted">
+      <p className="mt-3 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
         {plan.allDone
           ? "Nothing outstanding. Getting started stays in the sidebar in case you add something later."
           : `${plan.done} of ${plan.total} done. ${
@@ -420,13 +420,13 @@ function Finished({
             <div key={task.key} className="flex items-center gap-3 px-4 py-3">
               <span className="size-4 shrink-0 rounded-full border-2 border-border-2" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-medium text-fg">{task.label}</span>
-                <span className="block truncate text-[13px] text-fg-muted">{task.detail}</span>
+                <span className="block text-body font-medium text-fg">{task.label}</span>
+                <span className="block truncate text-footnote text-fg-muted">{task.detail}</span>
               </span>
               <button
                 type="button"
                 onClick={() => onOpen(task.key)}
-                className="shrink-0 text-[13px] font-semibold text-accent hover:underline"
+                className="shrink-0 text-footnote font-semibold text-accent hover:underline"
               >
                 Do this
               </button>
@@ -465,10 +465,10 @@ export function SetupOverview() {
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
           <PartyPopper className="size-6" />
         </span>
-        <p className="mt-3 text-[17px] font-semibold tracking-[-0.015em] text-fg">
+        <p className="mt-3 text-headline font-semibold tracking-[-0.015em] text-fg">
           Everything is set up
         </p>
-        <p className="mx-auto mt-1.5 max-w-md text-[15px] leading-relaxed text-fg-muted">
+        <p className="mx-auto mt-1.5 max-w-md text-body leading-relaxed text-fg-muted">
           Nothing outstanding. This page is here if you add something later.
         </p>
         <ButtonLink variant="primary" size="md" className="mt-4" href="/board">
@@ -488,19 +488,19 @@ export function SetupOverview() {
       <Card className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+            <p className="text-headline font-semibold tracking-[-0.015em] text-fg">
               {plan.canCollect
                 ? "You can take payments"
                 : `${plan.phases[0].total - plan.phases[0].done} to go before you can take a payment`}
             </p>
-            <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
+            <p className="mt-1 text-body leading-relaxed text-fg-muted">
               {plan.canCollect
                 ? `${pluralize(remaining, "thing")} left. None of it is urgent, and each one takes a minute.`
                 : "Start at the top. Everything below it can wait."}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <p className="tnum text-[15px] font-semibold text-fg-muted">
+            <p className="tnum text-body font-semibold text-fg-muted">
               {plan.done} of {plan.total}
             </p>
             <ButtonLink
@@ -520,7 +520,7 @@ export function SetupOverview() {
           />
         </div>
         {plan.skipped > 0 ? (
-          <p className="mt-3 text-[13px] text-fg-subtle">
+          <p className="mt-3 text-footnote text-fg-subtle">
             {plan.skipped} {plan.skipped === 1 ? "step does" : "steps do"} not apply to an
             association like yours, so we left {plan.skipped === 1 ? "it" : "them"} out.
           </p>
@@ -538,20 +538,20 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
   return (
     <section>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+        <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">
           {phase.title}
           {phase.complete ? (
-            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-ok-soft px-2 py-0.5 text-[13px] font-semibold text-ok">
+            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-ok-soft px-2 py-0.5 text-footnote font-semibold text-ok">
               <Check className="size-3" strokeWidth={3} />
               Done
             </span>
           ) : null}
         </h2>
-        <p className="tnum text-[13px] text-fg-muted">
+        <p className="tnum text-footnote text-fg-muted">
           {phase.done} of {phase.total}
         </p>
       </div>
-      <p className="mb-3 text-[15px] leading-relaxed text-fg-muted">{phase.outcome}</p>
+      <p className="mb-3 text-body leading-relaxed text-fg-muted">{phase.outcome}</p>
 
       <Card className="divide-y divide-border">
         {phase.tasks.map((task) => (
@@ -571,27 +571,27 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  "block text-[15px] font-semibold text-fg",
+                  "block text-body font-semibold text-fg",
                   task.complete && "line-through",
                 )}
               >
                 {task.label}
               </span>
-              <span className="mt-0.5 block text-[13px] leading-relaxed text-fg-muted">
+              <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
                 {task.because ?? task.detail}
               </span>
             </span>
             {task.complete ? (
               <Link
                 href={task.href}
-                className="mt-0.5 shrink-0 text-[13px] font-medium text-fg-subtle hover:text-fg"
+                className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle hover:text-fg"
               >
                 Change
               </Link>
             ) : (
               <Link
                 href={`/start/plan?task=${task.key}`}
-                className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-accent hover:underline"
+                className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-footnote font-semibold text-accent hover:underline"
               >
                 Do this
                 <ArrowRight className="size-3" />
@@ -699,7 +699,7 @@ function TaskAction({ task }: { task: PlanTask }) {
 }
 
 const field =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  fieldClass;
 
 function BankInline({ task }: { task: PlanTask }) {
   const { addBankAccount, isRemote } = useAppState();
@@ -727,7 +727,7 @@ function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <label
           aria-busy={busy}
-          className="press inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand-gradient px-3.5 text-[14px] font-medium text-primary-fg shadow-sm hover:brightness-[1.06] aria-busy:opacity-70"
+          className="press inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-brand-gradient px-3.5 text-callout font-medium text-primary-fg shadow-sm hover:brightness-[1.06] aria-busy:opacity-70"
         >
           <Upload className="size-3.5" />
           {busy ? "Uploading" : "Upload a document"}
@@ -763,7 +763,7 @@ function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
         </label>
         <GoThere task={task} secondary />
       </div>
-      {hint ? <p className="text-[13px] text-fg-subtle">{hint}</p> : null}
+      {hint ? <p className="text-footnote text-fg-subtle">{hint}</p> : null}
     </div>
   );
 }
@@ -771,7 +771,7 @@ function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
 function StructuralInline({ task }: { task: PlanTask }) {
   return (
     <div className="space-y-3">
-      <p className="text-[15px] leading-relaxed text-fg-muted">
+      <p className="text-body leading-relaxed text-fg-muted">
         Find out first, then file the report here. The library has your state&apos;s rule.
       </p>
       <div className="flex flex-wrap items-center gap-3">
@@ -808,7 +808,7 @@ function VendorInline({ task }: { task: PlanTask }) {
   return (
     <div className="space-y-3">
       {community.vendors.length ? (
-        <p className="text-[13px] text-fg-muted">
+        <p className="text-footnote text-fg-muted">
           On file: {community.vendors.map((v) => v.name).join(", ")}
         </p>
       ) : null}
@@ -954,7 +954,7 @@ function InvitesInline({ task }: { task: PlanTask }) {
   const missing = community.owners.filter((o) => o.members.length > 0 && !o.email.trim());
   return (
     <div className="space-y-3">
-      <p className="text-[15px] leading-relaxed text-fg-muted">
+      <p className="text-body leading-relaxed text-fg-muted">
         {missing.length
           ? `${pluralize(missing.length, "household")} with nobody we can email: ${missing
               .slice(0, 4)
@@ -975,7 +975,7 @@ function BoardInline({ task }: { task: PlanTask }) {
   if (!candidates.length) {
     return (
       <div className="space-y-3">
-        <p className="text-[15px] leading-relaxed text-fg-muted">
+        <p className="text-body leading-relaxed text-fg-muted">
           Nobody to appoint yet. An officer needs a login: invite a household by email, and once
           they have signed in they can hold an office.
         </p>
@@ -989,8 +989,8 @@ function BoardInline({ task }: { task: PlanTask }) {
         {candidates.slice(0, 8).map((account) => (
           <label key={account.id} className="flex items-center gap-3 px-4 py-2.5">
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-medium text-fg">{account.name}</span>
-              <span className="block text-[13px] text-fg-subtle">{homeLabel(community, account.unit)}</span>
+              <span className="block truncate text-body font-medium text-fg">{account.name}</span>
+              <span className="block text-footnote text-fg-subtle">{homeLabel(community, account.unit)}</span>
             </span>
             <select
               value={account.role}
@@ -1044,7 +1044,7 @@ function AmenityInline({ task }: { task: PlanTask }) {
           {community.amenities.map((a) => (
             <span
               key={a.id}
-              className="rounded-full bg-surface-3 px-3 py-1 text-[13px] font-medium text-fg-muted"
+              className="rounded-full bg-surface-3 px-3 py-1 text-footnote font-medium text-fg-muted"
             >
               {a.name}
             </span>
@@ -1100,7 +1100,7 @@ function PhotoInline() {
         <Camera className="size-4" />
         {busy ? "Uploading" : photo ? "Change the photo" : "Choose a photo"}
       </Button>
-      <p className="w-full text-[13px] text-fg-subtle">Any picture of the neighborhood does the job.</p>
+      <p className="w-full text-footnote text-fg-subtle">Any picture of the neighborhood does the job.</p>
     </div>
   );
 }
@@ -1131,10 +1131,10 @@ export function SetupPlanSummary() {
     >
       <Ring percent={plan.percent} done={plan.done} total={plan.total} />
       <span className="min-w-0 flex-1">
-        <span className="block text-[17px] font-semibold tracking-[-0.015em] text-fg">
+        <span className="block text-headline font-semibold tracking-[-0.015em] text-fg">
           Setting up: {plan.done} of {plan.total} done
         </span>
-        <span className="mt-0.5 block truncate text-[13px] leading-relaxed text-fg-muted">
+        <span className="mt-0.5 block truncate text-footnote leading-relaxed text-fg-muted">
           {next ? `Next: ${next.label}.` : ""}{" "}
           {plan.canCollect
             ? "You can already take payments."
@@ -1143,7 +1143,7 @@ export function SetupPlanSummary() {
               : ""}
         </span>
       </span>
-      <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand-gradient px-3.5 text-[13px] font-semibold text-primary-fg shadow-sm sm:inline-flex">
+      <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand-gradient px-3.5 text-footnote font-semibold text-primary-fg shadow-sm sm:inline-flex">
         Continue
         <ArrowRight className="size-3.5" />
       </span>
@@ -1170,7 +1170,7 @@ function Ring({ percent, done, total }: { percent: number; done: number; total: 
           strokeDashoffset={c * (1 - percent)}
         />
       </svg>
-      <span className="tnum absolute text-[13px] font-semibold text-fg">
+      <span className="tnum absolute text-footnote font-semibold text-fg">
         {done}
         <span className="text-fg-subtle">/{total}</span>
       </span>

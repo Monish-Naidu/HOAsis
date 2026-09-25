@@ -75,24 +75,24 @@ export function DisclosureSummary({
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[17px] font-semibold tracking-[-0.01em] text-fg">
+                  <p className="text-headline font-semibold tracking-[-0.01em] text-fg">
                     {finding.meta.question}
                   </p>
                   {answered ? (
-                    <p className="mt-1 text-[13px] text-fg-muted">
+                    <p className="mt-1 text-footnote text-fg-muted">
                       Answered by{" "}
                       {finding.confirmed
                         .map((a) => `${DOC_SHORT[a.document]} ${a.number}`)
                         .join(", ")}
                     </p>
                   ) : finding.status === "unconfirmed" ? (
-                    <p className="mt-1 text-[13px] text-warn">
-                      Nothing confirmed. {finding.candidates.length} article
-                      {finding.candidates.length === 1 ? "" : "s"} mention this and nobody
-                      has checked them.
+                    <p className="mt-1 text-footnote text-warn">
+                      Not confirmed yet. {finding.candidates.length} article
+                      {finding.candidates.length === 1 ? " may cover" : "s may cover"} this. Ask
+                      the board.
                     </p>
                   ) : (
-                    <p className="mt-1 text-[13px] text-fg-muted">
+                    <p className="mt-1 text-footnote text-fg-muted">
                       Your documents do not address this.
                     </p>
                   )}
@@ -116,24 +116,24 @@ export function DisclosureSummary({
                           <Badge tone="neutral">
                             {DOC_SHORT[article.document]} {article.number}
                           </Badge>
-                          <span className="text-[13px] font-semibold text-fg-muted">
+                          <span className="text-footnote font-semibold text-fg-muted">
                             {article.title}
                           </span>
                         </div>
                         {article.plain ? (
-                          <p className="mt-1.5 text-[15px] leading-relaxed text-fg">
+                          <p className="mt-1.5 text-body leading-relaxed text-fg">
                             {article.plain}
                           </p>
                         ) : null}
                         <details className="mt-2">
-                          <summary className="cursor-pointer text-[13px] font-medium text-brand">
+                          <summary className="cursor-pointer text-footnote font-medium text-brand">
                             The exact wording
                           </summary>
                           <div className="mt-2 space-y-2">
                             {article.text.map((paragraph, index) => (
                               <p
                                 key={index}
-                                className="text-[15px] leading-relaxed text-fg-muted"
+                                className="text-body leading-relaxed text-fg-muted"
                               >
                                 {paragraph}
                               </p>
@@ -145,7 +145,7 @@ export function DisclosureSummary({
                   </div>
                 ) : finding.status === "unconfirmed" ? (
                   <div>
-                    <p className="text-[15px] leading-relaxed text-fg">
+                    <p className="text-body leading-relaxed text-fg">
                       {showUnconfirmed
                         ? "These articles use words that suggest they settle this. Nobody has confirmed that they do, so nothing here is presented as an answer. Open each one and tag it, or leave it, but do not treat this list as a finding."
                         : "Some articles mention this, but nobody on the board has confirmed which one settles it. Ask the board rather than reading a guess here."}
@@ -153,7 +153,7 @@ export function DisclosureSummary({
                     {showUnconfirmed ? (
                       <ul className="mt-3 space-y-1.5">
                         {finding.candidates.map((article) => (
-                          <li key={article.id} className="text-[13px] text-fg-muted">
+                          <li key={article.id} className="text-footnote text-fg-muted">
                             <span className="font-semibold text-fg-muted">
                               {DOC_SHORT[article.document]} {article.number}
                             </span>{" "}
@@ -164,7 +164,7 @@ export function DisclosureSummary({
                     ) : null}
                   </div>
                 ) : (
-                  <p className="text-[15px] leading-relaxed text-fg">
+                  <p className="text-body leading-relaxed text-fg">
                     Nothing in the documents on file addresses this. That usually means it
                     is not restricted here, but it can also mean the provision is in a
                     document that has not been put into words yet. State law may still
@@ -172,7 +172,7 @@ export function DisclosureSummary({
                   </p>
                 )}
 
-                <p className="mt-4 border-t border-border pt-3 text-[13px] leading-relaxed text-fg-subtle">
+                <p className="mt-4 border-t border-border pt-3 text-footnote leading-relaxed text-fg-subtle">
                   <span className="font-semibold text-fg-muted">Why this is on the list: </span>
                   {finding.meta.why}
                 </p>
@@ -190,7 +190,7 @@ export function DisclosureCoverageLine({ articles }: { articles: GoverningArticl
   const findings = disclosureFindings(articles);
   const answered = findings.filter((f) => f.status === "answered").length;
   return (
-    <p className="tnum text-[15px] font-semibold text-fg">
+    <p className="tnum text-body font-semibold text-fg">
       {answered} / {DISCLOSURE_TOPICS.length}
     </p>
   );

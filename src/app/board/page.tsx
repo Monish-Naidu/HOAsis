@@ -66,10 +66,10 @@ export default function BoardDashboard() {
         <>
           {seesSetup ? <SetupPlanSummary /> : null}
           <Card className="p-6">
-            <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+            <p className="text-headline font-semibold tracking-[-0.015em] text-fg">
               Nothing to run yet
             </p>
-            <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-fg-muted">
+            <p className="mt-1.5 max-w-[60ch] text-body leading-relaxed text-fg-muted">
               Once dues are billed, a payment lands, or an owner asks for something, it shows up
               here.{plan.allDone ? "" : " The list above is the way to get there."}
             </p>
@@ -87,7 +87,7 @@ export default function BoardDashboard() {
               tone="warn"
               className="mt-6"
               icon={<ShieldAlert className="size-4" />}
-              title={`${money(exposure.totalUninsured, { cents: false })} sits above deposit insurance`}
+              title={`${money(exposure.totalUninsured, { cents: false })} is over the insured limit`}
               action={<SectionLink href="/board/money">See where</SectionLink>}
             >
               {exposure.rows
@@ -213,14 +213,14 @@ function NeedsYou() {
         title="Needs you today"
         action={
           rows.length ? (
-            <span className="tnum inline-flex h-6 items-center rounded-full bg-primary-soft px-2.5 text-[12px] font-bold text-primary">
+            <span className="tnum inline-flex h-6 items-center rounded-full bg-primary-soft px-2.5 text-caption font-bold text-primary">
               {rows.reduce((n, row) => n + row.count, 0)}
             </span>
           ) : null
         }
       />
       {rows.length === 0 ? (
-        <p className="flex items-center gap-3 px-5 py-3.5 text-[15px] text-ok">
+        <p className="flex items-center gap-3 px-5 py-3.5 text-body text-ok">
           <IconTile icon={ClipboardCheck} tint="teal" size="sm" className="pop-in" />
           Nothing needs you today.
         </p>
@@ -230,7 +230,7 @@ function NeedsYou() {
             <li key={row.href}>
               <Link
                 href={row.href}
-                className="group flex min-h-12 items-center gap-3 px-5 py-3 text-[15px] text-fg transition-colors hover:bg-surface-2"
+                className="group flex min-h-12 items-center gap-3 px-5 py-3 text-body text-fg transition-colors hover:bg-surface-2"
               >
                 <IconTile icon={row.icon} tint={row.tint} size="sm" />
                 <span className="min-w-0 flex-1 truncate">

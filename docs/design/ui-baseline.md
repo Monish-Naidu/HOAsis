@@ -21,14 +21,47 @@ then depth. Clean and simple is the name of the game.
 - **Numbers are derived and consistent.** A figure comes from a selector in
   `src/lib/metrics.ts`, never from the screen. Money in cents through
   `money()`. Large figures use `tnum` and tight tracking.
-- **Type carries hierarchy, not decoration.** The scale is 28 / 22 / 17 / 15
-  / 13 / 11. Semibold for titles and values, medium for labels, regular for
-  body. Muted and subtle foregrounds for what matters less.
+- **Type carries hierarchy, not decoration.** Sizes are tokens, never
+  `text-[Npx]`: `text-title1` 28, `text-title2` 24, `text-title3` 20,
+  `text-headline` 18, `text-body` 16, `text-callout` 15, `text-footnote` 14,
+  `text-caption` 13. Nothing smaller than caption. Semibold for titles and
+  values, medium for labels, regular for body. Muted and subtle foregrounds
+  for what matters less.
 - **Progressive disclosure.** A row shows what a person needs to decide
   whether to open it. Detail lives one tap in: an expand, a panel, a
   `<details>`. Never a wall of fields.
 - **Empty states say what fills them.** One line and, where there is one,
   the action.
+
+## Readable for everyone
+
+Owners skew older and many are not technical (2026-09-24).
+
+- **Text size is the reader's.** The tokens are rem times `--type-scale`,
+  which the Text size control sets to 1, 1.125 or 1.25. It lives in
+  Settings on both sides (`DisplaySettings`); the phone header's avatar
+  opens resident Settings. Anything that holds text grows with
+  it: `min-h`, not `h`, on a box with words in it; no `whitespace-nowrap` on
+  a label that could wrap instead.
+- **Contrast clears AA with room.** `fg-muted` 7:1, `fg-subtle` 5:1, field
+  and secondary-button edges (`border-2`) 3:1. Do not add a lighter grey.
+- **44px under a finger.** Buttons, back links, icon buttons, segmented
+  options. An icon-only control is the exception, and it has an
+  `aria-label`.
+- **Words beside icons** where the icon is not obvious (Board / Resident,
+  Sign out, Light / Dark).
+- **Links look like links.** A link in body-coloured text is underlined.
+- **Nothing important disappears on its own.** Toasts hold while a pointer
+  rests on them; warnings stay until closed. Money on a resident screen is
+  shown as the figure, not counted up.
+- **Keep the real word, explain it on tap.** CC&Rs, Autopay, Reserves,
+  funded, special assessment, business days: owners hear these at meetings,
+  so they stay, wrapped in `Term` (`src/lib/glossary.ts`) where a resident
+  first meets them. Tap, never hover.
+- **Every section is reachable on a phone.** The tab bar holds six; More
+  lists the rest with a line under each.
+- **Focus is always visible.** Fields wear the ring whatever their classes
+  say (`globals.css`).
 
 ## Deference
 

@@ -104,13 +104,13 @@ export function SearchButton({ compact = false, className }: { compact?: boolean
       onClick={openSearch}
       aria-label="Search"
       className={cn(
-        "press inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-[13px] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg",
+        "press inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-2.5 text-footnote text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg",
         className,
       )}
     >
       <Search className="size-3.5" />
       <span className="hidden sm:inline">Search</span>
-      <kbd className="hidden rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-sans text-[11px] font-medium text-fg-subtle sm:inline">
+      <kbd className="hidden rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-sans text-caption font-medium text-fg-subtle sm:inline">
         {mac ? "⌘" : "Ctrl"} K
       </kbd>
     </button>
@@ -207,7 +207,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         onKeyDown={onKey}
         className="pop-in w-full max-w-[640px] overflow-hidden rounded-card border border-border bg-surface shadow-float"
       >
-        <div className="flex h-14 items-center gap-3 border-b border-border px-4">
+        <div data-bare-focus className="flex h-14 items-center gap-3 border-b border-border pl-4 pr-2">
           <Search className="size-4 shrink-0 text-fg-subtle" />
           <input
             ref={inputRef}
@@ -222,27 +222,32 @@ function Palette({ onClose }: { onClose: () => void }) {
                 : "Search documents, meetings, ballots, requests…"
             }
             aria-label="Search"
-            className="h-full min-w-0 flex-1 bg-transparent text-[16px] text-fg outline-none placeholder:text-fg-subtle"
+            className="h-full min-w-0 flex-1 bg-transparent text-body text-fg outline-none placeholder:text-fg-subtle"
           />
-          <kbd className="hidden rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-sans text-[11px] font-medium text-fg-subtle sm:inline">
-            esc
-          </kbd>
+          {/* A way out without a keyboard; tapping the backdrop is not obvious. */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="press min-h-10 shrink-0 rounded-lg px-3 text-footnote font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+          >
+            Close
+          </button>
         </div>
 
         <div ref={listRef} className="max-h-[60vh] overflow-y-auto">
           {query.trim() === "" ? (
-            <p className="px-4 py-5 text-[13px] text-fg-muted">
+            <p className="px-4 py-5 text-footnote text-fg-muted">
               Type a name, a unit, a subject, a vendor, or a year. Everything the association has
               recorded is here.
             </p>
           ) : flat.length === 0 ? (
-            <p className="px-4 py-5 text-[13px] text-fg-muted">
+            <p className="px-4 py-5 text-footnote text-fg-muted">
               Nothing matches &ldquo;{query.trim()}&rdquo;.
             </p>
           ) : (
             groups.map((group) => (
               <div key={group.section} className="py-1">
-                <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                <p className="px-4 pb-1 pt-2 text-caption font-semibold uppercase tracking-[0.06em] text-fg-subtle">
                   {group.section}
                 </p>
                 <ul>
@@ -263,10 +268,10 @@ function Palette({ onClose }: { onClose: () => void }) {
                         >
                           <IconTile icon={Icon} tint={hit.tint} size="sm" />
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[15px] font-medium text-fg">
+                            <span className="block truncate text-body font-medium text-fg">
                               {hit.title}
                             </span>
-                            <span className="block truncate text-[13px] text-fg-muted">
+                            <span className="block truncate text-footnote text-fg-muted">
                               {hit.subtitle}
                             </span>
                           </span>
@@ -281,7 +286,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         </div>
 
         {flat.length > 0 ? (
-          <p className="flex items-center gap-4 border-t border-border px-4 py-2 text-[11px] text-fg-subtle">
+          <p className="flex items-center gap-4 border-t border-border px-4 py-2 text-caption text-fg-subtle">
             <span>↑↓ to move</span>
             <span>↵ to open</span>
             <span className="ml-auto tnum">

@@ -1,12 +1,11 @@
 "use client";
 
 import { ResidentTitle } from "@/components/app/resident-title";
-import { ChevronDown, ChevronRight, CircleDollarSign, Download, Landmark, Receipt } from "lucide-react";
+import { ChevronDown, ChevronRight, CircleDollarSign, Download, Landmark, Receipt, Settings } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
-import { ContactCard } from "@/components/app/contact-card";
 import { formatDate, money, today } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -50,22 +49,22 @@ export default function ResidentAccount() {
                     {isPayment ? <CircleDollarSign className="size-4" /> : <Receipt className="size-4" />}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-fg">{line.label}</p>
-                    <p className="mt-0.5 text-[13px] text-fg-muted">
+                    <p className="break-words text-body font-medium text-fg">{line.label}</p>
+                    <p className="mt-0.5 text-footnote text-fg-muted">
                       {formatDate(line.date, "long")}
                       {line.method ? ` · ${line.method}` : ""}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p
-                      className={`tnum text-[15px] font-semibold ${
+                      className={`tnum text-body font-semibold ${
                         isPayment ? "text-ok" : "text-fg"
                       }`}
                     >
                       {isPayment ? "−" : ""}
                       {money(Math.abs(line.amountCents))}
                     </p>
-                    <p className="tnum mt-0.5 text-[13px] text-fg-subtle">
+                    <p className="tnum mt-0.5 text-footnote text-fg-subtle">
                       Balance {money(line.balanceAfterCents)}
                     </p>
                   </div>
@@ -96,12 +95,12 @@ export default function ResidentAccount() {
                   {body}
                 </summary>
                 <div className="border-t border-border bg-surface-2 px-4 py-3">
-                  <p className="mb-2 text-[13px] font-semibold text-fg-muted">
+                  <p className="mb-2 text-footnote font-semibold text-fg-muted">
                     Applied to
                   </p>
                   <ul className="space-y-1.5">
                     {line.appliedTo.map((a) => (
-                      <li key={a.chargeId} className="flex justify-between text-[13px]">
+                      <li key={a.chargeId} className="flex justify-between text-footnote">
                         <span className="text-fg-muted">{a.label}</span>
                         <span className="tnum font-medium text-fg">{money(a.amountCents)}</span>
                       </li>
@@ -129,10 +128,10 @@ export default function ResidentAccount() {
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg-muted">
+          <p className="text-footnote font-semibold text-fg-muted">
             Balance
           </p>
-          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
+          <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(currentOwner.balanceCents)}
           </p>
           <Badge
@@ -153,13 +152,13 @@ export default function ResidentAccount() {
           </Badge>
         </Card>
         <Card className="p-4">
-          <p className="text-[13px] font-semibold text-fg-muted">
+          <p className="text-footnote font-semibold text-fg-muted">
             Paid in {paidYear}
           </p>
-          <p className="tnum mt-1.5 text-[24px] font-semibold leading-none text-fg">
+          <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(paidThisYear, { cents: false })}
           </p>
-          <p className="mt-2 text-[13px] text-fg-muted">
+          <p className="mt-2 text-footnote text-fg-muted">
             {money(ownerDues(association, currentOwner), { cents: false })} a{" "}
             {association.duesCadence === "monthly"
               ? "month"
@@ -189,7 +188,7 @@ export default function ResidentAccount() {
                   ]),
                 )
               }
-              className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline"
+              className="inline-flex items-center gap-1 text-footnote font-medium text-accent hover:underline"
             >
               <Download className="size-3" />
               Statement
@@ -202,7 +201,7 @@ export default function ResidentAccount() {
           {recent.map((line, i) => row(line, i))}
           {olderYears.map(([year, lines]) => (
             <details key={year} className="group/year border-t border-border">
-              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[13px] font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-footnote font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden">
                 {year === paidYear ? `Earlier in ${year}` : year}
                 <span className="flex items-center gap-2 font-medium text-fg-subtle">
                   {lines.length} entries
@@ -215,14 +214,26 @@ export default function ResidentAccount() {
         </Card>
       </section>
 
-      <ContactCard />
-
       <Link
         href="/resident/finances"
         className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
       >
         <Landmark className="size-4 shrink-0 text-fg-subtle" />
-        <span className="flex-1 text-[15px] font-medium text-fg">Association funds</span>
+        <span className="flex-1 text-body font-medium text-fg">Association funds</span>
+        <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+      </Link>
+
+      <Link
+        href="/resident/settings"
+        className="flex min-h-12 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
+      >
+        <Settings className="size-4 shrink-0 text-fg-subtle" />
+        <span className="flex-1 text-body font-medium text-fg">
+          Settings
+          <span className="block text-footnote font-normal text-fg-muted">
+            Text size, light or dark, and your contact details
+          </span>
+        </span>
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>
     </div>

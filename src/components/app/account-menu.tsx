@@ -48,18 +48,17 @@ export function ViewSwitcher({ className }: { className?: string }) {
           type="button"
           role="radio"
           aria-checked={view === v}
-          // Below sm the word is hidden and only the glyph shows, so the
-          // name has to come from here.
-          aria-label={label}
           title={label}
           onClick={() => go(v)}
           className={cn(
-            "inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] font-medium transition-colors sm:h-7 sm:px-2.5",
-            view === v ? "bg-surface-3 text-fg" : "text-fg-subtle hover:text-fg-muted",
+            // The word at every width: a person and a building are not
+            // obvious glyphs for "my home" and "the board".
+            "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md px-2.5 text-footnote font-medium transition-colors",
+            view === v ? "bg-surface-3 text-fg" : "text-fg-muted hover:text-fg",
           )}
         >
-          <Icon className="size-3.5" />
-          <span className="hidden sm:inline">{label}</span>
+          <Icon className="hidden size-3.5 sm:block" />
+          <span>{label}</span>
         </button>
       ))}
     </div>
@@ -76,8 +75,8 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
       <Avatar name={account.name} />
       {!compact ? (
         <div className="hidden leading-tight lg:block">
-          <p className="text-[15px] font-medium text-fg">{account.name}</p>
-          <p className="text-[13px] text-fg-muted">
+          <p className="text-body font-medium text-fg">{account.name}</p>
+          <p className="text-footnote text-fg-muted">
             {ROLE_LABEL[account.role]} · {homeLabel(community, account.unit)}
           </p>
         </div>
@@ -90,9 +89,10 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
           signOut();
           router.push("/signin");
         }}
-        className="press flex size-10 items-center justify-center rounded-lg text-fg-subtle hover:bg-surface-2 hover:text-fg lg:size-9"
+        className="press flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-lg px-2 text-footnote font-medium text-fg-muted hover:bg-surface-2 hover:text-fg lg:min-h-9"
       >
         <LogOut className="size-4" />
+        <span aria-hidden className="hidden xl:inline">Sign out</span>
       </button>
     </div>
   );

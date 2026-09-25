@@ -101,7 +101,7 @@ test.describe("the household's side", () => {
     const health = await expectHealthy(page, "notices about your home");
 
     expect(health.crashed).toBe(false);
-    expect(health.text).toMatch(/Nothing outstanding|What the board is relying on/);
+    expect(health.text).toMatch(/No notices|The board's evidence/);
     for (const reporter of ["Marguerite Lowry", "Ines Farrow", "Hollis Nakamura"]) {
       expect(health.text, `${reporter} was named to the accused`).not.toContain(reporter);
     }

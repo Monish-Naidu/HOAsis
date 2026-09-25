@@ -1,5 +1,6 @@
 "use client";
 
+import { Term } from "@/components/app/term";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -13,7 +14,7 @@ import {
   Repeat,
   X,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, IconTile, SectionTitle, SuccessMark, Toggle } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, IconTile, SectionTitle, SuccessMark, Toggle, fieldClass } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { useAppState, useCurrentOwner, useMyInstruments } from "@/lib/app-state";
 import {
@@ -179,13 +180,15 @@ export function PayFlow() {
           <div className="relative mx-auto mb-4 flex justify-center">
             <SuccessMark size={64} />
           </div>
-          <h1 className="relative text-[22px] font-semibold tracking-[-0.02em] text-fg">Payment scheduled</h1>
-          <p className="tnum relative mt-1 text-[24px] font-semibold tracking-[-0.02em] text-fg">
+          <h1 className="relative text-title2 font-semibold tracking-[-0.02em] text-fg">Payment sent</h1>
+          <p className="tnum relative mt-1 text-title2 font-semibold tracking-[-0.02em] text-fg">
             <CountUp cents={paid.amountCents} showCents />
           </p>
-          <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
-            {describeInstrument(paid.instrument)} · clears in{" "}
-            {FEE_SCHEDULE[paid.instrument.kind].settlement.toLowerCase()}
+          <p className="mt-2 text-body leading-relaxed text-fg-muted">
+            {describeInstrument(paid.instrument)} ·{" "}
+            {FEE_SCHEDULE[paid.instrument.kind].settlement === "Same day"
+              ? "Paid today"
+              : `Takes ${FEE_SCHEDULE[paid.instrument.kind].settlement.toLowerCase()}`}
           </p>
           <div className="mt-5 flex gap-2">
             <Button variant="secondary" size="lg" className="flex-1" onClick={() => setPaid(null)}>
@@ -193,7 +196,7 @@ export function PayFlow() {
             </Button>
             <Link
               href="/resident/account"
-              className="press shimmer flex h-11 flex-1 items-center justify-center rounded-lg bg-brand-gradient text-[15px] font-medium text-primary-fg shadow-raised hover:shadow-glow"
+              className="press shimmer flex h-11 flex-1 items-center justify-center rounded-lg bg-brand-gradient text-body font-medium text-primary-fg shadow-raised hover:shadow-glow"
             >
               View account
             </Link>
@@ -235,10 +238,10 @@ export function PayFlow() {
                 : "border-border hover:bg-surface-2",
             )}
           >
-            <span className="block text-[13px] font-medium text-fg-muted">
+            <span className="block text-footnote font-medium text-fg-muted">
               {balanceCents > 0 ? "Full balance" : "Next dues"}
             </span>
-            <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">
+            <span className="tnum mt-0.5 block text-headline font-semibold text-fg">
               {money(balanceCents > 0 ? balanceCents : duesCents)}
             </span>
           </button>
@@ -253,11 +256,11 @@ export function PayFlow() {
                 : "border-border hover:bg-surface-2",
             )}
           >
-            <span className="block text-[13px] font-medium text-fg-muted">Other amount</span>
+            <span className="block text-footnote font-medium text-fg-muted">Other amount</span>
             {amountMode === "custom" && amountCents ? (
-              <span className="tnum mt-0.5 block text-[17px] font-semibold text-fg">{money(amountCents)}</span>
+              <span className="tnum mt-0.5 block text-headline font-semibold text-fg">{money(amountCents)}</span>
             ) : (
-              <span className="mt-0.5 block text-[17px] font-medium text-fg-subtle">Choose</span>
+              <span className="mt-0.5 block text-headline font-medium text-fg-subtle">Choose</span>
             )}
           </button>
         </div>
@@ -265,14 +268,14 @@ export function PayFlow() {
           <label className="mt-3 block">
             <span className="sr-only">Payment amount</span>
             <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
-              <span className="text-[17px] text-fg-muted">$</span>
+              <span className="text-headline text-fg-muted">$</span>
               <input
                 autoFocus
                 inputMode="decimal"
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
                 placeholder="0.00"
-                className="tnum w-full bg-transparent text-[17px] font-medium text-fg outline-none placeholder:text-fg-subtle"
+                className="tnum w-full bg-transparent text-headline font-medium text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
           </label>
@@ -284,15 +287,17 @@ export function PayFlow() {
   // Autopay, shared by the demo and Stripe branches as a JSX value.
   const autopaySection = (
         <section id="autopay" className="scroll-mt-20">
-          <SectionTitle>Autopay</SectionTitle>
+          <SectionTitle>
+            <Term k="autopay">Autopay</Term>
+          </SectionTitle>
           <Card className="p-4">
             <div className="flex items-start gap-3">
               <IconTile icon={Repeat} tint="violet" size="md" className="mt-0.5" />
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-semibold text-fg">
+                <p className="text-body font-semibold text-fg">
                   Autopay {money(duesCents)} on the {ordinal(autopayDay)}
                 </p>
-                <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
+                <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
                   {selected
                     ? `From ${describeInstrument(selected)}. Cancel any time.`
                     : "Add a payment method to turn this on."}
@@ -312,7 +317,7 @@ export function PayFlow() {
             {autopay ? (
               <>
                 <div className="mt-3 border-t border-border pt-3">
-                  <p className="mb-2 text-[13px] font-semibold text-fg-muted">
+                  <p className="mb-2 text-footnote font-semibold text-fg-muted">
                     Day of the month
                   </p>
                   <div className="grid grid-cols-8 gap-1.5">
@@ -326,7 +331,7 @@ export function PayFlow() {
                         }}
                         aria-pressed={autopayDay === day}
                         className={cn(
-                          "tnum flex h-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors",
+                          "tnum flex h-8 items-center justify-center rounded-md text-footnote font-medium transition-colors",
                           autopayDay === day
                             ? "bg-brand-gradient text-primary-fg shadow-raised"
                             : day === settings.autopayLateAfterDay
@@ -338,7 +343,7 @@ export function PayFlow() {
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-[13px] leading-snug text-fg-subtle">
+                  <p className="mt-2 text-footnote leading-snug text-fg-subtle">
                     The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
                     dues are late.
                     {collections.lateFeeCents > 0
@@ -366,18 +371,18 @@ export function PayFlow() {
                       className="mt-0.5 size-4 rounded border-border-2"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[15px] font-medium text-fg">
-                        Only when my balance is at most
+                      <span className="block text-body font-medium text-fg">
+                        Set a limit for automatic payments
                       </span>
-                      <span className="block text-[13px] leading-snug text-fg-muted">
-                        A special assessment or a fine that pushes the balance above this waits for
-                        you to pay it yourself. Regular dues still go out on the {ordinal(autopayDay)}.
+                      <span className="block text-footnote leading-snug text-fg-muted">
+                        If you owe more than this, from a special assessment or a fine, you pay the
+                        extra yourself. Regular dues still go out on the {ordinal(autopayDay)}.
                       </span>
                     </span>
                   </label>
                   {capCents !== null ? (
                     <div className="mt-2 flex items-center gap-2 pl-6">
-                      <span className="text-[15px] text-fg-muted">$</span>
+                      <span className="text-body text-fg-muted">$</span>
                       <input
                         inputMode="decimal"
                         aria-label="Autopay cap in dollars"
@@ -392,9 +397,9 @@ export function PayFlow() {
                           setCapText(String(next / 100));
                           if (next !== capCents) persistAutopay({ on: true, capCents: next });
                         }}
-                        className="tnum h-9 w-28 rounded-lg border border-border-2 bg-surface px-2.5 text-[15px] text-fg outline-none focus:border-brand"
+                        className={cn(fieldClass, "tnum w-28")}
                       />
-                      <span className="text-[13px] text-fg-subtle">
+                      <span className="text-footnote text-fg-subtle">
                         Dues are {money(duesCents)}.
                       </span>
                     </div>
@@ -406,7 +411,7 @@ export function PayFlow() {
                 <div className="mt-3 border-t border-border pt-3">
                   {skipsUpcoming ? (
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[15px] font-medium text-fg">
+                      <p className="text-body font-medium text-fg">
                         Skipping {monthLabel(upcomingMonth)}
                       </p>
                       <Button
@@ -423,10 +428,10 @@ export function PayFlow() {
                   ) : (
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-[15px] font-medium text-fg">Skip next month</p>
-                        <p className="text-[13px] leading-snug text-fg-muted">
-                          Autopay sits out {monthLabel(upcomingMonth)} and carries on after. The
-                          balance still shows here so you can pay it by hand.
+                        <p className="text-body font-medium text-fg">Skip next month</p>
+                        <p className="text-footnote leading-snug text-fg-muted">
+                          No automatic payment in {monthLabel(upcomingMonth)}. It starts again the
+                          month after. You can still pay here yourself.
                         </p>
                       </div>
                       <Button
@@ -446,7 +451,7 @@ export function PayFlow() {
                   </>
                 ) : null}
 
-                <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[13px] font-medium text-ok">
+                <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-footnote font-medium text-ok">
                   Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}
                   {skipsUpcoming ? ` · ${monthLabel(upcomingMonth)} skipped` : ""}
                 </div>
@@ -474,9 +479,13 @@ export function PayFlow() {
             icon={<Repeat className="size-4" />}
             title={`${money(p.amountCents)} is processing`}
           >
-            {p.rail === "ach"
-              ? "Bank payments take about 4 business days to clear."
-              : "This payment is being confirmed."}
+            {p.rail === "ach" ? (
+              <>
+                Bank payments take about 4 <Term k="business-days">business days</Term> to clear.
+              </>
+            ) : (
+              "This payment is being confirmed."
+            )}
           </Callout>
         ))}
         {amountSection}
@@ -517,7 +526,7 @@ export function PayFlow() {
                 onClick={() => setAdding(true)}
               >
                 <Plus className="size-3.5" />
-                Save a method without paying
+                Save a card or bank account
               </Button>
             )}
             {autopaySection}
@@ -528,12 +537,12 @@ export function PayFlow() {
             icon={<Info className="size-4" />}
             title={
               stripeAccountId
-                ? "Payments are not configured in this environment"
+                ? "Online payments aren't working right now"
                 : "Your board hasn't set up online payments yet"
             }
           >
             {stripeAccountId ? (
-              "The Stripe publishable key is missing from this deployment."
+              "Please tell your board. You can still pay the way you used to."
             ) : can("finances") ? (
               <>
                 You can do it:{" "}
@@ -566,8 +575,8 @@ export function PayFlow() {
 
         {instruments.length === 0 ? (
           <Card className="p-5 text-center">
-            <p className="text-[15px] font-medium text-fg">No payment method yet</p>
-            <p className="mt-1 text-[13px] text-fg-muted">
+            <p className="text-body font-medium text-fg">No payment method yet</p>
+            <p className="mt-1 text-footnote text-fg-muted">
               A bank transfer costs less than a card.
             </p>
           </Card>
@@ -602,8 +611,10 @@ export function PayFlow() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="truncate text-[15px] font-medium text-fg">
-                          {instrument.label} ••{instrument.mask}
+                        {/* The last four stay whole: they are how a person tells two cards apart. */}
+                        <span className="flex min-w-0 text-body font-medium text-fg">
+                          <span className="truncate">{instrument.label}</span>
+                          <span className="tnum shrink-0">&nbsp;••{instrument.mask}</span>
                         </span>
                         {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
                         {/* Only when this one costs the owner strictly less. A tie
@@ -616,7 +627,7 @@ export function PayFlow() {
                         ) : null}
                         {expired ? <Badge tone="danger">Expired</Badge> : null}
                       </span>
-                      <span className="mt-0.5 block text-[13px] text-fg-muted">
+                      <span className="mt-0.5 block text-footnote text-fg-muted">
                         {policy.paidBy === "owner"
                           ? instrumentCost.platformCents === 0
                             ? "No fee to you"
@@ -677,17 +688,17 @@ export function PayFlow() {
       {selected && cost ? (
         <Card className="p-4">
           <dl className="space-y-1">
-            <div className="flex justify-between text-[15px]">
+            <div className="flex justify-between text-body">
               <dt className="text-fg-muted">Dues</dt>
               <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
             </div>
             {policy.paidBy === "owner" && cost.platformCents > 0 ? (
-              <div className="flex justify-between text-[15px]">
+              <div className="flex justify-between text-body">
                 <dt className="text-fg-muted">Payment fee</dt>
                 <dd className="tnum font-medium text-fg">{money(cost.platformCents)}</dd>
               </div>
             ) : null}
-            <div className="mt-2 flex justify-between border-t border-border pt-2 text-[17px]">
+            <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
               <dt className="font-semibold text-fg">You pay</dt>
               <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
             </div>

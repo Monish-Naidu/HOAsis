@@ -1,8 +1,9 @@
 "use client";
 
+import { Term } from "@/components/app/term";
 import { useMemo, useState } from "react";
 import { BookOpen, Filter, Landmark, Search, Sparkles } from "lucide-react";
-import { Badge, Card, EmptyState } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, fieldClass } from "@/components/ui/primitives";
 import type { GoverningArticle, GoverningDoc, GoverningTopic } from "@/lib/types";
 import { GOVERNING_DOCS, documentsPresent } from "@/lib/governing";
 import { formatDate, cn } from "@/lib/utils";
@@ -90,7 +91,7 @@ export function GoverningReader({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search all three documents, for example fence or late fee"
             aria-label="Search the governing documents"
-            className="h-10 w-full rounded-lg border border-border-2 bg-surface pl-9 pr-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
+            className={cn(fieldClass, "pl-9 pr-3")}
           />
         </label>
         <button
@@ -98,7 +99,7 @@ export function GoverningReader({
           onClick={() => setMineOnly((v) => !v)}
           aria-pressed={mineOnly}
           className={cn(
-            "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[15px] font-medium transition-colors",
+            "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-body font-medium transition-colors",
             mineOnly
               ? "border-brand bg-brand-soft text-brand-soft-fg"
               : "border-border-2 bg-surface text-fg-muted hover:text-fg",
@@ -118,7 +119,7 @@ export function GoverningReader({
               onClick={() => setDoc(d)}
               aria-pressed={doc === d}
               className={cn(
-                "shrink-0 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                "shrink-0 rounded-lg border px-3 py-1.5 text-footnote font-medium transition-colors",
                 doc === d
                   ? "border-brand bg-brand-soft text-brand-soft-fg"
                   : "border-border-2 bg-surface text-fg-muted hover:text-fg",
@@ -133,7 +134,7 @@ export function GoverningReader({
       {/* Which document wins, said once, where somebody comparing two
           provisions will actually be standing. */}
       {doc !== "all" ? (
-        <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-relaxed text-fg-muted">
+        <p className="mt-2 flex items-start gap-1.5 text-footnote leading-relaxed text-fg-muted">
           <Landmark className="mt-0.5 size-3.5 shrink-0" />
           <span>
             {GOVERNING_DOCS[doc].plain} Changed by {GOVERNING_DOCS[doc].changedBy.toLowerCase()}.
@@ -149,7 +150,7 @@ export function GoverningReader({
             onClick={() => setTopic(t)}
             aria-pressed={topic === t}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
+              "shrink-0 rounded-full px-3 py-1.5 text-footnote font-medium transition-colors",
               topic === t
                 ? "bg-brand text-brand-fg"
                 : "bg-surface-2 text-fg-muted hover:text-fg",
@@ -182,7 +183,7 @@ export function GoverningReader({
                   className="w-full px-4 py-3.5 text-left transition-colors hover:bg-surface-2"
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[13px] font-semibold text-fg-muted">
+                    <span className="text-footnote font-semibold text-fg-muted">
                       {DOC_SHORT[article.document]} {article.number}
                     </span>
                     <Badge tone={article.affects === "owners" ? "brand" : "neutral"}>
@@ -190,7 +191,7 @@ export function GoverningReader({
                     </Badge>
                     {proposed ? <Badge tone="warn">Change on the ballot</Badge> : null}
                     {article.amendedOn ? (
-                      <span className="text-[13px] text-fg-subtle">
+                      <span className="text-footnote text-fg-subtle">
                         Amended {formatDate(article.amendedOn, "medium")}
                       </span>
                     ) : null}
@@ -198,12 +199,12 @@ export function GoverningReader({
                         and they are entitled to know it was not there when
                         they moved in. */}
                     {article.adoptedOn ? (
-                      <span className="text-[13px] text-fg-subtle">
+                      <span className="text-footnote text-fg-subtle">
                         Adopted by the board {formatDate(article.adoptedOn, "medium")}
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-[17px] font-semibold tracking-[-0.01em] text-fg">
+                  <p className="mt-1 text-headline font-semibold tracking-[-0.01em] text-fg">
                     {article.title}
                   </p>
                   {/* The plain reading is the headline. The legal text is the
@@ -213,33 +214,37 @@ export function GoverningReader({
                       covenant is an interpretation and this screen does not
                       make those. */}
                   {article.plain ? (
-                    <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
+                    <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
                       {article.plain}
                     </p>
                   ) : (
-                    <p className="mt-1.5 text-[15px] leading-relaxed text-fg-subtle">
+                    <p className="mt-1.5 text-body leading-relaxed text-fg-subtle">
                       No plain reading has been written for this article yet. The exact
                       wording is below.
                     </p>
                   )}
-                  <p className="mt-2 text-[13px] font-medium text-brand">
+                  <p className="mt-2 text-footnote font-medium text-brand">
                     {expanded ? "Hide the exact wording" : "Read the exact wording"}
                   </p>
                 </button>
 
                 {expanded ? (
                   <div className="border-t border-border bg-surface-2 px-4 py-4">
-                    <p className="flex items-center gap-1.5 text-[13px] font-semibold text-fg-muted">
+                    <p className="flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
                       <Sparkles className="size-3.5" />
-                      {article.document === "declaration"
-                        ? "As written in the recorded declaration"
-                        : `As written in the ${GOVERNING_DOCS[article.document].label.toLowerCase()}`}
+                      {article.document === "declaration" ? (
+                        <>
+                          As written in the <Term k="ccrs">CC&amp;Rs</Term>
+                        </>
+                      ) : (
+                        `As written in the ${GOVERNING_DOCS[article.document].label.toLowerCase()}`
+                      )}
                     </p>
                     <div className="mt-2 space-y-2.5">
                       {article.text.map((paragraph, index) => (
                         <p
                           key={index}
-                          className="text-[15px] leading-relaxed text-fg"
+                          className="text-body leading-relaxed text-fg"
                         >
                           {paragraph}
                         </p>
@@ -249,7 +254,7 @@ export function GoverningReader({
                         pulled out of an upload are not the same kind of claim,
                         and a reader is entitled to tell them apart. */}
                     {article.extraction?.confirmedBy ? (
-                      <p className="mt-3 border-t border-border pt-3 text-[13px] leading-relaxed text-fg-subtle">
+                      <p className="mt-3 border-t border-border pt-3 text-footnote leading-relaxed text-fg-subtle">
                         Taken from the uploaded document and checked against it by{" "}
                         {article.extraction.confirmedBy}
                         {article.extraction.confirmedOn

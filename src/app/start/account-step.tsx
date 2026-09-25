@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Mail } from "lucide-react";
-import { Button, Callout } from "@/components/ui/primitives";
+import { Button, Callout, fieldClass } from "@/components/ui/primitives";
 import { signUp } from "@/lib/auth";
 import { hasSupabase } from "@/lib/supabase/env";
 import { unitCount, type CommunityDraft } from "@/lib/data/new-community";
@@ -49,7 +49,7 @@ export function AccountStep({
   const [failure, setFailure] = useState<string | null>(null);
 
   const input =
-    "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors focus:border-primary";
+    fieldClass;
 
   const name = draft.founder.name.trim();
   const email = draft.founder.email.trim();
@@ -68,13 +68,13 @@ export function AccountStep({
     } catch (error) {
       result = {
         ok: false,
-        message: error instanceof Error ? error.message : "That did not work.",
+        message: error instanceof Error ? error.message : "Something went wrong. Please try again.",
       };
     }
     setBusy(false);
 
     if (!result.ok) {
-      setFailure(result.message ?? "That did not work.");
+      setFailure(result.message ?? "Something went wrong. Please try again.");
       return;
     }
     // A user and no session means the project confirms addresses by email.
@@ -86,10 +86,10 @@ export function AccountStep({
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
+          <h1 className="text-title1 font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
             Your account is ready
           </h1>
-          <p className="mt-2 max-w-[56ch] text-[15px] leading-relaxed text-fg-muted sm:text-[17px]">
+          <p className="mt-2 max-w-[56ch] text-body leading-relaxed text-fg-muted sm:text-headline">
             We sent a confirmation link to <span className="font-semibold text-fg">{email}</span>.
             Open it whenever you like. Setup carries on here in the meantime.
           </p>
@@ -107,17 +107,17 @@ export function AccountStep({
   return (
     <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
       <div>
-        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
+        <h1 className="text-title1 font-semibold leading-tight tracking-[-0.03em] text-fg sm:text-[32px]">
           Start with an account
         </h1>
-        <p className="mt-2 max-w-[56ch] text-[15px] leading-relaxed text-fg-muted sm:text-[17px]">
+        <p className="mt-2 max-w-[56ch] text-body leading-relaxed text-fg-muted sm:text-headline">
           So nothing you enter is lost. Confirming your email can wait until the end.
         </p>
       </div>
 
       <div className="space-y-4">
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Your name</span>
+          <span className="text-footnote font-semibold text-fg-muted">Your name</span>
           <input
             autoComplete="name"
             value={draft.founder.name}
@@ -128,7 +128,7 @@ export function AccountStep({
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Your email</span>
+          <span className="text-footnote font-semibold text-fg-muted">Your email</span>
           <input
             type="email"
             autoComplete="email"
@@ -139,7 +139,7 @@ export function AccountStep({
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Pick a password</span>
+          <span className="text-footnote font-semibold text-fg-muted">Pick a password</span>
           <input
             type="password"
             autoComplete="new-password"
@@ -152,7 +152,7 @@ export function AccountStep({
       </div>
 
       {failure ? (
-        <p className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger" role="status">
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-footnote text-danger" role="status">
           {failure}
           {alreadyHasAccount ? (
             <>
@@ -183,7 +183,7 @@ export function AccountStep({
           Look around first
         </Button>
       </div>
-      <p className="text-[13px] leading-relaxed text-fg-subtle">
+      <p className="text-footnote leading-relaxed text-fg-subtle">
         Looking around builds a copy in this browser only. It is not saved anywhere else,
         nobody else can sign in to it, and it is not the association. Come back signed in
         when you are ready and it takes three minutes.
@@ -204,10 +204,10 @@ export function CheckEmailPanel({ draft, email }: { draft: CommunityDraft; email
       <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
         <Mail className="size-6" />
       </span>
-      <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] text-fg">
+      <h1 className="text-title1 font-semibold leading-tight tracking-[-0.03em] text-fg">
         Check your email
       </h1>
-      <p className="mt-2 max-w-[52ch] text-[17px] leading-relaxed text-fg-muted">
+      <p className="mt-2 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
         We sent a confirmation link to <span className="font-semibold text-fg">{email}</span>.
         Open it and {draft.name || "your association"} will be created with everything you
         just entered.

@@ -37,7 +37,7 @@ export function EvidenceViewer({
   if (photos.length === 0) {
     return (
       <Card className="px-4 py-5">
-        <p className="flex items-center gap-2 text-[15px] text-fg-muted">
+        <p className="flex items-center gap-2 text-body text-fg-muted">
           <Camera className="size-4 shrink-0 text-fg-subtle" />
           {emptyNote ??
             "No photographs are attached. A notice with no evidence behind it is one an owner can simply deny."}
@@ -67,10 +67,10 @@ export function EvidenceViewer({
              way that generating a photograph of a fictional driveway is not. */
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
             <Camera className="size-6 text-fg-subtle" />
-            <p className="text-[13px] font-semibold text-fg-muted">
+            <p className="text-footnote font-semibold text-fg-muted">
               Photograph {safe + 1} of {photos.length}
             </p>
-            <p className="max-w-sm text-[15px] leading-relaxed text-fg-muted">{photo.brief}</p>
+            <p className="max-w-sm text-body leading-relaxed text-fg-muted">{photo.brief}</p>
           </div>
         )}
 
@@ -102,19 +102,19 @@ export function EvidenceViewer({
             <Eye className="mr-1 inline size-3" />
             {VANTAGE_LABEL[photo.vantage]}
           </Badge>
-          <span className="text-[13px] text-fg-muted">
+          <span className="text-footnote text-fg-muted">
             {formatDate(photo.takenOn, "long")} · {photo.takenBy}
           </span>
         </div>
         {photo.src ? (
-          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{photo.brief}</p>
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{photo.brief}</p>
         ) : null}
 
         {concerns.map((concern) => (
           <p
             key={concern.photoId}
             className={cn(
-              "mt-2.5 flex items-start gap-2 rounded-lg px-3 py-2 text-[13px] leading-relaxed",
+              "mt-2.5 flex items-start gap-2 rounded-lg px-3 py-2 text-footnote leading-relaxed",
               concern.severity === "warn"
                 ? "bg-warn-soft text-fg"
                 : "bg-surface-2 text-fg-muted",

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Building2, Check, Landmark, Lock } from "lucide-react";
-import { Button, Callout } from "@/components/ui/primitives";
+import { Button, Callout, fieldClass } from "@/components/ui/primitives";
 import { supportedInstitutions } from "@/lib/data";
 import { isHoasisError } from "@/lib/core/errors";
 import { connectLinkedAccount, connectManualAccount } from "@/lib/payments/bank-accounts";
@@ -26,7 +26,7 @@ import { cn, todayIsoDate } from "@/lib/utils";
  */
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  fieldClass;
 
 type Route = "link" | "manual";
 
@@ -92,7 +92,7 @@ export function BankConnect({
             type="button"
             onClick={() => setRoute(id)}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-[15px] font-medium transition-colors",
+              "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-body font-medium transition-colors",
               route === id
                 ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
                 : "border-border text-fg-muted hover:bg-surface-2",
@@ -118,8 +118,8 @@ export function BankConnect({
                 <Building2 className="size-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-medium text-fg">{institution.name}</span>
-                <span className="block text-[13px] text-fg-subtle">
+                <span className="block text-body font-medium text-fg">{institution.name}</span>
+                <span className="block text-footnote text-fg-subtle">
                   {institution.accounts.length === 1
                     ? "1 account"
                     : `${institution.accounts.length} accounts`}
@@ -131,7 +131,7 @@ export function BankConnect({
           <button
             type="button"
             onClick={() => setRoute("manual")}
-            className="mt-1 self-start text-[13px] font-medium text-accent hover:underline"
+            className="mt-1 self-start text-footnote font-medium text-accent hover:underline"
           >
             My bank is not listed
           </button>
@@ -139,7 +139,7 @@ export function BankConnect({
       ) : (
         <div className="flex flex-col gap-4">
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-fg">
+            <span className="mb-1.5 block text-footnote font-medium text-fg">
               Bank or credit union
             </span>
             <input
@@ -152,7 +152,7 @@ export function BankConnect({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">Routing number</span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">Routing number</span>
               <input
                 inputMode="numeric"
                 value={manual.routingNumber}
@@ -160,12 +160,12 @@ export function BankConnect({
                 placeholder="325070760"
                 className={cn(inputClass, "font-mono")}
               />
-              <span className="mt-1 block text-[13px] text-fg-subtle">
+              <span className="mt-1 block text-footnote text-fg-subtle">
                 Nine digits, bottom left of a check.
               </span>
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-fg">Account number</span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">Account number</span>
               <input
                 inputMode="numeric"
                 value={manual.accountNumber}
@@ -188,7 +188,7 @@ export function BankConnect({
             Connect account
           </Button>
 
-          <p className="flex items-start gap-2 text-[13px] leading-snug text-fg-subtle">
+          <p className="flex items-start gap-2 text-footnote leading-snug text-fg-subtle">
             <Lock className="mt-px size-3.5 shrink-0" />
             We keep the bank, the last four digits, and nothing else. The full account number is
             checked and discarded, so it is never stored and never shown again.

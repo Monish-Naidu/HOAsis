@@ -24,7 +24,7 @@ function Rsvps({ meeting }: { meeting: Meeting }) {
   const coming = rsvps.filter((r) => r.response === "yes");
   const not = rsvps.filter((r) => r.response === "no");
   return (
-    <details className="mt-1.5 text-[13px]">
+    <details className="mt-1.5 text-footnote">
       <summary className="cursor-pointer select-none font-medium text-fg-muted hover:text-fg">
         {coming.length} coming{not.length ? ` · ${not.length} can't` : ""}
       </summary>
@@ -91,8 +91,8 @@ export default function BoardMeetings() {
               Live
             </Badge>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-semibold text-ok">{live.title}</p>
-              <p className="text-[13px] text-ok opacity-90">
+              <p className="truncate text-body font-semibold text-ok">{live.title}</p>
+              <p className="text-footnote text-ok opacity-90">
                 {live.time} · {live.attendees.length} joined · notice sent{" "}
                 {formatDate(live.noticeSentDate!, "long")}
               </p>
@@ -103,12 +103,12 @@ export default function BoardMeetings() {
               {/* Secondary: Schedule a meeting is the page's filled button. */}
               <MeetingRoom meeting={live} joinVariant="secondary" />
               <div className="border-t border-border px-4 py-3">
-                <p className="text-[13px] font-semibold text-fg-muted">
+                <p className="text-footnote font-semibold text-fg-muted">
                   In the room
                 </p>
                 <ul className="mt-2 space-y-1">
                   {live.attendees.map((a) => (
-                    <li key={a.name} className="flex items-center gap-2 text-[13px] text-fg-muted">
+                    <li key={a.name} className="flex items-center gap-2 text-footnote text-fg-muted">
                       <span className="size-1.5 shrink-0 rounded-full bg-ok" />
                       <span className="truncate">{a.name}</span>
                       <span className="ml-auto shrink-0 text-fg-subtle">
@@ -120,12 +120,12 @@ export default function BoardMeetings() {
               </div>
             </div>
             <div className="border-t border-border px-5 py-4 lg:col-span-2 lg:border-l lg:border-t-0">
-              <p className="text-[13px] font-semibold text-fg-muted">
+              <p className="text-footnote font-semibold text-fg-muted">
                 Agenda
               </p>
               <ol className="mt-2 space-y-1.5">
                 {live.agenda.map((item, i) => (
-                  <li key={item} className="flex gap-2 text-[15px] text-fg-muted">
+                  <li key={item} className="flex gap-2 text-body text-fg-muted">
                     <span className="tnum shrink-0 text-fg-subtle">{i + 1}.</span>
                     <span>{item}</span>
                   </li>
@@ -152,21 +152,21 @@ export default function BoardMeetings() {
             className="flex scroll-mt-32 lg:scroll-mt-24 items-start gap-3 border-b border-border px-5 py-3.5 last:border-b-0"
           >
             <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
-              <span className="text-[12px] font-semibold uppercase text-fg-subtle">
+              <span className="text-caption font-semibold uppercase text-fg-subtle">
                 {formatDate(m.date).split(" ")[0]}
               </span>
-              <span className="tnum text-[15px] font-semibold leading-none text-fg">
+              <span className="tnum text-body font-semibold leading-none text-fg">
                 {formatDate(m.date).split(" ")[1]}
               </span>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[15px] font-medium text-fg">{m.title}</p>
+                <p className="text-body font-medium text-fg">{m.title}</p>
               </div>
-              <p className="mt-0.5 text-[13px] text-fg-muted">
+              <p className="mt-0.5 text-footnote text-fg-muted">
                 {m.time} · {m.location}
               </p>
-              <p className={cn("mt-0.5 text-[13px]", m.noticeSentDate ? "text-fg-subtle" : "text-warn")}>
+              <p className={cn("mt-0.5 text-footnote", m.noticeSentDate ? "text-fg-subtle" : "text-warn")}>
                 {m.noticeSentDate
                   ? `Notice sent ${formatDate(m.noticeSentDate, "long")}`
                   : "Owners have not been sent notice"}
@@ -205,16 +205,16 @@ export default function BoardMeetings() {
             >
               <summary className="flex cursor-pointer select-none items-start gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
                 <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-3">
-                  <span className="text-[12px] font-semibold uppercase text-fg-subtle">
+                  <span className="text-caption font-semibold uppercase text-fg-subtle">
                     {formatDate(m.date).split(" ")[0]}
                   </span>
-                  <span className="tnum text-[15px] font-semibold leading-none text-fg">
+                  <span className="tnum text-body font-semibold leading-none text-fg">
                     {formatDate(m.date).split(" ")[1]}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-fg">{m.title}</p>
-                  <p className="mt-0.5 text-[13px] text-fg-muted">
+                  <p className="text-body font-medium text-fg">{m.title}</p>
+                  <p className="mt-0.5 text-footnote text-fg-muted">
                     {formatDate(m.date, "long")} · {m.time} · {m.location}
                     {m.attendees.length ? ` · ${m.attendees.length} attended` : ""}
                     {m.ballotIds.length ? ` · ${pluralize(m.ballotIds.length, "ballot")}` : ""}
@@ -225,10 +225,10 @@ export default function BoardMeetings() {
               </summary>
               <div className="grid gap-4 border-t border-border bg-surface-2 px-5 py-4 sm:grid-cols-2">
                 <div>
-                  <p className="text-[13px] font-semibold text-fg-muted">Agenda</p>
+                  <p className="text-footnote font-semibold text-fg-muted">Agenda</p>
                   <ol className="mt-1.5 space-y-1">
                     {m.agenda.map((item, i) => (
-                      <li key={item} className="flex gap-2 text-[15px] text-fg-muted">
+                      <li key={item} className="flex gap-2 text-body text-fg-muted">
                         <span className="tnum shrink-0 text-fg-subtle">{i + 1}.</span>
                         <span>{item}</span>
                       </li>
@@ -237,10 +237,10 @@ export default function BoardMeetings() {
                 </div>
                 {m.attendees.length ? (
                   <div>
-                    <p className="text-[13px] font-semibold text-fg-muted">In the room</p>
+                    <p className="text-footnote font-semibold text-fg-muted">In the room</p>
                     <ul className="mt-1.5 space-y-1">
                       {m.attendees.map((a) => (
-                        <li key={a.name} className="flex items-center gap-2 text-[13px] text-fg-muted">
+                        <li key={a.name} className="flex items-center gap-2 text-footnote text-fg-muted">
                           <span className="truncate">{a.name}</span>
                           <span className="ml-auto shrink-0 text-fg-subtle">
                             {a.role ?? placeLabel(a.unit ?? "")}

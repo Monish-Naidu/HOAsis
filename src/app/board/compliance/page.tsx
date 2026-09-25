@@ -184,13 +184,13 @@ export default function BoardCompliance() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-fg">
+                        <p className="text-body font-semibold leading-snug tracking-[-0.01em] text-fg">
                           {item.label}
                         </p>
                         <Badge tone={meta.tone}>{meta.label}</Badge>
                         {item.fromDayOne ? <Badge tone="neutral">From day one</Badge> : null}
                       </div>
-                      <p className="mt-1 text-[13px] text-fg-muted">
+                      <p className="mt-1 text-footnote text-fg-muted">
                         {/* A cited row names its section. An uncited one says
                             so rather than borrowing the confidence of the
                             rows around it. */}
@@ -203,14 +203,14 @@ export default function BoardCompliance() {
                     <div className="hidden shrink-0 text-right sm:block">
                       {item.dueDate && item.status !== "compliant" ? (
                         <p
-                          className={`text-[13px] font-semibold ${
+                          className={`text-footnote font-semibold ${
                             item.status === "overdue" ? "text-danger" : "text-warn"
                           }`}
                         >
                           {relativeDays(item.dueDate)}
                         </p>
                       ) : item.clockDays ? (
-                        <p className="text-[13px] text-fg-subtle">
+                        <p className="text-footnote text-fg-subtle">
                           {item.clockDays} day clock
                         </p>
                       ) : null}
@@ -218,10 +218,10 @@ export default function BoardCompliance() {
                     <ChevronDown className="mt-1 size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
                   </summary>
                   <div className="border-t border-border bg-surface-2 px-5 py-4">
-                    <p className="text-[13px] font-semibold text-fg-muted">
+                    <p className="text-footnote font-semibold text-fg-muted">
                       What you have to be able to show
                     </p>
-                    <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed text-fg-muted">
+                    <p className="mt-1.5 max-w-2xl text-body leading-relaxed text-fg-muted">
                       {item.evidence}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -238,18 +238,18 @@ export default function BoardCompliance() {
                       {item.article ? (
                         <Link
                           href={`/library/${item.article}`}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-2 bg-surface px-3 text-[13px] font-medium text-fg"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-2 bg-surface px-3 text-footnote font-medium text-fg"
                         >
                           Read where this comes from
                         </Link>
                       ) : null}
                       {item.cadence === "on-request" || item.cadence === "ongoing" ? null : item.doneOn ? (
-                        <span className="inline-flex h-8 items-center gap-2 text-[13px] text-fg-muted">
+                        <span className="inline-flex h-8 items-center gap-2 text-footnote text-fg-muted">
                           Done {formatDate(item.doneOn, "long")}
                           <button
                             type="button"
                             onClick={() => unmark(item.key)}
-                            className="font-semibold text-fg underline-offset-2 hover:underline"
+                            className="font-semibold text-fg underline underline-offset-2"
                           >
                             Undo
                           </button>
@@ -284,10 +284,10 @@ export default function BoardCompliance() {
                   {reserveDates.map((r) => (
                     <div key={r.label} className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[15px] font-medium text-fg">{r.label}</p>
-                        <p className="text-[13px] text-fg-muted">{r.note}</p>
+                        <p className="text-body font-medium text-fg">{r.label}</p>
+                        <p className="text-footnote text-fg-muted">{r.note}</p>
                       </div>
-                      <p className="tnum shrink-0 text-[13px] font-medium text-fg">{r.value}</p>
+                      <p className="tnum shrink-0 text-footnote font-medium text-fg">{r.value}</p>
                     </div>
                   ))}
                 </div>
@@ -297,7 +297,7 @@ export default function BoardCompliance() {
                     tone={funding.percent >= 0.7 ? "ok" : funding.percent >= 0.3 ? "warn" : "danger"}
                     aria-label={`Reserves ${Math.round(funding.percent * 100)} percent funded`}
                   />
-                  <p className="mt-2 text-[13px] text-fg-muted">
+                  <p className="mt-2 text-footnote text-fg-muted">
                     {Math.round(funding.percent * 100)} percent funded against the study.
                   </p>
                 </div>
@@ -322,19 +322,19 @@ export default function BoardCompliance() {
             />
             <div className="space-y-3 px-5 py-4">
               <div className="flex items-start justify-between gap-3">
-                <span className="text-[15px] text-fg">With a section, from your state guide</span>
-                <span className="tnum shrink-0 text-[13px] font-medium text-fg-muted">
+                <span className="text-body text-fg">With a section, from your state guide</span>
+                <span className="tnum shrink-0 text-footnote font-medium text-fg-muted">
                   {register.items.filter((i) => i.cited).length}
                 </span>
               </div>
               <div className="flex items-start justify-between gap-3">
-                <span className="text-[15px] text-fg">General duty, section not written yet</span>
-                <span className="tnum shrink-0 text-[13px] font-medium text-fg-muted">
+                <span className="text-body text-fg">General duty, section not written yet</span>
+                <span className="tnum shrink-0 text-footnote font-medium text-fg-muted">
                   {register.items.filter((i) => !i.cited).length}
                 </span>
               </div>
             </div>
-            <p className="border-t border-border px-5 py-3 text-[13px] leading-relaxed text-fg-subtle">
+            <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
               {register.cited
                 ? `Every cited row traces to the ${association.stateName} guide in the library, which carries its own sources. The dates are worked out from your fiscal year. Whether you did it is yours to mark, and none of this is legal advice.`
                 : `${association.stateName} sections are not written into the register yet, so these are the duties almost every association has, with no statute attached. The library has the ${association.stateName} guide, and the sections will follow.`}
@@ -349,7 +349,7 @@ export default function BoardCompliance() {
               />
               <div className="divide-y divide-border">
                 {register.dayOne.map((item) => (
-                  <p key={item.key} className="px-5 py-2.5 text-[15px] text-fg">
+                  <p key={item.key} className="px-5 py-2.5 text-body text-fg">
                     {item.label}
                   </p>
                 ))}

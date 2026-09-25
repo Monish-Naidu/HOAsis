@@ -32,8 +32,8 @@ export function ResidentTitle({
           <IconTile icon={tab.icon} tint={tab.tint ?? "blue"} variant="solid" size="md" className="pop-in" />
         ) : null}
         <div className="min-w-0">
-          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">{title}</h1>
-          {subtitle ? <p className="mt-0.5 text-[15px] text-fg-muted">{subtitle}</p> : null}
+          <h1 className="text-title2 font-semibold tracking-[-0.025em] text-fg">{title}</h1>
+          {subtitle ? <p className="mt-0.5 text-body text-fg-muted">{subtitle}</p> : null}
         </div>
       </div>
       {action}

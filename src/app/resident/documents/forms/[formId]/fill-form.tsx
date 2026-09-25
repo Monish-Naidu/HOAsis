@@ -4,12 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Download, Paperclip, ScrollText } from "lucide-react";
-import { Badge, Button, Callout, Card, EmptyState, Select } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, EmptyState, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { SignaturePad } from "@/components/app/signature-pad";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { FormField, FormSubmission, HomeRequest } from "@/lib/types";
-import { addDays, formatDate, todayIsoDate } from "@/lib/utils";
+import { cn, addDays, formatDate, todayIsoDate } from "@/lib/utils";
 
 /**
  * Filling in a form on the page rather than printing it.
@@ -57,8 +57,8 @@ export function FillForm({ formId }: { formId: string }) {
       <div className="space-y-4">
         <Back />
         <Card className="p-5">
-          <p className="text-[17px] font-semibold text-fg">{form.label}</p>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{form.description}</p>
+          <p className="text-headline font-semibold text-fg">{form.label}</p>
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{form.description}</p>
           <Callout tone="info" className="mt-4" title="This one is still a printed form">
             Download it, fill it in, and attach it to a request. Ask the board to add the
             questions here and you will be able to complete it on your phone instead.
@@ -167,14 +167,14 @@ export function FillForm({ formId }: { formId: string }) {
           <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
             <CheckCircle2 className="size-6" />
           </span>
-          <p className="mt-3 text-[19px] font-semibold text-fg">Sent to the committee</p>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
+          <p className="mt-3 text-title3 font-semibold text-fg">Sent to the committee</p>
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
             Your reference is{" "}
             <span className="font-semibold text-fg">{submitted.reference}</span>. A copy of
             what you signed is attached to it.
           </p>
           {submitted.dueDate ? (
-            <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-[13px] leading-relaxed text-fg-muted">
+            <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-footnote leading-relaxed text-fg-muted">
               The committee decides by {formatDate(submitted.dueDate, "long")}.{" "}
               {submitted.dueReason}
             </p>
@@ -182,14 +182,14 @@ export function FillForm({ formId }: { formId: string }) {
           <div className="mt-4 flex justify-center gap-2">
             <Link
               href={`/resident/requests/${submitted.reference}`}
-              className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-[15px] font-semibold text-brand-fg"
+              className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-body font-semibold text-brand-fg"
             >
               Track it
             </Link>
             <button
               type="button"
               onClick={() => router.push("/resident/documents")}
-              className="inline-flex h-10 items-center rounded-lg border border-border-2 bg-surface px-4 text-[15px] font-medium text-fg"
+              className="inline-flex h-10 items-center rounded-lg border border-border-2 bg-surface px-4 text-body font-medium text-fg"
             >
               Documents
             </button>
@@ -204,8 +204,8 @@ export function FillForm({ formId }: { formId: string }) {
       <Back />
 
       <div>
-        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-fg">{form.label}</h1>
-        <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">{form.description}</p>
+        <h1 className="text-title2 font-semibold tracking-[-0.025em] text-fg">{form.label}</h1>
+        <p className="mt-1 text-body leading-relaxed text-fg-muted">{form.description}</p>
         {form.governedBy ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge tone="neutral">
@@ -213,7 +213,7 @@ export function FillForm({ formId }: { formId: string }) {
               {form.governedBy}
             </Badge>
             {form.decisionDays ? (
-              <span className="text-[13px] text-fg-muted">
+              <span className="text-footnote text-fg-muted">
                 The committee answers within {form.decisionDays} days
               </span>
             ) : null}
@@ -250,7 +250,7 @@ export function FillForm({ formId }: { formId: string }) {
       <Button size="lg" className="w-full" disabled={!canSubmit} onClick={submit}>
         Sign and submit
       </Button>
-      <p className="pb-2 text-center text-[13px] text-fg-subtle">
+      <p className="pb-2 text-center text-footnote text-fg-subtle">
         You will get a reference number and a copy of what you signed.
       </p>
     </div>
@@ -261,7 +261,7 @@ function Back() {
   return (
     <Link
       href="/resident/documents"
-      className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+      className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-body font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
     >
       <ArrowLeft className="size-3.5" />
       Documents
@@ -283,12 +283,12 @@ function Field({
   onFiles: (names: string[]) => void;
 }) {
   const input =
-    "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors focus:border-brand";
+    fieldClass;
 
   return (
     <div className="px-4 py-3.5">
       <label className="block">
-        <span className="text-[15px] font-medium text-fg">
+        <span className="text-body font-medium text-fg">
           {field.label}
           {field.required ? <span className="ml-1 text-danger">*</span> : null}
         </span>
@@ -299,13 +299,13 @@ function Field({
             onChange={(e) => onChange(e.target.value)}
             rows={3}
             placeholder={field.placeholder}
-            className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+            className={cn(textareaClass, "mt-1.5")}
           />
         ) : field.kind === "choice" ? (
           <Select
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="mt-1.5 w-full [&>select]:h-11 [&>select]:text-[15px]"
+            className="mt-1.5 w-full [&>select]:h-11 [&>select]:text-body"
           >
             <option value="">Choose one</option>
             {field.options?.map((option) => (
@@ -322,11 +322,11 @@ function Field({
               onChange={(e) => onChange(e.target.checked ? "Yes" : "No")}
               className="size-4 rounded border-border-2"
             />
-            <span className="text-[15px] text-fg-muted">Yes</span>
+            <span className="text-body text-fg-muted">Yes</span>
           </span>
         ) : field.kind === "file" ? (
           <span className="mt-1.5 block">
-            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-[15px] font-medium text-fg transition-colors hover:bg-surface-2">
+            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-border-2 bg-surface px-3 text-body font-medium text-fg transition-colors hover:bg-surface-2">
               <Paperclip className="size-4" />
               {files.length > 0 ? "Add more" : "Choose files"}
               <input
@@ -346,7 +346,7 @@ function Field({
                 {files.map((name) => (
                   <span
                     key={name}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[13px] text-fg"
+                    className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5 text-footnote text-fg"
                   >
                     {name}
                     <button
@@ -373,10 +373,10 @@ function Field({
       </label>
 
       {field.suffix && field.kind === "number" ? (
-        <p className="mt-1 text-[13px] text-fg-subtle">In {field.suffix}.</p>
+        <p className="mt-1 text-footnote text-fg-subtle">In {field.suffix}.</p>
       ) : null}
       {field.help ? (
-        <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{field.help}</p>
+        <p className="mt-1.5 text-footnote leading-relaxed text-fg-muted">{field.help}</p>
       ) : null}
     </div>
   );

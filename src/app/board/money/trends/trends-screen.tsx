@@ -35,8 +35,8 @@ export function TrendsScreen() {
       <>
         <PageHeader title="Trends" description="Year over year." />
         <Card className="p-6">
-          <p className="text-[17px] font-semibold tracking-[-0.015em] text-fg">One year of history so far</p>
-          <p className="mt-1.5 max-w-[60ch] text-[15px] leading-relaxed text-fg-muted">
+          <p className="text-headline font-semibold tracking-[-0.015em] text-fg">One year of history so far</p>
+          <p className="mt-1.5 max-w-[60ch] text-body leading-relaxed text-fg-muted">
             Comparisons start once the books cover a second calendar year. Until then the Overview
             shows this year month by month.
           </p>
@@ -60,7 +60,7 @@ export function TrendsScreen() {
         title="Trends"
         description={`${span} of each year. Reserve funding is shown separately.`}
         action={
-          <div className="flex items-center gap-2 text-[13px] text-fg-muted">
+          <div className="flex items-center gap-2 text-footnote text-fg-muted">
             <SelectField label="Earlier year" value={String(a)} onChange={(v) => setA(Number(v))} options={options} />
             <span>against</span>
             <SelectField label="Later year" value={String(b)} onChange={(v) => setB(Number(v))} options={options} />
@@ -91,7 +91,7 @@ export function TrendsScreen() {
           hint={`${money(cmp.a.netCents, { sign: cmp.a.netCents > 0, cents: false })} in ${yearLabel(a)}`}
         />
       </div>
-      <p className="tnum mt-3 flex flex-wrap items-center gap-x-2 text-[13px] text-fg-muted">
+      <p className="tnum mt-3 flex flex-wrap items-center gap-x-2 text-footnote text-fg-muted">
         <span>
           Reserve funding {money(cmp.b.reserveCents, { cents: false })} in {b}, {money(cmp.a.reserveCents, { cents: false })} in {a}
         </span>
@@ -127,7 +127,7 @@ export function TrendsScreen() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-left">
               <thead>
-                <tr className="border-b border-border text-[13px] font-semibold text-fg-muted">
+                <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
                   <th className="px-5 py-2.5 font-semibold">Category</th>
                   <th className="tnum px-3 py-2.5 text-right font-semibold">{a}</th>
                   <th className="tnum px-3 py-2.5 text-right font-semibold">{b}</th>
@@ -139,7 +139,7 @@ export function TrendsScreen() {
               </thead>
               <tbody>
                 {cmp.categories.map((row) => (
-                  <tr key={row.category} className="border-b border-border text-[15px] last:border-b-0 hover:bg-surface-2">
+                  <tr key={row.category} className="border-b border-border text-body last:border-b-0 hover:bg-surface-2">
                     <td className="px-5 py-2.5 font-medium text-fg">{row.category}</td>
                     <td className="tnum px-3 py-2.5 text-right text-fg-muted">{money(row.aCents, { cents: false })}</td>
                     <td className="tnum px-3 py-2.5 text-right font-semibold text-fg">{money(row.bCents, { cents: false })}</td>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Term } from "@/components/app/term";
 import { Droplets, Flame, HandCoins, Plug, Trash2, Waves, Wifi } from "lucide-react";
 import { Card, Meter, SectionTitle } from "@/components/ui/primitives";
 import { assessmentProgress, sharedCostSummary } from "@/lib/metrics";
@@ -47,23 +48,23 @@ export function SharedCostCard({ community }: { community: Community }) {
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-semibold text-fg">{row.cost.name}</p>
-                    <p className="truncate text-[13px] text-fg-muted">{row.cost.provider}</p>
+                    <p className="truncate text-body font-semibold text-fg">{row.cost.name}</p>
+                    <p className="truncate text-footnote text-fg-muted">{row.cost.provider}</p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="tnum text-[15px] font-semibold text-fg">
+                    <p className="tnum text-body font-semibold text-fg">
                       {money(row.latest?.averageShareCents ?? 0)}
                     </p>
-                    <p className="text-[13px] text-fg-muted">your share</p>
+                    <p className="text-footnote text-fg-muted">your share</p>
                   </div>
                 </div>
               );
             })}
             <div className="flex items-center justify-between px-4 py-3">
-              <p className="text-[15px] text-fg-muted">
+              <p className="text-body text-fg-muted">
                 The community pays {money(shared.monthlyCents)} a month
               </p>
-              <p className="tnum text-[15px] font-semibold text-fg">
+              <p className="tnum text-body font-semibold text-fg">
                 {money(shared.perHomeMonthlyCents)}
               </p>
             </div>
@@ -73,22 +74,24 @@ export function SharedCostCard({ community }: { community: Community }) {
 
       {assessments.active.length > 0 ? (
         <div>
-          <SectionTitle>Special assessment</SectionTitle>
+          <SectionTitle>
+            <Term k="special-assessment">Special assessment</Term>
+          </SectionTitle>
           {assessments.active.map((row) => (
             <Card key={row.assessment.id} className="mt-3 p-4">
-              <p className="text-[15px] font-semibold text-fg">{row.assessment.title}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+              <p className="text-body font-semibold text-fg">{row.assessment.title}</p>
+              <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
                 {row.assessment.reason}
               </p>
               <div className="mt-3 flex items-baseline justify-between gap-3">
-                <p className="tnum text-[15px] font-semibold text-fg">
+                <p className="tnum text-body font-semibold text-fg">
                   {shortMoney(row.collectedCents)}
                   <span className="font-normal text-fg-muted">
                     {" "}
                     of {shortMoney(row.assessment.totalCents)} collected
                   </span>
                 </p>
-                <p className="tnum text-[13px] text-fg-muted">
+                <p className="tnum text-footnote text-fg-muted">
                   {row.installmentsLeft} payments left
                 </p>
               </div>

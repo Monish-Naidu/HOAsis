@@ -52,7 +52,7 @@ export function CollectionsScreen() {
             dues.measurable
               ? `${money(dues.collectedYtd, { cents: false })} of ${money(dues.expectedYtd, { cents: false })} billed`
               : community.association.duesCents > 0
-                ? `The first bill goes out ${formatDate(community.nextChargeDate, "long")}`
+                ? `First bill ${formatDate(community.nextChargeDate, "long")}`
                 : "Set dues in Settings to measure this"
           }
         />
@@ -73,7 +73,7 @@ export function CollectionsScreen() {
           <ul className="divide-y divide-border">
             {[...dues.months].reverse().map((m) => (
               <li key={m.month} className="px-5 py-3">
-                <div className="flex items-center justify-between gap-3 text-[13px]">
+                <div className="flex items-center justify-between gap-3 text-footnote">
                   <span className="font-medium text-fg">{m.label}</span>
                   <span className="tnum text-fg-muted">
                     <span className="font-semibold text-fg">{money(m.collectedCents, { cents: false })}</span> of{" "}
@@ -90,7 +90,7 @@ export function CollectionsScreen() {
             ))}
           </ul>
         ) : (
-          <p className="px-5 py-6 text-[15px] text-fg-muted">Dues appear here once the first month is billed.</p>
+          <p className="px-5 py-6 text-body text-fg-muted">Dues appear here once the first month is billed.</p>
         )}
       </Card>
 

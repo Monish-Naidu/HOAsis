@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Send, ShieldCheck } from "lucide-react";
-import { Button, Callout, Card, EmptyState } from "@/components/ui/primitives";
+import { Button, Callout, Card, EmptyState, fieldClass, textareaClass } from "@/components/ui/primitives";
+import { cn } from "@/lib/utils";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 
 const input =
-  "h-11 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand";
+  fieldClass;
 
 /**
  * Telling the board about something you have seen.
@@ -75,20 +76,20 @@ export function ReportForm() {
           <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
             <Check className="size-6" strokeWidth={2.5} />
           </span>
-          <p className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+          <p className="text-title3 font-semibold tracking-[-0.02em] text-fg">
             Sent to the board
           </p>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
-            Reference {sent}. Somebody from the board will go and look before anything else
-            happens, and what they see is what any notice would rest on.
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
+            Reference {sent}. Someone from the board will go and look before anything else
+            happens.
           </p>
-          <p className="mt-3 text-[13px] leading-relaxed text-fg-subtle">
-            You will not be told the outcome. The board handles enforcement on its own
-            record, and telling a reporter what happened next is how a rule becomes a feud.
+          <p className="mt-3 text-footnote leading-relaxed text-fg-subtle">
+            The board will not share the outcome with you. That keeps things fair between
+            neighbors.
           </p>
           <Link
             href="/resident"
-            className="mt-5 inline-flex h-10 items-center rounded-lg bg-brand px-5 text-[15px] font-semibold text-brand-fg transition-opacity hover:opacity-90"
+            className="mt-5 inline-flex h-10 items-center rounded-lg bg-brand px-5 text-body font-semibold text-brand-fg transition-opacity hover:opacity-90"
           >
             Done
           </Link>
@@ -102,15 +103,15 @@ export function ReportForm() {
       <div>
         <Link
           href="/resident"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+          className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-body font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
         >
           <ArrowLeft className="size-3.5" />
           Home
         </Link>
-        <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.025em] text-fg">
+        <h1 className="mt-2 text-title2 font-semibold tracking-[-0.025em] text-fg">
           Tell the board about something
         </h1>
-        <p className="mt-1 text-[15px] leading-relaxed text-fg-muted">
+        <p className="mt-1 text-body leading-relaxed text-fg-muted">
           Something you have seen that the rules may cover. This goes to the board privately.
         </p>
       </div>
@@ -125,7 +126,7 @@ export function ReportForm() {
 
       <Card as="form" onSubmit={(e) => e.preventDefault()} className="space-y-4 px-4 py-4">
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">Which home</span>
+          <span className="text-footnote font-semibold text-fg-muted">Which home</span>
           <input
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
@@ -134,34 +135,34 @@ export function ReportForm() {
             className={`${input} mt-1.5`}
           />
           {isMine ? (
-            <span className="mt-1 block text-[13px] text-warn">
+            <span className="mt-1 block text-footnote text-warn">
               That is your own home. If something needs fixing there, open a request instead.
             </span>
           ) : unit.trim() && !known ? (
-            <span className="mt-1 block text-[13px] text-fg-subtle">
-              No home with that number is on the register. The board will still see it.
+            <span className="mt-1 block text-footnote text-fg-subtle">
+              No home with that number is on the board&apos;s list. The board will still see it.
             </span>
           ) : null}
         </label>
 
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">What you saw</span>
+          <span className="text-footnote font-semibold text-fg-muted">What you saw</span>
           <textarea
             value={what}
             onChange={(e) => setWhat(e.target.value)}
             rows={4}
             placeholder="What it was, and roughly when. Plain words are fine."
             aria-label="What you saw"
-            className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand"
+            className={cn(textareaClass, "mt-1.5")}
           />
-          <span className="mt-1 block text-[13px] leading-relaxed text-fg-subtle">
+          <span className="mt-1 block text-footnote leading-relaxed text-fg-subtle">
             Describe what you saw rather than who you think is at fault. The board decides
             whether a rule was broken, and it decides that by going and looking.
           </span>
         </label>
 
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">When you saw it</span>
+          <span className="text-footnote font-semibold text-fg-muted">When you saw it</span>
           <input
             type="date"
             value={observedOn}
@@ -177,7 +178,7 @@ export function ReportForm() {
         </Button>
       </Card>
 
-      <p className="text-[13px] leading-relaxed text-fg-subtle">
+      <p className="text-footnote leading-relaxed text-fg-subtle">
         Reports are kept with your name against them so the board can see if the same two
         homes keep coming up. That pattern is worth a board knowing about, and it is the only
         reason your name is stored at all.

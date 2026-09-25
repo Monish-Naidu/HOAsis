@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, fieldClass } from "@/components/ui/primitives";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { HOME_TYPE_LABEL, countByType, duesFor, homeTypesOf, totalDues } from "@/lib/home-types";
 import type { HomeType } from "@/lib/types";
-import { money } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 
 /**
  * What a home pays, changed after founding.
@@ -91,8 +91,8 @@ export function DuesSettings() {
                 onClick={() => setSplit(mode.id)}
                 className={
                   split === mode.id
-                    ? "rounded-lg bg-surface px-3 py-1.5 text-[13px] font-medium text-fg shadow-card"
-                    : "rounded-lg px-3 py-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
+                    ? "rounded-lg bg-surface px-3 py-1.5 text-footnote font-medium text-fg shadow-card"
+                    : "rounded-lg px-3 py-1.5 text-footnote font-medium text-fg-muted hover:text-fg"
                 }
               >
                 {mode.label}
@@ -123,7 +123,7 @@ export function DuesSettings() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          <p className="text-[13px] text-fg-muted">
+          <p className="text-footnote text-fg-muted">
             <span className="tnum font-semibold text-fg">{money(projected, { cents: false })}</span>{" "}
             per {cadence} across {community.owners.length} homes
           </p>
@@ -153,9 +153,9 @@ function Amount({
 }) {
   return (
     <label className="block">
-      <span className="text-[13px] font-semibold text-fg-muted">{label}</span>
+      <span className="text-footnote font-semibold text-fg-muted">{label}</span>
       <div className="relative mt-1.5">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-fg-subtle">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
           $
         </span>
         <input
@@ -165,10 +165,10 @@ function Amount({
           value={value || ""}
           onChange={(e) => onChange(Number(e.target.value))}
           aria-label={label}
-          className="tnum h-10 w-full rounded-lg border border-border-2 bg-surface pl-7 pr-3 text-[15px] text-fg outline-none focus:border-brand"
+          className={cn(fieldClass, "tnum pl-7 pr-3")}
         />
       </div>
-      <span className="mt-1 block text-[12px] text-fg-subtle">{hint}</span>
+      <span className="mt-1 block text-caption text-fg-subtle">{hint}</span>
     </label>
   );
 }

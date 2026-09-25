@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Eraser, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fieldClass } from "@/components/ui/primitives";
 
 /**
  * A signature, drawn or typed.
@@ -89,14 +90,14 @@ export function SignaturePad({
 
   return (
     <div className="rounded-card border border-border bg-surface p-4">
-      <p className="flex items-center gap-1.5 text-[15px] font-semibold text-fg">
+      <p className="flex items-center gap-1.5 text-body font-semibold text-fg">
         <PenLine className="size-4" />
         Sign
       </p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{statement}</p>
+      <p className="mt-1.5 text-footnote leading-relaxed text-fg-muted">{statement}</p>
 
       <label className="mt-3 block">
-        <span className="text-[13px] font-semibold text-fg-muted">
+        <span className="text-footnote font-semibold text-fg-muted">
           Type your full legal name
         </span>
         <input
@@ -104,20 +105,20 @@ export function SignaturePad({
           onChange={(e) => onTypedName(e.target.value)}
           autoComplete="name"
           placeholder="Rhea Calloway"
-          className="mt-1.5 h-11 w-full rounded-lg border border-border-2 bg-surface px-3 font-[family-name:var(--font-signature,inherit)] text-[19px] text-fg outline-none focus:border-brand"
+          className={cn(fieldClass, "mt-1.5 font-[family-name:var(--font-signature,inherit)] text-title3")}
         />
       </label>
 
       <div className="mt-3">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-semibold text-fg-muted">
+          <span className="text-footnote font-semibold text-fg-muted">
             Draw it, if you would rather
           </span>
           {hasInk ? (
             <button
               type="button"
               onClick={clear}
-              className="inline-flex items-center gap-1 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
+              className="inline-flex items-center gap-1 text-footnote font-medium text-fg-muted transition-colors hover:text-fg"
             >
               <Eraser className="size-3.5" />
               Clear
@@ -137,7 +138,7 @@ export function SignaturePad({
           )}
         />
         {!hasInk ? (
-          <p className="mt-1 text-[13px] text-fg-subtle">
+          <p className="mt-1 text-footnote text-fg-subtle">
             Optional. The typed name above is what makes this binding.
           </p>
         ) : null}

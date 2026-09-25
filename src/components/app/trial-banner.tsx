@@ -57,10 +57,10 @@ export function TrialBanner() {
   if (phase.phase === "trialing") {
     if (!phase.closing) {
       return (
-        <p className="mb-5 flex items-center gap-2 text-[13px] text-fg-muted">
+        <p className="mb-5 flex items-center gap-2 text-footnote text-fg-muted">
           <CalendarClock className="size-3.5" />
           Free until {formatDate(phase.endsOn, "long")}, {phase.daysLeft} days left. Then {price}.{" "}
-          <Link href="/board/settings#billing" className="font-medium text-fg underline-offset-2 hover:underline">
+          <Link href="/board/settings#billing" className="font-medium text-fg underline underline-offset-2">
             Add a card
           </Link>
         </p>

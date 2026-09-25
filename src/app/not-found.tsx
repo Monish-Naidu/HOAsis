@@ -11,10 +11,10 @@ export default function NotFound() {
       <main className="flex flex-1 items-center justify-center px-5 pb-20">
         <Card className="w-full max-w-md p-6">
           <IconTile icon={Compass} tint="blue" size="md" className="mb-4" />
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-fg">
+          <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
             There is nothing here
           </h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
             The link may be old, or the record may belong to a different account.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">

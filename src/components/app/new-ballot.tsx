@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Plus, Vote, X } from "lucide-react";
-import { Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { addDays, formatDate, todayIsoDate } from "@/lib/utils";
+import { cn, addDays, formatDate, todayIsoDate } from "@/lib/utils";
 
 /**
  * Asking the homes a question.
@@ -28,7 +28,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
   const [closesOn, setClosesOn] = useState(addDays(today, 14));
 
   const field =
-    "h-10 w-full rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none focus:border-brand";
+    fieldClass;
   const ready =
     title.trim().length > 2 && choices.filter((c) => c.trim()).length >= 2 && closesOn > today;
 
@@ -75,7 +75,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
       />
       <div className="space-y-4 px-5 py-4">
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">The question</span>
+          <span className="text-footnote font-semibold text-fg-muted">The question</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -87,7 +87,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
         </label>
 
         <label className="block">
-          <span className="text-[13px] font-semibold text-fg-muted">
+          <span className="text-footnote font-semibold text-fg-muted">
             Anything homes should know first
             <span className="font-normal text-fg-subtle"> (optional)</span>
           </span>
@@ -97,12 +97,12 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
             rows={3}
             placeholder="What it costs, why now, and what happens if it does not pass."
             aria-label="Ballot detail"
-            className="mt-1.5 w-full rounded-lg border border-border-2 bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-fg outline-none focus:border-brand"
+            className={cn(textareaClass, "mt-1.5")}
           />
         </label>
 
         <div>
-          <span className="text-[13px] font-semibold text-fg-muted">Choices</span>
+          <span className="text-footnote font-semibold text-fg-muted">Choices</span>
           <div className="mt-1.5 space-y-2">
             {choices.map((choice, index) => (
               <div key={index} className="flex gap-2">
@@ -139,7 +139,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
         </div>
 
         <label className="block sm:max-w-xs">
-          <span className="text-[13px] font-semibold text-fg-muted">Voting ends</span>
+          <span className="text-footnote font-semibold text-fg-muted">Voting ends</span>
           <input
             type="date"
             value={closesOn}

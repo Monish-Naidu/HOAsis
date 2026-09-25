@@ -55,8 +55,8 @@ export function CollectionsLadder() {
   if (ladder.rows.length === 0) {
     return (
       <Card className="mt-6 p-5">
-        <p className="text-[15px] font-semibold text-fg">Everybody is current</p>
-        <p className="mt-1 text-[15px] text-fg-muted">
+        <p className="text-body font-semibold text-fg">Everybody is current</p>
+        <p className="mt-1 text-body text-fg-muted">
           Nothing to chase. The ladder starts at {policy.reminderDay} days past due.
         </p>
       </Card>
@@ -91,13 +91,13 @@ export function CollectionsLadder() {
                 amount and the badge wrap under them rather than squeezing
                 the text to a word per line. */}
             <div className="min-w-[12rem] flex-1">
-              <p className="truncate text-[15px] font-medium text-fg">
+              <p className="truncate text-body font-medium text-fg">
                 {row.owner.displayName}
-                <span className="ml-2 text-[13px] font-normal text-fg-muted">
+                <span className="ml-2 text-footnote font-normal text-fg-muted">
                   {placeLabel(row.owner.unit)}
                 </span>
               </p>
-              <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">
+              <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
                 {pluralize(row.owner.daysPastDue, "day")} late ·{" "}
                 {row.actionDue
                   ? ACTION[row.stage]
@@ -107,7 +107,7 @@ export function CollectionsLadder() {
               </p>
             </div>
             <span className="ml-auto flex shrink-0 items-center gap-3">
-              <span className="tnum text-[15px] font-semibold text-fg">
+              <span className="tnum text-body font-semibold text-fg">
                 {money(row.owner.balanceCents)}
               </span>
               <Badge tone={TONE[row.stage]}>{STEP[row.stage]}</Badge>
@@ -119,7 +119,7 @@ export function CollectionsLadder() {
       {ladder.skipped.length ? (
         <div className="flex items-start gap-3 border-t border-border bg-warn-soft px-5 py-3">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" />
-          <p className="text-[13px] leading-relaxed text-fg">
+          <p className="text-footnote leading-relaxed text-fg">
             {pluralize(ladder.skipped.length, "account")} passed the final notice step with no
             notice on record. Send what is missing before going further.
           </p>

@@ -4,11 +4,11 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Pin, Send } from "lucide-react";
 import type { Announcement } from "@/lib/types";
-import { Badge, Button, Card, CardHeader, Checkbox, PageHeader } from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, Checkbox, PageHeader, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { DuesMailer } from "@/components/app/dues-mailer";
 import { useToast } from "@/components/app/toast";
-import { formatDate, pluralize } from "@/lib/utils";
+import { cn, formatDate, pluralize } from "@/lib/utils";
 
 /**
  * Messages, the announcements tab: what the board says to every home at once.
@@ -111,7 +111,7 @@ function AnnouncementsManager({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
               aria-label="Announcement title"
-              className="h-9 min-w-0 flex-1 rounded-lg border border-border-2 bg-surface px-3 text-[15px] text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
+              className={cn(fieldClass, "min-w-0 flex-1")}
             />
           </div>
           <textarea
@@ -120,10 +120,10 @@ function AnnouncementsManager({
             placeholder="What should every household know?"
             aria-label="Announcement body"
             rows={3}
-            className="w-full rounded-lg border border-border-2 bg-surface px-3 py-2 text-[15px] leading-relaxed text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
+            className={textareaClass}
           />
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-[13px] font-medium text-fg-muted">
+            <label className="flex items-center gap-2 text-footnote font-medium text-fg-muted">
               <Checkbox checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
               Pin to the top of the home screen
             </label>
@@ -140,7 +140,7 @@ function AnnouncementsManager({
       ) : null}
 
       {announcements.length === 0 && !composing ? (
-        <p className="px-5 py-6 text-center text-[15px] text-fg-muted">
+        <p className="px-5 py-6 text-center text-body text-fg-muted">
           Nothing posted yet. The first announcement most boards write is how dues are billed.
         </p>
       ) : null}
@@ -151,7 +151,7 @@ function AnnouncementsManager({
         >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[15px] font-medium text-fg">{a.title}</p>
+              <p className="text-body font-medium text-fg">{a.title}</p>
               {a.pinned ? (
                 <Badge tone="brand">
                   <Pin className="size-2.5" />
@@ -159,8 +159,8 @@ function AnnouncementsManager({
                 </Badge>
               ) : null}
             </div>
-            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-fg-muted">{a.body}</p>
-            <p className="mt-1 text-[13px] text-fg-subtle">
+            <p className="mt-0.5 line-clamp-2 text-footnote leading-snug text-fg-muted">{a.body}</p>
+            <p className="mt-1 text-footnote text-fg-subtle">
               {a.author} · {formatDate(a.postedDate)}
             </p>
           </div>
@@ -170,7 +170,7 @@ function AnnouncementsManager({
               removeAnnouncement(a.id);
               notify("Announcement removed", "warn");
             }}
-            className="shrink-0 rounded-md px-2 py-1 text-[13px] font-medium text-fg-muted hover:bg-surface-2 hover:text-danger"
+            className="shrink-0 rounded-md px-2 py-1 text-footnote font-medium text-fg-muted hover:bg-surface-2 hover:text-danger"
           >
             Remove
           </button>
