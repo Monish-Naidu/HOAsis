@@ -61,6 +61,7 @@ export function HomeownersScreen() {
     setHouseholdOwner,
     setHomeType,
     can,
+    sees,
     isRemote,
   } = useAppState();
   const params = useSearchParams();
@@ -105,11 +106,11 @@ export function HomeownersScreen() {
   const [reminding, setReminding] = useState(params.get("remind") === "1");
   const policy = policyFor(community.settings);
 
-  const maySeeRoster = can("finances") || can("communications");
+  const maySeeRoster = sees("finances") || sees("communications");
   // Balances, standing and sales are the books. Without the finances
   // capability the balances come back empty, and a roster of "Paid up" for
   // every home is a false statement, so the money columns are not drawn.
-  const seesMoney = can("finances");
+  const seesMoney = sees("finances");
 
   // Behind first, furthest behind at the top, then by unit.
   const sorted = useMemo(

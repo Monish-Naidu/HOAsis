@@ -25,7 +25,7 @@ import {
   vendors,
 } from "./ledger";
 import { threads } from "./messages";
-import { accounts, accountById, CAPABILITY_LABEL, DEFAULT_ACCOUNT_ID, GRANTABLE, isAdmin, NO_CAPABILITIES } from "./accounts";
+import { accounts, accountById, accessLevel, CAPABILITY_LABEL, DEFAULT_ACCOUNT_ID, GRANTABLE, isAdmin, NO_CAPABILITIES, sees } from "./accounts";
 import { architecturalForms, communityAmenities, communitySettings } from "./settings";
 import { forumCategories, forumPosts } from "./forum";
 import { paymentInstruments, supportedInstitutions } from "./payments";
@@ -50,6 +50,8 @@ export {
   amenities,
   architecturalForms,
   CAPABILITY_LABEL,
+  accessLevel,
+  sees,
   communityAmenities,
   communitySettings,
   DEFAULT_ACCOUNT_ID,

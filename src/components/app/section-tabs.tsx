@@ -25,11 +25,11 @@ import { cn } from "@/lib/utils";
  */
 export function SectionTabs() {
   const pathname = usePathname();
-  const { can, community } = useAppState();
+  const { sees, community } = useAppState();
   const section = sectionFor(pathname);
   if (!section) return null;
 
-  const tabs = sectionPages(section).filter((route) => routeOffered(route, can, community));
+  const tabs = sectionPages(section).filter((route) => routeOffered(route, sees, community));
   if (tabs.length < 2) return null;
 
   const current = routeFor(pathname);

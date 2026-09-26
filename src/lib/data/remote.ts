@@ -3,6 +3,7 @@ import type { PreviousSetup } from "@/lib/data/new-community";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Community } from "./community";
 import type {
+  Activity,
   Account,
   BoardTerm,
   Capability,
@@ -332,7 +333,7 @@ export async function loadCommunity(
     posts, vendors, amenities, announcementRows,
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
-    paymentRows, replyRows, actionRows, joinRows, emailRows, termRows,
+    paymentRows, replyRows, actionRows, joinRows, emailRows, termRows, activityRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
@@ -399,6 +400,9 @@ export async function loadCommunity(
     supabase.from("join_requests").select("*").eq("association_id", associationId).order("created_at", { ascending: false }),
     supabase.from("email_log").select("*").eq("association_id", associationId).order("sent_at", { ascending: false }).limit(300),
     supabase.from("board_terms").select("*").eq("association_id", associationId).order("starts_on"),
+    // The newest hundred board actions; RLS answers nothing for a seat
+    // that may not open Settings, and the card says so.
+    supabase.from("activity").select("*").eq("association_id", associationId).order("at", { ascending: false }).limit(100),
   ]);
 
   const urlByPath = documents.urlByPath;
@@ -516,6 +520,7 @@ export async function loadCommunity(
         (m.capabilities ?? []) as Capability[],
         (m.capabilities ?? []).includes("permissions"),
       ),
+      views: caps((m.views ?? []) as Capability[]),
     }));
 
   // The first day of this fiscal year. A budget's actuals are this year's
@@ -573,6 +578,17 @@ export async function loadCommunity(
     role: t.role,
     from: t.starts_on,
     to: t.ends_on ?? undefined,
+  }));
+
+  const activity: Activity[] = (activityRows.data ?? []).map((r) => ({
+    id: r.id,
+    at: r.at,
+    actorId: r.actor_id ?? undefined,
+    actorName: r.actor_name,
+    subjectKind: r.subject_kind,
+    subjectId: r.subject_id ?? undefined,
+    summary: r.summary,
+    details: (r.details ?? {}) as Record<string, unknown>,
   }));
 
   return {
@@ -1131,5 +1147,6 @@ export async function loadCommunity(
     ownerCharges,
     history,
     boardTerms,
+    activity,
   };
 }

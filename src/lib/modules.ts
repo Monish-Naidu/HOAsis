@@ -119,7 +119,9 @@ export const MODULES: Record<ModuleKey, ModuleFlag> = {
   },
   "settings-advanced": {
     label: "Advanced settings",
-    on: false,
+    // On since 2026-09-26: the per-person grid is how a board gives an
+    // auditor a look, or a treasurer's stand-in the books.
+    on: true,
     note: "The per-person capability grid and the board-change counts. Roles cover month one.",
   },
   "autopay-extras": {

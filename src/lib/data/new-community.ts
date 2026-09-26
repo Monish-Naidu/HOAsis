@@ -425,6 +425,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     // The President holds everything, including permissions, which is the one
     // capability that cannot be granted away.
     capabilities: caps([...GRANTABLE], true),
+    views: caps([...GRANTABLE]),
   };
 
   // Only a home with somebody in it gets a login. An unsold lot has nobody to
@@ -440,6 +441,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       unit: owner.unit,
       role: "resident" as const,
       capabilities: NO_CAPABILITIES,
+      views: caps([]),
     }));
 
   return {

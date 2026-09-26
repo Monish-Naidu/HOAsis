@@ -12,6 +12,7 @@ import type {
   Association,
   Ballot,
   BankAccount,
+  Activity,
   BoardTerm,
   CommunityAmenity,
   CommunityHistory,
@@ -159,4 +160,6 @@ export interface Community {
   history?: CommunityHistory;
   /** Every term of office on record, current ones included. Unset for the fixtures. */
   boardTerms?: BoardTerm[];
+  /** The newest board actions, latest first. Remote only. */
+  activity?: Activity[];
 }

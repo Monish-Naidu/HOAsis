@@ -76,6 +76,15 @@ export interface CronRunRow {
   summary: Record<string, unknown>;
 }
 
+export interface ActivityRow {
+  id: string;
+  at: string;
+  association_id: string;
+  actor_name: string;
+  subject_kind: string;
+  summary: string;
+}
+
 export interface OpsReport {
   /** When this report was read, so the page never asks the clock while rendering. */
   now: string;
@@ -88,6 +97,8 @@ export interface OpsReport {
   stuckPayments: StuckPaymentRow[];
   /** The latest run per job, in the order the day runs them. */
   cronRuns: CronRunRow[];
+  /** The newest board actions across every association. */
+  activity: ActivityRow[];
   associationNames: Record<string, string>;
   /** Anything a query could not answer, so the page says so. */
   problems: string[];
@@ -145,6 +156,7 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
     autopayFailures: [],
     stuckPayments: [],
     cronRuns: [],
+    activity: [],
     associationNames: {},
     problems,
   };
@@ -154,7 +166,7 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
   }
 
   const admin = supabaseAdmin();
-  const [errors, emails, autopay, payments, crons] = await Promise.all([
+  const [errors, emails, autopay, payments, crons, activity] = await Promise.all([
     admin
       .from("app_errors")
       .select("id, created_at, reference, level, source, route, message, association_id, profile_id, user_agent")
@@ -187,6 +199,12 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
       .select("job, started_at, finished_at, ok, error, request_id, summary")
       .order("started_at", { ascending: false })
       .limit(60),
+    admin
+      .from("activity")
+      .select("id, at, association_id, actor_name, subject_kind, summary")
+      .gte("at", since)
+      .order("at", { ascending: false })
+      .limit(40),
   ]);
 
   for (const [name, result] of [
@@ -214,6 +232,8 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
   for (const r of emailRows) ids.add(r.association_id);
   for (const r of autopayRows) ids.add(r.association_id);
   for (const r of paymentRows) ids.add(r.association_id);
+  const activityRows = (activity.data ?? []) as ActivityRow[];
+  for (const r of activityRows) ids.add(r.association_id);
   const associationNames: Record<string, string> = {};
   if (ids.size > 0) {
     const { data } = await admin.from("associations").select("id, name").in("id", [...ids]);
@@ -230,6 +250,7 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
     autopayFailures: autopayRows,
     stuckPayments: paymentRows,
     cronRuns: latestPerJob(cronRows),
+    activity: activityRows,
     associationNames,
     problems,
   };

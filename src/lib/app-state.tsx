@@ -17,7 +17,7 @@ import {
 import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
-import { caps, DEFAULT_ROLE_CAPABILITIES, NO_CAPABILITIES } from "@/lib/data/accounts";
+import { caps, DEFAULT_ROLE_CAPABILITIES, DEFAULT_ROLE_VIEWS, NO_CAPABILITIES, sees as seesArea } from "@/lib/data/accounts";
 import { addDays, daysFromToday, formatDate, setToday, todayIsoDate } from "@/lib/utils";
 import { isUuid, newId } from "@/lib/core/ids";
 import { PersistedStore, type Store } from "@/lib/core/store";
@@ -79,6 +79,8 @@ import type {
   Violation,
   VendorInvoice,
   ViolationReport,
+  AccessLevel,
+  Capabilities,
 } from "@/lib/types";
 import { canRaiseNotice } from "@/lib/violations";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
@@ -162,7 +164,10 @@ interface AppState {
   signIn: (accountId: string) => void;
   signOut: () => void;
   setView: (v: View) => void;
+  /** May this seat change the area? Every action asks this. */
   can: (c: Capability) => boolean;
+  /** May this seat open the area, to read or to change? Screens and nav ask this. */
+  sees: (c: Capability) => boolean;
 
   updateSettings: (patch: Partial<Community["settings"]>) => void;
   setAmenities: (next: Community["amenities"]) => void;
@@ -177,7 +182,7 @@ interface AppState {
    * is gone from Storage, and a toast offering to bring it back would lie.
    */
   removeDocument: (documentId: string) => Promise<(() => void) | undefined>;
-  setCapability: (accountId: string, capability: Capability, on: boolean) => void;
+  setCapability: (accountId: string, capability: Capability, level: AccessLevel) => void;
   resetDemo: () => void;
   /** Adds a household to the register, with the account that lets them sign in. */
   addOwner: (input: { name: string; email: string; unit: string; homeType?: HomeType }) => Owner;
@@ -799,6 +804,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (c: Capability) => Boolean(account && account.capabilities[c]),
     [account],
   );
+  const sees = useCallback((c: Capability) => seesArea(account, c), [account]);
 
   /* -------------------------------------------------------------- settings */
 
@@ -986,14 +992,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const setCapability = useCallback(
-    (id: string, capability: Capability, on: boolean) => {
+    (id: string, capability: Capability, level: AccessLevel) => {
       // The President's grid is deliberately immutable. An association that can
       // strip its President of access has no way back in.
+      const change = level === "change";
+      const view = level === "view";
       if (!remote.community) {
         sliceStore(communityId, "accounts").update((list) =>
           list.map((a) =>
             a.id === id && a.role !== "president"
-              ? { ...a, capabilities: { ...a.capabilities, [capability]: on } }
+              ? {
+                  ...a,
+                  capabilities: { ...a.capabilities, [capability]: change },
+                  views: { ...a.views, [capability]: view },
+                }
               : a,
           ),
         );
@@ -1002,13 +1014,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const rc = remote.community;
       const account = rc.accounts.find((a) => a.id === id);
       if (!account || account.role === "president") return;
-      const granted = Object.entries({ ...account.capabilities, [capability]: on })
-        .filter(([, held]) => held)
-        .map(([name]) => name);
+      const held = (set: Capabilities, on: boolean) =>
+        Object.entries({ ...set, [capability]: on })
+          .filter(([, v]) => v)
+          .map(([name]) => name);
       void remoteWrite("Saving permissions", () =>
         supabaseBrowser()
           .from("memberships")
-          .update({ capabilities: granted })
+          .update({ capabilities: held(account.capabilities, change), views: held(account.views, view) })
           .eq("association_id", rc.id)
           .eq("profile_id", id)
           .is("ends_on", null),
@@ -1106,6 +1119,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                   ...account,
                   role,
                   capabilities: caps(DEFAULT_ROLE_CAPABILITIES[role] ?? []),
+                  views: caps(DEFAULT_ROLE_VIEWS[role] ?? []),
                 }
               : account,
           ),
@@ -1124,7 +1138,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       void remoteWrite("Saving the role", () =>
         supabaseBrowser()
           .from("memberships")
-          .update({ role, capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [] })
+          .update({
+            role,
+            capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [],
+            views: DEFAULT_ROLE_VIEWS[role] ?? [],
+          })
           .eq("association_id", rc.id)
           .eq("profile_id", accountId)
           .is("ends_on", null)
@@ -1155,7 +1173,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       void remoteWrite("Saving the role", () =>
         supabaseBrowser()
           .from("memberships")
-          .update({ role, capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [] })
+          .update({
+            role,
+            capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [],
+            views: DEFAULT_ROLE_VIEWS[role] ?? [],
+          })
           .eq("association_id", rc.id)
           .eq("unit_id", ownerId)
           .is("ends_on", null)
@@ -1454,6 +1476,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           unit,
           role: "resident" as const,
           capabilities: NO_CAPABILITIES,
+          views: NO_CAPABILITIES,
         },
       ]);
       return owner;
@@ -2120,6 +2143,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           unit: before.unit,
           role: "resident" as const,
           capabilities: NO_CAPABILITIES,
+          views: NO_CAPABILITIES,
         },
       ]);
       // Synchronous on purpose: the demo path settles in one render, and a
@@ -4201,6 +4225,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     signOut,
     setView,
     can,
+    sees,
     updateSettings,
     setAmenities,
     setForms,

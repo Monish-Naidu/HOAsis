@@ -97,6 +97,57 @@ export type Database = {
           },
         ]
       }
+      activity: {
+        Row: {
+          actor_id: string | null
+          actor_name: string
+          association_id: string
+          at: string
+          details: Json
+          id: string
+          subject_id: string | null
+          subject_kind: string
+          summary: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string
+          association_id: string
+          at?: string
+          details?: Json
+          id?: string
+          subject_id?: string | null
+          subject_kind: string
+          summary: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string
+          association_id?: string
+          at?: string
+          details?: Json
+          id?: string
+          subject_id?: string | null
+          subject_kind?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       amenities: {
         Row: {
           association_id: string
@@ -1246,6 +1297,7 @@ export type Database = {
           role: Database["public"]["Enums"]["board_role"]
           starts_on: string
           unit_id: string
+          views: Database["public"]["Enums"]["capability"][]
         }
         Insert: {
           association_id: string
@@ -1262,6 +1314,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
           unit_id: string
+          views?: Database["public"]["Enums"]["capability"][]
         }
         Update: {
           association_id?: string
@@ -1278,6 +1331,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["board_role"]
           starts_on?: string
           unit_id?: string
+          views?: Database["public"]["Enums"]["capability"][]
         }
         Relationships: [
           {
@@ -2742,6 +2796,13 @@ export type Database = {
       }
     }
     Functions: {
+      activity_actor: {
+        Args: { p_association: string }
+        Returns: {
+          actor_id: string
+          actor_name: string
+        }[]
+      }
       add_household: {
         Args: {
           p_association_id: string
@@ -2790,6 +2851,13 @@ export type Database = {
           state: string
         }[]
       }
+      can_view: {
+        Args: {
+          area: Database["public"]["Enums"]["capability"]
+          target: string
+        }
+        Returns: boolean
+      }
       cancel_association_deletion: {
         Args: { p_association_id: string }
         Returns: undefined
@@ -2797,6 +2865,10 @@ export type Database = {
       cancel_subscription: {
         Args: { p_association_id: string; p_reason?: string }
         Returns: undefined
+      }
+      capability_words: {
+        Args: { p: Database["public"]["Enums"]["capability"][] }
+        Returns: string
       }
       cast_vote: {
         Args: { p_ballot_id: string; p_option_id: string }
@@ -2940,6 +3012,16 @@ export type Database = {
           p_usage_unit?: string
         }
         Returns: string
+      }
+      record_activity: {
+        Args: {
+          p_association: string
+          p_details?: Json
+          p_kind: string
+          p_subject: string
+          p_summary: string
+        }
+        Returns: undefined
       }
       record_payment: {
         Args: {

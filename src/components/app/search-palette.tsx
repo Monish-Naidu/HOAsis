@@ -187,7 +187,7 @@ function Highlight({ text, ranges }: { text: string; ranges: Range[] }) {
 }
 
 function Palette({ onClose }: { onClose: () => void }) {
-  const { community, can } = useAppState();
+  const { community, sees } = useAppState();
   const owner = useCurrentOwner();
   const pathname = usePathname();
   const router = useRouter();
@@ -211,10 +211,10 @@ function Palette({ onClose }: { onClose: () => void }) {
         (a, b) => b.href.length - a.href.length,
       )[0];
       if (!route) return true;
-      return moduleOn(route.module) && (!route.need || route.need.some((c) => can(c)));
+      return moduleOn(route.module) && (!route.need || route.need.some((c) => sees(c)));
     };
-    return prepareIndex([...boardPages(community, can), ...boardIndex(community).filter((h) => allowed(h.kind))]);
-  }, [board, community, owner, can]);
+    return prepareIndex([...boardPages(community, sees), ...boardIndex(community).filter((h) => allowed(h.kind))]);
+  }, [board, community, owner, sees]);
 
   const trimmed = query.trim();
   const rows = useMemo<Row[]>(() => {
@@ -237,7 +237,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         }));
     }
     const shortcuts = board
-      ? boardShortcuts(trimmed, community, can)
+      ? boardShortcuts(trimmed, community, sees)
       : residentShortcuts(trimmed, community, owner);
     const found = searchIndex(index, trimmed);
     return [
@@ -268,7 +268,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         hit: s.item,
       })),
     ];
-  }, [trimmed, board, community, can, owner, index, recent]);
+  }, [trimmed, board, community, sees, owner, index, recent]);
 
   const groups = useMemo(() => groupHits(rows, trimmed === "" ? 5 : 6), [rows, trimmed]);
   const flat = useMemo(() => groups.flatMap((g) => g.hits), [groups]);

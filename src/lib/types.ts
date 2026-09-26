@@ -923,7 +923,34 @@ export interface Account {
   email: string;
   unit: string;
   role: AccountRole;
+  /** Areas this seat may change. Every write in the product asks this. */
   capabilities: Capabilities;
+  /**
+   * Areas this seat may open and read without changing. An auditor, a
+   * treasurer's stand-in, a director who only wants the numbers. Change
+   * implies view, so a screen asks `sees`, a button asks `can`.
+   */
+  views: Capabilities;
+}
+
+/** What a seat may do in one area. */
+export type AccessLevel = "none" | "view" | "change";
+
+/**
+ * One board action, as the record of it reads.
+ *
+ * Written by database triggers, never by the app, so no code path can skip
+ * it; readable by anyone who may see Settings; deletable by nobody.
+ */
+export interface Activity {
+  id: ID;
+  at: string;
+  actorId?: ID;
+  actorName: string;
+  subjectKind: string;
+  subjectId?: ID;
+  summary: string;
+  details: Record<string, unknown>;
 }
 
 /**

@@ -284,6 +284,7 @@ export const testCommunityOne: Community = {
       unit: "1",
       role: "president",
       capabilities: caps([...GRANTABLE], true),
+      views: caps([...GRANTABLE]),
     },
     {
       id: "tc1-acct-grant",
@@ -293,6 +294,7 @@ export const testCommunityOne: Community = {
       unit: "2",
       role: "treasurer",
       capabilities: caps(["finances", "vendors", "requests", "documents", "compliance"]),
+      views: caps([...GRANTABLE]),
     },
     {
       id: "tc1-acct-marcus",
@@ -302,6 +304,7 @@ export const testCommunityOne: Community = {
       unit: "3",
       role: "resident",
       capabilities: caps([]),
+      views: caps([]),
     },
     {
       id: "tc1-acct-lena",
@@ -311,6 +314,7 @@ export const testCommunityOne: Community = {
       unit: "4",
       role: "resident",
       capabilities: caps([]),
+      views: caps([]),
     },
     {
       id: "tc1-acct-dmitri",
@@ -320,6 +324,7 @@ export const testCommunityOne: Community = {
       unit: "5",
       role: "resident",
       capabilities: caps([]),
+      views: caps([]),
     },
   ],
 

@@ -107,3 +107,7 @@ Runbook, top five:
 | 11 to 14 | Month-1 product: manual-payment receipt, minutes field, PDF statement, dispute handling. Ten help articles. |
 | 15 to 21 | First association onboards on a call, ideally in WA. Watch founding, bank connect, first invite; fix same day. Insurance bound. |
 | 22 to 30 | Second and third boards, self-serve with a call offered. Start CSV bank import. Read the metric. Decide the price cap with real objections in hand. |
+
+## Added 2026-09-26
+
+View versus change access per area, and an append-only board activity record, both compared against PayHOA, Buildium and AppFolio in the session that built them. Details in docs/design/ui-baseline.md under "Board offices".

@@ -108,7 +108,7 @@ describe("goLiveChecklist", () => {
     const joined = community((x) => {
       x.accounts = [
         ...x.accounts,
-        { id: "p2", ownerId: x.owners[1].id, name: "Marcus Bell", email: "marcus@example.com", unit: "2", role: "resident", capabilities: x.accounts[0].capabilities },
+        { id: "p2", ownerId: x.owners[1].id, name: "Marcus Bell", email: "marcus@example.com", unit: "2", role: "resident", capabilities: x.accounts[0].capabilities, views: x.accounts[0].views },
       ];
     });
     expect(item(joined, "invites").done).toBe(true);

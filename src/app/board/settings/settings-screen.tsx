@@ -18,8 +18,12 @@ import {
   Upload,
   X,
   Image as ImageIcon,
+  Eye,
+  History,
+  Minus,
+  Pencil,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, Checkbox, PageHeader, SectionTitle, Select, SettingRow, Toggle, fieldClass, textareaClass } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, PageHeader, SectionTitle, Select, SettingRow, Toggle, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { DangerZone } from "@/components/app/danger-zone";
 import { SameNameNote } from "@/components/app/same-name-note";
 import { BillingRow } from "@/components/app/billing-row";
@@ -29,15 +33,17 @@ import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { useAppState } from "@/lib/app-state";
 import { AmenityRules } from "@/components/app/amenity-rules";
 import { useToast } from "@/components/app/toast";
-import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
+import { accessLevel, CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
 import {
+  type AccessLevel,
+  type Activity,
   type Capability,
   ROLE_LABEL,
   type AccountRole,
   type ArchitecturalForm,
   type CommunityAmenity,
 } from "@/lib/types";
-import { cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
+import { clockTime, cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { moduleOn } from "@/lib/modules";
 import { joinNeeds } from "@/lib/stripe/requirements";
@@ -70,7 +76,7 @@ export function SettingsScreen() {
     community,
     removeAmenity,
     removeForm,
-    can,
+    sees,
     isRemote,
     documents,
     ledger,
@@ -123,7 +129,7 @@ export function SettingsScreen() {
     .filter((t): t is typeof t & { to: string } => Boolean(t.to))
     .sort((a, b) => b.to.localeCompare(a.to) || b.from.localeCompare(a.from));
 
-  if (!can("settings")) {
+  if (!sees("settings")) {
     return (
       <Callout
         tone="warn"
@@ -785,13 +791,12 @@ export function SettingsScreen() {
                         <p className="text-footnote text-fg-muted">{ROLE_LABEL[a.role]}</p>
                       </td>
                       {GRANTABLE.map((c) => (
-                        <td key={c} className="px-2 py-3 text-center">
-                          <Checkbox
-                            checked={a.capabilities[c]}
+                        <td key={c} className="px-2 py-2 text-center">
+                          <AccessControl
+                            level={accessLevel(a, c)}
                             disabled={!isPresident || a.role === "president"}
-                            onChange={(e) => setCapability(a.id, c, e.target.checked)}
-                            aria-label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
-                            className="disabled:opacity-40"
+                            label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
+                            onChange={(level) => setCapability(a.id, c, level)}
                           />
                         </td>
                       ))}
@@ -800,11 +805,29 @@ export function SettingsScreen() {
               </tbody>
             </table>
           </div>
-          <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
-            The President&apos;s own row is locked on purpose. An association that can strip its
-            President of access has no way back in.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-5 py-3 text-footnote text-fg-subtle">
+            <span className="inline-flex items-center gap-1.5"><Minus className="size-3.5" aria-hidden /> No access</span>
+            <span className="inline-flex items-center gap-1.5"><Eye className="size-3.5" aria-hidden /> Can see</span>
+            <span className="inline-flex items-center gap-1.5"><Pencil className="size-3.5" aria-hidden /> Can change</span>
+            <span className="basis-full leading-relaxed">
+              Press a cell to move it along. The President&apos;s own row is locked on purpose: an
+              association that can strip its President of access has no way back in.
+            </span>
+          </div>
         </Card>
+        ) : null}
+
+        {/* Every board action, as the database recorded it. Written by
+            triggers, so nothing can skip it; nobody can delete a row. */}
+        {isRemote ? (
+          <Card>
+            <CardHeader
+              title="Activity"
+              subtitle="Who did what, newest first. Kept for as long as the association exists."
+              icon={<History className="size-4" />}
+            />
+            <ActivityList rows={community.activity ?? []} />
+          </Card>
         ) : null}
       </section>
 
@@ -1144,4 +1167,81 @@ const SECTION_NAME: Partial<Record<Capability, string>> = {
 
 function sectionNames(capabilities: Capability[]): string[] {
   return capabilities.map((c) => SECTION_NAME[c]).filter((n): n is string => Boolean(n));
+}
+
+/**
+ * One cell of the permissions grid: none, see, change. One press moves it
+ * along, so a President never learns a widget; the icon says which it is
+ * and the label reads the same aloud.
+ */
+function AccessControl({
+  level,
+  disabled,
+  label,
+  onChange,
+}: {
+  level: AccessLevel;
+  disabled?: boolean;
+  label: string;
+  onChange: (level: AccessLevel) => void;
+}) {
+  const next: Record<AccessLevel, AccessLevel> = { none: "view", view: "change", change: "none" };
+  const words: Record<AccessLevel, string> = { none: "no access", view: "can see", change: "can change" };
+  const Icon = level === "change" ? Pencil : level === "view" ? Eye : Minus;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={`${label}: ${words[level]}`}
+      title={words[level]}
+      onClick={() => onChange(next[level])}
+      className={cn(
+        "press inline-flex size-9 items-center justify-center rounded-lg border transition-colors",
+        level === "change" && "border-primary bg-primary text-primary-fg",
+        level === "view" && "border-primary/40 bg-primary-soft text-primary",
+        level === "none" && "border-border text-fg-subtle hover:bg-surface-2",
+        disabled && "cursor-not-allowed opacity-50",
+      )}
+    >
+      <Icon className="size-4" aria-hidden />
+    </button>
+  );
+}
+
+const ACTIVITY_PAGE = 20;
+
+function ActivityList({ rows }: { rows: Activity[] }) {
+  const [shown, setShown] = useState(ACTIVITY_PAGE);
+  if (rows.length === 0) {
+    return (
+      <p className="px-5 py-6 text-center text-callout text-fg-muted">
+        Nothing recorded yet. Appointing a board member, approving a bill or changing a setting
+        will show here.
+      </p>
+    );
+  }
+  return (
+    <>
+      <ul className="divide-y divide-border">
+        {rows.slice(0, shown).map((r) => (
+          <li key={r.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-5 py-3">
+            <span className="min-w-[14rem] flex-1 text-body text-fg">{r.summary}</span>
+            <span className="text-footnote text-fg-muted">
+              {r.actorName}
+              <span className="text-fg-subtle"> · </span>
+              <span className="tnum">{formatDate(r.at.slice(0, 10), "medium")}</span>
+              <span className="tnum text-fg-subtle"> {clockTime(r.at.slice(11, 16))}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {rows.length > shown ? (
+        <div className="border-t border-border px-5 py-3">
+          <Button variant="ghost" size="sm" onClick={() => setShown((n) => n + ACTIVITY_PAGE)}>
+            Show earlier
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
 }

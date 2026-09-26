@@ -264,6 +264,21 @@ seat is appointed, all adjustable by the President except their own:
 | Treasurer | Finances, Vendors, Homeowners, Documents, Messages, Compliance |
 | Secretary | Documents, Messages, Meetings and voting, Requests, Compliance, Community |
 
+Two lists per seat since 2026-09-26: what it may **change** (`capabilities`,
+every write in the schema asks this) and what it may **see** (`views`,
+new; five board-only read policies ask `can_view`). Change implies see. A
+screen or nav row asks `sees`, a button asks `can`. Every officer sees the
+whole board by default and changes their office's areas. The grid in
+Settings is three-state per cell (no access, can see, can change), one press
+moves it along, and the President's row is locked.
+
+Every board action is written to `activity` by database triggers (seats,
+access, bills, documents, settings, notices, ballots, requests, bank
+accounts, hand-recorded payments); readable by whoever may see Settings,
+editable and deletable by nobody. Shown in Settings → Activity and on
+/admin. `scripts/verify-access.mjs` (13 checks) proves the viewer and the
+record.
+
 The demo seats carry their own hand-set access and are not these defaults.
 `scripts/upgrade-role-defaults.mjs` moves real seats that still hold the
 pre-2026-09-26 defaults; a seat a President adjusted is left alone.

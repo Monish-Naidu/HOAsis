@@ -106,21 +106,30 @@ describe("capabilities", () => {
   it("lets the President grant and revoke", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    act(() => result.current.state.setCapability(ELLIS, "finances", true));
+    act(() => result.current.state.setCapability(ELLIS, "finances", "change"));
 
     act(() => result.current.state.signIn(ELLIS));
     expect(result.current.state.can("finances")).toBe(true);
 
     act(() => result.current.state.signIn(ARYA));
-    act(() => result.current.state.setCapability(ELLIS, "finances", false));
+    act(() => result.current.state.setCapability(ELLIS, "finances", "none"));
     act(() => result.current.state.signIn(ELLIS));
+    expect(result.current.state.can("finances")).toBe(false);
+  });
+
+  it("a viewer opens the area but cannot act in it", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    act(() => result.current.state.setCapability(ELLIS, "finances", "view"));
+    act(() => result.current.state.signIn(ELLIS));
+    expect(result.current.state.sees("finances")).toBe(true);
     expect(result.current.state.can("finances")).toBe(false);
   });
 
   it("refuses to strip the President, who would otherwise lock everyone out", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    act(() => result.current.state.setCapability(ARYA, "settings", false));
+    act(() => result.current.state.setCapability(ARYA, "settings", "none"));
     expect(result.current.state.can("settings")).toBe(true);
   });
 });

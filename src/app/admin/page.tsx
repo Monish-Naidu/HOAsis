@@ -66,6 +66,7 @@ export default async function OpsPage() {
         <div className="grid gap-6">
           <Health report={report} />
           <CronRuns report={report} />
+          <RecentActivity report={report} />
           <ErrorGroups report={report} />
           <LatestErrors report={report} />
           <EmailFailures report={report} />
@@ -196,6 +197,36 @@ function CronRuns({ report }: { report: OpsReport }) {
             <td className={`${cell} text-fg-muted`} colSpan={5}>
               No run recorded in the table yet.
             </td>
+          </tr>
+        ))}
+      </Table>
+    </Card>
+  );
+}
+
+function RecentActivity({ report }: { report: OpsReport }) {
+  return (
+    <Card>
+      <CardHeader
+        title="Board activity"
+        subtitle="What boards did, newest first, across every association. Written by database triggers; nobody can edit or delete a row."
+      />
+      <Table
+        head={["When", "Association", "Who", "What"]}
+        count={report.activity.length}
+        empty="No board action recorded in the window."
+      >
+        {report.activity.map((r) => (
+          <tr key={r.id}>
+            <td className={cell}>
+              <span className="text-fg">{ago(r.at, report.now)}</span>
+              <span className="ml-2 font-mono text-caption text-fg-subtle">{when(r.at)}</span>
+            </td>
+            <td className={`${cell} text-fg-muted`}>
+              {report.associationNames[r.association_id] ?? r.association_id.slice(0, 8)}
+            </td>
+            <td className={`${cell} text-fg-muted`}>{r.actor_name}</td>
+            <td className={`${cell} text-fg`}>{r.summary}</td>
           </tr>
         ))}
       </Table>

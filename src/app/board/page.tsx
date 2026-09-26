@@ -126,7 +126,7 @@ export default function BoardDashboard() {
  * six zeroes.
  */
 function NeedsYou() {
-  const { community, requests, can } = useAppState();
+  const { community, requests, sees } = useAppState();
   const recon = useReconciliation();
   const vendors = vendorDecisions(community);
   const openRequests = requests.filter(
@@ -205,7 +205,7 @@ function NeedsYou() {
     },
   ];
   // Only what this seat can act on, so the count here is work they can do.
-  const rows = all.filter((row) => row.count > 0 && mayOpen(row.href, can));
+  const rows = all.filter((row) => row.count > 0 && mayOpen(row.href, sees));
 
   return (
     <Card className="mt-6">
@@ -256,8 +256,8 @@ function NeedsYou() {
  * Each tile is the way into the page that has the rest.
  */
 function StatTiles() {
-  const { community, can } = useAppState();
-  const seesMoney = mayOpen("/board/money", can);
+  const { community, sees } = useAppState();
+  const seesMoney = mayOpen("/board/money", sees);
   const households = community.owners.filter((o) => !o.placeholder).length;
   const signedUp = community.owners.filter(
     (o) => !o.placeholder && community.accounts.some((a) => a.ownerId === o.id),
@@ -327,7 +327,7 @@ function StatTiles() {
           label="Homes signed up"
           value={<CountUp kind="number" value={signedUp} />}
           hint={`of ${pluralize(households, "home")}`}
-          href={mayOpen("/board/homeowners", can) ? "/board/homeowners" : undefined}
+          href={mayOpen("/board/homeowners", sees) ? "/board/homeowners" : undefined}
         />
       )}
       <Stat
@@ -345,7 +345,7 @@ function StatTiles() {
         }
         tone={liveMeeting ? "ok" : "neutral"}
         hint={nextMeeting ? `${nextMeeting.title} · ${nextMeeting.time}` : "Schedule one from Meetings"}
-        href={mayOpen("/board/meetings", can) ? "/board/meetings" : undefined}
+        href={mayOpen("/board/meetings", sees) ? "/board/meetings" : undefined}
       />
     </div>
   );

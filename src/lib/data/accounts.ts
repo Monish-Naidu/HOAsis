@@ -1,4 +1,4 @@
-import type { Account, Capabilities, Capability } from "@/lib/types";
+import type { AccessLevel, Account, Capabilities, Capability } from "@/lib/types";
 
 /** Nobody but the President can hold the permissions capability. */
 export const GRANTABLE: Capability[] = [
@@ -38,6 +38,21 @@ export function caps(on: Capability[], permissions = false): Capabilities {
 
 export const NO_CAPABILITIES = caps([]);
 
+/** Every area open to look at: what an officer sees by default. */
+export const ALL_VIEWS: Capabilities = caps([...GRANTABLE]);
+
+/** May this seat open the area, to read or to change? */
+export function sees(account: Pick<Account, "capabilities" | "views"> | null | undefined, c: Capability): boolean {
+  return Boolean(account && (account.capabilities[c] || account.views[c]));
+}
+
+/** The level a seat holds in one area, for the grid in Settings. */
+export function accessLevel(account: Pick<Account, "capabilities" | "views">, c: Capability): AccessLevel {
+  if (account.capabilities[c]) return "change";
+  if (account.views[c]) return "view";
+  return "none";
+}
+
 /**
  * What each office can do before anyone adjusts it.
  *
@@ -61,6 +76,19 @@ export const DEFAULT_ROLE_CAPABILITIES: Record<string, Capability[]> = {
 };
 
 /** The defaults before 2026-09-26, so seats still carrying them can be moved forward. */
+/**
+ * What each office may look at before anyone adjusts it: all of it. A board
+ * member who cannot open Finances cannot do their fiduciary job, whichever
+ * office they hold; what they may change is the list above.
+ */
+export const DEFAULT_ROLE_VIEWS: Record<string, Capability[]> = {
+  president: [...GRANTABLE],
+  "vice-president": [...GRANTABLE],
+  treasurer: [...GRANTABLE],
+  secretary: [...GRANTABLE],
+  resident: [],
+};
+
 export const LEGACY_ROLE_CAPABILITIES: Record<string, Capability[]> = {
   "vice-president": ["requests", "documents", "communications", "voting", "forum"],
   treasurer: ["finances", "vendors", "documents"],
@@ -80,6 +108,7 @@ export const accounts: Account[] = [
     unit: "7",
     role: "president",
     capabilities: caps([...GRANTABLE], true),
+    views: ALL_VIEWS,
   },
   {
     id: "acct-dana",
@@ -89,6 +118,7 @@ export const accounts: Account[] = [
     unit: "19",
     role: "treasurer",
     capabilities: caps(["finances", "vendors", "requests", "documents", "compliance"]),
+    views: ALL_VIEWS,
   },
   {
     id: "acct-sofia",
@@ -98,6 +128,7 @@ export const accounts: Account[] = [
     unit: "31",
     role: "secretary",
     capabilities: caps(["documents", "communications", "voting", "requests", "compliance", "forum"]),
+    views: ALL_VIEWS,
   },
   {
     id: "acct-ellis",
@@ -107,6 +138,7 @@ export const accounts: Account[] = [
     unit: "71",
     role: "vice-president",
     capabilities: caps(["requests", "voting", "communications", "forum"]),
+    views: ALL_VIEWS,
   },
   {
     id: "acct-monish",
@@ -116,6 +148,7 @@ export const accounts: Account[] = [
     unit: "42",
     role: "resident",
     capabilities: NO_CAPABILITIES,
+    views: NO_CAPABILITIES,
   },
   {
     id: "acct-nina",
@@ -125,6 +158,7 @@ export const accounts: Account[] = [
     unit: "15",
     role: "resident",
     capabilities: NO_CAPABILITIES,
+    views: NO_CAPABILITIES,
   },
 ];
 
