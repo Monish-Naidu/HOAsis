@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Copy, Download, FileText, Paperclip, Search } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader, fieldClass } from "@/components/ui/primitives";
-import { PeriodPicker, SelectField } from "@/components/app/finance-ui";
+import { ChevronDown, Copy, Download, FileText, Paperclip, Search } from "lucide-react";
+import { Badge, Button, Card, EmptyState, PageHeader, Segmented, fieldClass } from "@/components/ui/primitives";
+import { InlineBar, PeriodPicker, SelectField } from "@/components/app/finance-ui";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -15,6 +15,7 @@ import {
   ledgerAttachment,
   ledgerCategories,
   ledgerTotals,
+  totalsByCategory,
   periodRange,
   type LedgerFilter,
   type PeriodPreset,
@@ -59,6 +60,7 @@ export function TransactionsScreen() {
   const [accountId, setAccountId] = useState("all");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState<StatusFilter>(fromLink ? "needs-review" : "any");
+  const [direction, setDirection] = useState<"all" | "in" | "out">("all");
   const [search, setSearch] = useState(fromSearch ?? "");
   const [open, setOpen] = useState<string | null>(null);
 
@@ -70,11 +72,14 @@ export function TransactionsScreen() {
       accountId: accountId === "all" ? undefined : accountId,
       category: category === "all" ? undefined : category,
       status: status === "any" ? undefined : status,
+      direction: direction === "all" ? undefined : direction,
       search,
     };
     return filterLedger(ledger, filter);
-  }, [ledger, range.from, range.to, accountId, category, status, search]);
+  }, [ledger, range.from, range.to, accountId, category, status, direction, search]);
   const totals = ledgerTotals(rows);
+  const byCategory = totalsByCategory(rows);
+  const byCategoryMax = Math.max(1, ...byCategory.map((r) => Math.abs(r.inCents - r.outCents)));
   const categories = ledgerCategories(ledger);
   const accounts = community.bankAccounts;
   const accountName = (id: string) => {
@@ -142,6 +147,16 @@ export function TransactionsScreen() {
               options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
             />
             <SelectField label="Status" value={status} onChange={setStatus} options={STATUS_OPTIONS} />
+            <Segmented
+              label="Direction"
+              value={direction}
+              onChange={setDirection}
+              options={[
+                { value: "all", label: "All" },
+                { value: "in", label: "Money in" },
+                { value: "out", label: "Money out" },
+              ]}
+            />
             <label className="relative ml-auto min-w-[12rem] flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-fg-subtle" />
               <input
@@ -175,6 +190,41 @@ export function TransactionsScreen() {
           ))}
         </dl>
 
+        {/* The same rows, added up by category, for "how much did we spend
+            on landscaping last year" without a spreadsheet. Folded: most
+            visits are about one line, not the shape of the period. */}
+        {byCategory.length > 1 ? (
+          <details className="group border-b border-border">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-2.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+              <span>By category · {byCategory.length} categories</span>
+              <ChevronDown className="size-4 text-fg-subtle transition-transform group-open:rotate-180" />
+            </summary>
+            <ul className="grid gap-x-8 gap-y-3 px-5 pb-4 pt-1 sm:grid-cols-2">
+              {byCategory.map((r) => {
+                const net = r.inCents - r.outCents;
+                return (
+                  <li key={r.category}>
+                    <div className="flex items-baseline justify-between gap-3 text-footnote">
+                      <span className="min-w-0 truncate text-fg">
+                        {r.category} <span className="tnum text-fg-subtle">· {r.count}</span>
+                      </span>
+                      <span className={cn("tnum shrink-0 font-semibold", net > 0 ? "text-ok" : "text-fg")}>
+                        {money(net, { sign: net > 0, cents: false })}
+                      </span>
+                    </div>
+                    <InlineBar
+                      value={Math.abs(net)}
+                      max={byCategoryMax}
+                      colorClass={net > 0 ? "bg-ok" : "bg-chart-1"}
+                      className="mt-1"
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        ) : null}
+
         {rows.length === 0 ? (
           <EmptyState
             title="Nothing matches"
@@ -188,6 +238,7 @@ export function TransactionsScreen() {
                   setStatus("any");
                   setCategory("all");
                   setAccountId("all");
+                  setDirection("all");
                   setSearch("");
                 }}
               >

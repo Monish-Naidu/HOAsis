@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Landmark, ShieldAlert } from "lucide-react";
-import { Button, Callout, Card, CardHeader, Meter, PageHeader } from "@/components/ui/primitives";
+import { Button, Callout, Card, CardHeader, Meter, PageHeader, Segmented } from "@/components/ui/primitives";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { BankConnect } from "@/components/app/bank-connect";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
-import { DeltaChip, SectionLink, StatTile, YearControl } from "@/components/app/finance-ui";
+import { DeltaChip, SectionLink, StatTile } from "@/components/app/finance-ui";
 import { useToast } from "@/components/app/toast";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import {
@@ -16,12 +16,14 @@ import {
   cashPosition,
   compareYears,
   insuranceExposure,
+  lateFeesOwed,
   ledgerYears,
   monthName,
-  monthlyFlows,
-  spendingByCategory,
-  lateFeesOwed,
+  monthlyFlowsBetween,
+  operatingRunway,
   pastDueHint,
+  periodRange,
+  spendingBetween,
 } from "@/lib/metrics";
 import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
@@ -45,9 +47,27 @@ export function OverviewScreen() {
 
   const thisYear = Number(todayIsoDate().slice(0, 4));
   const years = ledgerYears(community);
-  const [year, setYear] = useState(years[0] ?? thisYear);
-  const flows = monthlyFlows(community, year, todayIsoDate());
-  const spending = spendingByCategory(community, year);
+  // The charts read one window: the last twelve months, or a calendar
+  // year. A treasurer in February wants the winter they just paid for, not
+  // six weeks of a new year.
+  const [span, setSpan] = useState<string>("rolling");
+  const rolling = span === "rolling";
+  const year = rolling ? (years[0] ?? thisYear) : Number(span);
+  const today = todayIsoDate();
+  const window = rolling
+    ? periodRange("last-12-months", today)
+    : { from: `${year}-01-01`, to: year === thisYear ? today : `${year}-12-31` };
+  const flows = monthlyFlowsBetween(community, window.from, window.to);
+  const spending = spendingBetween(community, window.from, window.to);
+  const flowIn = flows.reduce((t, m) => t + m.inCents, 0);
+  const flowOut = flows.reduce((t, m) => t + m.outCents, 0);
+  const monthOf = (iso: string) => Number(iso.slice(5, 7));
+  const spanLabel = rolling
+    ? `${monthName(monthOf(window.from))} ${window.from.slice(0, 4)} to ${monthName(monthOf(window.to))} ${window.to.slice(0, 4)}`
+    : year === thisYear
+      ? `January to ${monthName(monthOf(today), "long")}`
+      : `All of ${year}`;
+  const runway = operatingRunway(community, today);
   const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
 
   const lastYear = years.find((y) => y < year);
@@ -260,15 +280,36 @@ export function OverviewScreen() {
         <section className="mt-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">Through the year</h2>
-            {years.length > 1 ? (
-              <YearControl years={years} value={year} onChange={setYear} thisYear={thisYear} />
-            ) : null}
+            <Segmented
+              label="Period"
+              value={span}
+              onChange={setSpan}
+              options={[
+                { value: "rolling", label: "Last 12 months" },
+                ...[...years]
+                  .sort((a, b) => a - b)
+                  .map((y) => ({ value: String(y), label: y === thisYear ? "This year" : String(y) })),
+              ]}
+            />
           </div>
           <div className="grid gap-4 xl:grid-cols-5">
             {hasFlows ? (
               <Card className={cn("flex flex-col", spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
-                <CardHeader title="Money in and out" />
+                <CardHeader
+                  title="Money in and out"
+                  subtitle={`${spanLabel}: ${money(flowIn, { cents: false })} in, ${money(flowOut, { cents: false })} out`}
+                />
                 <MoneyFlowChart months={flows} />
+                {/* The number a treasurer is asked at the annual meeting. */}
+                {runway.months > 0 ? (
+                  <p className="mt-auto border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-muted">
+                    A typical month brings in {money(runway.avgInCents, { cents: false })} and pays out{" "}
+                    {money(runway.avgOutCents, { cents: false })}.
+                    {runway.coversMonths !== null
+                      ? ` With nothing coming in, the operating account would cover ${Math.round(runway.coversMonths * 10) / 10} months of bills.`
+                      : ""}
+                  </p>
+                ) : null}
               </Card>
             ) : null}
             {spending.rows.length > 0 ? (

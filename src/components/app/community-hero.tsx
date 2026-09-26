@@ -160,9 +160,10 @@ export function CommunityHero({
       aria-label={settings.displayName}
     >
       <div
-        // A slow drift across the photograph. The hero only sits on the two
-        // dashboards, so nothing else moves.
-        className="ken-burns absolute inset-0 -z-10 bg-cover bg-center"
+        // Still. It used to push in on arrival, and because the dashboard
+        // remounts on every visit the push ran every time, so the photo read
+        // as never settling (Monish, 2026-09-25).
+        className="absolute inset-0 -z-10 bg-cover bg-center"
         style={{ backgroundImage: `url(${settings.photoUrl})` }}
         aria-hidden
       />

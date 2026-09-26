@@ -184,6 +184,11 @@ export function SettingsScreen() {
         ))}
       </nav>
 
+      {/* Two columns that each stack their own cards, so nothing waits on
+          a taller neighbour and no row runs the width of the screen. One
+          column left every setting's control a foot away from its label. */}
+      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+      <div className="space-y-6">
       {/* Yours, not the association's: first, because it is the setting a
           board member is most likely to come here looking for. */}
       <section id="display" className="scroll-mt-32 lg:scroll-mt-24">
@@ -362,8 +367,8 @@ export function SettingsScreen() {
             title="Insurance"
             subtitle="The policy and its renewal date"
           />
-          <div className="grid gap-4 px-5 py-4 sm:grid-cols-3">
-            <label className="block">
+          <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
               <span className="text-footnote font-semibold text-fg-muted">Carrier</span>
               <input
                 value={community.association.insuranceCarrier ?? ""}
@@ -491,7 +496,9 @@ export function SettingsScreen() {
           </SettingRow>
         </Card>
       </section>
+      </div>
 
+      <div className="space-y-6">
       <section id="residents" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
         <SectionTitle>Residents</SectionTitle>
         {/* Visibility */}
@@ -871,6 +878,8 @@ export function SettingsScreen() {
           </form>
         </Card>
       </section>
+      </div>
+      </div>
 
           {/* Folded. Deleting the association sat one scroll below the dues
               amount, open, on a page a treasurer visits monthly. */}

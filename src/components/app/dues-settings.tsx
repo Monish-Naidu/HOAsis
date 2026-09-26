@@ -101,7 +101,7 @@ export function DuesSettings() {
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {split ? (
             kinds.map((k) => (
               <Amount

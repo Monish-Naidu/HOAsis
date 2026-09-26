@@ -229,7 +229,7 @@ export function YearControl({
 
 /* ----------------------------------------------------------------- period */
 
-const PRESETS: PeriodPreset[] = ["this-month", "last-month", "this-year", "last-year", "custom"];
+const PRESETS: PeriodPreset[] = ["this-month", "last-month", "this-year", "last-year", "last-12-months", "custom"];
 
 /**
  * The period a treasurer means: the presets they reach for, and a pair of

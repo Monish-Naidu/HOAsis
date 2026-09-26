@@ -9,8 +9,15 @@ import { ResidentBell } from "@/components/app/notifications";
 import { SearchButton, SearchPalette } from "@/components/app/search-palette";
 import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
-import { Rail, RailIcon } from "@/components/app/rail";
-import { residentModuleFor, residentTabs, visibleResidentTabs } from "@/components/app/resident-nav";
+import { Rail, RailNav, RailRow } from "@/components/app/rail";
+import {
+  residentModuleFor,
+  residentSectionFor,
+  residentTabs,
+  visibleResidentTabs,
+} from "@/components/app/resident-nav";
+import { ResidentSectionTabs } from "@/components/app/resident-section-tabs";
+import { useResidentBadges } from "@/components/app/resident-badges";
 import { ModuleOff } from "@/components/app/module-gate";
 import { PageTransition } from "@/components/app/page-transition";
 import { moduleOn } from "@/lib/modules";
@@ -49,7 +56,10 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const owner = useCurrentOwner();
   const associationName = settings.displayName;
   const tabs = visibleResidentTabs(settings);
+  const badges = useResidentBadges();
   const ownerName = owner?.members[0] ?? "";
+  // By section, so Account lights Payments and Voting lights Meetings.
+  const sectionHref = residentSectionFor(pathname)?.href ?? "";
   const unit = owner?.unit ?? "";
   const address = owner?.address ?? "";
   // "Lot 12" or "Unit 3", then the street only when one is on file.
@@ -111,8 +121,8 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   );
 
   const topBar = (
-    <header className="hidden border-b border-border bg-surface lg:block">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3">
+    <header className="sticky top-0 z-30 hidden border-b border-border bg-surface/95 backdrop-blur-md lg:block">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-2.5">
         {/* In website mode the sidebar carries the logo; showing it twice on
             one edge of the screen reads as a mistake. */}
         <div className="min-w-0">
@@ -123,12 +133,13 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           ) : (
             // The banner does not ride above these pages, so the bar says
             // whose portal this is and which home.
-            <div className="min-w-0">
+            <div className="-ml-2 flex min-w-0 items-center gap-3">
               {/* Somebody with homes in two associations switches here, the
-                  same control the board bar has. With one it is just the name. */}
-              <div className="-ml-2">
-                <CommunityName />
-              </div>
+                  same control the board bar has. With one it is just the name.
+                  The home sits beside it on one line, so this bar is the
+                  height of the board's. */}
+              <CommunityName />
+              <span className="h-5 w-px shrink-0 bg-border" aria-hidden />
               <p className="truncate text-footnote text-fg-muted">{homeLine}</p>
             </div>
           )}
@@ -218,45 +229,21 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           reads as a panel rather than a slab welded to the viewport. No
           community name or unit here; the banner carries both. */}
       <Rail home="/resident" label="Resident">
-        <nav aria-label="Resident sections" className="flex min-h-full w-full">
-          <TabPill
-            activeKey={
-              tabs.find((t) =>
-                t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href),
-              )?.href ?? ""
-            }
-            // Rows grow to share the column's height, so on a tall display
-            // each button fills its slot instead of floating in a gap
-            // (Monish, on a 42" screen, 2026-09-21). Capped so a laptop
-            // still reads as a list; past the cap the spacing takes over.
-            // Packing them from the top was tried 2026-09-24 and read as
-            // cramped; he asked for this back.
-            className="stagger flex min-h-full w-full flex-col justify-evenly gap-1.5"
-            pillClassName="bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
-          >
-            {tabs.filter((t) => !t.phoneOnly).map(({ href, label, icon: Icon, webLabel, tint }) => {
-              const active =
-                href === "/resident" ? pathname === href : pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  data-tab-key={href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "group relative z-10 flex min-h-11 max-h-[5.5rem] flex-1 items-center gap-3 rounded-2xl px-3 py-2.5 text-body font-medium transition-colors duration-200",
-                    active
-                      ? "text-white"
-                      : "text-navy-200 hover:bg-navy-800/70 hover:text-white",
-                  )}
-                >
-                  <RailIcon icon={Icon} tint={tint} active={active} />
-                  {webLabel ?? label}
-                </Link>
-              );
-            })}
-          </TabPill>
-        </nav>
+        <RailNav label="Resident sections" activeKey={sectionHref}>
+          {tabs
+            .filter((t) => !t.phoneOnly && !t.parent)
+            .map(({ href, label, icon, webLabel, tint }) => (
+              <RailRow
+                key={href}
+                href={href}
+                label={webLabel ?? label}
+                icon={icon}
+                tint={tint}
+                active={href === sectionHref}
+                badge={badges[href]}
+              />
+            ))}
+        </RailNav>
       </Rail>
       {/* The dashboard has no bar: the photo runs to the top of the page and
           the controls sit on it in a frosted tray, because a white strip
@@ -289,11 +276,12 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             onDashboard ? "" : "lg:max-w-2xl",
           )}
         >
+          <ResidentSectionTabs />
           <Gated pathname={pathname}>{children}</Gated>
         </main>
       </div>
       <div className="lg:hidden">
-        <TabBar pathname={pathname} tabs={tabs} pinned />
+        <TabBar pathname={pathname} tabs={tabs} badges={badges} pinned />
       </div>
     </div>
     </RequireSession>
@@ -355,10 +343,12 @@ const TAB_ACTIVE: Record<TintName, string> = {
 function TabBar({
   pathname,
   tabs,
+  badges = {},
   pinned = false,
 }: {
   pathname: string;
   tabs: typeof residentTabs;
+  badges?: ReturnType<typeof useResidentBadges>;
   /**
    * Pinned to the viewport rather than the flow.
    *
@@ -400,6 +390,13 @@ function TabBar({
               : href === "/resident/more"
                 ? pathname.startsWith(href) || moreHrefs.some((m) => pathname.startsWith(m))
                 : pathname.startsWith(href);
+          // A section's badge rides its phone tab; a ballot's rides More,
+          // since Meetings has no tab of its own there.
+          const badge =
+            badges[href] ??
+            (href === "/resident/more"
+              ? Object.entries(badges).find(([k]) => moreHrefs.includes(k))?.[1]
+              : undefined);
           return (
             <li key={href}>
               <Link
@@ -415,11 +412,22 @@ function TabBar({
                 <span
                   key={active ? "on" : "off"}
                   className={cn(
-                    "flex h-7 w-full max-w-11 items-center justify-center rounded-full transition-[background-color,transform] duration-200 ease-out",
+                    "relative flex h-7 w-full max-w-11 items-center justify-center rounded-full transition-[background-color,transform] duration-200 ease-out",
                     active ? cn("pop-in scale-100", TAB_PILL[tint]) : "scale-95",
                   )}
                 >
                   <Icon className="size-[19px]" strokeWidth={active ? 2.3 : 1.8} />
+                  {badge && badge.count > 0 ? (
+                    <span
+                      className={cn(
+                        "tnum absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white",
+                        badge.tone === "danger" ? "bg-danger" : badge.tone === "warn" ? "bg-warn" : "bg-fg-muted",
+                      )}
+                      aria-label={`${badge.count} waiting`}
+                    >
+                      {badge.count}
+                    </span>
+                  ) : null}
                 </span>
                 <span
                   className={cn(

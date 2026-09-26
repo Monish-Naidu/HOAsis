@@ -5,16 +5,27 @@ import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { FundsGate } from "./guard";
 import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
-import { Badge, Card, Meter, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Card, Meter, SectionTitle, Segmented } from "@/components/ui/primitives";
+import { useState } from "react";
 
 /** A list with nothing in it yet, and the one line that says why. */
 function Waiting({ children }: { children: React.ReactNode }) {
   return <p className="px-4 py-4 text-body text-fg-muted">{children}</p>;
 }
-import { budgetSummary, cashPosition, interestSummary, reserveSummary } from "@/lib/metrics";
+import {
+  PERIOD_LABEL,
+  type PeriodPreset,
+  budgetSummary,
+  cashPosition,
+  filterLedger,
+  interestSummary,
+  ledgerTotals,
+  periodRange,
+  reserveSummary,
+} from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { SharedCostCard } from "@/components/app/shared-cost-card";
-import { formatDate, money, shortMoney } from "@/lib/utils";
+import { formatDate, money, shortMoney, todayIsoDate } from "@/lib/utils";
 
 export default function ResidentFinances() {
   const { community, ledger } = useAppState();
@@ -23,7 +34,16 @@ export default function ResidentFinances() {
   const interest = interestSummary(community);
   const reserve = reserveSummary(community);
   const bud = budgetSummary(community);
-  const recent = ledger.filter((e) => e.status !== "needs-review").slice(0, 12);
+  // The period an owner can look through. Twelve most recent lines told
+  // nobody what last winter cost.
+  const [period, setPeriod] = useState<PeriodPreset>("this-month");
+  const [showAll, setShowAll] = useState(false);
+  const range = periodRange(period, todayIsoDate());
+  const inPeriod = filterLedger(ledger, { from: range.from, to: range.to }).filter(
+    (e) => e.status !== "needs-review",
+  );
+  const totals = ledgerTotals(inPeriod);
+  const recent = showAll ? inPeriod : inPeriod.slice(0, 12);
   const urgent = reserve.urgent.slice(0, 4);
 
   return (
@@ -208,19 +228,51 @@ export default function ResidentFinances() {
       <section>
         <SectionTitle
           action={
-            <span className="text-footnote text-fg-muted">{recent.length} most recent</span>
+            <span className="tnum text-footnote text-fg-muted">
+              {inPeriod.length} {inPeriod.length === 1 ? "transaction" : "transactions"}
+            </span>
           }
         >
           Transactions
         </SectionTitle>
+        <Segmented
+          label="Period"
+          value={period}
+          onChange={(next) => {
+            setPeriod(next);
+            setShowAll(false);
+          }}
+          className="mb-3"
+          options={(["this-month", "last-month", "this-year", "last-12-months"] as PeriodPreset[]).map(
+            // "12 months" so all four fit a phone without the last one clipping.
+            (v) => ({ value: v, label: v === "last-12-months" ? "12 months" : PERIOD_LABEL[v] }),
+          )}
+        />
         <Card>
-          {recent.length === 0 ? (
+          {ledger.length === 0 ? (
             <Waiting>Nothing has moved yet. The first dues and bills show up here.</Waiting>
-          ) : null}
+          ) : inPeriod.length === 0 ? (
+            <Waiting>Nothing moved in this period.</Waiting>
+          ) : (
+            <p className="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-b border-border px-4 py-3 text-footnote text-fg-muted">
+              <span>
+                In <span className="tnum font-semibold text-ok">{money(totals.inCents, { cents: false })}</span>
+              </span>
+              <span>
+                Out <span className="tnum font-semibold text-fg">{money(totals.outCents, { cents: false })}</span>
+              </span>
+              <span>
+                Net{" "}
+                <span className={`tnum font-semibold ${totals.netCents >= 0 ? "text-fg" : "text-danger"}`}>
+                  {money(totals.netCents, { sign: totals.netCents > 0, cents: false })}
+                </span>
+              </span>
+            </p>
+          )}
           {recent.map((e, i) => (
             <div
               key={e.id}
-              className={`flex items-start gap-3 px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
+              className={`flex items-start gap-3 border-t border-border px-4 py-3 ${i === 0 ? "border-t-0" : ""}`}
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-body font-medium text-fg">{e.description}</p>
@@ -244,6 +296,15 @@ export default function ResidentFinances() {
               </div>
             </div>
           ))}
+          {inPeriod.length > recent.length ? (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="w-full border-t border-border px-4 py-3 text-center text-footnote font-medium text-primary transition-colors hover:bg-surface-2"
+            >
+              Show all {inPeriod.length}
+            </button>
+          ) : null}
         </Card>
         <p className="mt-2 text-footnote leading-snug text-fg-subtle">
           Items the board is still checking are not shown yet.

@@ -38,10 +38,11 @@ export default function ResidentRequests() {
       />
 
       {/* A question is not a request. On a phone, where Messages has no
-          tab, this is the way in. */}
+          tab in the bar, this is the way in. On the website the section's
+          Messages tab above already is, so the card would say it twice. */}
       <Link
         href="/resident/messages"
-        className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+        className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2 lg:hidden"
       >
         <IconTile icon={Mail} tint="coral" size="sm" />
         <span className="min-w-0 flex-1">

@@ -437,19 +437,6 @@
 .page-from-right { animation: hoasis-page-from-right var(--dur-base) var(--ease-out-soft) both; }
 .page-from-left  { animation: hoasis-page-from-left  var(--dur-base) var(--ease-out-soft) both; }
 
-/* The dashboard photograph drifts. Forty seconds out and back, a few percent
-   of scale and a little travel, so it is felt rather than watched. */
-@keyframes hoasis-ken-burns {
-  from { transform: scale(1) translate(0, 0); }
-  to   { transform: scale(1.08) translate(-1.5%, 1%); }
-}
-/* One slow push in on arrival, then still. It used to drift forever, and a
-   picture that never stops moving pulls the eye off the words beside it. */
-.ken-burns {
-  animation: hoasis-ken-burns 12s var(--ease-out-soft) 1 both;
-  transform-origin: 60% 40%;
-}
-
 /* One question at a time. The answered question slips away in the direction
    of travel and the next one rises in from the other side, so going back
    reads as going back. Leaving is quick and entering settles, per the note

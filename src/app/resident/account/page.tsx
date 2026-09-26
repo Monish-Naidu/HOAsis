@@ -214,9 +214,11 @@ export default function ResidentAccount() {
         </Card>
       </section>
 
+      {/* On a phone these two have no tab of their own, so Account is the
+          way in. On the website the rail already lists both. */}
       <Link
         href="/resident/finances"
-        className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
+        className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2 lg:hidden"
       >
         <Landmark className="size-4 shrink-0 text-fg-subtle" />
         <span className="flex-1 text-body font-medium text-fg">Association funds</span>
@@ -225,7 +227,7 @@ export default function ResidentAccount() {
 
       <Link
         href="/resident/settings"
-        className="flex min-h-12 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
+        className="flex min-h-12 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2 lg:hidden"
       >
         <Settings className="size-4 shrink-0 text-fg-subtle" />
         <span className="flex-1 text-body font-medium text-fg">

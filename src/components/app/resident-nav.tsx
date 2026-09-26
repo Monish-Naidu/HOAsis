@@ -40,6 +40,18 @@ interface ResidentTab {
   visible?: (s: CommunitySettings) => boolean;
   /** Some are switched off for everyone until launch. See `lib/modules.ts`. */
   module?: ModuleKey;
+  /**
+   * The sidebar row this page lives under, by href.
+   *
+   * Eleven rows was a list nobody read, so related pages share one the way
+   * the board's do: Account sits under Payments, Messages under Requests,
+   * Voting under Meetings. Each keeps its own URL and its own phone tab if
+   * it has one; the parent row lights while it is open, and the section's
+   * tabs are how an owner moves between them.
+   */
+  parent?: string;
+  /** The name on the section's tab, where it differs from the label. */
+  tab?: string;
 }
 
 /**
@@ -52,14 +64,57 @@ interface ResidentTab {
  */
 export const residentTabs: ResidentTab[] = [
   { href: "/resident", label: "Dashboard", tabLabel: "Home", icon: Home, tint: "blue" },
-  { href: "/resident/pay", label: "Payments", icon: CreditCard, tint: "teal" },
+  { href: "/resident/pay", label: "Payments", tab: "Pay", icon: CreditCard, tint: "teal" },
+  // Under Payments in the sidebar: the balance and the history are two
+  // views of the same money. Still its own phone tab. Violet, the records
+  // tint: neutral grey made its title tile look switched off.
+  {
+    href: "/resident/account",
+    label: "Account",
+    icon: Receipt,
+    tint: "violet",
+    parent: "/resident/pay",
+  },
   { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus, tint: "blue" },
+  // Under Requests: a question is a request that needs no decision. On a
+  // phone it is one tap from Requests. Asking the board used to mean email,
+  // with no trace here.
+  {
+    href: "/resident/messages",
+    label: "Messages",
+    icon: Mail,
+    tint: "coral",
+    webOnly: true,
+    blurb: "Ask the board a question",
+    parent: "/resident/requests",
+  },
   {
     href: "/resident/documents",
     label: "Docs",
     icon: FileText,
     tint: "violet",
     webLabel: "Documents",
+  },
+  {
+    href: "/resident/calendar",
+    label: "Meetings",
+    icon: CalendarDays,
+    tint: "amber",
+    webOnly: true,
+    blurb: "Board meetings and what is on the calendar",
+    module: "resident-meetings",
+  },
+  // Under Meetings, as on the board side. Voting is occasional, and the
+  // dashboard banner already points at an open ballot.
+  {
+    href: "/resident/vote",
+    label: "Vote",
+    icon: Vote,
+    tint: "violet",
+    webLabel: "Voting",
+    webOnly: true,
+    blurb: "Open ballots and past results",
+    parent: "/resident/calendar",
   },
   {
     href: "/resident/forum",
@@ -72,26 +127,6 @@ export const residentTabs: ResidentTab[] = [
     module: "resident-forum",
   },
   {
-    href: "/resident/calendar",
-    label: "Meetings",
-    icon: CalendarDays,
-    tint: "amber",
-    webOnly: true,
-    blurb: "Board meetings and what is on the calendar",
-    module: "resident-meetings",
-  },
-  // Sidebar only. Voting is occasional, and the dashboard banner already
-  // points at an open ballot; the six phone tabs go to what people open weekly.
-  {
-    href: "/resident/vote",
-    label: "Vote",
-    icon: Vote,
-    tint: "violet",
-    webLabel: "Voting",
-    webOnly: true,
-    blurb: "Open ballots and past results",
-  },
-  {
     href: "/resident/finances",
     label: "Funds",
     icon: Landmark,
@@ -102,19 +137,6 @@ export const residentTabs: ResidentTab[] = [
     visible: (s) => s.showFundsToResidents,
     module: "resident-funds",
   },
-  // Sidebar only; on a phone it is one tap from Requests. Asking the board a
-  // question used to mean email, with no trace here.
-  {
-    href: "/resident/messages",
-    label: "Messages",
-    icon: Mail,
-    tint: "coral",
-    webOnly: true,
-    blurb: "Ask the board a question",
-  },
-  // Account closes the list, per the huddle's nav order. Violet, the
-  // records tint: neutral grey made its title tile look switched off.
-  { href: "/resident/account", label: "Account", icon: Receipt, tint: "violet" },
   // Where people look for text size. Its own page rather than a corner of
   // Account, which is about money.
   {
@@ -131,6 +153,25 @@ export const residentTabs: ResidentTab[] = [
 /** The tabs this association shows: its modules on, its switches on. */
 export function visibleResidentTabs(settings: CommunitySettings): ResidentTab[] {
   return residentTabs.filter((t) => moduleOn(t.module) && (!t.visible || t.visible(settings)));
+}
+
+/** The tab a path belongs to: the longest href that prefixes it. */
+export function residentTabFor(pathname: string): ResidentTab | undefined {
+  return [...residentTabs]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((t) => (t.href === "/resident" ? pathname === t.href : pathname.startsWith(t.href)));
+}
+
+/** The sidebar row a path lights: its tab's parent row, or the tab itself. */
+export function residentSectionFor(pathname: string): ResidentTab | undefined {
+  const tab = residentTabFor(pathname);
+  if (!tab) return undefined;
+  return tab.parent ? residentTabs.find((t) => t.href === tab.parent) : tab;
+}
+
+/** A section's pages in tab order: the row itself, then its children. */
+export function residentSectionPages(section: ResidentTab, tabs: ResidentTab[]): ResidentTab[] {
+  return [section, ...tabs.filter((t) => t.parent === section.href)];
 }
 
 /**

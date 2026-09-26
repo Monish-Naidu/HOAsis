@@ -145,20 +145,72 @@ export function monthlyFlows(c: Community, year: number, through?: string) {
   // said "$0.00" for money that simply has not had a chance to arrive.
   const last =
     through && Number(through.slice(0, 4)) === year ? Number(through.slice(5, 7)) : 12;
-  const months = Array.from({ length: last }, (_, i) => ({
-    month: `${year}-${String(i + 1).padStart(2, "0")}`,
-    inCents: 0,
-    outCents: 0,
-  }));
+  return monthlyFlowsBetween(c, `${year}-01-01`, `${year}-${String(last).padStart(2, "0")}-31`);
+}
+
+/**
+ * The same rows for any window, one per calendar month from the month of
+ * `from` to the month of `to`, so "the last twelve months" can cross a year
+ * end without the chart knowing.
+ */
+export function monthlyFlowsBetween(c: Community, from: string, to: string) {
+  const months: { month: string; inCents: number; outCents: number }[] = [];
+  let y = yearOf(from);
+  let m = monthOf(from);
+  const endY = yearOf(to);
+  const endM = monthOf(to);
+  while (y < endY || (y === endY && m <= endM)) {
+    months.push({ month: `${y}-${String(m).padStart(2, "0")}`, inCents: 0, outCents: 0 });
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  const index = new Map(months.map((row, i) => [row.month, i]));
   for (const e of c.ledger) {
     if (e.category === "Reserve transfer" || e.category === "Opening balance") continue;
-    if (Number(e.date.slice(0, 4)) !== year) continue;
-    const row = months[Number(e.date.slice(5, 7)) - 1];
+    if (e.date < from || e.date > to) continue;
+    const row = months[index.get(e.date.slice(0, 7)) ?? -1];
     if (!row) continue;
     if (e.amountCents >= 0) row.inCents += e.amountCents;
     else row.outCents += -e.amountCents;
   }
   return months;
+}
+
+/**
+ * What the operating account covers, at the pace of the last twelve months.
+ *
+ * Months of bills in the bank is the number a treasurer is asked for at the
+ * annual meeting, and the one that says whether a surprise repair is a
+ * problem. Reserve transfers are left out: they are savings, not bills.
+ */
+export function operatingRunway(c: Community, asOf: string) {
+  const from = shiftMonths(asOf, -11).slice(0, 7) + "-01";
+  const rows = monthlyFlowsBetween(c, from, asOf).filter((r) => r.inCents > 0 || r.outCents > 0);
+  const months = rows.length;
+  const avgInCents = months ? Math.round(rows.reduce((t, r) => t + r.inCents, 0) / months) : 0;
+  const avgOutCents = months ? Math.round(rows.reduce((t, r) => t + r.outCents, 0) / months) : 0;
+  const operating = cashPosition(c).operating;
+  return {
+    months,
+    avgInCents,
+    avgOutCents,
+    /** Months the operating balance would last with nothing coming in. */
+    coversMonths: avgOutCents ? operating / avgOutCents : null,
+  };
+}
+
+/** The same day `n` months away, clamped to the month's last day. */
+function shiftMonths(iso: string, n: number): string {
+  const y = yearOf(iso);
+  const m = monthOf(iso) - 1 + n;
+  const d = Number(iso.slice(8, 10));
+  const target = new Date(Date.UTC(y, m, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const pad = (v: number) => String(v).padStart(2, "0");
+  return `${target.getUTCFullYear()}-${pad(target.getUTCMonth() + 1)}-${pad(Math.min(d, last))}`;
 }
 
 /**
@@ -171,10 +223,15 @@ export function monthlyFlows(c: Community, year: number, through?: string) {
  * receiving entry cannot double it.
  */
 export function spendingByCategory(c: Community, year: number) {
+  return spendingBetween(c, `${year}-01-01`, `${year}-12-31`);
+}
+
+/** `spendingByCategory` for any window of days. */
+export function spendingBetween(c: Community, from: string, to: string) {
   const totals = new Map<string, number>();
   for (const e of c.ledger) {
     if (e.amountCents >= 0) continue;
-    if (Number(e.date.slice(0, 4)) !== year) continue;
+    if (e.date < from || e.date > to) continue;
     const label: LedgerCategory | "Reserve contributions" =
       e.category === "Reserve transfer" ? "Reserve contributions" : e.category;
     totals.set(label, (totals.get(label) ?? 0) - e.amountCents);
@@ -501,13 +558,20 @@ export function budgetVariance(c: Community) {
 /* Transactions: the ledger through a filter, and the totals of what is left.  */
 /* -------------------------------------------------------------------------- */
 
-export type PeriodPreset = "this-month" | "last-month" | "this-year" | "last-year" | "custom";
+export type PeriodPreset =
+  | "this-month"
+  | "last-month"
+  | "this-year"
+  | "last-year"
+  | "last-12-months"
+  | "custom";
 
 export const PERIOD_LABEL: Record<PeriodPreset, string> = {
   "this-month": "This month",
   "last-month": "Last month",
   "this-year": "This year",
   "last-year": "Last year",
+  "last-12-months": "Last 12 months",
   custom: "Custom",
 };
 
@@ -529,6 +593,10 @@ export function periodRange(preset: PeriodPreset, asOf: string): { from: string;
       return { from: `${year}-01-01`, to: `${year}-12-31` };
     case "last-year":
       return { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` };
+    case "last-12-months":
+      // Twelve whole months ending today, so the window starts on the first
+      // of the month a year back rather than on an arbitrary day.
+      return { from: shiftMonths(asOf, -11).slice(0, 7) + "-01", to: asOf };
     case "custom":
       return { from: `${year}-01-01`, to: asOf };
   }
@@ -602,6 +670,26 @@ export function ledgerTotals(rows: Community["ledger"]) {
       .reduce((t, e) => t + e.amountCents, 0),
     running,
   };
+}
+
+/**
+ * What a filtered set adds up to, by category, largest first.
+ *
+ * Answers "how much did we spend on landscaping last year" from the same
+ * rows the table shows, so the two cannot disagree. Held lines stay out,
+ * as everywhere; transfers to reserves appear under their own name.
+ */
+export function totalsByCategory(rows: Community["ledger"]) {
+  const map = new Map<string, { category: string; inCents: number; outCents: number; count: number }>();
+  for (const e of rows) {
+    if (e.status === "needs-review" || e.category === "Opening balance") continue;
+    const row = map.get(e.category) ?? { category: e.category, inCents: 0, outCents: 0, count: 0 };
+    if (e.amountCents >= 0) row.inCents += e.amountCents;
+    else row.outCents += -e.amountCents;
+    row.count += 1;
+    map.set(e.category, row);
+  }
+  return [...map.values()].sort((a, b) => b.outCents + b.inCents - (a.outCents + a.inCents));
 }
 
 /** Every category the ledger uses, alphabetical, for a filter's options. */

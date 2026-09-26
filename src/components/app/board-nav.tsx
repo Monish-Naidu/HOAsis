@@ -8,13 +8,10 @@ import { BOARD_ROUTES, routeOffered, sectionFor, sectionPages } from "@/lib/boar
 import { complianceSummary, delinquency, vendorDecisions } from "@/lib/metrics";
 import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
 import { TabPill } from "@/components/app/tab-pill";
-import { RailIcon } from "@/components/app/rail";
+import { RailNav, RailRow, type RailBadge } from "@/components/app/rail";
 import { cn } from "@/lib/utils";
 
-export interface NavBadge {
-  count: number;
-  tone: "danger" | "warn" | "neutral";
-}
+export type NavBadge = RailBadge;
 
 const rows = BOARD_ROUTES.filter((route) => !route.hidden);
 
@@ -82,11 +79,10 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   /**
    * Two dressings for one nav.
    *
-   * The rail is the navy sidebar from the 2026-09-01 dashboard design: a
-   * deliberately fixed surface, like the device bezels, so its colors are the
-   * navy ramp and a couple of literals rather than theme tokens. The bar is
-   * the horizontal strip under the header on narrow screens, which sits on a
-   * themed surface and keeps the themed styling.
+   * The rail is the navy sidebar from the 2026-09-01 dashboard design, drawn
+   * by `RailNav` and `RailRow` so it is the same rail the resident shell has.
+   * The bar is the horizontal strip under the header on narrow screens, which
+   * sits on a themed surface and keeps the themed styling.
    */
   const rail = variant === "rail";
 
@@ -100,61 +96,51 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
       ?.scrollIntoView({ inline: "center", block: "nearest" });
   }, [rail, pathname]);
 
-  return (
-    <nav ref={navRef} aria-label="Board sections" className={cn(rail && "flex min-h-full w-full")}>
-      <TabPill
-        activeKey={activeRoute?.key ?? ""}
-        className={cn(
-          "flex gap-1 lg:flex-col",
-          // Rows grow to share the column on a tall display, each capped so
-          // a treasurer's six do not balloon over the whole column (that was
-          // tried with justify-evenly and fell apart); past the cap they pack
-          // from the top. Same rule as the resident rail, 2026-09-21.
-          rail && "stagger w-full flex-col gap-1.5",
-        )}
-        pillClassName={
-          rail
-            ? "bg-brand-gradient rounded-2xl shadow-[0_8px_20px_-8px_rgb(77_139_245/0.7)]"
-            : "bg-primary-soft rounded-xl"
-        }
-      >
-      {visible.map(({ href, label, icon: Icon, key, tint }) => {
-        const active = key === activeRoute?.key;
-        const badge = badges[key];
-        return (
-          <Link
+  if (rail) {
+    return (
+      <RailNav label="Board sections" activeKey={activeRoute?.key ?? ""}>
+        {visible.map(({ href, label, icon, key, tint }) => (
+          <RailRow
             key={href}
             href={href}
-            data-tab-key={key}
-            aria-current={active ? "page" : undefined}
-            // On a phone the strip scrolls, and the lit row for Vendors or
-            // Settings sat off its right edge. Bring it into view.
-            ref={
-              !rail && active
-                ? (el) => el?.scrollIntoView({ block: "nearest", inline: "nearest" })
-                : undefined
-            }
-            className={cn(
-              // The selected background is the travelling pill behind the row,
-              // not a class on the link, so it slides rather than cuts.
-              "group relative z-10 flex items-center gap-2.5 rounded-xl px-3 py-2 text-callout font-medium transition-colors duration-200",
-              rail
-                ? // The row height the rail had with thirteen rows. With nine
-                  // they would stretch to 70px, which read as zoomed in.
-                  "min-h-11 max-h-12 flex-1 gap-3 rounded-2xl px-3 py-2.5 text-body"
-                : "min-h-10 shrink-0",
-              rail
-                ? active
-                  ? "text-white"
-                  : "text-navy-200 hover:bg-navy-800/70 hover:text-white"
-                : active
-                  ? "text-primary"
-                  : "text-fg-muted hover:bg-surface-2 hover:text-fg",
-            )}
-          >
-            {rail ? (
-              <RailIcon icon={Icon} tint={tint} active={active} />
-            ) : (
+            tabKey={key}
+            label={label}
+            icon={icon}
+            tint={tint}
+            active={key === activeRoute?.key}
+            badge={badges[key]}
+          />
+        ))}
+      </RailNav>
+    );
+  }
+
+  return (
+    <nav ref={navRef} aria-label="Board sections">
+      <TabPill activeKey={activeRoute?.key ?? ""} className="flex gap-1" pillClassName="bg-primary-soft rounded-xl">
+        {visible.map(({ href, label, icon: Icon, key }) => {
+          const active = key === activeRoute?.key;
+          const badge = badges[key];
+          return (
+            <Link
+              key={href}
+              href={href}
+              data-tab-key={key}
+              aria-current={active ? "page" : undefined}
+              // On a phone the strip scrolls, and the lit row for Vendors or
+              // Settings sat off its right edge. Bring it into view.
+              ref={
+                active
+                  ? (el) => el?.scrollIntoView({ block: "nearest", inline: "nearest" })
+                  : undefined
+              }
+              className={cn(
+                // The selected background is the travelling pill behind the row,
+                // not a class on the link, so it slides rather than cuts.
+                "group relative z-10 flex min-h-10 shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-callout font-medium transition-colors duration-200",
+                active ? "text-primary" : "text-fg-muted hover:bg-surface-2 hover:text-fg",
+              )}
+            >
               <Icon
                 className={cn(
                   "size-[17px] shrink-0 transition-transform duration-200",
@@ -163,34 +149,22 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
                 )}
                 strokeWidth={active ? 2.2 : 1.8}
               />
-            )}
-            <span className="truncate">{label}</span>
-            {badge && badge.count > 0 ? (
-              <span
-                className={cn(
-                  "tnum ml-auto hidden rounded px-1.5 py-0.5 text-caption font-bold lg:inline-block",
-                  rail
-                    ? cn(
-                        "bg-navy-800",
-                        // Fixed accents for the fixed surface. The dark theme's
-                        // warn and danger read on navy; the light theme's sink.
-                        badge.tone === "danger" && "text-[#e2837a]",
-                        badge.tone === "warn" && "text-[#dfa845]",
-                        badge.tone === "neutral" && "text-navy-200",
-                      )
-                    : cn(
-                        badge.tone === "danger" && "bg-danger-soft text-danger",
-                        badge.tone === "warn" && "bg-warn-soft text-warn",
-                        badge.tone === "neutral" && "bg-surface-3 text-fg-muted",
-                      ),
-                )}
-              >
-                {badge.count}
-              </span>
-            ) : null}
-          </Link>
-        );
-      })}
+              <span className="truncate">{label}</span>
+              {badge && badge.count > 0 ? (
+                <span
+                  className={cn(
+                    "tnum ml-auto hidden rounded px-1.5 py-0.5 text-caption font-bold lg:inline-block",
+                    badge.tone === "danger" && "bg-danger-soft text-danger",
+                    badge.tone === "warn" && "bg-warn-soft text-warn",
+                    badge.tone === "neutral" && "bg-surface-3 text-fg-muted",
+                  )}
+                >
+                  {badge.count}
+                </span>
+              ) : null}
+            </Link>
+          );
+        })}
       </TabPill>
     </nav>
   );
