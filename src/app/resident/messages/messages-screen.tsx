@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, MessagesSquare, Plus, Send } from "lucide-react";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useToast } from "@/components/app/toast";
@@ -31,8 +32,12 @@ export function MessagesScreen() {
   const { community, messageBoard, replyAsOwner } = useAppState();
   const owner = useCurrentOwner();
   const { notify } = useToast();
-  const [composing, setComposing] = useState(false);
-  const [subject, setSubject] = useState("");
+  // A request page sends its owner here with the subject filled in, so a
+  // question about a request opens ready to type.
+  const params = useSearchParams();
+  const asked = params.get("subject") ?? "";
+  const [composing, setComposing] = useState(Boolean(asked));
+  const [subject, setSubject] = useState(asked);
   const [topic, setTopic] = useState<MessageThread["tag"]>("General");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);

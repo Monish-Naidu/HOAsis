@@ -18,7 +18,7 @@ export const threads: MessageThread[] = [
       {
         id: "m-1",
         at: "2026-08-18",
-        from: "Mehr Meadows Board",
+        from: "Willow Creek Estates Board",
         fromRole: "board",
         direction: "outbound",
         channel: "email",
@@ -48,7 +48,7 @@ export const threads: MessageThread[] = [
       {
         id: "m-3",
         at: "2026-08-10",
-        from: "Mehr Meadows Board",
+        from: "Willow Creek Estates Board",
         fromRole: "board",
         direction: "outbound",
         channel: "email",

@@ -1,7 +1,7 @@
 import type { AmenityBooking } from "@/lib/types";
 
 /**
- * Reservations already on the books at Mehr Meadows.
+ * Reservations already on the books at Willow Creek Estates.
  *
  * Seeded so the picker has something to grey out. A booking screen where every
  * slot is free demonstrates nothing, because the interesting case is the one

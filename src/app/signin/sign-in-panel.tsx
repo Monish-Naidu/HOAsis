@@ -15,6 +15,24 @@ import { fetchJoinStatus } from "@/lib/join-status";
 import { useRemote } from "@/lib/data/remote-store";
 
 /**
+ * Real seats on the real database for trying the product, read at build
+ * time from NEXT_PUBLIC_TEST_LOGINS (a JSON list of label, who, email,
+ * password). Empty when the variable is unset, so the card does not exist.
+ * Monish chose to ship these on the live site for now (2026-09-26).
+ */
+const TEST_LOGINS: { label: string; who: string; email: string; password: string }[] = (() => {
+  try {
+    const raw = process.env.NEXT_PUBLIC_TEST_LOGINS;
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((l) => l && typeof l.email === "string" && typeof l.password === "string")
+      : [];
+  } catch {
+    return [];
+  }
+})();
+
+/**
  * Where somebody goes once they are signed in.
  *
  * Mirrors the rule in the auth callback, because arriving through a
@@ -87,6 +105,22 @@ export function SignInPanel() {
    * the demo seat whose email was typed. That keeps the prototype clickable
    * for anyone evaluating it. The seat list only renders in that case.
    */
+  /** A test seat: signs in straight away and lands where that person belongs. */
+  async function enterTestLogin(login: { email: string; password: string }) {
+    setMode("sign-in");
+    setEmail(login.email);
+    setPassword(login.password);
+    setNotice(null);
+    setBusy(true);
+    const result = await signInWithPassword(login.email, login.password);
+    setBusy(false);
+    if (!result.ok) {
+      setNotice({ tone: "danger", text: result.message ?? "That test login did not work." });
+      return;
+    }
+    router.push(await destinationAfterSignIn(params.get("next")));
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setNotice(null);
@@ -237,6 +271,14 @@ export function SignInPanel() {
               <Link href="/join" className="font-medium text-fg underline underline-offset-2">
                 Join with the code
               </Link>
+              . By creating an account you agree to the{" "}
+              <Link href="/terms" className="font-medium text-fg underline underline-offset-2">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="font-medium text-fg underline underline-offset-2">
+                Privacy policy
+              </Link>
               .
             </p>
           )}
@@ -245,16 +287,55 @@ export function SignInPanel() {
 
       {/* The sample communities, and a seat in each.
 
-          Mehr Meadows is built into the browser, a year deep, and is the
+          Willow Creek Estates is built into the browser, a year deep, and is the
           quickest way to see what the product does. Picking a seat signs
           you in as that person locally; the real project is untouched, and
           the header offers the real associations once somebody actually
           signs in. The same card is the whole front door when no project
           is configured. The front page's "See how it works" lands here
           by its id. */}
+      {/* A real board seat for trying the product on this machine. Rendered
+          only in development and only when the two NEXT_PUBLIC_TEST_LOGIN
+          values are in .env.local (gitignored), so nothing about it reaches
+          the deployed site or the repository. */}
+      {TEST_LOGINS.length ? (
+        <Card className="overflow-hidden">
+          <div className="p-4">
+            <p className="text-caption font-semibold uppercase tracking-wide text-fg-subtle">
+              Test logins
+            </p>
+            <p className="mt-1 text-body font-semibold text-fg">
+              Real seats on the real association in the database.
+            </p>
+            <p className="mt-1 text-footnote leading-snug text-fg-muted">
+              Pick one and you are in. Sign out from the card at the foot of the sidebar to try
+              the next, and see what a treasurer, an officer and an owner each see.
+            </p>
+          </div>
+          {TEST_LOGINS.map((l) => (
+            <button
+              key={l.email}
+              type="button"
+              disabled={busy}
+              onClick={() => void enterTestLogin(l)}
+              className="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-body font-medium text-fg">{l.label}</span>
+                <span className="block truncate text-footnote text-fg-muted">{l.who}</span>
+              </span>
+              <span className="text-footnote font-medium text-accent">{busy ? "Signing in…" : "Sign in"}</span>
+            </button>
+          ))}
+        </Card>
+      ) : null}
+
       <Card id="sample" className="scroll-mt-6 overflow-hidden">
         <div className="p-4">
-          <p className="text-body font-semibold text-fg">Just looking? Try a sample community</p>
+          <p className="text-caption font-semibold uppercase tracking-wide text-fg-subtle">Try the demo</p>
+          <p className="mt-1 text-body font-semibold text-fg">
+            A made-up association with sample data. Your own association is behind Sign in.
+          </p>
           <p className="mt-1 text-footnote leading-snug text-fg-muted">
             {community.settings.displayName} is built into this browser with{" "}
             {community.association.unitCount} homes and a year of history. Pick a person to try it

@@ -3,31 +3,44 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  ArrowRight,
   Building2,
   CalendarDays,
   ClipboardCheck,
+  Clock,
   FileText,
   Landmark,
   ListChecks,
   Megaphone,
   MessageSquareText,
   MessagesSquare,
+  Receipt,
   Search,
   ShieldAlert,
   Truck,
   Vote,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
-import { IconTile } from "@/components/ui/primitives";
+import { IconTile, type TintName } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { BOARD_ROUTES } from "@/lib/board-routes";
 import { moduleOn } from "@/lib/modules";
 import {
   boardIndex,
+  boardPages,
+  boardShortcuts,
   groupHits,
   KIND_ROUTE,
+  prepareIndex,
+  recentStore,
   residentIndex,
-  searchHits,
+  residentPages,
+  residentShortcuts,
+  searchIndex,
+  segments,
+  useRecentSearches,
+  type Range,
   type SearchHit,
   type SearchKind,
 } from "@/lib/search";
@@ -56,6 +69,9 @@ const ICON: Record<SearchKind, LucideIcon> = {
   announcement: Megaphone,
   post: MessageSquareText,
   action: ListChecks,
+  charge: Receipt,
+  page: ArrowRight,
+  shortcut: Zap,
 };
 
 /* A tiny store, so any button can open the one palette. */
@@ -135,6 +151,41 @@ export function SearchPalette() {
   return <Palette onClose={() => setOpen(false)} />;
 }
 
+
+/** One row in the list: a hit from the index, a shortcut, or a recent choice. */
+interface Row {
+  key: string;
+  kind: SearchKind;
+  section: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  tint: TintName;
+  icon?: LucideIcon;
+  titleRanges: Range[];
+  subtitleRanges: Range[];
+  /** The hit behind it, when it came from the index; remembered on open. */
+  hit?: SearchHit;
+}
+
+/** The text with the matched pieces marked. */
+function Highlight({ text, ranges }: { text: string; ranges: Range[] }) {
+  if (ranges.length === 0) return <>{text}</>;
+  return (
+    <>
+      {segments(text, ranges).map((s, i) =>
+        s.hit ? (
+          <mark key={i} className="rounded-sm bg-tint-amber-soft text-fg">
+            {s.text}
+          </mark>
+        ) : (
+          <span key={i}>{s.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 function Palette({ onClose }: { onClose: () => void }) {
   const { community, can } = useAppState();
   const owner = useCurrentOwner();
@@ -145,12 +196,16 @@ function Palette({ onClose }: { onClose: () => void }) {
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const recent = useRecentSearches();
 
   // The board sees a kind only when its tab is open to this seat: same
-  // capability and module gate the rail applies, looked up on the route table.
+  // capability and module gate the rail applies, looked up on the route
+  // table. Pages go through `routeOffered` themselves. Folded once here, so
+  // a keystroke is one pass over the index and no string normalisation.
   const index = useMemo(() => {
-    if (!board) return residentIndex(community, owner);
+    if (!board) return prepareIndex([...residentPages(community), ...residentIndex(community, owner)]);
     const allowed = (kind: SearchKind) => {
+      if (kind === "page" || kind === "shortcut" || kind === "charge") return true;
       const href = KIND_ROUTE[kind];
       const route = BOARD_ROUTES.filter((r) => href.startsWith(r.href)).sort(
         (a, b) => b.href.length - a.href.length,
@@ -158,11 +213,64 @@ function Palette({ onClose }: { onClose: () => void }) {
       if (!route) return true;
       return moduleOn(route.module) && (!route.need || route.need.some((c) => can(c)));
     };
-    return boardIndex(community).filter((h) => allowed(h.kind));
+    return prepareIndex([...boardPages(community, can), ...boardIndex(community).filter((h) => allowed(h.kind))]);
   }, [board, community, owner, can]);
 
-  const hits = useMemo(() => searchHits(index, query), [index, query]);
-  const groups = useMemo(() => groupHits(hits), [hits]);
+  const trimmed = query.trim();
+  const rows = useMemo<Row[]>(() => {
+    if (trimmed === "") {
+      // Recent, for this side of the product only: a board member's last
+      // five households are not a resident's business.
+      const prefix = board ? "/board" : "/resident";
+      return recent
+        .filter((e) => e.href.startsWith(prefix))
+        .map((e) => ({
+          key: `recent-${e.id}`,
+          kind: e.kind,
+          section: "Recent",
+          title: e.title,
+          subtitle: e.subtitle,
+          href: e.href,
+          tint: e.tint,
+          titleRanges: [],
+          subtitleRanges: [],
+        }));
+    }
+    const shortcuts = board
+      ? boardShortcuts(trimmed, community, can)
+      : residentShortcuts(trimmed, community, owner);
+    const found = searchIndex(index, trimmed);
+    return [
+      ...shortcuts.map<Row>((h) => ({
+        key: h.id,
+        kind: h.kind,
+        section: h.section,
+        title: h.title,
+        subtitle: h.subtitle,
+        href: h.href,
+        tint: h.tint,
+        icon: h.icon,
+        titleRanges: [],
+        subtitleRanges: [],
+        hit: h,
+      })),
+      ...found.map<Row>((s) => ({
+        key: s.item.id,
+        kind: s.item.kind,
+        section: s.item.section,
+        title: s.item.title,
+        subtitle: s.item.subtitle,
+        href: s.item.href,
+        tint: s.item.tint,
+        icon: s.item.icon,
+        titleRanges: s.titleRanges,
+        subtitleRanges: s.subtitleRanges,
+        hit: s.item,
+      })),
+    ];
+  }, [trimmed, board, community, can, owner, index, recent]);
+
+  const groups = useMemo(() => groupHits(rows, trimmed === "" ? 5 : 6), [rows, trimmed]);
   const flat = useMemo(() => groups.flatMap((g) => g.hits), [groups]);
   const active = flat[Math.min(cursor, Math.max(flat.length - 1, 0))];
 
@@ -172,9 +280,10 @@ function Palette({ onClose }: { onClose: () => void }) {
     el?.scrollIntoView({ block: "nearest" });
   }, [cursor, flat.length]);
 
-  function go(hit: SearchHit) {
+  function go(row: Row) {
+    if (row.hit) recentStore().remember(row.hit);
     onClose();
-    router.push(hit.href);
+    router.push(row.href);
   }
 
   function onKey(e: React.KeyboardEvent) {
@@ -187,11 +296,22 @@ function Palette({ onClose }: { onClose: () => void }) {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setCursor((c) => Math.max(c - 1, 0));
+    } else if (e.key === "Home" && flat.length > 0) {
+      e.preventDefault();
+      setCursor(0);
+    } else if (e.key === "End" && flat.length > 0) {
+      e.preventDefault();
+      setCursor(flat.length - 1);
     } else if (e.key === "Enter" && active) {
       e.preventDefault();
       go(active);
     }
   }
+
+  const activeId = active ? `search-opt-${active.key}` : undefined;
+  const canSearch = board
+    ? "Names, homes, addresses, emails, phone numbers, requests, transactions and amounts, vendors, documents, meetings, ballots, announcements, messages, and any page by name."
+    : "Documents, forms, meetings, ballots, your requests and notices, your charges and payments, announcements, and any page by name.";
 
   return (
     <div
@@ -218,10 +338,14 @@ function Palette({ onClose }: { onClose: () => void }) {
             }}
             placeholder={
               board
-                ? "Search households, transactions, documents, meetings, requests…"
-                : "Search documents, meetings, ballots, requests…"
+                ? "Search households, transactions, documents, meetings, pages…"
+                : "Search documents, meetings, ballots, requests, pages…"
             }
             aria-label="Search"
+            aria-controls="search-results"
+            aria-activedescendant={activeId}
+            autoComplete="off"
+            spellCheck={false}
             className="h-full min-w-0 flex-1 bg-transparent text-body text-fg outline-none placeholder:text-fg-subtle"
           />
           {/* A way out without a keyboard; tapping the backdrop is not obvious. */}
@@ -234,47 +358,75 @@ function Palette({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div ref={listRef} className="max-h-[60vh] overflow-y-auto">
-          {query.trim() === "" ? (
-            <p className="px-4 py-5 text-footnote text-fg-muted">
-              Type a name, a unit, a subject, a vendor, or a year. Everything the association has
-              recorded is here.
-            </p>
-          ) : flat.length === 0 ? (
-            <p className="px-4 py-5 text-footnote text-fg-muted">
-              Nothing matches &ldquo;{query.trim()}&rdquo;.
-            </p>
+        <div ref={listRef} id="search-results" role="listbox" aria-label="Results" className="max-h-[60vh] overflow-y-auto">
+          {flat.length === 0 ? (
+            trimmed === "" ? (
+              <div className="px-4 py-5">
+                <p className="text-footnote text-fg-muted">
+                  Type a name, a unit, an amount, a subject, a vendor, a month, or a page. What you
+                  open shows up here next time.
+                </p>
+                <p className="mt-2 text-caption text-fg-subtle">{canSearch}</p>
+              </div>
+            ) : (
+              <div className="px-4 py-5">
+                <p className="text-footnote text-fg-muted">Nothing matches &ldquo;{trimmed}&rdquo;.</p>
+                <p className="mt-2 text-caption text-fg-subtle">
+                  Try fewer words, a different spelling, or part of a name. You can search: {canSearch}
+                </p>
+              </div>
+            )
           ) : (
             groups.map((group) => (
               <div key={group.section} className="py-1">
-                <p className="px-4 pb-1 pt-2 text-caption font-semibold uppercase tracking-[0.06em] text-fg-subtle">
-                  {group.section}
-                </p>
+                <div className="flex items-center justify-between px-4 pb-1 pt-2">
+                  <p className="text-caption font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                    {group.section}
+                  </p>
+                  {group.section === "Recent" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        recentStore().clear();
+                        // The button goes with the list; keep the keys working.
+                        inputRef.current?.focus();
+                      }}
+                      className="press rounded-md px-2 py-1 text-caption font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
                 <ul>
-                  {group.hits.map((hit) => {
-                    const on = hit === active;
-                    const Icon = ICON[hit.kind];
+                  {group.hits.map((row) => {
+                    const on = row === active;
+                    const Icon = group.section === "Recent" ? Clock : (row.icon ?? ICON[row.kind]);
                     return (
-                      <li key={hit.id}>
+                      <li key={row.key} id={`search-opt-${row.key}`} role="option" aria-selected={on}>
                         <button
                           type="button"
+                          tabIndex={-1}
                           data-active={on}
-                          onMouseEnter={() => setCursor(flat.indexOf(hit))}
-                          onClick={() => go(hit)}
+                          onMouseEnter={() => setCursor(flat.indexOf(row))}
+                          onClick={() => go(row)}
                           className={cn(
                             "flex w-full items-center gap-3 px-4 py-2.5 text-left",
                             on ? "bg-surface-2" : "",
                           )}
                         >
-                          <IconTile icon={Icon} tint={hit.tint} size="sm" />
+                          <IconTile icon={Icon} tint={row.tint} size="sm" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-body font-medium text-fg">
-                              {hit.title}
+                              {row.kind === "page" && group.section !== "Recent" ? "Go to " : ""}
+                              <Highlight text={row.title} ranges={row.titleRanges} />
                             </span>
                             <span className="block truncate text-footnote text-fg-muted">
-                              {hit.subtitle}
+                              <Highlight text={row.subtitle} ranges={row.subtitleRanges} />
                             </span>
                           </span>
+                          {on ? (
+                            <span className="hidden shrink-0 text-caption text-fg-subtle sm:inline">↵</span>
+                          ) : null}
                         </button>
                       </li>
                     );
@@ -285,15 +437,16 @@ function Palette({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {flat.length > 0 ? (
-          <p className="flex items-center gap-4 border-t border-border px-4 py-2 text-caption text-fg-subtle">
-            <span>↑↓ to move</span>
-            <span>↵ to open</span>
+        <p className="flex items-center gap-4 border-t border-border px-4 py-2 text-caption text-fg-subtle">
+          <span>↑↓ to move</span>
+          <span>↵ to open</span>
+          <span>esc to close</span>
+          {trimmed !== "" && flat.length > 0 ? (
             <span className="ml-auto tnum">
-              {hits.length} {hits.length === 1 ? "result" : "results"}
+              {rows.length} {rows.length === 1 ? "result" : "results"}
             </span>
-          </p>
-        ) : null}
+          ) : null}
+        </p>
       </div>
     </div>
   );

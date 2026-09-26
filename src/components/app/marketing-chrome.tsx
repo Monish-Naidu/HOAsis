@@ -178,7 +178,12 @@ export function MarketingFooter() {
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
-          {[...LINKS, { href: "/signin", label: "Log in" }].map((link) => (
+          {[
+            ...LINKS,
+            { href: "/terms", label: "Terms" },
+            { href: "/privacy", label: "Privacy" },
+            { href: "/signin", label: "Log in" },
+          ].map((link) => (
             <Link
               key={link.href}
               href={link.href}

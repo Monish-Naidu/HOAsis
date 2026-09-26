@@ -112,6 +112,27 @@ try {
   check("a late payment_failed does not touch settled money",
     (downgraded ?? []).length === 0 && stillSettled?.state === "settled",
     `updated ${(downgraded ?? []).length}, state ${stillSettled?.state}`);
+
+  // 4. A refund from the dashboard lands in the books once, however many
+  // times Stripe says so, and never from a browser session.
+  const { data: refundId, error: refundError } = await admin.rpc("record_refund", {
+    p_stripe_payment_intent_id: intentA, p_amount_cents: 6000,
+  });
+  check("the webhook can record a refund", !refundError && refundId === firstId, refundError?.message ?? `${refundId}`);
+  const { data: again } = await admin.rpc("record_refund", {
+    p_stripe_payment_intent_id: intentA, p_amount_cents: 6000,
+  });
+  check("a redelivered refund is one refund", again === firstId, String(again));
+  const { data: refunded } = await admin.from("payments").select("state").eq("id", firstId).single();
+  const { data: refundLines } = await admin.from("charges").select("amount_cents").eq("unit_id", unit).ilike("label", "Refund%");
+  const { data: refundLedger } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", firstId).lt("amount_cents", 0);
+  check("a refund flips the payment, adds one statement line and one ledger line",
+    refunded?.state === "refunded" && (refundLines ?? []).length === 1 && refundLines[0].amount_cents === 6000 && (refundLedger ?? []).length === 1 && refundLedger[0].amount_cents === -6000,
+    `${refunded?.state}, ${(refundLines ?? []).length} lines, ${(refundLedger ?? []).length} ledger`);
+  const { error: browserRefund } = await president.client.rpc("record_refund", {
+    p_stripe_payment_intent_id: intentA, p_amount_cents: 1,
+  });
+  check("a signed-in person cannot record a refund", Boolean(browserRefund), browserRefund?.message ?? "allowed");
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {

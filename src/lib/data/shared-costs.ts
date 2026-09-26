@@ -1,7 +1,7 @@
 import type { SharedCost, SharedCostBill, SpecialAssessment } from "@/lib/types";
 
 /**
- * What Mehr Meadows pays on everyone's behalf, and what it costs.
+ * What Willow Creek Estates pays on everyone's behalf, and what it costs.
  *
  * The association is on a single master water meter and one commercial waste
  * contract, which is ordinary for a development of this age and the reason

@@ -2,7 +2,7 @@
 
 import { Term } from "@/components/app/term";
 import { ResidentTitle } from "@/components/app/resident-title";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Apple,
@@ -31,6 +31,7 @@ import { cn, formatDate, money, ordinal, pluralize, relativeDays, today } from "
 import { AddMethod } from "./add-method";
 import { InstrumentMenu } from "./instrument-menu";
 import { StripePayPanel } from "./stripe-pay-panel";
+import { refreshRemote } from "@/lib/data/remote-store";
 import { isChargeable } from "@/lib/payments/autopay";
 import { useToast } from "@/components/app/toast";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
@@ -466,6 +467,10 @@ export function PayFlow() {
   if (isRemote) {
     const stripeAccountId = community.association.stripeAccountId;
     const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+    // Stripe's answer, not the presence of an account id: an association
+    // whose treasurer clicked "Set up payments" and stopped has an account
+    // that refuses every charge, and a pay form in front of it is a lie.
+    const stripeReady = Boolean(community.association.stripeChargesEnabled);
     const inFlight = (community.pendingPayments ?? []).filter(
       (p) => p.unitId === owner.id && p.state === "pending",
     );
@@ -489,7 +494,10 @@ export function PayFlow() {
           </Callout>
         ))}
         {amountSection}
-        {stripeAccountId && publishableKey ? (
+        {stripeAccountId && !stripeReady ? (
+          <StripeReadyCheck associationId={community.association.id} />
+        ) : null}
+        {stripeAccountId && stripeReady && publishableKey ? (
           <>
             <TestModeGuide audience="resident" />
             <StripePayPanel
@@ -536,17 +544,27 @@ export function PayFlow() {
             tone="info"
             icon={<Info className="size-4" />}
             title={
-              stripeAccountId
+              stripeAccountId && !publishableKey
                 ? "Online payments aren't working right now"
-                : "Your board hasn't set up online payments yet"
+                : stripeAccountId
+                  ? "Your board hasn't finished payment setup yet"
+                  : "Your board hasn't set up online payments yet"
             }
           >
-            {stripeAccountId ? (
+            {stripeAccountId && !publishableKey ? (
               "Please tell your board. You can still pay the way you used to."
+            ) : can("finances") && stripeAccountId ? (
+              <>
+                Stripe still needs a few details from the board.{" "}
+                <Link href="/board/settings#money" className="font-medium underline">
+                  Finish setup in Settings
+                </Link>
+                . Owners can pay here as soon as Stripe says it is done.
+              </>
             ) : can("finances") ? (
               <>
                 You can do it:{" "}
-                <Link href="/board/settings" className="font-medium underline">
+                <Link href="/board/settings#money" className="font-medium underline">
                   Set up payments in Settings
                 </Link>
                 . It takes a few minutes and owners can pay here once it is done.
@@ -732,4 +750,34 @@ export function PayFlow() {
       {autopaySection}
     </div>
   );
+}
+
+/**
+ * Asks Stripe once whether the cached "not yet" is stale.
+ *
+ * The column is written when the board opens Settings or Stripe sends
+ * account.updated; a resident who arrives in the gap between finishing
+ * onboarding and either of those would otherwise wait for nothing. Renders
+ * nothing; a "yes" reloads the community so the pay panel appears.
+ */
+function StripeReadyCheck({ associationId }: { associationId: string }) {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/stripe/status?associationId=${encodeURIComponent(associationId)}`,
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!cancelled && data.chargesEnabled) await refreshRemote();
+      } catch {
+        // The callout below already says what to do.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [associationId]);
+  return null;
 }

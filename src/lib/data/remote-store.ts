@@ -3,7 +3,14 @@
 import { useSyncExternalStore } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
-import { loadCommunity, loadMyAssociations, type RemoteCommunitySummary } from "./remote";
+import {
+  loadCommunity,
+  loadLedgerBefore,
+  loadMyAssociations,
+  loadWholeStatement,
+  type RemoteCommunitySummary,
+} from "./remote";
+import { slugFromHost } from "@/lib/community-links";
 import type { Community } from "./community";
 
 /**
@@ -100,6 +107,45 @@ function remembered(): string | null {
 }
 
 /**
+ * Which association to open first. A vanity host names one and wins; a
+ * link under /c/<slug> sets the same preference before it navigates; failing
+ * both, the one this browser had open last, then the first on the list.
+ */
+let requestedSlug: string | null = null;
+let requestedId: string | null = null;
+
+/** Asks for an association by slug ahead of the next load. */
+export function preferRemoteSlug(slug: string | null) {
+  requestedSlug = slug;
+}
+
+/**
+ * Asks for an association by id ahead of the next load, once. The wizard
+ * uses it so founding a second association lands in the new one rather
+ * than in whichever this browser had open last.
+ */
+export function preferRemoteAssociation(id: string | null) {
+  requestedId = id;
+}
+
+function chooseActive(associations: RemoteCommunitySummary[]): string {
+  const byId = requestedId ? associations.find((a) => a.id === requestedId) : undefined;
+  requestedId = null;
+  if (byId) return byId.id;
+  const slug = requestedSlug ?? slugFromHost(window.location.hostname);
+  const bySlug = slug ? associations.find((a) => a.slug === slug) : undefined;
+  if (bySlug) return bySlug.id;
+  const preferred = remembered();
+  // This browser's last choice, then the person's own home association,
+  // then the first by name. The home choice travels with the account.
+  return (
+    associations.find((a) => a.id === preferred)?.id ??
+    associations.find((a) => a.isHome)?.id ??
+    associations[0].id
+  );
+}
+
+/**
  * Loads everything the signed in person can reach.
  *
  * Called when auth settles and after any write, because a write that is not
@@ -128,9 +174,7 @@ export async function loadRemote(profileId: string | null): Promise<void> {
       return;
     }
 
-    const preferred = remembered();
-    const activeId =
-      associations.find((a) => a.id === preferred)?.id ?? associations[0].id;
+    const activeId = chooseActive(associations);
     const [community, dismissals] = await Promise.all([
       loadCommunity(supabase, activeId),
       loadDismissals(supabase, activeId),
@@ -157,12 +201,33 @@ export async function setRemoteAssociation(id: string): Promise<void> {
     ]);
     remember(id);
     set({ status: "ready", activeId: id, community, dismissals, message: undefined });
+    // A deliberate switch is also the answer to "where should I land next
+    // time, on any device". Best effort; the browser memory above still works.
+    const profileId = state.profileId;
+    if (profileId) {
+      void client.from("profiles").update({ home_association_id: id }).eq("id", profileId);
+    }
   } catch (error) {
     set({
       status: "error",
       message: error instanceof Error ? error.message : "Could not open that association",
     });
   }
+}
+
+/**
+ * Opens the association a link names, once the list is known. Returns what
+ * happened so the caller can send a stranger to the join page.
+ */
+export async function setRemoteAssociationBySlug(
+  slug: string,
+): Promise<"switched" | "already" | "not-a-member" | "not-ready"> {
+  if (state.status !== "ready" && state.status !== "empty") return "not-ready";
+  const match = state.associations.find((a) => a.slug === slug);
+  if (!match) return "not-a-member";
+  if (match.id === state.activeId && state.community) return "already";
+  await setRemoteAssociation(match.id);
+  return state.status === "ready" ? "switched" : "not-ready";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -208,6 +273,64 @@ export async function remoteWrite(
     reportRemoteError(
       `${label}: ${error instanceof Error ? error.message : "the database refused it"}`,
     );
+    return false;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Earlier rows, on request                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Every ledger line before the loaded window, added to what is on screen.
+ *
+ * The lines are appended under the window's, and the server's month sums
+ * step aside for them (`history.ledgerLoaded`), so nothing is counted twice.
+ * Resolves false when there was nothing to fetch or it could not be fetched;
+ * the screen keeps what it has either way.
+ */
+export async function loadEarlierLedger(): Promise<boolean> {
+  const c = state.community;
+  if (!hasSupabase || !c?.history || c.history.ledgerLoaded) return false;
+  try {
+    const earlier = await loadLedgerBefore(supabaseBrowser(), c.id, c.history.from);
+    const current = state.community;
+    if (!current?.history || current.id !== c.id) return false;
+    set({
+      community: {
+        ...current,
+        ledger: [...current.ledger, ...earlier],
+        history: { ...current.history, ledgerLoaded: true },
+      },
+    });
+    return true;
+  } catch (error) {
+    reportRemoteError(error instanceof Error ? error.message : "Could not load earlier transactions");
+    return false;
+  }
+}
+
+/** One home's whole statement, replacing the windowed lines on screen. */
+export async function loadEarlierStatement(unitId: string): Promise<boolean> {
+  const c = state.community;
+  if (!hasSupabase || !c?.history || c.history.statementsLoaded.includes(unitId)) return false;
+  try {
+    const lines = await loadWholeStatement(supabaseBrowser(), unitId);
+    const current = state.community;
+    if (!current?.history || current.id !== c.id) return false;
+    set({
+      community: {
+        ...current,
+        ownerCharges: { ...current.ownerCharges, [unitId]: lines },
+        history: {
+          ...current.history,
+          statementsLoaded: [...current.history.statementsLoaded, unitId],
+        },
+      },
+    });
+    return true;
+  } catch (error) {
+    reportRemoteError(error instanceof Error ? error.message : "Could not load the earlier statement");
     return false;
   }
 }

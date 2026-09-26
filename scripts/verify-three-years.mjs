@@ -40,6 +40,28 @@ const check = (n, p, d = "") => {
 };
 const cleanup = { users: [], associations: [] };
 
+/**
+ * A write, retried through a statement timeout.
+ *
+ * Under load (three headless walks of a ten year association on the same
+ * database) one post_shared_cost_bill hit Postgres's statement timeout and
+ * the four checks that depend on it failed with it. A timeout says the
+ * database was busy, not that the books are wrong, so the call goes again,
+ * a few times with a pause, and only a repeated failure or any other error
+ * reaches the checks unchanged.
+ */
+async function withRetry(run, tries = 4) {
+  let last;
+  for (let attempt = 0; attempt < tries; attempt++) {
+    last = await run();
+    const message = last.error?.message ?? "";
+    const timedOut = last.error?.code === "57014" || /statement timeout/i.test(message);
+    if (!timedOut) return last;
+    await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+  }
+  return last;
+}
+
 const monthsAgo = (n) => {
   const d = new Date();
   d.setUTCMonth(d.getUTCMonth() - n, 1);
@@ -187,7 +209,7 @@ try {
     // utility bills do.
     const season = 1 + 0.25 * Math.sin(((MONTHS - m) % 12) / 12 * 2 * Math.PI);
     const waterTotal = Math.round(41_000 * season * Math.pow(1.07, yearIndex));
-    const { data: billId, error: billError } = await treasurer.client.rpc("post_shared_cost_bill", {
+    const { data: billId, error: billError } = await withRetry(() => treasurer.client.rpc("post_shared_cost_bill", {
       p_shared_cost_id: water.id,
       p_period_start: due,
       p_period_end: monthsAgo(m - 1),
@@ -195,18 +217,20 @@ try {
       p_due_on: monthsAgo(m - 1),
       p_usage_amount: Math.round(waterTotal / 84),
       p_usage_unit: "hundred cubic feet",
-    });
+    }));
     if (billError) { check(`water bill for ${due} posts`, false, billError.message); break; }
     waterBills.push({ id: billId, total: waterTotal, due });
 
-    await treasurer.client.rpc("post_shared_cost_bill", {
+    const { error: trashError } = await withRetry(() => treasurer.client.rpc("post_shared_cost_bill", {
       p_shared_cost_id: trash.id, p_period_start: due, p_period_end: monthsAgo(m - 1),
       p_total_cents: 18_900 + yearIndex * 900, p_due_on: monthsAgo(m - 1),
-    });
-    await treasurer.client.rpc("post_shared_cost_bill", {
+    }));
+    if (trashError) { check(`trash bill for ${due} posts`, false, trashError.message); break; }
+    const { error: gasError } = await withRetry(() => treasurer.client.rpc("post_shared_cost_bill", {
       p_shared_cost_id: gas.id, p_period_start: due, p_period_end: monthsAgo(m - 1),
       p_total_cents: Math.round(12_500 * season), p_due_on: monthsAgo(m - 1),
-    });
+    }));
+    if (gasError) { check(`gas bill for ${due} posts`, false, gasError.message); break; }
   }
 
   check("thirty-six water bills were posted", waterBills.length === MONTHS, `${waterBills.length}`);

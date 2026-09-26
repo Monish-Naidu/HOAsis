@@ -43,7 +43,7 @@ export default function BoardLayout({
           </Rail>
           <BoardChrome
             name={
-              <div className="flex min-w-0 items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 {/* The bird alone on a phone: at 320 the full wordmark and five
                     controls came to 359px and pushed sign out off the edge. */}
                 <Link href="/" aria-label="Your HOAsis" className="shrink-0 lg:hidden">

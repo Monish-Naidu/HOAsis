@@ -51,6 +51,10 @@ const WANTED = [
       "setup_intent.succeeded",
       "setup_intent.setup_failed",
       "setup_intent.canceled",
+      "account.updated",
+      "charge.refunded",
+      "charge.dispute.created",
+      "charge.dispute.closed",
     ],
     description: "Your HOAsis: dues on connected accounts",
   },
@@ -120,6 +124,84 @@ if (!env.CRON_SECRET) {
   setEnv("CRON_SECRET", randomBytes(24).toString("base64url"));
   fs.writeFileSync(envPath, envText);
   console.log("✓ CRON_SECRET generated and written to .env.local");
+}
+
+/* ------------------------------------ Apple Pay and Google Pay domains */
+
+/**
+ * Wallets need the domain registered on the account that charges. Direct
+ * charges run on each association's connected account, so every one of them
+ * gets the domain, and the platform account too so anything charged on our
+ * own account (the subscription) can show a wallet as well. Stripe checks
+ * the file this app serves at /.well-known/apple-developer-merchantid-domain-association,
+ * so Apple Pay only goes active once that path is live on the domain; Google
+ * Pay needs only the registration. Idempotent: a domain already registered
+ * comes back as-is, and validate() asks Stripe to look at the file again.
+ *
+ * Hosts: the origin given on the command line, NEXT_PUBLIC_SITE_HOST when
+ * set, and yourhoasis.com. localhost and *.vercel.app are skipped.
+ */
+const hosts = [...new Set(
+  [new URL(origin).hostname, env.NEXT_PUBLIC_SITE_HOST, "yourhoasis.com"]
+    .map((h) => (h ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
+    .filter((h) => h && !h.includes("localhost") && !h.endsWith(".vercel.app")),
+)];
+
+async function registerDomain(host, accountId) {
+  const options = accountId ? { stripeAccount: accountId } : undefined;
+  let domain = await stripe.paymentMethodDomains.create({ domain_name: host }, options);
+  if (domain.apple_pay?.status !== "active" || domain.google_pay?.status !== "active") {
+    domain = await stripe.paymentMethodDomains.validate(domain.id, {}, options);
+  }
+  return domain;
+}
+
+function walletLine(domain) {
+  const apple = domain.apple_pay?.status ?? "?";
+  const google = domain.google_pay?.status ?? "?";
+  const reasons = [
+    apple !== "active" && domain.apple_pay?.status_details?.error_message
+      ? `Apple: ${domain.apple_pay.status_details.error_message}`
+      : null,
+    google !== "active" && domain.google_pay?.status_details?.error_message
+      ? `Google: ${domain.google_pay.status_details.error_message}`
+      : null,
+  ].filter(Boolean);
+  return `Apple Pay ${apple}, Google Pay ${google}${reasons.length ? `\n    ${reasons.join("\n    ")}` : ""}`;
+}
+
+if (hosts.length) {
+  console.log(`\nWallet domains: ${hosts.join(", ")}\n`);
+  const { createClient } = await import("@supabase/supabase-js");
+  const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+  const { data: rows } = await admin
+    .from("associations")
+    .select("name, stripe_account_id")
+    .not("stripe_account_id", "is", null)
+    .is("deleted_at", null);
+  const accounts = [{ name: "platform (Your HOAsis)", stripe_account_id: null }, ...(rows ?? [])];
+  let inactive = 0;
+  for (const host of hosts) {
+    for (const account of accounts) {
+      try {
+        const domain = await registerDomain(host, account.stripe_account_id);
+        const ok = domain.apple_pay?.status === "active" && domain.google_pay?.status === "active";
+        if (!ok) inactive++;
+        console.log(`${ok ? "✓" : "!"} ${host} on ${account.name}${account.stripe_account_id ? ` (${account.stripe_account_id})` : ""}: ${walletLine(domain)}`);
+      } catch (error) {
+        inactive++;
+        console.log(`! ${host} on ${account.name}: ${error.message}`);
+      }
+    }
+  }
+  if (inactive) {
+    console.log(`
+Apple Pay goes active once https://${hosts[0]}/.well-known/apple-developer-merchantid-domain-association
+is served by the deployed site (the file is in public/). Deploy, then run this script again;
+it only re-validates, nothing is registered twice.`);
+  }
 }
 
 console.log(`

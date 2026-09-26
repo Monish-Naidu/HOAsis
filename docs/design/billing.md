@@ -26,7 +26,7 @@ The resident side is never touched by any of this. An owner's statement is
 theirs whatever the board has or has not paid, and a board that comes back
 after a lapse finds nothing missing.
 
-The demo association (Mehr Meadows) has no `trialEndsOn` and never sees a
+The demo association (Willow Creek Estates) has no `trialEndsOn` and never sees a
 banner. Only real associations do.
 
 ## Charging

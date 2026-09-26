@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useState } from "react";
+import { Suspense, use, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowRight, DoorOpen, ShieldCheck } from "lucide-react";
@@ -48,6 +48,7 @@ export function JoinPanel() {
         initialCode={(search.get("invite") ?? search.get("code") ?? "").toUpperCase().slice(0, 6)}
         invitedEmail={invited ? (search.get("email") ?? "") : ""}
         invited={invited}
+        communitySlug={search.get("community")}
       />
     );
   }
@@ -135,12 +136,16 @@ function JoinWithCode({
   initialCode,
   invitedEmail,
   invited,
+  communitySlug,
 }: {
   initialCode: string;
   invitedEmail: string;
   invited: boolean;
+  /** Set when they arrived by a community link (/c/<slug>) without a seat. */
+  communitySlug?: string | null;
 }) {
   const { lookupJoinCode } = useAppState();
+  const named = useCommunityName(communitySlug ?? null);
   const [draft, setDraft] = useState(initialCode);
   // The code being looked at. Arriving with one on the link skips the first
   // step; typing one and pressing Continue sets it.
@@ -180,10 +185,12 @@ function JoinWithCode({
           Join your community
         </p>
         <h1 className="mt-1 text-title3 font-semibold leading-tight tracking-[-0.02em] text-fg">
-          Enter your join code
+          {named ? `Join ${named.name}` : "Enter your join code"}
         </h1>
         <p className="mt-1 text-body leading-relaxed text-fg-muted">
-          Six characters, from your board or the welcome letter.
+          {named
+            ? `You are not on the register for ${named.name}${named.place ? `, ${named.place}` : ""} yet. Enter the join code from your board.`
+            : "Six characters, from your board or the welcome letter."}
         </p>
       </div>
       <div className="space-y-4 px-6 py-5">
@@ -215,6 +222,35 @@ function JoinWithCode({
       </div>
     </Card>
   );
+}
+
+/**
+ * The association a community link names, for the heading. A stranger sees
+ * the name and the town, which is all `association_by_slug` gives out.
+ */
+function useCommunityName(slug: string | null): Found | null {
+  return useSyncExternalStore(
+    (listener) => subscribeCommunityName(slug, listener),
+    () => (slug ? (names.get(slug) ?? null) : null),
+    () => null,
+  );
+}
+
+const names = new Map<string, Found | null>();
+const nameListeners = new Set<() => void>();
+
+function subscribeCommunityName(slug: string | null, listener: () => void) {
+  nameListeners.add(listener);
+  if (slug && !names.has(slug)) {
+    void fetch(`/api/join/lookup?community=${encodeURIComponent(slug)}`)
+      .then((r) => (r.ok ? r.json() : { found: null }))
+      .then((body: { found: Found | null }) => {
+        names.set(slug, body.found);
+        for (const l of nameListeners) l();
+      })
+      .catch(() => names.set(slug, null));
+  }
+  return () => nameListeners.delete(listener);
 }
 
 /* ------------------------------------------------------------------ form */

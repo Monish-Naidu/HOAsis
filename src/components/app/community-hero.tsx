@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Building2, Camera, Check, ChevronDown, Plus } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
 import { cn, pluralize } from "@/lib/utils";
+import { sameAssociationName } from "@/lib/community-links";
 import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { refreshRemote } from "@/lib/data/remote-store";
@@ -16,31 +17,67 @@ import { refreshRemote } from "@/lib/data/remote-store";
  * association, so carrying a session across would leave a President of one
  * holding capabilities in another.
  */
-export function CommunityName() {
+export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
   const { settings, community, communities, setCommunity, isRemote } = useAppState();
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
+  // Two of this person's associations with one name: the town tells them
+  // apart, in the button and in the list.
+  const twins = new Set(
+    communities
+      .filter((c, i) => communities.some((o, j) => j !== i && sameAssociationName(o.label, c.label)))
+      .map((c) => c.id),
+  );
+  const activePlace = twins.has(community.id)
+    ? (communities.find((c) => c.id === community.id)?.place ?? "")
+    : "";
+
+  const ink = onPhoto
+    ? "text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]"
+    : "text-fg";
+
   if (communities.length < 2) {
     return (
-      <span className="hidden items-center px-2 py-1 text-body font-medium text-fg sm:inline-flex">
+      <span
+        className={cn(
+          "inline-flex max-w-full items-center truncate px-2 py-1 font-medium",
+          onPhoto ? "text-title2 font-semibold tracking-[-0.02em]" : "text-body",
+          ink,
+        )}
+      >
         {settings.displayName}
       </span>
     );
   }
 
   return (
-    <div className="relative hidden sm:block">
+    // Shown at every width. It was hidden under 640px, which on a phone made
+    // a person with two associations unable to find the other one at all.
+    <div className="relative min-w-0 max-w-full">
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={`Switch association, now ${settings.displayName}`}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-body font-medium text-fg hover:bg-surface-2"
+        className={cn(
+          "inline-flex max-w-full items-center gap-1.5 rounded-lg px-2 py-1 font-medium",
+          onPhoto
+            ? "text-title2 font-semibold tracking-[-0.02em] hover:bg-white/15"
+            : "text-body hover:bg-surface-2",
+          ink,
+        )}
       >
-        {settings.displayName}
-        <ChevronDown className={cn("size-3.5 text-fg-subtle transition-transform", open && "rotate-180")} />
+        {/* Under sm the bar has no room for a name: the building stands in,
+            and the photo below says whose it is. */}
+        <Building2 className={cn("size-4 shrink-0 sm:hidden", onPhoto ? "text-white/85" : "text-fg-muted")} aria-hidden />
+        <span className="hidden truncate sm:inline">{settings.displayName}</span>
+        {activePlace ? (
+          <span className={cn("hidden truncate text-footnote font-normal sm:inline", onPhoto ? "text-white/80" : "text-fg-subtle")}>{activePlace}</span>
+        ) : null}
+        <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", onPhoto ? "text-white/80" : "text-fg-subtle", open && "rotate-180")} />
       </button>
 
       {open ? (
@@ -80,6 +117,9 @@ export function CommunityName() {
                   <Building2 className="size-3.5 shrink-0 text-fg-subtle" />
                   <span className="min-w-0 flex-1 truncate font-medium text-fg">
                     {option.label}
+                    {twins.has(option.id) && option.place ? (
+                      <span className="block truncate text-footnote font-normal text-fg-subtle">{option.place}</span>
+                    ) : null}
                   </span>
                   {option.id === community.id ? (
                     <Check className="size-3.5 shrink-0 text-ok" />
@@ -109,6 +149,8 @@ export function CommunityHero({
   subtitle,
   className,
   compact,
+  short,
+  nameControl,
   withLocation,
   overlay,
   toolbar,
@@ -116,6 +158,14 @@ export function CommunityHero({
   subtitle?: string;
   className?: string;
   compact?: boolean;
+  /**
+   * The form every page but the dashboard takes at lg: the same photo and
+   * the same controls tray, about half the height, so the top of every tab
+   * is the top of the dashboard and no white bar repeats the name.
+   */
+  short?: boolean;
+  /** Replaces the plain name with the association switcher, drawn on the photo. */
+  nameControl?: ReactNode;
   /** Derives the subtitle from the association rather than taking one. */
   withLocation?: boolean;
   /**
@@ -142,12 +192,19 @@ export function CommunityHero({
     <section
       className={cn(
         "relative isolate flex overflow-hidden",
+        // At lg the rail floats 12px in from the edges with rounded corners;
+        // the photo takes the same inset and radius so the two read as cards
+        // on one gutter rather than a strip butting into a pill (Monish,
+        // 2026-09-26). Below lg it runs edge to edge under the bar.
+        !compact && "lg:ml-0 lg:mr-3 lg:mt-3 lg:rounded-[26px]",
         overlay ? "flex-col justify-between" : "items-end",
         // Taller per the 2026-09-01 huddle: the banner was leaving too much
         // white space beneath it, so it carries more of the viewport now.
         // Taller again with an overlay, which needs its own band of photo.
         compact
           ? "h-28"
+          : short
+            ? "h-36 lg:h-40"
           : toolbar && overlay
             ? "h-64 sm:h-72 lg:h-80"
             : toolbar
@@ -195,14 +252,18 @@ export function CommunityHero({
         )}
       >
         <div className="min-w-0">
-          <h1
-            className={cn(
-              "font-semibold tracking-[-0.03em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35),0_8px_24px_rgb(0_0_0/0.25)]",
-              compact ? "text-title2" : "text-[30px] sm:text-[36px]",
-            )}
-          >
-            {settings.displayName}
-          </h1>
+          {nameControl ? (
+            <div className="-ml-2">{nameControl}</div>
+          ) : (
+            <h1
+              className={cn(
+                "font-semibold tracking-[-0.03em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35),0_8px_24px_rgb(0_0_0/0.25)]",
+                compact || short ? "text-title2" : "text-[30px] sm:text-[36px]",
+              )}
+            >
+              {settings.displayName}
+            </h1>
+          )}
           {line ? (
             <p className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-caption font-medium text-white/95 backdrop-blur-md sm:text-footnote">
               <Building2 className="size-3" strokeWidth={2.2} />
@@ -378,12 +439,9 @@ export function BoardChrome({
   const dashboard = pathname === "/board";
   return (
     <>
-      <header
-        className={cn(
-          "sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md",
-          dashboard && "lg:hidden",
-        )}
-      >
+      {/* The bar is for narrow screens. At lg the photo is the top of every
+          page, dashboard or not, with the controls in their tray on it. */}
+      <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md lg:hidden">
         <div className="flex items-center justify-between gap-4 px-4 py-2.5 lg:px-6">
           {name}
           {controls}
@@ -395,16 +453,71 @@ export function BoardChrome({
           {nav}
         </div>
       </header>
-      {dashboard ? (
-        <CommunityHero
-          withLocation
-          toolbar={
-            <div className="hidden rounded-2xl bg-surface/90 p-1.5 shadow-float ring-1 ring-border/70 backdrop-blur-md lg:block">
-              {controls}
-            </div>
-          }
-        />
-      ) : null}
+      <CommunityHero
+        withLocation
+        short={!dashboard}
+        nameControl={dashboard ? undefined : <CommunityName onPhoto />}
+        className={dashboard ? undefined : "max-lg:hidden"}
+        toolbar={
+          <div className="hidden rounded-2xl bg-surface/90 p-1.5 shadow-float ring-1 ring-border/70 backdrop-blur-md lg:block">
+            {controls}
+          </div>
+        }
+      />
+      {dashboard ? null : <PhotoStrip className="lg:hidden" quietBelowLg={false} />}
     </>
+  );
+}
+
+/**
+ * The community photo on every page that is not the dashboard.
+ *
+ * The dashboard has the full banner. Everywhere else the same photo runs
+ * as a short strip at the top of the content frame, inside the page's own
+ * gutters and with the cards' corner radius, so it reads as part of the
+ * page rather than a bar bolted above it. No controls, no cover button,
+ * no motion: the name and the line sit low left, the way the banner's do.
+ * Both shells render it from the same place, above the section tabs.
+ */
+export function PhotoStrip({
+  subtitle,
+  className,
+  quietBelowLg,
+}: {
+  subtitle?: string;
+  className?: string;
+  /** Photo only under lg, where the shell's own header already says the name. */
+  quietBelowLg?: boolean;
+}) {
+  const { settings, community } = useAppState();
+  const pathname = usePathname();
+  if (pathname === "/board" || pathname === "/resident") return null;
+  const line =
+    subtitle ??
+    `${community.association.addressLine} · ${pluralize(community.association.unitCount, "home")}`;
+  return (
+    <section
+      className={cn(
+        "relative isolate mx-4 mt-4 flex h-24 items-end overflow-hidden rounded-card sm:h-28 lg:mx-6",
+        className,
+      )}
+      aria-label={settings.displayName}
+    >
+      <div
+        className="absolute inset-0 -z-10 bg-navy-900 bg-cover bg-center"
+        style={settings.photoUrl ? { backgroundImage: `url(${settings.photoUrl})` } : undefined}
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-950/80 via-navy-950/30 to-navy-950/5"
+        aria-hidden
+      />
+      <div className={cn("w-full px-4 pb-3 sm:px-5", quietBelowLg && "max-lg:sr-only")}>
+        <p className="truncate text-headline font-semibold tracking-[-0.015em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]">
+          {settings.displayName}
+        </p>
+        <p className="truncate text-footnote text-white/85 [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]">{line}</p>
+      </div>
+    </section>
   );
 }

@@ -47,6 +47,11 @@ const TABLES = [
 ] as const;
 
 function allowed(): string | null {
+  // Never on the deployed site, whatever the flag says: this empties every
+  // table, and a flag copied into the wrong environment must not be enough.
+  if (process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production") {
+    return "Test reset does not exist in production.";
+  }
   if (process.env.ALLOW_TEST_RESET !== "true") {
     return "Test reset is switched off. Set ALLOW_TEST_RESET=true on the server to enable it, and never in production.";
   }

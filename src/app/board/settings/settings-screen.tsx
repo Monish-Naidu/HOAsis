@@ -7,6 +7,9 @@ import {
   ChevronDown,
   Copy,
   FileText,
+  Hourglass,
+  IdCard,
+  Landmark,
   Lock,
   Megaphone,
   Plus,
@@ -18,6 +21,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Callout, Card, CardHeader, Checkbox, PageHeader, SectionTitle, Select, SettingRow, Toggle, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { DangerZone } from "@/components/app/danger-zone";
+import { SameNameNote } from "@/components/app/same-name-note";
 import { BillingRow } from "@/components/app/billing-row";
 import { DisplaySettings } from "@/components/app/display-settings";
 import { DuesSettings } from "@/components/app/dues-settings";
@@ -36,6 +40,7 @@ import {
 import { cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { moduleOn } from "@/lib/modules";
+import { joinNeeds } from "@/lib/stripe/requirements";
 
 /** The jump row under the title, in page order. */
 const SECTIONS: { id: string; label: string }[] = [
@@ -52,6 +57,7 @@ export function SettingsScreen() {
   const {
     account,
     accounts,
+    communities,
     settings,
     updateSettings,
     amenities,
@@ -108,6 +114,14 @@ export function SettingsScreen() {
   const candidates = homes
     .filter((h) => h.role === "resident")
     .sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true }));
+  // Terms of office, where the database keeps them: when each sitting
+  // officer took the seat, and who held one before. Absent for the demo.
+  const terms = community.boardTerms ?? [];
+  const sinceFor = (ownerId: string, role: AccountRole) =>
+    terms.find((t) => !t.to && t.role === role && t.unit === community.owners.find((o) => o.id === ownerId)?.unit)?.from;
+  const pastTerms = terms
+    .filter((t): t is typeof t & { to: string } => Boolean(t.to))
+    .sort((a, b) => b.to.localeCompare(a.to) || b.from.localeCompare(a.from));
 
   if (!can("settings")) {
     return (
@@ -177,7 +191,7 @@ export function SettingsScreen() {
           <a
             key={x.id}
             href={`#${x.id}`}
-            className="rounded-lg px-2.5 py-1.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg pointer-coarse:min-h-11"
           >
             {x.label}
           </a>
@@ -187,8 +201,11 @@ export function SettingsScreen() {
       {/* Two columns that each stack their own cards, so nothing waits on
           a taller neighbour and no row runs the width of the screen. One
           column left every setting's control a foot away from its label. */}
+      {/* min-w-0 on each column: a grid column's floor is its widest child's
+          natural width, and the roster table's is 720px, so a phone showed a
+          sideways scroll with the right edge of every card cut off. */}
       <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
       {/* Yours, not the association's: first, because it is the setting a
           board member is most likely to come here looking for. */}
       <section id="display" className="scroll-mt-32 lg:scroll-mt-24">
@@ -250,6 +267,14 @@ export function SettingsScreen() {
               aria-label="Community name"
               className={cn(fieldClass, "w-48 max-w-full")}
             />
+            {name.trim() !== settings.displayName.trim() ? (
+              <SameNameNote
+                name={name}
+                excludeSlug={communities.find((c) => c.id === community.id)?.slug}
+                variant="plain"
+                className="mt-2 max-w-sm text-footnote leading-snug text-fg-muted"
+              />
+            ) : null}
           </SettingRow>
           <div className="border-b border-border px-5 py-4">
             <p className="text-body font-medium text-fg">Community photo</p>
@@ -270,7 +295,7 @@ export function SettingsScreen() {
               </div>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <label className="press inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-border-2 bg-surface px-3.5 text-callout font-medium text-fg hover:bg-surface-2">
+              <label className="press inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg pointer-coarse:min-h-11 border border-border-2 bg-surface px-3.5 text-callout font-medium text-fg hover:bg-surface-2">
                 <Upload className="size-3.5" />
                 Replace photo
                 <input
@@ -498,7 +523,7 @@ export function SettingsScreen() {
       </section>
       </div>
 
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
       <section id="residents" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
         <SectionTitle>Residents</SectionTitle>
         {/* Visibility */}
@@ -609,6 +634,9 @@ export function SettingsScreen() {
                   <p className="truncate text-body font-medium text-fg">{row.name}</p>
                   <p className="truncate text-footnote text-fg-muted">
                     {homeLabel(community, row.unit)}
+                    {sinceFor(row.ownerId, row.role)
+                      ? ` · since ${formatDate(sinceFor(row.ownerId, row.role) as string, "long")}`
+                      : ""}
                     {row.signedUp ? "" : " · not signed up yet"}
                   </p>
                   {row.opens.length ? (
@@ -646,10 +674,39 @@ export function SettingsScreen() {
               </div>
             ))}
           </div>
-          <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
+          <p className="max-w-prose border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
             The President is set apart on purpose. Handing over that office is its own step,
             because an association with no President has no way to grant access back.
           </p>
+          {/* Who held an office before, folded: a ten year association has
+              a dozen terms behind its four sitting officers. */}
+          {pastTerms.length ? (
+            <details className="group border-t border-border">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 py-3 text-footnote font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden">
+                Past officers
+                <span className="flex items-center gap-2 font-medium text-fg-subtle">
+                  {pastTerms.length} {pastTerms.length === 1 ? "term" : "terms"}
+                  <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+                </span>
+              </summary>
+              <ul className="divide-y divide-border border-t border-border">
+                {pastTerms.map((t) => (
+                  <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
+                    <div className="min-w-[10rem] flex-1">
+                      <p className="truncate text-body font-medium text-fg">{t.name}</p>
+                      <p className="truncate text-footnote text-fg-muted">
+                        {t.unit ? `${homeLabel(community, t.unit)} · ` : ""}
+                        <span className="tnum">
+                          {formatDate(t.from, "long")} to {formatDate(t.to, "long")}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge tone="neutral">{ROLE_LABEL[t.role]}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </Card>
 
         {/* What a board transition actually moves: nothing. The records are
@@ -666,7 +723,7 @@ export function SettingsScreen() {
             {(
               [
                 [documents.length, "documents"],
-                [ledger.length, "ledger entries"],
+                [community.history?.ledgerCount ?? ledger.length, "ledger entries"],
                 [community.owners.length, "homeowner records"],
                 [vendors.length, "vendor contacts"],
                 [community.meetings.length, "meetings on record"],
@@ -907,15 +964,33 @@ export function SettingsScreen() {
  * status is read live from the connect route on every visit rather than
  * cached in a column, because "charges enabled" is Stripe's fact, not ours,
  * and a stale copy would tell a treasurer setup is done when it is not.
+ *
+ * Four things a treasurer can see here, in the order they happen:
+ *
+ *   1. Nothing yet. A "before you start" card names the three things to have
+ *      on the desk, then one button. Stripe's form asks for exactly those,
+ *      because the connect route prefilled the rest.
+ *   2. Stripe needs one more thing. The requirement paths Stripe sends come
+ *      back as plain sentences (src/lib/stripe/requirements.ts); Continue
+ *      reopens the form on that page.
+ *   3. Stripe is checking. Every form is in and Stripe is verifying, which
+ *      usually takes minutes. This row asks again every ten seconds so the
+ *      treasurer sees it flip without reloading.
+ *   4. Live, with the bank the dues pay out to.
  */
+type OnboardingStatus =
+  | { name: "loading" }
+  | { name: "error" }
+  | { name: "none" }
+  | { name: "needs"; needs: string[] }
+  | { name: "checking" }
+  | { name: "live"; payout: { bank: string; last4: string } | null };
+
+const CHECKING_POLL_MS = 10_000;
+
 function StripeOnboardingRow({ associationId }: { associationId: string }) {
-  const [status, setStatus] = useState<
-    | { name: "loading" }
-    | { name: "error" }
-    | { name: "none" }
-    | { name: "incomplete" }
-    | { name: "live" }
-  >({ name: "loading" });
+  const [status, setStatus] = useState<OnboardingStatus>({ name: "loading" });
+  const [refresh, setRefresh] = useState(0);
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
@@ -926,11 +1001,19 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
           `/api/stripe/connect?associationId=${encodeURIComponent(associationId)}`,
         );
         if (!response.ok) throw new Error();
-        const data = await response.json();
+        const data: {
+          accountId: string | null;
+          chargesEnabled: boolean;
+          detailsSubmitted: boolean;
+          needs?: string[];
+          payout: { bank: string; last4: string } | null;
+        } = await response.json();
         if (cancelled) return;
         if (!data.accountId) setStatus({ name: "none" });
-        else if (data.chargesEnabled) setStatus({ name: "live" });
-        else setStatus({ name: "incomplete" });
+        else if (data.chargesEnabled) setStatus({ name: "live", payout: data.payout ?? null });
+        else if (data.needs?.length || !data.detailsSubmitted)
+          setStatus({ name: "needs", needs: data.needs?.length ? data.needs : ["a few more details"] });
+        else setStatus({ name: "checking" });
       } catch {
         if (!cancelled) setStatus({ name: "error" });
       }
@@ -938,7 +1021,15 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [associationId]);
+  }, [associationId, refresh]);
+
+  // While Stripe verifies, ask again every ten seconds. The interval only
+  // exists in that one state, so a live or untouched row makes no requests.
+  useEffect(() => {
+    if (status.name !== "checking") return;
+    const id = window.setInterval(() => setRefresh((n) => n + 1), CHECKING_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [status.name]);
 
   async function openOnboarding() {
     setRedirecting(true);
@@ -957,28 +1048,82 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
     }
   }
 
+  if (status.name === "none") {
+    return (
+      <div className="border-b border-border px-5 py-4 last:border-b-0">
+        <p className="text-body font-medium text-fg">Accepting payments</p>
+        <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
+          Residents can pay dues here once the association is connected to Stripe.
+        </p>
+        <p className="mt-4 text-body font-semibold text-fg">Before you start, have these ready</p>
+        <ul className="mt-2 space-y-2.5">
+          {[
+            { icon: FileText, text: "The association's EIN letter from the IRS" },
+            {
+              icon: Landmark,
+              text: "The bank's routing and account numbers, or a login to online banking",
+            },
+            {
+              icon: IdCard,
+              text: "The president's or treasurer's date of birth and the last four digits of their Social Security number",
+            },
+          ].map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-start gap-3">
+              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-fg-muted">
+                <Icon className="size-4" aria-hidden />
+              </span>
+              <span className="text-body leading-relaxed text-fg">{text}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-body leading-relaxed text-fg-muted">
+          Stripe is the bank-grade processor behind the payments. Your HOAsis never sees these
+          numbers.
+        </p>
+        <Button
+          variant="primary"
+          size="lg"
+          className="mt-4 w-full sm:w-auto"
+          onClick={openOnboarding}
+          disabled={redirecting}
+        >
+          {redirecting ? "Opening Stripe…" : "Start with Stripe"}
+        </Button>
+      </div>
+    );
+  }
+
+  const description =
+    status.name === "live"
+      ? status.payout
+        ? `Payments are live. Dues pay out to ${status.payout.bank} ••${status.payout.last4}.`
+        : "Payments are live. Dues settle to the association's own bank account."
+      : status.name === "needs"
+        ? `Stripe needs ${status.needs.length === 1 ? "one more thing" : "a few more things"}: ${joinNeeds(status.needs)}.`
+        : status.name === "checking"
+          ? "Stripe is checking your details, usually a few minutes."
+          : status.name === "error"
+            ? "Stripe did not answer. Try again in a moment."
+            : "Connect the association to Stripe so residents can pay dues here";
+
   return (
-    <SettingRow
-      title="Accepting payments"
-      description={
-        status.name === "live"
-          ? "Dues settle to the association's own bank account through Stripe"
-          : "Connect the association to Stripe so residents can pay dues here"
-      }
-    >
+    <SettingRow title="Accepting payments" description={description}>
       {status.name === "loading" ? (
         <span className="text-footnote text-fg-subtle">Checking…</span>
       ) : status.name === "live" ? (
         <Badge tone="ok">Payments are live</Badge>
+      ) : status.name === "checking" ? (
+        <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
+          <Hourglass className="size-3.5" aria-hidden />
+          Checking
+        </span>
       ) : status.name === "error" ? (
-        <span className="text-footnote font-medium text-danger">Could not reach Stripe</span>
+        <Button variant="secondary" size="sm" onClick={() => setRefresh((n) => n + 1)}>
+          Try again
+        </Button>
       ) : (
         <Button variant="primary" size="sm" onClick={openOnboarding} disabled={redirecting}>
-          {redirecting
-            ? "Opening…"
-            : status.name === "incomplete"
-              ? "Resume setup"
-              : "Set up payments"}
+          {redirecting ? "Opening…" : "Continue"}
         </Button>
       )}
     </SettingRow>

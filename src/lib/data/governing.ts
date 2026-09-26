@@ -45,7 +45,7 @@ export const declarationArticles: GoverningArticle[] = [
     topic: "governance",
     affects: "owners",
     text: [
-      "Section 1. This Declaration is recorded against all of the real property described in Exhibit A, being Lots 1 through 88 inclusive of the Plat of Mehr Meadows, recorded in Volume 168 of Plats, pages 41 through 44, records of Snohomish County, Washington.",
+      "Section 1. This Declaration is recorded against all of the real property described in Exhibit A, being Lots 1 through 88 inclusive of the Plat of Willow Creek Estates, recorded in Volume 168 of Plats, pages 41 through 44, records of Snohomish County, Washington.",
       "Section 2. Every covenant, condition and restriction in this Declaration runs with the land and binds every person acquiring any interest in a Lot, whether or not the covenants are referred to in the instrument by which that interest is acquired.",
       "Section 3. This Declaration may be enforced by the Association or by any Owner. Failure to enforce a covenant on one occasion is not a waiver of the right to enforce it later.",
     ],
@@ -354,7 +354,7 @@ export const bylawArticles: GoverningArticle[] = [
     topic: "governance",
     affects: "both",
     text: [
-      "The Association is Mehr Meadows Homeowners Association, a Washington nonprofit corporation organized under RCW 24.03A and subject to the Washington Uniform Common Interest Ownership Act, RCW 64.90.",
+      "The Association is Willow Creek Estates Homeowners Association, a Washington nonprofit corporation organized under RCW 24.03A and subject to the Washington Uniform Common Interest Ownership Act, RCW 64.90.",
       "These Bylaws govern the internal affairs of the Association. Where these Bylaws conflict with the Declaration, the Declaration controls. Where either conflicts with Washington law, the law controls.",
     ],
     plain:

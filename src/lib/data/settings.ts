@@ -6,7 +6,7 @@ import type { ArchitecturalForm, CommunityAmenity, CommunitySettings } from "@/l
  * see the resident side react.
  */
 export const communitySettings: CommunitySettings = {
-  displayName: "Mehr Meadows",
+  displayName: "Willow Creek Estates",
   photoUrl: "/community/mehr-meadows.jpg",
   photoCredit: "Alex Reynolds, Unsplash",
   homeLayout: "calendar",

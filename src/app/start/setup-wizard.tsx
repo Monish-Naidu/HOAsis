@@ -35,13 +35,25 @@ import { HOME_TYPE_LABEL, homeTypesOf, isMixed } from "@/lib/home-types";
 import { BankStep } from "./bank-step";
 import { CollectsPicker, OriginPicker, PropertyPicker, SpacesPicker } from "./situation-step";
 import { AccountStep, CheckEmailPanel } from "./account-step";
+import { RosterImport } from "./roster-import";
+import {
+  MONTHS,
+  booksOf,
+  householdsNeedingBooks,
+  nextDueOnOrAfter,
+  wallToday,
+  withBooks,
+  type Books,
+} from "./books";
+import { importRoster, setBooksStart } from "@/lib/roster/apply";
+import { SameNameNote } from "@/components/app/same-name-note";
 import {
   clearPendingDraft,
   pendingDraftStore,
   restoreDraft,
   savePendingDraft,
 } from "@/lib/pending-draft";
-import { cn, money } from "@/lib/utils";
+import { cn, formatDate, money } from "@/lib/utils";
 import { wordingFor, type Wording } from "@/lib/wording";
 import {
   clearProgress,
@@ -86,6 +98,7 @@ type QuestionId =
   | "spaces"
   | "origin"
   | "collects"
+  | "books"
   | "you"
   | "builder"
   | "homes"
@@ -116,6 +129,8 @@ function questionIds(signedIn: boolean, draft: CommunityDraft): QuestionId[] {
     "spaces",
     "origin",
     "collects",
+    // Where the books start, once we know whether there are any.
+    "books",
     "you",
     ...(w.fromBuilder ? (["builder"] as const) : []),
     "homes",
@@ -254,7 +269,44 @@ function WizardQuestions({
     }
     setBusy(true);
     try {
-      await createRemoteAssociation(finalizeDraft(draft));
+      const final = finalizeDraft(draft);
+      const associationId = await createRemoteAssociation(final);
+      // The fiscal year, the first bill, and what each home owed: none of it
+      // is a founding parameter, so it lands right after, keyed by the
+      // labels create_association just gave the homes. A failure here is
+      // not a failed founding; the association exists and Homeowners can
+      // redo the balances. Refounding on retry would make two.
+      try {
+        const today = wallToday();
+        const books = booksOf(draft, today);
+        await setBooksStart(associationId, {
+          fiscalYearStart: books.fiscalYearStart,
+          // The date the question showed, whether or not the board touched
+          // it, so the record says exactly what they were told.
+          billingStartsOn:
+            books.billingStartsOn ??
+            nextDueOnOrAfter(today, draft.dueDay, draft.duesCadence, books.fiscalYearStart),
+        });
+        const rows = householdsNeedingBooks(final);
+        if (rows.length) {
+          await importRoster(
+            associationId,
+            rows.map((h) => ({
+              line: 0,
+              name: h.name,
+              email: h.email,
+              unit: h.unit,
+              address: h.address ?? "",
+              phone: h.phone ?? "",
+              openingBalanceCents: h.openingBalanceCents,
+              problems: [],
+            })),
+            books.openingAsOf,
+          );
+        }
+      } catch (error) {
+        console.error("[hoasis] books follow-up after founding failed", error);
+      }
       clearProgress();
       // Straight to the plan rather than the dashboard. A board that lands on
       // an empty workspace has to work out what to do next; one that lands
@@ -308,6 +360,7 @@ function WizardQuestions({
               className={cn(input, "h-12 text-headline")}
               autoFocus
             />
+            <SameNameNote name={draft.name} />
           </Field>
         ),
       },
@@ -450,6 +503,16 @@ function WizardQuestions({
         title: "Anything billed besides dues?",
         detail: "Most associations bill one flat amount.",
         body: <CollectsPicker draft={draft} patch={patch} />,
+      },
+      books: {
+        id: "books",
+        group: "Money",
+        title: "When do the books start?",
+        detail:
+          draft.origin === "existing"
+            ? "The fiscal year, the first dues bill sent from here, and the day the balances you bring over are true."
+            : "The fiscal year and the first dues bill sent from here. Both can change in Settings.",
+        body: <BooksStep draft={draft} patch={patch} />,
       },
       you: {
         id: "you",
@@ -715,10 +778,14 @@ function HomesStep({ draft, patch }: StepProps) {
     </div>
   );
 
+  // The spreadsheet a board already keeps, either way the homes are named.
+  const importer = <RosterImport draft={draft} patch={patch} homeWord={w.home} />;
+
   if (naming === "addresses") {
     return (
       <div className="flex flex-col gap-5">
         {modes}
+        {importer}
         <AddressList draft={draft} patch={patch} w={w} />
       </div>
     );
@@ -726,7 +793,93 @@ function HomesStep({ draft, patch }: StepProps) {
   return (
     <div className="flex flex-col gap-5">
       {modes}
+      {importer}
       <RangesStep draft={draft} patch={patch} />
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* The books                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Where the books start.
+ *
+ * Three dates, and the daily dues run reads two of them. The fiscal year
+ * decides when quarters and years begin. The first bill is the first due
+ * date this product bills; a board that imports on the 10th with balances
+ * that already hold this month's dues picks next month, and nothing is
+ * billed twice. The as-of date is the day the opening balances are true,
+ * which is the day the treasurer read them off the old books.
+ */
+function BooksStep({ draft, patch }: StepProps) {
+  const today = wallToday();
+  const books = booksOf(draft, today);
+  const set = (next: Partial<Books>) => patch(withBooks(draft, { ...books, ...next }));
+  const fyMonth = Number(books.fiscalYearStart.slice(0, 2)) || 1;
+  const suggested = nextDueOnOrAfter(today, draft.dueDay, draft.duesCadence, books.fiscalYearStart);
+  const explicit = books.billingStartsOn !== null;
+  const existing = draft.origin === "existing";
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Fiscal year starts in"
+          hint="Most associations run a calendar year. Quarterly and annual dues count from here."
+        >
+          <select
+            value={fyMonth}
+            onChange={(e) => set({ fiscalYearStart: `${String(e.target.value).padStart(2, "0")}-01` })}
+            className={input}
+            autoFocus
+          >
+            {MONTHS.map((name, i) => (
+              <option key={name} value={i + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field
+          label="First dues bill from here"
+          hint={
+            explicit
+              ? "Anything due before this stays in the opening balances."
+              : `The next due date, ${formatDate(suggested, "long")}. Change it if that period is already billed elsewhere.`
+          }
+        >
+          <input
+            type="date"
+            value={books.billingStartsOn ?? suggested}
+            min={today}
+            onChange={(e) => set({ billingStartsOn: e.target.value || null })}
+            className={input}
+          />
+        </Field>
+        {existing ? (
+          <Field
+            label="Balances are true as of"
+            hint="The day you read what each home owes off the old books. The roster's balance column lands on each statement dated this day."
+          >
+            <input
+              type="date"
+              value={books.openingAsOf}
+              max={today}
+              onChange={(e) => set({ openingAsOf: e.target.value || today })}
+              className={input}
+            />
+          </Field>
+        ) : null}
+      </div>
+      {existing ? (
+        <Callout tone="info" title="Opening balances">
+          Put what each home owes today in the spreadsheet you import on the homes question, or
+          type them one by one under Homeowners once you are in. Either way each figure is one
+          dated line on the owner&apos;s statement, so they can see where it came from.
+        </Callout>
+      ) : null}
     </div>
   );
 }
@@ -826,7 +979,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
               <input
                 value={row.address ?? row.unit}
                 onChange={(e) => editRow(index, { address: e.target.value })}
-                placeholder="1430 Mehr Meadows Lane"
+                placeholder="1430 Willow Creek Lane"
                 aria-label={`Address of home ${index + 1}`}
                 autoComplete="off"
                 autoFocus={index === rows.length - 1 && !row.address}
@@ -892,7 +1045,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
             value={pasted}
             onChange={(e) => setPasted(e.target.value)}
             rows={5}
-            placeholder={"One address per line\n1430 Mehr Meadows Lane\n1432 Mehr Meadows Lane"}
+            placeholder={"One address per line\n1430 Willow Creek Lane\n1432 Willow Creek Lane"}
             aria-label="Addresses, one per line"
             className={textareaClass}
           />
@@ -1476,7 +1629,7 @@ function FounderAddress({
       <input
         value={draft.founder.address ?? ""}
         onChange={(e) => patch({ founder: { ...draft.founder, address: e.target.value } })}
-        placeholder="1428 Mehr Meadows Lane"
+        placeholder="1428 Willow Creek Lane"
         autoComplete="street-address"
         className={input}
         autoFocus={autoFocus}

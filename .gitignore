@@ -54,3 +54,4 @@ next-env.d.ts
 # Playwright writes traces and screenshots here on a failure.
 test-results/
 playwright-report/
+scripts/.qa/

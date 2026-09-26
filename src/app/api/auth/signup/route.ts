@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { logger } from "@/lib/log";
 import { Resend } from "resend";
+import { emailSender } from "@/lib/email/sender";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { confirmSignupEmail } from "@/lib/email/templates";
+import { clientIp, signupLimiter, tooManyRequests } from "@/lib/rate-limit";
 
 /**
  * Creates an account and sends the confirmation link ourselves.
@@ -21,6 +24,15 @@ import { confirmSignupEmail } from "@/lib/email/templates";
  * invited address at sign up, so an unconfirmed address must never sign in.
  */
 export async function POST(request: NextRequest) {
+  // Ten an hour from one address (src/lib/rate-limit.ts). A script creating
+  // accounts is refused; a household creating one is not slowed.
+  const log = logger("auth/signup", request);
+  const decision = signupLimiter.check(clientIp(request));
+  if (!decision.ok) {
+    log.warn("rate limited");
+    return tooManyRequests(decision);
+  }
+
   let body: { email?: unknown; password?: unknown; fullName?: unknown };
   try {
     body = await request.json();
@@ -64,6 +76,7 @@ export async function POST(request: NextRequest) {
   if (error || !data.user || !data.properties?.hashed_token) {
     const message = error?.message ?? "";
     const already = /already|exists/i.test(message);
+    log.warn("signup refused", { to: email, err: message || "no token", already });
     return NextResponse.json(
       {
         message: already
@@ -81,7 +94,7 @@ export async function POST(request: NextRequest) {
 
   const mail = confirmSignupEmail({ name: fullName, confirmUrl: confirm.toString() });
   const { error: sendError } = await new Resend(key).emails.send({
-    from: process.env.EMAIL_FROM ?? "Your HOAsis <onboarding@resend.dev>",
+    from: emailSender(),
     to: email,
     subject: mail.subject,
     html: mail.html,
@@ -91,7 +104,7 @@ export async function POST(request: NextRequest) {
   if (sendError) {
     // Undo, so the next attempt is not told the address is taken.
     await admin.auth.admin.deleteUser(data.user.id).catch(() => undefined);
-    console.error("[hoasis] signup email failed", sendError);
+    log.error("signup email failed", { to: email, err: sendError.message });
     // Resend refuses anything but the account owner's address until the
     // sending domain is verified. That is our setup, not their typo, and
     // telling them to check the address sent people hunting for a mistake
@@ -107,6 +120,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  log.info("signup created", { to: email, userId: data.user.id });
   return NextResponse.json({ ok: true });
 }
 

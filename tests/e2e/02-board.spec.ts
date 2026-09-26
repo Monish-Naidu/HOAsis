@@ -213,7 +213,7 @@ test.describe("board actions", () => {
 
     expect(file.suggestedFilename()).toMatch(/\.csv$/);
     // Named for the association rather than hardcoded, which it was once.
-    expect(file.suggestedFilename()).toContain("mehr-meadows");
+    expect(file.suggestedFilename()).toContain("willow-creek-estates");
   });
 
   test("settings changes reach the resident side", async ({ page }) => {

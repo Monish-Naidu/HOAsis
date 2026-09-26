@@ -6,10 +6,10 @@ import type { Capabilities, Capability, Owner } from "@/lib/types";
 /**
  * Test Community #1.
  *
- * Deliberately the opposite of Mehr Meadows in almost every dimension: five
+ * Deliberately the opposite of Willow Creek Estates in almost every dimension: five
  * homes rather than 88, a banner rather than a calendar, no amenities, no
  * reserve study, one vendor, and a two person board. If a screen only works
- * because Mehr Meadows is large and mature, this community will expose it.
+ * because Willow Creek Estates is large and mature, this community will expose it.
  *
  * Dated as of late February 2027, six months after the association onboarded
  * in August 2026.

@@ -1,9 +1,11 @@
+import type { LucideIcon } from "lucide-react";
 import type { Community } from "@/lib/data/community";
 import type { TintName } from "@/components/ui/primitives";
 import type { Owner } from "@/lib/types";
 import { money } from "@/lib/utils";
 import { statusLabel } from "@/lib/request-status";
 import { homeLabel } from "@/lib/wording";
+import type { Searchable } from "./match";
 
 /**
  * One search across everything the association has ever recorded.
@@ -31,21 +33,20 @@ export type SearchKind =
   | "vendor"
   | "announcement"
   | "post"
-  | "action";
+  | "action"
+  | "charge"
+  | "page"
+  | "shortcut";
 
-export interface SearchHit {
+export interface SearchHit extends Searchable {
   id: string;
   kind: SearchKind;
   /** The group heading in the results, which is the tab it opens. */
   section: string;
-  title: string;
-  subtitle: string;
-  /** `YYYY-MM-DD`, for ordering ties by recency. */
-  date: string;
   href: string;
   tint: TintName;
-  /** Extra words that should find this, never shown. */
-  keywords: string;
+  /** A page's own icon, where it has one; otherwise the kind's. */
+  icon?: LucideIcon;
 }
 
 export const KIND_LABEL: Record<SearchKind, string> = {
@@ -61,10 +62,13 @@ export const KIND_LABEL: Record<SearchKind, string> = {
   announcement: "Announcements",
   post: "Community",
   action: "Action items",
+  charge: "Your account",
+  page: "Go to",
+  shortcut: "Shortcuts",
 };
 
 /** The tab each kind lives on, for the board's capability gate. */
-export const KIND_ROUTE: Record<SearchKind, string> = {
+export const KIND_ROUTE: Record<Exclude<SearchKind, "charge" | "page" | "shortcut">, string> = {
   household: "/board/homeowners",
   transaction: "/board/money/transactions",
   document: "/board/documents",
@@ -80,7 +84,7 @@ export const KIND_ROUTE: Record<SearchKind, string> = {
   action: "/board/meetings",
 };
 
-const TINT: Record<SearchKind, TintName> = {
+export const TINT: Record<SearchKind, TintName> = {
   household: "violet",
   transaction: "teal",
   document: "violet",
@@ -93,15 +97,63 @@ const TINT: Record<SearchKind, TintName> = {
   announcement: "coral",
   post: "coral",
   action: "coral",
+  charge: "teal",
+  page: "blue",
+  shortcut: "teal",
 };
 
 const q = (s: string) => encodeURIComponent(s);
 
+const MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+/** "2026-10-03" → "october 2026 oct". The month by name is how people say a date. */
+export function dateWords(iso: string): string {
+  const m = Number(iso.slice(5, 7));
+  const name = MONTHS[m - 1];
+  if (!name) return iso.slice(0, 4);
+  return `${name} ${name.slice(0, 3)} ${iso.slice(0, 4)}`;
+}
+
+/** 28500 → "285 285.00", the two ways a person types an amount. */
+export function amountWords(cents: number): string {
+  const abs = Math.abs(cents);
+  const dollars = Math.floor(abs / 100);
+  return `${dollars} ${(abs / 100).toFixed(2)}`;
+}
+
+/** What people call an assessment when they are not reading the ledger. */
+const CATEGORY_WORDS: Record<string, string> = {
+  Assessments: "dues assessment hoa fees",
+  "Late fees": "fine penalty",
+  "Reserve transfer": "reserves savings",
+  "Interest income": "earned",
+  "Repairs & maintenance": "repair fix",
+  "Legal & professional": "lawyer attorney",
+};
+
+function categoryWords(category: string): string {
+  return `${category} ${CATEGORY_WORDS[category] ?? ""}`;
+}
+
+type Draft = Omit<SearchHit, "tint" | "section">;
+
 /** Everything a board seat may search, before the capability gate. */
 export function boardIndex(c: Community): SearchHit[] {
   const hits: SearchHit[] = [];
-  const hit = (h: Omit<SearchHit, "tint" | "section">) =>
-    hits.push({ ...h, tint: TINT[h.kind], section: KIND_LABEL[h.kind] });
+  const hit = (h: Draft) => hits.push({ ...h, tint: TINT[h.kind], section: KIND_LABEL[h.kind] });
 
   for (const o of c.owners) {
     hit({
@@ -113,8 +165,19 @@ export function boardIndex(c: Community): SearchHit[] {
         .filter(Boolean)
         .join(" · "),
       date: o.moveInDate,
-      href: `/board/homeowners?q=${q(o.displayName)}`,
-      keywords: [o.members.join(" "), o.email, o.phone, o.boardRole ?? ""].join(" "),
+      // The household itself, expanded, not the roster it is somewhere on.
+      href: `/board/homeowners?q=${q(o.displayName)}&open=${q(o.id)}`,
+      keywords: [
+        o.members.join(" "),
+        o.email,
+        o.phone,
+        o.phone.replace(/\D/g, ""),
+        o.unit,
+        o.boardRole ?? "",
+        o.standing,
+        o.balanceCents > 0 ? `owed behind ${amountWords(o.balanceCents)}` : "",
+        o.autopay ? "autopay" : "",
+      ].join(" "),
     });
   }
   for (const e of c.ledger) {
@@ -126,7 +189,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${e.counterparty} · ${money(Math.abs(e.amountCents))} · ${e.date}`,
       date: e.date,
       href: `/board/money/transactions?q=${q(e.description)}&from=${year}-01-01&to=${year}-12-31`,
-      keywords: `${e.category} ${e.status} ${year}`,
+      keywords: `${categoryWords(e.category)} ${e.status} ${dateWords(e.date)} ${amountWords(e.amountCents)}`,
     });
   }
   for (const d of c.documents) {
@@ -137,7 +200,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${d.category} · ${d.updatedDate}`,
       date: d.updatedDate,
       href: `/board/documents?q=${q(d.name)}`,
-      keywords: `${d.fileType} ${d.visibility} ${d.updatedDate.slice(0, 4)}`,
+      keywords: `${d.fileType} ${d.visibility} ${dateWords(d.updatedDate)}`,
     });
   }
   for (const t of c.threads) {
@@ -148,7 +211,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${t.participants.join(", ")}${t.unit ? ` · ${homeLabel(c, t.unit)}` : ""} · ${t.updatedDate}`,
       date: t.updatedDate,
       href: `/board/communications?thread=${q(t.id)}`,
-      keywords: `${t.tag} ${t.messages.map((m) => m.body).join(" ").slice(0, 600)}`,
+      keywords: `${t.tag} ${t.unit ?? ""} ${dateWords(t.updatedDate)} ${t.messages.map((m) => m.body).join(" ").slice(0, 600)}`,
     });
   }
   for (const m of c.meetings) {
@@ -159,7 +222,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${m.date} · ${m.time} · ${m.location}${m.status === "ended" ? " · ended" : ""}`,
       date: m.date,
       href: `/board/meetings#mtg-${m.id}`,
-      keywords: `${m.kind} ${m.agenda.join(" ")} ${m.date.slice(0, 4)}`,
+      keywords: `${m.kind} ${m.status} ${m.agenda.join(" ")} ${dateWords(m.date)}`,
     });
   }
   for (const b of c.ballots) {
@@ -170,7 +233,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${b.reference} · ${b.status} · closes ${b.closesDate}`,
       date: b.closesDate,
       href: `/board/voting#ballot-${b.id}`,
-      keywords: `${b.kind} ${b.body.join(" ").slice(0, 400)} ${b.closesDate.slice(0, 4)}`,
+      keywords: `${b.kind} ${b.reference} ${b.body.join(" ").slice(0, 400)} ${dateWords(b.closesDate)}`,
     });
   }
   for (const r of c.requests) {
@@ -181,7 +244,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${r.reference} · ${r.ownerName}, ${homeLabel(c, r.unit)} · ${statusLabel[r.status]}`,
       date: r.submittedDate,
       href: `/board/requests#req-${r.id}`,
-      keywords: `${r.kind} ${r.summary} ${r.submittedDate.slice(0, 4)}`,
+      keywords: `${r.reference} ${r.kind} ${r.unit} ${r.summary} ${dateWords(r.submittedDate)}`,
     });
   }
   for (const v of c.violations) {
@@ -193,7 +256,7 @@ export function boardIndex(c: Community): SearchHit[] {
       date: v.openedDate,
       // The notice itself, open, not the list it is somewhere on.
       href: `/board/violations?open=${q(v.id)}#vio-${v.id}`,
-      keywords: `${v.ruleCitation} ${v.openedDate.slice(0, 4)}`,
+      keywords: `${v.reference} ${v.ruleCitation} ${v.unit} violation ${dateWords(v.openedDate)}`,
     });
   }
   for (const v of c.vendors) {
@@ -204,7 +267,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${v.service} · ${money(v.ytdPaidCents)} paid this year`,
       date: v.coiExpires ?? "",
       href: `/board/vendors#vendor-${v.id}`,
-      keywords: v.defaultCategory,
+      keywords: `${v.defaultCategory} contractor payee ${v.w9OnFile ? "w9" : "no w9"}${v.coiExpires ? " coi insurance" : ""}`,
     });
   }
   for (const a of c.announcements) {
@@ -215,7 +278,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${a.category} · ${a.postedDate}`,
       date: a.postedDate,
       href: `/board/communications/announcements#announcements`,
-      keywords: `${a.body.slice(0, 400)} ${a.postedDate.slice(0, 4)}`,
+      keywords: `${a.author} ${a.body.slice(0, 400)} ${dateWords(a.postedDate)}`,
     });
   }
   for (const p of c.posts) {
@@ -237,7 +300,7 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${a.ownerName}${a.dueOn ? ` · due ${a.dueOn}` : ""}${a.doneOn ? " · done" : ""}`,
       date: a.dueOn ?? a.doneOn ?? "",
       href: `/board/meetings#action-items`,
-      keywords: "",
+      keywords: `todo task ${a.dueOn ? dateWords(a.dueOn) : ""}`,
     });
   }
   return hits;
@@ -246,8 +309,7 @@ export function boardIndex(c: Community): SearchHit[] {
 /** What one resident may search: their own things, and what every owner may read. */
 export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
   const hits: SearchHit[] = [];
-  const hit = (h: Omit<SearchHit, "tint" | "section">) =>
-    hits.push({ ...h, tint: TINT[h.kind], section: KIND_LABEL[h.kind] });
+  const hit = (h: Draft) => hits.push({ ...h, tint: TINT[h.kind], section: KIND_LABEL[h.kind] });
 
   for (const d of c.documents) {
     if (d.visibility === "board") continue;
@@ -258,7 +320,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       subtitle: `${d.category} · ${d.updatedDate}`,
       date: d.updatedDate,
       href: `/resident/documents?q=${q(d.name)}`,
-      keywords: `${d.fileType} ${d.updatedDate.slice(0, 4)}`,
+      keywords: `${d.fileType} ${dateWords(d.updatedDate)}`,
     });
   }
   // Forms an owner fills in here. The Documents page suggests searching for
@@ -284,7 +346,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       subtitle: `${m.date} · ${m.time} · ${m.location}${m.status === "ended" ? " · ended" : ""}`,
       date: m.date,
       href: `/resident/calendar`,
-      keywords: `${m.kind} ${m.agenda.join(" ")} ${m.date.slice(0, 4)}`,
+      keywords: `${m.kind} ${m.agenda.join(" ")} ${dateWords(m.date)}`,
     });
   }
   for (const b of c.ballots) {
@@ -296,7 +358,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       subtitle: `${b.status} · closes ${b.closesDate}`,
       date: b.closesDate,
       href: `/resident/vote#ballot-${b.id}`,
-      keywords: `${b.kind} ${b.body.join(" ").slice(0, 400)}`,
+      keywords: `${b.kind} ${b.body.join(" ").slice(0, 400)} ${dateWords(b.closesDate)}`,
     });
   }
   if (owner) {
@@ -309,7 +371,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
         subtitle: `${r.reference} · ${statusLabel[r.status]} · ${r.submittedDate}`,
         date: r.submittedDate,
         href: `/resident/requests/${q(r.reference)}`,
-        keywords: `${r.kind} ${r.summary}`,
+        keywords: `${r.reference} ${r.kind} ${r.summary} ${dateWords(r.submittedDate)}`,
       });
     }
     for (const v of c.violations) {
@@ -321,7 +383,19 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
         subtitle: `${v.reference} · ${v.stage} · ${v.openedDate}`,
         date: v.openedDate,
         href: `/resident/notices`,
-        keywords: v.ruleCitation,
+        keywords: `${v.reference} ${v.ruleCitation} violation ${dateWords(v.openedDate)}`,
+      });
+    }
+    // Their own charges and payments: "october dues" or "285" finds the line.
+    for (const line of c.ownerCharges[owner.id] ?? []) {
+      hit({
+        id: `chg-${line.id}`,
+        kind: "charge",
+        title: line.label,
+        subtitle: `${line.kind === "charge" ? "Charged" : line.kind === "payment" ? "Paid" : "Credit"} · ${money(Math.abs(line.amountCents))} · ${line.date}`,
+        date: line.date,
+        href: `/resident/account`,
+        keywords: `${line.kind} ${line.kind === "charge" ? "dues assessment" : ""} ${line.method ?? ""} ${dateWords(line.date)} ${amountWords(line.amountCents)}`,
       });
     }
   }
@@ -333,7 +407,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       subtitle: `${a.author} · ${a.postedDate}`,
       date: a.postedDate,
       href: `/resident`,
-      keywords: a.body.slice(0, 400),
+      keywords: `${a.body.slice(0, 400)} ${dateWords(a.postedDate)}`,
     });
   }
   for (const p of c.posts) {
@@ -349,52 +423,4 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
     });
   }
   return hits;
-}
-
-const fold = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
-
-/**
- * Every word typed has to appear somewhere on the hit. A word at the start
- * of the title outranks one in the middle, which outranks one in the
- * subtitle or the hidden keywords; ties go to the newest.
- */
-export function searchHits(index: SearchHit[], query: string, limit = 30): SearchHit[] {
-  const words = fold(query).split(/\s+/).filter(Boolean);
-  if (words.length === 0) return [];
-  const scored: { hit: SearchHit; score: number }[] = [];
-  for (const hit of index) {
-    const title = fold(hit.title);
-    const subtitle = fold(hit.subtitle);
-    const keywords = fold(hit.keywords);
-    let score = 0;
-    for (const word of words) {
-      if (title.startsWith(word) || title.includes(` ${word}`)) score += 6;
-      else if (title.includes(word)) score += 4;
-      else if (subtitle.includes(word)) score += 2;
-      else if (keywords.includes(word)) score += 1;
-      else {
-        score = 0;
-        break;
-      }
-    }
-    if (score > 0) scored.push({ hit, score });
-  }
-  return scored
-    .sort((a, b) => b.score - a.score || b.hit.date.localeCompare(a.hit.date))
-    .slice(0, limit)
-    .map((s) => s.hit);
-}
-
-/** Hits in the order found, grouped under their tab, each group capped. */
-export function groupHits(hits: SearchHit[], perGroup = 5): { section: string; hits: SearchHit[] }[] {
-  const groups: { section: string; hits: SearchHit[] }[] = [];
-  for (const hit of hits) {
-    let group = groups.find((g) => g.section === hit.section);
-    if (!group) {
-      group = { section: hit.section, hits: [] };
-      groups.push(group);
-    }
-    if (group.hits.length < perGroup) group.hits.push(hit);
-  }
-  return groups;
 }

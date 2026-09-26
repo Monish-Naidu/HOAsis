@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
+import { logger } from "@/lib/log";
 
 /**
  * Starts saving a payment method for later dues.
@@ -11,6 +12,7 @@ import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
  * capability deliberately does not extend to saving someone else's bank.
  */
 export async function POST(request: NextRequest) {
+  const log = logger("stripe/setup-intent", request);
   let body: { associationId?: string; unitId?: string };
   try {
     body = await request.json();
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
       { stripeAccount: account },
     );
     customerId = customer.id;
+    log.info("stripe customer created", { customerId, associationId, unitId });
     const { error } = await supabaseAdmin()
       .from("units")
       .update({ stripe_customer_id: customerId })
@@ -92,6 +95,7 @@ export async function POST(request: NextRequest) {
     },
     { stripeAccount: account },
   );
+  log.info("setup intent created", { intentId: intent.id, associationId, unitId });
 
   return NextResponse.json({ clientSecret: intent.client_secret, stripeAccountId: account });
 }

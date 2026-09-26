@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { logger } from "@/lib/log";
 import { Resend } from "resend";
+import { emailSender } from "@/lib/email/sender";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import { inviteEmail } from "@/lib/email/templates";
 import { remoteInviteUrl } from "@/lib/invitations";
+import { communityPath, placeLabel } from "@/lib/community-links";
 
 /**
  * Inviting households, and telling somebody the board let them in.
@@ -30,6 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Expected JSON" }, { status: 400 });
   }
   const { associationId, kind = "invite" } = body;
+  const log = logger("email/invite", request, { associationId });
   const unitIds = Array.isArray(body.unitIds) ? body.unitIds.filter((u) => typeof u === "string") : [];
   if (!associationId || unitIds.length === 0) {
     return NextResponse.json({ error: "associationId and unitIds are required" }, { status: 400 });
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest) {
   const admin = supabaseAdmin();
   const { data: association } = await admin
     .from("associations")
-    .select("name, join_code")
+    .select("name, join_code, slug, city, state")
     .eq("id", associationId)
     .single();
   if (!association) {
@@ -88,7 +92,8 @@ export async function POST(request: NextRequest) {
       const { data: link } = await admin.auth.admin.generateLink({
         type: "magiclink",
         email,
-        options: { redirectTo: `${origin}/resident` },
+        // Straight into this association, whichever others they hold.
+        options: { redirectTo: `${origin}${communityPath(association.slug, "/resident")}` },
       });
       if (link?.properties?.action_link) url = link.properties.action_link;
       else url = `${origin}/signin`;
@@ -97,6 +102,7 @@ export async function POST(request: NextRequest) {
     const built = inviteEmail({
       kind,
       associationName: association.name,
+      associationPlace: placeLabel(association.city, association.state),
       ownerName: m.full_name || "",
       unitLabel,
       url,
@@ -104,7 +110,7 @@ export async function POST(request: NextRequest) {
     });
 
     const { data, error } = await client.emails.send({
-      from: process.env.EMAIL_FROM ?? "Your HOAsis <onboarding@resend.dev>",
+      from: emailSender(),
       to: email,
       subject: built.subject,
       html: built.html,
@@ -123,12 +129,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      log.warn("invite failed", { to: email, err: error.message });
       result.failed++;
       result.errors.push(`${email}: ${error.message}`);
     } else {
       result.sent++;
     }
   }
+  log.info("invites sent", { kind, sent: result.sent, failed: result.failed, skipped: result.skipped });
 
   return NextResponse.json(result);
 }

@@ -6,6 +6,7 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";
 import { refreshRemote } from "@/lib/data/remote-store";
+import { PAYMENT_ELEMENT_OPTIONS, stripeAppearance } from "@/lib/stripe/appearance";
 
 /**
  * Saving a payment method for a real association: a SetupIntent collected by
@@ -97,7 +98,10 @@ function SetupElements({
     [publishableKey, setup.account],
   );
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret: setup.clientSecret }}>
+    <Elements
+      stripe={stripePromise}
+      options={{ clientSecret: setup.clientSecret, appearance: stripeAppearance() }}
+    >
       <SetupForm associationId={associationId} unitId={unitId} onDone={onDone} />
     </Elements>
   );
@@ -200,6 +204,7 @@ function SetupForm({
   return (
     <Card className="p-4">
       <PaymentElement
+        options={PAYMENT_ELEMENT_OPTIONS}
         onReady={() => setReady(true)}
         onLoadError={(event) =>
           setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")

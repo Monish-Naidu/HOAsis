@@ -269,7 +269,7 @@ export default function BoardCompliance() {
         </div>
 
         <div className="space-y-5">
-          {/* Was a hardcoded schedule naming Mehr Meadows' reserve consultant
+          {/* Was a hardcoded schedule naming Willow Creek Estates' reserve consultant
               and its 41 percent funding, which every association saw as its
               own. An association with no study should be told that plainly,
               because it is the finding rather than an empty panel. */}

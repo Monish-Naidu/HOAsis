@@ -1,11 +1,13 @@
 "use client";
 
 import { ResidentTitle } from "@/components/app/resident-title";
-import { ChevronDown, ChevronRight, CircleDollarSign, Download, Landmark, Receipt, Settings } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronRight, CircleDollarSign, Download, History, Landmark, Receipt, Settings } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
+import { loadEarlierStatement } from "@/lib/data/remote-store";
 import { formatDate, money, today } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -16,7 +18,21 @@ export default function ResidentAccount() {
   const association = community.association;
   const currentOwner = useCurrentOwner();
   const ownerCharges = useOwnerCharges();
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   if (!currentOwner) return null;
+  // A real association sends the last two years; the rest is one tap away.
+  const history = community.history;
+  const earlierCount = history
+    ? Math.max(0, (history.statementCounts[currentOwner.id] ?? 0) - ownerCharges.length)
+    : 0;
+  const hasEarlier = earlierCount > 0 && !history?.statementsLoaded.includes(currentOwner.id);
+
+  async function showEarlier() {
+    if (!currentOwner) return;
+    setLoadingEarlier(true);
+    await loadEarlierStatement(currentOwner.id);
+    setLoadingEarlier(false);
+  }
   // The year the ledger is actually in, not a constant.
   const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
   // That year's payments only. Summing every line was right while a statement
@@ -211,6 +227,20 @@ export default function ResidentAccount() {
               {lines.map((line) => row(line, 1))}
             </details>
           ))}
+          {hasEarlier ? (
+            <button
+              type="button"
+              onClick={showEarlier}
+              disabled={loadingEarlier}
+              className="flex min-h-12 w-full items-center justify-between border-t border-border px-4 py-3 text-left text-footnote font-semibold text-accent transition-colors hover:bg-surface-2 disabled:opacity-60"
+            >
+              <span className="flex items-center gap-2">
+                <History className="size-3.5" />
+                {loadingEarlier ? "Loading" : `Show entries before ${formatDate(history?.from ?? "", "long")}`}
+              </span>
+              <span className="font-medium text-fg-subtle">{earlierCount} entries</span>
+            </button>
+          ) : null}
         </Card>
       </section>
 

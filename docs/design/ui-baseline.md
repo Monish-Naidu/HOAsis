@@ -113,6 +113,35 @@ Owners skew older and many are not technical (2026-09-24).
   The one place a `solid` tile appears inside the product, and the glyph
   and tint are the same as the rail row that opened the page.
 
+## Community photo band
+
+The association's photo is on every page, not only the dashboard
+(Monish, 2026-09-25). One component, `CommunityHero`, in two sizes, and
+it lives in the shell, never in a page, so the picture neither reloads
+nor flashes between tabs.
+
+- **The dashboard keeps the full banner.** Name, location or home card,
+  the cover button, the frosted control tray at `lg`.
+- **Every other page gets the band**: the same element at 44px on a
+  phone and 64px at `lg`, so moving between the dashboard and a tab is
+  the photo resizing, not a strip replacing a banner. At `lg` the band is
+  the top bar: sticky, the switcher (`CommunityName onPhoto`) and the line
+  on the left, the tray on the right, and no white bar above it. Under
+  `lg` the shell's own bar stays (it carries the horizontal nav or the
+  phone header) and the band sits under it. The board's band carries the
+  switcher at every width, because its phone bar has no room for it; the
+  resident's phone header already says the name, so its band is the
+  picture alone under `lg`.
+- **Scrims.** The banner's gradient runs from the bottom; the band is too
+  short for that, so it wears an even wash. Dark mode is one step heavier
+  on both, so white type stays AA on a bright photo.
+- **No photo** is the rail's navy with the blue pool, never an empty box
+  or a broken image.
+- **Still.** No Ken Burns, no push on arrival. The one motion is the
+  height change, listed in the reduced-motion block as `.community-hero`.
+- The band never pushes the first row of content: at `lg` it replaces a
+  bar of the same height, and on a phone it is one row under the bar.
+
 ## Motion
 
 Two easings, three durations, one pop.
@@ -189,3 +218,34 @@ Two easings, three durations, one pop.
 3. One primary action, found in under a second.
 4. Every number traceable to a selector.
 5. `pnpm lint && npx tsc --noEmit && pnpm build`, then `npx vitest run`.
+
+## Photo strip and the resident frame (2026-09-26)
+
+- At lg the photo is the top of every page in both shells, the way the
+  dashboard always was: the full banner with the home card or location on
+  the dashboard, and on every other tab the same `CommunityHero` at half
+  height (`short`) with the association switcher drawn on the photo
+  (`CommunityName onPhoto`), the home or location line, and the frosted
+  controls tray. No white bar at lg anywhere, so nothing repeats the name
+  (Monish, 2026-09-26: "either combine it with the top part, or make it look
+  more like the dashboard"). Under lg the bar stays for the horizontal nav
+  and the photo runs as a short rounded `PhotoStrip` under it, photo-only on
+  the resident phone where the header already says the name.
+- One person, drawn once. At lg the card at the foot of the rail is the
+  account: name, role, home, theme, and pressing it opens Help and Sign out.
+  The bar's tray is then search, Resident/Board and the bell only. Under lg,
+  where there is no rail, the avatar in the bar opens the same menu. The
+  resident home card on the dashboard shows the address and unit, not the
+  name, for the same reason (Monish, 2026-09-26: three copies of Taylor Test
+  on one screen "feels clunky").
+- Avatars are solid primary blue with white initials, not a tint.
+- The banner at lg takes the rail's inset and 26px radius, so the two read
+  as cards on one gutter. It does not run behind the rail: the rail is the
+  app's spine, the photo is the community's, and one over the other fights.
+- A count on a rail row means something waits there for this person; hover
+  says what ("4 bills waiting on you"). It clears by acting on the thing,
+  never by dismissing the number.
+- The resident website uses the board's frame: `max-w-[1400px]` with the
+  same gutters, pages filling it through their container queries. No
+  centred narrow column and no side rail; a rail of extra cards was
+  rejected the same night.

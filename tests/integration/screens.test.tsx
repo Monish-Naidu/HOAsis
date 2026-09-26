@@ -107,7 +107,7 @@ describe("admin settings reach the resident UI", () => {
       </>,
     );
 
-    expect(screen.getByRole("heading", { name: "Mehr Meadows" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Willow Creek Estates" })).toBeInTheDocument();
     await user.click(screen.getByText("rename"));
     expect(screen.getByRole("heading", { name: "Cedar Court" })).toBeInTheDocument();
   });

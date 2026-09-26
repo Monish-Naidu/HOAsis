@@ -1,33 +1,61 @@
 /**
  * Proves migration 0029: autopay on the membership, an owner marking a notice
- * fixed, RSVPs, action items, and asking to join by code. Runs against the
- * seeded project as the Oakview president and one resident, and cleans up.
+ * fixed, RSVPs, action items, and asking to join by code. Founds its own
+ * association with its own president and resident, the way the other verify
+ * scripts do, and deletes both at the end. It used to sign in as the seeded
+ * Oakview president with a password that stopped working.
  */
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
-const env = Object.fromEntries(readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n").filter(l=>l&&!l.startsWith("#")).map(l=>{const i=l.indexOf("=");return [l.slice(0,i),l.slice(i+1).replace(/^"|"$/g,"")]}));
+import { loadEnv } from "./env.mjs";
+
+const env = loadEnv();
 const url = env.NEXT_PUBLIC_SUPABASE_URL, anon = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const admin = createClient(url, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const PW = "Expresshoa-2026-xfpa8v";
-async function as(email){ const c = createClient(url, anon, { auth: { persistSession: false } }); const { error } = await c.auth.signInWithPassword({ email, password: PW }); if (error) throw new Error(email+": "+error.message); return c; }
+const stamp = Date.now();
+const PW = "ranked-" + Math.random().toString(36).slice(2) + "A1";
+const cleanup = { users: [], associations: [] };
 let pass=0, fail=0;
 function ok(name, cond, detail=""){ if(cond){pass++; console.log("  ok ", name, detail)} else {fail++; console.log("  FAIL", name, detail)} }
 
-const { data: oak } = await admin.from("associations").select("id,name,join_code").eq("name","Oakview Commons").single();
-console.log("Oakview join code:", oak.join_code);
-const pres = await as("monishnaidu18@gmail.com");
-const jordan = await as("monishnaidu18+jordan@gmail.com");
+async function makeUser(who, email = `${who}-ranked-${stamp}@example.com`) {
+  const { data, error } = await admin.auth.admin.createUser({
+    email, password: PW, email_confirm: true, user_metadata: { full_name: who },
+  });
+  if (error) throw new Error(`${who}: ${error.message}`);
+  cleanup.users.push(data.user.id);
+  const c = createClient(url, anon, { auth: { persistSession: false } });
+  const { error: signIn } = await c.auth.signInWithPassword({ email, password: PW });
+  if (signIn) throw new Error(`${email}: ${signIn.message}`);
+  return c;
+}
+
+try {
+const jordanEmail = `jordan-ranked-${stamp}@example.com`;
+const pres = await makeUser("president");
+const { data: oakId, error: createError } = await pres.rpc("create_association", {
+  p_name: "Ranked List HOA", p_city: "Bothell", p_state: "WA",
+  p_dues_cents: 6000, p_dues_cadence: "monthly", p_due_day: 1,
+  p_founder_name: "Dana", p_founder_unit: "1",
+  p_households: [{ name: "Jordan", email: jordanEmail, unit: "2" }],
+});
+if (createError) throw new Error(createError.message);
+cleanup.associations.push(oakId);
+const { data: oak } = await admin.from("associations").select("id,name,join_code").eq("id", oakId).single();
+console.log("Join code:", oak.join_code);
+const jordan = await makeUser("Jordan", jordanEmail);
+// The seat is claimed by email on first sign in, as the app does it.
+await jordan.rpc("claim_my_seats");
 
 // anon: association_by_join_code and request_to_join
 const anonC = createClient(url, anon, { auth: { persistSession: false } });
 const look = await anonC.rpc("association_by_join_code", { p_code: oak.join_code.toLowerCase() });
-ok("anon can look up an association by code", look.data?.[0]?.name === "Oakview Commons", JSON.stringify(look.data));
+ok("anon can look up an association by code", look.data?.[0]?.name === oak.name, JSON.stringify(look.data));
 const bad = await anonC.rpc("association_by_join_code", { p_code: "ZZZZZZ" });
 ok("unknown code returns nothing", (bad.data ?? []).length === 0);
 const req = await anonC.rpc("request_to_join", { p_code: oak.join_code, p_name: "Test Joiner", p_email: "joiner-0029@example.com", p_unit: "99", p_note: "verify" });
-ok("anon can ask to join", req.data === "Oakview Commons", req.error?.message ?? "");
+ok("anon can ask to join", req.data === "Ranked List HOA", req.error?.message ?? "");
 const again = await anonC.rpc("request_to_join", { p_code: oak.join_code, p_name: "Test Joiner", p_email: "joiner-0029@example.com", p_unit: "99", p_note: "verify" });
-ok("asking twice is absorbed", again.data === "Oakview Commons" && !again.error);
+ok("asking twice is absorbed", again.data === "Ranked List HOA" && !again.error);
 const badMail = await anonC.rpc("request_to_join", { p_code: oak.join_code, p_name: "X", p_email: "nope", p_unit: "", p_note: "" });
 ok("a bad email is refused", Boolean(badMail.error));
 const anonRead = await anonC.from("join_requests").select("*");
@@ -87,6 +115,11 @@ ok("a resident cannot see action items", (aiJ.data ?? []).length === 0);
 const aiJw = await jordan.from("action_items").insert({ association_id: oak.id, title: "Sneak", owner_name: "J" });
 ok("a resident cannot add one", Boolean(aiJw.error));
 await admin.from("action_items").delete().eq("id", ai.data?.id);
-await admin.from("join_requests").delete().eq("email", "joiner-0029@example.com");
+} catch (error) {
+  ok("the run itself", false, error instanceof Error ? error.message : String(error));
+} finally {
+  for (const id of cleanup.associations) await admin.from("associations").delete().eq("id", id);
+  for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
+}
 console.log(`\n${pass}/${pass+fail} passed`);
 process.exit(fail ? 1 : 0);

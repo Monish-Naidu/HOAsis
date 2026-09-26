@@ -12,11 +12,12 @@ import {
   Search,
   Send,
   Trash2,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Avatar, Badge, Button, Callout, Card, EmptyState, KeyValue, PageHeader, Segmented, Select, Field, fieldClass, textareaClass } from "@/components/ui/primitives";
+import { Avatar, Badge, Button, ButtonLink, Callout, Card, EmptyState, KeyValue, PageHeader, Segmented, Select, Field, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { RemindersComposer } from "@/components/app/reminders-composer";
 import { JoinRequests } from "@/components/app/join-requests";
 import { useToast } from "@/components/app/toast";
@@ -81,7 +82,8 @@ export function HomeownersScreen() {
   const [kind, setKind] = useState<HomeType | "all">("all");
   // Search from the top bar lands here with the household's name filled in.
   const [query, setQuery] = useState(params.get("q") ?? "");
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Search's "Open home" shortcut lands with one household expanded.
+  const [openId, setOpenId] = useState<string | null>(params.get("open"));
   const [focusComposer, setFocusComposer] = useState(false);
   const [shown, setShown] = useState(PAGE);
   const [adding, setAdding] = useState(false);
@@ -399,6 +401,12 @@ export function HomeownersScreen() {
                 Record a sale
               </Button>
             ) : null}
+            {can("settings") ? (
+              <ButtonLink href="/board/homeowners/import" variant="ghost" size="sm">
+                <Upload className="size-3.5" />
+                Import roster
+              </ButtonLink>
+            ) : null}
             <Button variant="ghost" size="sm" onClick={exportRoster}>
               <Download className="size-3.5" />
               Export CSV
@@ -602,7 +610,7 @@ export function HomeownersScreen() {
                       each name. Under md the contact folds under the name. */}
                   <div
                     className={cn(
-                      "group/row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 transition-colors md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_1.25rem_16rem]",
+                      "group/row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 transition-colors md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_1.25rem_15rem]",
                       open ? "bg-surface-2" : "hover:bg-surface-2",
                     )}
                   >
@@ -624,8 +632,8 @@ export function HomeownersScreen() {
                         <Avatar name={o.members[0] ?? o.displayName} className="size-9" />
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate text-body font-medium text-fg">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span className="min-w-0 truncate text-body font-medium text-fg">
                             {o.displayName}
                           </span>
                           {o.boardRole ? <Badge tone="brand">{o.boardRole}</Badge> : null}
@@ -658,7 +666,7 @@ export function HomeownersScreen() {
                     </button>
                     {/* Fixed width, so the trailing column never pushes the
                         contact column around from row to row. */}
-                    <span className="flex shrink-0 items-center justify-end gap-2 md:grid md:grid-cols-[5.5rem_minmax(0,1fr)_2rem] md:gap-3">
+                    <span className="flex shrink-0 items-center justify-end gap-2 md:grid md:grid-cols-[5rem_minmax(0,1fr)_2rem] md:gap-3">
                       <span className="tnum hidden text-right text-body font-semibold text-fg md:block">
                         {seesMoney && o.balanceCents > 0 ? money(o.balanceCents) : ""}
                       </span>
@@ -886,6 +894,23 @@ function HouseholdDetail({
             <KeyValue label="On title">{owner.members.join(", ")}</KeyValue>
           ) : null}
           <KeyValue label="Moved in">{formatDate(owner.moveInDate, "long")}</KeyValue>
+          {owner.previousOwners?.length ? (
+            <div className="py-1.5">
+              <dt className="text-body text-fg-muted">
+                {owner.previousOwners.length === 1 ? "Previous owner" : "Previous owners"}
+              </dt>
+              <dd className="mt-1 space-y-1">
+                {owner.previousOwners.map((t) => (
+                  <p key={`${t.name}-${t.to}`} className="flex items-baseline justify-between gap-4 text-body">
+                    <span className="min-w-0 truncate font-medium text-fg">{t.name}</span>
+                    <span className="tnum shrink-0 text-footnote text-fg-muted">
+                      {formatDate(t.from, "long")} to {formatDate(t.to, "long")}
+                    </span>
+                  </p>
+                ))}
+              </dd>
+            </div>
+          ) : null}
           <KeyValue label="Balance">
             <span className={owner.balanceCents > 0 ? "text-fg" : "text-fg-muted"}>
               {money(owner.balanceCents)}

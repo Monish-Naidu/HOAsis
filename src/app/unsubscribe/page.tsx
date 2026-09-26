@@ -9,6 +9,9 @@ export const metadata = { title: "Email preferences" };
 const LABEL: Record<string, string> = {
   community: "community updates",
   newsletter: "the newsletter",
+  message: "messages from the board",
+  request: "updates on your requests",
+  invite: "invitations",
 };
 
 /**

@@ -262,7 +262,7 @@ test.describe("importing a document", () => {
     await page.getByLabel("The text of the document").fill(
       [
         "RULES AND REGULATIONS",
-        "of Mehr Meadows Homeowners Association",
+        "of Willow Creek Estates Homeowners Association",
         "Adopted by resolution of the Board of Directors.",
         "",
         "Section 7.1 Quiet hours",

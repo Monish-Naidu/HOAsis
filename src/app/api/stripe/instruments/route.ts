@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { BRAND_LABEL, type CardBrand } from "@/lib/payments/instruments";
+import { logger } from "@/lib/log";
 
 /**
  * Turns a SetupIntent into a payment_instruments row, and takes one away.
@@ -23,6 +24,7 @@ import { BRAND_LABEL, type CardBrand } from "@/lib/payments/instruments";
  * with Stripe, chargeable by anything that still held its id.
  */
 export async function POST(request: NextRequest) {
+  const log = logger("stripe/instruments", request);
   let body: { associationId?: string; unitId?: string; setupIntentId?: string };
   try {
     body = await request.json();
@@ -151,14 +153,17 @@ export async function POST(request: NextRequest) {
     .select("id")
     .single();
   if (error) {
+    log.warn("could not save the payment method", { err: error.message, associationId, unitId });
     // RLS refusals land here: someone saving to a home that is not theirs.
     return NextResponse.json({ error: "Could not save the payment method" }, { status: 403 });
   }
+  log.info("payment method saved", { instrumentId: inserted.id, kind: row.kind, verifying: Boolean(microdeposits), associationId, unitId });
 
   return NextResponse.json({ id: inserted.id });
 }
 
 export async function DELETE(request: NextRequest) {
+  const log = logger("stripe/instruments", request);
   let body: { associationId?: string; instrumentId?: string };
   try {
     body = await request.json();
@@ -203,6 +208,7 @@ export async function DELETE(request: NextRequest) {
       // Already detached, or gone: the row still has to go.
       const code = (problem as { code?: string }).code;
       if (code !== "resource_missing") {
+        log.error("stripe detach failed", { err: problem, instrumentId, associationId });
         return NextResponse.json({ error: "Stripe could not remove it" }, { status: 502 });
       }
     }
@@ -212,6 +218,7 @@ export async function DELETE(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: "Could not remove the payment method" }, { status: 403 });
   }
+  log.info("payment method removed", { instrumentId, associationId });
 
   // The household keeps a default as long as it has anything at all.
   if (instrument.is_default) {

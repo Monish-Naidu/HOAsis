@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { logger } from "@/lib/log";
 import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { EmailDeliveryStatus } from "@/lib/types";
@@ -41,8 +42,10 @@ const RUNG: Record<EmailDeliveryStatus, number> = {
 };
 
 export async function POST(request: NextRequest) {
+  const log = logger("email/webhook", request);
   const secret = process.env.RESEND_WEBHOOK_SECRET;
   if (!secret) {
+    log.error("resend webhook secret is not configured");
     return NextResponse.json({ error: "Webhook secret is not configured" }, { status: 500 });
   }
 
@@ -64,6 +67,7 @@ export async function POST(request: NextRequest) {
       webhookSecret: secret,
     });
   } catch (error) {
+    log.warn("bad signature", { err: error });
     return NextResponse.json(
       { error: `Bad signature: ${error instanceof Error ? error.message : "unknown"}` },
       { status: 400 },
@@ -71,6 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   const status = STATUS[event.type];
+  log.info("delivery event", { type: event.type, status: status ?? null });
   if (!status) return NextResponse.json({ received: true, ignored: event.type });
 
   const data = event.data as { email_id?: string };
@@ -95,6 +100,7 @@ export async function POST(request: NextRequest) {
     .update({ status, status_at: event.created_at })
     .eq("id", row.id);
   if (error) {
+    log.error("could not update email_log", { err: error.message, emailLogId: row.id });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ received: true, status });

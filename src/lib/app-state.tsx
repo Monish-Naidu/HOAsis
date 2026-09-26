@@ -26,6 +26,7 @@ import {
   useRemote,
   setRemoteAssociation,
   loadRemote,
+  preferRemoteAssociation,
   refreshRemote,
   remoteWrite,
   reportRemoteError,
@@ -82,9 +83,35 @@ import type {
 import { canRaiseNotice } from "@/lib/violations";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 import { placeLabel } from "@/lib/wording";
+import { videoJoinUrl } from "@/lib/meetings/video";
 import { statusLabel } from "@/lib/request-status";
 
 export type View = "resident" | "board";
+
+/**
+ * Emails what the board just wrote, after the row is in.
+ *
+ * Fire and forget on purpose: the record is already right by the time this
+ * runs, the server checks the caller's capability and reads the words back
+ * from the row, and every attempt lands in email_log whether it went or not.
+ * Only ever called in remote mode; the demo has nobody to email.
+ */
+function emailNotice(
+  associationId: string,
+  notice: {
+    kind: "announcement" | "meeting" | "ballot" | "letter" | "message" | "request";
+    id?: string;
+    unitIds?: string[];
+    subject?: string;
+    body?: string;
+  },
+) {
+  void fetch("/api/email/notify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ associationId, ...notice }),
+  }).catch(() => undefined);
+}
 
 /**
  * Everything a screen can read or change.
@@ -103,7 +130,8 @@ export interface UploadOutcome {
 interface AppState {
   /** Which association is being viewed, and what else is available. */
   community: Community;
-  communities: { id: string; label: string }[];
+  /** Every association this person can open. `place` tells twins apart. */
+  communities: { id: string; label: string; place?: string; slug?: string }[];
   /**
    * Opens another association. A real member holding two switches in place
    * and gets `"switched"`; picking a demo seat signs out and gets
@@ -217,12 +245,16 @@ interface AppState {
   isRemote: boolean;
 
   addPost: (post: ForumPost) => void;
-  addAnnouncement: (a: {
-    title: string;
-    body: string;
-    category: Announcement["category"];
-    pinned?: boolean;
-  }) => void;
+  addAnnouncement: (
+    a: {
+      title: string;
+      body: string;
+      category: Announcement["category"];
+      pinned?: boolean;
+    },
+    /** "none" when the caller sends its own email, as a meeting notice does. */
+    email?: "announcement" | "none",
+  ) => void;
   removeAnnouncement: (id: string) => void;
   /** Posts the meeting's notice to every home screen and records the date. */
   sendMeetingNotice: (meetingId: string) => void;
@@ -526,11 +558,20 @@ type MutableSlice = (typeof MUTABLE_SLICES)[number];
  */
 const registry = new Map<string, PersistedStore<never>>();
 
+/**
+ * Bump when the demo fixtures change in a way a browser's remembered copy
+ * would hide: a renamed association, a home that moved street. Persisted
+ * demo slices are keyed by this, so an old browser starts from the new
+ * fixture instead of showing last month's name over this month's data.
+ * Session, theme and the chosen community are keyed separately and survive.
+ */
+const DEMO_FIXTURE_VERSION = 2;
+
 function sliceStore<K extends MutableSlice>(
   communityId: string,
   slice: K,
 ): PersistedStore<Community[K]> {
-  const key = `hoasis:${communityId}:${slice}`;
+  const key = `hoasis:${communityId}:v${DEMO_FIXTURE_VERSION}:${slice}`;
   const existing = registry.get(key);
   if (existing) return existing as unknown as PersistedStore<Community[K]>;
 
@@ -1041,6 +1082,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    // Land in the one just founded, not in whichever this browser had open.
+    preferRemoteAssociation(associationId);
     await loadRemote(sessionUserId());
     return associationId;
   }, []);
@@ -2134,7 +2177,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const addAnnouncement = useCallback(
-    (a: { title: string; body: string; category: Announcement["category"]; pinned?: boolean }) => {
+    (
+      a: { title: string; body: string; category: Announcement["category"]; pinned?: boolean },
+      email: "announcement" | "none" = "announcement",
+    ) => {
       // Author is the seat that pressed the button, in the form the fixtures
       // established: "Arya Mehr, Board President".
       const roleLabel: Record<string, string> = {
@@ -2149,9 +2195,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const author = me
           ? `${me.name}${roleLabel[me.role] ? `, ${roleLabel[me.role]}` : ""}`
           : "The board";
+        const id = newId();
         void remoteWrite("Posting the announcement", () =>
           supabaseBrowser().from("announcements").insert({
-            id: newId(),
+            id,
             association_id: rc.id,
             author_name: author,
             category: a.category,
@@ -2159,7 +2206,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             body: a.body,
             pinned: a.pinned ?? false,
           }),
-        );
+        ).then((ok) => {
+          if (ok && email === "announcement") emailNotice(rc.id, { kind: "announcement", id });
+        });
         return;
       }
       const me = sliceStore(communityId, "accounts")
@@ -2194,25 +2243,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         title: `Notice of meeting: ${m.title}, ${when}`,
         body: [
           `${m.title} is on ${when}, ${m.location}.`,
-          m.dialIn ? `Join by video: ${m.dialIn}${m.passcode ? ` (passcode ${m.passcode})` : ""}.` : "",
+          `Join by video: ${videoJoinUrl(m, (remote.community?.association ?? associationRow).id)}${m.dialIn ? `, or dial ${m.dialIn}${m.passcode ? ` (passcode ${m.passcode})` : ""}` : ""}.`,
           m.agenda.length ? `Agenda: ${m.agenda.join("; ")}.` : "",
         ]
           .filter(Boolean)
           .join(" "),
         category: "Governance",
-      });
+      }, "none");
       const today = todayIsoDate();
       if (remote.community) {
+        const rc = remote.community;
+        // Statutory notice, so it goes by email under its own category
+        // rather than as an announcement an owner may have turned off.
         void remoteWrite("Recording the notice", () =>
           supabaseBrowser().from("meetings").update({ notice_sent_on: today }).eq("id", meetingId),
-        );
+        ).then((ok) => {
+          if (ok) emailNotice(rc.id, { kind: "meeting", id: meetingId });
+        });
         return;
       }
       sliceStore(communityId, "meetings").update((all) =>
         all.map((x) => (x.id === meetingId ? { ...x, noticeSentDate: today } : x)),
       );
     },
-    [remote.community, meetingList, addAnnouncement, communityId],
+    [remote.community, meetingList, associationRow, addAnnouncement, communityId],
   );
 
   const removeAnnouncement = useCallback(
@@ -2741,10 +2795,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return { name: local.settings.displayName, place: local.association.addressLine };
     }
     if (!hasSupabase) return null;
-    const { data } = await supabaseBrowser().rpc("association_by_join_code", { p_code: code });
-    const row = ((data ?? []) as { name: string; city: string | null; state: string | null }[])[0];
-    if (!row) return null;
-    return { name: row.name, place: [row.city, row.state].filter(Boolean).join(", ") };
+    // Through our own route so lookups are counted per address; the answer
+    // is the same anonymous RPC either way.
+    const response = await fetch(`/api/join/lookup?code=${encodeURIComponent(code)}`);
+    if (!response.ok) return null;
+    const body = (await response.json()) as { found: { name: string; place: string } | null };
+    return body.found;
   }, []);
 
   /* -------------------------------------------------------------- requests */
@@ -2807,7 +2863,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               thread: [...request.thread, event(request, actor?.name ?? "Board")],
             })
             .eq("id", requestId),
-        );
+        ).then((ok) => {
+          if (ok) emailNotice(rc.id, { kind: "request", id: requestId, body: note });
+        });
         return;
       }
       const actor = sliceStore(communityId, "accounts")
@@ -3282,7 +3340,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               messages: [...thread.messages, message(sender?.name ?? "Board", thread.messages.length)],
             })
             .eq("id", threadId),
-        );
+        ).then((ok) => {
+          // The channel on the message says "email", so it is one.
+          if (ok && thread.ownerId) {
+            emailNotice(rc.id, {
+              kind: thread.tag === "Billing" ? "letter" : "message",
+              unitIds: [thread.ownerId],
+              subject: thread.subject,
+              body,
+            });
+          }
+        });
         return;
       }
       const sender = sliceStore(communityId, "accounts")
@@ -3339,7 +3407,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             unread: false,
             messages: [message(senderName)],
           }),
-        );
+        ).then((ok) => {
+          // A dues letter is a statutory notice; a note is a message the
+          // owner may turn off. The tag is what tells them apart.
+          if (ok) {
+            emailNotice(rc.id, {
+              kind: tag === "Billing" ? "letter" : "message",
+              unitIds: [ownerId],
+              subject,
+              body,
+            });
+          }
+        });
         return;
       }
       const owner = sliceStore(communityId, "owners")
@@ -3723,7 +3802,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             live_results_visible: ballot.liveResultsVisible,
           });
           if (error) throw new Error(error.message);
-          return supabase.from("ballot_options").insert(
+          const { error: optionsError } = await supabase.from("ballot_options").insert(
             ballot.options.map((option, position) => ({
               ballot_id: id,
               label: option.label,
@@ -3731,6 +3810,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               position,
             })),
           );
+          if (optionsError) throw new Error(optionsError.message);
+          // Notice of a vote goes out the moment it opens to owners. The
+          // server reads the ballot back and declines a board-only one.
+          if (ballot.audience === "owners" && ballot.status === "open") {
+            emailNotice(rc.id, { kind: "ballot", id });
+          }
         });
         return;
       }
@@ -4085,8 +4170,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value: AppState = {
     community: community_,
     communities: remote.community
-      ? remote.associations.map((a) => ({ id: a.id, label: a.name }))
-      : communityList.map((c) => ({ id: c.id, label: c.label })),
+      ? remote.associations.map((a) => ({ id: a.id, label: a.name, place: a.place, slug: a.slug }))
+      : communityList.map((c) => ({ id: c.id, label: c.label, place: c.association.addressLine, slug: c.id })),
     setCommunity,
     account,
     // Every slice is read off the active community rather than off the local

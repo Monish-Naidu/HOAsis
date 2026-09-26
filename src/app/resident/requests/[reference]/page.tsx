@@ -8,6 +8,7 @@ import {
   CalendarClock,
   Download,
   Mail,
+  MessageSquare,
   Paperclip,
   Wrench,
 } from "lucide-react";
@@ -215,24 +216,21 @@ export default function RequestDetail({
       </section>
 
       {isOpen ? (
-        <Card className="p-3">
-          <textarea
-            rows={3}
-            placeholder="Add a note or answer a question…"
-            className="w-full resize-none bg-transparent px-1 py-1 text-body text-fg outline-none placeholder:text-fg-subtle"
-          />
-          <div className="flex items-center justify-between gap-2 border-t border-border pt-2.5">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted hover:text-fg"
-            >
-              <Paperclip className="size-3.5" />
-              Attach
-            </button>
-            <Button variant="primary" size="sm">
-              Send
-            </Button>
-          </div>
+        // A note box sat here with no handler behind it: Attach and Send did
+        // nothing, on the one screen an owner opens while waiting. Until a
+        // request carries an owner's reply, questions go to the board's inbox,
+        // which does reach them.
+        <Card className="flex items-center justify-between gap-3 px-4 py-3">
+          <p className="text-footnote text-fg-muted">
+            Have a question about this request, or something to add?
+          </p>
+          <Link
+            href={`/resident/messages?subject=${encodeURIComponent(`${request.reference}: ${request.title}`)}`}
+            className="inline-flex shrink-0 items-center gap-1.5 text-footnote font-medium text-primary hover:underline"
+          >
+            <MessageSquare className="size-3.5" />
+            Message the board
+          </Link>
         </Card>
       ) : null}
     </div>

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { errorBody, logger } from "@/lib/log";
 import { supabaseServer } from "@/lib/supabase/server";
 import { sendDuesEmails, type DuesCategory } from "@/lib/email/send";
 
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { associationId, category, dueDate, dryRun } = body;
+  const log = logger("email/send", request, { associationId });
   if (!associationId || !category || !dueDate) {
     return NextResponse.json(
       { error: "associationId, category and dueDate are all required" },
@@ -68,10 +70,12 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       dryRun,
     });
+    log.info("dues emails sent", { category, dryRun: Boolean(dryRun), sent: result.sent, failed: result.failed, skipped: result.skipped });
     return NextResponse.json(result);
   } catch (error) {
+    log.error("dues emails failed", { category, err: error });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not send" },
+      errorBody(log, error instanceof Error ? error.message : "Could not send"),
       { status: 500 },
     );
   }

@@ -183,6 +183,17 @@ export function AccountStep({
           Look around first
         </Button>
       </div>
+      <p className="text-footnote leading-relaxed text-fg-muted">
+        By creating an account you agree to the{" "}
+        <Link href="/terms" className="font-medium text-accent underline underline-offset-2">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="font-medium text-accent underline underline-offset-2">
+          Privacy policy
+        </Link>
+        .
+      </p>
       <p className="text-footnote leading-relaxed text-fg-subtle">
         Looking around builds a copy in this browser only. It is not saved anywhere else,
         nobody else can sign in to it, and it is not the association. Come back signed in

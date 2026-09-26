@@ -12,7 +12,9 @@ import type {
   Association,
   Ballot,
   BankAccount,
+  BoardTerm,
   CommunityAmenity,
+  CommunityHistory,
   CommunitySettings,
   DocumentRecord,
   ForumPost,
@@ -148,4 +150,13 @@ export interface Community {
 
   /** Charge history, keyed by owner. Only seeded for the demo households. */
   ownerCharges: Record<string, import("@/lib/types").ChargeLine[]>;
+
+  /**
+   * The months the server summed, for a real association with more history
+   * than the app loads line by line. Unset for the fixtures, which hold every
+   * line, and every selector reads them exactly as before.
+   */
+  history?: CommunityHistory;
+  /** Every term of office on record, current ones included. Unset for the fixtures. */
+  boardTerms?: BoardTerm[];
 }

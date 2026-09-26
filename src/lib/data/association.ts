@@ -10,8 +10,8 @@ import type {
 
 export const association: Association = {
   id: "assoc-mehr-meadows",
-  name: "Mehr Meadows Community Association",
-  shortName: "Mehr Meadows",
+  name: "Willow Creek Estates Community Association",
+  shortName: "Willow Creek Estates",
   state: "WA",
   stateName: "Washington",
   unitCount: 88,
@@ -99,7 +99,7 @@ export const announcements: Announcement[] = [
     title: "Windstorm season: clear your deck before the first big one",
     body: "When a wind advisory goes up, stow patio furniture, planters, and grills. Anything left out becomes a projectile, and the association does not insure resident property. Snohomish County PUD outage alerts are worth turning on.",
     postedDate: "2026-08-11",
-    author: "Mehr Meadows Board",
+    author: "Willow Creek Estates Board",
     category: "Notice",
   },
   {
@@ -107,7 +107,7 @@ export const announcements: Announcement[] = [
     title: "New: pay dues from your phone with Apple Pay",
     body: "Autopay and one-time payments now work with Apple Pay and Google Pay. Bank transfers stay free for you and cost the association $0.35, by far the cheapest way to pay.",
     postedDate: "2026-08-04",
-    author: "Mehr Meadows Board",
+    author: "Willow Creek Estates Board",
     category: "Notice",
   },
 ];

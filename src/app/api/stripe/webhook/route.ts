@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { syncAccountStatus } from "@/lib/stripe/account-status";
+import { recordAppError } from "@/lib/app-errors";
+import { logger } from "@/lib/log";
 
 /**
  * The only writer of Stripe-settled money.
@@ -23,6 +26,22 @@ import { supabaseAdmin } from "@/lib/supabase/server";
  * setup_intent.* as well as payment_intent.*.
  */
 export const runtime = "nodejs";
+
+/**
+ * The event's account must be the association's own connected account. The
+ * metadata names a unit; without this check, an intent created on any
+ * account this platform can see could settle somebody else's dues.
+ */
+async function belongsToAccount(unitId: string, account: string | undefined): Promise<boolean> {
+  if (!account) return false;
+  const { data } = await supabaseAdmin()
+    .from("units")
+    .select("associations(stripe_account_id)")
+    .eq("id", unitId)
+    .maybeSingle();
+  const row = data as { associations: { stripe_account_id: string | null } | null } | null;
+  return row?.associations?.stripe_account_id === account;
+}
 
 function intentMetadata(intent: Stripe.PaymentIntent) {
   const m = intent.metadata ?? {};
@@ -63,8 +82,16 @@ function railFromCharge(charge: Stripe.Charge | null, fallback: "ach" | "card") 
 }
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) {
+  const log = logger("stripe/webhook", request);
+  // The registered endpoint's secret, plus the one `stripe listen` prints
+  // for a local run, so a developer can watch a real event land without
+  // swapping the production value in and out of .env.local.
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_WEBHOOK_SECRET_LOCAL,
+  ].filter((s): s is string => Boolean(s));
+  if (secrets.length === 0) {
+    log.error("webhook secret is not configured");
     return NextResponse.json({ error: "Webhook secret is not configured" }, { status: 500 });
   }
   const signature = request.headers.get("stripe-signature");
@@ -72,12 +99,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  let event: Stripe.Event;
-  try {
-    event = stripe().webhooks.constructEvent(await request.text(), signature, secret);
-  } catch {
+  const payload = await request.text();
+  let event: Stripe.Event | null = null;
+  for (const secret of secrets) {
+    try {
+      event = stripe().webhooks.constructEvent(payload, signature, secret);
+      break;
+    } catch {
+      // Try the next secret.
+    }
+  }
+  if (!event) {
+    log.warn("bad signature");
     return NextResponse.json({ error: "Bad signature" }, { status: 400 });
   }
+  log.info("event", { type: event.type, eventId: event.id, account: event.account ?? null });
 
   switch (event.type) {
     case "payment_intent.requires_action":
@@ -87,7 +123,7 @@ export async function POST(request: NextRequest) {
       // something honest is happening.
       const intent = event.data.object;
       const meta = intentMetadata(intent);
-      if (!meta) break;
+      if (!meta || !(await belongsToAccount(meta.unitId, event.account))) break;
       await supabaseAdmin()
         .from("payments")
         .upsert(
@@ -110,7 +146,7 @@ export async function POST(request: NextRequest) {
     case "payment_intent.succeeded": {
       const intent = event.data.object;
       const meta = intentMetadata(intent);
-      if (!meta) break;
+      if (!meta || !(await belongsToAccount(meta.unitId, event.account))) break;
 
       // The actual processor fee from the balance transaction, so the books
       // carry what Stripe took rather than what our schedule estimated. Only
@@ -149,6 +185,7 @@ export async function POST(request: NextRequest) {
         p_paid_by: meta.paidBy ?? undefined,
       });
       if (error) {
+        log.error("record_payment failed", { err: error.message, intentId: intent.id, associationId: meta.associationId });
         // A 500 makes Stripe retry, which record_payment is built to tolerate.
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
@@ -194,6 +231,75 @@ export async function POST(request: NextRequest) {
         .from("payment_instruments")
         .delete()
         .eq("detail->>setupIntentId", intent.id);
+      break;
+    }
+
+    case "account.updated": {
+      // Onboarding finished, or Stripe paused the account. The cached
+      // answer on the associations row follows within the minute.
+      const account = event.data.object;
+      const admin = supabaseAdmin();
+      const { data: row } = await admin
+        .from("associations")
+        .select("id")
+        .eq("stripe_account_id", account.id)
+        .maybeSingle();
+      if (row) await syncAccountStatus(row.id, account.id);
+      break;
+    }
+
+    case "charge.refunded": {
+      // Issued from the Stripe dashboard. The books hear about it here:
+      // the payment flips to refunded, the owner's statement gets the money
+      // back, and the deposit leaves the ledger. record_refund is idempotent
+      // on the intent, so a redelivery is harmless.
+      const charge = event.data.object;
+      const intentId =
+        typeof charge.payment_intent === "string"
+          ? charge.payment_intent
+          : (charge.payment_intent?.id ?? null);
+      if (!intentId || !charge.amount_refunded) break;
+      const { error } = await supabaseAdmin().rpc("record_refund", {
+        p_stripe_payment_intent_id: intentId,
+        p_amount_cents: charge.amount_refunded,
+      });
+      if (error) {
+        log.error("record_refund failed", { err: error.message, intentId });
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      break;
+    }
+
+    case "charge.dispute.created":
+    case "charge.dispute.closed": {
+      // A chargeback. With losses_collector = stripe the association carries
+      // it, and the treasurer needs to know today, not on the next
+      // statement. It lands on /admin as an error with the amounts, and the
+      // payment keeps its state: the money is contested, not gone.
+      const dispute = event.data.object;
+      const intentId =
+        typeof dispute.payment_intent === "string"
+          ? dispute.payment_intent
+          : (dispute.payment_intent?.id ?? null);
+      const admin = supabaseAdmin();
+      const { data: payment } = intentId
+        ? await admin
+            .from("payments")
+            .select("association_id, unit_id, amount_cents")
+            .eq("stripe_payment_intent_id", intentId)
+            .maybeSingle()
+        : { data: null };
+      await recordAppError({
+        level: event.type === "charge.dispute.created" ? "error" : "warn",
+        source: "server",
+        route: "stripe/webhook",
+        message:
+          event.type === "charge.dispute.created"
+            ? `Chargeback opened for $${(dispute.amount / 100).toFixed(2)} (${dispute.reason ?? "no reason given"})`
+            : `Chargeback closed: ${dispute.status}`,
+        associationId: payment?.association_id ?? null,
+        extra: { disputeId: dispute.id, intentId, unitId: payment?.unit_id ?? null, account: event.account ?? null },
+      });
       break;
     }
 

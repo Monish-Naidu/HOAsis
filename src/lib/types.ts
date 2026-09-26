@@ -71,6 +71,14 @@ export interface Association {
    * this account, never to the platform.
    */
   stripeAccountId?: string;
+  /**
+   * Stripe's answer to "can this account take a payment", cached on the row
+   * by the connect route and the account.updated webhook. An account exists
+   * from the first click of setup; this is true only once onboarding is done.
+   */
+  stripeChargesEnabled?: boolean;
+  /** Where Stripe pays dues out to, from the connected account. */
+  stripePayout?: { bank: string; last4: string };
   /** Six characters a neighbour types in to ask to join. */
   joinCode?: string;
 }
@@ -185,6 +193,86 @@ export interface Owner {
    * the community cover photo. Seeded for the demo households only.
    */
   photoUrl?: string;
+  /**
+   * Who owned this home before, newest first, with the dates of each tenure.
+   *
+   * Read from the register's closed seats for a real association; the demo
+   * fixtures have no history and leave it unset.
+   */
+  previousOwners?: OwnerTenure[];
+}
+
+/** One past holder of a home. */
+export interface OwnerTenure {
+  name: string;
+  from: ISODate;
+  to: ISODate;
+}
+
+/**
+ * One term of office: who held which seat, from when, and until when.
+ *
+ * Kept by the database (`board_terms`) whenever a role changes, so the
+ * association can say who was treasurer in 2019 without opening the minutes.
+ */
+export interface BoardTerm {
+  id: ID;
+  name: string;
+  /** The home's register key, where the seat still names one. */
+  unit?: string;
+  role: BoardRole;
+  from: ISODate;
+  /** Unset while the term is running. */
+  to?: ISODate;
+}
+
+/**
+ * What the server summed of the rows the app did not load.
+ *
+ * Ten years of a real association is thousands of statement and ledger
+ * lines, and no screen reads the old ones a line at a time: they read
+ * a month's income, a year's spend, a home's standing. So the rows come
+ * down for the recent months only, and everything before `from` arrives
+ * as one row per month here. The selectors in metrics.ts read both and
+ * cannot tell the difference. Unset for the demo fixtures, which hold
+ * every line.
+ */
+export interface CommunityHistory {
+  /** The first day the app holds ledger lines and statement lines for. */
+  from: ISODate;
+  /** Ledger lines on the books, all time. */
+  ledgerCount: number;
+  /** The oldest ledger line's date, or unset for an association with none. */
+  ledgerFrom?: ISODate;
+  /** Money in and out before `from`, by month and category. */
+  ledgerMonths: LedgerMonth[];
+  /** Charges and payments before `from`, by month and kind, across every home. */
+  statementMonths: StatementMonth[];
+  /** Every home's statement length, so a screen can offer the earlier lines. */
+  statementCounts: Record<ID, number>;
+  /** Late fees inside what is owed today, across every home, from the whole statement. */
+  lateFeesOwedCents: Cents;
+  /** Homes whose whole statement has since been fetched. */
+  statementsLoaded: ID[];
+  /** True once every ledger line has been fetched. */
+  ledgerLoaded: boolean;
+}
+
+export interface LedgerMonth {
+  /** "2024-03" */
+  month: string;
+  category: LedgerCategory;
+  inCents: Cents;
+  outCents: Cents;
+  count: number;
+}
+
+export interface StatementMonth {
+  month: string;
+  kind: ChargeLine["kind"];
+  /** Signed as the lines are: charges positive, payments negative. */
+  cents: Cents;
+  count: number;
 }
 
 /**
@@ -766,6 +854,11 @@ export interface Meeting {
   location: string;
   dialIn: string;
   passcode: string;
+  /**
+   * A fixed video room name. Absent for every meeting so far: the room is
+   * derived from the association and meeting ids (`lib/meetings/video.ts`).
+   */
+  videoRoom?: string;
   attendees: MeetingAttendee[];
   agenda: string[];
   ballotIds: ID[];

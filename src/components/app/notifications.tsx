@@ -22,14 +22,18 @@ import {
   useReconciliation,
   useUnreadThreadCount,
 } from "@/lib/app-state";
+import { noticeKey, readStore, useReadNotices } from "@/lib/notifications-read";
 import { cn, daysFromToday, money, pluralize, relativeDays } from "@/lib/utils";
 
 /**
  * The bell on the top right, from the 2026-09-01 design.
  *
  * Every line in the panel is derived from a record that needs somebody, so
- * the badge can never show a number with nothing behind it. There is no
- * notification store to mark read: acting on the record is what clears it.
+ * the panel can never show an item with nothing behind it. Which lines the
+ * person has already seen lives in the browser (`notifications-read.ts`):
+ * clicking one marks it read and the badge counts only what is unread. A
+ * notice whose words change comes back as unread; an unchanged one stays
+ * quiet until the record itself goes away.
  */
 
 interface Notice {
@@ -210,6 +214,14 @@ function BellPanel({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const read = useReadNotices();
+  const keyed = notices.map((n) => ({ ...n, key: noticeKey(n), read: read.has(noticeKey(n)) }));
+  const present = keyed.map((n) => n.key);
+  const unread = keyed.filter((n) => !n.read).length;
+
+  function markRead(keys: string[]) {
+    readStore().markRead(keys, present);
+  }
   // Where the panel sits, measured from the bell when it opens. Anchoring it
   // to the bell's right edge with a fixed width ran it 40px off the left of
   // a 320px screen, since the bell is not at the screen's edge.
@@ -250,18 +262,16 @@ function BellPanel({
       <button
         type="button"
         aria-label={
-          notices.length === 0
-            ? "Notifications"
-            : `Notifications, ${pluralize(notices.length, "item")}`
+          unread === 0 ? "Notifications" : `Notifications, ${pluralize(unread, "unread")}`
         }
         aria-expanded={open}
         onClick={(e) => toggle(e.currentTarget)}
         className="press relative flex size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:size-9"
       >
         <Bell className="size-[18px]" strokeWidth={1.9} />
-        {notices.length > 0 ? (
+        {unread > 0 ? (
           <span className="tnum absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
-            {notices.length}
+            {unread}
           </span>
         ) : null}
       </button>
@@ -282,37 +292,58 @@ function BellPanel({
                 className="fixed z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-card border border-border bg-surface shadow-float"
                 style={{ top: place.top, right: place.right, width: place.width }}
               >
-                <p className="border-b border-border px-4 py-2.5 text-footnote font-semibold text-fg-muted">
-                  Notifications
-                </p>
-                {notices.length === 0 ? (
+                <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border px-4 py-2">
+                  <p className="text-footnote font-semibold text-fg-muted">Notifications</p>
+                  {unread > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => markRead(present)}
+                      className="press -mr-2 rounded-md px-2 py-1 text-footnote font-medium text-brand hover:bg-surface-2"
+                    >
+                      Mark all as read
+                    </button>
+                  ) : null}
+                </div>
+                {keyed.length === 0 ? (
                   <p className="px-4 py-6 text-center text-callout text-fg-muted">
                     Nothing needs you right now.
                   </p>
                 ) : (
-                  notices.map(({ icon: Icon, ...n }) => (
+                  keyed.map(({ icon: Icon, ...n }) => (
                     <Link
-                      key={n.id}
+                      key={n.key}
                       href={n.href}
-                      onClick={() => setOpen(false)}
+                      onClick={() => {
+                        markRead([n.key]);
+                        setOpen(false);
+                      }}
                       className="flex items-start gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-surface-2"
                     >
                       <span
                         className={cn(
                           "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
-                          n.tone,
+                          n.read ? "bg-surface-2 text-fg-subtle" : n.tone,
                         )}
                       >
                         <Icon className="size-4" strokeWidth={2} />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-callout font-medium leading-snug text-fg">
+                        <span
+                          className={cn(
+                            "block truncate text-callout leading-snug",
+                            n.read ? "font-normal text-fg-muted" : "font-medium text-fg",
+                          )}
+                        >
                           {n.title}
                         </span>
                         <span className="mt-0.5 line-clamp-2 text-caption leading-snug text-fg-muted">
                           {n.detail}
                         </span>
                       </span>
+                      {n.read ? null : (
+                        <span aria-hidden className="mt-2 size-2 shrink-0 rounded-full bg-brand" />
+                      )}
+                      <span className="sr-only">{n.read ? "Read" : "Unread"}</span>
                     </Link>
                   ))
                 )}

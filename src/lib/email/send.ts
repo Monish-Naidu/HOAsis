@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { assessmentDueEmail, pastDueEmail } from "./templates";
 import { unsubscribeUrl } from "./tokens";
+import { emailSender } from "./sender";
 
 /**
  * Sending dues email.
@@ -32,10 +33,7 @@ function resend(): Resend {
 }
 
 function sender(): string {
-  // Falls back to Resend's shared testing sender, which only delivers to the
-  // account owner. Better than a silent failure to an address that will never
-  // receive it.
-  return process.env.EMAIL_FROM ?? "Your HOAsis <onboarding@resend.dev>";
+  return emailSender();
 }
 
 /**

@@ -43,8 +43,8 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const badges: Partial<Record<string, NavBadge>> = {
     // What is left, not what is done. A board setting up wants to know how
     // much further, and the row disappears entirely at zero.
-    setup: { count: plan.total - plan.done, tone: "neutral" },
-    money: { count: recon.needsReview.length, tone: "warn" },
+    setup: { count: plan.total - plan.done, tone: "neutral", hint: "setup steps left" },
+    money: { count: recon.needsReview.length, tone: "warn", hint: "transactions to confirm" },
     // The section, not only its first tab: an owner saying a notice is fixed
     // is the board's move as much as a request is.
     requests: {
@@ -53,12 +53,13 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
         community.violations.filter((v) => v.stage !== "cured" && Boolean(v.ownerFixedDate))
           .length,
       tone: "neutral",
+      hint: "requests waiting on the board",
     },
-    compliance: { count: comp.overdue.length, tone: "danger" },
-    communications: { count: unread, tone: "neutral" },
-    homeowners: { count: delinq.past.length, tone: "warn" },
+    compliance: { count: comp.overdue.length, tone: "danger", hint: "overdue filings" },
+    communications: { count: unread, tone: "neutral", hint: "unread conversations" },
+    homeowners: { count: delinq.past.length, tone: "warn", hint: "homes past due" },
     // The same number as the dashboard and the Vendors page, from one selector.
-    vendors: { count: vendorDecisions(community).count, tone: "warn" },
+    vendors: { count: vendorDecisions(community).count, tone: "warn", hint: "bills waiting on you" },
   };
 
   // Three separate questions, asked of every page in a row: may they open

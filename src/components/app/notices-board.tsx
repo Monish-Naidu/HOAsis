@@ -9,7 +9,7 @@ import { NoticeLetter } from "@/components/app/notice-letter";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import type { Owner, Violation } from "@/lib/types";
-import { cn, daysFromToday, formatDate, relativeDays } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
 import { useHomeLabel } from "@/components/app/use-home-label";
 
 /**
@@ -53,13 +53,17 @@ function Notices() {
   const [creating, setCreating] = useState(false);
   const [printing, setPrinting] = useState<Violation | null>(null);
 
+  const today = todayIsoDate();
   const open = community.violations
     .filter((v) => v.stage !== "cured")
     // The owner's word that it is fixed is the board's next job, so it goes
-    // to the top. Then oldest first, because the oldest has waited longest.
+    // to the top. A notice sent today comes next, so the one just sent is
+    // seen to have landed rather than sitting under twenty older ones. Then
+    // oldest first, because the oldest has waited longest.
     .sort(
       (a, b) =>
         Number(Boolean(b.ownerFixedDate)) - Number(Boolean(a.ownerFixedDate)) ||
+        Number(b.openedDate === today) - Number(a.openedDate === today) ||
         a.openedDate.localeCompare(b.openedDate),
     );
   const resolved = community.violations

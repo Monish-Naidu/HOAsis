@@ -1,7 +1,18 @@
+import { placeLabel } from "@/lib/community-links";
 import type { PreviousSetup } from "@/lib/data/new-community";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Community } from "./community";
-import type { Account, Capability, ChargeLine, CommunitySettings, Owner, Payout } from "@/lib/types";
+import type {
+  Account,
+  BoardTerm,
+  Capability,
+  ChargeLine,
+  CommunityHistory,
+  CommunitySettings,
+  LedgerEntry,
+  Owner,
+  Payout,
+} from "@/lib/types";
 import { caps } from "./accounts";
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
@@ -33,6 +44,12 @@ export interface RemoteCommunitySummary {
   name: string;
   role: string;
   capabilities: Capability[];
+  /** The address in links: /c/<slug>. Made by the database, stable. */
+  slug: string;
+  /** The one this person chose to land in. At most one is true. */
+  isHome: boolean;
+  /** "Bothell, WA": what tells two associations with one name apart. */
+  place: string;
 }
 
 /** The associations this person currently belongs to. */
@@ -41,14 +58,28 @@ export async function loadMyAssociations(
 ): Promise<RemoteCommunitySummary[]> {
   const { data, error } = await supabase.rpc("my_associations");
   if (error) throw new Error(`Could not load your associations: ${error.message}`);
-  return (data ?? []).map(
-    (row: { association_id: string; name: string; role: string; capabilities: Capability[] }) => ({
-      id: row.association_id,
-      name: row.name,
-      role: row.role,
-      capabilities: row.capabilities ?? [],
-    }),
-  );
+  const rows = (data ?? []) as {
+    association_id: string; name: string; role: string; capabilities: Capability[]; slug: string | null; is_home?: boolean | null;
+  }[];
+  // The town, so a person on two boards called Maple Ridge can tell them
+  // apart. Read straight off the table; RLS scopes it to their own.
+  const places = new Map<string, string>();
+  if (rows.length) {
+    const { data: towns } = await supabase
+      .from("associations")
+      .select("id, city, state")
+      .in("id", rows.map((r) => r.association_id));
+    for (const t of towns ?? []) places.set(t.id, placeLabel(t.city, t.state));
+  }
+  return rows.map((row) => ({
+    id: row.association_id,
+    name: row.name,
+    role: row.role,
+    capabilities: row.capabilities ?? [],
+    slug: row.slug ?? row.association_id,
+    isHome: Boolean(row.is_home),
+    place: places.get(row.association_id) ?? "",
+  }));
 }
 
 /** The next occurrence of a billing day, on or after a date. */
@@ -74,13 +105,33 @@ function nextDueDate(from: string, day: number): string {
  */
 async function everyRow<T>(
   page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  /** Pages to ask for before the first has said whether there is more. */
+  expect = 1,
 ): Promise<{ data: T[] | null; error: { message: string } | null }> {
+  // The first page says whether there is more. After that, pages go out a
+  // few at a time: ten years of statements is ten pages, and read one after
+  // another they were fourteen seconds before the first number appeared.
+  // Results are appended in page order, so the rows stay sorted. A caller
+  // that knows the read spans two pages asks for both at once.
+  const opening = await Promise.all(
+    Array.from({ length: Math.max(1, expect) }, (_, i) => page(i * 1000, i * 1000 + 999)),
+  );
   const rows: T[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await page(from, from + 999);
+  for (const { data, error } of opening) {
     if (error) return { data: null, error };
     rows.push(...(data ?? []));
     if ((data ?? []).length < 1000) return { data: rows, error: null };
+  }
+  const BATCH = 4;
+  for (let from = 1000 * opening.length; ; from += 1000 * BATCH) {
+    const batch = await Promise.all(
+      Array.from({ length: BATCH }, (_, i) => page(from + i * 1000, from + i * 1000 + 999)),
+    );
+    for (const { data, error } of batch) {
+      if (error) return { data: null, error };
+      rows.push(...(data ?? []));
+      if ((data ?? []).length < 1000) return { data: rows, error: null };
+    }
   }
 }
 
@@ -127,32 +178,192 @@ function standingFor(daysPastDue: number, balanceCents: number): Owner["standing
   return "grace";
 }
 
+/** What `association_overview` returns: the sums of the rows the app does not load. */
+interface Overview {
+  units: {
+    unit_id: string;
+    balance_cents: number;
+    line_count: number;
+    carried_cents: number;
+    oldest_open_due_on: string | null;
+    late_fees_owed_cents: number;
+  }[];
+  ledger: {
+    count: number;
+    first_on: string | null;
+    months: { month: string; category: string; in_cents: number; out_cents: number; count: number }[];
+    accounts: { bank_account_id: string; balance_cents: number; interest_ytd_cents: number }[];
+  };
+  statements: {
+    months: { month: string; kind: string; cents: number; count: number }[];
+  };
+}
+
+/**
+ * How many months of lines come down with the association.
+ *
+ * Two years covers every period the screens open by default (this month,
+ * this year, the last twelve months, last year) and the current fiscal
+ * year whenever it starts. Everything earlier is summed by the server and
+ * fetched line by line only when a screen asks for it.
+ */
+const WINDOW_MONTHS = 24;
+
+/** The first day of the month `WINDOW_MONTHS` back, counting the current one. */
+export function historyWindowFrom(today: string): string {
+  const [y, m] = today.split("-").map(Number);
+  const zero = y * 12 + (m - 1) - (WINDOW_MONTHS - 1);
+  return `${Math.floor(zero / 12)}-${String((zero % 12) + 1).padStart(2, "0")}-01`;
+}
+
+type ChargeRow = {
+  id: string;
+  unit_id: string;
+  due_on: string;
+  created_at: string;
+  label: string;
+  kind: "charge" | "payment" | "credit";
+  amount_cents: number;
+};
+
+/**
+ * A home's statement lines, newest first, each carrying the balance after it.
+ *
+ * Walked oldest first from the balance carried into the first row, so a
+ * statement that starts two years in still reads the same running figure
+ * the balance view sums. Shown newest first like the fixture's statements:
+ * five years in, oldest first put the owner's last payment a hundred and
+ * twenty lines down the page.
+ */
+export function statementLines(rows: ChargeRow[], carriedCents = 0): ChargeLine[] {
+  let running = carriedCents;
+  const lines: ChargeLine[] = [];
+  for (const c of [...rows].sort((x, y) =>
+    x.due_on === y.due_on ? x.created_at.localeCompare(y.created_at) : x.due_on.localeCompare(y.due_on),
+  )) {
+    running += c.amount_cents;
+    lines.push({
+      id: c.id,
+      date: c.due_on,
+      label: c.label,
+      kind: c.kind,
+      amountCents: c.amount_cents,
+      balanceAfterCents: running,
+    });
+  }
+  return lines.reverse();
+}
+
+type LedgerRow = {
+  id: string;
+  occurred_on: string;
+  description: string;
+  counterparty: string;
+  category: string;
+  bank_account_id: string | null;
+  amount_cents: number;
+  confirmed_at: string | null;
+};
+
+function ledgerLine(e: LedgerRow): LedgerEntry {
+  return {
+    id: e.id,
+    date: e.occurred_on,
+    description: e.description,
+    counterparty: e.counterparty,
+    category: e.category as LedgerEntry["category"],
+    accountId: e.bank_account_id ?? "unassigned",
+    amountCents: e.amount_cents,
+    status: e.confirmed_at ? "cleared" : "needs-review",
+  };
+}
+
+/** Every ledger line before a day, for a screen that asked to see earlier. */
+export async function loadLedgerBefore(
+  supabase: SupabaseClient,
+  associationId: string,
+  before: string,
+): Promise<LedgerEntry[]> {
+  const { data, error } = await everyRow((from, to) =>
+    supabase
+      .from("ledger_entries")
+      .select("*")
+      .eq("association_id", associationId)
+      .lt("occurred_on", before)
+      .order("occurred_on", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
+  if (error) throw new Error(`Could not load earlier transactions: ${error.message}`);
+  return (data ?? []).map(ledgerLine);
+}
+
+/** One home's whole statement, every line, for a screen that asked to see earlier. */
+export async function loadWholeStatement(
+  supabase: SupabaseClient,
+  unitId: string,
+): Promise<ChargeLine[]> {
+  const { data, error } = await everyRow((from, to) =>
+    supabase.from("charges").select("*").eq("unit_id", unitId).order("due_on", { ascending: false }).order("id").range(from, to),
+  );
+  if (error) throw new Error(`Could not load the earlier statement: ${error.message}`);
+  return statementLines(data ?? []);
+}
+
 export async function loadCommunity(
   supabase: SupabaseClient,
   associationId: string,
 ): Promise<Community> {
   const today = new Date().toISOString().slice(0, 10);
+  const windowFrom = historyWindowFrom(today);
 
   // One round trip per table rather than a nested select, because the shapes
   // are flat and a failure is easier to attribute when it is not buried in a
   // join. Fired together, so the latency is one trip's worth.
+  //
+  // Statement and ledger lines come down for the last two years only. What
+  // came before is summed on the server by association_overview: each home's
+  // balance and standing, the ledger by month, each account's balance. Ten
+  // years of a forty home association was 15,000 rows in 60 calls and six
+  // seconds before the first number; the sums are one call.
   const [
-    association, units, memberships, charges, banks, ledger, balances,
+    association, units, memberships, charges, banks, ledger, overviewCall,
     requests, documents, meetings, ballots, ballotOptions, tallies, turnout, myVotes,
     posts, vendors, amenities, announcementRows,
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
-    paymentRows, replyRows, actionRows, joinRows, emailRows,
+    paymentRows, replyRows, actionRows, joinRows, emailRows, termRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     supabase.from("units").select("*").eq("association_id", associationId),
-    supabase.from("memberships").select("*").eq("association_id", associationId).is("ends_on", null),
-    everyRow((from, to) => supabase.from("charges").select("*").eq("association_id", associationId).order("due_on", { ascending: false }).order("id").range(from, to)),
+    // Every seat, closed ones included: a closed seat is a previous owner
+    // on the home's record. Current holders are picked out below.
+    supabase.from("memberships").select("*").eq("association_id", associationId).order("starts_on"),
+    // Forty homes billed monthly is two pages of two years, so both go out at once.
+    everyRow((from, to) => supabase.from("charges").select("*").eq("association_id", associationId).gte("due_on", windowFrom).order("due_on", { ascending: false }).order("id").range(from, to), 2),
     supabase.from("bank_accounts").select("*").eq("association_id", associationId),
-    everyRow((from, to) => supabase.from("ledger_entries").select("*").eq("association_id", associationId).order("occurred_on", { ascending: false }).order("id").range(from, to)),
-    supabase.from("unit_balances").select("*").eq("association_id", associationId),
+    everyRow((from, to) => supabase.from("ledger_entries").select("*").eq("association_id", associationId).gte("occurred_on", windowFrom).order("occurred_on", { ascending: false }).order("id").range(from, to)),
+    supabase.rpc("association_overview", { p_association_id: associationId, p_from: windowFrom }),
     supabase.from("requests").select("*").eq("association_id", associationId).order("submitted_on", { ascending: false }),
-    supabase.from("documents").select("*").eq("association_id", associationId).order("updated_on", { ascending: false }),
+    // Files open through short lived signed links, made here as soon as
+    // the rows arrive rather than after everything else has, so a row is
+    // a plain link on every screen. Storage applies the same visibility rule
+    // as the table, so a resident is only ever handed links to what they
+    // may read.
+    supabase.from("documents").select("*").eq("association_id", associationId).order("updated_on", { ascending: false })
+      .then(async (result) => {
+        const paths = (result.data ?? [])
+          .map((d) => d.storage_path)
+          .filter((path): path is string => Boolean(path));
+        const urlByPath = new Map<string, string>();
+        if (paths.length) {
+          const { data: signed } = await supabase.storage.from("documents").createSignedUrls(paths, SIGNED_URL_SECONDS);
+          for (const item of signed ?? []) {
+            if (item.path && item.signedUrl && !item.error) urlByPath.set(item.path, item.signedUrl);
+          }
+        }
+        return { ...result, urlByPath };
+      }),
     supabase.from("meetings").select("*").eq("association_id", associationId).order("held_on"),
     supabase.from("ballots").select("*").eq("association_id", associationId).order("closes_on"),
     supabase.from("ballot_options").select("*").order("position"),
@@ -187,30 +398,23 @@ export async function loadCommunity(
     supabase.from("action_items").select("*").eq("association_id", associationId).order("created_at"),
     supabase.from("join_requests").select("*").eq("association_id", associationId).order("created_at", { ascending: false }),
     supabase.from("email_log").select("*").eq("association_id", associationId).order("sent_at", { ascending: false }).limit(300),
+    supabase.from("board_terms").select("*").eq("association_id", associationId).order("starts_on"),
   ]);
 
-  // Files open through short lived signed links, made in one batch here so a
-  // row is a plain link on every screen. Storage applies the same visibility
-  // rule as the table, so a resident is only ever handed links to what they
-  // may read.
-  const filePaths = (documents.data ?? [])
-    .map((d: { storage_path: string | null }) => d.storage_path)
-    .filter((path: string | null): path is string => Boolean(path));
-  const urlByPath = new Map<string, string>();
-  if (filePaths.length) {
-    const { data: signed } = await supabase.storage
-      .from("documents")
-      .createSignedUrls(filePaths, SIGNED_URL_SECONDS);
-    for (const item of signed ?? []) {
-      if (item.path && item.signedUrl && !item.error) urlByPath.set(item.path, item.signedUrl);
-    }
-  }
+  const urlByPath = documents.urlByPath;
 
   if (association.error || !association.data) {
     throw new Error(`Could not load that association: ${association.error?.message ?? "not found"}`);
   }
 
   const a = association.data;
+
+  if (overviewCall.error) {
+    throw new Error(`Could not load that association: ${overviewCall.error.message}`);
+  }
+  const overview = overviewCall.data as Overview;
+  const unitSummary = new Map(overview.units.map((u) => [u.unit_id, u]));
+  const accountSummary = new Map(overview.ledger.accounts.map((b) => [b.bank_account_id, b]));
 
   // An owner cannot read the bank accounts or the ledger, and should not: a
   // payment's line names the household that paid. What they may know comes
@@ -229,11 +433,9 @@ export async function loadCommunity(
   // Display preferences with no column of their own live in a jsonb patch.
   const stored = (a.settings ?? {}) as Partial<CommunitySettings>;
   const unitRows = units.data ?? [];
-  const memberRows = memberships.data ?? [];
+  const everySeat = memberships.data ?? [];
+  const memberRows = everySeat.filter((m) => m.ends_on === null);
   const chargeRows = charges.data ?? [];
-  const balanceByUnit = new Map(
-    (balances.data ?? []).map((b) => [b.unit_id as string, b.balance_cents as number]),
-  );
 
   // One membership per home for display purposes. A home with two names on
   // title is one bill, so the first current holder names the household.
@@ -244,28 +446,29 @@ export async function loadCommunity(
 
   const owners: Owner[] = unitRows.map((unit) => {
     const holder = holderByUnit.get(unit.id);
-    const balanceCents = balanceByUnit.get(unit.id) ?? 0;
+    const summary = unitSummary.get(unit.id);
+    const balanceCents = Number(summary?.balance_cents ?? 0);
     // The oldest unpaid charge sets how far past due a household is. Money
     // is applied oldest first, so what is still owed is the newest charges
     // whose amounts add up to the balance; the oldest of those is the one
-    // the clock runs from. Reading the oldest charge of all, which this once
-    // did, said a home one month behind was a year late.
-    let uncovered = balanceCents;
-    let oldestOpen: (typeof chargeRows)[number] | undefined;
-    for (const c of [...chargeRows]
-      .filter((c) => c.unit_id === unit.id && c.kind === "charge" && c.due_on <= today)
-      .sort((x, y) => (x.due_on > y.due_on ? -1 : 1))) {
-      if (uncovered <= 0) break;
-      oldestOpen = c;
-      uncovered -= c.amount_cents;
-    }
+    // the clock runs from. The server finds it from the whole statement,
+    // since the charge a three year delinquent's clock runs from is older
+    // than any line the app loads.
+    const oldestOpen = summary?.oldest_open_due_on ?? null;
     const daysPastDue =
-      balanceCents > 0 && oldestOpen ? Math.max(0, daysBetween(oldestOpen.due_on, today)) : 0;
+      balanceCents > 0 && oldestOpen ? Math.max(0, daysBetween(oldestOpen, today)) : 0;
 
     const members = memberRows
       .filter((m) => m.unit_id === unit.id)
       .map((m) => m.full_name)
       .filter(Boolean);
+
+    // Who held the home before, newest first. A seat that closed the day
+    // it opened is a correction, not a tenure.
+    const previousOwners = everySeat
+      .filter((m) => m.unit_id === unit.id && m.ends_on !== null && m.ends_on > m.starts_on && m.full_name)
+      .map((m) => ({ name: m.full_name, from: m.starts_on, to: m.ends_on as string }))
+      .sort((x, y) => y.to.localeCompare(x.to));
 
     // A home with nobody on it yet still needs a name on the roster. For a
     // builder that is a lot not yet sold; for everyone else it is a home
@@ -296,6 +499,7 @@ export async function loadCommunity(
               .map((p: string) => p[0].toUpperCase() + p.slice(1))
               .join(" ")
           : undefined,
+      previousOwners: previousOwners.length ? previousOwners : undefined,
     };
   });
 
@@ -322,29 +526,54 @@ export async function loadCommunity(
     thisYearStart <= today ? thisYearStart : `${Number(today.slice(0, 4)) - 1}-${a.fiscal_year_start}`;
 
   // Statements keyed by home, each line carrying the balance after it. The
-  // running figure is derived here from the same rows the balance view sums,
-  // oldest first, so the statement and the balance cannot disagree.
+  // running figure starts from the balance the server carried into the
+  // window and walks the same rows the balance view sums, so the statement
+  // and the balance cannot disagree.
   const ownerCharges: Record<string, ChargeLine[]> = {};
-  for (const unit of unitRows) ownerCharges[unit.id] = [];
-  const running = new Map<string, number>();
-  for (const c of [...chargeRows].sort((x, y) =>
-    x.due_on === y.due_on ? x.created_at.localeCompare(y.created_at) : x.due_on.localeCompare(y.due_on),
-  )) {
-    const after = (running.get(c.unit_id) ?? 0) + c.amount_cents;
-    running.set(c.unit_id, after);
-    (ownerCharges[c.unit_id] ??= []).push({
-      id: c.id,
-      date: c.due_on,
-      label: c.label,
-      kind: c.kind,
-      amountCents: c.amount_cents,
-      balanceAfterCents: after,
-    });
+  const rowsByUnit = new Map<string, ChargeRow[]>();
+  for (const c of chargeRows) {
+    const list = rowsByUnit.get(c.unit_id);
+    if (list) list.push(c);
+    else rowsByUnit.set(c.unit_id, [c]);
   }
-  // Walked oldest first for the running balance, shown newest first like the
-  // fixture's statements. Five years in, oldest first put the owner's last
-  // payment a hundred and twenty lines down the page.
-  for (const lines of Object.values(ownerCharges)) lines.reverse();
+  for (const unit of unitRows) {
+    ownerCharges[unit.id] = statementLines(
+      rowsByUnit.get(unit.id) ?? [],
+      Number(unitSummary.get(unit.id)?.carried_cents ?? 0),
+    );
+  }
+
+  const history: CommunityHistory = {
+    from: windowFrom,
+    ledgerCount: Number(overview.ledger.count),
+    ledgerFrom: overview.ledger.first_on ?? undefined,
+    ledgerMonths: overview.ledger.months.map((m) => ({
+      month: m.month,
+      category: m.category as LedgerEntry["category"],
+      inCents: Number(m.in_cents),
+      outCents: Number(m.out_cents),
+      count: m.count,
+    })),
+    statementMonths: overview.statements.months.map((m) => ({
+      month: m.month,
+      kind: m.kind as ChargeLine["kind"],
+      cents: Number(m.cents),
+      count: m.count,
+    })),
+    statementCounts: Object.fromEntries(overview.units.map((u) => [u.unit_id, u.line_count])),
+    lateFeesOwedCents: overview.units.reduce((t, u) => t + Number(u.late_fees_owed_cents), 0),
+    statementsLoaded: [],
+    ledgerLoaded: false,
+  };
+
+  const boardTerms: BoardTerm[] = (termRows.data ?? []).map((t) => ({
+    id: t.id,
+    name: t.full_name,
+    unit: t.unit_id ? unitRows.find((u) => u.id === t.unit_id)?.label : undefined,
+    role: t.role,
+    from: t.starts_on,
+    to: t.ends_on ?? undefined,
+  }));
 
   return {
     id: a.id,
@@ -384,6 +613,11 @@ export async function loadCommunity(
           }
         : undefined,
       stripeAccountId: a.stripe_account_id ?? undefined,
+      stripeChargesEnabled: a.stripe_charges_enabled ?? false,
+      stripePayout:
+        a.stripe_payout_bank && a.stripe_payout_last4
+          ? { bank: a.stripe_payout_bank, last4: a.stripe_payout_last4 }
+          : undefined,
       joinCode: a.join_code,
     },
 
@@ -458,11 +692,10 @@ export async function loadCommunity(
       // What the books say is in the account. There is no bank feed yet, so
       // the ledger is the only source; a fixed zero read as "broke" on the
       // dashboard of an association with a year of dues behind it.
-      // Confirmed lines only, as association_funds counts them for owners,
-      // so a line waiting on review cannot make the two balances differ.
-      balanceCents: (ledger.data ?? [])
-        .filter((e) => e.bank_account_id === b.id && e.confirmed_at !== null)
-        .reduce((total, e) => total + e.amount_cents, 0),
+      // Confirmed lines only, all time, summed by the server as
+      // association_funds sums them for owners, so a line waiting on review
+      // cannot make the two balances differ.
+      balanceCents: Number(accountSummary.get(b.id)?.balance_cents ?? 0),
       syncedMinutesAgo: 0,
       status: "live" as const,
       reconciledThroughDate: today,
@@ -470,16 +703,7 @@ export async function loadCommunity(
       apy: 0,
       // From the books, this fiscal year. It was a fixed zero beside a
       // list of interest payments.
-      interestYtdCents: (ledger.data ?? [])
-        .filter(
-          (e) =>
-            e.bank_account_id === b.id &&
-            e.category === "Interest income" &&
-            e.amount_cents > 0 &&
-            e.confirmed_at !== null &&
-            e.occurred_on >= fiscalYearFrom,
-        )
-        .reduce((total, e) => total + e.amount_cents, 0),
+      interestYtdCents: Number(accountSummary.get(b.id)?.interest_ytd_cents ?? 0),
       insuredLimitCents: 250_000_00,
     })),
 
@@ -494,16 +718,7 @@ export async function loadCommunity(
           amountCents: e.amount_cents,
           status: "cleared" as const,
         }))
-      : (ledger.data ?? []).map((e) => ({
-      id: e.id,
-      date: e.occurred_on,
-      description: e.description,
-      counterparty: e.counterparty,
-      category: e.category as Community["ledger"][number]["category"],
-      accountId: e.bank_account_id ?? "unassigned",
-      amountCents: e.amount_cents,
-      status: e.confirmed_at ? ("cleared" as const) : ("needs-review" as const),
-    })),
+      : (ledger.data ?? []).map(ledgerLine),
 
     budget: (budgetRows.data ?? []).length
       ? (budgetRows.data ?? []).map((line) => ({
@@ -914,5 +1129,7 @@ export async function loadCommunity(
       ];
     })(),
     ownerCharges,
+    history,
+    boardTerms,
   };
 }

@@ -579,7 +579,9 @@ export function Avatar({
     <span
       className={cn(
         "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-footnote font-semibold",
-        tone === "brand" ? "bg-brand-soft text-brand-soft-fg" : "bg-surface-3 text-fg-muted",
+        // Solid, not a tint: pale initials on a pale disc were hard to see
+        // on the photo tray (Monish, 2026-09-26).
+        tone === "brand" ? "bg-primary text-primary-fg" : "bg-surface-3 text-fg-muted",
         className,
       )}
       aria-hidden

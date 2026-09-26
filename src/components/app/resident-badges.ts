@@ -7,6 +7,8 @@ import { daysFromToday } from "@/lib/utils";
 export interface ResidentBadge {
   count: number;
   tone: "warn" | "danger" | "neutral";
+  /** What the number counts, in words, shown on hover and read aloud. */
+  hint?: string;
 }
 
 /**
@@ -25,13 +27,13 @@ export function useResidentBadges(): Partial<Record<string, ResidentBadge>> {
     if (!owner) return badges;
 
     if (owner.balanceCents > 0) {
-      badges["/resident/pay"] = { count: 1, tone: owner.daysPastDue > 0 ? "danger" : "neutral" };
+      badges["/resident/pay"] = { count: 1, tone: owner.daysPastDue > 0 ? "danger" : "neutral", hint: "balance to pay" };
     }
 
     const toVote = community.ballots.filter(
       (b) => b.audience === "owners" && b.status === "open" && !b.myVoteOptionId,
     ).length;
-    if (toVote > 0) badges["/resident/calendar"] = { count: toVote, tone: "warn" };
+    if (toVote > 0) badges["/resident/calendar"] = { count: toVote, tone: "warn", hint: toVote === 1 ? "ballot to cast" : "ballots to cast" };
 
     // Replies in the last two weeks: on a request, or in a message thread.
     const answered = community.requests
@@ -52,7 +54,7 @@ export function useResidentBadges(): Partial<Record<string, ResidentBadge>> {
         return last && last.fromRole !== "resident" && daysFromToday(last.at) >= -14;
       }).length;
     if (answered + replied > 0) {
-      badges["/resident/requests"] = { count: answered + replied, tone: "neutral" };
+      badges["/resident/requests"] = { count: answered + replied, tone: "neutral", hint: "replies from the board" };
     }
     return badges;
   }, [community, owner]);

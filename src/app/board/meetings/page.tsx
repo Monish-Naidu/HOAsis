@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CalendarDays, CalendarPlus, ChevronDown, Megaphone } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { MeetingRoom } from "@/components/app/meeting-room";
+import { videoJoinUrl } from "@/lib/meetings/video";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
@@ -156,7 +157,7 @@ export default function BoardMeetings() {
                 {formatDate(m.date).split(" ")[0]}
               </span>
               <span className="tnum text-body font-semibold leading-none text-fg">
-                {formatDate(m.date).split(" ")[1]}
+                {Number(m.date.slice(8, 10))}
               </span>
             </div>
             <div className="min-w-0 flex-1">
@@ -165,6 +166,18 @@ export default function BoardMeetings() {
               </div>
               <p className="mt-0.5 text-footnote text-fg-muted">
                 {m.time} · {m.location}
+              </p>
+              <p className="mt-0.5 text-footnote text-fg-subtle">
+                <a
+                  href={videoJoinUrl(m, community.association.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-primary underline underline-offset-2"
+                >
+                  Video call link
+                </a>
+                {m.dialIn ? ` · dial in ${m.dialIn}` : ""}
+                {m.passcode ? ` · passcode ${m.passcode}` : ""}
               </p>
               <p className={cn("mt-0.5 text-footnote", m.noticeSentDate ? "text-fg-subtle" : "text-warn")}>
                 {m.noticeSentDate
@@ -209,7 +222,7 @@ export default function BoardMeetings() {
                     {formatDate(m.date).split(" ")[0]}
                   </span>
                   <span className="tnum text-body font-semibold leading-none text-fg">
-                    {formatDate(m.date).split(" ")[1]}
+                    {Number(m.date.slice(8, 10))}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">

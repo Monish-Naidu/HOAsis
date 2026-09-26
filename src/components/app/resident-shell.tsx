@@ -23,7 +23,7 @@ import { PageTransition } from "@/components/app/page-transition";
 import { moduleOn } from "@/lib/modules";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
-import { CommunityHero, CommunityName } from "@/components/app/community-hero";
+import { CommunityHero, CommunityName, PhotoStrip } from "@/components/app/community-hero";
 import { HomeBadge } from "@/components/app/home-badge";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -250,10 +250,12 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           saying the association's name above a photo saying the same thing
           was one name too many (Monish, 2026-09-21). Every other page keeps
           the bar, since it has no photo to carry the name. */}
-      {onDashboard ? null : topBar}
+      {/* The white bar is for narrow screens. At lg the photo is the top of
+          every page: the dashboard's full banner with the home card, and on
+          every other tab the same photo at half height with the switcher,
+          the home line and the controls on it (Monish, 2026-09-26). */}
+      {onDashboard ? null : <div className="lg:hidden">{topBar}</div>}
       {appHeader}
-      {/* The photo and the home card are the front door, not a masthead on
-          every page. Elsewhere the page title comes first. */}
       {onDashboard ? (
         <CommunityHero
           overlay={<HomeBadge />}
@@ -263,19 +265,29 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             </div>
           }
         />
-      ) : null}
-      <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
-        {/* The home screen runs the full width for its dashboard grid; every
-            other screen keeps the phone-width column both modes share, centred
-            under the banner rather than hugging the rail. The container query
-            context is what lets the same page collapse to one column inside
-            the phone frame. */}
-        <main
-          className={cn(
-            "mx-auto min-w-0 @container",
-            onDashboard ? "" : "lg:max-w-2xl",
-          )}
-        >
+      ) : (
+        <>
+          <CommunityHero
+            short
+            subtitle={homeLine}
+            nameControl={<CommunityName onPhoto />}
+            className="max-lg:hidden"
+            toolbar={
+              <div className="hidden rounded-2xl bg-surface/90 p-1.5 shadow-float ring-1 ring-border/70 backdrop-blur-md lg:block">
+                {controls}
+              </div>
+            }
+          />
+          <PhotoStrip className="lg:hidden" quietBelowLg />
+        </>
+      )}
+      <div className="mx-auto w-full max-w-[1400px] px-4 pb-24 pt-6 lg:px-6 lg:py-8 lg:pb-8">
+        {/* The same frame as the board: 1400px and the same gutters, so the
+            two views line up when switching. Every page is written at phone
+            width and lays itself out with container queries, so it fills
+            this frame the way the dashboard does instead of sitting as a
+            narrow column with ground either side (Monish, 2026-09-26). */}
+        <main className="min-w-0 @container">
           <ResidentSectionTabs />
           <Gated pathname={pathname}>{children}</Gated>
         </main>

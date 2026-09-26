@@ -76,6 +76,8 @@ export function RailIcon({
 export interface RailBadge {
   count: number;
   tone: "danger" | "warn" | "neutral";
+  /** What the number counts, in words, shown on hover and read aloud. */
+  hint?: string;
 }
 
 /**
@@ -147,6 +149,8 @@ export function RailRow({
       <span className="truncate">{label}</span>
       {badge && badge.count > 0 ? (
         <span
+          title={badge.hint ? `${badge.count} ${badge.hint}` : undefined}
+          aria-label={badge.hint ? `${badge.count} ${badge.hint}` : undefined}
           className={cn(
             "tnum ml-auto rounded bg-navy-800 px-1.5 py-0.5 text-caption font-bold",
             // Fixed accents for the fixed surface. The dark theme's warn and

@@ -1,5 +1,5 @@
 import type { Community } from "@/lib/data/community";
-import type { LedgerCategory } from "@/lib/types";
+import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { daysFromToday, money } from "@/lib/utils";
 import { totalDues } from "@/lib/home-types";
@@ -57,6 +57,9 @@ export function delinquency(c: Community) {
  * are what it still owes in fees.
  */
 export function lateFeesOwed(c: Community): number {
+  // A real association's statements are on hand for the recent months only;
+  // the server read each whole statement back to its last zero.
+  if (c.history) return c.history.lateFeesOwedCents;
   let total = 0;
   for (const owner of c.owners) {
     if (owner.balanceCents <= 0) continue;
@@ -121,10 +124,51 @@ export function reserveSummary(c: Community) {
   };
 }
 
+/** A ledger line as the flow selectors read it: when, what for, how much. */
+export type LedgerFlow = Pick<LedgerEntry, "date" | "category" | "amountCents">;
+
+const flowCache = new WeakMap<
+  Community["ledger"],
+  { history: CommunityHistory; lines: LedgerFlow[] }
+>();
+
+/**
+ * Every ledger line the selectors below add up.
+ *
+ * For the fixtures that is the ledger itself. For a real association the
+ * lines on hand cover the recent months only, and the server summed the
+ * rest by month and category (`community.history`): each of those months
+ * stands in here as one line for money in and one for money out, dated the
+ * first of its month. Every window a screen opens starts on the first of a
+ * month, so a month's stand-in falls on the same side of the line as its
+ * rows would. Once the earlier lines have been fetched the stand-ins step
+ * aside, so nothing is counted twice.
+ */
+export function ledgerFlows(c: Community): LedgerFlow[] {
+  const h = c.history;
+  if (!h) return c.ledger;
+  const cached = flowCache.get(c.ledger);
+  if (cached && cached.history === h) return cached.lines;
+  const lines: LedgerFlow[] = h.ledgerLoaded ? [...c.ledger] : c.ledger.filter((e) => e.date >= h.from);
+  if (!h.ledgerLoaded) {
+    for (const m of h.ledgerMonths) {
+      const date = `${m.month}-01`;
+      if (m.inCents > 0) lines.push({ date, category: m.category, amountCents: m.inCents });
+      if (m.outCents > 0) lines.push({ date, category: m.category, amountCents: -m.outCents });
+      // A month of nothing but zero lines still counts as a month with activity.
+      if (m.inCents === 0 && m.outCents === 0 && m.count > 0) {
+        lines.push({ date, category: m.category, amountCents: 0 });
+      }
+    }
+  }
+  flowCache.set(c.ledger, { history: h, lines });
+  return lines;
+}
+
 /** The calendar years the ledger touches, newest first, for the chart filter. */
 export function ledgerYears(c: Community): number[] {
   const years = new Set<number>();
-  for (const e of c.ledger) years.add(Number(e.date.slice(0, 4)));
+  for (const e of ledgerFlows(c)) years.add(Number(e.date.slice(0, 4)));
   return [...years].sort((a, b) => b - a);
 }
 
@@ -168,7 +212,7 @@ export function monthlyFlowsBetween(c: Community, from: string, to: string) {
     }
   }
   const index = new Map(months.map((row, i) => [row.month, i]));
-  for (const e of c.ledger) {
+  for (const e of ledgerFlows(c)) {
     if (e.category === "Reserve transfer" || e.category === "Opening balance") continue;
     if (e.date < from || e.date > to) continue;
     const row = months[index.get(e.date.slice(0, 7)) ?? -1];
@@ -229,7 +273,7 @@ export function spendingByCategory(c: Community, year: number) {
 /** `spendingByCategory` for any window of days. */
 export function spendingBetween(c: Community, from: string, to: string) {
   const totals = new Map<string, number>();
-  for (const e of c.ledger) {
+  for (const e of ledgerFlows(c)) {
     if (e.amountCents >= 0) continue;
     if (e.date < from || e.date > to) continue;
     const label: LedgerCategory | "Reserve contributions" =
@@ -281,7 +325,7 @@ export function yearSummary(c: Community, year: number, throughMonth = 12) {
   const incomeCents = flows.reduce((t, m) => t + m.inCents, 0);
   const spendCents = flows.reduce((t, m) => t + m.outCents, 0);
   let reserveCents = 0;
-  for (const e of c.ledger) {
+  for (const e of ledgerFlows(c)) {
     if (e.category !== "Reserve transfer" || e.amountCents >= 0) continue;
     if (yearOf(e.date) !== year || monthOf(e.date) > throughMonth) continue;
     reserveCents -= e.amountCents;
@@ -314,7 +358,7 @@ export function delta(from: number, to: number): Delta {
 /** Every spending category for one year, reserve funding included as its own line. */
 function spendAllCategories(c: Community, year: number, throughMonth: number) {
   const totals = new Map<string, number>();
-  for (const e of c.ledger) {
+  for (const e of ledgerFlows(c)) {
     if (e.amountCents >= 0) continue;
     if (yearOf(e.date) !== year || monthOf(e.date) > throughMonth) continue;
     const label = e.category === "Reserve transfer" ? "Reserve contributions" : e.category;
@@ -425,16 +469,24 @@ export function duesCollection(c: Community, year: number) {
   const deposited = Array.from({ length: 12 }, () => 0);
   const paid = Array.from({ length: 12 }, () => 0);
   const active = Array.from({ length: 12 }, () => false);
-  for (const e of c.ledger) {
+  for (const e of ledgerFlows(c)) {
     if (yearOf(e.date) !== year) continue;
     active[monthOf(e.date) - 1] = true;
     if (e.category === "Assessments" && e.amountCents > 0) deposited[monthOf(e.date) - 1] += e.amountCents;
   }
+  // Statement lines on hand, then the months the server summed before them.
+  // A home whose whole statement was fetched still counts through the sums
+  // for the earlier months, so the two never overlap.
+  const linesFrom = c.history?.from ?? "";
   for (const lines of Object.values(c.ownerCharges ?? {})) {
     for (const line of lines) {
-      if (line.kind !== "payment" || yearOf(line.date) !== year) continue;
+      if (line.kind !== "payment" || yearOf(line.date) !== year || line.date < linesFrom) continue;
       paid[monthOf(line.date) - 1] += -line.amountCents;
     }
+  }
+  for (const m of c.history?.statementMonths ?? []) {
+    if (m.kind !== "payment" || Number(m.month.slice(0, 4)) !== year) continue;
+    paid[Number(m.month.slice(5, 7)) - 1] += -m.cents;
   }
   const collected = deposited.map((net, i) => (paid[i] > 0 ? paid[i] : net));
   const months = collected
@@ -623,7 +675,15 @@ export function filterLedger(ledger: Community["ledger"], f: LedgerFilter) {
     if (f.status && e.status !== f.status) return false;
     if (f.direction === "in" && e.amountCents < 0) return false;
     if (f.direction === "out" && e.amountCents >= 0) return false;
-    if (q && !`${e.description} ${e.counterparty} ${e.category}`.toLowerCase().includes(q)) return false;
+    // The amount as a person would type it, so "285" and "285.00" both find
+    // the line. Search from the top bar lands here with one.
+    if (
+      q &&
+      !`${e.description} ${e.counterparty} ${e.category} ${(Math.abs(e.amountCents) / 100).toFixed(2)}`
+        .toLowerCase()
+        .includes(q.replace(/[$,]/g, ""))
+    )
+      return false;
     return true;
   });
 }
@@ -1089,7 +1149,8 @@ const EXPECTED_RECORDS = [
   {
     key: "financials",
     label: "Most recent financial statements",
-    match: /financial statement|balance sheet|income statement/i,
+    // "Year end financials 2025" is what most boards call the thing.
+    match: /financial statement|financials|year[- ]end|balance sheet|income statement/i,
     why: "The annual figures owners can inspect. Lenders ask for the last two years.",
   },
   {

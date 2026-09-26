@@ -16,12 +16,19 @@ import { cn, money, todayIsoDate } from "@/lib/utils";
  * to set, back-dated if that is the truth, and the record says plainly whether
  * the money moved through us or through their bank.
  */
-export function RecordPayment({ onClose }: { onClose: () => void }) {
+export function RecordPayment({
+  onClose,
+  initialAmount = "",
+}: {
+  onClose: () => void;
+  /** Dollars as typed, from the search shortcut. */
+  initialAmount?: string;
+}) {
   const { vendors, addPayout } = useAppState();
   const { notify } = useToast();
 
   const [vendorId, setVendorId] = useState(vendors[0]?.id ?? "");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(initialAmount);
   const [paidOn, setPaidOn] = useState(todayIsoDate());
   const [method, setMethod] = useState<"ach" | "check" | "card">("ach");
   const [reference, setReference] = useState("");

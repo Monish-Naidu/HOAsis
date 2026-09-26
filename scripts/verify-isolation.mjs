@@ -166,6 +166,38 @@ try {
     check("cannot seize the other association's presidency", stillBeta, error?.code ?? "no error, but unchanged");
   }
 
+  // 4b. A home cannot be claimed across the line: a row whose unit is in B
+  //     and whose association is A is refused, whoever writes it. Without
+  //     this, memberships_write (no with-check) let a President seat
+  //     themselves at another association's home and my_unit_ids() then
+  //     opened that home's charges to them.
+  {
+    const { data: units } = await admin.from("units").select("id").eq("association_id", B).limit(1);
+    const foreignUnit = units[0].id;
+    const { data, error } = await alpha.client
+      .from("memberships")
+      .insert({ association_id: A, unit_id: foreignUnit, profile_id: alpha.id, full_name: "Alpha", role: "resident" })
+      .select("id");
+    check("cannot seat myself at the other association's home", Boolean(error) || (data ?? []).length === 0, error?.code ?? "inserted");
+    const { data: charges } = await alpha.client.from("charges").select("id").eq("unit_id", foreignUnit);
+    check("the other association's charges stay closed by unit", (charges ?? []).length === 0, `${(charges ?? []).length} rows`);
+    const { error: adminError } = await admin
+      .from("payments")
+      .insert({ association_id: A, unit_id: foreignUnit, amount_cents: 100, rail: "check", state: "pending" });
+    check("even the service role cannot record a payment against a home in another association", Boolean(adminError), adminError?.message ?? "inserted");
+    await admin.from("memberships").delete().eq("unit_id", foreignUnit).eq("association_id", A);
+  }
+
+  // 4c. A name is a label, so a second "Beta Hollow" is allowed, and the
+  //     public lookup that warns about it says name, town and slug only.
+  {
+    const { data, error } = await anon().rpc("associations_named", { p_name: "  beta   HOLLOW " });
+    const rows = data ?? [];
+    const keys = rows.length ? Object.keys(rows[0]).sort().join(",") : "";
+    check("associations_named finds the name regardless of case and spacing", !error && rows.some((r) => r.slug && r.name === "Beta Hollow"), error?.message ?? `${rows.length} rows`);
+    check("associations_named discloses name, city, state and slug only", !rows.length || keys === "city,name,slug,state", keys);
+  }
+
   // 5. The list of associations a person belongs to is theirs alone.
   {
     const { data } = await alpha.client.rpc("my_associations");

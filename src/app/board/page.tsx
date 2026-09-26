@@ -46,6 +46,7 @@ export default function BoardDashboard() {
   // Something to run: money has moved, or somebody has asked for something.
   const running =
     community.ledger.length > 0 ||
+    (community.history?.ledgerCount ?? 0) > 0 ||
     community.requests.length > 0 ||
     community.ballots.length > 0 ||
     community.payouts.length > 0;

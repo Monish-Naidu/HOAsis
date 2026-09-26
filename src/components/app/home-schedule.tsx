@@ -67,7 +67,7 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
                     {formatDate(e.date).split(" ")[0]}
                   </span>
                   <span className="tnum text-body font-semibold leading-none text-fg">
-                    {formatDate(e.date).split(" ")[1]}
+                    {Number(e.date.slice(8, 10))}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">

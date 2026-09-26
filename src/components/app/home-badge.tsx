@@ -7,6 +7,7 @@ import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
 import { shrinkImage } from "@/lib/home-photo";
 import { useToast } from "@/components/app/toast";
 import { HOME_TYPE_LABEL, isMixed } from "@/lib/home-types";
+import { homeLabel } from "@/lib/wording";
 
 /**
  * The resident's home, inlaid on the community banner.
@@ -19,7 +20,7 @@ import { HOME_TYPE_LABEL, isMixed } from "@/lib/home-types";
  * card shows; the two never disagree.
  */
 export function HomeBadge() {
-  const { settings, account, community } = useAppState();
+  const { settings, community } = useAppState();
   const owner = useCurrentOwner();
   // In a mixed community the kind of home is part of what the home is.
   const kind =
@@ -81,16 +82,17 @@ export function HomeBadge() {
         </button>
       </div>
       <div className="min-w-0 flex-1">
-        {/* The person, not "My Home": the address on the next line already
-            says it is a home, and a name on the card says whose. */}
+        {/* The home, not the person: the rail and the bar already say who
+            is signed in, and a third name on the same screen read as
+            clutter (Monish, 2026-09-26). */}
         <p className="truncate text-headline font-semibold tracking-[-0.015em] sm:text-title3">
-          {account?.name ?? owner.members[0] ?? "My Home"}
+          {owner.address}
         </p>
-        <p className="mt-0.5 truncate text-body text-white/90">{owner.address}</p>
-        <p className="truncate text-footnote text-white/70">
-          {kind ? `${kind} · ` : ""}
-          {settings.displayName}
+        <p className="mt-0.5 truncate text-body text-white/90">
+          {homeLabel(community, owner.unit)}
+          {kind ? ` · ${kind}` : ""}
         </p>
+        <p className="truncate text-footnote text-white/70">{settings.displayName}</p>
         <div className="mt-2 flex items-center gap-3">
           <Link
             href="/resident/account"

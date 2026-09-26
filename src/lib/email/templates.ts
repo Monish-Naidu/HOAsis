@@ -282,6 +282,8 @@ export function confirmSignupEmail(input: { name: string; confirmUrl: string }) 
 export function inviteEmail(input: {
   kind: "invite" | "welcome";
   associationName: string;
+  /** "Bothell, WA". Names repeat; the town says which one this is. */
+  associationPlace?: string;
   ownerName: string;
   unitLabel: string;
   url: string;
@@ -289,14 +291,15 @@ export function inviteEmail(input: {
 }) {
   const first = input.ownerName.trim().split(/\s+/)[0] || "Neighbor";
   const home = input.unitLabel ? ` at ${escapeHtml(input.unitLabel)}` : "";
+  const named = escapeHtml(input.associationName) + (input.associationPlace ? ` in ${escapeHtml(input.associationPlace)}` : "");
   const welcome = input.kind === "welcome";
   const subject = welcome
     ? `You're in: ${input.associationName}`
     : `Your home${input.unitLabel ? ` at ${input.unitLabel}` : ""} is ready on Your HOAsis`;
   const heading = welcome ? `The board let you in` : `${escapeHtml(input.associationName)} is on Your HOAsis`;
   const line = welcome
-    ? `Hi ${escapeHtml(first)}. The board of ${escapeHtml(input.associationName)} confirmed your home${home}. Your dues, documents and requests are ready.`
-    : `Hi ${escapeHtml(first)}. Your board added your home${home} to ${escapeHtml(input.associationName)}. ${
+    ? `Hi ${escapeHtml(first)}. The board of ${named} confirmed your home${home}. Your dues, documents and requests are ready.`
+    : `Hi ${escapeHtml(first)}. Your board added your home${home} to ${named}. ${
         input.hasAccount
           ? "Your account already exists, so one tap opens it."
           : "Create your account with this email address and your home opens on its own."
@@ -390,5 +393,197 @@ export function autopayEmail(kind: "charged" | "failed", input: AutopayEmailInpu
       footer: `Sent by ${input.associationName} through Your HOAsis because autopay is on for your home. Turn it off any time on the pay screen.`,
     }),
     text: `${input.ownerName},\n\n${heading}. ${detail}\n\n${input.payUrl}\n\nYour HOAsis`,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Notices from the board                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The shape every board notice shares: who it is from, the one link, and
+ * whether the footer offers a way out. Statutory notices pass null for the
+ * unsubscribe link and the footer says why there is none.
+ */
+export interface NoticeEmailInput {
+  associationName: string;
+  ownerName: string;
+  /** Signs the person in and lands on the screen the notice is about. */
+  url: string;
+  /** Null for statutory notices. */
+  unsubscribeUrl: string | null;
+}
+
+/** Plain text as the board typed it, made safe for HTML and split on blank lines. */
+function paragraphs(text: string): string {
+  return text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map(
+      (p) =>
+        `<p style="margin:0 0 10px;font-size:15px;line-height:1.6;color:#3d4a5e;">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`,
+    )
+    .join("");
+}
+
+function heading(text: string): string {
+  return `<h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">${escapeHtml(text)}</h1>`;
+}
+
+function noticeFooter(input: NoticeEmailInput, why: string): string {
+  const sender = `Sent by ${escapeHtml(input.associationName)} through Your HOAsis.`;
+  if (!input.unsubscribeUrl) {
+    return `${sender} ${why} It is sent to every owner and cannot be turned off.`;
+  }
+  return `${sender} <a href="${input.unsubscribeUrl}" style="color:#8a94a3;">Unsubscribe from these</a>.`;
+}
+
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] || "Neighbor";
+}
+
+/** An announcement the board posted. Optional: an owner may turn these off. */
+export function announcementEmail(input: NoticeEmailInput & { title: string; body: string }) {
+  const subject = `${input.title} · ${input.associationName}`;
+  const body = `${heading(input.title)}${paragraphs(input.body)}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: input.body.split("\n")[0].slice(0, 120),
+      body,
+      cta: { label: "Open Your HOAsis", url: input.url },
+      footer: noticeFooter(input, ""),
+    }),
+    text: `${input.title}\n\n${input.body}\n\n${input.url}\n\n${input.associationName}${
+      input.unsubscribeUrl ? `\n\nUnsubscribe: ${input.unsubscribeUrl}` : ""
+    }`,
+  };
+}
+
+/** Notice of a meeting. Statutory: the date is the subject, the agenda is the body. */
+export function meetingNoticeEmail(
+  input: NoticeEmailInput & {
+    title: string;
+    date: string;
+    time: string;
+    location: string;
+    dialIn?: string;
+    passcode?: string;
+    /** The Jitsi link everyone joins by, from `lib/meetings/video.ts`. */
+    videoUrl?: string;
+    agenda: string[];
+  },
+) {
+  const when = `${longDate(input.date)} at ${input.time}`;
+  const subject = `Notice of meeting: ${input.title}, ${when} · ${input.associationName}`;
+  const phone = input.dialIn
+    ? `dial ${input.dialIn}${input.passcode ? ` (passcode ${input.passcode})` : ""}`
+    : "";
+  const lines = [
+    `${input.title} is on ${when}, ${input.location}.`,
+    input.videoUrl
+      ? `Join by video: ${input.videoUrl}${phone ? `, or ${phone}` : ""}.`
+      : phone
+        ? `Join by phone: ${phone}.`
+        : "",
+  ].filter(Boolean);
+  const agenda = input.agenda.length
+    ? `<p style="margin:12px 0 4px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#6b7789;">Agenda</p><ol style="margin:0 0 10px;padding-left:20px;font-size:15px;line-height:1.6;color:#3d4a5e;">${input.agenda
+        .map((a) => `<li>${escapeHtml(a)}</li>`)
+        .join("")}</ol>`
+    : "";
+  const body = `${heading(`${input.title}, ${when}`)}${paragraphs(lines.join("\n\n"))}${agenda}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `${when}, ${input.location}.`,
+      body,
+      cta: { label: "See the meeting", url: input.url },
+      footer: noticeFooter(input, "This is notice of a meeting of the association."),
+    }),
+    text: `${input.title}, ${when}\n\n${lines.join("\n")}${
+      input.agenda.length ? `\n\nAgenda:\n${input.agenda.map((a, i) => `${i + 1}. ${a}`).join("\n")}` : ""
+    }\n\n${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/** A vote is open. Statutory: the closing date is in the subject. */
+export function ballotOpenEmail(
+  input: NoticeEmailInput & { title: string; body: string[]; closesDate: string },
+) {
+  const closes = longDate(input.closesDate);
+  const subject = `Vote by ${closes}: ${input.title} · ${input.associationName}`;
+  const body = `${heading(input.title)}${paragraphs(
+    [`Voting is open until ${closes}. One vote per home.`, ...input.body].join("\n\n"),
+  )}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `Voting is open until ${closes}.`,
+      body,
+      cta: { label: "Cast my vote", url: input.url },
+      footer: noticeFooter(input, "This is notice of a vote of the association."),
+    }),
+    text: `${input.title}\n\nVoting is open until ${closes}. One vote per home.\n\n${input.body.join(
+      "\n\n",
+    )}\n\nVote: ${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/**
+ * A message from the board to one household: a reply on a thread, a note
+ * from the roster, or a dues letter written in the product. The subject is
+ * the board's own; the body goes out as typed. A dues letter is statutory
+ * and says so; anything else may be turned off.
+ */
+export function boardMessageEmail(
+  input: NoticeEmailInput & { subject: string; body: string; senderName: string; statutory: boolean },
+) {
+  const subject = `${input.subject} · ${input.associationName}`;
+  const body = `${heading(input.subject)}${paragraphs(input.body)}<p style="margin:6px 0 0;font-size:15px;line-height:1.6;color:#3d4a5e;">${escapeHtml(
+    input.senderName,
+  )}, for the board</p>`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: input.body.split("\n")[0].slice(0, 120),
+      body,
+      cta: { label: input.statutory ? "See my account" : "Reply", url: input.url },
+      footer: noticeFooter(
+        input,
+        input.statutory ? "This is a notice about your account." : "",
+      ),
+    }),
+    text: `${input.subject}\n\n${input.body}\n\n${input.senderName}, for the board\n\n${input.url}\n\n${input.associationName}${
+      input.unsubscribeUrl ? `\n\nUnsubscribe: ${input.unsubscribeUrl}` : ""
+    }`,
+  };
+}
+
+/** A request moved. The new status is the subject; the board's note is the body. */
+export function requestUpdateEmail(
+  input: NoticeEmailInput & { reference: string; title: string; status: string; note: string },
+) {
+  const subject = `${input.status}: ${input.title} · ${input.reference}`;
+  const body = `${heading(`${input.title} is ${input.status.toLowerCase()}`)}${paragraphs(
+    [`${firstName(input.ownerName)}, the board updated request ${input.reference}.`, input.note].join("\n\n"),
+  )}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `${input.reference} is ${input.status.toLowerCase()}.`,
+      body,
+      cta: { label: "See the request", url: input.url },
+      footer: noticeFooter(input, ""),
+    }),
+    text: `${input.title} is ${input.status.toLowerCase()}.\n\n${input.note}\n\n${input.url}\n\n${input.associationName}${
+      input.unsubscribeUrl ? `\n\nUnsubscribe: ${input.unsubscribeUrl}` : ""
+    }`,
   };
 }

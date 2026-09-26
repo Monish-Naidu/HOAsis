@@ -11,6 +11,7 @@ import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { refreshRemote } from "@/lib/data/remote-store";
+import { PAYMENT_ELEMENT_OPTIONS, stripeAppearance } from "@/lib/stripe/appearance";
 import { cn, money } from "@/lib/utils";
 import { InstrumentMenu } from "./instrument-menu";
 
@@ -419,7 +420,10 @@ function ElementStep({
     [publishableKey, phase.account],
   );
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret: phase.clientSecret }}>
+    <Elements
+      stripe={stripePromise}
+      options={{ clientSecret: phase.clientSecret, appearance: stripeAppearance() }}
+    >
       <ConfirmForm phase={phase} onDone={onDone} onBack={onBack} />
     </Elements>
   );
@@ -562,6 +566,7 @@ function ConfirmForm({
         </div>
       </dl>
       <PaymentElement
+        options={PAYMENT_ELEMENT_OPTIONS}
         onLoadError={(event) =>
           setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")
         }

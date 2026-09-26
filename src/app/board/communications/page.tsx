@@ -20,6 +20,9 @@ import { useHomeLabel } from "@/components/app/use-home-label";
  * now, beside this one and the Community forum.
  */
 
+/** How many conversations the inbox lists before it is asked for the rest. */
+const RECENT_THREADS = 30;
+
 export default function BoardCommunications() {
   // The screen reads `?thread=` from the URL, which is what the Suspense is
   // for: the rest of the page prerenders and the selection resolves on the client.
@@ -38,6 +41,9 @@ function CommunicationsScreen() {
   const params = useSearchParams();
   const [activeId, setActiveId] = useState(params.get("thread") ?? threads[0]?.id);
   const [draft, setDraft] = useState("");
+  // Ten years of collection letters is a hundred conversations. The list
+  // opens on the newest and unfolds on request; the open one always shows.
+  const [showAll, setShowAll] = useState(false);
   const active = threads.find((t) => t.id === activeId) ?? threads[0];
   // Every board seat is copied on a reply, so the count is the roster's.
   const boardSeats = community.accounts.filter((a) => a.role !== "resident").length;
@@ -85,7 +91,10 @@ function CommunicationsScreen() {
         {/* Thread list */}
         <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Inbox" subtitle={pluralize(threads.length, "conversation")} />
-          {threads.map((t) => (
+          {(showAll
+            ? threads
+            : threads.filter((t, i) => i < RECENT_THREADS || t.id === active.id)
+          ).map((t) => (
             <button
               key={t.id}
               type="button"
@@ -118,6 +127,13 @@ function CommunicationsScreen() {
               </div>
             </button>
           ))}
+          {!showAll && threads.length > RECENT_THREADS ? (
+            <div className="border-t border-border px-5 py-3">
+              <Button variant="secondary" size="sm" onClick={() => setShowAll(true)}>
+                Show all {threads.length} conversations
+              </Button>
+            </div>
+          ) : null}
         </Card>
 
         {/* Reading pane, as tall as the inbox beside it */}

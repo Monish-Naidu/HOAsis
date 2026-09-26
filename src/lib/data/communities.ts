@@ -43,10 +43,10 @@ import { messageTemplates as mmTemplates } from "./templates";
 import { ballots as mmBallots, meetings as mmMeetings } from "./voting";
 import { testCommunityOne } from "./test-community-one";
 
-/** Mehr Meadows, the established 88 home association. */
+/** Willow Creek Estates, the established 88 home association. */
 export const mehrMeadows: Community = {
   id: "mehr-meadows",
-  label: "Mehr Meadows",
+  label: "Willow Creek Estates",
   asOf: "2026-08-20",
   nextChargeDate: "2026-09-01",
   association: mmAssociation,

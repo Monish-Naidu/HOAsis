@@ -1,7 +1,7 @@
 import type { VendorInvoice } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
-/* Invoices vendors have sent Mehr Meadows. Newest first.                      */
+/* Invoices vendors have sent Willow Creek Estates. Newest first.                      */
 /*                                                                             */
 /* Three are waiting and one is paid, so the inbox, the pay flow and the paid  */
 /* trail each have something to show. The paid one is the same bill as payout  */

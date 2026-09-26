@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, Copy, Download, FileText, Paperclip, Search } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader, Segmented, fieldClass } from "@/components/ui/primitives";
+import { ChevronDown, Copy, Download, FileText, History, Paperclip, Search } from "lucide-react";
+import { Badge, Button, Callout, Card, EmptyState, PageHeader, Segmented, fieldClass } from "@/components/ui/primitives";
 import { InlineBar, PeriodPicker, SelectField } from "@/components/app/finance-ui";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
+import { loadEarlierLedger } from "@/lib/data/remote-store";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import {
   communitySlug,
@@ -49,8 +50,11 @@ export function TransactionsScreen() {
   // Search from the top bar lands on one line: its words in the box and its
   // year as the period, so a 2024 entry is not hidden behind "this month".
   const fromSearch = params.get("q");
+  // A link that names its own dates (search, or a year on the trends page)
+  // opens on them.
+  const fromDates = Boolean(params.get("from") && params.get("to"));
   const [preset, setPreset] = useState<PeriodPreset>(
-    fromSearch ? "custom" : fromLink ? "this-year" : "this-month",
+    fromSearch || fromDates ? "custom" : fromLink ? "this-year" : "this-month",
   );
   const [custom, setCustom] = useState(() => {
     const from = params.get("from");
@@ -63,8 +67,30 @@ export function TransactionsScreen() {
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
   const [search, setSearch] = useState(fromSearch ?? "");
   const [open, setOpen] = useState<string | null>(null);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
 
   const range = preset === "custom" ? custom : periodRange(preset, asOf);
+  // A real association's lines come down for the last two years. A period
+  // that reaches further back needs the rest fetched, and says so rather
+  // than reading as an empty year.
+  const history = community.history;
+  const earlierExists = Boolean(
+    history && !history.ledgerLoaded && history.ledgerFrom && history.ledgerFrom < history.from,
+  );
+  const needsEarlier = earlierExists && history !== undefined && range.from < history.from;
+
+  async function showEarlier() {
+    setLoadingEarlier(true);
+    const loaded = await loadEarlierLedger();
+    setLoadingEarlier(false);
+    if (loaded) notify("Every transaction is on screen", "ok");
+  }
+  const earlierButton = (
+    <Button variant="secondary" size="sm" onClick={showEarlier} disabled={loadingEarlier}>
+      <History className="size-3.5" />
+      {loadingEarlier ? "Loading" : "Load earlier transactions"}
+    </Button>
+  );
   const rows = useMemo(() => {
     const filter: LedgerFilter = {
       from: range.from,
@@ -225,11 +251,31 @@ export function TransactionsScreen() {
           </details>
         ) : null}
 
+        {/* One button, not two: with nothing on screen the empty state carries it. */}
+        {needsEarlier && history && rows.length > 0 ? (
+          <div className="border-b border-border px-5 py-3">
+            <Callout
+              tone="neutral"
+              icon={<History className="size-4" />}
+              title={`Transactions before ${formatDate(history.from, "long")} are not loaded yet`}
+              action={earlierButton}
+            >
+              The books go back to {formatDate(history.ledgerFrom ?? history.from, "long")}. The totals
+              above count what is on screen.
+            </Callout>
+          </div>
+        ) : null}
+
         {rows.length === 0 ? (
           <EmptyState
-            title="Nothing matches"
-            description="No transactions in this period with these filters."
+            title={needsEarlier ? "Not loaded yet" : "Nothing matches"}
+            description={
+              needsEarlier
+                ? "Load the earlier transactions to see this period."
+                : "No transactions in this period with these filters."
+            }
             action={
+              needsEarlier ? earlierButton : (
               <Button
                 variant="secondary"
                 size="sm"
@@ -244,6 +290,7 @@ export function TransactionsScreen() {
               >
                 Show this year
               </Button>
+              )
             }
           />
         ) : (

@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe/server";
+import { registerPayDomains, syncAccountStatus } from "@/lib/stripe/account-status";
+import { accountPrefill } from "@/lib/stripe/onboarding";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
+import { logger } from "@/lib/log";
 
 /**
  * Connect onboarding for an association.
@@ -15,6 +18,12 @@ import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
  * and near-zero loss exposure. Dues settle to the association's own bank
  * account, never to us. The id is still acct_…, so every v1 call made on its
  * behalf (PaymentIntents, SetupIntents, Customers) is unchanged.
+ *
+ * The account is created with everything the association row already
+ * knows (src/lib/stripe/onboarding.ts), so Stripe's form asks the treasurer
+ * only for the EIN, the street address, a bank account, the representative
+ * and the terms. The requirements that remain come back from GET as plain
+ * sentences (`needs`), which is what the Settings row reads out.
  *
  * Authorization matches the email route: the caller's own session answers
  * has_capability, so a crafted request from someone else's console gets a 403.
@@ -55,23 +64,19 @@ export async function GET(request: NextRequest) {
     .single();
 
   if (!row?.stripe_account_id) {
-    return NextResponse.json({ accountId: null, chargesEnabled: false, detailsSubmitted: false });
+    return NextResponse.json({
+      accountId: null,
+      chargesEnabled: false,
+      detailsSubmitted: false,
+      needs: [],
+      payout: null,
+    });
   }
 
-  const account = await stripe().v2.core.accounts.retrieve(row.stripe_account_id, {
-    include: ["configuration.merchant", "requirements"],
-  });
-  const capabilities = account.configuration?.merchant?.capabilities;
-  // Live means a resident can pay by at least one rail. Both are requested;
-  // ACH is the one that matters for dues, cards usually clear first.
-  const chargesEnabled =
-    capabilities?.card_payments?.status === "active" ||
-    capabilities?.ach_debit_payments?.status === "active";
-  // Nothing left for the treasurer to type. Stripe may still be verifying.
-  const detailsSubmitted = !(account.requirements?.entries ?? []).some(
-    (entry) => entry.awaiting_action_from === "user",
-  );
-  return NextResponse.json({ accountId: account.id, chargesEnabled, detailsSubmitted });
+  // Read live and written down, so the resident pay screen and this row
+  // never disagree about whether money can move.
+  const status = await syncAccountStatus(associationId!, row.stripe_account_id);
+  return NextResponse.json(status);
 }
 
 export async function POST(request: NextRequest) {
@@ -84,41 +89,35 @@ export async function POST(request: NextRequest) {
   const associationId = body.associationId ?? null;
   const auth = await authorize(request, associationId);
   if (auth.error) return auth.error;
+  const log = logger("stripe/connect", request, { associationId });
 
   const { data: row } = await auth.supabase
     .from("associations")
-    .select("name, ein, stripe_account_id")
+    .select("name, ein, city, state, phone, slug, stripe_account_id")
     .eq("id", associationId!)
     .single();
   if (!row) {
     return NextResponse.json({ error: "No such association" }, { status: 404 });
   }
 
+  const origin = request.nextUrl.origin;
   let accountId = row.stripe_account_id;
   if (!accountId) {
+    // Stripe checks the business URL, so a localhost origin would fail it;
+    // the public site is the address of record whichever host created it.
+    const site =
+      origin.includes("localhost") || origin.includes("127.0.0.1")
+        ? `https://${process.env.NEXT_PUBLIC_SITE_HOST ?? "yourhoasis.com"}`
+        : origin;
+    const { data: me } = await auth.supabase.auth.getUser();
     const account = await stripe().v2.core.accounts.create({
-      display_name: row.name,
-      identity: {
-        country: "us",
-        entity_type: "company",
-        business_details: {
-          registered_name: row.name,
-          id_numbers: row.ein ? [{ type: "us_ein", value: row.ein }] : undefined,
-        },
-      },
-      configuration: {
-        merchant: {
-          capabilities: {
-            card_payments: { requested: true },
-            ach_debit_payments: { requested: true },
-          },
-        },
-      },
-      defaults: { responsibilities: { fees_collector: "stripe", losses_collector: "stripe" } },
+      ...accountPrefill(row, site),
+      contact_email: me.user?.email ?? undefined,
       dashboard: "full",
       metadata: { association_id: associationId! },
     });
     accountId = account.id;
+    log.info("connected account created", { accountId });
     // The service role writes the id: the column is plumbing the browser has
     // no reason to be able to set, so no RLS policy allows it.
     const { error } = await supabaseAdmin()
@@ -126,11 +125,15 @@ export async function POST(request: NextRequest) {
       .update({ stripe_account_id: accountId })
       .eq("id", associationId!);
     if (error) {
+      log.error("could not save the connected account", { err: error.message, accountId });
       return NextResponse.json({ error: "Could not save the account" }, { status: 500 });
+    }
+    const domains = await registerPayDomains(accountId, request.nextUrl.hostname);
+    for (const d of domains) {
+      log.info("pay domain", { accountId, host: d.host, applePay: d.applePay, googlePay: d.googlePay, reason: d.reason });
     }
   }
 
-  const origin = request.nextUrl.origin;
   const link = await stripe().v2.core.accountLinks.create({
     account: accountId,
     use_case: {

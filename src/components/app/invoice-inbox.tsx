@@ -159,6 +159,10 @@ export function InvoiceInbox() {
         />
       ) : null}
 
+      {/* Paid and All count emailed invoices, and nothing files one yet. Until
+          one exists the two tabs read "0" beside a record of every payment the
+          association has made (331 of them, ten years in), so they wait. */}
+      {invoices.length > 0 ? (
       <div className="border-b border-border px-5 py-2.5">
         <Segmented
           label="Which bills"
@@ -172,6 +176,7 @@ export function InvoiceInbox() {
           ]}
         />
       </div>
+      ) : null}
 
       {visible.length === 0 && (filter !== "waiting" || toSign.length === 0) ? (
         <EmptyState
@@ -226,7 +231,9 @@ export function InvoiceInbox() {
                   key={payout.id}
                   payout={payout}
                   primary={visible.length === 0 && index === 0}
-                  readOnly={isRemote}
+                  // Signing writes through approvePayout, which has a remote
+                  // path; only the invoice inbox itself is browser-only.
+                  readOnly={false}
                   onApprove={() =>
                     run(() => approvePayout(payout.id), `Approved ${payout.vendor}`)
                   }

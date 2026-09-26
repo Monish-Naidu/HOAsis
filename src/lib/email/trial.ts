@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { emailSender } from "@/lib/email/sender";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { trialEmail, type TrialEmailInput } from "./templates";
 
@@ -30,7 +31,7 @@ export async function sendTrialNotice(input: {
       error = "RESEND_API_KEY is missing, so nothing can be sent.";
     } else {
       const sent = await new Resend(key).emails.send({
-        from: process.env.EMAIL_FROM ?? "Your HOAsis <onboarding@resend.dev>",
+        from: emailSender(),
         to: input.to,
         subject: built.subject,
         html: built.html,

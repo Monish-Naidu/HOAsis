@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { statusFromStripe } from "@/lib/billing";
 import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { logger } from "@/lib/log";
 
 /**
  * The only writer of the platform subscription.
@@ -79,8 +80,10 @@ async function writeSubscription(admin: Admin, subscription: Stripe.Subscription
 }
 
 export async function POST(request: NextRequest) {
+  const log = logger("billing/webhook", request);
   const secret = process.env.STRIPE_BILLING_WEBHOOK_SECRET;
   if (!secret) {
+    log.error("billing webhook secret is not configured");
     return NextResponse.json({ error: "Webhook secret is not configured" }, { status: 500 });
   }
   const signature = request.headers.get("stripe-signature");
@@ -90,8 +93,10 @@ export async function POST(request: NextRequest) {
   try {
     event = stripe().webhooks.constructEvent(await request.text(), signature, secret);
   } catch {
+    log.warn("bad signature");
     return NextResponse.json({ error: "Bad signature" }, { status: 400 });
   }
+  log.info("event", { type: event.type, eventId: event.id });
 
   const admin = supabaseAdmin();
 

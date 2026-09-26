@@ -1,7 +1,7 @@
 import type { ActionItem, JoinRequest } from "@/lib/types";
 
 /**
- * What the Mehr Meadows board agreed to do, and who is waiting at the door.
+ * What the Willow Creek Estates board agreed to do, and who is waiting at the door.
  *
  * Three items from the July meeting, one done and two open, so the dashboard
  * card shows what it looks like in use. One join request, so the Homeowners

@@ -6,7 +6,11 @@
  * holds even when a bug or a forged link tries to write the row directly.
  */
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { loadEnv } from "./env.mjs";
 
 const env = Object.fromEntries(
   readFileSync(new URL("../.env.local", import.meta.url), "utf8")
@@ -101,12 +105,76 @@ try {
   });
   check("a resident cannot pull the association's address list",
     (residentList ?? []).length === 0, `${(residentList ?? []).length} rows`);
+
+  // The two conversational categories added in 0045 are the owner's to decline.
+  const { error: messageOptOut } = await behindUser.client
+    .from("email_optouts").insert({ profile_id: behindUser.id, category: "message" });
+  const { error: requestOptOut } = await behindUser.client
+    .from("email_optouts").insert({ profile_id: behindUser.id, category: "request" });
+  check("an owner can turn off board messages and request updates",
+    !messageOptOut && !requestOptOut, messageOptOut?.message ?? requestOptOut?.message ?? "");
+  const { data: afterOptOut } = await president.client.rpc("email_recipients", {
+    p_association_id: associationId, p_category: "message", p_only_past_due: false,
+  });
+  check("and a message run then leaves them out",
+    !(afterOptOut ?? []).some((r) => r.profile_id === behindUser.id),
+    `${(afterOptOut ?? []).length} recipients`);
+  const { data: letterRun } = await president.client.rpc("email_recipients", {
+    p_association_id: associationId, p_category: "delinquency", p_only_past_due: true,
+  });
+  check("but a dues letter still reaches them",
+    (letterRun ?? []).length === 1, `${(letterRun ?? []).length} recipients`);
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
   for (const id of cleanup.associations) await admin.from("associations").delete().eq("id", id);
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }
+
+/* ------------------------------------------------------------ deliverability */
+
+/**
+ * Who production sends as.
+ *
+ * Resend's shared onboarding@resend.dev sender delivers to the account owner
+ * and nobody else, and an empty EMAIL_FROM is refused outright, so either
+ * one in production means every resident's mail is silently lost. The value
+ * is read from Vercel when the CLI is linked, and from this shell when
+ * VERCEL_ENV says this already is production.
+ */
+function senderProblem(from) {
+  const value = (from ?? "").trim();
+  if (!value) return "EMAIL_FROM is empty";
+  const address = value.match(/<([^>]+)>/)?.[1] ?? value;
+  if (address.toLowerCase().endsWith("@resend.dev")) return `EMAIL_FROM is the shared sender ${address}`;
+  return null;
+}
+
+function productionSender() {
+  if (process.env.VERCEL_ENV === "production") return { from: process.env.EMAIL_FROM, source: "this environment" };
+  const dir = mkdtempSync(join(tmpdir(), "hoasis-env-"));
+  try {
+    const file = join(dir, "prod.env");
+    execFileSync("vercel", ["env", "pull", "--environment=production", "--yes", file], { stdio: "ignore", timeout: 60_000 });
+    return { from: loadEnv(new URL(`file://${file}`)).EMAIL_FROM, source: "Vercel production" };
+  } catch {
+    return null;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const production = productionSender();
+if (production) {
+  const problem = senderProblem(production.from);
+  check(`production sends from a verified domain (${production.source})`, !problem,
+    problem ? `${problem}. Verify yourhoasis.com in Resend and set EMAIL_FROM; see docs/email.md` : production.from);
+} else {
+  console.log("  note  could not read Vercel's production EMAIL_FROM (vercel CLI not linked); local value is "
+    + JSON.stringify(env.EMAIL_FROM ?? ""));
+}
+const localProblem = senderProblem(env.EMAIL_FROM);
+if (localProblem) console.log(`  note  .env.local: ${localProblem}, so local sends reach only the Resend account owner`);
 
 for (const r of results) console.log(`${r.p ? "  ok  " : "FAIL  "}${r.n}${r.d ? `  (${r.d})` : ""}`);
 console.log(`\n${results.length - failures}/${results.length} passed`);

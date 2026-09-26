@@ -6,6 +6,7 @@ import { AppStateProvider } from "@/lib/app-state";
 import { ErrorBoundary } from "@/components/app/error-boundary";
 import { ToastProvider } from "@/components/app/toast";
 import { RemoteErrorToasts } from "@/components/app/remote-error-toasts";
+import { ErrorReporter } from "@/components/app/error-reporter";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AppStateProvider>
             <ToastProvider>
               <RemoteErrorToasts />
+              <ErrorReporter />
               {children}
             </ToastProvider>
           </AppStateProvider>

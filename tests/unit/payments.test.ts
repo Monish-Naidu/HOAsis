@@ -282,7 +282,7 @@ describe("platform fee", () => {
   });
 
   it("credits the association, not the owner, when a flat fee hits every rail", () => {
-    // Mehr Meadows' policy: $1.50, owner paid, not waived on ACH. Both rails
+    // Willow Creek Estates' policy: $1.50, owner paid, not waived on ACH. Both rails
     // cost the owner the same, so a badge claiming the owner saves would
     // contradict the identical totals printed beside it. The association does
     // still save the card processing, so the rail is worth surfacing.

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { costFor, stripe } from "@/lib/stripe/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { logger } from "@/lib/log";
 
 /**
  * Creates the PaymentIntent a resident is about to confirm.
@@ -15,6 +16,7 @@ import { supabaseServer } from "@/lib/supabase/server";
  * garbage-collect; our books only ever hear from the webhook.
  */
 export async function POST(request: NextRequest) {
+  const log = logger("stripe/payment-intent", request);
   let body: {
     associationId?: string;
     unitId?: string;
@@ -168,6 +170,7 @@ export async function POST(request: NextRequest) {
     },
     { stripeAccount: association.stripe_account_id },
   );
+  log.info("payment intent created", { intentId: intent.id, associationId, unitId, rail, amountCents: cost.residentPaysCents, saved: Boolean(instrumentId) });
 
   return NextResponse.json({
     clientSecret: intent.client_secret,

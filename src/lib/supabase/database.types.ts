@@ -182,6 +182,51 @@ export type Database = {
           },
         ]
       }
+      app_errors: {
+        Row: {
+          association_id: string | null
+          created_at: string
+          extra: Json
+          id: string
+          level: string
+          message: string
+          profile_id: string | null
+          reference: string
+          route: string | null
+          source: string
+          stack: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          association_id?: string | null
+          created_at?: string
+          extra?: Json
+          id?: string
+          level?: string
+          message: string
+          profile_id?: string | null
+          reference: string
+          route?: string | null
+          source: string
+          stack?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          association_id?: string | null
+          created_at?: string
+          extra?: Json
+          id?: string
+          level?: string
+          message?: string
+          profile_id?: string | null
+          reference?: string
+          route?: string | null
+          source?: string
+          stack?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       associations: {
         Row: {
           billing_brand: string | null
@@ -189,6 +234,7 @@ export type Database = {
           billing_email: string | null
           billing_last4: string | null
           billing_notices: string[]
+          billing_starts_on: string | null
           billing_subscription_id: string | null
           cancel_reason: string | null
           canceled_at: string | null
@@ -223,9 +269,13 @@ export type Database = {
           settings: Json
           setup_completed_at: string | null
           shared_spaces: string[]
+          slug: string
           software_fee_cents_per_home: number
           state: string
           stripe_account_id: string | null
+          stripe_charges_enabled: boolean
+          stripe_payout_bank: string | null
+          stripe_payout_last4: string | null
           subscription_status: string
           trial_ends_at: string
         }
@@ -235,6 +285,7 @@ export type Database = {
           billing_email?: string | null
           billing_last4?: string | null
           billing_notices?: string[]
+          billing_starts_on?: string | null
           billing_subscription_id?: string | null
           cancel_reason?: string | null
           canceled_at?: string | null
@@ -269,9 +320,13 @@ export type Database = {
           settings?: Json
           setup_completed_at?: string | null
           shared_spaces?: string[]
+          slug: string
           software_fee_cents_per_home?: number
           state: string
           stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_payout_bank?: string | null
+          stripe_payout_last4?: string | null
           subscription_status?: string
           trial_ends_at?: string
         }
@@ -281,6 +336,7 @@ export type Database = {
           billing_email?: string | null
           billing_last4?: string | null
           billing_notices?: string[]
+          billing_starts_on?: string | null
           billing_subscription_id?: string | null
           cancel_reason?: string | null
           canceled_at?: string | null
@@ -315,9 +371,13 @@ export type Database = {
           settings?: Json
           setup_completed_at?: string | null
           shared_spaces?: string[]
+          slug?: string
           software_fee_cents_per_home?: number
           state?: string
           stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_payout_bank?: string | null
+          stripe_payout_last4?: string | null
           subscription_status?: string
           trial_ends_at?: string
         }
@@ -547,6 +607,71 @@ export type Database = {
           },
         ]
       }
+      board_terms: {
+        Row: {
+          association_id: string
+          created_at: string
+          ends_on: string | null
+          full_name: string
+          id: string
+          membership_id: string | null
+          role: Database["public"]["Enums"]["board_role"]
+          starts_on: string
+          unit_id: string | null
+        }
+        Insert: {
+          association_id: string
+          created_at?: string
+          ends_on?: string | null
+          full_name: string
+          id?: string
+          membership_id?: string | null
+          role: Database["public"]["Enums"]["board_role"]
+          starts_on: string
+          unit_id?: string | null
+        }
+        Update: {
+          association_id?: string
+          created_at?: string
+          ends_on?: string | null
+          full_name?: string
+          id?: string
+          membership_id?: string | null
+          role?: Database["public"]["Enums"]["board_role"]
+          starts_on?: string
+          unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_terms_association_id_fkey"
+            columns: ["association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_terms_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_terms_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "unit_balances"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "board_terms_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_lines: {
         Row: {
           annual_cents: number
@@ -642,6 +767,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cron_runs: {
+        Row: {
+          error: string | null
+          finished_at: string
+          id: string
+          job: string
+          ok: boolean
+          request_id: string | null
+          started_at: string
+          summary: Json
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string
+          id?: string
+          job: string
+          ok?: boolean
+          request_id?: string | null
+          started_at?: string
+          summary?: Json
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string
+          id?: string
+          job?: string
+          ok?: boolean
+          request_id?: string | null
+          started_at?: string
+          summary?: Json
+        }
+        Relationships: []
       }
       documents: {
         Row: {
@@ -1608,6 +1766,7 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
+          home_association_id: string | null
           id: string
           phone: string
         }
@@ -1615,6 +1774,7 @@ export type Database = {
           created_at?: string
           email: string
           full_name?: string
+          home_association_id?: string | null
           id: string
           phone?: string
         }
@@ -1622,10 +1782,19 @@ export type Database = {
           created_at?: string
           email?: string
           full_name?: string
+          home_association_id?: string | null
           id?: string
           phone?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_home_association_id_fkey"
+            columns: ["home_association_id"]
+            isOneToOne: false
+            referencedRelation: "associations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       requests: {
         Row: {
@@ -2587,6 +2756,10 @@ export type Database = {
         Args: { p_basis: number[]; p_total_cents: number }
         Returns: number[]
       }
+      assess_late_fees: {
+        Args: { p_association_id: string; p_today?: string }
+        Returns: number
+      }
       association_by_join_code: {
         Args: { p_code: string }
         Returns: {
@@ -2595,7 +2768,28 @@ export type Database = {
           state: string
         }[]
       }
+      association_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          city: string
+          name: string
+          state: string
+        }[]
+      }
       association_funds: { Args: { p_association_id: string }; Returns: Json }
+      association_overview: {
+        Args: { p_association_id: string; p_from: string }
+        Returns: Json
+      }
+      associations_named: {
+        Args: { p_name: string }
+        Returns: {
+          city: string
+          name: string
+          slug: string
+          state: string
+        }[]
+      }
       cancel_association_deletion: {
         Args: { p_association_id: string }
         Returns: undefined
@@ -2668,6 +2862,10 @@ export type Database = {
           starts_on: string
         }[]
       }
+      import_households: {
+        Args: { p_as_of?: string; p_association_id: string; p_rows: Json }
+        Returns: Json
+      }
       is_board_of: { Args: { target: string }; Returns: boolean }
       is_member_of: { Args: { target: string }; Returns: boolean }
       is_statutory: {
@@ -2705,8 +2903,10 @@ export type Database = {
         Returns: {
           association_id: string
           capabilities: Database["public"]["Enums"]["capability"][]
+          is_home: boolean
           name: string
           role: Database["public"]["Enums"]["board_role"]
+          slug: string
         }[]
       }
       my_join_requests: {
@@ -2723,6 +2923,7 @@ export type Database = {
         }[]
       }
       my_unit_ids: { Args: never; Returns: string[] }
+      normalize_association_name: { Args: { p_name: string }; Returns: string }
       owner_message: {
         Args: { p_body: string; p_unit_id: string }
         Returns: Json
@@ -2753,6 +2954,10 @@ export type Database = {
         }
         Returns: string
       }
+      record_refund: {
+        Args: { p_amount_cents: number; p_stripe_payment_intent_id: string }
+        Returns: string
+      }
       remove_household: { Args: { p_unit_id: string }; Returns: undefined }
       reply_as_owner: {
         Args: { p_body: string; p_thread_id: string }
@@ -2772,6 +2977,7 @@ export type Database = {
         }
         Returns: string
       }
+      reserved_slug: { Args: { p_slug: string }; Returns: boolean }
       resume_subscription: {
         Args: { p_association_id: string }
         Returns: undefined
@@ -2784,6 +2990,7 @@ export type Database = {
         Args: { p_association_id: string; p_autopay: Json }
         Returns: undefined
       }
+      slugify: { Args: { p_text: string }; Returns: string }
       start_owner_thread: {
         Args: {
           p_body: string
@@ -2811,6 +3018,10 @@ export type Database = {
       transfer_presidency: {
         Args: { p_to_profile: string }
         Returns: undefined
+      }
+      unique_association_slug: {
+        Args: { p_name: string; p_self?: string }
+        Returns: string
       }
       update_my_contact: {
         Args: {
@@ -2873,6 +3084,8 @@ export type Database = {
         | "newsletter"
         | "billing"
         | "invite"
+        | "message"
+        | "request"
       payment_rail: "ach" | "card" | "apple-pay" | "google-pay"
       payment_state: "pending" | "settled" | "failed" | "refunded"
       post_status: "pending" | "published" | "rejected"
@@ -3076,6 +3289,8 @@ export const Constants = {
         "newsletter",
         "billing",
         "invite",
+        "message",
+        "request",
       ],
       payment_rail: ["ach", "card", "apple-pay", "google-pay"],
       payment_state: ["pending", "settled", "failed", "refunded"],

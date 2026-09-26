@@ -115,7 +115,7 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
  * /start/plan is often the first page of a visit: a reload, a bookmark, the
  * dashboard's link opened in a new tab. Nothing else on that page starts the
  * session, so the sample community rendered in its place, and a founder was
- * shown Mehr Meadows' 88 homes as their plan. Keyed by the community as well,
+ * shown Willow Creek Estates' 88 homes as their plan. Keyed by the community as well,
  * because the questions asked are counted once, on the first render.
  */
 export function SetupFlow({ welcome = false }: { welcome?: boolean }) {

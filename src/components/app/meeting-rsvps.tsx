@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarOff, Radio, Users } from "lucide-react";
+import { CalendarOff, Copy, Radio, Users } from "lucide-react";
 import { MeetingRoom } from "@/components/app/meeting-room";
 import { useToast } from "@/components/app/toast";
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
@@ -8,6 +8,8 @@ import { EntryRow } from "@/components/app/calendar-view";
 import { kindLabel, kindTone, upcomingFrom } from "@/lib/calendar";
 import { calendarEntries } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
+import { videoJoinUrl } from "@/lib/meetings/video";
+import type { Meeting } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
 
 /**
@@ -57,20 +59,7 @@ export function MeetingRsvps() {
               <p className="mt-0.5 text-footnote text-fg-muted">
                 {formatDate(m.date, "long")} · {relativeDays(m.date)} · {m.time} · {m.location}
               </p>
-              {m.dialIn ? (
-                <p className="mt-1 text-footnote text-fg-subtle">
-                  Video call:{" "}
-                  <a
-                    href={m.dialIn}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    join link
-                  </a>
-                  {m.passcode ? ` · passcode ${m.passcode}` : ""}
-                </p>
-              ) : null}
+              <MeetingJoinDetails meeting={m} />
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Button
                   variant={mine === "yes" ? "primary" : "secondary"}
@@ -109,6 +98,53 @@ export function MeetingRsvps() {
         })}
       </Card>
     </section>
+  );
+}
+
+/**
+ * Where to join a meeting that has not started: the video link to forward,
+ * the phone number, and a note that the room opens when the host does.
+ */
+function MeetingJoinDetails({ meeting: m }: { meeting: Meeting }) {
+  const { community } = useAppState();
+  const { notify } = useToast();
+  const link = videoJoinUrl(m, community.association.id);
+  return (
+    <div className="mt-1 text-footnote leading-snug text-fg-subtle">
+      <p className="flex flex-wrap items-center gap-x-2">
+        <span>
+          <a
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-primary underline underline-offset-2"
+          >
+            Video call link
+          </a>
+        </span>
+        <button
+          type="button"
+          aria-label="Copy join link"
+          onClick={() =>
+            void navigator.clipboard?.writeText(link).then(
+              () => notify("Copied", "ok"),
+              () => notify(link, "info"),
+            )
+          }
+          className="press inline-flex min-h-9 items-center gap-1 rounded-md px-1.5 font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+        >
+          <Copy className="size-3.5" />
+          Copy
+        </button>
+      </p>
+      {m.dialIn ? (
+        <p>
+          Dial in: <span className="tnum">{m.dialIn}</span>
+          {m.passcode ? ` · passcode ${m.passcode}` : ""}
+        </p>
+      ) : null}
+      <p className="opacity-70">Opens when the host starts it.</p>
+    </div>
   );
 }
 

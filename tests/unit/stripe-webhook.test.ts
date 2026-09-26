@@ -19,9 +19,15 @@ const secondEq = vi.fn(async () => ({ error: null }));
 const firstEq = vi.fn(() => ({ eq: secondEq }));
 const update = vi.fn(() => ({ eq: firstEq }));
 // setup_intent handling reads verifying rows by their SetupIntent id.
-const selectEq = vi.fn(async () => ({
+const verifyingRows = {
   data: [{ id: "inst-1", detail: { token: "pm_1", status: "verifying", verifyUrl: "u", setupIntentId: "seti_1" } }],
+};
+const selectEq = vi.fn(() => ({
+  then: (resolve: (v: typeof verifyingRows) => unknown) => Promise.resolve(verifyingRows).then(resolve),
+  maybeSingle: async () => ({ data: { associations: { stripe_account_id: "acct_test" } } }),
 }));
+// The account check reads the unit's association; the fixture belongs to
+// the account every event here is sent from.
 const select = vi.fn(() => ({ eq: selectEq }));
 const deleteEq = vi.fn(async () => ({ error: null }));
 const del = vi.fn(() => ({ eq: deleteEq }));
@@ -70,6 +76,14 @@ beforeEach(() => {
 });
 
 describe("the webhook route", () => {
+  it("ignores a succeeded intent sent from an account that is not the unit's", async () => {
+    const event = { ...intentEvent("payment_intent.succeeded", { latest_charge: null }), account: "acct_other" };
+    const response = await POST(signedRequest(event) as never);
+    expect(response.status).toBe(200);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
   it("rejects a payload whose signature does not verify", async () => {
     const request = new Request("http://localhost/api/stripe/webhook", {
       method: "POST",

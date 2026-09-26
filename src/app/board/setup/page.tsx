@@ -3,6 +3,7 @@
 import { PageHeader } from "@/components/ui/primitives";
 import { SetupOverview } from "@/components/app/setup-plan";
 import { PortingCard } from "@/components/app/porting-card";
+import { GoLiveChecklist } from "./go-live-checklist";
 import { useAppState } from "@/lib/app-state";
 
 export default function SetupPage() {
@@ -13,6 +14,7 @@ export default function SetupPage() {
         title={`Set up ${community.settings.displayName}`}
         description="The steps to get your community running."
       />
+      <GoLiveChecklist />
       <SetupOverview />
       <PortingCard />
     </>
