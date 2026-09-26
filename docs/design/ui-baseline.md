@@ -249,3 +249,21 @@ Two easings, three durations, one pop.
   same gutters, pages filling it through their container queries. No
   centred narrow column and no side rail; a rail of extra cards was
   rejected the same night.
+
+## Board offices and what each sees (2026-09-26)
+
+An association always has exactly one President: the founder by
+construction, moved by "Transfer presidency", never left empty, because
+`permissions` (changing seats) belongs to that office alone. Defaults when a
+seat is appointed, all adjustable by the President except their own:
+
+| Office | Default access |
+| --- | --- |
+| President | everything, plus changing seats |
+| Vice President | everything the President sees, except changing seats |
+| Treasurer | Finances, Vendors, Homeowners, Documents, Messages, Compliance |
+| Secretary | Documents, Messages, Meetings and voting, Requests, Compliance, Community |
+
+The demo seats carry their own hand-set access and are not these defaults.
+`scripts/upgrade-role-defaults.mjs` moves real seats that still hold the
+pre-2026-09-26 defaults; a seat a President adjusted is left alone.

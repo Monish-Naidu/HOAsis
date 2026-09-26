@@ -42,14 +42,29 @@ export const NO_CAPABILITIES = caps([]);
  * What each office can do before anyone adjusts it.
  *
  * Boards change every year, so these are a starting point rather than a rule.
- * The President can widen or narrow any of them, except their own.
+ * The President can widen or narrow any of them, except their own. Written
+ * for a real board, not the demo (Monish, 2026-09-26): the Vice President
+ * stands in for the President and sees everything except the power to
+ * change seats; the Treasurer runs the money and the letters about it; the
+ * Secretary keeps the records, the minutes and the correspondence.
+ *
+ * Only the President holds `permissions`, which is why an association
+ * always has exactly one: the founder is President by construction and the
+ * office moves through "Transfer presidency", never by leaving it empty.
  */
 export const DEFAULT_ROLE_CAPABILITIES: Record<string, Capability[]> = {
   president: [...GRANTABLE],
+  "vice-president": [...GRANTABLE],
+  treasurer: ["finances", "vendors", "documents", "communications", "compliance"],
+  secretary: ["documents", "communications", "voting", "requests", "compliance", "forum"],
+  resident: [],
+};
+
+/** The defaults before 2026-09-26, so seats still carrying them can be moved forward. */
+export const LEGACY_ROLE_CAPABILITIES: Record<string, Capability[]> = {
   "vice-president": ["requests", "documents", "communications", "voting", "forum"],
   treasurer: ["finances", "vendors", "documents"],
   secretary: ["documents", "communications", "voting", "compliance", "forum"],
-  resident: [],
 };
 
 /**
