@@ -73,7 +73,7 @@ export interface BoardRoute {
    * It only hides the link. The page itself still renders, so a bookmark or a
    * link from Settings works, and turning the layer on is one click away.
    */
-  present?: (c: Community) => boolean;
+  present?: (c: Community, dismissed?: ReadonlySet<string>) => boolean;
   /**
    * Reachable and gated, but not its own line in the sidebar.
    *
@@ -138,7 +138,9 @@ export const BOARD_ROUTES: BoardRoute[] = [
     // bank, and locking either of them out of the list they are working from
     // is worse than showing it to both.
     need: ["settings", "finances"],
-    present: (c) => !buildPlan(c, profileFromCommunity(c)).allDone,
+    // The steps a board answers by saying so ("We already have an EIN") are
+    // done because they were dismissed, so the row has to be told which were.
+    present: (c, dismissed) => !buildPlan(c, profileFromCommunity(c), dismissed).allDone,
   },
   {
     href: "/board/money",
@@ -394,11 +396,12 @@ export function routeOffered(
   route: BoardRoute,
   can: (capability: Capability) => boolean,
   community: Community,
+  dismissed?: ReadonlySet<string>,
 ): boolean {
   return (
     routeOn(route) &&
     (!route.need || route.need.some((c) => can(c))) &&
-    (!route.present || route.present(community))
+    (!route.present || route.present(community, dismissed))
   );
 }
 

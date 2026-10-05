@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { goLiveChecklist } from "@/lib/go-live";
+import { billingStatus, goLiveChecklist } from "@/lib/go-live";
 import { buildCommunity, emptyDraft, type CommunityDraft } from "@/lib/data/new-community";
 import type { Community } from "@/lib/data/community";
 
@@ -143,5 +143,20 @@ describe("goLiveChecklist", () => {
     expect(live.canCollect).toBe(true);
     expect(live.allDone).toBe(false);
     expect(live.total).toBe(7);
+  });
+});
+
+describe("what the go-live list shares with the setup list", () => {
+  it("answers the card question the same way in both places", () => {
+    const c = community();
+    const status = billingStatus(c, TODAY);
+    expect(status.done).toBe(item(c, "billing").done);
+    expect(status.detail).toBe(item(c, "billing").detail);
+    expect(status.urgent).toBe(item(c, "billing").urgent);
+  });
+
+  it("sends the Stripe row to a Settings section that exists", () => {
+    // `#payments` named nothing; the Payments card sits inside #money.
+    expect(item(community(), "stripe").href).toBe("/board/settings#money");
   });
 });

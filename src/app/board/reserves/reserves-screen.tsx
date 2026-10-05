@@ -9,6 +9,7 @@ import { ReserveTransferForm } from "@/components/app/reserve-transfer-form";
 import { cashPosition, reserveSummary } from "@/lib/metrics";
 import { fundingBand } from "@/lib/reserves";
 import { useAppState } from "@/lib/app-state";
+import { moduleOn } from "@/lib/modules";
 import { money, pluralize, shortMoney, today } from "@/lib/utils";
 
 /**
@@ -86,7 +87,10 @@ export function ReservesScreen() {
         <ReserveStudyCard />
 
         <Card className="mt-6">
-          <CardHeader title="What to do about it" subtitle="Three steps, in order" />
+          <CardHeader
+            title="What to do about it"
+            subtitle={`${moduleOn("money-budget") ? "Three" : "Two"} steps, in order`}
+          />
           <ol className="px-5 py-4">
             {[
               community.settings.reserveStudy
@@ -98,10 +102,15 @@ export function ReservesScreen() {
                     title: "Get a quote for a reserve study",
                     body: "For a community this size it is usually a few hundred dollars, and it is the input everything else needs.",
                   },
-              {
-                title: "Put a reserve line in the budget",
-                body: "A number picked from a study beats a number picked from a surplus, but any transfer beats none.",
-              },
+              // The Budget page is switched off, so no step sends a board there.
+              ...(moduleOn("money-budget")
+                ? [
+                    {
+                      title: "Put a reserve line in the budget",
+                      body: "A number picked from a study beats a number picked from a surplus, but any transfer beats none.",
+                    },
+                  ]
+                : []),
               {
                 title: "Add each component above as the study names it",
                 body: "Roof, paving, pool equipment: what it costs, when it is due, what is set aside. The page fills in from there.",
@@ -163,7 +172,15 @@ export function ReservesScreen() {
           label="Budgeted each month"
           value={monthlyCents === null ? "None" : money(monthlyCents, { cents: false })}
           tone={monthlyCents ? "neutral" : "warn"}
-          hint={monthlyCents === null ? "No reserve line in the budget" : "The budget's reserve line"}
+          hint={
+            moduleOn("money-budget")
+              ? monthlyCents === null
+                ? "No reserve line in the budget"
+                : "The budget's reserve line"
+              : monthlyCents === null
+                ? "No monthly transfer set"
+                : "The monthly transfer"
+          }
         />
         <Stat
           label="Replacing next"

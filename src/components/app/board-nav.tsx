@@ -24,7 +24,7 @@ const rows = BOARD_ROUTES.filter((route) => !route.hidden);
  */
 export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const pathname = usePathname();
-  const { sees, community, requests } = useAppState();
+  const { sees, community, requests, dismissedSetupTasks } = useAppState();
   const recon = useReconciliation();
   const unread = useUnreadThreadCount();
   const comp = complianceSummary(community);
@@ -68,7 +68,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   // vote but not see meetings still finds Voting under Meetings.
   const visible = rows
     .map((row) => {
-      const offered = sectionPages(row).filter((page) => routeOffered(page, sees, community));
+      const offered = sectionPages(row).filter((page) => routeOffered(page, sees, community, dismissedSetupTasks));
       return offered.length ? { ...row, href: offered[0].href } : null;
     })
     .filter((row) => row !== null);

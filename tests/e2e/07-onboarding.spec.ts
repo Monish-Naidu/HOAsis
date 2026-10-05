@@ -265,7 +265,7 @@ test.describe("the plan is built from the answers", () => {
     expect(health.text, "amenities missing after picking a pool and a gym").toContain("reserve");
   });
 
-  test("the plan names the state on obligations", async ({ page }) => {
+  test("the plan leaves the budget out while that page is switched off", async ({ page }) => {
     await onboard(page, {
       name: "Sunset Townhomes",
       state: "California",
@@ -276,7 +276,11 @@ test.describe("the plan is built from the answers", () => {
 
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a California association");
-    expect(health.text, "the plan never mentions their state").toContain("California");
+    // The one step that named the state was the budget, and the Budget page
+    // is switched off for launch, so the step is too. When it comes back
+    // this goes back to checking for "California".
+    expect(health.text, "the plan points at a page that is switched off").not.toContain("Budget what you spend");
+    expect(health.text, "the records group is missing").toContain("Records owners can ask for");
   });
 });
 
@@ -294,9 +298,15 @@ test.describe("getting to money", () => {
     await page.goto("/board/setup");
     const health = await inspect(page);
     expect(health.crashed, "the plan crashed").toBe(false);
-    // Either they can collect, or the plan says exactly how many things stand
-    // between them and collecting. Never a bare ratio.
-    expect(health.text).toMatch(/You can take payments|before you can take a payment/);
+    // One line, from one answer. This is a copy in the browser, which cannot
+    // take money, so it must say so and never claim "You can take payments".
+    // (A signed in association says how many steps are left until Stripe is on.)
+    expect(health.text).toMatch(
+      /cannot take payments|steps? left before owners can pay online/,
+    );
+    expect(health.text, "a browser copy claimed it can take payments").not.toContain(
+      "You can take payments",
+    );
   });
 
   test("the lots in the plat reach the roster, unsold and billable", async ({ page }) => {
@@ -371,7 +381,7 @@ test.describe("the plan is its own screen", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan inside the workspace");
     expect(health.text, "the plan is not available in the workspace").toMatch(
-      /Start collecting|You can take payments/,
+      /Get paid/,
     );
   });
 });
@@ -411,16 +421,31 @@ test.describe("the first weeks of a community still being built", () => {
       origin: "We are taking over from the builder",
     });
 
-    const health = await inspect(page);
-    expect(health.text, "no plan for a board taking over").toContain(
+    // The short paragraph for the situation, above the one list.
+    const intro = await inspect(page);
+    expect(intro.text, "no introduction for a board taking over").toContain(
       "Find out what you are being handed",
     );
-    // Order is the whole argument. A release signed before the study is a
-    // release signed without knowing what it gives up.
+
+    // The handover steps are items in the one list, in their own group,
+    // first. Order is the whole argument.
+    await page.goto("/board/setup");
+    const health = await expectHealthy(page, "plan for a board taking over");
+    expect(health.text, "no handover group").toContain("Before you sign the handover");
     expect(health.text).toContain("before you sign a release");
     expect(health.text, "the reason for the order is missing").toMatch(
       /without knowing what it gives up/,
     );
+    expect(
+      health.text.indexOf("Before you sign the handover"),
+      "the handover group should come before Get paid",
+    ).toBeLessThan(health.text.indexOf("Get paid"));
+    // A turnover has balances on the day control passes, so the list asks.
+    expect(health.text, "a turnover is not asked what each home owes").toContain(
+      "Enter what each home owes today",
+    );
+    // And it is not given the builder's group.
+    expect(health.text).not.toContain("Before the bank will open an account");
   });
 
   test("a board taking over is told to ask what the builder paid on its own lots", async ({
@@ -434,7 +459,8 @@ test.describe("the first weeks of a community still being built", () => {
       origin: "We are taking over from the builder",
     });
 
-    const health = await inspect(page);
+    await page.goto("/board/setup");
+    const health = await expectHealthy(page, "plan for a board taking over");
     // The most commonly skipped obligation in the category, and the one that
     // stops being collectable the day the builder dissolves the entity.
     expect(health.text, "nobody asks about dues on the unsold lots").toContain(
@@ -445,6 +471,15 @@ test.describe("the first weeks of a community still being built", () => {
     expect(health.text, "the reserve check is a balance rather than a history").toContain(
       "deposit history",
     );
+    for (const title of [
+      "Get an independent turnover study, before you sign a release",
+      "Check what the reserve account actually holds",
+      "Write down when the construction warranties end",
+      "Take the records in a form you can use",
+      "Seat your own board and remove the builder's signers",
+    ]) {
+      expect(health.text, `${title} is missing`).toContain(title);
+    }
   });
 
   test("a builder is told to constitute it and to charge its own unsold lots", async ({
@@ -458,16 +493,27 @@ test.describe("the first weeks of a community still being built", () => {
       origin: "We are building the community",
     });
 
-    const health = await inspect(page);
-    expect(health.text).toContain("Stand it up properly");
-    expect(health.text, "the EIN is the thing that unblocks a bank account").toContain(
-      "Employer Identification Number",
-    );
+    const intro = await inspect(page);
+    expect(intro.text).toContain("Stand it up properly");
+
+    await page.goto("/board/setup");
+    const health = await expectHealthy(page, "builder plan");
+    expect(health.text).toContain("Before the bank will open an account");
+    expect(health.text, "the EIN is the thing that unblocks a bank account").toContain("Get an EIN");
+    expect(health.text).toContain("Register the association and name a registered agent");
     // A builder setting its own budget has every incentive to leave this out,
     // and it is the largest source of turnover litigation.
     expect(health.text, "nobody tells the builder to charge itself").toContain(
       "what the unsold lots pay",
     );
+    expect(health.text).toContain("Fund reserves from the first assessment");
+    expect(
+      health.text.indexOf("Before the bank will open an account"),
+      "the bank paperwork should come before Get paid",
+    ).toBeLessThan(health.text.indexOf("Get paid"));
+    // Nothing to carry in for a builder, and no handover steps.
+    expect(health.text).not.toContain("Enter what each home owes today");
+    expect(health.text).not.toContain("Before you sign the handover");
   });
 
   test("nobody is told to import, export, or leave a management company", async ({ page }) => {
@@ -489,7 +535,7 @@ test.describe("the first weeks of a community still being built", () => {
 });
 
 test.describe("an association that already runs itself", () => {
-  test("is told to set one opening balance per home, not to import a ledger", async ({
+  test("is asked what each home owes today, not to import a ledger", async ({
     page,
   }) => {
     await onboard(page, {
@@ -501,21 +547,40 @@ test.describe("an association that already runs itself", () => {
       lots: { from: 1, to: 8 },
     });
 
-    const health = await inspect(page);
-    // Titled by where they are coming from; the steps are the same books.
-    expect(health.text, "no plan for an established association").toMatch(
-      /Open your books here|Move the books here|Take the work in house/,
+    // The books are a list item now, not a numbered card under the list.
+    await page.goto("/board/setup");
+    const health = await expectHealthy(page, "plan for an established association");
+    expect(health.text, "the opening balances step is missing").toContain(
+      "Enter what each home owes today",
     );
-    // The claim that makes a switch tractable: history stays where it is, and
-    // one figure per home on one date is enough to be correct from there.
-    expect(health.text).toContain("opening balance for every home");
-    expect(health.text, "the reason the history does not move is missing").toContain(
-      "Importing years of history is where migrations stall",
+    expect(health.text, "an established association was given the builder's paperwork").not.toContain(
+      "Before the bank will open an account",
     );
     // And still nothing about exporting from wherever they were.
     for (const word of ["spreadsheet", "CSV", "management company"]) {
       expect(health.text, `the plan still mentions ${word}`).not.toContain(word);
     }
+    // The link goes to the screen that sets them.
+    await expect(
+      page.locator('a[href^="/start/plan?task=opening-balances"]').first(),
+    ).toBeVisible();
+  });
+
+  test("from nothing yet gets the paperwork a new association needs, and the balances", async ({
+    page,
+  }) => {
+    await onboard(page, {
+      name: "Fresh Start HOA",
+      state: "Washington",
+      dues: "120",
+      property: "Detached homes",
+      origin: "We already run our association",
+      previously: "Nothing yet",
+    });
+    await page.goto("/board/setup");
+    const health = await expectHealthy(page, "plan for a fresh association");
+    expect(health.text).toContain("Get an EIN");
+    expect(health.text).toContain("Enter what each home owes today");
   });
 
   test("can actually set those balances, and they reach the statement", async ({ page }) => {

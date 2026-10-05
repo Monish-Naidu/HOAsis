@@ -5,8 +5,25 @@ import type {
   PreviousSetup,
   PropertyType,
 } from "@/lib/data/new-community";
-import { SETUP_TASKS, type SetupTask } from "@/lib/setup";
+import {
+  BUILDER_KEYS,
+  HANDOVER_KEYS,
+  SETUP_TASKS,
+  firstBill,
+  hasRecords,
+  inviteStatus,
+  openingBalanceCount,
+  rosterStatus,
+  switching,
+  whereIs,
+  type PlanFacts,
+  type SetupTask,
+} from "@/lib/setup";
+import { billingStatus } from "@/lib/go-live";
+import { newlyFormed } from "@/lib/porting";
+import { moduleOn } from "@/lib/modules";
 import { homeTypesOf } from "@/lib/home-types";
+import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
  * A plan, built from what a board told us about their situation.
@@ -24,9 +41,14 @@ import { homeTypesOf } from "@/lib/home-types";
  * Grouped by outcome rather than by tier, because "essential" and
  * "recommended" describe our taxonomy and "you can take payments after this"
  * describes their morning.
+ *
+ * One list. The advice card by situation and the go-live checklist used to
+ * be two more lists beside it, repeating it and disagreeing with it. What
+ * either held that this list lacked is an item here, and "can take payments"
+ * has exactly one definition: the Stripe item is done (`buildPlan().payments`).
  */
 
-export type PlanPhaseId = "collect" | "obligations" | "everything-else";
+export type PlanPhaseId = "before-handover" | "before-bank" | "collect" | "obligations" | "everything-else";
 
 export interface PlanPhase {
   id: PlanPhaseId;
@@ -39,8 +61,14 @@ export interface PlanPhase {
   complete: boolean;
 }
 
-export interface PlanTask extends SetupTask {
+export interface PlanTask extends Omit<SetupTask, "done" | "unavailable"> {
   complete: boolean;
+  /**
+   * Cannot be done where the association lives (a copy in this browser cannot
+   * take money). Listed, never counted done, and left out of the counts so a
+   * copy can still reach the end of what it can do.
+   */
+  unavailable: boolean;
   /**
    * Why this one is here, for this association.
    *
@@ -121,7 +149,10 @@ const RESERVE_STUDY_STATES = new Set([
  * dismissed, and the board never learns that our lists contain things that do
  * not apply to them.
  */
-function applies(task: SetupTask, p: AssociationProfile): boolean {
+function applies(task: SetupTask, p: AssociationProfile, c: Community): boolean {
+  // Each situation gets exactly its own steps and nobody else's.
+  if (HANDOVER_KEYS.includes(task.key)) return p.origin === "handover";
+  if (BUILDER_KEYS.includes(task.key)) return p.origin === "builder";
   // A mixed community gets every task any of its kinds needs: the condo
   // building's structural review does not stop mattering because there are
   // detached houses down the road.
@@ -138,6 +169,10 @@ function applies(task: SetupTask, p: AssociationProfile): boolean {
 
     case "amenities":
       return p.sharedSpaces.length > 0;
+
+    // The trial and the subscription exist only for a real association.
+    case "billing":
+      return whereIs(c) === "signed-in";
 
     case "reserves":
       // Detached homes on their own lots have far less in common to replace,
@@ -157,6 +192,20 @@ function applies(task: SetupTask, p: AssociationProfile): boolean {
     case "insurance":
       return true;
 
+    // Only an association that formed just now has these to do.
+    case "ein":
+    case "register":
+      return newlyFormed(p.origin, p.previously);
+
+    // Only an association that existed before has balances to carry in.
+    case "opening-balances":
+      return switching(p);
+
+    // The Budget page is switched off, so a task that sends a board there
+    // is not shown. It returns the day the module does.
+    case "budget":
+      return moduleOn("money-budget");
+
     case "board":
       // One person can run a two home association. Above that a board is
       // either required by the documents or a practical necessity.
@@ -168,11 +217,74 @@ function applies(task: SetupTask, p: AssociationProfile): boolean {
 }
 
 /** The sentence that names their own situation back to them. */
-function because(task: SetupTask, p: AssociationProfile): string | undefined {
+function because(
+  task: SetupTask,
+  p: AssociationProfile,
+  c: Community,
+  dismissed: boolean,
+): string | undefined {
   const types = homeTypesOf(p);
   const has = (t: PropertyType) => types.includes(t);
   const mixed = types.length > 1;
   switch (task.key) {
+    case "roster": {
+      const r = rosterStatus(c, p);
+      if (r.homes <= 1) return "Only your own home is on the register.";
+      if (r.withoutOwner === 0) return `${pluralize(r.homes, "home")}, every one with an owner listed.`;
+      if (r.stillSelling) {
+        return `${pluralize(r.homes, "home")} on the register. ${r.withoutOwner} not sold yet, which is expected while you are still selling.`;
+      }
+      return `${r.withoutOwner} of ${pluralize(r.homes, "home")} ${r.withoutOwner === 1 ? "has" : "have"} no owner listed.`;
+    }
+
+    case "opening-balances": {
+      const n = openingBalanceCount(c);
+      if (n > 0) return `${pluralize(n, "home")} with an opening balance saved.`;
+      if (dismissed) return "You said nobody owes anything today.";
+      return "Nothing is saved yet. Enter these before the first bill goes out.";
+    }
+
+    case "payments": {
+      const a = c.association;
+      const where = whereIs(c);
+      if (where === "demo") return "Payments are on in this demo.";
+      if (where === "browser-copy") {
+        return "A copy in this browser cannot take payments. Set it up for real to turn them on.";
+      }
+      if (a.stripeChargesEnabled) {
+        return a.stripePayout
+          ? `Stripe has verified the association. Dues settle to ${a.stripePayout.bank} ••${a.stripePayout.last4}.`
+          : "Stripe has verified the association. Owners can pay online.";
+      }
+      return a.stripeAccountId
+        ? "Started, not finished. Stripe still needs something from the treasurer."
+        : "Owners cannot pay online until Stripe has verified the association.";
+    }
+
+    case "first-bill": {
+      const bill = firstBill(c);
+      if (!bill.done) return "No dues amount is set, so nothing can be billed.";
+      const amount = bill.varies
+        ? "each kind of home at its own amount"
+        : `${money(bill.cents)} per home, billed ${bill.cadence}`;
+      return `${bill.issued ? "Dues have been billed. Next bill" : "First bill"} ${formatDate(bill.date, "long")}, ${amount}.`;
+    }
+
+    case "invites": {
+      const i = inviteStatus(c);
+      const noEmail =
+        i.noEmail > 0
+          ? ` ${pluralize(i.noEmail, "owner")} ${i.noEmail === 1 ? "has" : "have"} no email on file.`
+          : "";
+      if (i.owners === 0) return "Add every home's owner first, then invite them.";
+      if (i.withEmail === 0) return `${noEmail.trim()} Add emails to invite them.`;
+      if (i.done) return `${i.reached} of ${i.withEmail} invited or signed in.${noEmail}`;
+      return `${pluralize(i.waiting, "owner")} with an email ${i.waiting === 1 ? "has" : "have"} not been invited.${noEmail}`;
+    }
+
+    case "billing":
+      return billingStatus(c, todayIsoDate()).detail;
+
     case "reserves":
       if (mixed && has("condos")) {
         return "The condo buildings are the association's to replace, roof to foundation. They will dominate the study, so start with them.";
@@ -262,8 +374,14 @@ function listSpaces(keys: string[]): string {
 
 /** Which phase a task belongs to, by what finishing it buys. */
 const PHASE_OF: Record<string, PlanPhaseId> = {
+  ...Object.fromEntries(HANDOVER_KEYS.map((k) => [k, "before-handover" as const])),
+  ...Object.fromEntries(BUILDER_KEYS.map((k) => [k, "before-bank" as const])),
+  ein: "before-bank",
+  register: "before-bank",
   roster: "collect",
-  bank: "collect",
+  "opening-balances": "collect",
+  payments: "collect",
+  "first-bill": "collect",
   invites: "collect",
   documents: "obligations",
   budget: "obligations",
@@ -275,17 +393,28 @@ const PHASE_OF: Record<string, PlanPhaseId> = {
   vendors: "everything-else",
   amenities: "everything-else",
   photo: "everything-else",
+  billing: "everything-else",
 };
 
 const PHASE_META: { id: PlanPhaseId; title: string; outcome: string }[] = [
   {
+    id: "before-handover",
+    title: "Before you sign the handover",
+    outcome: "Most of what matters is decided before you sign anything. Mark each one done as you finish it.",
+  },
+  {
+    id: "before-bank",
+    title: "Before the bank will open an account",
+    outcome: "What has to exist on paper before the bank opens an account in the association's name.",
+  },
+  {
     id: "collect",
-    title: "Start collecting",
-    outcome: "Finish these and the association can take a payment.",
+    title: "Get paid",
+    outcome: "Finish these and owners can pay online.",
   },
   {
     id: "obligations",
-    title: "What you owe owners",
+    title: "Records owners can ask for",
     outcome: "The records members are entitled to ask for, and the ones a lender wants at closing.",
   },
   {
@@ -296,46 +425,103 @@ const PHASE_META: { id: PlanPhaseId; title: string; outcome: string }[] = [
 ];
 
 /**
+ * Tasks that are hidden by a switch (a module, or where the association
+ * lives) rather than by what the board told us. Left out of "steps do not
+ * apply to an association like yours", which is about the answers.
+ */
+const HIDDEN_BY_SWITCH = new Set(["budget", "billing", ...HANDOVER_KEYS, ...BUILDER_KEYS]);
+
+/** The one answer to "can owners pay online", and how every screen says it. */
+export interface PaymentsLine {
+  /** The Stripe step is done (or this is the demo). The only thing that makes the claim true. */
+  ready: boolean;
+  /** Steps in "Get paid" still open, the Stripe step among them. */
+  stepsLeft: number;
+  /** The heading over the list. */
+  headline: string;
+  /** The same fact as a closing sentence, for the welcome, the end and the dashboard. */
+  sentence: string;
+}
+
+/**
  * `dismissed` is what the board itself said does not apply ("we do not pay
  * any vendors"). Those leave the plan the same way a task that never applied
- * does: silently, and counted among what was left out.
+ * does: silently, and counted among what was left out. The exception is a task
+ * with `doneWhenDismissed`: there the board saying so is how it is done, so it
+ * stays in the list, ticked.
  */
 export function buildPlan(
   community: Community,
   profile: AssociationProfile,
-  dismissed: Set<string> = new Set(),
+  dismissed: ReadonlySet<string> = new Set(),
 ) {
+  const facts: PlanFacts = { origin: profile.origin, previously: profile.previously };
+  const included = new Set<string>();
   const phases: PlanPhase[] = PHASE_META.map((meta) => {
     const tasks: PlanTask[] = SETUP_TASKS.filter(
       (task) =>
-        PHASE_OF[task.key] === meta.id && applies(task, profile) && !dismissed.has(task.key),
-    ).map((task) => ({
-      ...task,
-      complete: task.done(community),
-      because: because(task, profile),
-    }));
+        PHASE_OF[task.key] === meta.id &&
+        applies(task, profile, community) &&
+        (!dismissed.has(task.key) || task.doneWhenDismissed),
+    ).map((task) => {
+      included.add(task.key);
+      const { done: isDone, unavailable: isUnavailable, ...rest } = task;
+      const unavailable = Boolean(isUnavailable?.(community));
+      const wasDismissed = dismissed.has(task.key);
+      return {
+        ...rest,
+        // An association that kept records brings its study; a new one gets one.
+        label:
+          task.key === "reserves" && hasRecords(facts) ? "Enter your reserve study" : task.label,
+        unavailable,
+        // Never done where it cannot be done, whatever the records say.
+        complete: !unavailable && (isDone(community, facts) || (Boolean(task.doneWhenDismissed) && wasDismissed)),
+        because: because(task, profile, community, wasDismissed),
+      };
+    });
 
-    const done = tasks.filter((t) => t.complete).length;
+    const counted = tasks.filter((t) => !t.unavailable);
+    const done = counted.filter((t) => t.complete).length;
     return {
       ...meta,
       tasks,
       done,
-      total: tasks.length,
-      complete: tasks.length > 0 && done === tasks.length,
+      total: counted.length,
+      complete: counted.length > 0 && done === counted.length,
     };
-  }).filter((phase) => phase.total > 0);
+  }).filter((phase) => phase.tasks.length > 0);
 
-  const all = phases.flatMap((p) => p.tasks);
+  const all = phases.flatMap((p) => p.tasks).filter((t) => !t.unavailable);
   const done = all.filter((t) => t.complete).length;
   const collect = phases.find((p) => p.id === "collect");
+  const payments = collect?.tasks.find((t) => t.key === "payments");
+  const ready = Boolean(payments?.complete);
+  const stepsLeft = (collect?.tasks ?? []).filter((t) => !t.unavailable && !t.complete).length;
+  const browserCopy = whereIs(community) === "browser-copy";
+
+  const paymentsLine: PaymentsLine = {
+    ready,
+    stepsLeft,
+    headline: ready
+      ? "You can take payments"
+      : browserCopy
+        ? "A copy in this browser cannot take payments"
+        : `${pluralize(stepsLeft, "step")} left before owners can pay online`,
+    sentence: ready
+      ? "You can take payments."
+      : browserCopy
+        ? "A copy in this browser cannot take payments."
+        : `${pluralize(stepsLeft, "step")} left before owners can pay online.`,
+  };
 
   return {
     phases,
     done,
     total: all.length,
     percent: all.length ? done / all.length : 1,
-    /** The milestone worth announcing, rather than burying at 3 of 11. */
-    canCollect: Boolean(collect?.complete),
+    /** True only when the Stripe step is done. The one definition. */
+    canTakePayments: ready,
+    payments: paymentsLine,
     /**
      * Nothing left, including when every task was skipped: a board that
      * dismissed the whole list has no phases, and the dashboard used to read
@@ -343,6 +529,6 @@ export function buildPlan(
      */
     allDone: done === all.length,
     /** What we removed by asking three questions instead of showing everything. */
-    skipped: SETUP_TASKS.length - all.length,
+    skipped: SETUP_TASKS.filter((t) => !HIDDEN_BY_SWITCH.has(t.key) && !included.has(t.key)).length,
   };
 }
