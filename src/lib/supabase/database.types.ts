@@ -445,9 +445,11 @@ export type Database = {
       autopay_runs: {
         Row: {
           amount_cents: number
+          attempts: number
           association_id: string
           created_at: string
           id: string
+          last_attempt_on: string | null
           month: string
           rail: string | null
           reason: string | null
@@ -457,9 +459,11 @@ export type Database = {
         }
         Insert: {
           amount_cents?: number
+          attempts?: number
           association_id: string
           created_at?: string
           id?: string
+          last_attempt_on?: string | null
           month: string
           rail?: string | null
           reason?: string | null
@@ -469,9 +473,11 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          attempts?: number
           association_id?: string
           created_at?: string
           id?: string
+          last_attempt_on?: string | null
           month?: string
           rail?: string | null
           reason?: string | null

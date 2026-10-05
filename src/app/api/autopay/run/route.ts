@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { sendAutopayNotice } from "@/lib/email/autopay";
-import { decideAutopay, isChargeable, pendingSince } from "@/lib/payments/autopay";
+import {
+  decideAutopay,
+  isChargeable,
+  mayRetryAutopay,
+  NO_CHARGEABLE_METHOD,
+  pendingSince,
+} from "@/lib/payments/autopay";
 import {
   describeInstrument,
   type PaymentInstrument,
@@ -119,7 +125,7 @@ export async function GET(request: NextRequest) {
           admin
             .from("associations")
             .select(
-              "id, name, slug, stripe_account_id, dues_cents, dues_by_type, deleted_at",
+              "id, name, slug, stripe_account_id, stripe_charges_enabled, dues_cents, dues_by_type, deleted_at",
             )
             .eq("id", member.association_id)
             .single(),
@@ -138,7 +144,7 @@ export async function GET(request: NextRequest) {
             .lte("due_on", today),
           admin
             .from("autopay_runs")
-            .select("state")
+            .select("id, state, attempts, last_attempt_on, reason, created_at")
             .eq("unit_id", member.unit_id)
             .eq("month", month)
             .maybeSingle(),
@@ -154,7 +160,10 @@ export async function GET(request: NextRequest) {
             .gte("created_at", pendingSince(today)),
         ]);
 
-        if (existing) return; // This month is already decided.
+        // This month is already decided, unless it failed: a failed month
+        // may be tried again once the owner has fixed something, which is
+        // judged below when the methods on file are known.
+        if (existing && existing.state !== "failed") return;
         // Not knowing what is in flight is not the same as nothing being in
         // flight. Leave the home for tomorrow rather than risk a second pull.
         if (pendingError) throw new Error(`Could not read pending payments: ${pendingError.message}`);
@@ -164,6 +173,14 @@ export async function GET(request: NextRequest) {
           !association.stripe_account_id
         ) {
           report.waiting.push(`${tag}: no online payments`);
+          return;
+        }
+        // Stripe has the association's account paused or not yet approved.
+        // A charge now would fail for a reason the owner cannot fix, and the
+        // email would blame their card. No row is written, so the home is
+        // asked again every day until the board has sorted it out.
+        if (!association.stripe_charges_enabled) {
+          report.waiting.push(`${tag}: online payments are paused`);
           return;
         }
 
@@ -202,7 +219,7 @@ export async function GET(request: NextRequest) {
 
         if (decision.action === "skip") {
           report.skipped.push(`${tag}: ${decision.reason}`);
-          if (!dryRun) {
+          if (!dryRun && !existing) {
             await admin.from("autopay_runs").insert({
               association_id: association.id,
               unit_id: member.unit_id,
@@ -247,8 +264,29 @@ export async function GET(request: NextRequest) {
           ) ?? candidates.find((i) => isChargeable(i));
         const email = member.invited_email ?? null;
 
+        // A second try at a month that failed, and only with a reason to
+        // expect a different answer. Otherwise the failed row stands and
+        // nobody is emailed again.
+        if (
+          existing &&
+          !mayRetryAutopay({
+            run: {
+              state: existing.state,
+              attempts: existing.attempts,
+              lastAttemptOn: existing.last_attempt_on ?? existing.created_at.slice(0, 10),
+              reason: existing.reason,
+            },
+            today,
+            chargeableAddedOn: candidates.filter((i) => isChargeable(i)).map((i) => i.addedDate),
+          })
+        ) {
+          return;
+        }
+
         if (!instrument || !unit?.stripe_customer_id) {
-          const reason = "No payment method that can be charged automatically";
+          // Already recorded and already said, the first time.
+          if (existing) return;
+          const reason = NO_CHARGEABLE_METHOD;
           report.failed.push(`${tag}: ${reason}`);
           log.warn("autopay skipped, nothing chargeable", { associationId: association.id, unitId: member.unit_id, month });
           if (dryRun) return;
@@ -259,6 +297,7 @@ export async function GET(request: NextRequest) {
             state: "failed",
             amount_cents: decision.amountCents,
             reason,
+            last_attempt_on: today,
           });
           if (email) {
             await sendAutopayNotice({
@@ -292,20 +331,40 @@ export async function GET(request: NextRequest) {
         }
 
         // Claim the month first. A conflict here means a parallel run got in,
-        // and that run owns the charge.
-        const claim = await admin
-          .from("autopay_runs")
-          .insert({
-            association_id: association.id,
-            unit_id: member.unit_id,
-            month,
-            state: "charged",
-            amount_cents: decision.amountCents,
-            rail,
-            reason: decision.reason,
-          })
-          .select("id")
-          .single();
+        // and that run owns the charge. A retry claims the failed row itself,
+        // and only if it is still failed and still on the attempt this run
+        // read, so two runs cannot both take the second try.
+        const attempt = existing ? existing.attempts + 1 : 1;
+        const claim = existing
+          ? await admin
+              .from("autopay_runs")
+              .update({
+                state: "charged",
+                amount_cents: decision.amountCents,
+                rail,
+                reason: decision.reason,
+                attempts: attempt,
+                last_attempt_on: today,
+              })
+              .eq("id", existing.id)
+              .eq("state", "failed")
+              .eq("attempts", existing.attempts)
+              .select("id")
+              .single()
+          : await admin
+              .from("autopay_runs")
+              .insert({
+                association_id: association.id,
+                unit_id: member.unit_id,
+                month,
+                state: "charged",
+                amount_cents: decision.amountCents,
+                rail,
+                reason: decision.reason,
+                last_attempt_on: today,
+              })
+              .select("id")
+              .single();
         if (claim.error) return;
 
         try {
@@ -333,7 +392,13 @@ export async function GET(request: NextRequest) {
             },
             {
               stripeAccount: association.stripe_account_id,
-              idempotencyKey: `autopay-${member.unit_id}-${month}`,
+              // Stripe replays the first answer for a repeated key, so a
+              // second try needs a key of its own or it would be handed the
+              // original decline. The first try keeps the key it always had.
+              idempotencyKey:
+                attempt === 1
+                  ? `autopay-${member.unit_id}-${month}`
+                  : `autopay-${member.unit_id}-${month}-try${attempt}`,
             },
           );
 

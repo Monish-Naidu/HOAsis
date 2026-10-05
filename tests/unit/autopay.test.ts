@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { decideAutopay, isChargeable, pendingSince } from "@/lib/payments/autopay";
+import {
+  AUTOPAY_MAX_ATTEMPTS,
+  decideAutopay,
+  isChargeable,
+  mayRetryAutopay,
+  NO_CHARGEABLE_METHOD,
+  pendingSince,
+} from "@/lib/payments/autopay";
 
 /**
  * The cron's judgement, with no clock and no database. Every rule here is a
@@ -140,3 +147,47 @@ describe("isChargeable", () => {
     expect(isChargeable({})).toBe(false);
   });
 });
+
+/**
+ * A failed month used to be final. It may be tried again, but only with a
+ * reason to expect a different answer, so a declined card is not declined
+ * again every morning.
+ */
+describe("mayRetryAutopay", () => {
+  const declined = { state: "failed", attempts: 1, lastAttemptOn: "2026-10-05", reason: "Your card was declined." };
+
+  it("tries again the day after the owner adds a new method", () => {
+    expect(mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: ["2026-10-05"] })).toBe(true);
+    expect(mayRetryAutopay({ run: declined, today: "2026-10-07", chargeableAddedOn: ["2026-10-06"] })).toBe(true);
+  });
+
+  it("leaves a declined card alone when nothing has changed", () => {
+    expect(mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: ["2026-03-01"] })).toBe(false);
+    expect(mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: [] })).toBe(false);
+  });
+
+  it("never tries twice in one day", () => {
+    expect(mayRetryAutopay({ run: declined, today: "2026-10-05", chargeableAddedOn: ["2026-10-05"] })).toBe(false);
+  });
+
+  it("stops at the cap", () => {
+    const spent = { ...declined, attempts: AUTOPAY_MAX_ATTEMPTS };
+    expect(mayRetryAutopay({ run: spent, today: "2026-10-09", chargeableAddedOn: ["2026-10-08"] })).toBe(false);
+  });
+
+  it("tries a month that had nothing to charge once anything can be charged", () => {
+    const nothing = { ...declined, reason: NO_CHARGEABLE_METHOD };
+    // A bank account that finished verifying was added before the failure.
+    expect(mayRetryAutopay({ run: nothing, today: "2026-10-08", chargeableAddedOn: ["2026-10-01"] })).toBe(true);
+    expect(mayRetryAutopay({ run: nothing, today: "2026-10-08", chargeableAddedOn: [] })).toBe(false);
+  });
+
+  it("never reopens a month that was charged or skipped", () => {
+    for (const state of ["charged", "skipped"]) {
+      expect(
+        mayRetryAutopay({ run: { ...declined, state }, today: "2026-10-06", chargeableAddedOn: ["2026-10-05"] }),
+      ).toBe(false);
+    }
+  });
+});
+

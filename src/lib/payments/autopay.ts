@@ -91,3 +91,37 @@ export function isChargeable(instrument: {
 }): boolean {
   return Boolean(instrument.token?.startsWith("pm_")) && instrument.status !== "verifying";
 }
+
+/** The most times one month is ever attempted. */
+export const AUTOPAY_MAX_ATTEMPTS = 3;
+
+/** The reason written when there was nothing to charge at all. */
+export const NO_CHARGEABLE_METHOD = "No payment method that can be charged automatically";
+
+/**
+ * Whether a month that failed should be tried again today.
+ *
+ * A failed month used to be final, so an owner who replaced a declined card
+ * the next day still went past due. Trying again every morning would be the
+ * opposite mistake: the same decline and the same email, daily. So a retry
+ * needs a reason to expect a different answer:
+ *
+ *   - the failure was having nothing to charge, and now there is something; or
+ *   - a method was added on or after the day of the last attempt.
+ *
+ * And never twice in a day, and never past the cap.
+ */
+export function mayRetryAutopay(input: {
+  run: { state: string; attempts: number; lastAttemptOn: string; reason: string | null };
+  /** YYYY-MM-DD, the same clock the run uses. */
+  today: string;
+  /** The day each method that can be charged now was added. */
+  chargeableAddedOn: string[];
+}): boolean {
+  const { run, today, chargeableAddedOn } = input;
+  if (run.state !== "failed") return false;
+  if (run.attempts >= AUTOPAY_MAX_ATTEMPTS) return false;
+  if (run.lastAttemptOn >= today) return false;
+  if (run.reason === NO_CHARGEABLE_METHOD) return chargeableAddedOn.length > 0;
+  return chargeableAddedOn.some((added) => added >= run.lastAttemptOn);
+}
