@@ -10,11 +10,12 @@ review (257 findings, seven walkers). Both are summarised here; the full
 findings were session files and are not in the repo, so anything worth
 keeping is written into a row below.
 
-**Where it stands (2026-10-05, late night):** pull request #8 is merged and
-live too; migrations through 0094 are applied. Pull request #9 (branch
-`demo-agrees`) holds the rest of the browser walk and four more section 12
-rows (lost disputes booked, approvals under a lock, Stripe pausing payments
-emailed, no sale before closing). Earlier note follows.
+**Where it stands (end of 2026-10-05):** pull requests #7, #8 and #9 are
+merged and live; migrations through 0094 are applied. Every row marked
+done in sections 9 to 13 is on production. Next: the open rows of section
+12 (owners with several homes, an unreachable president, autopay failures
+on Past due), the notice title field, the hydration error on `/start`, and
+the decisions waiting on Monish. Earlier note follows.
 
 **Where it stood (2026-10-05, night):** sections 0, 2 to 5, 9, 10 and most
 of 11 are on production (pull request #7 merged, main at 41597a9), with the
