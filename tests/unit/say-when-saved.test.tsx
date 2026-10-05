@@ -209,7 +209,7 @@ describe("deleting an association", () => {
 
   it("says nothing of it during the free period, with nothing to cancel", () => {
     open({ subscriptionStatus: "trialing" });
-    expect(screen.getByText("Removes it for everybody. Recoverable for thirty days, then gone.")).toBeInTheDocument();
+    expect(screen.getByText("Removes it for everybody right away. Support can bring it back for thirty days.")).toBeInTheDocument();
     expect(screen.queryByText(/Cancel the subscription first/)).not.toBeInTheDocument();
   });
 });
