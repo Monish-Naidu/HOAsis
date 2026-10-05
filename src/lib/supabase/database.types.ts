@@ -20,6 +20,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_payout: { Args: { p_payout_id: string }; Returns: Json }
       graphql: {
         Args: {
           extensions?: Json

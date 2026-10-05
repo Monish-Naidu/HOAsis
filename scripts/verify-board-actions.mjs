@@ -321,6 +321,25 @@ try {
   check("reply_as_board: and not a general one", generalError?.code === "42501", generalError?.message ?? "no error");
   const { data: afterAll } = await admin.from("threads").select("messages").eq("id", thread.id).single();
   check("reply_as_board: a refused reply adds nothing", afterAll?.messages?.length === 4, String(afterAll?.messages?.length));
+
+  // Two officers approve one vendor payment at the same moment (0094). Each
+  // used to write a list of one over the other's.
+  const { data: bill } = await admin.from("payouts").insert({
+    association_id: associationId, vendor_name: "Two Signers Roofing", amount_cents: 90_000, approvals_required: 2,
+  }).select("id").single();
+  const [byPresident, byTreasurer] = await Promise.all([
+    president.client.rpc("approve_payout", { p_payout_id: bill.id }),
+    treasurer.client.rpc("approve_payout", { p_payout_id: bill.id }),
+  ]);
+  const { data: signed } = await admin.from("payouts").select("approvals, status").eq("id", bill.id).single();
+  check("approve_payout: two approvals at once are both kept, and the payment is scheduled",
+    !byPresident.error && !byTreasurer.error && (signed?.approvals ?? []).length === 2 && signed?.status === "scheduled",
+    byPresident.error?.message ?? byTreasurer.error?.message ?? JSON.stringify(signed));
+  await treasurer.client.rpc("approve_payout", { p_payout_id: bill.id });
+  const { data: signedAgain } = await admin.from("payouts").select("approvals").eq("id", bill.id).single();
+  check("approve_payout: the same officer cannot sign twice", (signedAgain?.approvals ?? []).length === 2, JSON.stringify(signedAgain?.approvals));
+  const { error: neighborApproves } = await neighbor.client.rpc("approve_payout", { p_payout_id: bill.id });
+  check("approve_payout: an owner without finances is refused", neighborApproves?.code === "42501", neighborApproves?.message ?? "no error");
 } catch (error) {
   check("the run itself", false, error instanceof Error ? error.message : String(error));
 } finally {
