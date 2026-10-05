@@ -1,0 +1,60 @@
+# Every push and pull request runs the same check a person runs before
+# pushing: lint, types, unit tests and a production build. Nothing ran on
+# push before 2026-10-04, and stale checks sat broken for nine days.
+#
+# No secrets. Without Supabase keys the app builds and serves the signed-out
+# demo, which is the path the unit tests and the browser suite cover. The
+# database checks (pnpm db:verify) write to the one live project and stay a
+# thing a person runs.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  # The browser suite, against a production build of the same commit serving
+  # the demo. Rehearsed without secrets on 2026-10-04: 129 pass, and the 14
+  # that skip are the ones that need a module switched on or Stripe keys.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+      - name: Serve the build and run the suite
+        run: |
+          pnpm start -p 3000 &
+          until curl -s -o /dev/null http://localhost:3000/; do sleep 1; done
+          pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results
+          retention-days: 7
