@@ -84,8 +84,8 @@ const intents: Intent[] = [
     phrases: ["turn on autopay", "set up autopay"],
     answer: (c) => ({
       text: c.owner.autopay
-        ? `Autopay is on. ${money(c.association.duesCents)} comes out on the 1st and reminder emails stop while it is running.`
-        : `Autopay is off. Turning it on pays ${money(c.association.duesCents)} on the 1st and stops the reminder emails.`,
+        ? `Autopay is on. Your dues of ${money(c.association.duesCents)} are paid for you when they come due.`
+        : `Autopay is off. Turn it on and your dues of ${money(c.association.duesCents)} are paid for you when they come due.`,
       action: { label: "Autopay settings", href: "/resident/pay#autopay" },
     }),
   },

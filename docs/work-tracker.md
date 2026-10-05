@@ -218,12 +218,12 @@ is a line on a screen that nothing in the code keeps:
 | Where | What it says | Status |
 | --- | --- | --- |
 | Settings, forms | "Upload your own forms" button stores no file | waiting: hide it or build the upload |
-| Notices queue | "Send notice" may only open the notice, not send it | next: check, then rename or wire it |
+| Notices | "Send notice" posts the notice in the owner's app and emails nobody | waiting: email it too (the route can already send a letter to one home), or say "Post notice" |
 | Delivery panel | Describes text message opt in and opt out; there are no texts | waiting: remove until texts exist |
 | About page | "Dual approval is the default here" | waiting: true only for vendor payments over the limit |
-| Pricing, included list | Several items the launch scope has switched off | next: match the list to `modules.ts` |
+| Pricing, included list | Read against `modules.ts` 2026-10-05: every item is on. Two are Monish's to confirm: "Live support from the people who built it" (support is email to him) and "Accounting" (it is dues, vendor payments and reserves, not a general ledger) | waiting |
 | Resident report form | "Your name goes to the board and to nobody else", "The board will not share the outcome with you" | waiting: policy call |
 | Notices, stages | "Fix it by the date below and there is no fine" | waiting: policy call, the app does not issue fines |
-| Assistant | "reminder emails stop while autopay is running" | next: check against the dues reminder job |
+| Assistant | "reminder emails stop while autopay is running", "comes out on the 1st" | done 2026-10-05: neither was true (the dues email goes to every home; the owner picks the day), so the answer now says dues are paid for you when they come due |
 | Names | "roster", "register" and "Homeowners" for one list; letters and some screens hardcode "unit" | waiting: pick one name; "unit" should follow the home kind |
-| `feature-tabs.tsx` | Unused file with old landing claims | next: delete |
+| `feature-tabs.tsx` | Unused file with old landing claims | done 2026-10-05: deleted |
