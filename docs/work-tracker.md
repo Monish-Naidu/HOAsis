@@ -34,14 +34,14 @@ The worst kind: a board acts on them. Each is small.
 
 | Item | Where | Status |
 | --- | --- | --- |
-| Wizard's last step takes routing and account numbers, discards them, then says "Connected" and "You can already take payments" | `src/app/start/setup-wizard.tsx`, `src/lib/setup-plan.ts` | next |
+| Wizard's last step takes routing and account numbers, discards them, then says "Connected" and "You can already take payments" | `src/app/start/setup-wizard.tsx`, `src/lib/setup-plan.ts` | wizard half done; the plan's "You can take payments" is doing |
 | "Invite your neighbors" shows done when nobody was invited | `src/lib/setup-plan.ts` | next |
 | Adding a vendor says "W-9 requested by email"; nothing is sent | `src/app/board/vendors/` | done |
 | New request screen promises reply times nobody set (2 business days, 30 days, 3 days) | `src/app/resident/requests/new/form.tsx` | done |
 | Real pay screen still mentions a payment fee | `src/app/resident/pay/` | done |
 | "Add photos or documents" on a request: the file never leaves the browser | resident requests and forms | done: hidden for a real association until upload is real |
 | "Both can change in Settings" and "you get told before it lapses" in the wizard and plan | setup wizard, setup plan | first done; the insurance line is next |
-| Wizard asks "Anything billed besides dues?" and, for a real association, the builder's name; nothing reads either | setup wizard | next: remove |
+| Wizard asks "Anything billed besides dues?" and, for a real association, the builder's name; nothing reads either | setup wizard | done 2026-10-04 (c9d560f, branch staging-and-onboarding) |
 | Setup and Reserves point at the Budget page, which is switched off | setup plan, reserves screen | next: remove the four mentions |
 | "Paid up" badge beside a $285 balance; "View home details" opens the statement | resident home | badge done ("Not late"); the link label is next |
 | Demo-only controls shown to a real association: live meeting room and attendance, emailed-in vendor bills, Pay by ACH, bank picker, "Public" document setting, "Match transactions" | board screens | next |
@@ -51,14 +51,14 @@ The worst kind: a board acts on them. Each is small.
 
 | Item | Status |
 | --- | --- |
-| Reorder the wizard: name, place, who is setting this up, kind of homes, homes and owners, dues, when the books start, your home. "Who is setting this up?" was seventh and shapes every later screen | next |
-| Drop the bank step; "Turn on online payments" (Stripe) is the first step after Create, and nothing says payments are on until Stripe says so | next (Monish said go, 2026-10-04) |
-| One list after Create instead of three (go-live list, plan, advice card), in order: homes and owners, what each home owes, online payments, first bill date, invite owners | next (Monish said go, 2026-10-04) |
-| Opening balances become a step for a switching association | next, with the row above |
-| Late fee: a new association starts with none and is asked on the dues step (today $25 at 30 days, unasked) | next (Monish said go, 2026-10-04) |
-| Bug: a condo or townhome founder who leaves the unit number blank becomes an extra home that is billed | next |
-| Bug: "balances as of" defaults to tomorrow on a US evening | next (the UTC "today" problem; see section 7) |
-| A turnover board's neighbours are filed as "Not sold yet" under the builder; an established association's unnamed homes show "Unsold" | next: "No owner listed" |
+| Reorder the wizard: name, place, who is setting this up, kind of homes, homes and owners, dues, when the books start, your home. "Who is setting this up?" was seventh and shapes every later screen | done 2026-10-04 (c9d560f, branch staging-and-onboarding): account, name, place, who is setting up, kind of homes, dues, shared spaces, your home, homes, billing start |
+| Drop the bank step; "Turn on online payments" (Stripe) is the first step after Create, and nothing says payments are on until Stripe says so | wizard half done 2026-10-04 (c9d560f, branch staging-and-onboarding); the Stripe step in the list is doing |
+| One list after Create instead of three (go-live list, plan, advice card), in order: homes and owners, what each home owes, online payments, first bill date, invite owners | doing |
+| Opening balances become a step for a switching association | doing, with the row above |
+| Late fee: a new association starts with none and is asked on the dues step (today $25 at 30 days, unasked) | done 2026-10-04 (c9d560f, branch staging-and-onboarding), migration 0079 applied |
+| Bug: a condo or townhome founder who leaves the unit number blank becomes an extra home that is billed | done 2026-10-04 (c9d560f, branch staging-and-onboarding) |
+| Bug: "balances as of" defaults to tomorrow on a US evening | done 2026-10-04 (c9d560f, branch staging-and-onboarding) for the wizard; the wider UTC question is in section 7 |
+| A turnover board's neighbours are filed as "Not sold yet" under the builder; an established association's unnamed homes show "Unsold" | done 2026-10-04 (c9d560f, branch staging-and-onboarding) |
 | A look-around copy is never carried into the real association | later |
 | A draft held for email confirmation only comes back on the same device | later |
 
