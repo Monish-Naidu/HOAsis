@@ -11,6 +11,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { loadRemote } from "@/lib/data/remote-store";
 import { signOutOfSupabase } from "@/lib/auth";
 import { subscriptionExit } from "@/lib/stripe/subscription-exit";
+import { SUPPORT_EMAIL } from "@/lib/support";
 import { cn } from "@/lib/utils";
 
 /**
@@ -319,8 +320,8 @@ export function DangerZone() {
             // file (migration 0073), and said so only in a toast afterwards.
             detail={
               community.association.billing?.subscriptionId
-                ? "Removes it for everybody. Recoverable for thirty days, then gone. Cancel the subscription first: it cannot be deleted while billing is on file."
-                : "Removes it for everybody. Recoverable for thirty days, then gone."
+                ? "Removes it for everybody right away. Support can bring it back for thirty days. Cancel the subscription first: it cannot be deleted while billing is on file."
+                : "Removes it for everybody right away. Support can bring it back for thirty days."
             }
             action="Delete"
             tone="danger"
@@ -330,8 +331,9 @@ export function DangerZone() {
             <Callout tone="danger" title="This affects every owner, not just you">
               Owners have payment records here that they are entitled to, and that your
               association is usually required to keep for years. Export anything you need
-              first. You have thirty days to change your mind, after which it cannot be
-              recovered.
+              first: once it is deleted, nobody can sign in to it, you included. For thirty
+              days you can write to {SUPPORT_EMAIL} to have it brought back. After that it
+              cannot be recovered.
             </Callout>
             <label className="block">
               <span className="mb-1.5 block text-footnote font-medium text-fg">
