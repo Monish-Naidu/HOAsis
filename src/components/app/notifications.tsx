@@ -7,6 +7,7 @@ import {
   Bell,
   CircleDollarSign,
   ClipboardCheck,
+  Gavel,
   Inbox,
   Mail,
   Megaphone,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/app-state";
 import { noticeKey, readStore, useReadNotices } from "@/lib/notifications-read";
 import { ballotPhase } from "@/lib/phases";
+import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { cn, daysFromToday, money, pastDueLabel, pluralize, relativeDays } from "@/lib/utils";
 
 /**
@@ -120,10 +122,22 @@ function useResidentNotices(): Notice[] {
     notices.push({
       id: "live",
       title: live.title,
-      detail: `Meeting on now · ${live.attendees.length} joined`,
+      detail: liveMeetingLine(live.attendees.length),
       href: "/resident/calendar",
       icon: Radio,
       tone: "bg-ok-soft text-ok",
+    });
+  }
+  // Only notices that are open and addressed to this home. It sits above the
+  // balance: it can carry a fine, and it was reachable from nowhere else.
+  const openNotices = openNoticesForHome(community.violations, owner);
+  if (openNotices.length > 0) {
+    notices.push({
+      id: "notice",
+      ...noticeSummary(openNotices),
+      href: "/resident/notices",
+      icon: Gavel,
+      tone: "bg-warn-soft text-warn",
     });
   }
   if (owner && owner.balanceCents > 0) {

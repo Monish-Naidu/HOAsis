@@ -218,7 +218,7 @@ export function PayFlow() {
               href="/resident/account"
               className="press shimmer flex h-11 flex-1 items-center justify-center rounded-lg bg-brand-gradient text-body font-medium text-primary-fg shadow-raised hover:shadow-glow"
             >
-              View account
+              See statement
             </Link>
           </div>
         </Card>

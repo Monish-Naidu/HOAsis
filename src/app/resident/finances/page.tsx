@@ -4,7 +4,7 @@ import { Term } from "@/components/app/term";
 import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { FundsGate } from "./guard";
-import { ChevronRight, Landmark, PiggyBank, TrendingUp } from "lucide-react";
+import { ChevronRight, TrendingUp } from "lucide-react";
 import { Badge, Card, Meter, SectionTitle, Segmented } from "@/components/ui/primitives";
 import { useState } from "react";
 
@@ -26,12 +26,17 @@ import {
 import { useAppState } from "@/lib/app-state";
 import { SharedCostCard } from "@/components/app/shared-cost-card";
 import { formatDate, money, shortMoney, todayIsoDate } from "@/lib/utils";
+import { moduleOn } from "@/lib/modules";
+import { bankLine } from "@/lib/funds-wording";
 
 export default function ResidentFinances() {
   const { community, ledger } = useAppState();
-  const bankAccounts = community.bankAccounts;
   const cash = cashPosition(community);
   const interest = interestSummary(community);
+  // The reserve accounts' own interest, not the operating account's.
+  const reserveInterestCents = interest.reserveAccounts.reduce((t, a) => t + a.interestYtdCents, 0);
+  const operatingBank = bankLine(community.bankAccounts, "operating");
+  const reserveBank = bankLine(community.bankAccounts, "reserve");
   const reserve = reserveSummary(community);
   const bud = budgetSummary(community);
   // The period an owner can look through. Twelve most recent lines told
@@ -60,7 +65,9 @@ export default function ResidentFinances() {
           <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(cash.operating, { cents: false })}
           </p>
-          <p className="mt-1.5 text-footnote text-fg-muted">Everyday bills</p>
+          <p className="mt-1.5 truncate text-footnote text-fg-muted">
+            {operatingBank ? `${operatingBank} · everyday bills` : "Everyday bills"}
+          </p>
         </Card>
         <Card className="p-4">
           <p className="text-footnote font-semibold text-fg-muted">
@@ -69,85 +76,17 @@ export default function ResidentFinances() {
           <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(cash.reserve, { cents: false })}
           </p>
-          <p className="mt-1.5 text-footnote text-fg-muted">Savings for big repairs</p>
+          <p className="mt-1.5 truncate text-footnote text-fg-muted">
+            {reserveBank ? `${reserveBank} · big repairs` : "Savings for big repairs"}
+          </p>
         </Card>
       </div>
 
-      <SharedCostCard community={community} />
-
-      {/* Interest. The rate and the full-year figure need the bank's APY,
-          which only a bank feed knows; without one they read 0.00% and $0
-          beside real interest payments, so only what the books show is shown. */}
-      <section>
-        <SectionTitle>What the reserves earn</SectionTitle>
-        <Card className="p-4">
-          <div className={interest.blendedApy > 0 ? "grid grid-cols-3 gap-3" : ""}>
-            {interest.blendedApy > 0 ? (
-              <div>
-                <p className="text-footnote text-fg-subtle">Interest rate</p>
-                <p className="tnum mt-1 text-headline font-semibold leading-none text-fg">
-                  {interest.blendedApy.toFixed(2)}%
-                </p>
-              </div>
-            ) : null}
-            <div>
-              <p className="text-footnote text-fg-subtle">Interest this year</p>
-              <p className="tnum mt-1 text-headline font-semibold leading-none text-ok">
-                {money(interest.earnedYtd, { cents: false })}
-              </p>
-            </div>
-            {interest.blendedApy > 0 ? (
-              <div>
-                <p className="text-footnote text-fg-subtle">Expected this year</p>
-                <p className="tnum mt-1 text-headline font-semibold leading-none text-fg">
-                  {money(interest.projectedAnnual, { cents: false })}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </Card>
-      </section>
-
-      {/* Accounts */}
-      <section>
-        <SectionTitle>Accounts</SectionTitle>
-        <Card>
-          {bankAccounts.length === 0 ? (
-            <Waiting>No bank account connected yet. The board adds one in Finances.</Waiting>
-          ) : null}
-          {bankAccounts.map((a, i) => (
-            <div
-              key={a.id}
-              className={`flex items-center gap-3 px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
-            >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-muted">
-                {a.kind === "operating" ? (
-                  <Landmark className="size-4" />
-                ) : (
-                  <PiggyBank className="size-4" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-body font-medium text-fg">{a.name}</p>
-                <p className="truncate text-footnote text-fg-muted">
-                  {a.institution}
-                  {a.apy > 0 ? ` · ${a.apy.toFixed(2)}% interest` : ""}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="tnum text-body font-semibold text-fg">
-                  {money(a.balanceCents, { cents: false })}
-                </p>
-                {a.interestYtdCents > 0 ? (
-                  <p className="tnum text-footnote text-ok">
-                    {money(a.interestYtdCents, { cents: false })} earned
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </Card>
-      </section>
+      {/* Utility shares only where the association has switched shared costs
+          on; the special assessment stays either way. */}
+      <SharedCostCard
+        community={moduleOn("shared-costs") ? community : { ...community, sharedCosts: [] }}
+      />
 
       {/* Where dues go */}
       <section>
@@ -194,6 +133,15 @@ export default function ResidentFinances() {
           What reserves are saved for
         </SectionTitle>
         <Card>
+          {/* One line, and only when there is interest to report. The rate
+              and a full-year figure need the bank's APY, which only a bank
+              feed knows, so only what the books show is shown. */}
+          {reserveInterestCents > 0 ? (
+            <p className="tnum border-b border-border px-4 py-3 text-footnote text-fg-muted">
+              <span className="font-semibold text-ok">{money(reserveInterestCents, { cents: false })}</span>{" "}
+              interest this year
+            </p>
+          ) : null}
           {urgent.length === 0 ? (
             <Waiting>
               {reserve.hasStudy
@@ -316,7 +264,7 @@ export default function ResidentFinances() {
         className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
       >
         <TrendingUp className="size-4 shrink-0 text-fg-subtle" />
-        <span className="flex-1 text-body font-medium text-fg">Budget and reserve study</span>
+        <span className="flex-1 text-body font-medium text-fg">Budget and other financial documents</span>
         <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
       </Link>
     </div>

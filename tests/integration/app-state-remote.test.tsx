@@ -675,6 +675,210 @@ describe("approving a request to join", () => {
   });
 });
 
+describe("letting somebody in on a home already on the register", () => {
+  const request = () => server().joinRequests.find((j) => j.status === "pending")!;
+  const home = () => server().owners.find((o) => o.unit === request().unit)!;
+
+  it("seats them on the chosen home, then marks the request, then sends the welcome", async () => {
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.seatJoinRequest(request().id, home().id, false);
+    });
+
+    expect(ok).toBe(true);
+    expect(targets()).toEqual(["rpc:seat_join_request", "update join_requests"]);
+    expect(writes()[0].values).toEqual({ p_request_id: request().id, p_unit_id: home().id, p_as_second: false });
+    // No home was made from what they typed.
+    expect(targets()).not.toContain("rpc:add_household");
+    expect(fetched.map((f) => f.url)).toEqual(["/api/email/invite"]);
+  });
+
+  it("as a second owner sends no welcome, which would reach the first owner too", async () => {
+    const { result } = renderApp();
+    await act(async () => {
+      await result.current.seatJoinRequest(request().id, home().id, true);
+    });
+
+    expect((writes()[0].values as { p_as_second: boolean }).p_as_second).toBe(true);
+    expect(targets()).toEqual(["rpc:seat_join_request", "update join_requests"]);
+    expect(fetched).toEqual([]);
+  });
+
+  it("leaves the request waiting when the database says the home has an owner", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:seat_join_request"
+        ? { error: { message: "That home already has an owner. Add them as a second owner, or record a sale" } }
+        : undefined;
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.seatJoinRequest(request().id, home().id, false);
+    });
+
+    expect(ok).toBe(false);
+    expect(targets()).toEqual(["rpc:seat_join_request"]);
+    expect(fetched).toEqual([]);
+    expect(errors).toEqual([
+      "Letting them in: That home already has an owner. Add them as a second owner, or record a sale",
+    ]);
+  });
+
+  it("adds a second owner and changes an email through their own functions", async () => {
+    const { result } = renderApp();
+    const target = server().owners[0];
+    await act(async () => {
+      await result.current.addSecondOwner(target.id, { name: " Lee Two ", email: " lee@example.com " });
+      await result.current.changeOwnerEmail(target.id, " fixed@example.com ");
+    });
+
+    expect(targets()).toEqual(["rpc:add_second_owner", "rpc:change_owner_email"]);
+    expect(writes()[0].values).toEqual({ p_unit_id: target.id, p_name: "Lee Two", p_email: "lee@example.com" });
+    // The seat is found by the address it has now: a home can have two owners.
+    expect(writes()[1].values).toEqual({ p_unit_id: target.id, p_old_email: target.email, p_new_email: "fixed@example.com" });
+  });
+});
+
+describe("the Homeowners screen: asked to join", () => {
+  const request = () => server().joinRequests.find((j) => j.status === "pending")!;
+  const picker = () => screen.getByLabelText(`Home for ${request().name}`) as HTMLSelectElement;
+
+  it("starts on the home they typed, and offers a second owner or a sale when it has an owner", async () => {
+    const user = userEvent.setup();
+    renderScreen(<screens.HomeownersScreen />);
+    const home = server().owners.find((o) => o.unit === request().unit)!;
+
+    expect(picker().value).toBe(home.id);
+    expect(screen.queryByRole("button", { name: "Let them in" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^record a sale for/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add as a second owner" }));
+    await settled();
+
+    expect(targets()).toEqual(["rpc:seat_join_request", "update join_requests"]);
+    expect(writes()[0].values).toMatchObject({ p_unit_id: home.id, p_as_second: true });
+  });
+
+  it("lets them in on a home with no owner listed", async () => {
+    const user = userEvent.setup();
+    const home = server().owners.find((o) => o.unit === request().unit)!;
+    change({ owners: server().owners.map((o) => (o.id === home.id ? { ...o, placeholder: true, displayName: "No owner yet", email: "" } : o)) });
+    await act(async () => {
+      await store.refreshRemote();
+    });
+    renderScreen(<screens.HomeownersScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Let them in" }));
+    await settled();
+
+    expect(writes()[0]).toMatchObject({ target: "rpc:seat_join_request", values: { p_unit_id: home.id, p_as_second: false } });
+  });
+
+  it("selects nothing when what they typed matches no home, and creates nothing unless asked", async () => {
+    const user = userEvent.setup();
+    change({ joinRequests: server().joinRequests.map((j) => (j.status === "pending" ? { ...j, unit: "Plot 9000" } : j)) });
+    await act(async () => {
+      await store.refreshRemote();
+    });
+    renderScreen(<screens.HomeownersScreen />);
+
+    expect(picker().value).toBe("");
+    expect(screen.getByRole("button", { name: "Let them in" })).toBeDisabled();
+    expect(writes()).toEqual([]);
+
+    // The only way to make a home is the last choice, which names its label.
+    await user.selectOptions(picker(), screen.getByRole("option", { name: "Add as a new home: Plot 9000" }));
+    await user.click(screen.getByRole("button", { name: "Let them in" }));
+    await settled();
+
+    expect(targets()).toEqual(["rpc:add_household", "update join_requests"]);
+  });
+});
+
+describe("the Homeowners screen: the household card and the join code", () => {
+  // One on the first page of the roster, which sorts behind first, then by unit.
+  const unsigned = () =>
+    [...server().owners]
+      .sort((a, b) => (a.daysPastDue !== b.daysPastDue ? b.daysPastDue - a.daysPastDue : Number(a.unit) - Number(b.unit)))
+      .slice(0, 50)
+      .find((o) => !o.placeholder && !server().accounts.some((a) => a.ownerId === o.id))!;
+
+  it("changes the email a not yet signed in owner will claim their seat with", async () => {
+    const user = userEvent.setup();
+    const home = unsigned();
+    renderScreen(<screens.HomeownersScreen />);
+
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the email for ${home.displayName}` }));
+    const box = screen.getByLabelText("New owner email");
+    await user.clear(box);
+    await user.type(box, "right@example.com");
+    await user.click(screen.getByRole("button", { name: "Save email" }));
+    await settled();
+
+    expect(writes()[0]).toMatchObject({
+      target: "rpc:change_owner_email",
+      values: { p_unit_id: home.id, p_old_email: home.email, p_new_email: "right@example.com" },
+    });
+  });
+
+  it("adds a second owner by name and email", async () => {
+    const user = userEvent.setup();
+    const home = unsigned();
+    renderScreen(<screens.HomeownersScreen />);
+
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Add a second owner to ${home.unit}` }));
+    await user.type(screen.getByLabelText("Second owner name"), "Lee Two");
+    await user.type(screen.getByLabelText("Second owner email"), "lee@example.com");
+    await user.click(screen.getByRole("button", { name: "Add second owner" }));
+    await settled();
+
+    expect(writes()[0]).toMatchObject({
+      target: "rpc:add_second_owner",
+      values: { p_unit_id: home.id, p_name: "Lee Two", p_email: "lee@example.com" },
+    });
+  });
+
+  it("shows the join code with copy buttons, to a seat that may invite", async () => {
+    const user = userEvent.setup();
+    const written: string[] = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void written.push(text) },
+    });
+    renderScreen(<screens.HomeownersScreen />);
+    const code = server().association.joinCode!;
+
+    expect(screen.getByText(code)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Copy code" }));
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+
+    expect(written).toEqual([code, `${window.location.origin}/join?code=${code}`]);
+  });
+
+  it("shows neither the code nor the roster buttons to a seat that may only look", async () => {
+    const lookOnly = { ...server().accounts.find((a) => a.id === ME)!.capabilities };
+    for (const key of Object.keys(lookOnly) as (keyof typeof lookOnly)[]) lookOnly[key] = false;
+    change({
+      accounts: server().accounts.map((a) =>
+        a.id === ME ? { ...a, role: "secretary" as const, capabilities: lookOnly, views: { ...lookOnly, finances: true } } : a,
+      ),
+    });
+    await act(async () => {
+      await store.refreshRemote();
+    });
+    const user = userEvent.setup();
+    const home = unsigned();
+    renderScreen(<screens.HomeownersScreen />);
+
+    expect(screen.queryByRole("button", { name: "Copy code" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    expect(screen.queryByRole("button", { name: /^Change the email for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Add a second owner to/ })).not.toBeInTheDocument();
+  });
+});
+
 describe("founding an association", () => {
   it("says which part of setup was not saved, and still lands in the association", async () => {
     db.answer = (s) => {

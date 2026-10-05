@@ -83,7 +83,7 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
               href="/resident/account"
               className="inline-flex items-center gap-0.5 text-footnote font-semibold text-accent hover:underline"
             >
-              View home details
+              See your statement
               <ChevronRight className="size-3.5" />
             </Link>
           ) : null}

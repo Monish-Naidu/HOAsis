@@ -12,6 +12,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # So a run can be started by hand from the Actions page.
+  workflow_dispatch:
 
 concurrency:
   group: check-${{ github.ref }}
@@ -35,6 +37,10 @@ jobs:
   # the demo. Rehearsed without secrets on 2026-10-04: 129 pass, and the 14
   # that skip are the ones that need a module switched on or Stripe keys.
   browser:
+    # On pull requests only. The merge to main runs the quick job again and
+    # no more: the slow one already passed on the pull request, and a private
+    # repository gets 2,000 free minutes a month.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

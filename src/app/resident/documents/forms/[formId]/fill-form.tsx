@@ -136,7 +136,7 @@ export function FillForm({ formId }: { formId: string }) {
       submittedDate: todayIsoDate(),
       dueDate,
       dueReason: form.governedBy
-        ? `${form.governedBy}. Not decided within ${form.decisionDays} days is deemed approved.`
+        ? `${form.governedBy}.`
         : undefined,
       attachments: Object.values(files)
         .flat()
@@ -205,7 +205,7 @@ export function FillForm({ formId }: { formId: string }) {
           </p>
           {submitted.dueDate ? (
             <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-footnote leading-relaxed text-fg-muted">
-              The committee decides by {formatDate(submitted.dueDate, "long")}.{" "}
+              The committee aims to decide by {formatDate(submitted.dueDate, "long")}.{" "}
               {submitted.dueReason}
             </p>
           ) : null}

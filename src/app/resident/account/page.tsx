@@ -2,13 +2,13 @@
 
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useState } from "react";
-import { ChevronDown, ChevronRight, CircleDollarSign, Download, History, Landmark, Receipt, Settings } from "lucide-react";
-import Link from "next/link";
+import { ChevronDown, CircleDollarSign, Download, History, Receipt } from "lucide-react";
 import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { loadEarlierStatement } from "@/lib/data/remote-store";
-import { formatDate, money, pastDueLabel, today } from "@/lib/utils";
+import { formatDate, money, today } from "@/lib/utils";
+import { balanceStanding } from "@/lib/resident-wording";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { HOME_TYPE_LABEL, isMixed, ownerDues } from "@/lib/home-types";
@@ -20,6 +20,7 @@ export default function ResidentAccount() {
   const ownerCharges = useOwnerCharges();
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   if (!currentOwner) return null;
+  const standing = balanceStanding(currentOwner);
   // A real association sends the last two years; the rest is one tap away.
   const history = community.history;
   const earlierCount = history
@@ -130,7 +131,7 @@ export default function ResidentAccount() {
   return (
     <div className="animate-rise space-y-6">
       <ResidentTitle
-        title="Account"
+        title="Statement"
         subtitle={[
           homeLabel(community, currentOwner.unit),
           isMixed(community.profile) && currentOwner.homeType
@@ -150,28 +151,10 @@ export default function ResidentAccount() {
           <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(currentOwner.balanceCents)}
           </p>
-          {/* "Paid up" is for a home that owes nothing. A home with a bill
-              that is not late yet used to read "Paid up" under the amount
-              it owed. */}
-          <Badge
-            tone={
-              currentOwner.standing === "current"
-                ? currentOwner.balanceCents > 0
-                  ? "neutral"
-                  : "ok"
-                : currentOwner.standing === "collections"
-                  ? "danger"
-                  : "warn"
-            }
-            className="mt-2"
-          >
-            {currentOwner.standing === "current"
-              ? currentOwner.balanceCents > 0
-                ? "Not late"
-                : "Paid up"
-              : currentOwner.standing === "collections"
-                ? "In collections"
-                : pastDueLabel(currentOwner.daysPastDue)}
+          {/* "Paid up" is for a home that owes nothing; the words come from
+              one helper so every screen agrees. */}
+          <Badge tone={standing.tone} className="mt-2">
+            {standing.label}
           </Badge>
         </Card>
         <Card className="p-4">
@@ -214,7 +197,7 @@ export default function ResidentAccount() {
               className="inline-flex items-center gap-1 text-footnote font-medium text-accent hover:underline"
             >
               <Download className="size-3" />
-              Statement
+              Download as a spreadsheet
             </button>
           }
         >
@@ -250,31 +233,6 @@ export default function ResidentAccount() {
           ) : null}
         </Card>
       </section>
-
-      {/* On a phone these two have no tab of their own, so Account is the
-          way in. On the website the rail already lists both. */}
-      <Link
-        href="/resident/finances"
-        className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2 lg:hidden"
-      >
-        <Landmark className="size-4 shrink-0 text-fg-subtle" />
-        <span className="flex-1 text-body font-medium text-fg">Association funds</span>
-        <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-      </Link>
-
-      <Link
-        href="/resident/settings"
-        className="flex min-h-12 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 shadow-card transition-colors hover:bg-surface-2 lg:hidden"
-      >
-        <Settings className="size-4 shrink-0 text-fg-subtle" />
-        <span className="flex-1 text-body font-medium text-fg">
-          Settings
-          <span className="block text-footnote font-normal text-fg-muted">
-            Text size, light or dark, and your contact details
-          </span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-      </Link>
     </div>
   );
 }

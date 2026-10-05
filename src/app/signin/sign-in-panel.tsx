@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { requestPasswordReset, signInWithPassword, signUp } from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
-import { fetchJoinStatus } from "@/lib/join-status";
 import { retryRemote, useRemote } from "@/lib/data/remote-store";
 import { readableLinkError } from "@/lib/email/link-error";
 
@@ -49,9 +48,10 @@ async function destinationAfterSignIn(next: string | null): Promise<string> {
     const { data } = await supabaseBrowser().rpc("my_associations");
     const rows = (data ?? []) as { role: string }[];
     if (!rows.length) {
-      // Waiting on a board is its own state, shown on the resident side.
-      const pending = (await fetchJoinStatus()).some((j) => j.status === "pending");
-      return pending ? "/resident" : "/start";
+      // No association yet: waiting on a board, declined, wrong email or a
+      // founder who has not started. The resident side holds the fork that
+      // offers each the right door; /start is its second choice.
+      return "/resident";
     }
     return rows.some((m) => m.role !== "resident") ? "/board" : "/resident";
   } catch {

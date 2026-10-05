@@ -2816,6 +2816,10 @@ export type Database = {
         }
         Returns: string
       }
+      add_second_owner: {
+        Args: { p_email: string; p_name: string; p_unit_id: string }
+        Returns: string
+      }
       allocate_cents: {
         Args: { p_basis: number[]; p_total_cents: number }
         Returns: number[]
@@ -2879,6 +2883,10 @@ export type Database = {
       }
       cast_votes: {
         Args: { p_ballot_id: string; p_option_ids: string[] }
+        Returns: string
+      }
+      change_owner_email: {
+        Args: { p_new_email: string; p_old_email: string; p_unit_id: string }
         Returns: string
       }
       claim_my_seats: { Args: never; Returns: number }
@@ -3074,6 +3082,10 @@ export type Database = {
       rsvp_meeting: {
         Args: { p_meeting_id: string; p_response: string }
         Returns: undefined
+      }
+      seat_join_request: {
+        Args: { p_as_second?: boolean; p_request_id: string; p_unit_id: string }
+        Returns: string
       }
       set_my_autopay: {
         Args: { p_association_id: string; p_autopay: Json }

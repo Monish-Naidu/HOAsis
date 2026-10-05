@@ -11,7 +11,10 @@ import { ThemeToggle } from "@/components/app/theme";
 import { Wordmark } from "@/components/app/logo";
 import { Rail, RailNav, RailRow } from "@/components/app/rail";
 import {
+  residentBarTabs,
   residentModuleFor,
+  residentMoreRows,
+  residentRailRows,
   residentSectionFor,
   residentTabs,
   visibleResidentTabs,
@@ -58,7 +61,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const tabs = visibleResidentTabs(settings);
   const badges = useResidentBadges();
   const ownerName = owner?.members[0] ?? "";
-  // By section, so Account lights Payments and Voting lights Meetings.
+  // By section, so the statement lights Payments and Voting lights Meetings.
   const sectionHref = residentSectionFor(pathname)?.href ?? "";
   const unit = owner?.unit ?? "";
   const address = owner?.address ?? "";
@@ -206,6 +209,9 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             <main className="no-scrollbar flex-1 overflow-y-auto pb-6">
               {pathname === "/resident" ? <CommunityHero compact /> : null}
               <div className="@container px-4 pt-4">
+                {/* The pages under a bar tab (Statement, Messages, Voting)
+                    are reached by their section's tabs, here as on the web. */}
+                <ResidentSectionTabs />
                 <Gated pathname={pathname}>{children}</Gated>
               </div>
             </main>
@@ -230,13 +236,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           community name or unit here; the banner carries both. */}
       <Rail home="/resident" label="Resident">
         <RailNav label="Resident sections" activeKey={sectionHref}>
-          {tabs
-            .filter((t) => !t.phoneOnly && !t.parent)
-            .map(({ href, label, icon, webLabel, tint }) => (
+          {residentRailRows(tabs).map(({ href, label, icon, tint }) => (
               <RailRow
                 key={href}
                 href={href}
-                label={webLabel ?? label}
+                label={label}
                 icon={icon}
                 tint={tint}
                 active={href === sectionHref}
@@ -371,7 +375,11 @@ function TabBar({
    */
   pinned?: boolean;
 }) {
-  const moreHrefs = tabs.filter((t) => t.webOnly).map((t) => t.href);
+  const barTabs = residentBarTabs(tabs);
+  const barHrefs = barTabs.map((t) => t.href);
+  const moreHrefs = residentMoreRows(tabs).map((t) => t.href);
+  // By section, so a page under a tab (the statement under Pay) lights it.
+  const sectionHref = residentSectionFor(pathname)?.href ?? "";
   return (
     <nav
       className={cn(
@@ -385,28 +393,24 @@ function TabBar({
         className="grid"
         // As many columns as tabs, so a hidden section never leaves a hole.
         // minmax(0, 1fr) rather than 1fr: a bare 1fr will not shrink below
-        // its label, and six labels at 320px pushed Account off the screen.
+        // its label, and six labels at 320px pushed one off the screen.
         style={{
-          gridTemplateColumns: `repeat(${tabs.filter((t) => !t.webOnly).length}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${barTabs.length}, minmax(0, 1fr))`,
         }}
       >
-        {tabs
-          .filter((t) => !t.webOnly)
-          .map(({ href, label, tabLabel, icon: Icon, tint = "blue" }) => {
+        {barTabs.map(({ href, label, tabLabel, icon: Icon, tint = "blue" }) => {
           // More stays lit on any page it lists, so the reader knows where
           // they came from and how to get back.
           const active =
-            href === "/resident"
-              ? pathname === href
-              : href === "/resident/more"
-                ? pathname.startsWith(href) || moreHrefs.some((m) => pathname.startsWith(m))
-                : pathname.startsWith(href);
-          // A section's badge rides its phone tab; a ballot's rides More,
-          // since Meetings has no tab of its own there.
+            href === "/resident/more"
+              ? pathname.startsWith(href) || moreHrefs.includes(sectionHref)
+              : sectionHref === href;
+          // A section's badge rides its tab; a row under More has none of
+          // its own, so its badge rides More.
           const badge =
             badges[href] ??
             (href === "/resident/more"
-              ? Object.entries(badges).find(([k]) => moreHrefs.includes(k))?.[1]
+              ? Object.entries(badges).find(([k]) => moreHrefs.includes(k) && !barHrefs.includes(k))?.[1]
               : undefined);
           return (
             <li key={href}>

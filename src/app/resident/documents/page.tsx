@@ -43,7 +43,7 @@ export default function ResidentDocuments() {
 }
 
 function DocumentsScreen() {
-  const { community, documents } = useAppState();
+  const { community, documents, isRemote } = useAppState();
   const params = useSearchParams();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const visible = documents.filter((d) => d.visibility !== "board");
@@ -212,6 +212,13 @@ function DocumentsScreen() {
                       {formatDate(d.updatedDate, "medium")} · {d.size}
                     </span>
                   </span>
+                  {/* A sample document has no file behind it, so the row
+                      does not open. Say so, in the signed-out demo only. */}
+                  {!d.url && !isRemote ? (
+                    <span className="shrink-0 rounded-md bg-surface-3 px-1.5 py-0.5 text-footnote font-medium text-fg-muted">
+                      Sample
+                    </span>
+                  ) : null}
                 </>
               );
               // A row opens the file when there is one. The demo's documents

@@ -13,7 +13,8 @@ import { sameOriginPath } from "./next-path";
  * So this exchanges the code for a session and then answers the only question
  * that matters next: what does this person already belong to?
  *
- *   nothing            they are founding an association, so send them to setup
+ *   nothing            the fork on the resident side: join with a code, or set
+ *                      up a new association, with who is signed in and a way out
  *   one, as an officer they have a board to run
  *   one, as a resident they have a balance to look at
  *
@@ -73,12 +74,12 @@ export async function GET(request: NextRequest) {
   const rows = (memberships ?? []) as { role: string }[];
 
   if (!rows.length) {
-    // Somebody who created their account through a join code is waiting on
-    // a board, and the resident side says so. Sending them to found an
-    // association would be answering a question they did not ask.
-    const { data: asked } = await supabase.rpc("my_join_requests");
-    const waiting = (asked ?? []).some((j: { status: string }) => j.status === "pending");
-    return NextResponse.redirect(new URL(waiting ? "/resident" : "/start", url.origin));
+    // Somebody with an account and no association might be waiting on a
+    // board, might have been declined, might have used an address the board
+    // does not have, or might be a founder who has not started. The resident
+    // side tells those apart and offers the right door to each. Sending them
+    // all to the founder's setup was answering a question most had not asked.
+    return NextResponse.redirect(new URL("/resident", url.origin));
   }
 
   const runsSomething = rows.some((m) => m.role !== "resident");

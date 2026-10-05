@@ -28,6 +28,10 @@ test.describe("board workspace", () => {
     test(`${tab} works`, async ({ page }) => {
       await page.goto("/board");
       await openTab(page, "/board", tab);
+      // Wait for the screen itself. Counting headings a fixed quarter second
+      // after the click read an empty page on a slow runner (Homeowners, on
+      // GitHub, 2026-10-05) where the same build passed everywhere else.
+      await expect(page.locator("main h1, main h2").first(), `${tab} rendered nothing`).toBeVisible();
       const health = await expectHealthy(page, `admin ${tab}`);
       expect(health.headingCount, `${tab} rendered nothing`).toBeGreaterThan(0);
     });
@@ -270,6 +274,9 @@ test.describe("shared costs", () => {
   });
 
   test("a resident sees their own share and who the association pays", async ({ page }) => {
+    // The owner's half follows the same switch as the board's since
+    // 2026-10-04: with the module off there is no share to show.
+    test.skip(!MODULES["shared-costs"].on, "Shared costs is off at launch, see lib/modules.ts");
     await seedSession(page, { seat: SEATS.resident, view: "resident" });
     await page.goto("/resident/finances");
     await page.waitForLoadState("networkidle");

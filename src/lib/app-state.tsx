@@ -351,6 +351,10 @@ interface AppState {
   ) => boolean | Promise<boolean>;
   /** Names the owner of a home that has none on record yet. */
   setHouseholdOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
+  /** A second person on a home that already has an owner, with a sign-in of their own. */
+  addSecondOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
+  /** The address a not yet signed in owner claims their seat with. */
+  changeOwnerEmail: (ownerId: string, email: string) => Promise<boolean>;
   /** Which kind of home these are: detached, townhome or condo. */
   setHomeType: (ownerIds: string[], homeType: HomeType) => boolean | Promise<boolean>;
   removeOwner: (ownerId: string) => () => void;
@@ -532,6 +536,11 @@ interface AppState {
   removeActionItem: (itemId: string) => void;
   /** Lets a person in: a household on the roster, invited at their address. */
   approveJoinRequest: (requestId: string, unit: string) => Promise<boolean>;
+  /**
+   * Lets a requester in on a home already on the register, chosen by the
+   * board. `second` shares the home with its owner. Creates no home.
+   */
+  seatJoinRequest: (requestId: string, ownerId: string, second: boolean) => Promise<boolean>;
   declineJoinRequest: (requestId: string) => Promise<boolean>;
   /**
    * Somebody outside asking in. Works signed out: the code names the
@@ -1789,6 +1798,109 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             ? { ...o, displayName: name, members: [name], email, placeholder: false }
             : o,
         ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, communityId],
+  );
+
+  /**
+   * The demo's version of a seat: the person is named on the home and gets an
+   * account of their own. Two accounts can point at one home, which is what
+   * a second owner is. Nothing is added to the register.
+   */
+  const seatInDemo = useCallback(
+    (ownerId: string, input: { name: string; email: string }, second: boolean) => {
+      const owners = sliceStore(communityId, "owners");
+      const owner = owners.getSnapshot().find((o) => o.id === ownerId);
+      if (!owner) return false;
+      const name = input.name.trim();
+      const email = input.email.trim();
+      const accounts = sliceStore(communityId, "accounts");
+      const onHome = accounts.getSnapshot().filter((a) => a.ownerId === ownerId);
+      if (second || owner.placeholder) {
+        // A second owner joins the names on title; the first owner of an
+        // empty home replaces the stand in name.
+        owners.update((all) =>
+          all.map((o) =>
+            o.id !== ownerId
+              ? o
+              : second
+                ? { ...o, members: [...o.members, name] }
+                : { ...o, displayName: name, members: [name], email, placeholder: false },
+          ),
+        );
+        accounts.update((all) => [
+          ...all,
+          {
+            id: `${communityId}-acct-${owner.unit}${second ? `-${onHome.length + 1}` : ""}`,
+            ownerId,
+            name,
+            email,
+            unit: owner.unit,
+            role: "resident" as const,
+            capabilities: NO_CAPABILITIES,
+            views: NO_CAPABILITIES,
+          },
+        ]);
+        return true;
+      }
+      // A home with a listed owner who has no email: the requester takes it.
+      owners.update((all) =>
+        all.map((o) => (o.id === ownerId ? { ...o, displayName: name, members: [name], email } : o)),
+      );
+      accounts.update((all) =>
+        all.map((a) => (a.ownerId === ownerId ? { ...a, name, email } : a)),
+      );
+      return true;
+    },
+    [communityId],
+  );
+
+  /**
+   * A second owner of a home that already has one. They are a second seat on
+   * the same home: the bill, the balance and the vote stay the home's.
+   */
+  const addSecondOwner = useCallback(
+    (ownerId: string, input: { name: string; email: string }) => {
+      if (remote.community) {
+        return remoteWrite("Adding the second owner", () =>
+          supabaseBrowser().rpc("add_second_owner", {
+            p_unit_id: ownerId,
+            p_name: input.name.trim(),
+            p_email: input.email.trim(),
+          }),
+        );
+      }
+      return Promise.resolve(seatInDemo(ownerId, input, true));
+    },
+    [remote.community, seatInDemo],
+  );
+
+  /**
+   * Corrects the address a listed owner will claim their seat with.
+   * claim_my_seats matches it on the next sign in or press of their
+   * invitation link, so a typo no longer strands them.
+   */
+  const changeOwnerEmail = useCallback(
+    (ownerId: string, email: string) => {
+      const next = email.trim();
+      if (remote.community) {
+        const current = remote.community.owners.find((o) => o.id === ownerId);
+        return remoteWrite("Changing the email", () =>
+          supabaseBrowser().rpc("change_owner_email", {
+            p_unit_id: ownerId,
+            p_old_email: current?.email ?? "",
+            p_new_email: next,
+          }),
+        );
+      }
+      const was = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId)?.email;
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) => (o.id === ownerId ? { ...o, email: next } : o)),
+      );
+      sliceStore(communityId, "accounts").update((all) =>
+        all.map((a) => (a.ownerId === ownerId && a.email === was ? { ...a, email: next } : a)),
       );
       return Promise.resolve(true);
     },
@@ -3186,6 +3298,51 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return decided;
     },
     [remote.community, communityId, addOwnerSaving, decideJoin],
+  );
+
+  /**
+   * The board chose a home from the register for this request. Nothing is
+   * created from what the person typed: the database seats them on that
+   * home (or beside its owner), and only then is the request marked decided,
+   * so a refusal leaves it waiting.
+   */
+  const seatJoinRequest = useCallback(
+    async (requestId: string, ownerId: string, second: boolean) => {
+      const existing = remote.community
+        ? remote.community.joinRequests
+        : sliceStore(communityId, "joinRequests").getSnapshot();
+      const request = existing.find((j) => j.id === requestId);
+      if (!request) return false;
+      if (remote.community) {
+        const seated = await remoteWrite("Letting them in", () =>
+          supabaseBrowser().rpc("seat_join_request", {
+            p_request_id: requestId,
+            p_unit_id: ownerId,
+            p_as_second: second,
+          }),
+        );
+        if (!seated) return false;
+        const decided = await decideJoin(requestId, "approved");
+        // The note that says "you're in" goes to every address on the home,
+        // so a second owner is not sent one: it would reach the first owner
+        // too. They find the home on their next sign in or Check again.
+        if (decided && !second) {
+          void fetch("/api/email/invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              associationId: remote.community.id,
+              unitIds: [ownerId],
+              kind: "welcome",
+            }),
+          }).catch(() => undefined);
+        }
+        return decided;
+      }
+      if (!seatInDemo(ownerId, { name: request.name, email: request.email }, second)) return false;
+      return decideJoin(requestId, "approved");
+    },
+    [remote.community, communityId, decideJoin, seatInDemo],
   );
 
   const declineJoinRequest = useCallback(
@@ -4724,6 +4881,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     raiseNoticeFromReport,
     setOpeningBalances,
     setHouseholdOwner,
+    addSecondOwner,
+    changeOwnerEmail,
     setHomeType,
     removeOwner,
     transferHome,
@@ -4778,6 +4937,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setActionItemDone,
     removeActionItem,
     approveJoinRequest,
+    seatJoinRequest,
     declineJoinRequest,
     requestToJoin,
     lookupJoinCode,
