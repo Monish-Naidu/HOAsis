@@ -19,19 +19,23 @@ import type { TintName } from "@/components/ui/primitives";
 
 interface ResidentTab {
   href: string;
+  /** The one name, on the website rail, the section tabs and the More page. */
   label: string;
   icon: LucideIcon;
   /** The colour on the icon's tile, in the rail and the tab bar. */
   tint?: TintName;
-  /** The sidebar has room for a longer name than a 63px tab does. */
+  /**
+   * Not set any more: a row has one name everywhere. Search still reads it,
+   * so the field stays until it stops.
+   */
   webLabel?: string;
   /**
-   * A shorter name for the phone tab bar, where six tabs share 320px and
-   * "Dashboard" alone wanted a sixth of the screen.
+   * A shorter name for the phone tab bar, where six tabs share 320px:
+   * "Pay" for Payments, "Docs" for Documents.
    */
   tabLabel?: string;
-  /** Sidebar only. The phone tab bar holds six; the rest are under More. */
-  webOnly?: boolean;
+  /** On the phone tab bar. Every other row is under More, or is a section tab. */
+  bar?: boolean;
   /** Phone tab bar only: More, which the sidebar has no need for. */
   phoneOnly?: boolean;
   /** One line under the name on the phone's More page. */
@@ -44,10 +48,10 @@ interface ResidentTab {
    * The sidebar row this page lives under, by href.
    *
    * Eleven rows was a list nobody read, so related pages share one the way
-   * the board's do: Account sits under Payments, Messages under Requests,
-   * Voting under Meetings. Each keeps its own URL and its own phone tab if
-   * it has one; the parent row lights while it is open, and the section's
-   * tabs are how an owner moves between them.
+   * the board's do: the statement sits under Payments, Messages under
+   * Requests, Voting under Meetings. Each keeps its own URL; the parent row
+   * lights while it is open, and the section's tabs are how an owner moves
+   * between them, on a phone as on the website.
    */
   parent?: string;
   /** The name on the section's tab, where it differs from the label. */
@@ -55,52 +59,55 @@ interface ResidentTab {
 }
 
 /**
- * One nav definition, used by the phone tab bar and the website sidebar.
- * Names and order follow the 2026-09-01 dashboard design: Dashboard,
- * Payments, Requests, Documents, Community, Meetings, Voting, Account, then
- * Settings. The phone tab bar shows six: Home, Payments, Requests, Docs,
- * Account and More, and More lists every section the bar has no room for,
- * so nothing is reachable only from the website (2026-09-24).
+ * One nav definition, read by the website rail, the section tabs, the phone
+ * tab bar and the More page, so a place never has two names or two orders.
+ *
+ * Rail, in order: Home; Payments (tabs Pay, Statement); Requests (tabs
+ * Requests, Messages); Documents; Meetings (tabs Meetings, Voting);
+ * Community; Association funds; Settings. The phone bar holds the rows
+ * marked `bar`: Home, Pay, Requests, Docs, Meetings, More (Monish, 2026-10-04,
+ * Meetings in place of Account). More lists the rail rows the bar has no room
+ * for, in the rail's order. Pages under another row are reached by that row's
+ * tabs, which draw at every width.
  */
 export const residentTabs: ResidentTab[] = [
-  { href: "/resident", label: "Dashboard", tabLabel: "Home", icon: Home, tint: "blue" },
-  { href: "/resident/pay", label: "Payments", tab: "Pay", icon: CreditCard, tint: "teal" },
-  // Under Payments in the sidebar: the balance and the history are two
-  // views of the same money. Still its own phone tab. Violet, the records
-  // tint: neutral grey made its title tile look switched off.
+  { href: "/resident", label: "Home", icon: Home, tint: "blue", bar: true },
+  { href: "/resident/pay", label: "Payments", tab: "Pay", tabLabel: "Pay", icon: CreditCard, tint: "teal", bar: true },
+  // Under Payments: the balance and the history are two views of the same
+  // money. Violet, the records tint: neutral grey made its title tile look
+  // switched off.
   {
     href: "/resident/account",
-    label: "Account",
+    label: "Statement",
     icon: Receipt,
     tint: "violet",
     parent: "/resident/pay",
   },
-  { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus, tint: "blue" },
-  // Under Requests: a question is a request that needs no decision. On a
-  // phone it is one tap from Requests. Asking the board used to mean email,
-  // with no trace here.
+  { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus, tint: "blue", bar: true },
+  // Under Requests: a question is a request that needs no decision. Asking
+  // the board used to mean email, with no trace here.
   {
     href: "/resident/messages",
     label: "Messages",
     icon: Mail,
     tint: "coral",
-    webOnly: true,
     blurb: "Ask the board a question",
     parent: "/resident/requests",
   },
   {
     href: "/resident/documents",
-    label: "Docs",
+    label: "Documents",
+    tabLabel: "Docs",
     icon: FileText,
     tint: "violet",
-    webLabel: "Documents",
+    bar: true,
   },
   {
     href: "/resident/calendar",
     label: "Meetings",
     icon: CalendarDays,
     tint: "amber",
-    webOnly: true,
+    bar: true,
     blurb: "Board meetings and what is on the calendar",
     module: "resident-meetings",
   },
@@ -108,11 +115,9 @@ export const residentTabs: ResidentTab[] = [
   // dashboard banner already points at an open ballot.
   {
     href: "/resident/vote",
-    label: "Vote",
+    label: "Voting",
     icon: Vote,
     tint: "violet",
-    webLabel: "Voting",
-    webOnly: true,
     blurb: "Open ballots and past results",
     parent: "/resident/calendar",
   },
@@ -121,38 +126,49 @@ export const residentTabs: ResidentTab[] = [
     label: "Community",
     icon: MessageSquareText,
     tint: "coral",
-    webOnly: true,
     blurb: "Posts from your neighbors",
     visible: (s) => s.forumEnabled,
     module: "resident-forum",
   },
   {
     href: "/resident/finances",
-    label: "Funds",
+    label: "Association funds",
     icon: Landmark,
     tint: "teal",
-    webLabel: "Association funds",
-    webOnly: true,
     blurb: "Where the association's money is",
     visible: (s) => s.showFundsToResidents,
     module: "resident-funds",
   },
   // Where people look for text size. Its own page rather than a corner of
-  // Account, which is about money.
+  // the statement, which is about money.
   {
     href: "/resident/settings",
     label: "Settings",
     icon: Settings,
     tint: "blue",
-    webOnly: true,
     blurb: "Text size, light or dark, and your contact details",
   },
-  { href: "/resident/more", label: "More", icon: LayoutGrid, tint: "blue", phoneOnly: true },
+  { href: "/resident/more", label: "More", icon: LayoutGrid, tint: "blue", bar: true, phoneOnly: true },
 ];
 
 /** The tabs this association shows: its modules on, its switches on. */
 export function visibleResidentTabs(settings: CommunitySettings): ResidentTab[] {
   return residentTabs.filter((t) => moduleOn(t.module) && (!t.visible || t.visible(settings)));
+}
+
+/** The website rail: every row that is not phone-only and not under another row. */
+export function residentRailRows(tabs: ResidentTab[]): ResidentTab[] {
+  return tabs.filter((t) => !t.phoneOnly && !t.parent);
+}
+
+/** The phone tab bar, left to right. */
+export function residentBarTabs(tabs: ResidentTab[]): ResidentTab[] {
+  return tabs.filter((t) => t.bar);
+}
+
+/** The More page: the rail's rows that the bar has no room for, in the rail's order. */
+export function residentMoreRows(tabs: ResidentTab[]): ResidentTab[] {
+  return residentRailRows(tabs).filter((t) => !t.bar);
 }
 
 /** The tab a path belongs to: the longest href that prefixes it. */

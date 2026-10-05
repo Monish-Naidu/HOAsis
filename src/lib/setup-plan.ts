@@ -271,6 +271,7 @@ function because(
     }
 
     case "invites": {
+      if (whereIs(c) === "demo") return "Owners are signed in to this demo.";
       const i = inviteStatus(c);
       const noEmail =
         i.noEmail > 0

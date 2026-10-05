@@ -1044,6 +1044,85 @@ describe("the roster", () => {
   });
 });
 
+describe("letting somebody in on a home already on the register (demo)", () => {
+  const pending = (state: ReturnType<typeof useAppState>) =>
+    state.community.joinRequests.find((j) => j.status === "pending")!;
+
+  it("seats them beside the owner of the home the board chose, and adds no home", async () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const request = pending(result.current);
+    const home = result.current.community.owners.find((o) => o.unit === request.unit)!;
+    const homes = result.current.community.owners.length;
+    const seatsBefore = result.current.accounts.filter((a) => a.ownerId === home.id).length;
+
+    await act(async () => {
+      expect(await result.current.seatJoinRequest(request.id, home.id, true)).toBe(true);
+    });
+
+    expect(result.current.community.owners.length).toBe(homes);
+    const now = result.current.community.owners.find((o) => o.id === home.id)!;
+    expect(now.members).toContain(request.name);
+    expect(now.displayName).toBe(home.displayName);
+    const seats = result.current.accounts.filter((a) => a.ownerId === home.id);
+    expect(seats.some((a) => a.email === request.email)).toBe(true);
+    expect(seats).toHaveLength(seatsBefore + 1);
+    expect(result.current.community.joinRequests.find((j) => j.id === request.id)!.status).toBe("approved");
+  });
+
+  it("gives an empty home its owner without making a second home", async () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const request = pending(result.current);
+    const empty = result.current.community.owners[1];
+    act(() => {
+      result.current.removeOwner(empty.id);
+    });
+    act(() => {
+      result.current.addOwner({ name: "x", email: "", unit: "A1" });
+    });
+    const target = result.current.community.owners.find((o) => o.unit === "A1")!;
+    await act(async () => {
+      await result.current.setHouseholdOwner(target.id, { name: "", email: "" });
+    });
+    const homes = result.current.community.owners.length;
+
+    await act(async () => {
+      await result.current.seatJoinRequest(request.id, target.id, false);
+    });
+
+    const now = result.current.community.owners.find((o) => o.id === target.id)!;
+    expect(result.current.community.owners.length).toBe(homes);
+    expect(now.displayName).toBe(request.name);
+    expect(now.email).toBe(request.email);
+    expect(now.placeholder).toBe(false);
+  });
+
+  it("adds a second owner from the household card, with a sign in of their own", async () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const home = result.current.community.owners[0];
+    const before = result.current.accounts.filter((a) => a.ownerId === home.id).length;
+
+    await act(async () => {
+      expect(await result.current.addSecondOwner(home.id, { name: "Lee Two", email: "lee@example.com" })).toBe(true);
+    });
+
+    expect(result.current.community.owners.find((o) => o.id === home.id)!.members).toContain("Lee Two");
+    expect(result.current.accounts.filter((a) => a.ownerId === home.id)).toHaveLength(before + 1);
+    // One home, one balance: nothing about the second owner is billed.
+    expect(result.current.community.owners.find((o) => o.id === home.id)!.balanceCents).toBe(home.balanceCents);
+  });
+
+  it("changes the email invitations go to", async () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const home = result.current.community.owners[0];
+
+    await act(async () => {
+      await result.current.changeOwnerEmail(home.id, "fixed@example.com");
+    });
+
+    expect(result.current.community.owners.find((o) => o.id === home.id)!.email).toBe("fixed@example.com");
+  });
+});
+
 describe("taking a payment", () => {
   it("writes the statement, the balance, the books, the budget, and the bank together", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });

@@ -48,7 +48,7 @@ describe("sameOriginPath", () => {
 
 const verifyOtp = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
 const exchangeCodeForSession = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
-const rpc = vi.fn(async (name: string) =>
+const rpc = vi.fn(async (name: string): Promise<{ data: unknown }> =>
   name === "my_associations" ? { data: [{ role: "resident" }] } : { data: null },
 );
 
@@ -101,5 +101,21 @@ describe("the callback route", () => {
     const location = new URL(response.headers.get("location")!);
     expect(location.pathname).toBe("/signin");
     expect(location.searchParams.has("next")).toBe(false);
+  });
+
+  it("sends somebody with an account and no association to the fork, never to the founder's setup", async () => {
+    // Wrong email at sign up, a declined request, a copied link, a request
+    // still waiting: the resident side tells them apart and offers each the
+    // right door. Setup is the fork's second choice.
+    for (const asked of [[], [{ status: "pending" }], [{ status: "declined" }]]) {
+      rpc.mockImplementation(async (name: string) =>
+        name === "my_associations" ? { data: [] } : name === "my_join_requests" ? { data: asked } : { data: null },
+      );
+      const response = await callback("token_hash=hash_123&type=signup");
+      expect(new URL(response.headers.get("location")!).pathname).toBe("/resident");
+    }
+    rpc.mockImplementation(async (name: string) =>
+      name === "my_associations" ? { data: [{ role: "resident" }] } : { data: null },
+    );
   });
 });

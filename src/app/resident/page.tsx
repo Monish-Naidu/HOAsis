@@ -7,13 +7,13 @@ import {
   CircleDollarSign,
   CreditCard,
   FileText,
-  Megaphone,
+  Gavel,
   Radio,
   Receipt,
   Vote,
   Wrench,
 } from "lucide-react";
-import { Card, CardHeader, EmptyState, IconTile, SectionTitle, TINT_FIELD, type TintName } from "@/components/ui/primitives";
+import { Card, CardHeader, EmptyState, IconTile, TINT_FIELD, type TintName } from "@/components/ui/primitives";
 import { calendarEntries } from "@/lib/metrics";
 import { ballotPhase } from "@/lib/phases";
 import {
@@ -25,6 +25,8 @@ import {
 import { HomeSchedule } from "@/components/app/home-schedule";
 import { cn, formatDate, money, pastDueLabel, relativeDays } from "@/lib/utils";
 import { ownerDues } from "@/lib/home-types";
+import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
+import { Announcements } from "./announcements";
 
 /**
  * The resident home, laid out to the 2026-09-01 dashboard design.
@@ -35,15 +37,20 @@ import { ownerDues } from "@/lib/home-types";
  */
 export default function ResidentHome() {
   const { community } = useAppState();
+  const owner = useCurrentOwner();
   const live = community.meetings.find((m) => m.status === "live");
   const toVote = community.ballots.filter(
     (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
   );
+  // A notice against this home is the thing an owner most needs to see first,
+  // and it used to be a card inside Requests that nothing pointed at.
+  const openNotices = openNoticesForHome(community.violations, owner);
+  const notice = openNotices.length ? noticeSummary(openNotices) : null;
 
   return (
     <div className="stagger space-y-6">
       {/* What expires today, in one card rather than a stack of banners. */}
-      {live || toVote.length ? (
+      {live || notice || toVote.length ? (
         <Card className="divide-y divide-border">
           {live ? (
             <Link
@@ -54,8 +61,21 @@ export default function ResidentHome() {
               <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 block text-body font-semibold text-fg">{live.title}</span>
                 <span className="block text-footnote text-ok">
-                  Meeting on now · {live.attendees.length} joined
+                  {liveMeetingLine(live.attendees.length)}
                 </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+            </Link>
+          ) : null}
+          {notice ? (
+            <Link
+              href="/resident/notices"
+              className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+            >
+              <IconTile icon={Gavel} tint="amber" size="sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-body font-semibold text-fg">{notice.title}</span>
+                <span className="line-clamp-2 block text-footnote text-fg-muted">{notice.detail}</span>
               </span>
               <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
             </Link>
@@ -126,13 +146,13 @@ function AccountSummary() {
     <Card>
       <CardHeader
         accent="teal"
-        title="Account summary"
+        title="Your balance"
         action={
           <Link
             href="/resident/account"
             className="text-footnote font-medium text-accent hover:underline"
           >
-            View details
+            Statement
           </Link>
         }
       />
@@ -358,62 +378,3 @@ function RecentActivity() {
     </Card>
   );
 }
-
-/* ------------------------------------------------------------ announcements */
-
-function Announcements() {
-  const { community } = useAppState();
-  const announcements = community.announcements;
-  const pinned = announcements.find((a) => a.pinned);
-  const rest = announcements.filter((a) => !a.pinned).slice(0, 2);
-  if (!pinned && rest.length === 0) return null;
-
-  return (
-    <section>
-      <SectionTitle>From the board</SectionTitle>
-      {/* The pinned notice runs the full width; the rest share it two up
-          once there is room, so the band fills the bottom of the page. */}
-      <div className="grid gap-3 @3xl:grid-cols-2 [&>*]:min-w-0">
-        {pinned ? (
-          <Card className="relative overflow-hidden @3xl:col-span-2">
-            <span className="absolute inset-y-0 left-0 w-[3px] bg-brand-gradient" aria-hidden />
-            <div className="p-4 pl-5">
-              <div className="mb-1.5 flex items-center gap-2">
-                <IconTile icon={Megaphone} tint="coral" size="xs" />
-                <span className="text-footnote font-semibold text-fg-muted">
-                  Pinned · {pinned.category}
-                </span>
-              </div>
-              <h3 className="text-body font-semibold leading-snug tracking-[-0.01em] text-fg">
-                {pinned.title}
-              </h3>
-              <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{pinned.body}</p>
-              <p className="mt-2.5 text-footnote text-fg-subtle">
-                {pinned.author} · {formatDate(pinned.postedDate)}
-              </p>
-            </div>
-          </Card>
-        ) : null}
-        {rest.map((a) => (
-          <Card key={a.id}>
-            <div className="p-4">
-              <span className="text-footnote font-semibold text-fg-muted">
-                {a.category}
-              </span>
-              <h3 className="mt-1 text-body font-semibold leading-snug tracking-[-0.01em] text-fg">
-                {a.title}
-              </h3>
-              <p className="mt-1.5 line-clamp-2 text-body leading-relaxed text-fg-muted">
-                {a.body}
-              </p>
-              <p className="mt-2.5 text-footnote text-fg-subtle">
-                {a.author} · {formatDate(a.postedDate)}
-              </p>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-}
-

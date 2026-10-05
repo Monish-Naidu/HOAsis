@@ -19,7 +19,9 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Avatar, Badge, Button, ButtonLink, Callout, Card, EmptyState, KeyValue, PageHeader, Segmented, Select, Field, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { RemindersComposer } from "@/components/app/reminders-composer";
-import { JoinRequests } from "@/components/app/join-requests";
+import { AskedToJoin } from "./asked-to-join";
+import { JoinCodeRow } from "./join-code-row";
+import { ChangeEmailForm, SecondOwnerForm } from "./owner-forms";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -191,6 +193,8 @@ export function HomeownersScreen() {
     replyToThread,
     messageOwner,
     setHouseholdOwner,
+    addSecondOwner,
+    changeOwnerEmail,
     setHomeType,
     can,
     sees,
@@ -248,6 +252,9 @@ export function HomeownersScreen() {
   const changesMoney = can("finances");
   // The invitation route takes either capability, so the button asks the same.
   const mayInvite = can("settings") || can("communications");
+  // Changing who is on the register is the settings capability, the same one
+  // Add household and the decision on a join request ask.
+  const mayChangeRoster = can("settings");
   const [inviting, setInviting] = useState(false);
 
   // Behind first, furthest behind at the top, then by unit.
@@ -304,12 +311,12 @@ export function HomeownersScreen() {
     }
   }
 
-  function startSale(owner: Owner | null) {
+  function startSale(owner: Owner | null, buyer?: { name: string; email: string }) {
     setSale({
       open: true,
       ownerId: owner?.id ?? null,
-      name: "",
-      email: "",
+      name: buyer?.name ?? "",
+      email: buyer?.email ?? "",
       closingDate: todayIsoDate(),
       settle: true,
     });
@@ -478,7 +485,22 @@ export function HomeownersScreen() {
 
       {reminding && seesMoney ? <RemindersComposer onClose={() => setReminding(false)} /> : null}
 
-      {maySeeRoster ? <JoinRequests /> : null}
+      {mayInvite && community.association.joinCode ? (
+        <JoinCodeRow code={community.association.joinCode} />
+      ) : null}
+
+      {maySeeRoster ? (
+        <AskedToJoin
+          onRecordSale={
+            changesMoney
+              ? (ownerId, buyer) => {
+                  const home = owners.find((o) => o.id === ownerId);
+                  if (home) startSale(home, buyer);
+                }
+              : undefined
+          }
+        />
+      ) : null}
 
       <Card className="mt-6">
         {/* Toolbar */}
@@ -865,6 +887,35 @@ export function HomeownersScreen() {
                               })
                           : undefined
                       }
+                      onChangeEmail={
+                        mayChangeRoster && !o.placeholder && (!isRemote || !accounts.some((a) => a.ownerId === o.id))
+                          ? (email) =>
+                              Promise.resolve(changeOwnerEmail(o.id, email)).then((ok) => {
+                                if (ok) notify(`${o.displayName}'s email is now ${email}`, "ok");
+                                return ok;
+                              })
+                          : undefined
+                      }
+                      onAddSecondOwner={
+                        mayChangeRoster && !o.placeholder
+                          ? (name, email) =>
+                              Promise.resolve(addSecondOwner(o.id, { name, email })).then((ok) => {
+                                if (!ok) return false;
+                                // The usual invitation is the link with the
+                                // address on it. Emailing it would also reach
+                                // the first owner, because the route writes to
+                                // every address on a home.
+                                if (isRemote && community.association.joinCode) {
+                                  const link = remoteInviteUrl(community.association.joinCode, email, window.location.origin);
+                                  void navigator.clipboard?.writeText(link).catch(() => undefined);
+                                  notify(`${name} added to ${homeLabel(community, o.unit)}. Their invitation link is copied`, "ok");
+                                } else {
+                                  notify(`${name} added to ${homeLabel(community, o.unit)}`, "ok");
+                                }
+                                return true;
+                              })
+                          : undefined
+                      }
                       onInvite={() => copyInvite(o)}
                       onEmailInvite={isRemote && o.email && mayInvite ? () => void emailInvites([o]) : undefined}
                       signedUp={!isRemote || accounts.some((a) => a.ownerId === o.id)}
@@ -957,6 +1008,8 @@ function HouseholdDetail({
   onSale,
   onInvite,
   onEmailInvite,
+  onChangeEmail,
+  onAddSecondOwner,
   signedUp,
   onRemove,
   duesLine,
@@ -973,6 +1026,10 @@ function HouseholdDetail({
   onSale?: () => void;
   onInvite: () => void;
   onEmailInvite?: () => void;
+  /** Correct the address the listed owner claims their seat with. Absent when this seat may not, or they have signed in. */
+  onChangeEmail?: (email: string) => Promise<boolean>;
+  /** Add another person to this home. Absent when this seat may not change the roster. */
+  onAddSecondOwner?: (name: string, email: string) => Promise<boolean>;
   signedUp: boolean;
   onRemove: () => void;
   /** What this home is billed, shown when homes pay different amounts. */
@@ -984,6 +1041,7 @@ function HouseholdDetail({
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
+  const [editing, setEditing] = useState<"email" | "second" | null>(null);
 
   function startFromLetter() {
     if (!letter) return;
@@ -1119,6 +1177,13 @@ function HouseholdDetail({
         )}
       </div>
 
+      {editing === "email" && onChangeEmail ? (
+        <ChangeEmailForm current={owner.email} onSave={onChangeEmail} onCancel={() => setEditing(null)} />
+      ) : null}
+      {editing === "second" && onAddSecondOwner ? (
+        <SecondOwnerForm unit={owner.unit} onSave={onAddSecondOwner} onCancel={() => setEditing(null)} />
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-border pt-3">
         {onSale ? (
           <Button
@@ -1149,6 +1214,28 @@ function HouseholdDetail({
           >
             <Send className="size-3.5" />
             {signedUp ? "Email sign-in link" : "Email invite"}
+          </Button>
+        ) : null}
+        {onChangeEmail ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(editing === "email" ? null : "email")}
+            aria-label={`Change the email for ${owner.displayName}`}
+          >
+            <Mail className="size-3.5" />
+            Change email
+          </Button>
+        ) : null}
+        {onAddSecondOwner ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(editing === "second" ? null : "second")}
+            aria-label={`Add a second owner to ${owner.unit}`}
+          >
+            <Plus className="size-3.5" />
+            Add a second owner
           </Button>
         ) : null}
         <Button

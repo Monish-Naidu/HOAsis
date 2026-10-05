@@ -2,11 +2,12 @@
 
 import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Gavel, Mail, Plus } from "lucide-react";
-import { Badge, ButtonLink, Card, EmptyState, IconTile, SectionTitle } from "@/components/ui/primitives";
+import { ChevronDown, ChevronRight, Gavel, Plus } from "lucide-react";
+import { Badge, ButtonLink, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { bucketRequests, useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
 import { kindLabel, statusLabel, statusTone } from "@/lib/request-status";
 import { formatDate, pluralize, relativeDays } from "@/lib/utils";
+import { openNoticesForHome } from "@/lib/resident-wording";
 
 
 
@@ -21,8 +22,7 @@ export default function ResidentRequests() {
   const notices = owner
     ? community.violations.filter((v) => v.ownerId === owner.id || v.unit === owner.unit)
     : [];
-  const openNotices = notices.filter((v) => v.stage !== "cured");
-  const myThreads = owner ? community.threads.filter((t) => t.ownerId === owner.id).length : 0;
+  const openNotices = openNoticesForHome(community.violations, owner);
 
   return (
     <div className="animate-rise space-y-6">
@@ -36,23 +36,6 @@ export default function ResidentRequests() {
           </ButtonLink>
         }
       />
-
-      {/* A question is not a request. On a phone, where Messages has no
-          tab in the bar, this is the way in. On the website the section's
-          Messages tab above already is, so the card would say it twice. */}
-      <Link
-        href="/resident/messages"
-        className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2 lg:hidden"
-      >
-        <IconTile icon={Mail} tint="coral" size="sm" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-body font-semibold text-fg">Message the board</span>
-          <span className="block text-footnote leading-snug text-fg-muted">
-            {myThreads > 0 ? `${pluralize(myThreads, "conversation")}` : "Ask a question, no decision needed"}
-          </span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-      </Link>
 
       {notices.length > 0 ? (
         <Link

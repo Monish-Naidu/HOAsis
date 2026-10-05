@@ -5,18 +5,20 @@ import { useRouter } from "next/navigation";
 import { Building2, ChevronRight, LayoutDashboard, LogOut } from "lucide-react";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { Card, IconTile } from "@/components/ui/primitives";
-import { visibleResidentTabs } from "@/components/app/resident-nav";
+import { residentMoreRows, visibleResidentTabs } from "@/components/app/resident-nav";
 import { useAppState } from "@/lib/app-state";
 
 /**
  * Everything the phone's tab bar has no room for, as a list with a line
  * under each name, so no section is reachable only from the website. The
- * rows are the sidebar's, in the sidebar's order, with the same tiles.
+ * rows are the sidebar's, in the sidebar's order and under its names, minus
+ * the ones the bar already has. Pages under another row (Statement, Messages,
+ * Voting) are that row's tabs, which draw on a phone too.
  */
 export default function ResidentMore() {
   const { settings, signOut, account, setView, community, communities, setCommunity } = useAppState();
   const router = useRouter();
-  const rows = visibleResidentTabs(settings).filter((t) => t.webOnly);
+  const rows = residentMoreRows(visibleResidentTabs(settings));
   // On a phone the header has room for a name and three controls, so the two
   // switches the website keeps on the photo live here: back to the board for
   // an officer, and across to another association for somebody in two.
@@ -30,7 +32,7 @@ export default function ResidentMore() {
       <ResidentTitle title="More" />
 
       <Card className="divide-y divide-border">
-        {rows.map(({ href, label, webLabel, icon, tint, blurb }) => (
+        {rows.map(({ href, label, icon, tint, blurb }) => (
           <Link
             key={href}
             href={href}
@@ -38,7 +40,7 @@ export default function ResidentMore() {
           >
             <IconTile icon={icon} tint={tint} size="sm" />
             <span className="min-w-0 flex-1">
-              <span className="block text-body font-semibold text-fg">{webLabel ?? label}</span>
+              <span className="block text-body font-semibold text-fg">{label}</span>
               {blurb ? <span className="block text-footnote text-fg-muted">{blurb}</span> : null}
             </span>
             <ChevronRight className="size-4 shrink-0 text-fg-subtle" />

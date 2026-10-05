@@ -35,6 +35,7 @@ const forms = [
     size: "120 KB",
     updatedDate: "2026-01-10",
     decisionDays: 30,
+    governedBy: "CC&Rs Art. VII",
     fields: [{ id: "what", label: "What are you building", kind: "short", required: true }],
   },
   {
@@ -135,6 +136,16 @@ describe("a form filled in on the page", () => {
     // Not on the card and not in the toast.
     expect(screen.queryByText(new RegExp(guess()))).not.toBeInTheDocument();
     expect(screen.getByText(/Its number is in your requests/)).toBeInTheDocument();
+  });
+
+  it("aims at a date and never writes a deemed-approved promise for the association", async () => {
+    await sign();
+
+    expect(await screen.findByText("Sent to the committee")).toBeInTheDocument();
+    expect(screen.getByText(/The committee aims to decide by/)).toBeInTheDocument();
+    const sent = addRequest.mock.calls[0] as unknown as [{ dueReason?: string }];
+    expect(sent[0].dueReason).toBe("CC&Rs Art. VII.");
+    expect(screen.queryByText(/deemed approved/)).not.toBeInTheDocument();
   });
 
   it("shows the stored number once the write answers with it", async () => {

@@ -156,7 +156,8 @@ test.describe("resident experience", () => {
   // they are opened by address.
   for (const [name, path] of [
     ["Voting", "/resident/vote"],
-    ["Account", "/resident/account"],
+    ["Statement", "/resident/account"],
+    ["Messages", "/resident/messages"],
   ] as const) {
     test(`${name} works`, async ({ page }) => {
       await page.goto(path);

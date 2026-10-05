@@ -188,6 +188,30 @@ export default function RequestDetail({
         </section>
       ) : null}
 
+      {/* The answers and the signature, as sent. The form promises a copy of
+          what was signed; this is where it is. */}
+      {request.submission ? (
+        <section>
+          <SectionTitle>What you sent</SectionTitle>
+          <Card className="p-4">
+            <dl className="space-y-2.5">
+              {request.submission.answers
+                .filter((a) => a.value)
+                .map((a) => (
+                  <div key={a.fieldId}>
+                    <dt className="text-footnote font-semibold text-fg-muted">{a.label}</dt>
+                    <dd className="mt-0.5 break-words text-body text-fg">{a.value}</dd>
+                  </div>
+                ))}
+            </dl>
+            <p className="mt-3 border-t border-border pt-3 text-footnote text-fg-muted">
+              Signed by {request.submission.signature.typedName} on{" "}
+              {formatDate(request.submission.signature.signedAt.slice(0, 10), "long")}
+            </p>
+          </Card>
+        </section>
+      ) : null}
+
       {request.attachments.length ? (
         <section>
           <SectionTitle>Attachments</SectionTitle>

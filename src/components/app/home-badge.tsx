@@ -98,7 +98,9 @@ export function HomeBadge() {
             href="/resident/account"
             className="inline-flex items-center gap-0.5 text-footnote font-semibold text-[#8fc0ff] hover:underline"
           >
-            View home details
+            {/* Named for where it goes. It read "View home details" and
+                opened the statement. */}
+            See your statement
             <ChevronRight className="size-3.5" />
           </Link>
           {uploaded ? (

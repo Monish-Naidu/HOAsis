@@ -270,6 +270,9 @@ test.describe("shared costs", () => {
   });
 
   test("a resident sees their own share and who the association pays", async ({ page }) => {
+    // The owner's half follows the same switch as the board's since
+    // 2026-10-04: with the module off there is no share to show.
+    test.skip(!MODULES["shared-costs"].on, "Shared costs is off at launch, see lib/modules.ts");
     await seedSession(page, { seat: SEATS.resident, view: "resident" });
     await page.goto("/resident/finances");
     await page.waitForLoadState("networkidle");

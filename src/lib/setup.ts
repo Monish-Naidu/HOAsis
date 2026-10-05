@@ -235,7 +235,11 @@ export const SETUP_TASKS: SetupTask[] = [
     detail: "An email for every owner, then an invitation, so they can see their balance and pay.",
     why: "An owner with no invitation cannot see a balance, be reminded about dues, or pay. It is also the gap that quietly makes your collection rate look worse than your neighbors are. Owners with no email on file are counted but do not hold this up.",
     href: "/board/homeowners",
-    done: (c) => inviteStatus(c).done,
+    // The two shipped demos are long-running associations whose owners were
+    // never "invited" in any record, and a demo that reads as mid-setup with
+    // 82 owners waiting is showing the wrong thing. Like payments, it is
+    // done there.
+    done: (c) => whereIs(c) === "demo" || inviteStatus(c).done,
   },
 
   /* --------------------------------------------- records owners can ask for */

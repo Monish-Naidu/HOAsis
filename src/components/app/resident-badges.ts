@@ -2,8 +2,10 @@
 
 import { useMemo } from "react";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import type { Community } from "@/lib/data/community";
+import type { Owner } from "@/lib/types";
 import { ballotPhase } from "@/lib/phases";
-import { daysFromToday } from "@/lib/utils";
+import { openNoticesForHome } from "@/lib/resident-wording";
 
 export interface ResidentBadge {
   count: number;
@@ -15,48 +17,50 @@ export interface ResidentBadge {
 /**
  * Counts beside the resident sections, keyed by the section row's href.
  *
- * A badge means something waits on the owner, the way the board's mean a
- * decision is owed: a balance to pay, a ballot to cast, an answer from the
- * board they have not seen. Nothing else earns one, or the numbers stop
- * meaning anything.
+ * A number on a row is a number the page it opens shows under its own
+ * words, or it is not there:
+ *
+ * - Meetings: ballots this owner has not voted on. The Meetings page opens
+ *   with "N ballots need your vote", linking to Voting.
+ * - Requests: open notices about this home. The Requests page opens with
+ *   "N open notices about your home".
+ *
+ * Payments has no count. A balance is an amount, not a number of things, and
+ * the home card and the bell already say it; a "1" there counted nothing.
+ * Replies from the board have none either: the page marks no reply as
+ * unseen, so a count of them could never clear. The bell lists them.
  */
+export function residentBadges(
+  community: Pick<Community, "ballots" | "violations">,
+  owner: Pick<Owner, "id" | "unit"> | null,
+): Partial<Record<string, ResidentBadge>> {
+  const badges: Partial<Record<string, ResidentBadge>> = {};
+  if (!owner) return badges;
+
+  const toVote = community.ballots.filter(
+    (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
+  ).length;
+  if (toVote > 0) {
+    badges["/resident/calendar"] = {
+      count: toVote,
+      tone: "warn",
+      hint: toVote === 1 ? "ballot to cast" : "ballots to cast",
+    };
+  }
+
+  const notices = openNoticesForHome(community.violations, owner).length;
+  if (notices > 0) {
+    badges["/resident/requests"] = {
+      count: notices,
+      tone: "warn",
+      hint: notices === 1 ? "open notice about your home" : "open notices about your home",
+    };
+  }
+  return badges;
+}
+
 export function useResidentBadges(): Partial<Record<string, ResidentBadge>> {
   const { community } = useAppState();
   const owner = useCurrentOwner();
-  return useMemo(() => {
-    const badges: Partial<Record<string, ResidentBadge>> = {};
-    if (!owner) return badges;
-
-    if (owner.balanceCents > 0) {
-      badges["/resident/pay"] = { count: 1, tone: owner.daysPastDue > 0 ? "danger" : "neutral", hint: "balance to pay" };
-    }
-
-    const toVote = community.ballots.filter(
-      (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
-    ).length;
-    if (toVote > 0) badges["/resident/calendar"] = { count: toVote, tone: "warn", hint: toVote === 1 ? "ballot to cast" : "ballots to cast" };
-
-    // Replies in the last two weeks: on a request, or in a message thread.
-    const answered = community.requests
-      .filter((r) => r.ownerId === owner.id)
-      .filter((r) => {
-        const last = [...r.thread].sort((a, b) => (a.at < b.at ? 1 : -1))[0];
-        return (
-          last &&
-          last.actorRole !== "resident" &&
-          last.actorRole !== "system" &&
-          daysFromToday(last.at) >= -14
-        );
-      }).length;
-    const replied = community.threads
-      .filter((t) => t.ownerId === owner.id)
-      .filter((t) => {
-        const last = t.messages[t.messages.length - 1];
-        return last && last.fromRole !== "resident" && daysFromToday(last.at) >= -14;
-      }).length;
-    if (answered + replied > 0) {
-      badges["/resident/requests"] = { count: answered + replied, tone: "neutral", hint: "replies from the board" };
-    }
-    return badges;
-  }, [community, owner]);
+  return useMemo(() => residentBadges(community, owner), [community, owner]);
 }

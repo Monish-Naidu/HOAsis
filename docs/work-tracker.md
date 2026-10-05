@@ -43,7 +43,7 @@ The worst kind: a board acts on them. Each is small.
 | "Both can change in Settings" and "you get told before it lapses" in the wizard and plan | setup wizard, setup plan | done 2026-10-04 |
 | Wizard asks "Anything billed besides dues?" and, for a real association, the builder's name; nothing reads either | setup wizard | done 2026-10-04 (c9d560f, branch staging-and-onboarding) |
 | Setup and Reserves point at the Budget page, which is switched off | setup plan, reserves screen | done 2026-10-04: hidden while the module is off |
-| "Paid up" badge beside a $285 balance; "View home details" opens the statement | resident home | badge done ("Not late"); the link label is next |
+| "Paid up" badge beside a $285 balance; "View home details" opens the statement | resident home | done 2026-10-05 (pull request #4): "Not late", and the home card link reads "See your statement" |
 | Demo-only controls shown to a real association: live meeting room and attendance, emailed-in vendor bills, Pay by ACH, bank picker, "Public" document setting, "Match transactions" | board screens | next |
 | Real sign-in page is headed with the demo association's name for every real homeowner | `src/app/signin/` | done |
 
@@ -66,14 +66,14 @@ The worst kind: a board acts on them. Each is small.
 
 | Item | Status |
 | --- | --- |
-| "Let them in" is disabled for any home already on the roster, which after the wizard is every home; a mistyped home creates a duplicate | next: a home picker with the right action for an empty home, a sold home and a co-owner |
-| A person with an account and no home is sent to the founder's wizard with no way to "join"; waiting screens have no sign out | next: one fork screen (join code first, signed in as, sign out) |
-| The board cannot correct a household's email | next |
-| The board is never told somebody is waiting; the join code is buried in Settings | next: show it on Homeowners |
-| A second owner of the same home with their own sign-in | next (Monish said go, 2026-10-04) |
+| "Let them in" is disabled for any home already on the roster, which after the wizard is every home; a mistyped home creates a duplicate | done 2026-10-05 (pull request #4): a home picker; seats the person on an empty or unclaimed home, offers "Add as a second owner" or a sale for an owned one, and only adds a home when asked to (migration 0080) |
+| A person with an account and no home is sent to the founder's wizard with no way to "join"; waiting screens have no sign out | done 2026-10-05 (pull request #4): one fork screen, with "Signed in as" and sign out on every state; a founder with unfinished setup is led back to it |
+| The board cannot correct a household's email | done 2026-10-05 (pull request #4) |
+| The board is never told somebody is waiting; the join code is buried in Settings | done 2026-10-05 (pull request #4) for the code (shown on Homeowners with copy buttons). Emailing the board when somebody asks is still open |
+| A second owner of the same home with their own sign-in | done 2026-10-05 (pull request #4): the board adds one from the household card or from a join request; a sale ends every seat on the home (migration 0081). A second owner added from a join request gets no welcome email yet |
 | Printable letter or flyer with the join code | later |
 | Emails say "reply to this email" with no reply address set | next: a board contact address in Settings; emails say "reply" only once it is set (approved) |
-| Confirmation link has no resend | next |
+| Confirmation link has no resend | done 2026-10-05 (pull request #4) on the join page. The sign-in page's create-account notice and the wizard do not have it yet |
 | Sign-in links in emails last one hour | done 2026-10-04: 24 hours, set on the live project and in `supabase/config.toml` |
 | Renters, and a board seat with no office | later |
 
@@ -93,11 +93,11 @@ The worst kind: a board acts on them. Each is small.
 
 | Item | Status |
 | --- | --- |
-| Announcements are cut at two lines, cannot be opened, and only three ever show | next |
-| A notice or fine against your home appears only inside Requests | next: dashboard and bell |
-| One navigation, same names on the website rail, the phone bar and More: Home, Payments (Pay, Statement), Requests (Requests, Messages), Documents, Meetings (Meetings, Voting), Community, Association funds, Settings | next |
-| Phone bar: swap Account for Meetings (Monish set the current bar on 2026-09-24) | next (Monish said go, 2026-10-04) |
-| Rail counts that match nothing on the page | next |
+| Announcements are cut at two lines, cannot be opened, and only three ever show | done 2026-10-05 (pull request #4) |
+| A notice or fine against your home appears only inside Requests | done 2026-10-05 (pull request #4) |
+| One navigation, same names on the website rail, the phone bar and More: Home, Payments (Pay, Statement), Requests (Requests, Messages), Documents, Meetings (Meetings, Voting), Community, Association funds, Settings | done 2026-10-05 (pull request #4) |
+| Phone bar: swap Account for Meetings (Monish set the current bar on 2026-09-24) | done 2026-10-05 (pull request #4): Home, Pay, Requests, Docs, Meetings, More |
+| Rail counts that match nothing on the page | done 2026-10-05 (pull request #4): Meetings counts ballots you have not voted on, Requests counts open notices about your home; Payments and replies carry no count |
 | Real photo and file upload on requests | later, after section 1 hides the control |
 
 ## 6. Left open from the audit rounds

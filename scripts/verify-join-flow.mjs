@@ -153,6 +153,102 @@ try {
   const { error: sneak, data: sneaked } = await owner3.client
     .from("memberships").update({ role: "treasurer" }).eq("association_id", associationId).eq("unit_id", unitByLabel["107 Willow Creek Dr"]).select();
   check("a resident cannot give themselves an office", Boolean(sneak) || (sneaked ?? []).length === 0, sneak?.message ?? `${(sneaked ?? []).length} rows`);
+
+  // 8. A home that is already on the register (migration 0080). The board
+  //    picks the home; nothing is created from what the person typed.
+  const unitCount = async () =>
+    (await admin.from("units").select("id", { count: "exact", head: true }).eq("association_id", associationId)).count;
+  const openSeats = async (unitId) =>
+    (await admin.from("memberships").select("id,full_name,profile_id,invited_email").eq("unit_id", unitId).is("ends_on", null)).data ?? [];
+  const ask = async (tag, name, typed) => {
+    const person = await signUp(mail(tag), name);
+    await person.client.rpc("request_to_join", { p_code: code, p_name: name, p_email: mail(tag), p_unit: typed, p_note: "" });
+    const { data } = await admin.from("join_requests").select("id").eq("association_id", associationId).eq("email", mail(tag)).single();
+    return { ...person, requestId: data?.id };
+  };
+  const homes = Object.fromEntries(Object.entries(unitByLabel));
+  const emptyHome = homes["110 Willow Creek Dr"];
+  await admin.from("memberships").update({ full_name: "", invited_email: null }).eq("unit_id", emptyHome);
+  await admin.from("memberships").update({ invited_email: null }).eq("unit_id", homes["111 Willow Creek Dr"]);
+  await admin.from("memberships").update({ full_name: "", invited_email: null }).eq("unit_id", homes["113 Willow Creek Dr"]);
+  const homesBefore = await unitCount();
+
+  // 8a. An empty home takes the requester as its owner, on the spot.
+  const pat = await ask("pat", "Pat Lind", "110");
+  const seated = await founder.client.rpc("seat_join_request", { p_request_id: pat.requestId, p_unit_id: emptyHome });
+  check("the board seats a requester on a home with no owner", !seated.error && seated.data === emptyHome, seated.error?.message ?? "");
+  const { data: patMine } = await pat.client.rpc("my_associations");
+  check("and they are in the association at once", (patMine ?? []).some((m) => m.association_id === associationId), JSON.stringify(patMine));
+  const { data: patUnits } = await pat.client.rpc("my_unit_ids");
+  check("on that home and no other", (patUnits ?? []).length === 1 && patUnits[0] === emptyHome, String(patUnits));
+  check("no home was created from what they typed", (await unitCount()) === homesBefore, `${await unitCount()} vs ${homesBefore}`);
+  const again = await founder.client.rpc("seat_join_request", { p_request_id: pat.requestId, p_unit_id: emptyHome });
+  check("asking twice changes nothing", !again.error && (await openSeats(emptyHome)).length === 1, again.error?.message ?? "");
+
+  // 8b. A home whose listed owner has not signed in, with no email on file.
+  const sol = await ask("sol", "Sol Marsh", "111");
+  const solSeat = await founder.client.rpc("seat_join_request", { p_request_id: sol.requestId, p_unit_id: homes["111 Willow Creek Dr"] });
+  const solSeats = await openSeats(homes["111 Willow Creek Dr"]);
+  check("a listed owner with no email hands the seat to the requester", !solSeat.error && solSeats.length === 1 && solSeats[0].full_name === "Sol Marsh" && Boolean(solSeats[0].profile_id), solSeat.error?.message ?? JSON.stringify(solSeats));
+
+  // 8c. A different owner: refused as the only owner, allowed as a second.
+  const rae = await ask("rae", "Rae Stone", "108");
+  const unsignedOther = await founder.client.rpc("seat_join_request", { p_request_id: rae.requestId, p_unit_id: homes["108 Willow Creek Dr"] });
+  check("an owner who has not signed in, with another email, is not replaced", /already has an owner/i.test(unsignedOther.error?.message ?? ""), unsignedOther.error?.message ?? "no error");
+  const quinn = await ask("quinn", "Quinn Ross", "107");
+  const signedOther = await founder.client.rpc("seat_join_request", { p_request_id: quinn.requestId, p_unit_id: homes["107 Willow Creek Dr"] });
+  check("an owner who has signed in is not replaced", /already has an owner/i.test(signedOther.error?.message ?? ""), signedOther.error?.message ?? "no error");
+  check("and nothing was seated or created", (await openSeats(homes["107 Willow Creek Dr"])).length === 1 && (await unitCount()) === homesBefore);
+  const second = await founder.client.rpc("seat_join_request", { p_request_id: quinn.requestId, p_unit_id: homes["107 Willow Creek Dr"], p_as_second: true });
+  const { data: quinnUnits } = await quinn.client.rpc("my_unit_ids");
+  check("as a second owner they share the home", !second.error && (quinnUnits ?? []).includes(homes["107 Willow Creek Dr"]), second.error?.message ?? String(quinnUnits));
+  const { data: ownerStill } = await owner3.client.rpc("my_unit_ids");
+  check("and the first owner keeps theirs", (ownerStill ?? []).includes(homes["107 Willow Creek Dr"]), String(ownerStill));
+  check("two seats, one home", (await openSeats(homes["107 Willow Creek Dr"])).length === 2 && (await unitCount()) === homesBefore);
+
+  // 8d. Only a settings holder, and only on their own association.
+  const raeByOwner = await owner3.client.rpc("seat_join_request", { p_request_id: rae.requestId, p_unit_id: homes["109 Willow Creek Dr"] });
+  check("a resident cannot seat anybody", Boolean(raeByOwner.error), raeByOwner.error?.message ?? "no error");
+  const byVisitor = await anon().rpc("seat_join_request", { p_request_id: rae.requestId, p_unit_id: homes["109 Willow Creek Dr"] });
+  check("a visitor cannot seat anybody", Boolean(byVisitor.error), byVisitor.error?.message ?? "no error");
+
+  // 8e. A second owner from the household card.
+  const leeEmail = mail("lee");
+  const added = await founder.client.rpc("add_second_owner", { p_unit_id: homes["112 Willow Creek Dr"], p_name: "Lee Two", p_email: leeEmail });
+  check("the board adds a second owner to a home with one", !added.error && (await openSeats(homes["112 Willow Creek Dr"])).length === 2, added.error?.message ?? "");
+  const lee = await signUp(leeEmail, "Lee Two");
+  const { data: leeUnits } = await lee.client.rpc("my_unit_ids");
+  check("who claims the seat by signing up with that email", (leeUnits ?? []).includes(homes["112 Willow Creek Dr"]), String(leeUnits));
+  const twice = await founder.client.rpc("add_second_owner", { p_unit_id: homes["112 Willow Creek Dr"], p_name: "Lee Two", p_email: leeEmail });
+  check("the same person is not added twice", Boolean(twice.error), twice.error?.message ?? "no error");
+  const onEmpty = await founder.client.rpc("add_second_owner", { p_unit_id: homes["113 Willow Creek Dr"], p_name: "Nobody First", p_email: mail("nobody") });
+  check("a home with no owner is not given a second one first", Boolean(onEmpty.error), onEmpty.error?.message ?? "no error");
+  const byResident = await owner3.client.rpc("add_second_owner", { p_unit_id: homes["112 Willow Creek Dr"], p_name: "Sneak", p_email: mail("sneak") });
+  check("a resident cannot add an owner", Boolean(byResident.error), byResident.error?.message ?? "no error");
+
+  // 8f. Correcting the email an owner will claim their seat with.
+  const home114 = homes["114 Willow Creek Dr"];
+  const fixed = await founder.client.rpc("change_owner_email", { p_unit_id: home114, p_old_email: mail("owner10"), p_new_email: mail("owner10b") });
+  const fixedSeats = await openSeats(home114);
+  check("the board changes the email on a seat nobody has claimed", !fixed.error && fixedSeats[0]?.invited_email === mail("owner10b"), fixed.error?.message ?? JSON.stringify(fixedSeats));
+  const owner10 = await signUp(mail("owner10b"), "Owner 10");
+  const { data: o10Units } = await owner10.client.rpc("my_unit_ids");
+  check("and the owner signing up with the new one claims it", (o10Units ?? []).includes(home114), String(o10Units));
+  const wrongOld = await founder.client.rpc("change_owner_email", { p_unit_id: homes["109 Willow Creek Dr"], p_old_email: "nobody@example.com", p_new_email: mail("x") });
+  check("an email no owner has is refused", Boolean(wrongOld.error), wrongOld.error?.message ?? "no error");
+  const signedIn = await founder.client.rpc("change_owner_email", { p_unit_id: homes["107 Willow Creek Dr"], p_old_email: mail("owner3"), p_new_email: mail("owner3c") });
+  check("an owner who has signed in keeps their own email", Boolean(signedIn.error), signedIn.error?.message ?? "no error");
+  const byOwner = await owner3.client.rpc("change_owner_email", { p_unit_id: homes["109 Willow Creek Dr"], p_old_email: mail("owner5"), p_new_email: mail("owner5b") });
+  check("a resident cannot change an email", Boolean(byOwner.error), byOwner.error?.message ?? "no error");
+
+  // 8g. A sale (migration 0081) ends every owner's seat, not only the newest.
+  const today = new Date().toISOString().slice(0, 10);
+  const sold = await founder.client.rpc("transfer_home", { p_unit_id: homes["107 Willow Creek Dr"], p_new_name: "Bea Buyer", p_new_email: mail("buyer"), p_closing_date: today });
+  check("the board records a sale of a home with two owners", !sold.error, sold.error?.message ?? "");
+  const { data: sellerUnits } = await owner3.client.rpc("my_unit_ids");
+  const { data: coUnits } = await quinn.client.rpc("my_unit_ids");
+  check("neither seller keeps the home", !(sellerUnits ?? []).includes(homes["107 Willow Creek Dr"]) && !(coUnits ?? []).includes(homes["107 Willow Creek Dr"]), `${sellerUnits} / ${coUnits}`);
+  check("one seat is open, the buyer's", (await openSeats(homes["107 Willow Creek Dr"])).length === 1);
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
