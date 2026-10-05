@@ -287,7 +287,7 @@ confirmed and survived a reload, 390px on about forty pages.
 
 | Where | What happens | Status |
 | --- | --- | --- |
-| Dark mode on `/start`, `/board/setup`, `/board` | A hydration error drops the dark theme and the page renders light | next |
+| Dark mode on `/start`, `/board/setup`, `/board` | A hydration error drops the dark theme and the page renders light | done 2026-10-05 for what the visitor sees (pull request #8): the theme is put back on every mount, checked on ten loads. Still open: the hydration error itself. It fires at random on about half of loads of `/start` in the production build only, in light mode too; after React recovers, the page matches the server except the theme icon. Not yet found: no direct browser reads in the wizard or the question flow |
 | Wizard, homes by number | Preview says 5 homes and $1,000; the association is made with 4 and $800, the founder's home merged into a range | next |
 | Resident pay, "Other amount" | -5 reads "Pay $5.00"; 99999 on a $285 balance has no warning; 0 disables the button without saying why | done 2026-10-05 (pull request #8): refused with a reason; an overpayment says the extra stays as credit; the server already refused bad amounts |
 | Resident settings, phone | "abc" saves | done 2026-10-05 (pull request #8) |
