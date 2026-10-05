@@ -10,7 +10,13 @@ review (257 findings, seven walkers). Both are summarised here; the full
 findings were session files and are not in the repo, so anything worth
 keeping is written into a row below.
 
-**Where it stands (2026-10-05, night):** sections 0, 2 to 5, 9, 10 and most
+**Where it stands (2026-10-05, late night):** pull request #8 is merged and
+live too; migrations through 0094 are applied. Pull request #9 (branch
+`demo-agrees`) holds the rest of the browser walk and four more section 12
+rows (lost disputes booked, approvals under a lock, Stripe pausing payments
+emailed, no sale before closing). Earlier note follows.
+
+**Where it stood (2026-10-05, night):** sections 0, 2 to 5, 9, 10 and most
 of 11 are on production (pull request #7 merged, main at 41597a9), with the
 first half of section 12: one-off charges, undoing a payment recorded by
 hand, sale privacy, autopay retry, no late fee on a starting balance.
@@ -261,11 +267,11 @@ annual dues, month ends, the dues job running twice, view-only seats).
 | The buyer of a home reads the seller's history | Payments, request threads, board messages and votes are readable by anyone with a current seat on the home, with no date filter | done 2026-10-05 for requests, threads, votes and rule notices (branch first-year, migration 0089 applied, `verify-sale-privacy`): hidden from the buyer where a previous household owned the home. The money ledger stays whole on purpose: the balance is summed from it |
 | A credit balance at sale | Carries to the buyer without a word; the sale dialog only settles money owed | done 2026-10-05 (branch first-year): the sale form says the credit stays with the home unless the board settles it with the seller first |
 | Autopay fails once | Never retried that month, even after the owner fixes the card; the board is not told | done 2026-10-05 for the retry (branch first-year, migration 0085 applied): tried again only when the owner has added a method since, never twice a day, three times a month at most. Still next: list failures on Past due |
-| Stripe restricts the association's account | Autopay still tries and owners get "problem with your payment method" | done 2026-10-05 for the wait (branch first-year): autopay holds off while Stripe has charges off. Still next: email finance holders when Stripe restricts the account |
+| Stripe restricts the association's account | Autopay still tries and owners get "problem with your payment method" | done 2026-10-05 for the wait (branch first-year): autopay holds off while Stripe has charges off. Done 2026-10-05 (pull request #9): finance holders are emailed, once a day, with what Stripe is waiting for |
 | An owner with two or three homes | Sees, pays and votes for one home only | next: a home switcher on the resident side; one vote cast per home held |
 | The president cannot be reached | Only the sitting president can name the next one | next: platform admin can reassign; later a vote of officers |
-| A lost card dispute or a late bank return | Finance holders are emailed; the owner's statement still says paid | next: book it as a returned payment |
-| Two officers approve the same vendor payment at once | One approval can be lost (the whole list is written from the browser) | next: an `approve_payout` function that adds the caller |
+| A lost card dispute or a late bank return | Finance holders are emailed; the owner's statement still says paid | done 2026-10-05 (pull request #9, migration 0093 applied): booked like a refund, once per dispute; the email says so |
+| Two officers approve the same vendor payment at once | One approval can be lost (the whole list is written from the browser) | done 2026-10-05 (pull request #9, migration 0094 applied): added under a row lock, once per account |
 | A home that should not be billed (builder lots) | No exempt flag; zero means "not set" | later, with vacant lots |
 | A home added mid-period | Waits for the next bill; no proration | later: say so on the add-home form |
 | A home removed or two lots merged after the first bill | Refused; it keeps being billed | next: allow when the balance is zero |
@@ -274,7 +280,7 @@ annual dues, month ends, the dues job running twice, view-only seats).
 | Year end | Owner statement CSV and board transactions CSV only; no printable statement, no all-homes statement run | later |
 | Documents | No versions; a new upload sits beside the old one | later |
 | A late fee on a starting balance | Confirmed on the live database: a balance as of months ago drew a late fee on the first morning | done 2026-10-05 (branch first-year, migration 0087 applied): a brought-forward line never draws a fee; dues billed here still do |
-| A sale with a closing date in the future | Checked 2026-10-05: the sale takes effect the moment it is recorded, whatever the date, so the seller is locked out early | done 2026-10-05 in the form (branch first-year). Later: the same refusal in `transfer_home` |
+| A sale with a closing date in the future | Checked 2026-10-05: the sale takes effect the moment it is recorded, whatever the date, so the seller is locked out early | done 2026-10-05 in the form and in `transfer_home` (migration 0092 applied) |
 | A check that bounces after dues read as paid | Reversing the payment puts the money back on the balance, but `assess_late_fees` reads the old dues line as covered (the reversal is a later charge), so no late fee follows; a Stripe refund has the same gap | done 2026-10-05 (branch first-year, migration 0091 applied, `verify-late-fees` 21/21) |
 
 ## 13. What the browser walk found
@@ -293,15 +299,15 @@ confirmed and survived a reload, 390px on about forty pages.
 | Resident settings, phone | "abc" saves | done 2026-10-05 (pull request #8) |
 | Wizard | Dues of 0 erased silently, no upper limit; founder email "notanemail" accepted; pasted list keeps "3 Founder Way" and "3 founder way" as two homes; Continue disabled with no reason in four places | done 2026-10-05 (pull request #8): each field says what is wrong; dues cap $100,000; name cap 80; a paste says how many were added and skipped |
 | Meetings, schedule | Time "banana" accepted; the notice adds a video link the board never entered | done 2026-10-05 for the time (pull request #8). The link is left: every meeting gets a video room in the app ("Join the call"), so the notice matches it. Waiting on Monish: keep a room on every meeting, or only when the board asks for one |
-| Demo only: a dues change | Past bills and "dues collected" move with it, against what Settings says; Home says $310 while the September line says $285 | next: the demo should bill from the records the way the database does |
-| Demo only: vendor payment recorded | Cash on hand, the vendor's total and Transactions do not move | next |
-| Demo only: counts | Hero says 88 homes after a household is added (89 elsewhere); Voting mixes "of 88" and "of 89" | next |
-| Demo only: resident pays by bank | Statement says $285.00, the board ledger +$282.72 | next: no fee is taken anywhere now |
-| Resident home, paid up | Shows the next bill as the current balance before it is due | next: say "next bill" |
-| Setup list | "Add every home and its owner" cannot attach an owner to a listed home; counts disagree ("1 of 9", "2 of 10", "Step 1 of 8"); copy says "Getting started", the nav says "Setting up" | next |
-| Finances overview | "Total spent" includes reserve transfers, "Money out" does not | next: one definition or two labels |
-| Requests | Approve acts with no note and the toast names the number, not the title | next |
-| Settings | Access grid and toggles save without a word; first click removes access | next |
-| Resident add card | Copy for developers ("Use the test number 4242...") | next |
-| Small | `/about` linked from nowhere; 404's main button is "Back to sign in"; pinned announcement under a newer one; "Change dues" field empty; notice title shows the fix, not the rule; no maximum on the association name; weekday names wrong in demo copy; "An admin can turn it back on" | next |
+| Demo only: a dues change | Past bills and "dues collected" move with it, against what Settings says; Home says $310 while the September line says $285 | done 2026-10-05 (pull request #9): billed is the sum of the dues lines on the statements, in the demo and signed in. Left: months before the loaded history still use the rate (`association_overview` would need dues-only monthly sums); the autopay "usually" line needs the same "next bill is already $285" note |
+| Demo only: vendor payment recorded | Cash on hand, the vendor's total and Transactions do not move | done 2026-10-05 (pull request #9); signed in it already moved |
+| Demo only: counts | Hero says 88 homes after a household is added (89 elsewhere); Voting mixes "of 88" and "of 89" | done 2026-10-05 (pull request #9): one count from the register; a ballot keeps the count it opened with and says so when it differs |
+| Demo only: resident pays by bank | Statement says $285.00, the board ledger +$282.72 | checked 2026-10-05: that is what the real path records too (the deposit is net of Stripe's processing fee, which sits on the payment row and nowhere on the ledger). Waiting on Monish: show the fee as its own ledger line, which is a database change |
+| Resident home, paid up | Shows the next bill as the current balance before it is due | done 2026-10-05 (pull request #9): "Next bill, due September 1" and "Pay early"; the Homeowners badge says "Not due yet" |
+| Setup list | "Add every home and its owner" cannot attach an owner to a listed home; counts disagree ("1 of 9", "2 of 10", "Step 1 of 8"); copy says "Getting started", the nav says "Setting up" | done 2026-10-05 (pull request #9): one `setupCounts` for every screen, the owner of a listed home can be named there, one name |
+| Finances overview | "Total spent" includes reserve transfers, "Money out" does not | done 2026-10-05 (pull request #9): moving money to reserves is not spending; shown on its own line. Left: the Trends screen still lists "Reserve contributions" as a category |
+| Requests | Approve acts with no note and the toast names the number, not the title | done 2026-10-05 for the toast (pull request #9) |
+| Settings | Access grid and toggles save without a word; first click removes access | done 2026-10-05 (pull request #9) |
+| Resident add card | Copy for developers ("Use the test number 4242...") | done 2026-10-05 (pull request #9) |
+| Small | `/about` linked from nowhere; 404's main button is "Back to sign in"; pinned announcement under a newer one; "Change dues" field empty; notice title shows the fix, not the rule; no maximum on the association name; weekday names wrong in demo copy; "An admin can turn it back on" | done 2026-10-05 (pull request #9), except the notice title: the form has no title field, so the fix text is the title. Next: a short title field on the notice form |
 

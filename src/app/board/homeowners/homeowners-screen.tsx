@@ -1135,7 +1135,9 @@ function DuesBadge({ owner, unsold }: { owner: Owner; unsold: boolean }) {
       </Badge>
     );
   }
-  if (owner.balanceCents > 0) return <Badge tone="neutral">Balance due</Badge>;
+  // Owed but not late: the only thing on the statement is a bill whose due
+  // date has not come. "Balance due" read as a problem beside "Paid up".
+  if (owner.balanceCents > 0) return <Badge tone="neutral">Not due yet</Badge>;
   return (
     <Badge tone="ok" dot>
       Paid up

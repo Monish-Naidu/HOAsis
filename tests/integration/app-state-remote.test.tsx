@@ -438,11 +438,10 @@ describe("a write aimed at one row", () => {
     act(() => result.current.approvePayout(waiting.id));
     await settled();
 
-    const [update] = writes().filter((s) => s.target === "payouts");
-    expect(update.counted).toBe(true);
-    expect((update.values as { approvals: unknown[] }).approvals).toHaveLength(
-      waiting.approvals.length + 1,
-    );
+    // The database adds the signature itself (approve_payout, 0094); the
+    // browser no longer writes the list.
+    expect(targets()).toEqual(["rpc:approve_payout"]);
+    expect(writes().filter((s) => s.target === "payouts")).toHaveLength(0);
   });
 });
 
@@ -1401,11 +1400,11 @@ describe("two presses in quick succession", () => {
     });
     await settled();
 
-    expect(writes().filter((s) => s.target === "payouts")).toHaveLength(1);
-    const mine = server()
-      .payouts.find((p) => p.id === waiting.id)!
-      .approvals.filter((a) => a.name === server().accounts.find((x) => x.id === ME)!.name);
-    expect(mine).toHaveLength(1);
+    // Both presses reach the database, which signs once; the second press
+    // used to be stopped here by a name check that two different officers
+    // called Pat would both fail.
+    expect(targets().filter((t) => t === "rpc:approve_payout").length).toBeGreaterThanOrEqual(1);
+    expect(writes().filter((s) => s.target === "payouts")).toHaveLength(0);
   });
 });
 

@@ -4433,26 +4433,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const asked = rc.payouts.find((p) => p.id === payoutId);
         if (!approver || !asked) return;
         if (asked.approvals.some((a) => a.name === approver.name)) return;
-        void remoteWrite("Approving the payment", () => {
-          // The payment as the last write left it. A second press that
-          // queued behind the first finds its own name there and stops,
-          // instead of signing twice.
-          const payout = latest(rc).payouts.find((p) => p.id === payoutId) ?? asked;
-          if (payout.approvals.some((a) => a.name === approver.name)) {
-            return Promise.resolve({ error: null });
-          }
-          const approvals = [...payout.approvals, { name: approver.name, at: todayIsoDate() }];
-          return supabaseBrowser()
-            .from("payouts")
-            .update(
-              {
-                approvals,
-                status: approvals.length >= payout.approvalsRequired ? "scheduled" : payout.status,
-              },
-              { count: "exact" },
-            )
-            .eq("id", payoutId);
-        });
+        // The database adds the signature under a row lock (approve_payout,
+        // 0094). The browser used to read the list, add a name and write
+        // the whole list back, and two officers pressing at once each wrote
+        // a list of one over the other's.
+        void remoteWrite("Approving the payment", () =>
+          supabaseBrowser().rpc("approve_payout", { p_payout_id: payoutId }),
+        );
         return;
       }
       const approver = sliceStore(communityId, "accounts")
