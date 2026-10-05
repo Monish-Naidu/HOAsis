@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MarketingFooter, MarketingHeader } from "@/components/app/marketing-chrome";
 import { Callout } from "@/components/ui/primitives";
-import { PRICE_PER_HOME_CENTS, PRICE_PER_TRANSACTION_CENTS, TRIAL_DAYS } from "@/lib/pricing";
+import { PRICE_PER_HOME_CENTS, TRIAL_DAYS } from "@/lib/pricing";
 import { SUPPORT_EMAIL, SUPPORT_RESPONSE } from "@/lib/support";
 import { money } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 /** Last edited. Bump when the words change. */
-const UPDATED = "September 26, 2026";
+const UPDATED = "October 4, 2026";
 
 /**
  * The terms, written to be read by a board president rather than skimmed by
@@ -67,8 +67,8 @@ export default function TermsPage() {
           <Section title="3. Price">
             <p>
               {money(PRICE_PER_HOME_CENTS)} per home per month, counting every home on the register
-              whether or not it is occupied, billed monthly to a card the board puts on file, plus{" "}
-              {money(PRICE_PER_TRANSACTION_CENTS)} per online payment. The first {TRIAL_DAYS} days
+              whether or not it is occupied, billed monthly to a card the board puts on file. That is
+              the whole price: we charge nothing per payment. The first {TRIAL_DAYS} days
               are free and no card is needed to start. If no card is on file when the free days end,
               the board side of the service pauses two weeks later; residents can still see their
               own statements. We will give at least thirty days&apos; notice before changing the
@@ -80,7 +80,8 @@ export default function TermsPage() {
             <p>
               Online payments are processed by Stripe under the association&apos;s own Stripe account.
               Money goes from the resident to the association&apos;s bank account and never sits with
-              us. Stripe&apos;s processing fees and our per payment fee are shown on every receipt.
+              us. Stripe&apos;s processing fees are Stripe&apos;s, come out of the association&apos;s
+              deposit, and are shown on every receipt.
               Refunds of a resident&apos;s payment are the association&apos;s decision and are made
               from its Stripe dashboard. Disputes and chargebacks are between the resident, the
               association and Stripe.

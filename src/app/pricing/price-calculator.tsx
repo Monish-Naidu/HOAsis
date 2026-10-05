@@ -35,10 +35,10 @@ const MAX_HOMES = 2_000;
 const INCLUDED: { lead: string; rest: string }[] = [
   { lead: "Every feature", rest: "at every size" },
   { lead: "Unlimited", rest: "board members and residents" },
-  { lead: "Accounting", rest: "with bank matching and reserves" },
+  { lead: "Accounting", rest: "for dues, expenses and reserves" },
   { lead: "Resident site", rest: "that works on any phone" },
   { lead: "Voting and meetings", rest: "with agendas and a call-in link" },
-  { lead: "Documents", rest: "and the public records page" },
+  { lead: "Documents", rest: "every owner can open" },
   { lead: "Board guides", rest: "for your state's rules" },
   { lead: "Live support", rest: "from the people who built it" },
 ];
@@ -82,7 +82,7 @@ export function PriceCalculator() {
               <Badge tone="ok">{TRIAL_DAYS} days free, no card</Badge>
             </div>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <p className="tnum text-gradient text-[56px] font-semibold leading-none tracking-[-0.04em]">
+              <p className="tnum text-[56px] font-semibold leading-none tracking-[-0.04em] text-fg">
                 {money(PRICE_PER_HOME_CENTS, { cents: false })}
               </p>
               <p className="text-[17px] font-medium text-fg-muted">per home, per month</p>
@@ -146,7 +146,7 @@ export function PriceCalculator() {
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                  <p className="text-[14px] font-medium text-fg-muted">
                     A month
                   </p>
                   <p key={monthly} className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
@@ -154,7 +154,7 @@ export function PriceCalculator() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                  <p className="text-[14px] font-medium text-fg-muted">
                     A year
                   </p>
                   <p key={annual} className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">

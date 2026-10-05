@@ -30,7 +30,6 @@ import {
   articleBySlug,
   association,
   libraryArticles,
-  communitySettings,
   liveMeeting,
   openRequests,
   reserveComponents,
@@ -39,7 +38,7 @@ import {
   vendorGaps,
   vendors,
 } from "@/lib/data";
-import { computePaymentCost, FEE_SCHEDULE } from "@/lib/payments/instruments";
+import { FEE_SCHEDULE } from "@/lib/payments/instruments";
 import { PRICE_PER_HOME_CENTS, TRIAL_DAYS } from "@/lib/pricing";
 import { cn, daysFromToday, formatDate, money, today } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
@@ -64,62 +63,56 @@ export const metadata = {
  * with icons. Every item is a promise the product keeps today; the free trial
  * moved to the pricing line, where the question it answers is asked.
  */
-const ASSURANCES: { icon: typeof Zap; label: string; tint: TintName }[] = [
-  { icon: Zap, label: "Setup in Minutes", tint: "amber" },
-  { icon: CreditCard, label: "No Card to Start", tint: "blue" },
-  { icon: CircleX, label: "Cancel Whenever", tint: "coral" },
-  { icon: Headphones, label: "Live Support", tint: "teal" },
+const ASSURANCES: { icon: typeof Zap; label: string }[] = [
+  { icon: Zap, label: "Set up in minutes" },
+  { icon: CreditCard, label: "No card to start" },
+  { icon: CircleX, label: "Cancel whenever" },
+  { icon: Headphones, label: "Live support" },
 ];
 
 /**
- * Tints are recognition, assigned once per idea and kept everywhere the idea
- * appears: money is teal, time is amber, records are violet, talking is
- * blue, video is coral. A visitor who reads the strip and then the feature
- * cards sees the same colour on the same thing twice.
+ * Every icon on the page wears the one quiet tile, in the brand's blue. They
+ * were five hues until 2026-10-04, one per idea, and seventeen coloured tiles
+ * down a page read as decoration: the picture at the top is the one loud
+ * thing here. Colour is kept for a state (paid, expiring, live), the way the
+ * product itself uses it.
  */
-const BENEFITS: { icon: typeof Clock; tint: TintName; title: string; body: string }[] = [
+const BENEFITS: { icon: typeof Clock; title: string; body: string }[] = [
   {
     icon: Clock,
-    tint: "amber",
     title: "Save time",
     body: "Automate everyday HOA tasks and reduce busywork.",
   },
   {
     icon: CircleDollarSign,
-    tint: "teal",
     title: "Save money",
     body: "Get professional tools without professional management fees.",
   },
   {
     icon: ShieldCheck,
-    tint: "violet",
     title: "Keep every record",
     body: "Documents, decisions, and money in one place the next board inherits.",
   },
 ];
 
-const POCKET: { icon: typeof Clock; tint: TintName; title: string; body: string }[] = [
+const POCKET: { icon: typeof Clock; title: string; body: string }[] = [
   {
     icon: CircleCheck,
-    tint: "teal",
     title: "Approve",
     body: "Review requests, invoices, and documents on the go.",
   },
   {
     icon: MessagesSquare,
-    tint: "blue",
     title: "Communicate",
     body: "Message homeowners and send notices to everyone.",
   },
   {
     icon: Bell,
-    tint: "amber",
     title: "Stay informed",
     body: "Get real-time updates on what matters most.",
   },
   {
     icon: Video,
-    tint: "coral",
     title: "Meet",
     body: "Hold board meetings anyone can join with a call-in link.",
   },
@@ -370,15 +363,10 @@ function VendorMini() {
 }
 
 /**
- * The rails on the demo association's own dues, priced by the same
- * computePaymentCost the product runs, so the tile and the pay screen agree.
+ * The rails on the demo association's own dues. An owner pays the dues and
+ * nothing on top on either rail, which is what the pay screen shows too.
  */
 function PaymentsMini() {
-  const policy = {
-    flatCents: communitySettings.paymentFeeCents,
-    paidBy: communitySettings.paymentFeePaidBy,
-    waiveOnAch: communitySettings.paymentFeeWaivedOnAch,
-  };
   const dues = association.duesCents;
   return (
     <Mini className="p-2.5">
@@ -389,13 +377,12 @@ function PaymentsMini() {
             { kind: "card", label: "Card" },
           ] as const
         ).map(({ kind, label }) => {
-          const cost = computePaymentCost(kind, dues, policy);
           return (
             <li key={kind} className="px-1 py-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="whitespace-nowrap text-[12px] font-semibold text-fg">{label}</p>
                 <span className="tnum text-[12px] text-fg-muted">
-                  {money(cost.residentPaysCents)}
+                  {money(dues)}
                 </span>
               </div>
               <div className="mt-0.5 flex items-start justify-between gap-2">
@@ -404,9 +391,9 @@ function PaymentsMini() {
                 <p className="min-w-0 text-[11px] leading-snug text-fg-muted">
                   {FEE_SCHEDULE[kind].settlement.replace(/^About /, "")}
                 </p>
-                {/* Under a flat owner fee both rails cost the owner the same;
-                    the saving lands on the association, and the pay screen
-                    says so in the same words. */}
+                {/* Both rails cost the owner the same; the saving lands on
+                    the association, and the pay screen says so in the same
+                    words. */}
                 {kind === "ach" ? <Pill tone="ok">Saves the HOA</Pill> : null}
               </div>
             </li>
@@ -447,20 +434,18 @@ function KnowledgeMini() {
  * place, and moves down here when it does.
  */
 /**
- * The strip under the four feature cards. Each item wears the same solid
- * tile the cards do, in its own tint, so the row reads as the rest of the
- * product and not as a footnote; the grid gives every item the same width.
+ * The strip under the four feature cards. Each item wears the same tile the
+ * cards do, so the row reads as the rest of the product and not as a
+ * footnote; the grid gives every item the same width.
  */
-const EVERYTHING_ELSE: { label: string; icon: typeof Bell; tint: TintName }[] = [
-  { label: "Notices", icon: Bell, tint: "coral" },
-  { label: "Architectural requests", icon: ClipboardCheck, tint: "blue" },
-  { label: "Documents", icon: FileText, tint: "violet" },
-  { label: "Communication", icon: MessagesSquare, tint: "teal" },
-  { label: "Meetings", icon: CalendarDays, tint: "amber" },
-  { label: "Voting", icon: Vote, tint: "violet" },
-  ...(moduleOn("compliance")
-    ? [{ label: "Board guides", icon: BookOpen, tint: "blue" as TintName }]
-    : []),
+const EVERYTHING_ELSE: { label: string; icon: typeof Bell }[] = [
+  { label: "Notices", icon: Bell },
+  { label: "Architectural requests", icon: ClipboardCheck },
+  { label: "Documents", icon: FileText },
+  { label: "Communication", icon: MessagesSquare },
+  { label: "Meetings", icon: CalendarDays },
+  { label: "Voting", icon: Vote },
+  ...(moduleOn("compliance") ? [{ label: "Board guides", icon: BookOpen }] : []),
 ];
 
 /**
@@ -471,21 +456,18 @@ const EVERYTHING_ELSE: { label: string; icon: typeof Bell; tint: TintName }[] = 
 const FEATURES = [
   {
     icon: CreditCard,
-    tint: "blue" as TintName,
     title: "Payments & dues",
     line: "Collected, posted, reconciled.",
     mini: <PaymentsMini />,
   },
   {
     icon: Briefcase,
-    tint: "amber" as TintName,
     title: "Vendor management",
     line: "Contracts and invoices, one place.",
     mini: <VendorMini />,
   },
   {
     icon: ChartNoAxesColumn,
-    tint: "teal" as TintName,
     title: "Reserve tracking",
     line: "Know if you're on track.",
     mini: <ReserveMini />,
@@ -493,15 +475,13 @@ const FEATURES = [
   moduleOn("compliance")
     ? {
         icon: ShieldCheck,
-        tint: "violet" as TintName,
-        title: "Compliance updates",
+            title: "Compliance updates",
         line: "Stay ahead of changing laws.",
         mini: <ComplianceMini />,
       }
     : {
         icon: BookOpen,
-        tint: "violet" as TintName,
-        title: "Board guides",
+            title: "Board guides",
         line: "Plain answers for every board job.",
         mini: <KnowledgeMini />,
       },
@@ -534,7 +514,7 @@ function Notice({
       )}
     >
       <div className="flex items-start gap-3">
-        <IconTile icon={icon} tint={tint} variant="solid" size="sm" />
+        <IconTile icon={icon} tint={tint} size="sm" />
         <div className="min-w-0">
           <p className="text-[14px] font-semibold leading-tight text-fg">{title}</p>
           <p className="mt-0.5 text-[13px] leading-snug text-fg-muted">{body}</p>
@@ -584,7 +564,7 @@ function PocketNotices({
       {next ? (
         <Notice
           icon={CalendarDays}
-          tint="violet"
+          tint="blue"
           title="Board meeting"
           body={`${formatDate(next.date)} at ${next.time}, ${next.location}`}
           className={itemClassNames[2]}
@@ -593,7 +573,7 @@ function PocketNotices({
       {live ? (
         <Notice
           icon={Video}
-          tint="coral"
+          tint="teal"
           title="Board meeting is live"
           body={`Live now, ${live.attendees.length} joined`}
           className={itemClassNames[3]}
@@ -624,18 +604,16 @@ function PocketNotices({
 
 function IconRow({
   icon,
-  tint,
   title,
   body,
 }: {
   icon: typeof Clock;
-  tint: TintName;
   title: string;
   body: string;
 }) {
   return (
     <li className="flex items-start gap-4 py-5">
-      <IconTile icon={icon} tint={tint} variant="solid" size="xl" ring />
+      <IconTile icon={icon} size="xl" />
       <div>
         <p className="text-[19px] font-semibold tracking-[-0.02em] text-fg">{title}</p>
         <p className="mt-1 text-[16px] leading-relaxed text-fg-muted">{body}</p>
@@ -650,18 +628,16 @@ function IconRow({
  */
 function PocketTile({
   icon,
-  tint,
   title,
   body,
 }: {
   icon: typeof Clock;
-  tint: TintName;
   title: string;
   body: string;
 }) {
   return (
     <li className="lift rounded-2xl border border-border bg-surface p-4 shadow-card">
-      <IconTile icon={icon} tint={tint} variant="solid" size="md" />
+      <IconTile icon={icon} size="md" />
       <p className="mt-3 text-[16px] font-semibold tracking-[-0.015em] text-fg">{title}</p>
       <p className="mt-0.5 text-[14px] leading-snug text-fg-muted">{body}</p>
     </li>
@@ -730,13 +706,6 @@ function HeroChip({
 function HeroChips() {
   const request = openRequests()[0];
   const meeting = upcomingMeetings().find((m) => m.status !== "live");
-  // The demo association's own dues, priced by the same computePaymentCost
-  // the pay screen runs, so the chip and the product agree to the cent.
-  const ach = computePaymentCost("ach", association.duesCents, {
-    flatCents: communitySettings.paymentFeeCents,
-    paidBy: communitySettings.paymentFeePaidBy,
-    waiveOnAch: communitySettings.paymentFeeWaivedOnAch,
-  });
   const kind = request ? request.kind.charAt(0).toUpperCase() + request.kind.slice(1) : "";
   return (
     <>
@@ -744,8 +713,8 @@ function HeroChips() {
       <HeroChip
         icon={CircleDollarSign}
         tint="teal"
-        title={`Dues paid, ${money(ach.residentPaysCents)}`}
-        body={ach.platformCents === 0 ? "Bank transfer, no fee" : "Bank transfer, posted today"}
+        title={`Dues paid, ${money(association.duesCents)}`}
+        body="Bank transfer, posted today"
         x={50}
         y={31.5}
         delay={520}
@@ -754,7 +723,7 @@ function HeroChips() {
       {meeting ? (
         <HeroChip
           icon={CalendarDays}
-          tint="violet"
+          tint="blue"
           title="Board meeting"
           body={`${formatDate(meeting.date)} · ${meeting.location}`}
           x={71.5}
@@ -766,7 +735,7 @@ function HeroChips() {
       {request ? (
         <HeroChip
           icon={ClipboardCheck}
-          tint="blue"
+          tint="teal"
           title={`${kind} request approved`}
           body={`Unit ${request.unit} · from your phone`}
           x={93.6}
@@ -829,7 +798,7 @@ export default function MarketingHome() {
           <div className="lg:pr-8">
             <Reveal>
               <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-tint-blue/25 bg-surface/70 py-1 pl-1.5 pr-3 text-[13px] font-semibold text-fg-muted shadow-card backdrop-blur-sm">
-                <span className="inline-flex h-5 items-center rounded-full bg-brand-gradient px-2 text-[11px] font-bold uppercase tracking-[0.06em] text-primary-fg">
+                <span className="inline-flex h-5 items-center rounded-full bg-brand-gradient px-2 text-[12px] font-semibold text-primary-fg">
                   New
                 </span>
                 {TRIAL_DAYS} days free, no card to start
@@ -894,12 +863,10 @@ export default function MarketingHome() {
             reads as evenly spaced from edge to edge rather than as a list
             that starts on the left and runs out. */}
         <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-4 gap-y-5 px-5 py-7 text-[15px] font-semibold sm:grid-cols-4 sm:text-[17px] sm:tracking-[-0.01em]">
-          {ASSURANCES.map(({ icon, label, tint }, index) => (
-            <li key={label}>
-              <Reveal delay={index * 70} className="flex items-center justify-center gap-3">
-                <IconTile icon={icon} tint={tint} variant="solid" size="md" />
-                {label}
-              </Reveal>
+          {ASSURANCES.map(({ icon, label }) => (
+            <li key={label} className="flex items-center justify-center gap-3">
+              <IconTile icon={icon} size="md" />
+              {label}
             </li>
           ))}
         </ul>
@@ -913,15 +880,15 @@ export default function MarketingHome() {
       <section className="overflow-x-clip border-b border-border bg-surface">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
           <div>
-            <Reveal>
+            <div>
               <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
                 Run your HOA.
                 <br />
-                <span className="text-gradient">Not another job.</span>
+                Not another job.
               </h2>
 
-            </Reveal>
-            <Reveal delay={90}>
+            </div>
+            <div>
               <ul className="mt-6 divide-y divide-border">
                 {BENEFITS.map((benefit) => (
                   <IconRow key={benefit.title} {...benefit} />
@@ -934,14 +901,14 @@ export default function MarketingHome() {
                 Get started today
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
-            </Reveal>
+            </div>
           </div>
-          <Reveal delay={160}>
+          <div>
             <MonitorFrame
               src="/marketing/product-finances.png"
               alt="The Your HOAsis board dashboard: money in and out by month, spending by category, and the association's balances"
             />
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -950,11 +917,11 @@ export default function MarketingHome() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-70" aria-hidden />
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <div>
-            <Reveal>
+            <div>
               <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
                 Sound familiar?
               </h2>
-              <p className="mt-3 text-[24px] font-semibold tracking-[-0.02em] text-gradient">
+              <p className="mt-3 text-[24px] font-semibold tracking-[-0.02em] text-fg">
                 Meet Eric.
               </p>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
@@ -964,8 +931,8 @@ export default function MarketingHome() {
               <p className="mt-6 text-[19px] font-semibold tracking-[-0.015em] text-fg">
                 Your HOAsis was built to change that.
               </p>
-            </Reveal>
-            <Reveal delay={90}>
+            </div>
+            <div>
               <Link
                 href="/start"
                 className="press shimmer group mt-7 inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[17px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
@@ -973,9 +940,9 @@ export default function MarketingHome() {
                 Start today
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
-            </Reveal>
+            </div>
           </div>
-          <Reveal delay={160}>
+          <div>
             {/* A photograph, on purpose. The deck drew this as a video player
                 and Monish decided on 2026-08-28 that there is no video to make.
                 On 2026-09-03 the slide's render gave way to a real photo of a
@@ -993,25 +960,24 @@ export default function MarketingHome() {
               />
             </div>
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
       {/* Slide four. */}
       <section id="features" className="scroll-mt-16 border-b border-border bg-surface">
         <div className="mx-auto w-full max-w-7xl px-5 py-20 sm:py-24">
-          <Reveal>
+          <div>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-balance text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
-                Built for the way HOA boards{" "}
-                <span className="text-gradient">actually work.</span>
+                Built for the way HOA boards actually work.
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-[18px] leading-relaxed text-fg-muted">
                 Powerful tools for the things that matter most, so your community runs smoothly
                 today and is prepared for tomorrow.
               </p>
             </div>
-          </Reveal>
+          </div>
 
           {/* Four across from a laptop width up. Under that they keep their
               width and scroll sideways, because a card at 180px cannot hold
@@ -1020,15 +986,11 @@ export default function MarketingHome() {
               and a sliver; the fifth is the strip underneath now. Each card
               sits at its own height: the minis differ. */}
           <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
-            {FEATURES.map(({ icon, tint, title, line, mini }, index) => (
-              <Reveal
-                key={title}
-                delay={index * 80}
-                className="w-[300px] shrink-0 snap-start lg:w-auto"
-              >
+            {FEATURES.map(({ icon, title, line, mini }) => (
+              <div key={title} className="w-[300px] shrink-0 snap-start lg:w-auto">
                 <Card className="lift relative overflow-hidden p-6">
                   <div className="flex flex-col items-center text-center">
-                    <IconTile icon={icon} tint={tint} variant="solid" size="xl" ring />
+                    <IconTile icon={icon} size="xl" />
                     <h3 className="mt-4 text-[19px] font-semibold tracking-[-0.02em] text-fg">
                       {title}
                     </h3>
@@ -1036,14 +998,14 @@ export default function MarketingHome() {
                   </div>
                   <div className="mt-5">{mini}</div>
                 </Card>
-              </Reveal>
+              </div>
             ))}
           </div>
 
-          <Reveal delay={300}>
-            <Card className="mt-6 overflow-hidden bg-gradient-to-r from-tint-blue-soft via-surface to-tint-violet-soft">
+          <div>
+            <Card className="mt-6 overflow-hidden">
               <div className="flex items-center gap-3 border-b border-border/70 px-6 py-4">
-                <IconTile icon={Sparkles} tint="amber" variant="solid" size="sm" />
+                <IconTile icon={Sparkles} size="sm" />
                 <h3 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
                   And everything else
                 </h3>
@@ -1057,12 +1019,12 @@ export default function MarketingHome() {
               <ul
                 className="grid grid-cols-2 gap-px bg-border/60 sm:grid-cols-3 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none"
               >
-                {EVERYTHING_ELSE.map(({ label, icon, tint }) => (
+                {EVERYTHING_ELSE.map(({ label, icon }) => (
                   <li
                     key={label}
                     className="lift flex flex-col items-center gap-3 bg-surface px-3 py-6 text-center"
                   >
-                    <IconTile icon={icon} tint={tint} variant="solid" size="lg" ring />
+                    <IconTile icon={icon} size="lg" />
                     <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em] text-fg">
                       <Check className="size-3.5 shrink-0 text-ok" strokeWidth={3} />
                       {label}
@@ -1071,7 +1033,7 @@ export default function MarketingHome() {
                 ))}
               </ul>
             </Card>
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -1080,18 +1042,18 @@ export default function MarketingHome() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-70" aria-hidden />
         <div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-10">
           <div>
-            <Reveal>
+            <div>
               <h2 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[48px]">
                 Your entire community.
                 <br />
-                <span className="text-gradient">In your pocket.</span>
+                In your pocket.
               </h2>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
                 Your HOAsis keeps you informed, connected, and in control from any phone.
                 Anytime, anywhere.
               </p>
-            </Reveal>
-            <Reveal delay={90}>
+            </div>
+            <div>
               <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                 {POCKET.map((item) => (
                   <PocketTile key={item.title} {...item} />
@@ -1100,14 +1062,14 @@ export default function MarketingHome() {
               <p className="mt-4 text-[15px] text-fg-subtle">
                 Works in any browser today. iPhone and Android apps are next.
               </p>
-            </Reveal>
+            </div>
           </div>
 
           {/* The phone in the middle of its column, the four cards hung
               around it, two a side, their inner edges over the device the
               way notifications sit over a lock screen. */}
           <div className="relative lg:min-h-[700px]">
-            <Reveal delay={160}>
+            <div>
               {/* The phone is drawn at 500px so its screen lines up with the
                   frame. A phone reading the page shrinks the whole drawing
                   with zoom instead, which keeps the two aligned. */}
@@ -1120,8 +1082,8 @@ export default function MarketingHome() {
                   />
                 </div>
               </div>
-            </Reveal>
-            <Reveal delay={240} className="lg:absolute lg:inset-0 lg:z-10">
+            </div>
+            <div className="lg:absolute lg:inset-0 lg:z-10">
               <PocketNotices
                 className="mt-8 grid gap-3 sm:grid-cols-2 lg:contents"
                 itemClassNames={[
@@ -1131,7 +1093,7 @@ export default function MarketingHome() {
                   "lg:absolute lg:right-0 lg:top-[66%] lg:w-[256px]",
                 ]}
               />
-            </Reveal>
+            </div>
           </div>
         </div>
       </section>
@@ -1140,15 +1102,13 @@ export default function MarketingHome() {
           trial, and the next question is what comes after it. */}
       <section className="border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6 px-5 py-12 sm:py-14">
-          <Reveal>
+          <div>
             <div className="flex flex-wrap items-center gap-5">
-              <div className="rounded-2xl border border-tint-blue/20 bg-gradient-to-br from-tint-blue-soft to-tint-violet-soft px-5 py-4 text-center shadow-card">
-                <p className="tnum text-gradient text-[40px] font-semibold leading-none tracking-[-0.04em]">
+              <div className="rounded-2xl border border-border bg-surface-2 px-5 py-4 text-center">
+                <p className="tnum text-[40px] font-semibold leading-none tracking-[-0.04em] text-fg">
                   {money(PRICE_PER_HOME_CENTS)}
                 </p>
-                <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-muted">
-                  per home, monthly
-                </p>
+                <p className="mt-1.5 text-[14px] font-medium text-fg-muted">per home, monthly</p>
               </div>
               <div>
                 <h2 className="text-[26px] font-semibold tracking-[-0.03em] text-fg sm:text-[32px]">
@@ -1159,8 +1119,8 @@ export default function MarketingHome() {
                 </p>
               </div>
             </div>
-          </Reveal>
-          <Reveal delay={80}>
+          </div>
+          <div>
             <Link
               href="/pricing"
               className="press group inline-flex h-11 items-center gap-2 rounded-xl border border-border-2 bg-surface px-5 text-[15px] font-semibold text-fg hover:border-fg-subtle hover:bg-surface-2"
@@ -1168,7 +1128,7 @@ export default function MarketingHome() {
               See pricing
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
-          </Reveal>
+          </div>
         </div>
         {/* The rails, named. Set as quiet wordmarks rather than borrowed logo
             art, and only rails the product actually runs: the huddle said
@@ -1176,9 +1136,7 @@ export default function MarketingHome() {
             2026-09-02, and a logo for a service we do not use is a lie. */}
         <div className="border-t border-border">
           <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-9 gap-y-2 px-5 py-5 sm:justify-between">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-              Payments run on
-            </p>
+            <p className="text-[14px] font-medium text-fg-subtle">Payments run on</p>
             {["Stripe", "ACH", "Visa", "Mastercard", "Apple Pay", "Google Pay"].map((rail) => (
               <span
                 key={rail}
@@ -1191,41 +1149,42 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Close. */}
-      <section className="relative isolate overflow-hidden bg-navy-900 text-navy-50 dark:bg-navy-800">
-        <Image src="/marketing/aerial.jpg" alt="" fill sizes="100vw" className="-z-30 object-cover" />
+      {/* Close. The same neighborhood the page opened on, after dark: every
+          window lit and nobody at a kitchen table with a spreadsheet. It was
+          a stock aerial photograph under a navy wash until 2026-10-04, which
+          put a second kind of picture on a page that opens on a drawn one.
+          The words sit in the picture's own sky, left of the homes; the band
+          is night in both themes, so its inks are fixed. */}
+      <section className="relative isolate overflow-hidden bg-[#070d24] text-navy-50">
+        <Image
+          src="/marketing/hero-night.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="-z-30 object-cover object-[78%_100%]"
+        />
+        {/* Enough dark behind the words to hold them on any crop: from the
+            left on a wide screen, over the whole band on a phone, where the
+            homes sit under the copy rather than beside it. */}
         <div
-          className="absolute inset-0 -z-20 bg-gradient-to-b from-navy-950/85 via-navy-950/75 to-navy-950/90"
+          className="absolute inset-0 -z-20 bg-[#070d24]/70 lg:bg-transparent lg:bg-gradient-to-r lg:from-[#070d24] lg:via-[#070d24]/70 lg:to-transparent"
           aria-hidden
         />
-        {/* Two pools of colour on the navy, so the band glows rather than
-            sits: blue low left, violet high right. Fixed, because the band
-            is the same navy in both themes. */}
-        <div
-          className="pointer-events-none absolute -bottom-40 -left-24 -z-10 size-[34rem] rounded-full bg-[radial-gradient(closest-side,rgb(63_130_242/0.45),transparent)] blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -right-24 -top-40 -z-10 size-[30rem] rounded-full bg-[radial-gradient(closest-side,rgb(143_118_255/0.4),transparent)] blur-3xl"
-          aria-hidden
-        />
-        <div className="mx-auto w-full max-w-6xl px-5 py-24 text-center">
-          <Reveal>
-            <h2 className="mx-auto max-w-2xl text-[36px] font-semibold leading-tight tracking-[-0.035em] sm:text-[52px]">
+        <div className="mx-auto w-full max-w-6xl px-5 py-24 lg:py-36">
+          <div className="max-w-2xl">
+            <h2 className="text-[36px] font-semibold leading-[1.08] tracking-[-0.035em] sm:text-[52px]">
               Fast for the board.
               <br />
-              <span className="bg-gradient-to-r from-[#8fb6ff] via-[#b7a6ff] to-[#6fe0bd] bg-clip-text text-transparent">
-                Calm for the neighborhood.
-              </span>
+              Calm for the neighborhood.
             </h2>
-            <p className="mx-auto mt-4 max-w-lg text-[18px] leading-relaxed text-navy-200">
+            <p className="mt-4 max-w-md text-[18px] leading-relaxed text-navy-100">
               Set up your community in minutes. No card to start, {TRIAL_DAYS} days free, cancel
               whenever.
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/start"
-                className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-white px-6 text-[16px] font-semibold text-navy-950 shadow-float hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-12px_rgb(143_180_255/0.6)]"
+                className="press group inline-flex h-12 items-center gap-2 rounded-xl bg-white px-6 text-[16px] font-semibold text-navy-950 shadow-float hover:-translate-y-0.5"
               >
                 Get started
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -1237,7 +1196,7 @@ export default function MarketingHome() {
                 Log in
               </Link>
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 

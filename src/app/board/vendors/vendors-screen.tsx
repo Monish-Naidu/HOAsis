@@ -440,7 +440,12 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
             <AlertTriangle className="size-3 text-warn" />
           )}
           {approved ? (
-            `Approved by ${p.approvals.map((a) => a.name.split(" ")[0]).join(" and ")}`
+            // Money the board paid from its own bank was never ours to approve.
+            p.approvals.length === 0 ? (
+              "No approval needed"
+            ) : (
+              `Approved by ${p.approvals.map((a) => a.name.split(" ")[0]).join(" and ")}`
+            )
           ) : (
             <a href={`#sign-${p.id}`} className="font-medium text-accent hover:underline">
               Waiting for approval, above

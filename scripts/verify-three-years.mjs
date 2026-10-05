@@ -128,6 +128,9 @@ try {
   if (foundError) throw new Error(foundError.message);
   cleanup.associations.push(hoa);
   check("the association is founded", Boolean(hoa));
+  // Books open on the founding day unless told otherwise (0056); this suite
+  // bills periods that fell due before today.
+  await admin.from("associations").update({ billing_starts_on: "2000-01-01" }).eq("id", hoa);
 
   const people = { "101": president };
   for (const h of HOMES.slice(1)) people[h.unit] = await makeUser(h.name, emails[h.unit]);
@@ -460,9 +463,11 @@ try {
     for (let i = 0; i < chunks; i++) {
       const amount = i === chunks - 1 ? paying - each * (chunks - 1) : each;
       if (amount <= 0) continue;
-      const { error } = await people[h.unit].client.rpc("record_payment", {
+      // Settled the way the webhook settles it; an owner cannot write their
+      // own payment (0062).
+      const { error } = await admin.rpc("record_payment", {
         p_unit_id: unitOf[h.unit], p_amount_cents: amount,
-        p_rail: "ach", p_processor_fee_cents: 35,
+        p_rail: "ach", p_processor_fee_cents: 35, p_paid_by: people[h.unit].id,
       });
       if (error) { check(`unit ${h.unit} could pay`, false, error.message); break; }
       paymentsMade++;

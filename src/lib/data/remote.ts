@@ -1,5 +1,5 @@
 import { placeLabel } from "@/lib/community-links";
-import type { PreviousSetup } from "@/lib/data/new-community";
+import { yearElapsedFrom, type PreviousSetup } from "@/lib/data/new-community";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Community } from "./community";
 import type {
@@ -19,7 +19,7 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
 import { duesFor } from "@/lib/home-types";
-import { clockTime } from "@/lib/utils";
+import { addDays, clockTime, nextDueOnOrAfter } from "@/lib/utils";
 
 /**
  * Loading a real association out of Postgres.
@@ -83,15 +83,26 @@ export async function loadMyAssociations(
   }));
 }
 
-/** The next occurrence of a billing day, on or after a date. */
-function nextDueDate(from: string, day: number): string {
-  const [year, month, today] = from.split("-").map(Number);
-  const safe = Math.min(Math.max(1, day), 28);
-  if (today < safe) {
-    return `${year}-${String(month).padStart(2, "0")}-${String(safe).padStart(2, "0")}`;
-  }
-  const zero = year * 12 + month;
-  return `${Math.floor(zero / 12)}-${String((zero % 12) + 1).padStart(2, "0")}-${String(safe).padStart(2, "0")}`;
+/**
+ * The next bill an association will issue, looking from `today`.
+ *
+ * On its cadence and counted from its fiscal year, the way the daily run
+ * bills, and not before the first bill the board set. Looking starts the day
+ * after today, so on a due day "next" is the following period and not the
+ * bill issued this morning.
+ */
+export function nextChargeDateFor(
+  today: string,
+  a: {
+    due_day: number;
+    dues_cadence: "monthly" | "quarterly" | "annually";
+    fiscal_year_start?: string | null;
+    billing_starts_on?: string | null;
+  },
+): string {
+  const tomorrow = addDays(today, 1);
+  const from = a.billing_starts_on && a.billing_starts_on > tomorrow ? a.billing_starts_on : tomorrow;
+  return nextDueOnOrAfter(from, a.due_day, a.dues_cadence, a.fiscal_year_start ?? "01-01");
 }
 
 /**
@@ -413,6 +424,20 @@ export async function loadCommunity(
 
   const a = association.data;
 
+  // Three reads cannot be allowed to fail quietly, because what an empty
+  // answer says is false: no homes, nobody seated (which signs the member
+  // out of their own association), and statements with nothing on them. The
+  // other tables are left to come back empty, since one flaky secondary
+  // read should not lock every member out.
+  const needed: [string, { error: { message: string } | null }][] = [
+    ["the homes", units],
+    ["the roster", memberships],
+    ["the statements", charges],
+  ];
+  for (const [what, result] of needed) {
+    if (result.error) throw new Error(`Could not load ${what}: ${result.error.message}`);
+  }
+
   if (overviewCall.error) {
     throw new Error(`Could not load that association: ${overviewCall.error.message}`);
   }
@@ -595,7 +620,7 @@ export async function loadCommunity(
     id: a.id,
     label: a.name,
     asOf: today,
-    nextChargeDate: nextDueDate(today, a.due_day),
+    nextChargeDate: nextChargeDateFor(today, a),
 
     association: {
       id: a.id,
@@ -745,6 +770,9 @@ export async function loadCommunity(
           ytdActualCents: funds
             ? fundsActual(funds, line.category, line.kind as "income" | "expense")
             : (ledger.data ?? [])
+                // Confirmed lines only: one waiting on review is held out
+                // of every report, and association_funds leaves it out too.
+                .filter((e) => Boolean(e.confirmed_at))
                 .filter((e) => e.category === line.category && e.occurred_on >= fiscalYearFrom)
                 .filter((e) => (line.kind === "income" ? e.amount_cents > 0 : e.amount_cents < 0))
                 .reduce((total, e) => total + Math.abs(e.amount_cents), 0),
@@ -772,6 +800,7 @@ export async function loadCommunity(
               : (ledger.data ?? [])
                   .filter(
                     (e) =>
+                      Boolean(e.confirmed_at) &&
                       e.category === "Assessments" &&
                       e.amount_cents > 0 &&
                       e.occurred_on >= fiscalYearFrom,
@@ -780,7 +809,10 @@ export async function loadCommunity(
             kind: "income",
           },
         ],
-    yearElapsed: Number(today.slice(5, 7)) / 12,
+    // From the fiscal year's first month, like the actuals above. The
+    // calendar month over twelve read "83% of the year gone" in October for
+    // a year that began in July.
+    yearElapsed: yearElapsedFrom(a.fiscal_year_start ?? "01-01", today),
 
     reserveComponents: (reserveRows.data ?? []).map((c) => ({
       id: c.id,

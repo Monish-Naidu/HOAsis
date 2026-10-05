@@ -4543,7 +4543,7 @@ export function useAssistantContext() {
       methods: community.instruments.map((m) => ({
         label: m.label,
         kind: m.kind,
-        feeCents: settings.paymentFeeCents,
+        feeCents: 0,
         feePercent: 0,
       })),
       meetings: community.meetings

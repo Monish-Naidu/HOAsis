@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
   const { data: association } = await supabase
     .from("associations")
-    .select("stripe_account_id, dues_cents, payment_fee_cents, payment_fee_paid_by, payment_fee_waived_on_ach")
+    .select("stripe_account_id, dues_cents")
     .eq("id", associationId)
     .single();
   if (!association) {
@@ -83,6 +83,19 @@ export async function POST(request: NextRequest) {
       { error: "This association has not set up online payments" },
       { status: 409 },
     );
+  }
+  // The home has to be one of this association's. The intent is created on
+  // the named association's Stripe account with the unit in its metadata, and
+  // the webhook refuses to settle a unit from an account that is not its
+  // own, so a mismatch here is money taken that the books never show.
+  const { data: home } = await supabase
+    .from("units")
+    .select("association_id")
+    .eq("id", unitId)
+    .maybeSingle();
+  if (!home || home.association_id !== associationId) {
+    log.warn("unit is not in the named association", { associationId, unitId });
+    return NextResponse.json({ error: "That home is not part of this association" }, { status: 400 });
   }
   // A fat-fingered amount should fail here, not become a refund conversation.
   // Two years of dues covers any realistic catch-up payment.
@@ -137,13 +150,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unknown rail" }, { status: 400 });
   }
 
-  const cost = costFor(association, rail, amountCents);
+  const cost = costFor(rail, amountCents);
 
   const intent = await stripe().paymentIntents.create(
     {
       amount: cost.residentPaysCents,
       currency: "usd",
-      application_fee_amount: cost.platformCents || undefined,
       customer: customerId,
       payment_method: paymentMethodId,
       payment_method_types: rail === "ach" ? ["us_bank_account"] : ["card"],
@@ -164,7 +176,7 @@ export async function POST(request: NextRequest) {
         paid_by: auth.user.id,
         assessment_cents: String(cost.amountCents),
         platform_fee_cents: String(cost.platformCents),
-        platform_fee_paid_by: association.payment_fee_paid_by ?? "owner",
+        platform_fee_paid_by: "owner",
         rail,
       },
     },

@@ -285,7 +285,6 @@ function StatTiles() {
         <>
       <Stat
         icon={<Landmark className="size-4" />}
-        accent="teal"
         label="Cash on hand"
         value={<CountUp cents={cash.operating} />}
         hint="Operating account"
@@ -293,7 +292,7 @@ function StatTiles() {
       />
       <Stat
         icon={<Home className="size-4" />}
-        accent="coral"
+        accent={delinq.past.length > 0 ? "amber" : undefined}
         label="Past due"
         value={<CountUp kind="number" value={delinq.past.length} />}
         tone={delinq.past.length > 0 ? "warn" : "neutral"}
@@ -306,7 +305,7 @@ function StatTiles() {
       />
       <Stat
         icon={<Percent className="size-4" />}
-        accent="blue"
+        accent={dues.measurable && dues.rate < 0.9 ? "amber" : undefined}
         label={`Dues collected, ${thisYear}`}
         value={dues.measurable ? <CountUp kind="percent" value={Math.round(dues.rate * 100)} /> : "Not yet"}
         tone={dues.measurable && dues.rate < 0.9 ? "warn" : "neutral"}
@@ -323,7 +322,6 @@ function StatTiles() {
         // owners informed are the ones who chase the sign-ups.
         <Stat
           icon={<Users className="size-4" />}
-          accent="violet"
           label="Homes signed up"
           value={<CountUp kind="number" value={signedUp} />}
           hint={`of ${pluralize(households, "home")}`}
@@ -332,7 +330,7 @@ function StatTiles() {
       )}
       <Stat
         icon={<CalendarDays className="size-4" />}
-        accent="amber"
+        accent={liveMeeting ? "teal" : undefined}
         label="Next meeting"
         value={
           liveMeeting

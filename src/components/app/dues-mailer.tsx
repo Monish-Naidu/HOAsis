@@ -66,7 +66,13 @@ export function DuesMailer() {
       }
       setOutcome({ ...body, dryRun });
       if (!dryRun) {
-        notify(`${pluralize(body.sent, "email")} sent`, "ok");
+        // Say what happened. A run where every send failed is not a success,
+        // and one with nobody to write to is not a failure.
+        const failed = Number(body.failed ?? 0);
+        if (body.sent > 0 && failed === 0) notify(`${pluralize(body.sent, "email")} sent`, "ok");
+        else if (body.sent > 0) notify(`${pluralize(body.sent, "email")} sent, ${failed} could not be sent`, "warn");
+        else if (failed > 0) notify(`No emails went out. ${pluralize(failed, "send")} failed.`, "warn");
+        else notify("Nobody to send to", "info");
       }
     } catch {
       notify("Could not reach the mail service", "warn");

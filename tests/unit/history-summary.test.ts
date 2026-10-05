@@ -125,19 +125,30 @@ describe("the server's month sums read the same as the lines", () => {
     expect(operatingRunway(part, whole.asOf)).toEqual(operatingRunway(whole, whole.asOf));
   });
 
-  it("reads late fees from the server's figure when there is one", () => {
-    expect(lateFeesOwed(part)).toBe(lateFeesOwed(whole));
+  it("hands back the server's late fee figure untouched when there is one", () => {
+    // Only the pass-through is checked here: the helper above fills the
+    // figure from `lateFeesOwed` itself, so comparing part with whole would
+    // be the function against itself. The arithmetic is pinned to statements
+    // written out by hand in metrics.test.ts.
+    const served: Community = { ...part, history: { ...part.history!, lateFeesOwedCents: 12_345 } };
+    expect(lateFeesOwed(served)).toBe(12_345);
   });
 
   it("steps the sums aside once every line has been fetched", () => {
     const loaded: Community = { ...part, ledger: whole.ledger, history: { ...part.history!, ledgerLoaded: true } };
-    expect(ledgerFlows(loaded)).toEqual(whole.ledger);
+    // Every line, less the ones waiting on review, which no report counts.
+    expect(ledgerFlows(loaded)).toEqual(whole.ledger.filter((e) => e.status !== "needs-review"));
     expect(netByYear(loaded)).toEqual(netByYear(whole));
   });
 
-  it("leaves the fixtures alone", () => {
+  it("reads the fixtures line for line, less the ones waiting on review", () => {
     expect(whole.history).toBeUndefined();
-    expect(ledgerFlows(whole)).toBe(whole.ledger);
+    const held = whole.ledger.filter((e) => e.status === "needs-review");
+    expect(held.length).toBeGreaterThan(0);
+    expect(ledgerFlows(whole)).toEqual(whole.ledger.filter((e) => e.status !== "needs-review"));
+    expect(ledgerFlows(whole)).toHaveLength(whole.ledger.length - held.length);
+    // Worked out once per ledger, since every chart on a screen asks.
+    expect(ledgerFlows(whole)).toBe(ledgerFlows(whole));
   });
 });
 

@@ -457,7 +457,11 @@ export function Stat({
   hint?: ReactNode;
   tone?: Tone;
   icon?: ReactNode;
-  /** A coloured hairline along the top and a tile behind the icon, so four tiles in a row read as four things. */
+  /**
+   * A coloured hairline along the top and a tile behind the icon. For a tile
+   * whose number is in a state worth the eye (past due, live), not one per
+   * tile: four colours in a row made the one that mattered look like the rest.
+   */
   accent?: TintName;
   className?: string;
   /** Makes the whole tile the way into its detail screen. */
@@ -488,7 +492,11 @@ export function Stat({
               {icon}
             </IconTile>
           ) : (
-            <span className="text-fg-subtle">{icon}</span>
+            // The tile's own box, so a row of tiles lines up whether or not
+            // each one is wearing a colour.
+            <span className="inline-flex size-8 shrink-0 items-center justify-center text-fg-subtle">
+              {icon}
+            </span>
           )
         ) : null}
       </div>

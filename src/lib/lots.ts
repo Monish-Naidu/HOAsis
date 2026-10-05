@@ -105,11 +105,13 @@ export function phaseProblems(phases: LotPhase[], homeNoun = "Lot"): PhaseProble
       continue;
     }
 
+    // Claimed by id, not by label: two ranges a board gave the same name are
+    // still two ranges, and a number in both is still listed twice.
     const overlaps: number[] = [];
     for (let n = phase.from; n <= phase.to; n += 1) {
       const owner = claimed.get(n);
-      if (owner && owner !== phase.label) overlaps.push(n);
-      else claimed.set(n, phase.label);
+      if (owner && owner !== phase.id) overlaps.push(n);
+      else claimed.set(n, phase.id);
     }
     if (overlaps.length) {
       const shown = overlaps.slice(0, 3).join(", ");
@@ -221,6 +223,14 @@ export function nextPhase(
     (max, phase) => (lotsInPhase(phase) > 0 ? Math.max(max, phase.to) : max),
     0,
   );
-  const index = phases.length + 1;
+  // One past the highest number any row already carries, not one past the
+  // count. Remove Phase 2 of three and the count says the next is 3 again,
+  // which hands the new row the id of the one still on screen: the two then
+  // edit and delete as one. An id with no number in it counts as nothing.
+  const taken = phases.reduce((max, phase) => {
+    const suffix = Number(/(\d+)$/.exec(phase.id)?.[1] ?? 0);
+    return Math.max(max, suffix);
+  }, 0);
+  const index = Math.max(taken, phases.length) + 1;
   return { id: `phase-${index}`, label: `${group} ${index}`, from: highest + 1, to: 0, homeType };
 }

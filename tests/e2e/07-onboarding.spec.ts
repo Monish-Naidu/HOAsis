@@ -106,6 +106,9 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   }
   await step(page);
 
+  // The books: fiscal year and first bill, taken as offered.
+  await step(page);
+
   // The homes: which is yours, who built it, and the plat.
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
@@ -666,6 +669,7 @@ test.describe("a community with more than one kind of home", () => {
     await page.getByRole("button", { name: /We are building the community/ }).click();
     await step(page);
     await step(page); // just dues
+    await step(page); // the books, as offered
 
     await page.getByLabel("Your name").fill("Pat Founder");
     await page.getByLabel("Your email").fill("pat@example.com");
@@ -761,6 +765,7 @@ test.describe("get started and signing up are the same flow", () => {
     await page.getByRole("button", { name: /We are building the community/ }).click();
     await step(page);
     await step(page);
+    await step(page); // the books, as offered
     await expect(page.getByLabel("Your name"), "the name was not carried forward").toHaveValue(
       "Pat Founder",
     );

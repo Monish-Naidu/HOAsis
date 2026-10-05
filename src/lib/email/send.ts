@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { assessmentDueEmail, pastDueEmail } from "./templates";
 import { unsubscribeUrl } from "./tokens";
 import { emailSender } from "./sender";
+import { signInUrl } from "./sign-in-link";
 
 /**
  * Sending dues email.
@@ -45,18 +46,14 @@ function sender(): string {
  * paying, because every step in between loses people.
  */
 async function payLink(email: string, hasAccount: boolean, origin: string): Promise<string> {
-  const admin = supabaseAdmin();
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: hasAccount ? "magiclink" : "invite",
+  // A link we could not mint is not a reason to send nothing: the notice
+  // still has to arrive, and signInUrl falls back to the front door.
+  return signInUrl(supabaseAdmin(), {
     email,
-    options: { redirectTo: `${origin}/resident/pay` },
+    type: hasAccount ? "magiclink" : "invite",
+    origin,
+    path: "/resident/pay",
   });
-  if (error || !data.properties?.action_link) {
-    // A link we could not mint is not a reason to send nothing: the notice
-    // still has to arrive, so fall back to the front door.
-    return `${origin}/signin`;
-  }
-  return data.properties.action_link;
 }
 
 export async function sendDuesEmails(input: {

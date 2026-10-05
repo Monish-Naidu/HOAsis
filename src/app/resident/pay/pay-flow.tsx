@@ -25,7 +25,7 @@ import {
   isExpired,
   type InstrumentKind,
   type PaymentInstrument,
-  type PlatformFeePolicy,
+  NO_PLATFORM_FEE,
 } from "@/lib/payments/instruments";
 import { cn, formatDate, money, ordinal, pluralize, relativeDays, today } from "@/lib/utils";
 import { AddMethod } from "./add-method";
@@ -156,15 +156,11 @@ export function PayFlow() {
       if (!next.on) notify("Autopay is off. Nothing will be taken.", "info");
       else if (next.skipMonth) notify(`${monthLabel(next.skipMonth)} will be skipped.`);
       else if (next.skipMonth === null) notify("Nothing is skipped now.");
-      else notify(`Autopay ${money(duesCents)} on the ${ordinal(day)}.`);
+      else notify(`Autopay takes your balance on the ${ordinal(day)}.`);
     });
   }
 
-  const policy: PlatformFeePolicy = {
-    flatCents: settings.paymentFeeCents,
-    paidBy: settings.paymentFeePaidBy,
-    waiveOnAch: settings.paymentFeeWaivedOnAch,
-  };
+  const policy = NO_PLATFORM_FEE;
   const cheapest = cheapestRail(instruments, amountCents, policy);
   const cost = selected
     ? computePaymentCost(selected.kind, amountCents, policy)
@@ -296,11 +292,11 @@ export function PayFlow() {
               <IconTile icon={Repeat} tint="violet" size="md" className="mt-0.5" />
               <div className="min-w-0 flex-1">
                 <p className="text-body font-semibold text-fg">
-                  Autopay {money(duesCents)} on the {ordinal(autopayDay)}
+                  Autopay your balance on the {ordinal(autopayDay)}
                 </p>
                 <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
                   {selected
-                    ? `From ${describeInstrument(selected)}. Cancel any time.`
+                    ? `Usually ${money(duesCents)}. Any fee or other charge on your account is included. From ${describeInstrument(selected)}. Cancel any time.`
                     : "Add a payment method to turn this on."}
                 </p>
               </div>

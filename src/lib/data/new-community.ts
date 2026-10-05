@@ -9,7 +9,8 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { wordingFor } from "@/lib/wording";
 import { homeTypesOf, soleType } from "@/lib/home-types";
-import { phaseFor } from "@/lib/lots";
+import { lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor } from "@/lib/lots";
+import { addDays, nextDueOnOrAfter } from "@/lib/utils";
 
 /**
  * Defaults nobody is asked about during setup.
@@ -217,20 +218,15 @@ function shortHash(value: string): string {
   return hash.toString(36).slice(0, 4);
 }
 
-/** The next occurrence of `day` on or after `from`, as YYYY-MM-DD. */
-function nextDueDate(from: ISODate, day: number): ISODate {
-  const [year, month, today] = from.split("-").map(Number);
-  const safeDay = Math.min(Math.max(1, day), 28);
-  if (today < safeDay) {
-    return `${year}-${String(month).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
-  }
-  const zero = year * 12 + month; // already advanced one month
-  return `${Math.floor(zero / 12)}-${String((zero % 12) + 1).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
-}
-
-/** Share of the fiscal year elapsed, so budget pace is honest from day one. */
-function yearElapsedFrom(fiscalYearStart: string, asOf: ISODate): number {
-  const [, startMonth] = fiscalYearStart.split("-").map(Number);
+/**
+ * Share of the fiscal year elapsed, so budget pace is honest from day one.
+ * Counted from the fiscal year's first month, since that is the year the
+ * actuals beside it are summed over.
+ */
+export function yearElapsedFrom(fiscalYearStart: string, asOf: ISODate): number {
+  // "MM-DD": the month is the first pair. Reading the second took the day
+  // for the month, which only held while every year here began on 01-01.
+  const startMonth = Number(fiscalYearStart.slice(0, 2)) || 1;
   const [, month, day] = asOf.split("-").map(Number);
   const monthsIn = (month - startMonth + 12) % 12;
   return Math.min(1, (monthsIn + day / 30) / 12);
@@ -281,7 +277,7 @@ export function draftDuesTotal(draft: CommunityDraft): Cents {
  * fills the screen in, the founder's own lot belongs to the founder.
  */
 export function otherHomes(draft: CommunityDraft): DraftHousehold[] {
-  const mine = founderUnit(draft);
+  const mine = founderLabel(draft);
   return draft.households.filter((h) => h.unit.trim() !== "" && h.unit.trim() !== mine);
 }
 
@@ -294,6 +290,36 @@ export function otherHomes(draft: CommunityDraft): DraftHousehold[] {
  */
 export function founderUnit(draft: CommunityDraft): string {
   return draft.founder.unit.trim() || draft.founder.address?.trim() || "";
+}
+
+/**
+ * The founder's home as the register prints it.
+ *
+ * The founder is asked for a bare number ("12") a screen before the ranges
+ * offer a prefix, and the ranges then print that home as "Lot 12". Matched
+ * letter for letter those are two homes: the President on "12" and an unsold
+ * "Lot 12" beside it, billed and counted toward quorum, 41 homes on a 40 lot
+ * plat. So where ranges exist, the number is looked up in them and the
+ * printed label is the key, whichever spelling was typed and in whatever
+ * case. A community that goes by address has no ranges and is left alone.
+ */
+export function founderLabel(draft: CommunityDraft): string {
+  const typed = founderUnit(draft);
+  const phases = draft.phases ?? [];
+  if (!typed || !phases.length) return typed;
+  const prefix = draft.lotPrefix ?? "";
+  const wanted = typed.toLowerCase();
+  // "Lot 12" typed against ranges that print a bare "12" is the same home.
+  const bare = wanted.replace(/^\D+/, "");
+  for (const phase of phases) {
+    // A range past the limit is a typo and creates no homes; not worth walking.
+    if (lotsInPhase(phase) > MAX_LOTS_PER_PHASE) continue;
+    for (let n = phase.from; n <= phase.to; n += 1) {
+      const label = lotLabel(prefix, n);
+      if (label.toLowerCase() === wanted || String(n) === wanted || String(n) === bare) return label;
+    }
+  }
+  return typed;
 }
 
 /** Which way this draft names its homes, when the board has not said. */
@@ -313,7 +339,7 @@ export function defaultHomeNaming(draft: CommunityDraft): HomeNaming {
  * and everything is trimmed once here rather than in two creators.
  */
 export function finalizeDraft(draft: CommunityDraft): CommunityDraft {
-  const unit = founderUnit(draft);
+  const unit = founderLabel(draft);
   const types = homeTypesOf(draft);
   const sole = soleType(types);
   // Every home carries its kind, so nothing downstream has to know whether
@@ -448,7 +474,8 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     id,
     label: draft.name,
     asOf,
-    nextChargeDate: nextDueDate(asOf, draft.dueDay),
+    // The day after, so "next" never names a bill that fell due today.
+    nextChargeDate: nextDueOnOrAfter(addDays(asOf, 1), draft.dueDay, draft.duesCadence, FISCAL_YEAR_START),
 
     // Carried through so the plan can be rebuilt later without asking again.
     profile: {

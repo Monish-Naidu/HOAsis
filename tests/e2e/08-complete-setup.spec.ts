@@ -56,6 +56,8 @@ async function found(page: Page, name: string, property: Kind) {
   await page.getByRole("button", { name: /We are building the community/ }).click();
   await next();
   await next();
+  // The books: fiscal year and first bill, taken as offered.
+  await next();
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");

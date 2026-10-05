@@ -52,6 +52,9 @@ try {
     ],
   });
   cleanup.associations.push(associationId);
+  // Books open on the founding day unless told otherwise (0056); this suite
+  // bills periods that fell due before today.
+  await admin.from("associations").update({ billing_starts_on: day(-60) }).eq("id", associationId);
   await president.client.rpc("issue_assessment", {
     p_association_id: associationId, p_label: "Assessment", p_due_on: day(-5),
   });
@@ -76,6 +79,16 @@ try {
   check("a past due run reaches only homes that owe",
     (behind ?? []).length === 1 && behind[0].unit_label === "2",
     JSON.stringify((behind ?? []).map((r) => `${r.unit_label}:${r.balance_cents}`)));
+
+  // The mailer itself runs under the service role, which is nobody as far as
+  // a view scoped to "my homes" can tell. It read every balance as zero, so
+  // a past due run reached no one and the assessment email said $0.00 (0062).
+  const { data: asServer } = await admin.rpc("email_recipients", {
+    p_association_id: associationId, p_category: "delinquency", p_only_past_due: true,
+  });
+  check("the mailer, as the server, reaches the home that owes with its real balance",
+    (asServer ?? []).length === 1 && asServer[0].unit_label === "2" && asServer[0].balance_cents === 6000,
+    JSON.stringify((asServer ?? []).map((r) => `${r.unit_label}:${r.balance_cents}`)));
 
   // Opting out.
   const behindUser = await makeUser("behind");

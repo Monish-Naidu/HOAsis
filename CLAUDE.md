@@ -7,14 +7,18 @@ to Your HOAsis at yourhoasis.com on 2026-09-19; brand system in
 `docs/design/brand-yourhoasis.md`. Internal storage keys keep the `hoasis-`
 prefix on purpose: renaming them signs every browser out.
 
-Clickable prototype of an HOA management product. See `README.md` for the full architecture;
-this file is the short version of what to keep true when editing.
+An HOA management product. Signed-in users run on Supabase (Postgres with row level
+security), Stripe and Resend; the fixtures serve only the signed-out demo. `README.md`
+still describes the earlier backend-less prototype in places, so trust the code and
+`docs/tenancy.md` over it. This file is the short version of what to keep true when editing.
 
 ## Rules that matter
 
-- **UI changes follow `docs/design/ui-baseline.md`.** Apple HIG applied to this product:
-  one primary action per surface, semantic tokens, progressive disclosure, quiet
-  interaction, 4pt spacing. Read it before touching a screen.
+- **UI changes follow the `frontend-design` skill** (official plugin, enabled in
+  `.claude/settings.json`). Baseline since 2026-10-04: ground the design in the subject,
+  plan, review the plan against the brief, build, critique from screenshots. Load it
+  before touching a screen. `docs/design/ui-baseline.md` still holds this product's
+  tokens, spacing and reusable patterns; where the two differ, the skill wins.
 
 - **Screens import from `@/lib/data` only.** Never import a fixture file (`data/ledger.ts`,
   `data/owners.ts`, …) directly from a page. The repository layer in `data/index.ts` is the
@@ -52,8 +56,15 @@ bar and the sidebar.
 ## Checks
 
 ```bash
-pnpm lint && npx tsc --noEmit && pnpm build
+pnpm check        # lint, tsc, vitest, build: about fifteen seconds
+pnpm e2e          # Playwright, against a server already running (E2E_BASE to point elsewhere)
+pnpm db:verify    # every database check, against the real Supabase project in .env.local
 ```
+
+`pnpm check` is the default. Run `pnpm e2e` when a change touches a flow a spec drives,
+and `pnpm db:verify` when it touches SQL, a migration or the data layer; it runs every
+script and lists the ones that failed. A change to the onboarding wizard's steps needs
+the helpers in `tests/e2e/07-onboarding.spec.ts` and `08-complete-setup.spec.ts` updated.
 
 All routes should prerender. `pnpm lint` is strict about `setState` in effects, use
 `useSyncExternalStore` for anything reading browser state.

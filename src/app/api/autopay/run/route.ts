@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { sendAutopayNotice } from "@/lib/email/autopay";
-import { decideAutopay, isChargeable } from "@/lib/payments/autopay";
+import { decideAutopay, isChargeable, pendingSince } from "@/lib/payments/autopay";
 import {
   describeInstrument,
   type PaymentInstrument,
@@ -113,11 +113,12 @@ export async function GET(request: NextRequest) {
           { data: unit },
           { data: balance },
           { data: existing },
+          { data: pending, error: pendingError },
         ] = await Promise.all([
           admin
             .from("associations")
             .select(
-              "id, name, slug, stripe_account_id, dues_cents, dues_by_type, payment_fee_cents, payment_fee_paid_by, payment_fee_waived_on_ach, deleted_at",
+              "id, name, slug, stripe_account_id, dues_cents, dues_by_type, deleted_at",
             )
             .eq("id", member.association_id)
             .single(),
@@ -140,9 +141,22 @@ export async function GET(request: NextRequest) {
             .eq("unit_id", member.unit_id)
             .eq("month", month)
             .maybeSingle(),
+          // Money on its way. A bank payment is only a pending row until it
+          // settles, days later, so the charges above still show it as owed.
+          // Recent rows only: one left behind by a missed failure event must
+          // not keep this home out of autopay for good.
+          admin
+            .from("payments")
+            .select("amount_cents")
+            .eq("unit_id", member.unit_id)
+            .eq("state", "pending")
+            .gte("created_at", pendingSince(today)),
         ]);
 
         if (existing) return; // This month is already decided.
+        // Not knowing what is in flight is not the same as nothing being in
+        // flight. Leave the home for tomorrow rather than risk a second pull.
+        if (pendingError) throw new Error(`Could not read pending payments: ${pendingError.message}`);
         if (
           !association ||
           association.deleted_at ||
@@ -156,10 +170,15 @@ export async function GET(request: NextRequest) {
           (sum, c) => sum + c.amount_cents,
           0,
         );
+        const pendingCents = (pending ?? []).reduce(
+          (sum, p) => sum + p.amount_cents,
+          0,
+        );
         const decision = decideAutopay({
           plan,
           today,
           balanceCents,
+          pendingCents,
           // The home's own kind's amount, as issue_assessment billed it.
           duesCents: duesFor(
             {
@@ -252,7 +271,7 @@ export async function GET(request: NextRequest) {
         }
 
         const rail = instrument.kind === "ach" ? "ach" : "card";
-        const cost = costFor(association, rail, decision.amountCents);
+        const cost = costFor(rail, decision.amountCents);
         const method = describeInstrument(instrument);
 
         if (dryRun) {
@@ -284,7 +303,6 @@ export async function GET(request: NextRequest) {
             {
               amount: cost.residentPaysCents,
               currency: "usd",
-              application_fee_amount: cost.platformCents || undefined,
               customer: unit.stripe_customer_id,
               payment_method: instrument.token,
               payment_method_types:
@@ -298,8 +316,7 @@ export async function GET(request: NextRequest) {
                 paid_by: member.profile_id ?? "",
                 assessment_cents: String(cost.amountCents),
                 platform_fee_cents: String(cost.platformCents),
-                platform_fee_paid_by:
-                  association.payment_fee_paid_by ?? "owner",
+                platform_fee_paid_by: "owner",
                 rail,
                 autopay_month: month,
               },

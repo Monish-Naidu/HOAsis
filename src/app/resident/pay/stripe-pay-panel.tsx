@@ -483,14 +483,6 @@ function ConfirmSaved({
           <dt className="text-fg-muted">Dues</dt>
           <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
         </div>
-        <div className="flex justify-between text-body">
-          <dt className="text-fg-muted">
-            {cost.platformCents === 0 ? "Payment fee (waived)" : "Payment fee"}
-          </dt>
-          <dd className="tnum font-medium text-fg">
-            {money(cost.residentPaysCents - cost.amountCents)}
-          </dd>
-        </div>
         <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
           <dt className="font-semibold text-fg">You pay</dt>
           <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
@@ -553,12 +545,6 @@ function ConfirmForm({
         <div className="flex justify-between text-body">
           <dt className="text-fg-muted">Dues</dt>
           <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
-        </div>
-        <div className="flex justify-between text-body">
-          <dt className="text-fg-muted">
-            {cost.platformCents === 0 ? "Payment fee (waived)" : "Payment fee"}
-          </dt>
-          <dd className="tnum font-medium text-fg">{money(cost.residentPaysCents - cost.amountCents)}</dd>
         </div>
         <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
           <dt className="font-semibold text-fg">You pay</dt>

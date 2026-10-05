@@ -1,5 +1,4 @@
 import type { CommunityDraft, DraftHousehold } from "@/lib/data/new-community";
-import { addDays } from "@/lib/utils";
 
 /**
  * Where the books start, asked in the wizard and carried on the draft.
@@ -62,24 +61,9 @@ export const MONTHS = [
  * The next date dues fall due on or after `from`, for the wizard's default
  * first bill. The founding date is what the daily run assumes; offering the
  * next due day makes the default explicit and lets the board push it out.
+ * The one in `@/lib/utils`, which the data layer uses too.
  */
-export function nextDueOnOrAfter(from: string, dueDay: number, cadence: CommunityDraft["duesCadence"], fiscalYearStart: string): string {
-  const day = Math.min(Math.max(1, dueDay), 28);
-  const fyMonth = Number(fiscalYearStart.slice(0, 2)) || 1;
-  const step = cadence === "monthly" ? 1 : cadence === "quarterly" ? 3 : 12;
-  const [y, m] = from.split("-").map(Number);
-  // Walk month by month from this month, keeping only months on the cadence.
-  for (let i = 0; i < 24; i++) {
-    const total = y * 12 + (m - 1) + i;
-    const yy = Math.floor(total / 12);
-    const mm = (total % 12) + 1;
-    const onCadence = ((mm - fyMonth) % step + step) % step === 0;
-    if (!onCadence) continue;
-    const candidate = `${yy}-${String(mm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    if (candidate >= from) return candidate;
-  }
-  return addDays(from, 30);
-}
+export { nextDueOnOrAfter } from "@/lib/utils";
 
 /**
  * Which homes need the follow-up call after founding: any with a phone or

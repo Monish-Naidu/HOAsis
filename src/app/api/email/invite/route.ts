@@ -4,6 +4,8 @@ import { Resend } from "resend";
 import { emailSender } from "@/lib/email/sender";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import { inviteEmail } from "@/lib/email/templates";
+import { signInUrl } from "@/lib/email/sign-in-link";
+import { createInviteLimiter, spendInvites } from "@/lib/email/invite-limit";
 import { remoteInviteUrl } from "@/lib/invitations";
 import { communityPath, placeLabel } from "@/lib/community-links";
 
@@ -19,6 +21,10 @@ import { communityPath, placeLabel } from "@/lib/community-links";
  * to their home. Everybody else gets the join page with their address
  * filled in; the seat is claimed when they confirm that address.
  */
+
+/** Six hundred messages an hour for one association (src/lib/email/invite-limit.ts). */
+const inviteLimiter = createInviteLimiter();
+
 export async function POST(request: NextRequest) {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
@@ -74,6 +80,18 @@ export async function POST(request: NextRequest) {
     .in("unit_id", unitIds.slice(0, 200))
     .is("ends_on", null);
 
+  // Counted before the first send, one for each message this call would
+  // put out, so a loop of full batches stops at the ceiling.
+  const addressed = (members ?? []).filter((m) => (m.invited_email ?? "").trim()).length;
+  const within = spendInvites(inviteLimiter, associationId, addressed);
+  if (!within.ok) {
+    log.warn("invite limit reached", { kind, asked: addressed });
+    return NextResponse.json(
+      { error: "That is more invitations than one association can send in an hour. Try again later." },
+      { status: 429, headers: { "Retry-After": String(within.retryAfterSeconds) } },
+    );
+  }
+
   const origin = siteOrigin(request);
   const client = new Resend(key);
   const result = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
@@ -89,14 +107,13 @@ export async function POST(request: NextRequest) {
     const hasAccount = Boolean(m.profile_id);
     let url = remoteInviteUrl(association.join_code, email, origin);
     if (hasAccount) {
-      const { data: link } = await admin.auth.admin.generateLink({
-        type: "magiclink",
+      url = await signInUrl(admin, {
         email,
+        type: "magiclink",
+        origin,
         // Straight into this association, whichever others they hold.
-        options: { redirectTo: `${origin}${communityPath(association.slug, "/resident")}` },
+        path: communityPath(association.slug, "/resident"),
       });
-      if (link?.properties?.action_link) url = link.properties.action_link;
-      else url = `${origin}/signin`;
     }
 
     const built = inviteEmail({

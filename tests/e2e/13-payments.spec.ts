@@ -75,7 +75,7 @@ test.describe.serial("Stripe, test mode", () => {
 
     await page.getByRole("button", { name: /New card/ }).click();
     await page.getByRole("button", { name: /Continue to pay/ }).click();
-    // The server priced it: dues plus the association's flat fee.
+    // The server priced it: the dues, with nothing of ours added.
     await expect(page.getByText("You pay")).toBeVisible({ timeout: 20_000 });
     await fillCard(page);
     await page.getByRole("button", { name: /^Pay \$/ }).click();

@@ -22,7 +22,7 @@ import {
   useOwnerCharges,
 } from "@/lib/app-state";
 import { HomeSchedule } from "@/components/app/home-schedule";
-import { cn, formatDate, money, relativeDays } from "@/lib/utils";
+import { cn, formatDate, money, pastDueLabel, relativeDays } from "@/lib/utils";
 import { ownerDues } from "@/lib/home-types";
 
 /**
@@ -170,7 +170,7 @@ function AccountSummary() {
           )}
           <p className="text-footnote text-fg-muted">
             {past
-              ? `${owner.daysPastDue} days past due`
+              ? pastDueLabel(owner.daysPastDue)
               : `Next dues ${formatDate(nextCharge, "long")}`}
           </p>
         </div>
@@ -201,28 +201,30 @@ function AccountSummary() {
 function QuickActions() {
   // Three, and each goes somewhere different. Five tiles used to resolve to
   // three destinations, two of them already in the tab bar.
-  const actions: { href: string; label: string; icon: typeof Wrench; tint: TintName }[] = [
-    { href: "/resident/requests/new", label: "New request", icon: Wrench, tint: "blue" },
-    { href: "/resident/documents", label: "Documents", icon: FileText, tint: "violet" },
-    { href: "/resident/vote", label: "Vote", icon: Vote, tint: "teal" },
+  const actions: { href: string; label: string; icon: typeof Wrench }[] = [
+    { href: "/resident/requests/new", label: "New request", icon: Wrench },
+    { href: "/resident/documents", label: "Documents", icon: FileText },
+    { href: "/resident/vote", label: "Vote", icon: Vote },
   ];
-  // A row of three tinted buttons, no card around them. A card titled
-  // "Quick actions" wrapping three links was the tallest thing on the page
-  // after the photo, for the least information.
+  // A row of three buttons, no card around them. A card titled "Quick
+  // actions" wrapping three links was the tallest thing on the page after
+  // the photo, for the least information. All three wear the one quiet
+  // field: they were blue, violet and teal, and three colours beside the
+  // balance pulled the eye off the number and the Pay button.
   return (
     <nav aria-label="Quick actions" className="grid grid-cols-3 gap-3 @xl:gap-4">
-      {actions.map(({ href, label, icon, tint }) => (
+      {actions.map(({ href, label, icon }) => (
         <Link
           key={label}
           href={href}
           className={cn(
             "press group flex min-h-[4.75rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center transition-colors @xl:min-h-16 @xl:flex-row @xl:gap-3 @xl:px-4",
-            TINT_FIELD[tint],
+            TINT_FIELD.blue,
           )}
         >
           <IconTile
             icon={icon}
-            tint={tint}
+            tint="blue"
             variant="solid"
             size="md"
             className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"

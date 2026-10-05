@@ -201,12 +201,15 @@ export function CommunityHero({
         // Taller per the 2026-09-01 huddle: the banner was leaving too much
         // white space beneath it, so it carries more of the viewport now.
         // Taller again with an overlay, which needs its own band of photo.
+        // The resident home's (tray and card) came down on 2026-10-04 to what
+        // the card needs and no more: at 256px on a phone the photo held the
+        // first third of the screen and the balance started below the fold.
         compact
           ? "h-28"
           : short
             ? "h-36 lg:h-40"
           : toolbar && overlay
-            ? "h-64 sm:h-72 lg:h-80"
+            ? "h-44 sm:h-48 lg:h-64"
             : toolbar
               ? "h-48 sm:h-56 lg:h-64"
               : overlay

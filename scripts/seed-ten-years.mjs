@@ -437,10 +437,16 @@ try {
     const h = home(unit);
     const rail = h.rail;
     const fee = rail === "card" ? Math.round(cents * 0.029) + 30 : Math.min(Math.round(cents * 0.008), 500);
-    const client = by ?? people[unit]?.client ?? treasurer.client;
-    const paymentId = await must(`payment for ${unit} on ${date}`, client.rpc("record_payment", {
-      p_unit_id: unitOf[unit], p_amount_cents: cents, p_rail: rail, p_processor_fee_cents: fee,
-    }));
+    // An owner's payment is settled the way the webhook settles it; an owner
+    // cannot write their own (0062). A named board member still records by hand.
+    const paymentId = await must(`payment for ${unit} on ${date}`, by
+      ? by.rpc("record_payment", {
+          p_unit_id: unitOf[unit], p_amount_cents: cents, p_rail: rail, p_processor_fee_cents: fee,
+        })
+      : admin.rpc("record_payment", {
+          p_unit_id: unitOf[unit], p_amount_cents: cents, p_rail: rail, p_processor_fee_cents: fee,
+          p_paid_by: people[unit]?.id ?? null,
+        }));
     await Promise.all([
       admin.from("payments").update({ created_at: `${date}T15:00:00Z`, settled_at: `${date}T15:00:00Z` }).eq("id", paymentId),
       admin.from("ledger_entries").update({ occurred_on: date }).eq("payment_id", paymentId),

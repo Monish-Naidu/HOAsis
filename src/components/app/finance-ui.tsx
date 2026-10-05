@@ -99,7 +99,7 @@ export function StatTile({
       >
         {value}
       </p>
-      {hint ? <p className="mt-1.5 truncate text-footnote leading-snug text-fg-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-footnote leading-snug text-fg-muted">{hint}</p> : null}
     </>
   );
   const styles = cn(

@@ -34,7 +34,7 @@ export default function PricingPage() {
         <Reveal>
           <header className="mx-auto max-w-2xl text-center">
             <h1 className="text-balance text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] text-fg sm:text-[60px]">
-              One price. <span className="text-gradient">Every feature.</span>
+              One price. Every feature.
             </h1>
             <p className="mt-5 text-[17px] leading-relaxed text-fg-muted sm:text-[19px]">
               No tiers, no seats, no add-ons. Set your size and read the number.
@@ -46,7 +46,7 @@ export default function PricingPage() {
           <PriceCalculator />
         </Reveal>
 
-        <Reveal delay={160}>
+        <div>
           <div className="relative isolate mt-20 overflow-hidden rounded-[28px] bg-navy-950 px-6 py-14 ring-1 ring-inset ring-white/5 dark:bg-navy-900 text-center text-navy-50 sm:py-16">
             <div
               className="pointer-events-none absolute -bottom-32 -left-20 -z-10 size-[26rem] rounded-full bg-[radial-gradient(closest-side,rgb(63_130_242/0.5),transparent)] blur-3xl"
@@ -77,7 +77,7 @@ export default function PricingPage() {
               </Link>
             </div>
           </div>
-        </Reveal>
+        </div>
       </main>
       <MarketingFooter />
     </div>

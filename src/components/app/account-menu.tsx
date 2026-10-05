@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, CircleHelp, LogOut, User } from "lucide-react";
+import { Building2, CircleHelp, LogOut, RefreshCw, User } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
 import { useAuth } from "@/lib/auth";
 import { NoAssociationYet } from "@/components/app/no-association";
-import { useRemote } from "@/lib/data/remote-store";
+import { retryRemote, useRemote } from "@/lib/data/remote-store";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { ROLE_LABEL } from "@/lib/types";
@@ -193,7 +193,10 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
   // redirecting during that window bounces somebody who is signed in straight
   // back to the front door.
   const settling = auth.loading || remote.status === "loading";
-  const signedIn = Boolean(account) || remote.status === "empty";
+  // Signed in, and the association did not load. That is not signed out:
+  // sending this person to the sign-in form bounces them straight back here.
+  const loadFailed = Boolean(auth.user) && remote.status === "error";
+  const signedIn = Boolean(account) || remote.status === "empty" || loadFailed;
 
   useEffect(() => {
     if (ready && !settling && !signedIn) router.replace("/signin");
@@ -208,6 +211,30 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
   // sensible next move, so say that rather than showing empty screens.
   if (!account && remote.status === "empty") {
     return <NoAssociationYet />;
+  }
+
+  // The read failed (a dropped connection, a database that did not answer).
+  // Say what failed and offer the one thing that fixes it.
+  if (!account && loadFailed) {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 text-center">
+        <h1 className="text-title2 font-semibold tracking-[-0.02em] text-fg">
+          Your association did not load
+        </h1>
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
+          {remote.message ?? "Could not load your association"}. You are still signed in. Check
+          your connection and try again.
+        </p>
+        <button
+          type="button"
+          onClick={() => void retryRemote()}
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 self-center rounded-xl border border-border-2 px-5 text-body font-semibold text-fg transition-colors hover:bg-surface-2"
+        >
+          <RefreshCw className="size-4" />
+          Try again
+        </button>
+      </div>
+    );
   }
 
   if (!account) return null;

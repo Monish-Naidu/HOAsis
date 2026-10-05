@@ -33,7 +33,11 @@ export interface LimitDecision {
 }
 
 export interface Limiter {
-  check(key: string): LimitDecision;
+  /**
+   * Spends `cost` from the key's window, one by default. All or nothing: a
+   * cost that does not fit is refused and spends none of what was left.
+   */
+  check(key: string, cost?: number): LimitDecision;
   /** Drops counters whose window has passed. Called on every check. */
   size(): number;
 }
@@ -50,20 +54,19 @@ export function createLimiter({ limit, windowMs, now = Date.now }: LimiterOption
   }
 
   return {
-    check(key) {
+    check(key, cost = 1) {
       const at = now();
       sweep(at);
-      const current = windows.get(key);
-      if (!current || at - current.started >= windowMs) {
-        windows.set(key, { started: at, count: 1 });
-        return { ok: true, retryAfterSeconds: 0, remaining: limit - 1 };
+      const stored = windows.get(key);
+      const current =
+        stored && at - stored.started < windowMs ? stored : { started: at, count: 0 };
+      if (current.count + cost > limit) {
+        const retryAfterSeconds = Math.max(1, Math.ceil((current.started + windowMs - at) / 1000));
+        return { ok: false, retryAfterSeconds, remaining: 0 };
       }
-      current.count += 1;
-      if (current.count <= limit) {
-        return { ok: true, retryAfterSeconds: 0, remaining: limit - current.count };
-      }
-      const retryAfterSeconds = Math.max(1, Math.ceil((current.started + windowMs - at) / 1000));
-      return { ok: false, retryAfterSeconds, remaining: 0 };
+      current.count += cost;
+      windows.set(key, current);
+      return { ok: true, retryAfterSeconds: 0, remaining: limit - current.count };
     },
     size: () => windows.size,
   };

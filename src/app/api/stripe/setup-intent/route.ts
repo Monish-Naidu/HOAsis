@@ -55,11 +55,17 @@ export async function POST(request: NextRequest) {
 
   const { data: unit } = await supabase
     .from("units")
-    .select("stripe_customer_id, label")
+    .select("stripe_customer_id, label, association_id")
     .eq("id", unitId)
     .single();
   if (!unit) {
     return NextResponse.json({ error: "No such home" }, { status: 404 });
+  }
+  // The customer is created on the named association's Stripe account and
+  // kept on the unit, so the home has to be one of that association's.
+  if (unit.association_id !== associationId) {
+    log.warn("unit is not in the named association", { associationId, unitId });
+    return NextResponse.json({ error: "That home is not part of this association" }, { status: 400 });
   }
 
   let customerId = unit.stripe_customer_id;

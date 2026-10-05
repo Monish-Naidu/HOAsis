@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/primitives";
 import { RosterPreview } from "@/components/app/roster-preview";
-import { founderUnit, type CommunityDraft, type DraftHousehold } from "@/lib/data/new-community";
+import { founderLabel, founderUnit, type CommunityDraft, type DraftHousehold } from "@/lib/data/new-community";
 import { homeTypesOf } from "@/lib/home-types";
 import type { RosterRow } from "@/lib/roster/csv";
 import { withExtras } from "./books";
@@ -30,7 +30,8 @@ export function RosterImport({
 }) {
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState<number | null>(null);
-  const mine = founderUnit(draft).toLowerCase();
+  // The founder's own home, as typed and as the ranges print it.
+  const mine = new Set([founderUnit(draft).toLowerCase(), founderLabel(draft).toLowerCase()]);
   const types = homeTypesOf(draft);
 
   function add(rows: RosterRow[]) {
@@ -38,7 +39,7 @@ export function RosterImport({
     let count = 0;
     for (const row of rows) {
       const key = row.unit.trim().toLowerCase();
-      if (!key || key === mine) continue;
+      if (!key || mine.has(key)) continue;
       const existing = byUnit.get(key);
       const merged: DraftHousehold = withExtras(
         {

@@ -68,11 +68,11 @@ export function CollectionsScreen() {
       {/* The ladder is the list of who is behind and what is owed them; the
           table of past-due households that sat here said it again. */}
       <Card className="mt-6">
-        <CardHeader title="Dues by month" subtitle={dues.measurable ? `${thisYear}, collected against billed` : "Nothing billed yet"} />
+        <CardHeader title={community.association.duesCadence === "monthly" ? "Dues by month" : "Dues by bill"} subtitle={dues.measurable ? `${thisYear}, collected against billed` : "Nothing billed yet"} />
         {dues.measurable ? (
           <ul className="divide-y divide-border">
             {[...dues.months].reverse().map((m) => (
-              <li key={m.month} className="px-5 py-3">
+              <li key={m.label} className="px-5 py-3">
                 <div className="flex items-center justify-between gap-3 text-footnote">
                   <span className="font-medium text-fg">{m.label}</span>
                   <span className="tnum text-fg-muted">

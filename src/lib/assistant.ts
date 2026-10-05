@@ -216,13 +216,8 @@ const intents: Intent[] = [
     keywords: ["dues", "assessment", "cost", "much", "monthly", "fee", "fees", "charge"],
     phrases: ["how much are dues", "what are my dues", "monthly dues"],
     answer: (c) => {
-      const cheapest = [...c.methods].sort(
-        (a, b) => a.feePercent - b.feePercent || a.feeCents - b.feeCents,
-      )[0];
       return {
-        text: `Dues are ${money(c.association.duesCents)} a month. Paying by ${cheapest.label} is free to you and costs the association ${money(
-          cheapest.feeCents,
-        )}. Card and Apple Pay run 2.9% plus 30 cents, passed through at cost.`,
+        text: `Dues are ${money(c.association.duesCents)} a month, and you pay exactly that on any method. A bank transfer costs the association the least to accept.`,
         action: { label: "Pay dues", href: "/resident/pay" },
       };
     },

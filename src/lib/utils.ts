@@ -116,6 +116,39 @@ export function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * The next date dues fall due on or after `from`.
+ *
+ * Dues are billed on the association's due day, in the months its cadence
+ * lands on: every month, every third month counted from the fiscal year
+ * start, or the fiscal year's first month alone. A helper that knows only the
+ * day told a quarterly association in October that its next bill was November
+ * 1, and the dues email said so to every owner; the bill was January 1.
+ * The due day is held to 1 through 28, as the database holds it.
+ */
+export function nextDueOnOrAfter(
+  from: string,
+  dueDay: number,
+  cadence: "monthly" | "quarterly" | "annually",
+  fiscalYearStart: string,
+): string {
+  const day = Math.min(Math.max(1, dueDay), 28);
+  const fyMonth = Number(fiscalYearStart.slice(0, 2)) || 1;
+  const step = cadence === "monthly" ? 1 : cadence === "quarterly" ? 3 : 12;
+  const [y, m] = from.split("-").map(Number);
+  // Walk month by month from this month, keeping only months on the cadence.
+  for (let i = 0; i < 24; i++) {
+    const total = y * 12 + (m - 1) + i;
+    const yy = Math.floor(total / 12);
+    const mm = (total % 12) + 1;
+    const onCadence = ((mm - fyMonth) % step + step) % step === 0;
+    if (!onCadence) continue;
+    const candidate = `${yy}-${String(mm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (candidate >= from) return candidate;
+  }
+  return addDays(from, 30);
+}
+
 export function daysFromToday(iso: string) {
   return Math.round((parseDate(iso).getTime() - today().getTime()) / DAY);
 }
@@ -154,4 +187,12 @@ export function ordinal(n: number): string {
 
 export function pluralize(n: number, one: string, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
+}
+
+/**
+ * How late a balance is, in words. A balance that fell due this morning is
+ * owed and zero days late, and "0 days past due" read as a bug.
+ */
+export function pastDueLabel(days: number): string {
+  return days <= 0 ? "Due today" : `${pluralize(days, "day")} past due`;
 }

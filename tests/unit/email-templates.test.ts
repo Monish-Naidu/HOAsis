@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   announcementEmail,
+  assessmentDueEmail,
+  autopayEmail,
   ballotOpenEmail,
   boardMessageEmail,
+  inviteEmail,
   meetingNoticeEmail,
+  pastDueEmail,
   requestUpdateEmail,
+  trialEmail,
 } from "@/lib/email/templates";
 
 /**
@@ -47,6 +52,137 @@ describe("announcementEmail", () => {
     expect(built.html).not.toContain("<script>");
     expect(built.html).toContain("&lt;script&gt;");
     expect(built.html).toContain("5% &amp; fees &lt;b&gt;too&lt;/b&gt;");
+    // The first line of the body is also the hidden preheader, which used to
+    // go out exactly as typed.
+    expect(built.html).not.toContain("<b>");
+  });
+});
+
+/**
+ * Nothing a board or an owner typed may arrive as markup, in any template.
+ * Every field a person can fill carries a tag here; the only tags allowed in
+ * the result are the ones the template wrote itself. Subjects and the plain
+ * text part stay as typed, because they are not HTML.
+ */
+describe("what people typed, in every template", () => {
+  const TAG = `<a href="https://evil.example">Verify your bank details</a>`;
+  const typed = (label: string) => `${label} & Sons ${TAG}`;
+  const hostile = {
+    associationName: typed("Smith"),
+    ownerName: typed("Gwen"),
+    url: "https://yourhoasis.com/auth/callback?token_hash=abc",
+    unsubscribeUrl: null as string | null,
+  };
+  const dues = {
+    associationName: hostile.associationName,
+    ownerName: hostile.ownerName,
+    unitLabel: typed("12B"),
+    balanceCents: 28500,
+    dueDate: "2026-10-01",
+    payUrl: hostile.url,
+    unsubscribeUrl: null,
+  };
+
+  const built: Record<string, { subject: string; html: string; text: string }> = {
+    assessment: assessmentDueEmail(dues),
+    pastDue: pastDueEmail({ ...dues, daysPastDue: 12 }),
+    trial: trialEmail("3-days", {
+      associationName: hostile.associationName,
+      presidentName: typed("Dana"),
+      trialEndsOn: "2026-10-20",
+      homes: 20,
+      monthlyCents: 4000,
+      billingUrl: hostile.url,
+    }),
+    autopayCharged: autopayEmail("charged", {
+      associationName: hostile.associationName,
+      ownerName: hostile.ownerName,
+      amountCents: 28500,
+      method: typed("BECU checking"),
+      payUrl: hostile.url,
+    }),
+    autopayFailed: autopayEmail("failed", {
+      associationName: hostile.associationName,
+      ownerName: hostile.ownerName,
+      amountCents: 28500,
+      method: typed("Visa"),
+      problem: typed("Your card was declined"),
+      payUrl: hostile.url,
+    }),
+    invite: inviteEmail({
+      kind: "invite",
+      associationName: hostile.associationName,
+      associationPlace: typed("Bothell"),
+      ownerName: hostile.ownerName,
+      unitLabel: typed("12B"),
+      url: hostile.url,
+      hasAccount: false,
+    }),
+    welcome: inviteEmail({
+      kind: "welcome",
+      associationName: hostile.associationName,
+      ownerName: hostile.ownerName,
+      unitLabel: typed("12B"),
+      url: hostile.url,
+      hasAccount: true,
+    }),
+    announcement: announcementEmail({ ...hostile, title: typed("Pool"), body: `${typed("First line")}\n\nSecond.` }),
+    meeting: meetingNoticeEmail({
+      ...hostile,
+      title: typed("Annual meeting"),
+      date: "2026-10-14",
+      time: "7:00 PM",
+      location: typed("Clubhouse"),
+      dialIn: typed("555-0100"),
+      passcode: typed("1234"),
+      agenda: [typed("Budget")],
+    }),
+    ballot: ballotOpenEmail({ ...hostile, title: typed("Budget"), body: [typed("Details")], closesDate: "2026-11-01" }),
+    message: boardMessageEmail({
+      ...hostile,
+      subject: typed("About your fence"),
+      body: typed("Thanks"),
+      senderName: typed("Arya"),
+      statutory: false,
+    }),
+    request: requestUpdateEmail({
+      ...hostile,
+      reference: "REQ-2026-014",
+      title: typed("Front door"),
+      status: "Approved",
+      note: typed("Use the colour on file"),
+    }),
+  };
+
+  it.each(Object.keys(built))("%s: no typed tag survives, and the one link is ours", (name) => {
+    const { html } = built[name];
+    expect(html).not.toContain("evil.example\">");
+    expect(html).not.toContain("<a href=\"https://evil.example");
+    expect(html).not.toContain("& Sons");
+    expect(html).toContain("&amp; Sons");
+    expect(links(html)).toEqual([hostile.url]);
+  });
+
+  it("escapes the header block every message shares: association name, preheader, button", () => {
+    const { html } = built.assessment;
+    const header = html.slice(html.indexOf("text-transform:uppercase"), html.indexOf("</p>", html.indexOf("text-transform:uppercase")));
+    expect(header).toContain("Smith &amp; Sons &lt;a href=");
+    const preheader = html.slice(html.indexOf("display:none"), html.indexOf("</div>"));
+    expect(preheader).toContain("12B &amp; Sons &lt;a href=");
+  });
+
+  it("leaves subjects as typed, since a subject is not HTML", () => {
+    expect(built.assessment.subject).toContain("Smith & Sons <a href=");
+    expect(built.assessment.subject).not.toContain("&amp;");
+    expect(built.autopayFailed.subject).not.toContain("&amp;");
+    expect(built.trial.subject).not.toContain("&amp;");
+  });
+
+  it("does not escape twice", () => {
+    for (const { html } of Object.values(built)) {
+      expect(html).not.toContain("&amp;amp;");
+      expect(html).not.toContain("&amp;lt;");
+    }
   });
 });
 

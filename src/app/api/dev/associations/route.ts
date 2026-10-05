@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { testToolsBlocked } from "../guard";
 
 /**
  * Listing and deleting associations, for testing.
@@ -7,18 +8,16 @@ import { supabaseAdmin } from "@/lib/supabase/server";
  * Deleting one properly is already a supported act with its own guards, and
  * this deliberately does not use it: the product flow is soft, reversible and
  * President only, which is right for a real board and useless for clearing up
- * after a test run. This is the hard version, gated the same way as the full
- * reset.
+ * after a test run. This is the hard version, behind the same locks as the
+ * full reset (./guard.ts): never in production, only with the flag, only on
+ * the project named as safe to empty, and never next to an association that
+ * looks live.
  */
 
-function blocked(): string | null {
-  return process.env.ALLOW_TEST_RESET === "true"
-    ? null
-    : "Test tools are switched off. Set ALLOW_TEST_RESET=true on the server.";
-}
-
 export async function GET() {
-  const reason = blocked();
+  // 200 with the reason, not a 404: the test tools page reads the body to
+  // say why the tools are off.
+  const reason = await testToolsBlocked(supabaseAdmin);
   if (reason) return NextResponse.json({ enabled: false, reason });
 
   const admin = supabaseAdmin();
@@ -46,9 +45,8 @@ export async function GET() {
 }
 
 export async function DELETE(request: NextRequest) {
-  const reason = blocked();
+  const reason = await testToolsBlocked(supabaseAdmin);
   if (reason) return NextResponse.json({ error: reason }, { status: 403 });
-
 
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Which one?" }, { status: 400 });

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { testToolsBlocked } from "../guard";
 
 /**
  * Emptying the database, for testing.
@@ -10,9 +11,12 @@ import { supabaseAdmin } from "@/lib/supabase/server";
  * environment variable that is absent in production cannot be talked into
  * existing.
  *
- * Three separate protections, and all three have to hold:
+ * Four separate locks, and all four have to open (./guard.ts): never on a
+ * production deployment, the flag, the project named in
+ * TEST_RESET_PROJECT_REF being the one this server is connected to, and no
+ * association in it that looks live.
  *
- * The gate is deliberately only that variable. Requiring a session as well
+ * There is deliberately no sign-in among them. Requiring a session as well
  * sounds safer and is not: clearing every account is the point, and a tool
  * that then refuses to run because nobody is signed in has locked you out of
  * the mess it just made.
@@ -46,20 +50,8 @@ const TABLES = [
   "associations",
 ] as const;
 
-function allowed(): string | null {
-  // Never on the deployed site, whatever the flag says: this empties every
-  // table, and a flag copied into the wrong environment must not be enough.
-  if (process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production") {
-    return "Test reset does not exist in production.";
-  }
-  if (process.env.ALLOW_TEST_RESET !== "true") {
-    return "Test reset is switched off. Set ALLOW_TEST_RESET=true on the server to enable it, and never in production.";
-  }
-  return null;
-}
-
 export async function GET() {
-  const blocked = allowed();
+  const blocked = await testToolsBlocked(supabaseAdmin);
   if (blocked) return NextResponse.json({ enabled: false, reason: blocked }, { status: 200 });
 
   const admin = supabaseAdmin();
@@ -75,9 +67,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const blocked = allowed();
+  const blocked = await testToolsBlocked(supabaseAdmin);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 403 });
-
 
   let body: { confirm?: string; keepEmail?: string };
   try {

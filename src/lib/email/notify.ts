@@ -15,6 +15,7 @@ import {
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { emailSender, resendKey } from "./sender";
 import { unsubscribeUrl } from "./tokens";
+import { signInUrl } from "./sign-in-link";
 
 /**
  * Everything the board sends that is not a dues run or an invitation.
@@ -91,12 +92,7 @@ async function signInLink(
   joinCode: string,
 ): Promise<string> {
   if (!person.profile_id) return remoteInviteUrl(joinCode, person.email, origin);
-  const { data } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email: person.email,
-    options: { redirectTo: `${origin}${path}` },
-  });
-  return data?.properties?.action_link ?? `${origin}/signin`;
+  return signInUrl(admin, { email: person.email, type: "magiclink", origin, path });
 }
 
 /** Resend's free tier allows two requests a second; a roster send must not trip it. */

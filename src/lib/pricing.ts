@@ -9,13 +9,14 @@
  * Priced per home per month. It is the convention a board already understands,
  * because it is how a management proposal is quoted, so the
  * comparison needs no arithmetic from them.
+ *
+ * That rate is the whole price. There was a $2 charge per online payment
+ * until 2026-10-04, which made "no add-ons" on the pricing page untrue;
+ * Monish took it off rather than reword the page.
  */
 
 /** Per home, per month. */
 export const PRICE_PER_HOME_CENTS = 4_00;
-
-/** Per payment, whatever rail it arrives on. */
-export const PRICE_PER_TRANSACTION_CENTS = 2_00;
 
 /** The whole software bill for an association of this size, monthly. */
 export function monthlyFor(homes: number): number {

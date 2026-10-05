@@ -13,8 +13,18 @@
  * Two associations rather than one because the thing worth proving is the
  * wall between them, and one association has no wall to prove.
  *
- * Refuses to run unless ALLOW_TEST_RESET=true is in .env.local, for the same
- * reason /api/dev/reset does: this deletes other people's data.
+ * Refuses to run unless every lock /api/dev/reset has is open, for the same
+ * reason: this deletes other people's data. The rules live in
+ * src/app/api/dev/guard.ts and are repeated here because a script cannot
+ * import that file. Change one, change the other.
+ *
+ *   1. ALLOW_TEST_RESET=true in .env.local.
+ *   2. TEST_RESET_PROJECT_REF, in .env.local or on the command line, names
+ *      the Supabase project NEXT_PUBLIC_SUPABASE_URL points at. .env.local
+ *      has pointed at the only project there is; naming it is a person
+ *      saying "this one is safe to empty".
+ *   3. No association in the project has a subscription or online payments
+ *      switched on. Checked against the database before anything is deleted.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -32,6 +42,32 @@ const env = Object.fromEntries(
 
 if (env.ALLOW_TEST_RESET !== "true") {
   console.error("Refusing: ALLOW_TEST_RESET is not true in .env.local.");
+  process.exit(1);
+}
+
+/** "abcd" for https://abcd.supabase.co; the host name for anything else. */
+function projectRef(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (!host) return null;
+    return host.endsWith(".supabase.co") ? host.split(".")[0] : host;
+  } catch {
+    return null;
+  }
+}
+
+const namedRef = (process.env.TEST_RESET_PROJECT_REF ?? env.TEST_RESET_PROJECT_REF ?? "").trim().toLowerCase();
+const actualRef = projectRef(env.NEXT_PUBLIC_SUPABASE_URL);
+if (!namedRef) {
+  console.error(
+    "Refusing: TEST_RESET_PROJECT_REF is not set. It must name the Supabase project this script may empty.",
+  );
+  process.exit(1);
+}
+if (!actualRef || namedRef !== actualRef) {
+  console.error(
+    "Refusing: TEST_RESET_PROJECT_REF does not name the project in NEXT_PUBLIC_SUPABASE_URL. Nothing was touched.",
+  );
   process.exit(1);
 }
 
@@ -62,7 +98,32 @@ const ORPHAN_TABLES = [
   "setup_dismissals", "memberships", "units",
 ];
 
+/**
+ * The last lock, and the only one that looks at the data. One association
+ * with a subscription or online payments switched on means this is not a
+ * project with nothing to lose. A check that cannot be made is a refusal.
+ */
+async function refuseNextToLiveData() {
+  const { data, error } = await admin
+    .from("associations")
+    .select("name")
+    .or("billing_subscription_id.not.is.null,stripe_charges_enabled.eq.true")
+    .limit(1);
+  if (error) {
+    console.error(`Refusing: could not check for live associations (${error.message}). Nothing was touched.`);
+    process.exit(1);
+  }
+  if (data && data.length > 0) {
+    console.error(
+      `Refusing: this project holds an association with a subscription or online payments switched on (${data[0].name}). Nothing was touched.`,
+    );
+    process.exit(1);
+  }
+}
+
 async function wipe() {
+  // First, always: nothing below this line can be undone.
+  await refuseNextToLiveData();
   const { data: associations } = await admin.from("associations").select("id, name");
   for (const a of associations ?? []) {
     const { error } = await admin.from("associations").delete().eq("id", a.id);

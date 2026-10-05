@@ -129,7 +129,11 @@ export function OverviewScreen() {
           value={money(cash.operating, { cents: false })}
           hint={
             primary
-              ? `${primary.institution} ••${primary.mask} · matched through ${formatDate(primary.reconciledThroughDate)}`
+              ? // There is no bank feed for a real association yet, so nothing
+                // has been matched to anything; the figure is the books' own.
+                isRemote
+                ? `${primary.institution}${primary.mask ? ` ••${primary.mask}` : ""} · from the books`
+                : `${primary.institution} ••${primary.mask} · matched through ${formatDate(primary.reconciledThroughDate)}`
               : "No bank account connected yet"
           }
         />

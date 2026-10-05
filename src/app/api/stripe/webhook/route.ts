@@ -31,16 +31,33 @@ export const runtime = "nodejs";
  * The event's account must be the association's own connected account. The
  * metadata names a unit; without this check, an intent created on any
  * account this platform can see could settle somebody else's dues.
+ *
+ * Three answers, because "the database did not answer" is not "no". A failed
+ * lookup read as a mismatch used to be acknowledged with a 200, and Stripe
+ * never sends a settled payment twice once it has been told it arrived.
  */
-async function belongsToAccount(unitId: string, account: string | undefined): Promise<boolean> {
-  if (!account) return false;
-  const { data } = await supabaseAdmin()
+async function belongsToAccount(
+  unitId: string,
+  account: string | undefined,
+): Promise<"yes" | "no" | "error"> {
+  if (!account) return "no";
+  const { data, error } = await supabaseAdmin()
     .from("units")
     .select("associations(stripe_account_id)")
     .eq("id", unitId)
     .maybeSingle();
+  if (error) {
+    // A unit id that is not an id at all can never start matching. That is a
+    // permanent "no", and answering 500 would have Stripe retry it for days.
+    return error.code === "22P02" ? "no" : "error";
+  }
   const row = data as { associations: { stripe_account_id: string | null } | null } | null;
-  return row?.associations?.stripe_account_id === account;
+  return row?.associations?.stripe_account_id === account ? "yes" : "no";
+}
+
+/** The answer that makes Stripe deliver the event again. */
+function retryLater(message: string) {
+  return NextResponse.json({ error: message }, { status: 500 });
 }
 
 function intentMetadata(intent: Stripe.PaymentIntent) {
@@ -123,8 +140,14 @@ export async function POST(request: NextRequest) {
       // something honest is happening.
       const intent = event.data.object;
       const meta = intentMetadata(intent);
-      if (!meta || !(await belongsToAccount(meta.unitId, event.account))) break;
-      await supabaseAdmin()
+      if (!meta) break;
+      const ours = await belongsToAccount(meta.unitId, event.account);
+      if (ours === "error") {
+        log.error("account lookup failed", { intentId: intent.id, unitId: meta.unitId });
+        return retryLater("Could not look up the unit");
+      }
+      if (ours === "no") break;
+      const { error: pendingError } = await supabaseAdmin()
         .from("payments")
         .upsert(
           {
@@ -140,13 +163,62 @@ export async function POST(request: NextRequest) {
           // A retry, or a `succeeded` that arrived first: leave the row alone.
           { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
         );
+      if (pendingError) {
+        // This row is what stops autopay and the late fee run from acting on
+        // money already in flight, so losing it quietly means the same dues
+        // can be pulled twice. Ask Stripe to send the event again. A foreign
+        // key that no longer resolves (the payer's profile was deleted) will
+        // never succeed, so that one is put on /admin and acknowledged.
+        if (pendingError.code === "23503") {
+          log.error("pending payment row refused", { intentId: intent.id, error: pendingError.message });
+          await recordAppError({
+            level: "error",
+            source: "server",
+            route: "stripe/webhook",
+            message: "Pending payment not recorded",
+            associationId: meta.associationId,
+            extra: { intentId: intent.id, unitId: meta.unitId, error: pendingError.message },
+          });
+          break;
+        }
+        log.error("pending payment row failed", { intentId: intent.id, error: pendingError.message });
+        return retryLater(pendingError.message);
+      }
       break;
     }
 
     case "payment_intent.succeeded": {
       const intent = event.data.object;
       const meta = intentMetadata(intent);
-      if (!meta || !(await belongsToAccount(meta.unitId, event.account))) break;
+      const ours = meta ? await belongsToAccount(meta.unitId, event.account) : "no";
+      if (ours === "error") {
+        // The database did not answer. A 500 makes Stripe send this again,
+        // which record_payment is built to tolerate.
+        log.error("account lookup failed", { intentId: intent.id, unitId: meta?.unitId });
+        return retryLater("Could not look up the unit");
+      }
+      if (!meta || ours === "no") {
+        // Money settled on a connected account and the books will not show
+        // it: no usable metadata, or a unit that is not this account's.
+        // Retrying cannot fix either, so it is acknowledged, but never
+        // silently. It lands on /admin with the intent to look up.
+        log.error("settled payment not recorded", { intentId: intent.id, account: event.account ?? null });
+        await recordAppError({
+          level: "error",
+          source: "server",
+          route: "stripe/webhook",
+          message: "Settled payment not recorded",
+          associationId: meta?.associationId ?? null,
+          extra: {
+            intentId: intent.id,
+            account: event.account ?? null,
+            unitId: meta?.unitId ?? null,
+            amountCents: intent.amount ?? null,
+            why: meta ? "The unit does not belong to the account the event came from" : "The intent carries no usable metadata",
+          },
+        });
+        break;
+      }
 
       // The actual processor fee from the balance transaction, so the books
       // carry what Stripe took rather than what our schedule estimated. Only
@@ -195,11 +267,17 @@ export async function POST(request: NextRequest) {
     case "payment_intent.payment_failed":
     case "payment_intent.canceled": {
       const intent = event.data.object;
-      await supabaseAdmin()
+      const { error } = await supabaseAdmin()
         .from("payments")
         .update({ state: "failed" })
         .eq("stripe_payment_intent_id", intent.id)
         .eq("state", "pending");
+      if (error) {
+        // A pending row left standing reads as money on its way, to the
+        // owner and to autopay. Ask Stripe to say it again.
+        log.error("could not fail the pending payment", { err: error.message, intentId: intent.id });
+        return retryLater(error.message);
+      }
       break;
     }
 

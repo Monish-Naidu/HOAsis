@@ -63,7 +63,12 @@ export function lateFeesOwed(c: Community): number {
   let total = 0;
   for (const owner of c.owners) {
     if (owner.balanceCents <= 0) continue;
-    const lines = [...(c.ownerCharges[owner.id] ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+    // Oldest first. A statement is kept newest first, and a sort by date
+    // alone leaves two lines of one day in that order, so a fee and the
+    // payment that cleared it the same afternoon read as payment, then fee:
+    // a fee still owed that was in fact paid. Turned over first, the stable
+    // sort keeps a day's lines in the order they happened.
+    const lines = [...(c.ownerCharges[owner.id] ?? [])].reverse().sort((a, b) => a.date.localeCompare(b.date));
     let since = 0;
     lines.forEach((line, i) => {
       if (line.balanceAfterCents <= 0) since = i + 1;
@@ -124,12 +129,16 @@ export function reserveSummary(c: Community) {
   };
 }
 
-/** A ledger line as the flow selectors read it: when, what for, how much. */
-export type LedgerFlow = Pick<LedgerEntry, "date" | "category" | "amountCents">;
+/**
+ * A ledger line as the flow selectors read it: when, what for, how much.
+ * The status rides along on a real line; a month the server summed has none.
+ */
+export type LedgerFlow = Pick<LedgerEntry, "date" | "category" | "amountCents"> &
+  Partial<Pick<LedgerEntry, "status">>;
 
 const flowCache = new WeakMap<
   Community["ledger"],
-  { history: CommunityHistory; lines: LedgerFlow[] }
+  { history: CommunityHistory | undefined; lines: LedgerFlow[] }
 >();
 
 /**
@@ -143,14 +152,21 @@ const flowCache = new WeakMap<
  * month, so a month's stand-in falls on the same side of the line as its
  * rows would. Once the earlier lines have been fetched the stand-ins step
  * aside, so nothing is counted twice.
+ *
+ * A line waiting on review is left out here, once, for every selector. The
+ * overview says such lines are held out of reports until confirmed, and
+ * Transactions already held them out; the charts, the runway and dues
+ * collected counted them, so a bank line imported twice was spending twice
+ * on one screen and once on the next.
  */
 export function ledgerFlows(c: Community): LedgerFlow[] {
   const h = c.history;
-  if (!h) return c.ledger;
   const cached = flowCache.get(c.ledger);
   if (cached && cached.history === h) return cached.lines;
-  const lines: LedgerFlow[] = h.ledgerLoaded ? [...c.ledger] : c.ledger.filter((e) => e.date >= h.from);
-  if (!h.ledgerLoaded) {
+  const lines: LedgerFlow[] = c.ledger.filter(
+    (e) => e.status !== "needs-review" && (!h || h.ledgerLoaded || e.date >= h.from),
+  );
+  if (h && !h.ledgerLoaded) {
     for (const m of h.ledgerMonths) {
       const date = `${m.month}-01`;
       if (m.inCents > 0) lines.push({ date, category: m.category, amountCents: m.inCents });
@@ -444,60 +460,128 @@ export function categoryTrend(c: Community, category: string) {
 }
 
 /**
- * Dues billed against dues collected, month by month.
+ * Dues billed against dues collected, bill by bill.
  *
- * Expected is what the association bills: every unit at its dues, converted
- * to a monthly figure whatever the cadence. Collected is the positive side of
- * the Assessments category; the card fee pass-through sits in that category
- * as a negative and is left out, since it is a cost and not a shortfall.
- * Only months with any transaction at all are rated, so a future month does
- * not read as zero collected.
+ * Expected is what the association billed: every unit at its dues, once for
+ * each bill that has fallen due. A monthly association has a row per month.
+ * A quarterly or annual one has a row per bill, in the month it fell due,
+ * and what came in during the months after it, up to the next bill, counts
+ * toward that row; money in before the year's first bill was paying last
+ * year's last one, which leads the list as its own row, labelled with its
+ * year. Spreading an annual bill evenly over twelve months read
+ * 100% collected in March with a quarter of the homes unpaid, since three
+ * months' share of the bill was all it was held against.
+ *
+ * Collected is the positive side of the Assessments category; the card fee
+ * pass-through sits in that category as a negative and is left out, since
+ * it is a cost and not a shortfall. For monthly dues only months with any
+ * transaction at all are rated, so a future month does not read as zero
+ * collected. A quarterly or annual bill counts once its month has arrived
+ * (`asOf`, the association's own clock unless told otherwise) and only from
+ * the first month the association has anything on its books, so a bill
+ * that fell due before it existed is not held against it.
  */
-export function duesCollection(c: Community, year: number) {
-  const { unitCount, duesCents, duesCadence } = c.association;
+export function duesCollection(c: Community, year: number, asOf: string = c.asOf) {
+  const { unitCount, duesCents, duesCadence, fiscalYearStart } = c.association;
   // Every home at its own amount. In a mixed community kinds pay differently,
   // and a roster that has not loaded yet falls back to the unit count.
   const perPeriod = c.owners.length ? totalDues(c.association, c.owners) : unitCount * duesCents;
-  const perMonth =
-    duesCadence === "monthly" ? perPeriod : duesCadence === "quarterly" ? perPeriod / 3 : perPeriod / 12;
-  const expectedCents = Math.round(perMonth);
+  // What one bill comes to, every home together.
+  const expectedCents = Math.round(perPeriod);
   // Collected means what owners paid, before the processor's cut. The ledger
   // books each deposit net of the fee, so a month in which every home paid
   // read 96% against a gross bill (found in the five year run, 2026-09-24).
   // Owners' statements carry the gross payment, so a month they cover is
   // measured from them; a month they do not reach falls back to the ledger.
-  const deposited = Array.from({ length: 12 }, () => 0);
-  const paid = Array.from({ length: 12 }, () => 0);
-  const active = Array.from({ length: 12 }, () => false);
+  // The first month with anything on the books, in any year.
+  let firstActive = "";
   for (const e of ledgerFlows(c)) {
-    if (yearOf(e.date) !== year) continue;
-    active[monthOf(e.date) - 1] = true;
-    if (e.category === "Assessments" && e.amountCents > 0) deposited[monthOf(e.date) - 1] += e.amountCents;
+    const ym = e.date.slice(0, 7);
+    if (!firstActive || ym < firstActive) firstActive = ym;
   }
   // Statement lines on hand, then the months the server summed before them.
   // A home whose whole statement was fetched still counts through the sums
   // for the earlier months, so the two never overlap.
   const linesFrom = c.history?.from ?? "";
-  for (const lines of Object.values(c.ownerCharges ?? {})) {
-    for (const line of lines) {
-      if (line.kind !== "payment" || yearOf(line.date) !== year || line.date < linesFrom) continue;
-      paid[monthOf(line.date) - 1] += -line.amountCents;
+  const tally = (y: number) => {
+    const deposited = Array.from({ length: 12 }, () => 0);
+    const paid = Array.from({ length: 12 }, () => 0);
+    const active = Array.from({ length: 12 }, () => false);
+    for (const e of ledgerFlows(c)) {
+      if (yearOf(e.date) !== y) continue;
+      active[monthOf(e.date) - 1] = true;
+      if (e.category === "Assessments" && e.amountCents > 0) deposited[monthOf(e.date) - 1] += e.amountCents;
     }
-  }
-  for (const m of c.history?.statementMonths ?? []) {
-    if (m.kind !== "payment" || Number(m.month.slice(0, 4)) !== year) continue;
-    paid[Number(m.month.slice(5, 7)) - 1] += -m.cents;
-  }
-  const collected = deposited.map((net, i) => (paid[i] > 0 ? paid[i] : net));
-  const months = collected
-    .map((collectedCents, i) => ({
+    for (const lines of Object.values(c.ownerCharges ?? {})) {
+      for (const line of lines) {
+        if (line.kind !== "payment" || yearOf(line.date) !== y || line.date < linesFrom) continue;
+        paid[monthOf(line.date) - 1] += -line.amountCents;
+      }
+    }
+    for (const m of c.history?.statementMonths ?? []) {
+      if (m.kind !== "payment" || Number(m.month.slice(0, 4)) !== y) continue;
+      paid[Number(m.month.slice(5, 7)) - 1] += -m.cents;
+    }
+    return { collected: deposited.map((net, i) => (paid[i] > 0 ? paid[i] : net)), active };
+  };
+  const { collected, active } = tally(year);
+
+  // Which months a bill falls due in: every month, every third counted from
+  // the fiscal year start, or the fiscal year's first month alone. The same
+  // rule the daily run bills by.
+  const monthly = duesCadence === "monthly";
+  const step = monthly ? 1 : duesCadence === "quarterly" ? 3 : 12;
+  const fyMonth = Number((fiscalYearStart ?? "").slice(0, 2)) || 1;
+  const onCadence = (i: number) => (((i + 1 - fyMonth) % step) + step) % step === 0;
+  const asOfMonth = asOf.slice(0, 7);
+  const billed = (i: number) => {
+    if (monthly) return active[i];
+    const ym = `${year}-${String(i + 1).padStart(2, "0")}`;
+    return onCadence(i) && firstActive !== "" && ym >= firstActive && ym <= asOfMonth;
+  };
+
+  const months: { month: number; label: string; expectedCents: number; collectedCents: number; rate: number }[] = [];
+  for (let i = 0; i < 12; i += 1) {
+    if (!billed(i)) continue;
+    let collectedCents = collected[i];
+    // Money that arrives between two bills is paying the earlier one.
+    if (!monthly) {
+      for (let j = i + 1; j < 12 && !onCadence(j); j += 1) collectedCents += collected[j];
+    }
+    months.push({
       month: i + 1,
       label: SHORT_MONTHS[i],
       expectedCents,
       collectedCents,
       rate: expectedCents ? Math.min(1, collectedCents / expectedCents) : 0,
-    }))
-    .filter((_, i) => active[i]);
+    });
+  }
+  // A bill from last year that this year is still paying. When the cadence
+  // does not land on January (a fiscal year from July, say), the months
+  // before this year's first bill belong to last year's last one. Without
+  // this row an annual association read in March said "nothing billed yet"
+  // with a July bill four fifths collected, and money paid January to June
+  // was counted in no year at all.
+  if (!monthly) {
+    let first = 0;
+    while (first < 12 && !onCadence(first)) first += 1;
+    let last = 11;
+    while (last > 0 && !onCadence(last)) last -= 1;
+    const ym = `${year - 1}-${String(last + 1).padStart(2, "0")}`;
+    if (first > 0 && first < 12 && firstActive !== "" && ym >= firstActive && ym <= asOfMonth) {
+      const before = tally(year - 1).collected;
+      let collectedCents = 0;
+      for (let j = last; j < 12; j += 1) collectedCents += before[j];
+      for (let j = 0; j < first; j += 1) collectedCents += collected[j];
+      months.unshift({
+        month: last + 1,
+        label: `${SHORT_MONTHS[last]} ${year - 1}`,
+        expectedCents,
+        collectedCents,
+        rate: expectedCents ? Math.min(1, collectedCents / expectedCents) : 0,
+      });
+    }
+  }
   const collectedYtd = months.reduce((t, m) => t + m.collectedCents, 0);
   const expectedYtd = expectedCents * months.length;
   return {

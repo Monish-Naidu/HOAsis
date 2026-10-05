@@ -23,7 +23,7 @@ import {
   useUnreadThreadCount,
 } from "@/lib/app-state";
 import { noticeKey, readStore, useReadNotices } from "@/lib/notifications-read";
-import { cn, daysFromToday, money, pluralize, relativeDays } from "@/lib/utils";
+import { cn, daysFromToday, money, pastDueLabel, pluralize, relativeDays } from "@/lib/utils";
 
 /**
  * The bell on the top right, from the 2026-09-01 design.
@@ -129,7 +129,7 @@ function useResidentNotices(): Notice[] {
     notices.push({
       id: "balance",
       title: owner.daysPastDue > 0 ? "Your account is past due" : "A payment is coming up",
-      detail: `${money(owner.balanceCents)} ${owner.daysPastDue > 0 ? `· ${owner.daysPastDue} days past due` : `· due ${relativeDays(community.nextChargeDate)}`}`,
+      detail: `${money(owner.balanceCents)} ${owner.daysPastDue > 0 ? `· ${pastDueLabel(owner.daysPastDue)}` : `· due ${relativeDays(community.nextChargeDate)}`}`,
       href: "/resident/pay",
       icon: CircleDollarSign,
       tone: owner.daysPastDue > 0 ? "bg-danger-soft text-danger" : "bg-info-soft text-info",

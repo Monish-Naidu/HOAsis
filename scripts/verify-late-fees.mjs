@@ -73,8 +73,31 @@ try {
   const { data: feesB } = await admin.from("charges").select("unit_id").eq("association_id", associationId).eq("category", "late_fee").eq("label", "Late fee, Second dues");
   check("only the unpaid home gets the second period's fee", second === 1 && (feesB ?? []).length === 1 && feesB[0].unit_id === unitB, `${second}, ${JSON.stringify(feesB)}`);
 
+  // A home that paid ahead owes nothing when the bill arrives, and gets no
+  // fee. The payment was made before the line existed, so nothing was ever
+  // applied to it; reading "unpaid" off those rows fined a paid up home
+  // every month its credit lasted (fixed in 0062).
+  await admin.rpc("record_payment", { p_unit_id: unitA, p_amount_cents: 10000, p_rail: "ach", p_processor_fee_cents: 0 });
+  await admin.rpc("issue_assessment", { p_association_id: associationId, p_label: "Fourth dues", p_due_on: day(-31) });
+  const { data: ahead } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(0) });
+  const { data: feesD } = await admin.from("charges").select("unit_id").eq("association_id", associationId).eq("category", "late_fee").eq("label", "Late fee, Fourth dues");
+  check("a home that paid ahead gets no fee", ahead === 1 && (feesD ?? []).length === 1 && feesD[0].unit_id === unitB, `${ahead}, ${JSON.stringify(feesD)}`);
+
+  // A bank payment still clearing holds the fee off until it lands or fails.
+  await admin.rpc("issue_assessment", { p_association_id: associationId, p_label: "Fifth dues", p_due_on: day(-30) });
+  const { data: pendingRow } = await admin.from("payments").insert({
+    association_id: associationId, unit_id: unitB, amount_cents: 47500, rail: "ach", state: "pending",
+  }).select("id").single();
+  const { data: held } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(0) });
+  const { data: feesE } = await admin.from("charges").select("unit_id").eq("association_id", associationId).eq("category", "late_fee").eq("label", "Late fee, Fifth dues");
+  check("a payment still clearing holds the fee off", (feesE ?? []).every((f) => f.unit_id !== unitB), `${held}, ${JSON.stringify(feesE)}`);
+  await admin.from("payments").update({ state: "failed" }).eq("id", pendingRow?.id ?? "");
+  const { data: after } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(0) });
+  check("and it posts once that payment fails", after === 1, String(after));
+
   // The board's own policy is honoured: no fee when it says zero.
-  await admin.from("associations").update({ settings: { collectionPolicy: { lateFeeCents: 0 } } }).eq("id", associationId);
+  const { error: policyError } = await admin.from("associations").update({ settings: { collectionPolicy: { lateFeeCents: 0 } } }).eq("id", associationId);
+  check("the policy change is saved", !policyError, policyError?.message ?? "");
   await admin.rpc("issue_assessment", { p_association_id: associationId, p_label: "Third dues", p_due_on: day(-45) });
   const { data: none } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(0) });
   check("a policy with no fee posts none", none === 0, String(none));

@@ -3,7 +3,6 @@ import {
   MANAGEMENT_RANGE_PER_HOME,
   PRICE_EXAMPLES,
   PRICE_PER_HOME_CENTS,
-  PRICE_PER_TRANSACTION_CENTS,
   annualFor,
   monthlyFor,
 } from "@/lib/pricing";
@@ -49,10 +48,5 @@ describe("pricing", () => {
     const sizes = PRICE_EXAMPLES.map((e) => e.homes);
     expect([...sizes].sort((a, b) => a - b)).toEqual(sizes);
     expect(PRICE_EXAMPLES.filter((e) => e.highlight)).toHaveLength(1);
-  });
-
-  it("charges a flat fee per payment rather than a percentage", () => {
-    // The whole argument for it: a fee that does not grow with the assessment.
-    expect(PRICE_PER_TRANSACTION_CENTS).toBe(2_00);
   });
 });

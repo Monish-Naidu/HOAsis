@@ -16,6 +16,7 @@ import { useToast } from "@/components/app/toast";
 import { GOVERNING_DOCS, DOC_ORDER, DISCLOSURE_TOPICS } from "@/lib/governing";
 import { extractArticles, toArticle } from "@/lib/governing-extract";
 import type { Extraction, ExtractedArticle } from "@/lib/governing-extract";
+import { ROLE_LABEL } from "@/lib/types";
 import type { DisclosureTopic, GoverningDoc, GoverningTopic } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +84,7 @@ function initialChoices(extraction: Extraction): Record<string, Choice> {
  * interpretation into somebody's legal record.
  */
 export function ImportScreen() {
-  const { community, addGoverningArticles } = useAppState();
+  const { community, account, addGoverningArticles } = useAppState();
   const { notify } = useToast();
 
   const [source, setSource] = useState("");
@@ -113,7 +114,7 @@ export function ImportScreen() {
     // so beats extracting nonsense and asking a board to confirm it.
     if (/\.(pdf|docx?|xlsx?)$/i.test(file.name)) {
       setReadError(
-        `${file.name} is a ${file.name.split(".").pop()?.toUpperCase()} file. Pulling text out of one happens on the server in a real deployment; here, open it, copy the text, and paste it below.`,
+        `${file.name} is a ${file.name.split(".").pop()?.toUpperCase()} file, and we cannot read those yet. Open it, copy the text, and paste it below.`,
       );
       return;
     }
@@ -158,7 +159,11 @@ export function ImportScreen() {
           topic: choices[article.key].topic,
           affects: choices[article.key].affects,
           disclosureTopics: choices[article.key].disclosure,
-          confirmedBy: "Arya Mehr, President",
+          // Whoever pressed the button, since the reader shows this name
+          // beside every article as the person who checked it.
+          confirmedBy: account
+            ? `${account.name}${ROLE_LABEL[account.role] ? `, ${ROLE_LABEL[account.role]}` : ""}`
+            : "The board",
           confirmedOn: community.asOf,
         }),
       ),

@@ -284,11 +284,22 @@ export interface PlatformFeePolicy {
   waiveOnAch: boolean;
 }
 
-export const DEFAULT_FEE_POLICY: PlatformFeePolicy = {
-  flatCents: 150,
+/**
+ * Your HOAsis takes nothing per payment. The price is the monthly rate per
+ * home and that is all of it; the flat fee per online payment came off on
+ * 2026-10-04 (Monish). Every screen and both payment routes price with this.
+ *
+ * The policy shape stays because the split below is still how a payment is
+ * itemized, and the associations table still carries the three columns a
+ * board once set. Nothing reads them.
+ */
+export const NO_PLATFORM_FEE: PlatformFeePolicy = {
+  flatCents: 0,
   paidBy: "owner",
   waiveOnAch: false,
 };
+
+export const DEFAULT_FEE_POLICY: PlatformFeePolicy = NO_PLATFORM_FEE;
 
 export interface PaymentCost {
   amountCents: Cents;

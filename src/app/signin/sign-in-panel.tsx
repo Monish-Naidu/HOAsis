@@ -1,5 +1,6 @@
 "use client";
 
+import { sameOriginPath } from "@/app/auth/callback/next-path";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -41,7 +42,8 @@ const TEST_LOGINS: { label: string; who: string; email: string; password: string
  */
 async function destinationAfterSignIn(next: string | null): Promise<string> {
   // An explicit destination wins, but only a path on this site.
-  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+  const safe = sameOriginPath(next, window.location.origin);
+  if (safe) return safe;
   try {
     const { data } = await supabaseBrowser().rpc("my_associations");
     const rows = (data ?? []) as { role: string }[];

@@ -81,6 +81,9 @@ try {
   });
   cleanup.associations.push(hoa);
   check("the association is founded", Boolean(hoa));
+  // Books open on the founding day unless told otherwise (0056); this suite
+  // bills periods that fell due before today.
+  await admin.from("associations").update({ billing_starts_on: "2000-01-01" }).eq("id", hoa);
 
   const treasurer = await makeUser("Tom Treasurer", treasurerEmail);
   const steady = await makeUser("Sam Steady", steadyEmail);
@@ -137,11 +140,14 @@ try {
 
   for (const payer of payers) {
     for (let i = 0; i < payer.months; i++) {
-      const { error } = await payer.who.client.rpc("record_payment", {
+      // Settled the way the webhook settles it; an owner cannot write their
+      // own payment (0062).
+      const { error } = await admin.rpc("record_payment", {
         p_unit_id: unitOf[payer.unit],
         p_amount_cents: DUES,
         p_rail: "ach",
         p_processor_fee_cents: 35,
+        p_paid_by: payer.who.id,
       });
       if (error) {
         check(`unit ${payer.unit} could pay month ${i + 1}`, false, error.message);

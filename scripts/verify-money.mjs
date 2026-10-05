@@ -49,6 +49,10 @@ try {
   });
   cleanup.associations.push(associationId);
 
+  // An association's books open on the day it was founded unless told
+  // otherwise (0056), and this one bills a period that fell due last week.
+  await admin.from("associations").update({ billing_starts_on: day(-60) }).eq("id", associationId);
+
   // The bank the money lands in.
   const { error: bankError } = await president.client.from("bank_accounts").insert({
     association_id: associationId, kind: "operating",
@@ -78,10 +82,18 @@ try {
   const { data: before } = await resident.client.from("unit_balances").select("balance_cents").eq("unit_id", myUnit).single();
   check("the resident owes the assessment", before?.balance_cents === 6000, String(before?.balance_cents));
 
-  const { data: paymentId, error: payError } = await resident.client.rpc("record_payment", {
+  // An owner cannot write their own payment: that cleared a balance with no
+  // money moving (0062). A real one is written by the server when the
+  // processor says it settled, which is what the admin client stands for here.
+  const { error: selfPayError } = await resident.client.rpc("record_payment", {
     p_unit_id: myUnit, p_amount_cents: 6000, p_rail: "ach", p_processor_fee_cents: 35,
   });
-  check("a resident can pay their own assessment", !payError && Boolean(paymentId), payError?.message ?? "");
+  check("a resident cannot record their own payment", selfPayError?.code === "42501", selfPayError?.message?.slice(0, 45) ?? "no error");
+
+  const { data: paymentId, error: payError } = await admin.rpc("record_payment", {
+    p_unit_id: myUnit, p_amount_cents: 6000, p_rail: "ach", p_processor_fee_cents: 35, p_paid_by: resident.id,
+  });
+  check("a settled payment reaches the resident's statement", !payError && Boolean(paymentId), payError?.message ?? "");
 
   const { data: after } = await resident.client.from("unit_balances").select("balance_cents").eq("unit_id", myUnit).single();
   check("their balance clears", after?.balance_cents === 0, String(after?.balance_cents));
@@ -117,6 +129,25 @@ try {
     p_association_id: associationId, p_label: "Sneaky", p_due_on: day(-1),
   });
   check("a resident cannot bill the association", Boolean(billError), billError?.message?.slice(0, 45) ?? "no error");
+
+  // A visitor with no session holds the public key and nothing else. Each of
+  // these once took them for the server, because both have no user id.
+  const nobody = anon();
+  const refused = (e) => Boolean(e) && /permission denied|42501/.test(`${e.code} ${e.message}`);
+  const { error: anonPay } = await nobody.rpc("record_payment", { p_unit_id: myUnit, p_amount_cents: 100, p_rail: "ach" });
+  check("a signed out visitor cannot record a payment", refused(anonPay), anonPay?.message?.slice(0, 60) ?? "no error");
+  const { error: anonBill } = await nobody.rpc("issue_assessment", { p_association_id: associationId, p_label: "Sneaky", p_due_on: day(-1) });
+  check("a signed out visitor cannot bill the association", refused(anonBill), anonBill?.message?.slice(0, 60) ?? "no error");
+  const { error: anonFees } = await nobody.rpc("assess_late_fees", { p_association_id: associationId });
+  check("a signed out visitor cannot post late fees", refused(anonFees), anonFees?.message?.slice(0, 60) ?? "no error");
+  const { error: anonRefund } = await nobody.rpc("record_refund", { p_stripe_payment_intent_id: "pi_nothing", p_amount_cents: 100 });
+  check("a signed out visitor cannot record a refund", refused(anonRefund), anonRefund?.message?.slice(0, 60) ?? "no error");
+  const { error: memberRefund } = await president.client.rpc("record_refund", { p_stripe_payment_intent_id: "pi_nothing", p_amount_cents: 100 });
+  check("nor can a signed in board member", refused(memberRefund), memberRefund?.message?.slice(0, 60) ?? "no error");
+  const { error: forged } = await resident.client.rpc("record_activity", {
+    p_association: associationId, p_kind: "association", p_subject: associationId, p_summary: "Forged",
+  });
+  check("nobody can write the activity record by hand", refused(forged), forged?.message?.slice(0, 60) ?? "no error");
 
   // A treasurer recording a cheque that arrived in the post.
   const { error: boardPayError } = await president.client.rpc("record_payment", {

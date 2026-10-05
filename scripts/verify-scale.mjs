@@ -81,6 +81,9 @@ try {
     check(`${scale.name}: founding ${scale.homes} homes succeeds`, !error, error?.message ?? "");
     if (!associationId) continue;
     cleanup.associations.push(associationId);
+    // Books open on the founding day unless told otherwise (0056); this suite
+    // bills periods that fell due before today.
+    await admin.from("associations").update({ billing_starts_on: "2000-01-01" }).eq("id", associationId);
 
     // Slow onboarding is abandoned onboarding, and this is one round trip.
     check(

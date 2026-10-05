@@ -50,6 +50,11 @@ function longDate(iso: string): string {
  * Table based and inline styled, because a decade of email clients still do
  * not agree on flexbox, and a layout that collapses in Outlook is a notice
  * that did not arrive.
+ *
+ * The association's name, the preheader and the button label are escaped
+ * here, once, so no template has to remember: all three carry words a board
+ * or an owner typed. Callers pass them as plain text, never pre-escaped.
+ * `body` and `footer` are HTML the template built, with its own escaping.
  */
 function layout(options: {
   associationName: string;
@@ -63,13 +68,13 @@ function layout(options: {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
 <body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${options.preheader}</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(options.preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 16px;">
 <tr><td align="center">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:14px;border:1px solid #e2e6ec;overflow:hidden;">
     <tr><td style="padding:24px 28px 0;">
       <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7789;">
-        ${options.associationName}
+        ${escapeHtml(options.associationName)}
       </p>
     </td></tr>
     <tr><td style="padding:16px 28px 8px;">${options.body}</td></tr>
@@ -77,7 +82,7 @@ function layout(options: {
       <a href="${options.cta.url}"
          style="display:inline-block;background:#1e3a5f;color:#ffffff;text-decoration:none;
                 padding:14px 28px;border-radius:10px;font-size:16px;font-weight:600;">
-        ${options.cta.label}
+        ${escapeHtml(options.cta.label)}
       </a>
       <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#6b7789;">
         This link signs you in, so there is no password to remember.
@@ -101,7 +106,7 @@ export function assessmentDueEmail(input: DuesEmailInput) {
       ${amount} is due ${longDate(input.dueDate)}
     </h1>
     <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
-      ${input.ownerName}, this is your assessment for unit ${input.unitLabel}.
+      ${escapeHtml(input.ownerName)}, this is your assessment for unit ${escapeHtml(input.unitLabel)}.
     </p>`;
 
   return {
@@ -128,7 +133,7 @@ export function pastDueEmail(input: DuesEmailInput) {
       ${amount} is past due
     </h1>
     <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
-      ${input.ownerName}, unit ${input.unitLabel} carries a balance of ${amount}${
+      ${escapeHtml(input.ownerName)}, unit ${escapeHtml(input.unitLabel)} carries a balance of ${amount}${
         days > 0 ? `, now ${days} ${days === 1 ? "day" : "days"} past due` : ""
       }.
     </p>
@@ -159,7 +164,7 @@ export function pastDueEmail(input: DuesEmailInput) {
  * than leaving somebody to conclude we ignored one.
  */
 function footerFor(input: DuesEmailInput): string {
-  const sender = `Sent by ${input.associationName} through Your HOAsis.`;
+  const sender = `Sent by ${escapeHtml(input.associationName)} through Your HOAsis.`;
   if (!input.unsubscribeUrl) {
     return `${sender} This is a notice about your account, so it is sent to every owner and cannot be turned off. You can still turn off community updates and newsletters in your account settings.`;
   }
@@ -215,10 +220,10 @@ export function trialEmail(kind: "14-days" | "3-days" | "ended", input: TrialEma
       ${heading}
     </h1>
     <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
-      ${input.presidentName}, ${input.associationName} is on Your HOAsis at ${price}. ${detail}
+      ${escapeHtml(input.presidentName)}, ${escapeHtml(input.associationName)} is on Your HOAsis at ${price}. ${detail}
     </p>`;
 
-  const footer = `Sent to the President of ${input.associationName} by Your HOAsis. This is about the association's subscription, so it goes to whoever runs the board and cannot be turned off.`;
+  const footer = `Sent to the President of ${escapeHtml(input.associationName)} by Your HOAsis. This is about the association's subscription, so it goes to whoever runs the board and cannot be turned off.`;
 
   return {
     subject,
@@ -327,6 +332,11 @@ export function inviteEmail(input: {
   };
 }
 
+/**
+ * Makes typed words safe to sit in HTML, as text or inside a double-quoted
+ * attribute. Subjects and the plain text part are not HTML and never go
+ * through this, or "&amp;" shows up in an inbox.
+ */
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -374,10 +384,10 @@ export function autopayEmail(kind: "charged" | "failed", input: AutopayEmailInpu
 
   const body = `
     <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
-      ${heading}
+      ${escapeHtml(heading)}
     </h1>
     <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
-      ${input.ownerName}, ${detail}
+      ${escapeHtml(input.ownerName)}, ${escapeHtml(detail)}
     </p>`;
 
   return {
@@ -390,7 +400,7 @@ export function autopayEmail(kind: "charged" | "failed", input: AutopayEmailInpu
         kind === "charged"
           ? { label: "View account", url: input.payUrl }
           : { label: `Pay ${amount}`, url: input.payUrl },
-      footer: `Sent by ${input.associationName} through Your HOAsis because autopay is on for your home. Turn it off any time on the pay screen.`,
+      footer: `Sent by ${escapeHtml(input.associationName)} through Your HOAsis because autopay is on for your home. Turn it off any time on the pay screen.`,
     }),
     text: `${input.ownerName},\n\n${heading}. ${detail}\n\n${input.payUrl}\n\nYour HOAsis`,
   };

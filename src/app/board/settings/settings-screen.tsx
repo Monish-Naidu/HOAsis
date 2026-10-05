@@ -32,6 +32,7 @@ import { DuesSettings } from "@/components/app/dues-settings";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { useAppState } from "@/lib/app-state";
 import { AmenityRules } from "@/components/app/amenity-rules";
+import { useCoverPhotoUpload } from "@/components/app/community-hero";
 import { useToast } from "@/components/app/toast";
 import { accessLevel, CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
 import {
@@ -60,6 +61,7 @@ const SECTIONS: { id: string; label: string }[] = [
 ];
 
 export function SettingsScreen() {
+  const coverPhoto = useCoverPhotoUpload();
   const {
     account,
     accounts,
@@ -310,14 +312,15 @@ export function SettingsScreen() {
                   className="sr-only"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
+                    // Cleared so picking the same file again still fires.
+                    event.target.value = "";
                     if (!file) return;
-                    // Object URLs are per tab, so this preview does not survive a
-                    // reload. A real upload puts the file in object storage and
-                    // stores the returned URL instead.
-                    updateSettings({
-                      photoUrl: URL.createObjectURL(file),
-                      photoCredit: file.name,
-                    });
+                    // The same upload the banner's camera button uses. This
+                    // used to save an object URL, which only means anything
+                    // in the tab that made it, as a real association's photo.
+                    void coverPhoto.choose(file);
+                    // The old credit named somebody else's picture.
+                    if (settings.photoCredit) updateSettings({ photoCredit: "" });
                   }}
                 />
               </label>
@@ -452,63 +455,18 @@ export function SettingsScreen() {
         <SectionTitle>Money</SectionTitle>
         <DuesSettings />
 
-        {/* Payments: billing, the bank, and who carries the fee */}
+        {/* Payments: billing, the bank, and autopay's last day */}
         <Card>
           <CardHeader
             title="Payments"
             subtitle={
-              isRemote
-                ? "Your plan, where dues land, and who pays the fee"
-                : "The fee on each payment, and when autopay runs"
+              isRemote ? "Your plan, where dues land, and when autopay runs" : "When autopay runs"
             }
           />
           {isRemote ? <BillingRow /> : null}
           {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
           {isRemote ? <TestModeGuide audience="board" className="mx-4 my-3" /> : null}
 
-          <SettingRow
-            title="Payment fee"
-            description="Flat fee per payment, added to the processor's cost"
-          >
-            <Select
-              value={settings.paymentFeeCents}
-              onChange={(e) => updateSettings({ paymentFeeCents: Number(e.target.value) })}
-              aria-label="Payment fee"
-            >
-              {[0, 50, 100, 150, 200, 250, 300].map((cents) => (
-                <option key={cents} value={cents}>
-                  {cents === 0 ? "No fee" : `$${(cents / 100).toFixed(2)}`}
-                </option>
-              ))}
-            </Select>
-          </SettingRow>
-          <SettingRow
-            title="Who pays it"
-            description="Paid by the owner or by the association"
-          >
-            <Select
-              value={settings.paymentFeePaidBy}
-              onChange={(e) =>
-                updateSettings({
-                  paymentFeePaidBy: e.target.value as "owner" | "association",
-                })
-              }
-              aria-label="Who pays the fee"
-            >
-              <option value="owner">The owner</option>
-              <option value="association">The association</option>
-            </Select>
-          </SettingRow>
-          <SettingRow
-            title="Waive it on bank transfers"
-            description="Bank transfers cost the association less than cards"
-          >
-            <Toggle
-              checked={settings.paymentFeeWaivedOnAch}
-              onChange={(v) => updateSettings({ paymentFeeWaivedOnAch: v })}
-              label="Waive the fee on bank transfers"
-            />
-          </SettingRow>
           <SettingRow
             title="Last day for autopay"
             description="The latest day of the month autopay can run"

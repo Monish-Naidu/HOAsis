@@ -8,7 +8,7 @@ import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { loadEarlierStatement } from "@/lib/data/remote-store";
-import { formatDate, money, today } from "@/lib/utils";
+import { formatDate, money, pastDueLabel, today } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { HOME_TYPE_LABEL, isMixed, ownerDues } from "@/lib/home-types";
@@ -164,7 +164,7 @@ export default function ResidentAccount() {
               ? "Paid up"
               : currentOwner.standing === "collections"
                 ? "In collections"
-                : `${currentOwner.daysPastDue} days past due`}
+                : pastDueLabel(currentOwner.daysPastDue)}
           </Badge>
         </Card>
         <Card className="p-4">

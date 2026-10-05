@@ -14,6 +14,11 @@ import type { AutopayPlan, Cents } from "@/lib/types";
  *     rest waits for the owner to pay it by hand.
  *   - A day with nothing due is not a decision at all. It waits, so dues
  *     posted on the 3rd are still collected on the 4th.
+ *   - Money already on its way counts. A bank payment takes days to settle
+ *     and writes no statement line until it does, so the balance alone would
+ *     have autopay pull the same dues a second time. What is in flight comes
+ *     off first; if that covers everything, the day waits like any other
+ *     day with nothing due, and is asked again tomorrow.
  */
 export type AutopayDecision =
   | { action: "wait"; reason: string }
@@ -26,8 +31,17 @@ export function decideAutopay(input: {
   today: string;
   balanceCents: Cents;
   duesCents: Cents;
+  /**
+   * Payments made but not yet settled: the home's `pending` rows, summed.
+   * The caller bounds them by age (see pendingSince), so a row whose failure
+   * was never heard about cannot hold autopay off forever.
+   */
+  pendingCents?: Cents;
 }): AutopayDecision {
-  const { plan, today, balanceCents, duesCents } = input;
+  const { plan, today, duesCents } = input;
+  const pendingCents = Math.max(0, input.pendingCents ?? 0);
+  // What autopay may still take: the balance less what is already coming.
+  const balanceCents = Math.max(0, input.balanceCents - pendingCents);
   const month = today.slice(0, 7);
   const day = Number(today.slice(8, 10));
 
@@ -41,6 +55,7 @@ export function decideAutopay(input: {
     return { action: "skip", reason: "Skipped this month" };
   }
   if (balanceCents <= 0) {
+    if (input.balanceCents > 0) return { action: "wait", reason: "Payment processing" };
     return { action: "wait", reason: "Nothing due" };
   }
   if (plan.capCents !== undefined && balanceCents > plan.capCents) {
@@ -53,6 +68,20 @@ export function decideAutopay(input: {
     };
   }
   return { action: "charge", amountCents: balanceCents, reason: "Full balance" };
+}
+
+/**
+ * How long a pending payment is believed. A bank debit settles or fails
+ * within about a week; past two, the likelier story is a failure event that
+ * never arrived, and a home must not sit out autopay forever on its account.
+ */
+export const PENDING_PAYMENT_MAX_AGE_DAYS = 14;
+
+/** The earliest day a pending payment may date from and still count, YYYY-MM-DD. */
+export function pendingSince(today: string): string {
+  const at = new Date(`${today}T00:00:00Z`);
+  at.setUTCDate(at.getUTCDate() - PENDING_PAYMENT_MAX_AGE_DAYS);
+  return at.toISOString().slice(0, 10);
 }
 
 /** A saved instrument the cron can actually charge: a Stripe method, verified. */

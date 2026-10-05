@@ -6,8 +6,10 @@ const nextConfig: NextConfig = {
     return [
       // The board shell lived at /admin until 2026-09-01. Old deep links keep
       // working; permanent, because the old name is not coming back. The bare
-      // /admin is the owner's ops page since 2026-09-25 (docs/observability.md).
-      { source: "/admin/:path*", destination: "/board/:path*", permanent: true },
+      // /admin is the owner's ops page since 2026-09-25 (docs/observability.md),
+      // so the pattern is `:path+`, one segment or more. `:path*` also matches
+      // none, and sent /admin itself to /board before the page was looked at.
+      { source: "/admin/:path+", destination: "/board/:path+", permanent: true },
     ];
   },
 };

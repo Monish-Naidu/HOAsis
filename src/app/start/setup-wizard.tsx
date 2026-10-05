@@ -14,6 +14,7 @@ import {
   emptyDraft,
   founderHomeType,
   finalizeDraft,
+  founderLabel,
   founderUnit,
   otherHomes,
   unitCount,
@@ -1140,7 +1141,9 @@ function RangesStep({ draft, patch }: StepProps) {
     setBuyer({ name: "", email: "" });
   }
 
-  const mine = founderUnit(draft);
+  // The printed label, so the founder's own "Lot 12" row is recognised as
+  // theirs and does not offer "It has sold".
+  const mine = founderLabel(draft);
   const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
 
   return (
