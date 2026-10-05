@@ -150,10 +150,15 @@ export default function ResidentAccount() {
           <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(currentOwner.balanceCents)}
           </p>
+          {/* "Paid up" is for a home that owes nothing. A home with a bill
+              that is not late yet used to read "Paid up" under the amount
+              it owed. */}
           <Badge
             tone={
               currentOwner.standing === "current"
-                ? "ok"
+                ? currentOwner.balanceCents > 0
+                  ? "neutral"
+                  : "ok"
                 : currentOwner.standing === "collections"
                   ? "danger"
                   : "warn"
@@ -161,7 +166,9 @@ export default function ResidentAccount() {
             className="mt-2"
           >
             {currentOwner.standing === "current"
-              ? "Paid up"
+              ? currentOwner.balanceCents > 0
+                ? "Not late"
+                : "Paid up"
               : currentOwner.standing === "collections"
                 ? "In collections"
                 : pastDueLabel(currentOwner.daysPastDue)}

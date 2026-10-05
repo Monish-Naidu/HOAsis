@@ -283,9 +283,9 @@ export function StripePayPanel({
     );
   }
 
-  /* Method choice. The exact fee lands when the server prices the intent. */
+  /* Method choice. The exact total lands when the server prices the intent. */
   const fresh = [
-    { value: "new-ach", label: "New bank account", hint: "Lowest fee", icon: Landmark },
+    { value: "new-ach", label: "New bank account", hint: "Costs the association least", icon: Landmark },
     { value: "new-card", label: "New card", hint: "Paid today", icon: CreditCard },
   ];
   const rowClass = (active: boolean, disabled = false) =>
@@ -397,7 +397,7 @@ export function StripePayPanel({
       </Button>
       <p className="mt-2.5 flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
         <Info className="mt-px size-3 shrink-0" />
-        You will see the fee on the next screen, before you pay.
+        You will see the total on the next screen, before you pay.
       </p>
     </Card>
   );

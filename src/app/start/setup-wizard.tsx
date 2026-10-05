@@ -514,7 +514,7 @@ function WizardQuestions({
         detail:
           draft.origin === "existing"
             ? "The fiscal year, the first dues bill sent from here, and the day the balances you bring over are true."
-            : "The fiscal year and the first dues bill sent from here. Both can change in Settings.",
+            : "The fiscal year and the first dues bill sent from here. Check both with your treasurer before you continue.",
         body: <BooksStep draft={draft} patch={patch} />,
       },
       you: {

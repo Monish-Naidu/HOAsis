@@ -73,7 +73,7 @@ export function VendorsScreen() {
       defaultCategory: "Repairs & maintenance",
     });
     notify(
-      draft.w9OnFile ? `Added ${draft.name}` : `Added ${draft.name}. W-9 requested by email.`,
+      draft.w9OnFile ? `Added ${draft.name}` : `Added ${draft.name}. No W-9 on file yet.`,
     );
     setDraft({ name: "", service: "", achEnabled: true, w9OnFile: false });
     setAdding(false);
@@ -195,10 +195,11 @@ export function VendorsScreen() {
               size="sm"
               onClick={() => {
                 markW9Requested(gaps.missingW9[0].id);
-                notify(`W-9 requested from ${gaps.missingW9[0].name}`);
+                // Nothing is emailed: this only records that the board asked.
+                notify(`Noted that you asked ${gaps.missingW9[0].name} for a W-9. Ask them yourself; nothing was emailed.`);
               }}
             >
-              Request W-9
+              Mark as asked
             </Button>
           }
         >
