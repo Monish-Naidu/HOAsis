@@ -228,6 +228,11 @@ try {
   await admin.from("units").update({ stripe_customer_id: `cus_seller_${stamp}` }).eq("id", soldUnit);
   await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "charge", label: "Assessment", amount_cents: 25_000, due_on: day(-30) });
   const { error: closingError } = await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "payment", label: "Paid at closing", amount_cents: -25_000, due_on: day(0) });
+  // A sale takes effect when it is recorded, so one dated next month is
+  // refused (0092) and the seller keeps their seat until it happens.
+  const { error: earlySale } = await president.client.rpc("transfer_home", { p_unit_id: soldUnit, p_new_name: "Buyer", p_new_email: `buyer-${stamp}@example.com`, p_closing_date: day(30) });
+  const { data: stillSeated } = await admin.from("memberships").select("id").eq("unit_id", soldUnit).is("ends_on", null);
+  check("transfer_home: a closing still to come is refused, and the seller stays", Boolean(earlySale) && (stillSeated ?? []).length === 1, earlySale?.message ?? `allowed, ${(stillSeated ?? []).length} current`);
   const { data: newSeat, error: saleError } = await president.client.rpc("transfer_home", { p_unit_id: soldUnit, p_new_name: "Buyer", p_new_email: `buyer-${stamp}@example.com`, p_closing_date: day(0) });
   check("transfer_home: the board records a sale", !closingError && !saleError && Boolean(newSeat), saleError?.message ?? closingError?.message ?? "");
   const { data: seats } = await admin.from("memberships").select("full_name,ends_on").eq("unit_id", soldUnit).order("starts_on");
