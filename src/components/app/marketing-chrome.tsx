@@ -189,6 +189,8 @@ export function MarketingFooter() {
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
           {[
             ...LINKS,
+            // Only the footer links to it; the top bar stays at three.
+            { href: "/about", label: "About" },
             JOIN,
             { href: "/terms", label: "Terms" },
             { href: "/privacy", label: "Privacy" },

@@ -15,14 +15,14 @@ export default function NotFound() {
             There is nothing here
           </h1>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-            The link may be old, or it may belong to a different account.
+            That page does not exist, or it belongs to an association you are not signed in to.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
-            <ButtonLink href="/signin" variant="primary" size="lg">
-              Back to sign in
-            </ButtonLink>
-            <ButtonLink href="/" variant="ghost" size="lg">
+            <ButtonLink href="/" variant="primary" size="lg">
               Home
+            </ButtonLink>
+            <ButtonLink href="/signin" variant="ghost" size="lg">
+              Sign in
             </ButtonLink>
           </div>
         </Card>

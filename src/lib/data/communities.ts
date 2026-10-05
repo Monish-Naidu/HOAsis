@@ -88,6 +88,9 @@ export const mehrMeadows: Community = {
   ownerCharges: buildOwnerLedgers(mmOwners, {
     assessmentCents: 28_500,
     nextChargeDate: "2026-09-01",
+    // From January, so every month the books call billed has dues lines on
+    // the statements to be summed.
+    months: 9,
     handWritten: { "own-042": mmCharges },
   }),
 };

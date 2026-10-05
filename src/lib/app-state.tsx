@@ -119,6 +119,8 @@ import {
   type ManualPaymentRow,
 } from "@/lib/payments/manual-payments";
 import { placeLabel } from "@/lib/wording";
+import { addStatementLine } from "@/lib/statement";
+import { homeCount } from "@/lib/metrics";
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { statusLabel } from "@/lib/request-status";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
@@ -1668,11 +1670,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
 
       // Oldest first. The stored ledger is newest first, so walk it backwards.
+      // Only bills already due are paid toward, as record_payment does: a
+      // bill posted early waits for its date, and money sent ahead of it
+      // stays a payment on the statement.
       let remaining = input.amountCents;
       const appliedTo: { chargeId: string; label: string; amountCents: number }[] = [];
       for (const line of [...existing].reverse()) {
         if (remaining <= 0) break;
-        if (line.kind !== "charge") continue;
+        if (line.kind !== "charge" || line.date > date) continue;
         const open = line.amountCents - (paidAgainst.get(line.id) ?? 0);
         if (open <= 0) continue;
         const take = Math.min(open, remaining);
@@ -1684,16 +1689,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const owner = owners.getSnapshot().find((o) => o.id === input.ownerId);
       const balanceAfter = Math.max(0, (owner?.balanceCents ?? 0) - input.amountCents);
 
+      // Placed by its date, after the charges of that day, with the running
+      // balances restated: written at the top it sat above a bill dated
+      // later and the balance beside it read as if paid before billed.
+      const headBefore = existing[0]?.balanceAfterCents ?? owner?.balanceCents ?? 0;
       charges.update((all) => ({
         ...all,
-        [input.ownerId]: [
+        [input.ownerId]: addStatementLine(
+          all[input.ownerId] ?? [],
           {
             id: `pay-${date}-${input.ownerId}-${existing.length + 1}`,
             date,
             label: input.label,
             kind: "payment" as const,
             amountCents: -input.amountCents,
-            balanceAfterCents: balanceAfter,
+            balanceAfterCents: headBefore - input.amountCents,
             method: input.method,
             feeCents: input.processorCents,
             feePaidBy: "association" as const,
@@ -1701,8 +1711,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             // inventing a charge for it to have paid.
             ...(appliedTo.length ? { appliedTo } : {}),
           },
-          ...all[input.ownerId] ?? [],
-        ],
+          headBefore - input.amountCents,
+        ),
       }));
 
       owners.update((all) =>
@@ -1725,7 +1735,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         {
           id: `led-${date}-${input.ownerId}-${all.length + 1}`,
           date,
-          description: `Dues payment, ${placeLabel(owner?.unit ?? "?")}`,
+          // Worded as record_payment words it ("Assessment payment, unit 42"),
+          // and booked as it books it: one deposit, net of the processor's
+          // fee, with the gross payment on the home's statement.
+          description: `Assessment payment, unit ${owner?.unit ?? "?"}`,
           counterparty: owner?.displayName ?? "Owner",
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
@@ -4946,6 +4959,51 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       sliceStore(communityId, "payouts").update((all) =>
         [payout, ...all].sort((a, b) => b.issuedDate.localeCompare(a.issuedDate)),
       );
+      // The rest of what the signed-in path writes for money that already
+      // left: a line on the operating account's books, and from it the bank
+      // balance, the vendor's year, and the budget line. A payout row alone
+      // read "Paid" while cash, Transactions and the vendor's total stood
+      // still.
+      if (payout.status !== "paid") return;
+      const vendor = sliceStore(communityId, "vendors")
+        .getSnapshot()
+        .find((v) => v.id === payout.vendorId);
+      const operating = sliceStore(communityId, "bankAccounts")
+        .getSnapshot()
+        .find((a) => a.kind === "operating");
+      const category = payout.category ?? vendor?.defaultCategory ?? "Repairs & maintenance";
+      const entry: Community["ledger"][number] = {
+        id: `le-${payout.id}`,
+        date: payout.issuedDate,
+        description: payout.invoiceNumber ? `${payout.vendor}, ${payout.invoiceNumber}` : payout.vendor,
+        counterparty: payout.vendor,
+        category,
+        accountId: operating?.id ?? "unassigned",
+        amountCents: -payout.amountCents,
+        status: "cleared",
+        matchedBy: "manual",
+        payoutId: payout.id,
+      };
+      sliceStore(communityId, "ledger").update((all) => [entry, ...all]);
+      if (operating) {
+        sliceStore(communityId, "bankAccounts").update((all) =>
+          all.map((acct) =>
+            acct.id === operating.id ? { ...acct, balanceCents: acct.balanceCents - payout.amountCents } : acct,
+          ),
+        );
+      }
+      if (vendor && payout.issuedDate.slice(0, 4) === todayIsoDate().slice(0, 4)) {
+        sliceStore(communityId, "vendors").update((all) =>
+          all.map((v) => (v.id === vendor.id ? { ...v, ytdPaidCents: v.ytdPaidCents + payout.amountCents } : v)),
+        );
+      }
+      sliceStore(communityId, "budget").update((all) =>
+        all.map((line) =>
+          line.kind === "expense" && line.category === category
+            ? { ...line, ytdActualCents: line.ytdActualCents + payout.amountCents }
+            : line,
+        ),
+      );
     },
     [remote.community, communityId],
   );
@@ -5842,7 +5900,7 @@ export function useAssistantContext() {
         // What this owner's home pays, which is the one figure the assistant
         // says about dues.
         duesCents: ownerDues(community.association, owner ?? undefined),
-        unitCount: community.association.unitCount,
+        unitCount: homeCount(community),
         operatingCents: cash.operating,
         reserveCents: reserveBalance,
         interestYtdCents: community.bankAccounts.reduce((t, a) => t + a.interestYtdCents, 0),

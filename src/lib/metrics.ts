@@ -4,6 +4,7 @@ import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
 import { daysFromToday, money } from "@/lib/utils";
 import { totalDues } from "@/lib/home-types";
+import { isDuesLine } from "@/lib/statement";
 
 /**
  * Derived figures, as pure functions of one community.
@@ -16,6 +17,16 @@ import { totalDues } from "@/lib/home-types";
  * makes a second association possible, and is also exactly the shape these
  * become once the data comes from a server.
  */
+
+/**
+ * How many homes the association has: the register, counted. Unsold lots are
+ * homes. A stored count (`association.unitCount`) was set once and drifted the
+ * moment a household was added; it is only the answer before the register has
+ * loaded.
+ */
+export function homeCount(c: Pick<Community, "owners" | "association">): number {
+  return c.owners.length || c.association.unitCount;
+}
 
 export function cashPosition(c: Community) {
   const operating = c.bankAccounts
@@ -284,9 +295,11 @@ function shiftMonths(iso: string, n: number): string {
  *
  * The top five categories keep their own line; everything after folds into
  * "Other", because a sixth slice is where a donut stops being readable.
- * Money moved into reserves is shown as its own category, "Reserve
- * contributions", counting only the operating side of the transfer so the
- * receiving entry cannot double it.
+ * Money moved into reserves is not spending: it is the association's own
+ * money going from one of its accounts to another, the same rule the money
+ * in and out chart follows. It is returned beside the rows as `reserveCents`
+ * (the operating side of each transfer, so the receiving entry cannot double
+ * it) for a screen that wants to say so, and the total leaves it out.
  */
 export function spendingByCategory(c: Community, year: number) {
   return spendingBetween(c, `${year}-01-01`, `${year}-12-31`);
@@ -295,12 +308,19 @@ export function spendingByCategory(c: Community, year: number) {
 /** `spendingByCategory` for any window of days. */
 export function spendingBetween(c: Community, from: string, to: string) {
   const totals = new Map<string, number>();
+  let reserveCents = 0;
   for (const e of ledgerFlows(c)) {
     if (e.amountCents >= 0) continue;
     if (e.date < from || e.date > to) continue;
-    const label: LedgerCategory | "Reserve contributions" =
-      e.category === "Reserve transfer" ? "Reserve contributions" : e.category;
-    totals.set(label, (totals.get(label) ?? 0) - e.amountCents);
+    // Moving money between the association's own accounts, and a starting
+    // balance, are neither spending: the same two lines the money in and out
+    // chart leaves out.
+    if (e.category === "Opening balance") continue;
+    if (e.category === "Reserve transfer") {
+      reserveCents -= e.amountCents;
+      continue;
+    }
+    totals.set(e.category, (totals.get(e.category) ?? 0) - e.amountCents);
   }
   const sorted = [...totals.entries()]
     .map(([category, cents]) => ({ category, cents }))
@@ -312,6 +332,7 @@ export function spendingBetween(c: Community, from: string, to: string) {
   return {
     rows: rows.map((r) => ({ ...r, share: totalCents ? r.cents / totalCents : 0 })),
     totalCents,
+    reserveCents,
   };
 }
 
@@ -468,8 +489,12 @@ export function categoryTrend(c: Community, category: string) {
 /**
  * Dues billed against dues collected, bill by bill.
  *
- * Expected is what the association billed: every unit at its dues, once for
- * each bill that has fallen due. A monthly association has a row per month.
+ * Expected is what the association billed: the dues lines on the homes'
+ * statements, bill by bill, so a dues change or a new home reaches only the
+ * bills issued after it and what was billed never moves. A bill with no dues
+ * line on hand (no statements yet, or a month the server summed and did not
+ * itemise) is held at every unit's dues today, the best figure known. A bill
+ * counts once it has fallen due. A monthly association has a row per month.
  * A quarterly or annual one has a row per bill, in the month it fell due,
  * and what came in during the months after it, up to the next bill, counts
  * toward that row; money in before the year's first bill was paying last
@@ -492,8 +517,28 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   // Every home at its own amount. In a mixed community kinds pay differently,
   // and a roster that has not loaded yet falls back to the unit count.
   const perPeriod = c.owners.length ? totalDues(c.association, c.owners) : unitCount * duesCents;
-  // What one bill comes to, every home together.
+  // What the next bill comes to, every home together, at today's rates.
   const expectedCents = Math.round(perPeriod);
+  // What each bill was, from the dues lines the statements carry. A month
+  // with no dues line on hand is held at today's rate, since nothing better
+  // is known. Lines before `history.from` are left out: only some homes'
+  // earlier statements may have been fetched, and a partial sum would
+  // understate the bill.
+  const statementsFrom = c.history?.from ?? "";
+  const billedIn = (y: number) => {
+    const cents = Array.from({ length: 12 }, () => 0);
+    const seen = Array.from({ length: 12 }, () => false);
+    for (const lines of Object.values(c.ownerCharges ?? {})) {
+      for (const line of lines) {
+        if (!isDuesLine(line) || yearOf(line.date) !== y || line.date < statementsFrom) continue;
+        cents[monthOf(line.date) - 1] += line.amountCents;
+        seen[monthOf(line.date) - 1] = true;
+      }
+    }
+    return { cents, seen };
+  };
+  const billedThisYear = billedIn(year);
+  const expectedFor = (b: typeof billedThisYear, i: number) => (b.seen[i] ? b.cents[i] : expectedCents);
   // Collected means what owners paid, before the processor's cut. The ledger
   // books each deposit net of the fee, so a month in which every home paid
   // read 96% against a gross bill (found in the five year run, 2026-09-24).
@@ -549,6 +594,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   const months: { month: number; label: string; expectedCents: number; collectedCents: number; rate: number }[] = [];
   for (let i = 0; i < 12; i += 1) {
     if (!billed(i)) continue;
+    const billedCents = expectedFor(billedThisYear, i);
     let collectedCents = collected[i];
     // Money that arrives between two bills is paying the earlier one.
     if (!monthly) {
@@ -557,9 +603,9 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     months.push({
       month: i + 1,
       label: SHORT_MONTHS[i],
-      expectedCents,
+      expectedCents: billedCents,
       collectedCents,
-      rate: expectedCents ? Math.min(1, collectedCents / expectedCents) : 0,
+      rate: billedCents ? Math.min(1, collectedCents / billedCents) : 0,
     });
   }
   // A bill from last year that this year is still paying. When the cadence
@@ -576,20 +622,21 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     const ym = `${year - 1}-${String(last + 1).padStart(2, "0")}`;
     if (first > 0 && first < 12 && firstActive !== "" && ym >= firstActive && ym <= asOfMonth) {
       const before = tally(year - 1).collected;
+      const billedBefore = expectedFor(billedIn(year - 1), last);
       let collectedCents = 0;
       for (let j = last; j < 12; j += 1) collectedCents += before[j];
       for (let j = 0; j < first; j += 1) collectedCents += collected[j];
       months.unshift({
         month: last + 1,
         label: `${SHORT_MONTHS[last]} ${year - 1}`,
-        expectedCents,
+        expectedCents: billedBefore,
         collectedCents,
-        rate: expectedCents ? Math.min(1, collectedCents / expectedCents) : 0,
+        rate: billedBefore ? Math.min(1, collectedCents / billedBefore) : 0,
       });
     }
   }
   const collectedYtd = months.reduce((t, m) => t + m.collectedCents, 0);
-  const expectedYtd = expectedCents * months.length;
+  const expectedYtd = months.reduce((t, m) => t + m.expectedCents, 0);
   return {
     months,
     expectedCents,

@@ -6,7 +6,6 @@ import {
   Building2,
   CreditCard,
   Landmark,
-  Lock,
   ShieldCheck,
 } from "lucide-react";
 import { Badge, Button, Callout, Card } from "@/components/ui/primitives";
@@ -234,8 +233,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
         icon={<AlertTriangle className="size-4" />}
         title="Do not enter a real card"
       >
-        This prototype has no payment processor. Use the test number {TEST_CARD}, or any card
-        that passes a checksum.
+        This is a demo. Nothing you type here is sent anywhere or saved.
       </Callout>
 
       <label className="block">
@@ -314,12 +312,6 @@ function AddCard({ onDone }: { onDone: () => void }) {
       <Button variant="primary" size="lg" className="w-full" type="submit">
         Add card
       </Button>
-      <p className="flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
-        <Lock className="mt-px size-3 shrink-0" />
-        In production this field is hosted by the payment processor and the number never reaches
-        our code. Here it is checked and discarded in the same call, so only the brand, the last
-        four, and the expiry are ever kept.
-      </p>
     </form>
   );
 }

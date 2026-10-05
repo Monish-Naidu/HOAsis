@@ -397,6 +397,8 @@ export interface ChargeLine {
   method?: string;
   feeCents?: Cents;
   feePaidBy?: "association" | "owner";
+  /** The database's name for what a charge is ("dues", "late_fee"). Unset on the demo's lines. */
+  category?: string;
   /** Demo only: a payment entered by hand that the board has since reversed. */
   reversed?: boolean;
 }

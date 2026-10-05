@@ -2,6 +2,7 @@ import type { Community } from "@/lib/data/community";
 import { billingPhase } from "@/lib/billing";
 import type { ISODate } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { homeCount } from "@/lib/metrics";
 
 /**
  * Whether a real association is ready to collect from real residents.
@@ -67,7 +68,7 @@ export function billingStatus(community: Community, today: ISODate) {
         {
           status: a.subscriptionStatus ?? "trialing",
           trialEndsOn: a.trialEndsOn,
-          homes: a.unitCount,
+          homes: homeCount(community),
           hasSubscription: Boolean(a.billing?.subscriptionId),
         },
         today,

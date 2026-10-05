@@ -3,6 +3,7 @@
 import { Check, Clock, Lock, Users } from "lucide-react";
 import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { homeCount } from "@/lib/metrics";
 import { ballotPhase } from "@/lib/phases";
 import type { Ballot } from "@/lib/types";
 import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
@@ -65,7 +66,7 @@ export function BallotCard({
    */
   sealedNote?: boolean;
 }) {
-  const { settings } = useAppState();
+  const { settings, community } = useAppState();
   const t = tally(ballot);
   // The phase, so a card never says Open, or offers Close now, on a ballot
   // whose closing date has passed.
@@ -98,6 +99,14 @@ export function BallotCard({
             </span>
           )}
         </div>
+        {/* A ballot keeps the number of homes it opened with, so a vote from
+            spring reads 50 of 88 beside one from autumn at 1 of 89. Said once
+            here so the two do not read as a mistake. */}
+        {!scheduled && ballot.audience !== "board" && ballot.eligible !== homeCount(community) ? (
+          <p className="mt-1 text-caption text-fg-subtle">
+            Counted against the {ballot.eligible} homes on the register when voting opened.
+          </p>
+        ) : null}
         <h3 className="mt-1.5 text-headline font-semibold leading-snug tracking-[-0.015em] text-fg">
           {ballot.title}
         </h3>

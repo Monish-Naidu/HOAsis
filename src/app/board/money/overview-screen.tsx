@@ -310,6 +310,15 @@ export function OverviewScreen() {
                   totalCents={spending.totalCents}
                   reportHref="/board/money/transactions"
                 />
+                {/* Savings moved between the association's own accounts: shown
+                    beside the total, never inside it, so this card and the
+                    chart's money out are one figure. */}
+                {spending.reserveCents > 0 ? (
+                  <p className="flex items-baseline justify-between gap-3 border-t border-border px-5 py-3 text-footnote text-fg-muted">
+                    <span>Moved to reserves, not counted as spending</span>
+                    <span className="tnum font-semibold text-fg">{money(spending.reserveCents, { cents: false })}</span>
+                  </p>
+                ) : null}
               </Card>
             ) : null}
           </div>

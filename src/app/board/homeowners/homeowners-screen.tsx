@@ -1392,7 +1392,7 @@ function HouseholdDetail({
         <ChangeEmailForm current={owner.email} onSave={onChangeEmail} onCancel={() => setEditing(null)} />
       ) : null}
       {editing === "second" && onAddSecondOwner ? (
-        <SecondOwnerForm unit={owner.unit} onSave={onAddSecondOwner} onCancel={() => setEditing(null)} />
+        <SecondOwnerForm unit={owner.unit} homeName={homeName} onSave={onAddSecondOwner} onCancel={() => setEditing(null)} />
       ) : null}
 
       {editing === "payment" && onRecordPayment ? (
@@ -1415,11 +1415,11 @@ function HouseholdDetail({
         />
       ) : null}
       {editing === "credit" && onAddCredit ? (
-        <AddCreditForm unit={owner.unit} onSave={onAddCredit} onCancel={() => setEditing(null)} />
+        <AddCreditForm unit={owner.unit} homeName={homeName} onSave={onAddCredit} onCancel={() => setEditing(null)} />
       ) : null}
       {editing === "charge" && onAddCharge ? (
         <AddChargeForm
-          heading={`A charge for home ${owner.unit}`}
+          heading={`A charge for ${homeName}`}
           onSave={onAddCharge}
           onCancel={() => setEditing(null)}
         />
@@ -1427,6 +1427,7 @@ function HouseholdDetail({
       {editing === "dues" && onChangeDues ? (
         <ChangeDuesForm
           unit={owner.unit}
+          homeName={homeName}
           period={duesNow.period}
           nowCents={duesNow.cents}
           sourceLabel={duesNow.sourceLabel}

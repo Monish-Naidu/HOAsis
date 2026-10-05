@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAppState, useReconciliation, useUnreadThreadCount } from "@/lib/app-state";
 import { BOARD_ROUTES, routeOffered, sectionFor, sectionPages } from "@/lib/board-routes";
 import { complianceSummary, delinquency, vendorDecisions } from "@/lib/metrics";
-import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
+import { buildPlan, profileFromCommunity, setupCounts } from "@/lib/setup-plan";
 import { TabPill } from "@/components/app/tab-pill";
 import { RailNav, RailRow, type RailBadge } from "@/components/app/rail";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const unread = useUnreadThreadCount();
   const comp = complianceSummary(community);
   const delinq = delinquency(community);
-  const plan = buildPlan(community, profileFromCommunity(community));
+  const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
 
   /**
    * A badge means somebody owes a decision here, and nothing else.
@@ -43,7 +43,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   const badges: Partial<Record<string, NavBadge>> = {
     // What is left, not what is done. A board setting up wants to know how
     // much further, and the row disappears entirely at zero.
-    setup: { count: plan.total - plan.done, tone: "neutral", hint: "setup steps left" },
+    setup: { count: setupCounts(plan).left, tone: "neutral", hint: "setup steps left" },
     money: { count: recon.needsReview.length, tone: "warn", hint: "transactions to confirm" },
     // The section, not only its first tab: an owner saying a notice is fixed
     // is the board's move as much as a request is.

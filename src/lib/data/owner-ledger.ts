@@ -79,7 +79,13 @@ export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLi
   const lateFeeCents = owner.balanceCents - unpaidMonths * assessmentCents;
   // A household twelve months behind needs twelve months of history, otherwise
   // the whole arrears collapses into one implausible late fee.
-  const span = Math.max(months, unpaidMonths + 1);
+  //
+  // A home that is past due owes bills that have already fallen due, so its
+  // open months end at last month. Only a home that is not late can owe the
+  // coming bill, which the daily run posts up to a week early. Anchoring every
+  // open month on the coming one made a home 30 days late owe nothing yet.
+  const anchor = owner.daysPastDue > 0 ? 1 : 0;
+  const span = Math.max(months, unpaidMonths + 1 + anchor);
 
   const lines: ChargeLine[] = [];
   let balance: Cents = 0;
@@ -90,6 +96,8 @@ export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLi
   for (let offset = span - 1; offset >= 0; offset--) {
     const { year, month, iso } = shiftMonths(nextChargeDate, -offset);
     if (iso < owner.moveInDate) continue;
+    // Not billed yet: a late home's coming bill has not been posted.
+    if (offset < anchor) continue;
     // An owner who owes nothing has not been billed for the coming month yet.
     // Emitting that charge would close the ledger a month above their balance.
     if (offset === 0 && unpaidMonths === 0) continue;
@@ -104,11 +112,11 @@ export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLi
     };
     lines.push(charge);
 
-    const isOpen = offset < unpaidMonths;
+    const isOpen = offset - anchor < unpaidMonths;
     if (isOpen) {
       // The oldest open month is where a late fee lands, since that is the one
       // that actually aged past the grace period.
-      if (lateFeeCents > 0 && offset === unpaidMonths - 1) {
+      if (lateFeeCents > 0 && offset - anchor === unpaidMonths - 1) {
         lines.push({
           id: nextId(),
           date: onDay(year, month, 16),

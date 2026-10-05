@@ -7,7 +7,8 @@ import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
 import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
 import { loadEarlierStatement } from "@/lib/data/remote-store";
-import { formatDate, money, today } from "@/lib/utils";
+import { formatDate, money, today, todayIsoDate } from "@/lib/utils";
+import { balanceSplit } from "@/lib/statement";
 import { balanceStanding } from "@/lib/resident-wording";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -34,6 +35,11 @@ export default function ResidentAccount() {
     await loadEarlierStatement(currentOwner.id);
     setLoadingEarlier(false);
   }
+  // The rate is what this home pays a bill from now on; a bill already on the
+  // statement keeps the amount it was issued at. Said so when they differ.
+  const rate = ownerDues(association, currentOwner);
+  const upcoming = balanceSplit(ownerCharges, currentOwner.balanceCents, todayIsoDate()).upcoming;
+  const issuedAtOtherAmount = upcoming && upcoming.amountCents !== rate ? upcoming : null;
   // The year the ledger is actually in, not a constant.
   const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
   // That year's payments only. Summing every line was right while a statement
@@ -165,7 +171,7 @@ export default function ResidentAccount() {
             {money(paidThisYear, { cents: false })}
           </p>
           <p className="mt-2 text-footnote text-fg-muted">
-            {money(ownerDues(association, currentOwner), { cents: false })} a{" "}
+            {money(rate, { cents: false })} a{" "}
             {association.duesCadence === "monthly"
               ? "month"
               : association.duesCadence === "quarterly"
@@ -173,6 +179,12 @@ export default function ResidentAccount() {
                 : "year"}{" "}
             in dues
           </p>
+          {issuedAtOtherAmount ? (
+            <p className="mt-1 text-footnote text-fg-muted">
+              The {formatDate(issuedAtOtherAmount.date, "long")} bill is already issued at{" "}
+              {money(issuedAtOtherAmount.amountCents, { cents: false })}.
+            </p>
+          ) : null}
         </Card>
       </div>
 

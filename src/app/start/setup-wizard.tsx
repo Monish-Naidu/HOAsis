@@ -509,7 +509,7 @@ function WizardQuestions({
         id: "spaces",
         group: "Your community",
         title: "Anything shared that owners use?",
-        detail: "Pick what you have. Owners can reserve these once they are listed, and each one is something the reserves will one day replace.",
+        detail: "Pick what you have. Owners can reserve these once they are listed. Each one is something the association will have to repair or replace one day.",
         skipLabel: "Nothing shared",
         onSkip: () => patch({ sharedSpaces: [] }),
         body: <SpacesPicker draft={draft} patch={patch} />,
@@ -996,7 +996,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
               <input
                 value={row.address ?? row.unit}
                 onChange={(e) => editRow(index, { address: e.target.value })}
-                placeholder="1430 Willow Creek Lane"
+                placeholder="12 Oak Lane"
                 aria-label={`Address of home ${index + 1}`}
                 autoComplete="off"
                 autoFocus={index === rows.length - 1 && !row.address}

@@ -1,0 +1,189 @@
+import { describe, expect, it, vi } from "vitest";
+import { act, render, renderHook, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => "/resident",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+const { AppStateProvider, useAppState, useOwnerCharges } = await import("@/lib/app-state");
+const { default: ResidentHome } = await import("@/app/resident/page");
+const { default: ResidentAccount } = await import("@/app/resident/account/page");
+const { cashPosition, duesCollection, homeCount, monthlyFlowsBetween } = await import("@/lib/metrics");
+
+const wrapper = ({ children }: { children: ReactNode }) => <AppStateProvider>{children}</AppStateProvider>;
+const TODAY = "2026-08-20";
+
+describe("a vendor payment in the demo", () => {
+  it("moves cash, the vendor's year and Transactions, as the signed in path writes them", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const vendor = result.current.vendors[0];
+    const cashBefore = cashPosition(result.current.community).operating;
+    const yearBefore = vendor.ytdPaidCents;
+    const ledgerBefore = result.current.ledger.length;
+
+    act(() => {
+      result.current.addPayout({
+        id: "po-test",
+        vendorId: vendor.id,
+        vendor: vendor.name,
+        invoiceNumber: "INV-1",
+        amountCents: 48_000,
+        method: "ach",
+        status: "paid",
+        issuedDate: TODAY,
+        expectedDate: TODAY,
+        approvals: [],
+        approvalsRequired: 0,
+      });
+    });
+
+    expect(cashPosition(result.current.community).operating).toBe(cashBefore - 48_000);
+    expect(result.current.vendors.find((v) => v.id === vendor.id)!.ytdPaidCents).toBe(yearBefore + 48_000);
+    expect(result.current.ledger.length).toBe(ledgerBefore + 1);
+    // On the operating account, for the amount, tied to the payment.
+    expect(result.current.ledger[0]).toMatchObject({ amountCents: -48_000, date: TODAY, payoutId: "po-test", counterparty: vendor.name });
+    // And in this month's money out.
+    const flows = monthlyFlowsBetween(result.current.community, "2026-08-01", TODAY);
+    expect(flows.at(-1)!.outCents).toBeGreaterThanOrEqual(48_000);
+  });
+
+  it("writes nothing to the books for a payment that has not gone out", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const vendor = result.current.vendors[0];
+    const ledgerBefore = result.current.ledger.length;
+    act(() => {
+      result.current.addPayout({
+        id: "po-later", vendorId: vendor.id, vendor: vendor.name, invoiceNumber: "INV-2", amountCents: 10_000,
+        method: "check", status: "scheduled", issuedDate: TODAY, expectedDate: TODAY, approvals: [], approvalsRequired: 1,
+      });
+    });
+    expect(result.current.ledger.length).toBe(ledgerBefore);
+  });
+});
+
+describe("a dues change and a new home in the demo", () => {
+  it("leave what was billed alone, and the home count follows the register", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const billed = () => duesCollection(result.current.community, 2026).expectedYtd;
+    const before = billed();
+    const homesBefore = homeCount(result.current.community);
+    const unit42 = result.current.community.owners.find((o) => o.unit === "42")!;
+
+    act(() => {
+      result.current.setHomeDues([{ ownerId: unit42.id, cents: 31_000 }]);
+    });
+    expect(billed()).toBe(before);
+
+    act(() => {
+      result.current.addOwner({ name: "Rosa Delgado", email: "rosa@example.com", unit: "99" });
+    });
+    expect(billed()).toBe(before);
+    expect(homeCount(result.current.community)).toBe(homesBefore + 1);
+  });
+});
+
+describe("a bank payment in the demo", () => {
+  it("is the full amount on the statement and the net deposit in the books, worded as the database words it", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners.find((o) => o.daysPastDue > 0)!;
+    act(() => {
+      result.current.recordPayment({
+        ownerId: owner.id, amountCents: 28_500, processorCents: 228, platformCents: 0,
+        platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
+      });
+    });
+    const line = result.current.community.ownerCharges[owner.id].find((l) => l.kind === "payment" && l.id.startsWith("pay-"))!;
+    expect(line).toMatchObject({ label: "Bank payment", amountCents: -28_500, feeCents: 228 });
+    expect(result.current.ledger[0]).toMatchObject({
+      description: `Assessment payment, unit ${owner.unit}`,
+      category: "Assessments",
+      amountCents: 28_500 - 228,
+    });
+  });
+});
+
+describe("the resident home card", () => {
+  function Controls() {
+    const { signIn, recordPayment } = useAppState();
+    return (
+      <div>
+        <button onClick={() => signIn("acct-monish")}>sign in as owner</button>
+        <button
+          onClick={() =>
+            recordPayment({
+              ownerId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
+              platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
+            })
+          }
+        >
+          pay early
+        </button>
+      </div>
+    );
+  }
+
+  it("says Next bill, with its date, when the only bill owed is not due yet", async () => {
+    const user = userEvent.setup();
+    render(
+      <AppStateProvider>
+        <Controls />
+        <ResidentHome />
+      </AppStateProvider>,
+    );
+    await user.click(screen.getByText("sign in as owner"));
+    expect(screen.getByText("Next bill")).toBeInTheDocument();
+    expect(screen.queryByText("Current balance")).not.toBeInTheDocument();
+    expect(screen.getByText("Due September 1, 2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Pay early: $285" })).toBeInTheDocument();
+  });
+
+  it("keeps the statement's amount on the button after a dues change, and says so on the statement", async () => {
+    const user = userEvent.setup();
+    function Change() {
+      const { setHomeDues } = useAppState();
+      return <button onClick={() => setHomeDues([{ ownerId: "own-042", cents: 31_000 }])}>change dues</button>;
+    }
+    render(
+      <AppStateProvider>
+        <Controls />
+        <Change />
+        <ResidentHome />
+        <ResidentAccount />
+      </AppStateProvider>,
+    );
+    await user.click(screen.getByText("sign in as owner"));
+    await user.click(screen.getByText("change dues"));
+    // The card and the button follow the bill on the statement: $285.
+    expect(screen.getByRole("link", { name: "Pay early: $285" })).toBeInTheDocument();
+    // The rate is the rate, and the bill already issued is named as it is.
+    expect(screen.getByText(/\$310 a month in dues/)).toBeInTheDocument();
+    expect(screen.getByText(/September 1, 2026 bill is already issued at \$285/)).toBeInTheDocument();
+    // Paid ahead: the button is still the statement's amount, not the new rate.
+    await user.click(screen.getByText("pay early"));
+    expect(screen.getByRole("link", { name: "Pay early: $285" })).toBeInTheDocument();
+  });
+
+  it("puts a payment made today below the bill dated later, with balances that follow", () => {
+    const { result } = renderHook(() => ({ state: useAppState(), lines: useOwnerCharges() }), { wrapper });
+    act(() => result.current.state.signIn("acct-monish"));
+    act(() => {
+      result.current.state.recordPayment({
+        ownerId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
+        platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
+      });
+    });
+    const lines = result.current.lines;
+    expect(lines.slice(0, 3).map((l) => [l.date, l.kind])).toEqual([
+      ["2026-09-01", "charge"],
+      [TODAY, "payment"],
+      ["2026-08-03", "payment"],
+    ]);
+    // Paid ahead of its bill: a credit until the bill is dated, then nothing owed.
+    expect(lines[0].balanceAfterCents).toBe(0);
+    expect(lines[1].balanceAfterCents).toBe(-28_500);
+  });
+});

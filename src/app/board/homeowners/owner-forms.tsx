@@ -64,10 +64,13 @@ export function ChangeEmailForm({
 /** A second person on the same home, with their own sign in. Same bill, same vote. */
 export function SecondOwnerForm({
   unit,
+  homeName,
   onSave,
   onCancel,
 }: {
   unit: string;
+  /** How the board names this home, for the heading. Falls back to the unit. */
+  homeName?: string;
   onSave: (name: string, email: string) => Promise<boolean>;
   onCancel: () => void;
 }) {
@@ -87,7 +90,7 @@ export function SecondOwnerForm({
           .finally(() => setBusy(false));
       }}
     >
-      <p className="text-footnote font-semibold text-fg-muted">Second owner of {unit}</p>
+      <p className="text-footnote font-semibold text-fg-muted">Second owner of {homeName ?? unit}</p>
       <p className="text-footnote text-fg-muted">
         They get their own sign in. The home keeps one balance and one vote.
       </p>

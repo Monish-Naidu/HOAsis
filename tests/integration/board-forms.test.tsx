@@ -434,6 +434,7 @@ describe("a home's own dues in the browser copy", () => {
     await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
     // What it pays now, and where that comes from, before anything is typed.
     expect(screen.getByText(/Pays .* a month now, from /)).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), String(standard / 100 + 75));
     await user.click(screen.getByRole("button", { name: "Save dues" }));
 
@@ -493,6 +494,7 @@ describe("a home's own dues in the browser copy", () => {
         onCancel={onCancel}
       />,
     );
+    await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
     expect(onCancel).not.toHaveBeenCalled();

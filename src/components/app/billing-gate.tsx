@@ -6,6 +6,7 @@ import { CreditCard } from "lucide-react";
 import { Card } from "@/components/ui/primitives";
 import { boardLocked } from "@/lib/billing";
 import { useAppState } from "@/lib/app-state";
+import { homeCount } from "@/lib/metrics";
 import { monthlyFor } from "@/lib/pricing";
 import { formatDate, money } from "@/lib/utils";
 import { usePhase } from "./trial-banner";
@@ -27,7 +28,7 @@ export function BillingGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const homes = community.association.unitCount;
+  const homes = homeCount(community);
   const endsOn = phase.phase === "ended" ? phase.endsOn : community.asOf;
 
   return (

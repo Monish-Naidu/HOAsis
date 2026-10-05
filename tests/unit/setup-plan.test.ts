@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildPlan, profileFromCommunity, profileFromDraft } from "@/lib/setup-plan";
+import { buildPlan, profileFromCommunity, profileFromDraft, setupCounts } from "@/lib/setup-plan";
 import { portingPlan } from "@/lib/porting";
 import { mehrMeadows } from "@/lib/data/communities";
 import { buildCommunity, emptyDraft, type CommunityDraft } from "@/lib/data/new-community";
@@ -595,5 +595,29 @@ describe("each origin gets exactly its own group", () => {
     const builder = planOf(signedIn(undefined, { origin: "builder", previously: undefined }));
     expect(running.skipped).toBeLessThan(10);
     expect(builder.skipped).toBeLessThan(10);
+  });
+});
+
+describe("one count for setup", () => {
+  it("reads the same two numbers however it is asked, and dismissing changes both together", () => {
+    const profile = profileFromCommunity(mehrMeadows);
+    const open = buildPlan(mehrMeadows, profile);
+    const counted = open.phases.flatMap((p) => p.tasks).filter((t) => !t.unavailable);
+    const c = setupCounts(open);
+    expect(c.total).toBe(counted.length);
+    expect(c.done).toBe(counted.filter((t) => t.complete).length);
+    expect(c.left).toBe(c.total - c.done);
+    // The phases add up to the same total, so no screen can count differently.
+    expect(open.phases.reduce((n, p) => n + p.total, 0)).toBe(c.total);
+    expect(open.phases.reduce((n, p) => n + p.done, 0)).toBe(c.done);
+
+    // A dismissed optional task leaves the plan, and every caller passing the
+    // same set sees the same smaller total.
+    const optional = counted.find((t) => t.optional && !t.complete && !t.doneWhenDismissed);
+    if (optional) {
+      const after = setupCounts(buildPlan(mehrMeadows, profile, new Set([optional.key])));
+      expect(after.total).toBe(c.total - 1);
+      expect(after.done).toBe(c.done);
+    }
   });
 });

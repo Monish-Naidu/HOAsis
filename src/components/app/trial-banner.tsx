@@ -6,6 +6,7 @@ import { ArrowRight, CalendarClock, CreditCard } from "lucide-react";
 import { ButtonLink, Callout } from "@/components/ui/primitives";
 import { billingPhase, type BillingPhase } from "@/lib/billing";
 import { useAppState } from "@/lib/app-state";
+import { homeCount } from "@/lib/metrics";
 import { monthlyFor } from "@/lib/pricing";
 import { formatDate, money } from "@/lib/utils";
 
@@ -25,7 +26,7 @@ export function usePhase(): BillingPhase | null {
     {
       status: a.subscriptionStatus ?? "trialing",
       trialEndsOn: a.trialEndsOn,
-      homes: a.unitCount,
+      homes: homeCount(community),
       hasSubscription: Boolean(a.billing?.subscriptionId),
     },
     community.asOf,
@@ -40,7 +41,7 @@ export function TrialBanner() {
   // Settings is where the card gets added; the card there says it all.
   if (pathname.startsWith("/board/settings")) return null;
 
-  const homes = community.association.unitCount;
+  const homes = homeCount(community);
   const price = `${money(monthlyFor(homes), { cents: false })} a month for ${homes} ${homes === 1 ? "home" : "homes"}`;
 
   const action = (

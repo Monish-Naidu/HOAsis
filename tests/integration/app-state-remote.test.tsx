@@ -970,6 +970,7 @@ describe("a home's own dues", () => {
     renderScreen(<screens.HomeownersScreen />);
     await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
     await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
     await settled();
@@ -987,6 +988,7 @@ describe("a home's own dues", () => {
     renderScreen(<screens.HomeownersScreen />);
     await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
     await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
     await settled();

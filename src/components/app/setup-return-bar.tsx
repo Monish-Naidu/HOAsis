@@ -6,7 +6,7 @@ import { Suspense, useEffect, useRef } from "react";
 import { ArrowLeft, Check } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
+import { buildPlan, profileFromCommunity, setupCounts } from "@/lib/setup-plan";
 
 /**
  * The way back to the question.
@@ -43,6 +43,7 @@ function ReturnBar() {
   // With the steps the board ticked by hand, or the bar counts a different
   // total from the list it leads back to.
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
+  const counts = setupCounts(plan);
   const tasks = plan.phases.flatMap((phase) => phase.tasks);
   const doneKeys = tasks.filter((task) => task.complete).map((task) => task.key).join(",");
   const previous = useRef<string | null>(null);
@@ -62,12 +63,12 @@ function ReturnBar() {
       .filter((task) => task && task.href === pathname);
     if (!fromSetup || !finishedHere.length) return;
     const label = finishedHere[0]?.label ?? "Done";
-    notify(`${label}: done. ${plan.done} of ${plan.total}.`, "ok");
+    notify(`${label}: done. ${counts.done} of ${counts.total}.`, "ok");
     // On to the next question, in phase order, rather than back to the list
     // to find it. The list is where they land when nothing is left.
     const next = tasks.find((task) => !task.complete);
     router.push(next ? `/start/plan?task=${encodeURIComponent(next.key)}` : "/board/setup");
-  }, [doneKeys, pathname, tasks, plan.done, plan.total, fromSetup, notify, router]);
+  }, [doneKeys, pathname, tasks, counts.done, counts.total, fromSetup, notify, router]);
 
   if (plan.allDone) return null;
   if (pathname === "/board/setup" || pathname === "/board") return null;
@@ -94,11 +95,11 @@ function ReturnBar() {
       </span>
       <span className="flex shrink-0 items-center gap-2">
         <span className="hidden text-footnote text-fg-muted sm:inline">
-          {plan.done} of {plan.total} done
+          {counts.done} of {counts.total} done
         </span>
         <span className="flex items-center gap-1 rounded-full bg-ok-soft px-2 py-0.5 text-footnote font-semibold text-ok">
           <Check className="size-3" strokeWidth={3} />
-          {plan.done}
+          {counts.done}
         </span>
       </span>
     </Link>

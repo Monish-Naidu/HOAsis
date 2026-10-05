@@ -8,7 +8,7 @@ import {
   useCurrentOwner,
   useMyRequests,
 } from "@/lib/app-state";
-import type { HomeRequest } from "@/lib/types";
+import type { ChargeLine, HomeRequest } from "@/lib/types";
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <AppStateProvider>{children}</AppStateProvider>
@@ -1127,6 +1127,13 @@ describe("letting somebody in on a home already on the register (demo)", () => {
   });
 });
 
+/**
+ * The newest payment on a statement. A statement is in date order, so a bill
+ * posted for a later date (the September bill, on August 20) sits above a
+ * payment made today; the payment is no longer the first line.
+ */
+const lastPayment = (lines: { kind: string }[]) => lines.find((l) => l.kind === "payment") as ChargeLine;
+
 describe("taking a payment", () => {
   it("writes the statement, the balance, the books, the budget, and the bank together", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
@@ -1153,8 +1160,7 @@ describe("taking a payment", () => {
     const after = result.current.community;
     // The household's own statement.
     const statement = after.ownerCharges[owner.id];
-    expect(statement[0].kind).toBe("payment");
-    expect(statement[0].amountCents).toBe(-owner.balanceCents);
+    expect(lastPayment(statement).amountCents).toBe(-owner.balanceCents);
     // Their balance.
     expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(0);
     // The association's books, net of what the processor takes.
@@ -1173,8 +1179,11 @@ describe("taking a payment", () => {
 
   it("applies money to the oldest open charge first", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
+    // A home with a bill already due: money is applied to bills that have
+    // fallen due, as record_payment does, and the first home on the list owes
+    // only the September bill, which has not.
     const owner = result.current.community.owners.find(
-      (o) => (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge"),
+      (o) => o.daysPastDue > 0 && (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge"),
     )!;
     // The oldest charge that still owes something, which is not the same as
     // the oldest charge: earlier ones have already been paid off.
@@ -1201,7 +1210,7 @@ describe("taking a payment", () => {
       });
     });
 
-    const applied = result.current.community.ownerCharges[owner.id][0].appliedTo ?? [];
+    const applied = lastPayment(result.current.community.ownerCharges[owner.id]).appliedTo ?? [];
     expect(applied[0]?.chargeId).toBe(oldest.id);
   });
 
@@ -1247,7 +1256,7 @@ describe("recording an owner's check or cash (demo)", () => {
     });
 
     const after = result.current.community;
-    const line = after.ownerCharges[owner.id][0];
+    const line = lastPayment(after.ownerCharges[owner.id]);
     expect(line).toMatchObject({
       kind: "payment",
       label: "Check payment #1042",
@@ -1266,7 +1275,7 @@ describe("recording an owner's check or cash (demo)", () => {
   it("reads Cash payment with no number, and applies to the oldest charge first", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     const owner = result.current.community.owners.find(
-      (o) => (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge") && o.balanceCents > 0,
+      (o) => (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge") && o.daysPastDue > 0,
     )!;
     act(() => {
       void result.current.recordManualPayment({
@@ -1277,7 +1286,7 @@ describe("recording an owner's check or cash (demo)", () => {
         receivedOn: "2026-08-20",
       });
     });
-    const line = result.current.community.ownerCharges[owner.id][0];
+    const line = lastPayment(result.current.community.ownerCharges[owner.id]);
     expect(line.label).toBe("Cash payment");
     expect(line.appliedTo?.length).toBeGreaterThan(0);
   });
