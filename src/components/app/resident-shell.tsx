@@ -28,6 +28,7 @@ import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero, CommunityName, PhotoStrip } from "@/components/app/community-hero";
 import { HomeBadge } from "@/components/app/home-badge";
+import { DemoBanner } from "@/components/app/local-copy-banner";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { cn } from "@/lib/utils";
@@ -211,6 +212,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               <div className="@container px-4 pt-4">
                 {/* The pages under a bar tab (Statement, Messages, Voting)
                     are reached by their section's tabs, here as on the web. */}
+                <DemoBanner className="mb-4" />
                 <ResidentSectionTabs />
                 <Gated pathname={pathname}>{children}</Gated>
               </div>
@@ -291,6 +293,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             this frame the way the dashboard does instead of sitting as a
             narrow column with ground either side (Monish, 2026-09-26). */}
         <main className="min-w-0 @container">
+          <DemoBanner />
           <ResidentSectionTabs />
           <Gated pathname={pathname}>{children}</Gated>
         </main>

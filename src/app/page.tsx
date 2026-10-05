@@ -29,6 +29,7 @@ import {
   Vote,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
+import { PriceDial } from "./price-dial";
 import { Avatar, Card, IconTile, type TintName } from "@/components/ui/primitives";
 import {
   articleBySlug,
@@ -775,6 +776,53 @@ function HeroChips() {
   );
 }
 
+/**
+ * Setup, in the order the wizard asks. Three because that is how many things
+ * a board has to bring: answers, a list of homes, and its owners.
+ */
+const STEPS = [
+  {
+    title: "Answer a few questions",
+    body: "Your association's name, what kind of homes it has, and what dues are. No paperwork to find first.",
+  },
+  {
+    title: "Add your homes",
+    body: "Type a range of addresses or import the spreadsheet you already keep. Enter what each home owes today.",
+  },
+  {
+    title: "Invite owners and collect dues",
+    body: "Owners join with a code and pay by bank transfer or card. The money goes to your association's bank account.",
+  },
+];
+
+/** Only what is true of the product today. */
+const QUESTIONS = [
+  {
+    q: "Where does the money go when an owner pays?",
+    a: "To your association's own bank account. Payments run through Stripe, which pays out to the account your board connects. We never hold your money.",
+  },
+  {
+    q: "Are there fees on payments?",
+    a: "None from us. Owners pay exactly their dues. Stripe's processing fee comes out of what the association receives, and a bank transfer costs the least.",
+  },
+  {
+    q: "Can owners still pay by check?",
+    a: "Yes. The board records the check or cash against the home and its balance updates, so online and paper payments sit in one ledger.",
+  },
+  {
+    q: "We already have balances and records somewhere else.",
+    a: "Bring them. Import your owner list from a spreadsheet, enter what each home owes today, and upload the documents owners need.",
+  },
+  {
+    q: "Do owners have to install anything?",
+    a: "No. It works in the browser on any phone or computer. Owners join with a code the board gives them.",
+  },
+  {
+    q: "What if we change our mind?",
+    a: `There is no card to start and no contract. After the ${TRIAL_DAYS} free days it is month to month, and the board can cancel from Settings.`,
+  },
+];
+
 export default function MarketingHome() {
   return (
     <div className="min-h-dvh bg-bg">
@@ -852,13 +900,20 @@ export default function MarketingHome() {
                   Get started
                   <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
+                {/* The demo, not the sign-in: somebody who already has an
+                    account uses the header, and somebody who does not would
+                    rather look before giving an email address. */}
                 <Link
-                  href="/signin"
+                  href="/demo"
                   className="press inline-flex h-12 items-center rounded-xl border border-border-2 bg-surface/60 px-6 text-[16px] font-semibold text-fg backdrop-blur-sm hover:bg-surface"
                 >
-                  Log in
+                  Try the demo
                 </Link>
               </div>
+              <p className="mt-4 text-[15px] font-medium text-fg-muted [text-shadow:0_0_16px_var(--hero-field),0_0_6px_var(--hero-field)]">
+                {money(PRICE_PER_HOME_CENTS, { cents: false })} per home a month after that. The demo
+                needs no account.
+              </p>
             </Reveal>
           </div>
         </div>
@@ -925,7 +980,7 @@ export default function MarketingHome() {
                 href="/start"
                 className="press shimmer group mt-4 inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[17px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
               >
-                Get started today
+                Get started
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
@@ -964,7 +1019,7 @@ export default function MarketingHome() {
                 href="/start"
                 className="press shimmer group mt-7 inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[17px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
               >
-                Start today
+                Get started
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
@@ -1092,6 +1147,13 @@ export default function MarketingHome() {
               <p className="mt-4 text-[15px] text-fg-subtle">
                 Works in any browser today. iPhone and Android apps are next.
               </p>
+              <Link
+                href="/demo?as=owner"
+                className="press group mt-5 inline-flex h-11 items-center gap-2 rounded-xl border border-border-2 bg-surface px-5 text-[15px] font-semibold text-fg hover:border-fg-subtle hover:bg-surface-2"
+              >
+                See what an owner sees
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
             </div>
           </div>
 
@@ -1128,37 +1190,69 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* The price, in one line. The strip under the hero promises a free
-          trial, and the next question is what comes after it. */}
+      {/* What happens after the button. A board member weighing a switch is
+          really weighing the work of switching, so the three things setup
+          asks for are named in the order it asks for them. Numbered because
+          it is a sequence. */}
       <section className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6 px-5 py-12 sm:py-14">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
+          <h2 className="max-w-2xl text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-fg sm:text-[44px]">
+            From sign-up to your first dues payment.
+          </h2>
+          <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
+            {STEPS.map((step, index) => (
+              <li key={step.title} className="relative md:pr-4">
+                {/* The line between the steps, drawn from each number to the
+                    next column. */}
+                {index < STEPS.length - 1 ? (
+                  <span
+                    className="absolute left-14 right-0 top-5 hidden h-px bg-border md:block"
+                    aria-hidden
+                  />
+                ) : null}
+                <span className="tnum relative inline-flex size-10 items-center justify-center rounded-full bg-brand-gradient text-[17px] font-semibold text-primary-fg shadow-raised">
+                  {index + 1}
+                </span>
+                <h3 className="mt-5 text-[20px] font-semibold tracking-[-0.02em] text-fg">
+                  {step.title}
+                </h3>
+                <p className="mt-2 max-w-sm text-[16px] leading-relaxed text-fg-muted">{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* The price, for the visitor's own size. The strip under the hero
+          promises a free trial, and the next question is what comes after
+          it. */}
+      <section className="border-b border-border bg-surface-2">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
           <div>
-            <div className="flex flex-wrap items-center gap-5">
-              <div className="rounded-2xl border border-border bg-surface-2 px-5 py-4 text-center">
-                <p className="tnum text-[40px] font-semibold leading-none tracking-[-0.04em] text-fg">
-                  {money(PRICE_PER_HOME_CENTS)}
-                </p>
-                <p className="mt-1.5 text-[14px] font-medium text-fg-muted">per home, monthly</p>
-              </div>
-              <div>
-                <h2 className="text-[26px] font-semibold tracking-[-0.03em] text-fg sm:text-[32px]">
-                  One price. Every feature.
-                </h2>
-                <p className="mt-2 max-w-xl text-[17px] leading-relaxed text-fg-muted">
-                  After your {TRIAL_DAYS} free days. No setup fee, no add-ons, cancel whenever.
-                </p>
-              </div>
+            <h2 className="text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-fg sm:text-[44px]">
+              One price. Every feature.
+            </h2>
+            <p className="mt-4 max-w-md text-[18px] leading-relaxed text-fg-muted">
+              {money(PRICE_PER_HOME_CENTS, { cents: false })} per home a month after your {TRIAL_DAYS}{" "}
+              free days. No setup fee, no add-ons, and no fee from us on payments. Cancel whenever.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link
+                href="/start"
+                className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[16px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
+              >
+                Get started
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                href="/pricing"
+                className="press inline-flex h-12 items-center rounded-xl border border-border-2 bg-surface px-6 text-[16px] font-semibold text-fg hover:border-fg-subtle"
+              >
+                See pricing
+              </Link>
             </div>
           </div>
-          <div>
-            <Link
-              href="/pricing"
-              className="press group inline-flex h-11 items-center gap-2 rounded-xl border border-border-2 bg-surface px-5 text-[15px] font-semibold text-fg hover:border-fg-subtle hover:bg-surface-2"
-            >
-              See pricing
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </div>
+          <PriceDial />
         </div>
         {/* The rails, named. Set as quiet wordmarks rather than borrowed logo
             art, and only rails the product actually runs: the huddle said
@@ -1174,6 +1268,42 @@ export default function MarketingHome() {
               >
                 {rail}
               </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The questions a board asks before it gives an email address. Each
+          answer is something the product does today; `<details>` so it
+          opens without a script. */}
+      <section className="border-b border-border bg-surface">
+        <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-16">
+          <div>
+            <h2 className="text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-fg sm:text-[44px]">
+              Questions boards ask first.
+            </h2>
+            <p className="mt-4 max-w-sm text-[17px] leading-relaxed text-fg-muted">
+              Something else? The demo is the quickest answer, and it needs no account.
+            </p>
+            <Link
+              href="/demo"
+              className="press group mt-6 inline-flex h-11 items-center gap-2 rounded-xl border border-border-2 bg-surface px-5 text-[15px] font-semibold text-fg hover:border-fg-subtle hover:bg-surface-2"
+            >
+              Try the demo
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+          <div className="divide-y divide-border border-y border-border">
+            {QUESTIONS.map((item, index) => (
+              // The first one open, so the list reads as answers and not as
+              // six closed doors.
+              <details key={item.q} className="group" open={index === 0}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-[18px] font-semibold tracking-[-0.01em] text-fg [&::-webkit-details-marker]:hidden">
+                  {item.q}
+                  <ChevronRight className="size-5 shrink-0 text-fg-subtle transition-transform group-open:rotate-90" />
+                </summary>
+                <p className="max-w-2xl pb-6 text-[16px] leading-relaxed text-fg-muted">{item.a}</p>
+              </details>
             ))}
           </div>
         </div>
@@ -1219,10 +1349,10 @@ export default function MarketingHome() {
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                href="/signin"
+                href="/demo"
                 className="press inline-flex h-12 items-center gap-2 rounded-xl border border-navy-50/30 px-6 text-[16px] font-semibold text-navy-50 hover:bg-navy-50/10"
               >
-                Log in
+                Try the demo
               </Link>
             </div>
           </div>
