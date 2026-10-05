@@ -404,8 +404,11 @@ function spendAllCategories(c: Community, year: number, throughMonth: number) {
   for (const e of ledgerFlows(c)) {
     if (e.amountCents >= 0) continue;
     if (yearOf(e.date) !== year || monthOf(e.date) > throughMonth) continue;
-    const label = e.category === "Reserve transfer" ? "Reserve contributions" : e.category;
-    totals.set(label, (totals.get(label) ?? 0) - e.amountCents);
+    // The same two lines spendingBetween leaves out: moving money to the
+    // reserve account is not spending, and the year comparison used to show
+    // it as the biggest category of all.
+    if (e.category === "Reserve transfer" || e.category === "Opening balance") continue;
+    totals.set(e.category, (totals.get(e.category) ?? 0) - e.amountCents);
   }
   return totals;
 }

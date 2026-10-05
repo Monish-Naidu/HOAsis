@@ -1863,6 +1863,10 @@ export type Database = {
           },
         ]
       }
+      reassign_presidency: {
+        Args: { p_association_id: string; p_to_profile: string }
+        Returns: undefined
+      }
       requests: {
         Row: {
           association_id: string

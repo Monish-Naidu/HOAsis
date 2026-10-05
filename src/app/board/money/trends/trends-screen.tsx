@@ -146,7 +146,7 @@ export function TrendsScreen() {
                     <td className="px-3 py-2.5 text-right">
                       <DeltaChip
                         delta={row.change}
-                        goodWhen={row.category === "Reserve contributions" ? "neither" : "down"}
+                        goodWhen="down"
                       />
                     </td>
                     <td className="px-5 py-2.5">

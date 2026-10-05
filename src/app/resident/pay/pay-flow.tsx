@@ -342,7 +342,7 @@ export function PayFlow() {
                 </p>
                 <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
                   {autopayFrom
-                    ? `Usually ${money(duesCents)}. Anything else you owe, such as a late fee, is included. From ${describeInstrument(autopayFrom)}. Cancel any time.`
+                    ? `Usually ${money(duesCents)}, or whatever the bill says. Anything else you owe, such as a late fee, is included. From ${describeInstrument(autopayFrom)}. Cancel any time.`
                     : instruments.length > 0
                       ? "Confirm your bank to turn this on."
                       : "Add a payment method to turn this on."}
