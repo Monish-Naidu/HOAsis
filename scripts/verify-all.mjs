@@ -9,6 +9,10 @@
  *
  * These talk to the real Supabase project in .env.local. They create their
  * own associations and users and remove them when they finish.
+ *
+ * `pnpm db:verify:staging` points every script at .env.staging instead
+ * (ENV_FILE, read by each script), so the checks can run without writing to
+ * the project real associations live in.
  */
 import { spawnSync } from "node:child_process";
 
