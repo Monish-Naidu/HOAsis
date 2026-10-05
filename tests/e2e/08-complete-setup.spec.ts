@@ -140,7 +140,7 @@ async function completeEverything(page: Page, property: Kind) {
   await page.getByRole("button", { name: "Add a component" }).click();
   await page.getByLabel("Component name").fill("Clubhouse roof");
   await page.getByLabel("Replacement cost").fill("42000");
-  await page.getByRole("button", { name: "Add it" }).click();
+  await page.getByRole("button", { name: "Add component" }).click();
   await page.waitForTimeout(500);
 
   // Settings: insurance, an officer, an amenity, a photograph.

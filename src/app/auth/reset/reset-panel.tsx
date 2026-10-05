@@ -33,10 +33,10 @@ export function ResetPanel() {
     const result = await setNewPassword(password);
     setBusy(false);
     if (!result.ok) {
-      setNotice({ tone: "danger", text: result.message ?? "Something went wrong. Please try again." });
+      setNotice({ tone: "danger", text: result.message ?? "That did not work. Try again." });
       return;
     }
-    setNotice({ tone: "ok", text: "Password changed. Taking you in." });
+    setNotice({ tone: "ok", text: "Password changed. Opening your account." });
     router.push("/resident");
   }
 

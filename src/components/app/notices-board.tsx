@@ -74,7 +74,7 @@ function Notices() {
 
   function resolve(violation: Violation) {
     setViolationStage(violation.id, "cured");
-    notify(`${placeLabel(violation.unit)} resolved.`);
+    notify(`Notice for ${placeLabel(violation.unit)} marked resolved.`);
     setOpenId(null);
   }
 
@@ -104,7 +104,7 @@ function Notices() {
               setCreating(false);
               setTab("open");
             } catch (error) {
-              notify(error instanceof Error ? error.message : "Could not send that", "warn");
+              notify(error instanceof Error ? error.message : "The notice was not sent. Check the details and try again.", "warn");
             }
           }}
         />
@@ -223,7 +223,7 @@ function NoticeRow({
               </p>
               <p className="mt-0.5 text-fg-muted">
                 {violation.ownerFixedNote ? `"${violation.ownerFixedNote}" ` : ""}
-                Have a look, then mark it resolved if it is.
+                Check it, then mark the notice resolved if it is.
               </p>
             </div>
           ) : null}

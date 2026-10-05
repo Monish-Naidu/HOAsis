@@ -195,7 +195,7 @@ describe("a dues run over a roster", () => {
       expect(send).toHaveBeenCalledTimes(1);
       expect(result).toMatchObject({ sent: 1, failed: 4, remaining: 0, unrecorded: "permission denied for table email_log" });
       expect(result.errors[0]).toBe(
-        "Stopped. The record of this send could not be saved. 4 people were not reached. Sending again could write to people who already have it.",
+        "Stopped. The log of this send could not be saved. 4 people were not reached. Sending again could write to people who already have it.",
       );
     });
 
@@ -284,7 +284,7 @@ describe("a board notice over a roster", () => {
       expect(send.mock.calls.map(([message]) => message.to)).toEqual(["owner1@example.com"]);
       expect(answers[0]).toMatchObject({ sent: 1, failed: 4, remaining: 0, unrecorded: "permission denied for table email_log" });
       expect(answers[0].errors[0]).toBe(
-        "Stopped. The record of this send could not be saved. 4 people were not reached. Sending again could write to people who already have it.",
+        "Stopped. The log of this send could not be saved. 4 people were not reached. Sending again could write to people who already have it.",
       );
     });
 
@@ -319,7 +319,7 @@ describe("a board notice over a roster", () => {
         pacer: pacerFor().pacer,
       });
       expect(result).toMatchObject({ sent: 2, failed: 0, remaining: 0, unrecorded: "permission denied for table email_log" });
-      expect(result.errors).toEqual(["The record of this send could not be saved."]);
+      expect(result.errors).toEqual(["The log of this send could not be saved."]);
     });
 
     it("says nothing of it when every record is written", async () => {

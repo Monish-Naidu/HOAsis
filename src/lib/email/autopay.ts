@@ -26,7 +26,7 @@ export async function sendAutopayNotice(input: {
   if (!input.dryRun) {
     const key = process.env.RESEND_API_KEY;
     if (!key) {
-      error = "RESEND_API_KEY is missing, so nothing can be sent.";
+      error = "Email is not set up, so nothing was sent.";
     } else {
       const sent = await new Resend(key).emails.send({
         from: emailSender(),

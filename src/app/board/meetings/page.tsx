@@ -86,7 +86,7 @@ export default function BoardMeetings() {
     const ok = await sendMeetingNotice(m.id);
     setSending((ids) => ids.filter((id) => id !== m.id));
     // Anything that fell short has been said by the send itself.
-    if (ok) notify(`Notice of ${m.title} posted to every home`);
+    if (ok) notify(`Notice of ${m.title} sent to every home`);
   }
 
   return (
@@ -171,7 +171,7 @@ export default function BoardMeetings() {
               <p className={cn("mt-0.5 text-footnote", m.noticeSentDate ? "text-fg-subtle" : "text-warn")}>
                 {m.noticeSentDate
                   ? `Notice sent ${formatDate(m.noticeSentDate, "long")}`
-                  : "Owners have not been sent notice"}
+                  : "Notice not sent yet"}
                 {m.ballotIds.length
                   ? ` · ${pluralize(m.ballotIds.length, "ballot")} on the agenda`
                   : ""}

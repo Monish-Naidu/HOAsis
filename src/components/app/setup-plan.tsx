@@ -64,7 +64,7 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
     detail: "A nonprofit corporation with your state, and an agent who accepts legal papers for it.",
   },
   roster: {
-    title: "Is every home on the register, with its owner?",
+    title: "Is every home listed, with its owner?",
     detail: "Every home, with the owner's name. A home with no owner has no balance and no vote.",
   },
   "opening-balances": {
@@ -73,7 +73,7 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
   },
   payments: {
     title: "Can owners pay online yet?",
-    detail: "Connect the association to Stripe. Nothing here says payments are on until Stripe does.",
+    detail: "Set up online payments. They are not on until Stripe approves the association.",
   },
   "first-bill": {
     title: "Is the first bill right?",
@@ -89,7 +89,7 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
   },
   budget: {
     title: "What does the association spend on?",
-    detail: "One line per kind of expense turns the assessments into a budget.",
+    detail: "One line per kind of expense turns the dues into a budget.",
   },
   insurance: {
     title: "Who insures the association?",
@@ -286,7 +286,7 @@ function WayOut() {
     <p className="mt-10 text-center text-footnote text-fg-subtle">
       Come back to this any time from Getting started.{" "}
       <Link href="/board" className="font-medium text-accent hover:underline">
-        Go to the dashboard
+        Open the dashboard
       </Link>
     </p>
   );
@@ -343,8 +343,8 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
           <Done
             label={
               varies
-                ? `${money(totalDues(community.association, community.owners))} ${cadence} in assessments`
-                : `${money(dues)} ${cadence} assessment`
+                ? `${money(totalDues(community.association, community.owners))} ${cadence} in dues`
+                : `${money(dues)} ${cadence} dues`
             }
             detail={
               homesWithOwnDues(community.owners) > 0
@@ -365,7 +365,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
               <span className="block text-footnote text-fg-muted">
                 {local
                   ? "A copy in this browser cannot take payments. Set it up for real to turn them on."
-                  : "Owners cannot pay online until Stripe has verified the association."}
+                  : "Owners cannot pay online until online payments are approved."}
               </span>
             </span>
           </div>
@@ -385,7 +385,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
           <ArrowRight className="size-4" />
         </Button>
         <ButtonLink variant="ghost" size="lg" href="/board">
-          Go to the dashboard
+          Open the dashboard
         </ButtonLink>
       </div>
     </div>
@@ -449,7 +449,7 @@ function Finished({
       </h1>
       <p className="mt-3 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
         {plan.allDone
-          ? "Nothing outstanding. Getting started stays in the sidebar in case you add something later."
+          ? "Nothing outstanding. Setting up stays in the sidebar in case you add something later."
           : `${plan.done} of ${plan.total} done. ${plan.payments.sentence}`}
       </p>
 
@@ -475,7 +475,7 @@ function Finished({
       ) : null}
 
       <ButtonLink variant="primary" size="lg" className="mt-6" href="/board">
-        Go to the dashboard
+        Open the dashboard
         <ArrowRight className="size-4" />
       </ButtonLink>
     </div>
@@ -675,7 +675,7 @@ function screenName(href: string): string {
     "/board/money": "Finances",
     "/board/documents": "Documents",
     "/board/settings": "Settings",
-    "/board/reserves": "Reserve Study",
+    "/board/reserves": "Reserve study",
     "/board/vendors": "Vendors",
     "/library": "the library",
   };
@@ -817,7 +817,7 @@ function PaymentsInline({ task }: { task: PlanTask }) {
   const started = Boolean(community.association.stripeAccountId);
   return (
     <ButtonLink href={setupLink(task)} variant="primary" size="md">
-      {started ? "Finish with Stripe" : "Connect Stripe"}
+      {started ? "Finish setting up online payments" : "Set up online payments"}
       <ArrowRight className="size-3.5" />
     </ButtonLink>
   );
@@ -1005,10 +1005,10 @@ function HouseholdInline({ task }: { task: PlanTask }) {
   function save() {
     try {
       const owner = addOwner(entry);
-      notify(`Added ${owner.displayName}, unit ${owner.unit}`);
+      notify(`Added ${owner.displayName}, home ${owner.unit}`);
       setEntry({ name: "", email: "", unit: "" });
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not add that household", "warn");
+      notify(error instanceof Error ? error.message : "Could not add that home. Check the details and try again.", "warn");
     }
   }
   return (
@@ -1017,8 +1017,8 @@ function HouseholdInline({ task }: { task: PlanTask }) {
         <input
           value={entry.name}
           onChange={(e) => setEntry({ ...entry, name: e.target.value })}
-          placeholder="Household name"
-          aria-label="Household name"
+          placeholder="Owner name"
+          aria-label="Owner name"
           onKeyDown={(e) => e.key === "Enter" && save()}
           className={field}
         />
@@ -1027,7 +1027,7 @@ function HouseholdInline({ task }: { task: PlanTask }) {
           value={entry.email}
           onChange={(e) => setEntry({ ...entry, email: e.target.value })}
           placeholder="Email"
-          aria-label="Household email"
+          aria-label="Owner email"
           onKeyDown={(e) => e.key === "Enter" && save()}
           className={field}
         />
@@ -1072,8 +1072,8 @@ function BoardInline({ task }: { task: PlanTask }) {
     return (
       <div className="space-y-3">
         <p className="text-body leading-relaxed text-fg-muted">
-          Nobody to appoint yet. An officer needs a login: invite a household by email, and once
-          they have signed in they can hold an office.
+          No one to appoint yet. Invite an owner by email. Once they sign in, you can make them a
+          board member.
         </p>
         <GoThere task={{ ...task, href: "/board/homeowners" }} />
       </div>

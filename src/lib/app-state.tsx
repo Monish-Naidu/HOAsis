@@ -1265,7 +1265,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         Object.entries({ ...set, [capability]: on })
           .filter(([, v]) => v)
           .map(([name]) => name);
-      void remoteWrite("Saving permissions", () => {
+      void remoteWrite("Saving access", () => {
         // The seat as the last write left it. Built from the copy on screen,
         // the second of two quick presses on the grid dropped the first.
         const account = latest(rc).accounts.find((a) => a.id === id) ?? seat;
@@ -1408,7 +1408,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         } catch (duesError) {
           reportRemoteError(
             `Your association is set up, but some homes were not given their own dues (${
-              duesError instanceof Error ? duesError.message : "the database refused it"
+              duesError instanceof Error ? duesError.message : "it was not saved"
             }). Open Homeowners and use Change dues on those homes. Until then they pay the usual amount.`,
           );
         }
@@ -1682,7 +1682,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         {
           id: `led-${date}-${input.ownerId}-${all.length + 1}`,
           date,
-          description: `Assessment payment, unit ${owner?.unit ?? "?"}`,
+          description: `Dues payment, ${placeLabel(owner?.unit ?? "?")}`,
           counterparty: owner?.displayName ?? "Owner",
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
@@ -1964,7 +1964,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       if (remote.community) {
         const rc = remote.community;
-        const saved = remoteWrite("Adding the household", async () => {
+        const saved = remoteWrite("Adding the home", async () => {
           const added = await supabaseBrowser().rpc("add_household", {
             p_association_id: rc.id,
             p_unit_id: ownerId,
@@ -2458,7 +2458,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!report) throw new ValidationError("That report is not on file", { reportId });
       if (!canRaiseNotice(report)) {
         throw new ValidationError(
-          "Somebody has to go and look before a notice can rest on this",
+          "Someone has to look at the home and mark this report verified before a notice can be sent",
           { reportId },
         );
       }
@@ -2546,7 +2546,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const addNotice = useCallback(
     (input: { ownerId: string; ownerName: string; unit: string; rule: string; ruleCitation?: string }) => {
       if (!input.rule.trim() || !input.unit.trim()) {
-        throw new ValidationError("A notice needs a home and what was seen", {});
+        throw new ValidationError("Choose a home and say what was seen", {});
       }
       const existing = remote.community
         ? remote.community.violations
@@ -2798,7 +2798,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               association_id: rc.id,
               bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
               occurred_on: input.closingDate,
-              description: `Paid at closing, unit ${owner?.unit ?? ""}`.trim(),
+              description: `Paid at closing, ${placeLabel(owner?.unit ?? "")}`.trim(),
               counterparty: owner?.displayName ?? "Title company",
               category: "Assessments",
               amount_cents: owed,
@@ -2824,7 +2824,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             // The one refusal that can be seen coming, checked before any
             // money is written.
             if (owner && input.closingDate < owner.moveInDate) {
-              throw new Error("the closing date is before this owner's tenure began. Check the date");
+              throw new Error("the closing date is before this owner took ownership. Check the date");
             }
             const { error } = await recordPayment();
             if (error) throw new Error(error.message);
@@ -3473,7 +3473,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const addActionItem = useCallback(
     (input: { title: string; ownerName: string; dueOn?: string; meetingId?: string }) => {
       const title = input.title.trim();
-      if (!title) throw new ValidationError("An action item needs to say what", { title });
+      if (!title) throw new ValidationError("Describe the action item", { title });
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the item", () =>
@@ -3651,9 +3651,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const code = input.code.trim().toUpperCase();
       const name = input.name.trim();
       const email = input.email.trim();
-      if (!code) return { ok: false as const, error: "Type the code from your board." };
+      if (!code) return { ok: false as const, error: "Enter the join code from your board." };
       if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-        return { ok: false as const, error: "A name and a working email address are needed." };
+        return { ok: false as const, error: "Enter your name and a working email address." };
       }
       // A demo association answers from the browser, so the flow can be
       // tried without an account. A real one goes to the database as anyone.
@@ -3683,7 +3683,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         p_note: input.note.trim(),
       });
       if (error || !data) {
-        return { ok: false as const, error: error?.message ?? "No association has that code." };
+        return { ok: false as const, error: error?.message ?? "No association has that join code. Check it with your board." };
       }
       return { ok: true as const, association: data };
     },
@@ -3909,7 +3909,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           });
           if (!response.ok) {
             const data = await response.json().catch(() => ({}));
-            throw new Error(data.error ?? "Could not remove the payment method");
+            throw new Error(data.error ?? "The payment method was not removed. Try again");
           }
         });
         return undefined;
@@ -4223,7 +4223,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const messageBoard = useCallback(
     async (ownerId: string, subject: string, body: string, tag: MessageThread["tag"] = "General") => {
       if (!subject.trim() || !body.trim()) {
-        throw new ValidationError("Add a subject and a few words", {});
+        throw new ValidationError("Add a subject and a message", {});
       }
       if (remote.community) {
         return remoteWrite("Sending your message", () =>

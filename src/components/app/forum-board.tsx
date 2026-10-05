@@ -435,7 +435,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   ) : null}
                   {replyNote === p.id ? (
                     <p className="text-footnote text-fg-subtle">
-                      Replies are not saved for this community yet.
+                      Your reply was not saved. Replies are not available in this community yet.
                     </p>
                   ) : null}
                 </div>

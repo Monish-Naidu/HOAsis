@@ -114,8 +114,8 @@ export function JoinPanel() {
 
         <p className="flex items-start gap-2 pt-1 text-footnote leading-snug text-fg-subtle">
           <ShieldCheck className="mt-px size-3.5 shrink-0" />
-          This link was issued for your unit. Your board sees your balance and your requests;
-          neighbors do not.
+          This link is for your home. Your board sees your balance and your requests;
+          your neighbors do not.
         </p>
       </div>
     </Card>
@@ -186,14 +186,14 @@ function JoinWithCode({
       <div className="border-b border-border px-6 py-5">
         <p className="flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
           <DoorOpen className="size-3.5" />
-          Join your community
+          Join your association
         </p>
         <h1 className="mt-1 text-title3 font-semibold leading-tight tracking-[-0.02em] text-fg">
           {named ? `Join ${named.name}` : "Enter your join code"}
         </h1>
         <p className="mt-1 text-body leading-relaxed text-fg-muted">
           {named
-            ? `You are not on the register for ${named.name}${named.place ? `, ${named.place}` : ""} yet. Enter the join code from your board.`
+            ? `Your home is not on the list for ${named.name}${named.place ? `, ${named.place}` : ""} yet. Enter the join code from your board.`
             : "Six characters, from your board or the welcome letter."}
         </p>
       </div>
@@ -214,7 +214,7 @@ function JoinWithCode({
           />
         </label>
         <Button variant="primary" size="md" type="submit" className="w-full" disabled={!canContinue}>
-          Continue
+          Find my association
           <ArrowRight className="size-4" />
         </Button>
         <p className="text-center text-footnote text-fg-subtle">
@@ -302,10 +302,10 @@ function JoinForm({
     return (
       <Card className="p-6">
         <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
-          No association has the code {code}
+          That code did not match an association
         </h1>
         <p className="mt-2 text-body leading-relaxed text-fg-muted">
-          Check the letter or ask your board. Codes are six letters and numbers.
+          Check it with your board. A join code is six letters and numbers.
         </p>
         <Button variant="secondary" size="md" className="mt-5" onClick={onRetry}>
           Try another code
@@ -360,7 +360,7 @@ function JoinForm({
       if (needsAccount) {
         const made = await signUp(email, password, name);
         if (!made.ok) {
-          setError(made.message ?? "Something went wrong. Please try again.");
+          setError(made.message ?? "That did not work. Try again.");
           return;
         }
       }

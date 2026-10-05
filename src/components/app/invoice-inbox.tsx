@@ -36,7 +36,7 @@ export function InvoiceInbox() {
       approvePayout(payout.id);
       notify(`Approved ${payout.vendor}`);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "That did not save", "warn");
+      notify(error instanceof Error ? error.message : "That was not saved. Try again.", "warn");
     }
   }
 

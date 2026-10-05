@@ -144,8 +144,8 @@ export function EmailDelivery() {
       </div>
 
       <p className="border-t border-border px-5 py-3 text-footnote leading-snug text-fg-subtle">
-        Delivery status comes from the mail provider&apos;s webhook. Set RESEND_WEBHOOK_SECRET and
-        point Resend at /api/email/webhook.
+        Delivery updates come from our email service. If every status stays On its way, ask
+        whoever set up your account to check that email tracking is switched on.
       </p>
     </Card>
   );

@@ -132,7 +132,7 @@ export function RecordPayment({
           <label className="block">
             {/* Their date, not today's. A payment entered in April for a
                 February invoice belongs in February or the books are wrong. */}
-            <span className="text-footnote font-semibold text-fg-muted">Date it left</span>
+            <span className="text-footnote font-semibold text-fg-muted">Date paid</span>
             <input
               type="date"
               value={paidOn}
@@ -142,7 +142,7 @@ export function RecordPayment({
             />
           </label>
           <label className="block">
-            <span className="text-footnote font-semibold text-fg-muted">How</span>
+            <span className="text-footnote font-semibold text-fg-muted">Paid by</span>
             <Select
               value={method}
               onChange={(e) => setMethod(e.target.value as typeof method)}
@@ -214,7 +214,7 @@ export function RecordPayment({
             onClose();
           }}
         >
-          Record it
+          Record payment
         </Button>
       </div>
     </Card>

@@ -79,7 +79,7 @@ export function ActionItems({
               setAdding(false);
               notify(`${input.ownerName || "Somebody"} owes: ${input.title}`);
             } catch (error) {
-              notify(error instanceof Error ? error.message : "Could not add that", "warn");
+              notify(error instanceof Error ? error.message : "That action item was not added. Try again.", "warn");
             }
           }}
         />
@@ -89,7 +89,7 @@ export function ActionItems({
         <EmptyState
           icon={<ListChecks className="size-5" />}
           title="No open tasks"
-          description="Tasks agreed at meetings, with an owner and a due date."
+          description="Press Add to record something the board agreed to do, with who does it and by when."
         />
       ) : null}
 
@@ -248,7 +248,7 @@ function AddForm({
       </div>
       <div className="flex gap-2">
         <Button type="submit" variant="primary" size="sm" disabled={!title.trim()}>
-          Add it
+          Add action item
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>
           Cancel

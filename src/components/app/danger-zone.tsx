@@ -92,7 +92,7 @@ export function DangerZone() {
       notify(label, "ok");
       return true;
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Something went wrong. Please try again.", "warn");
+      notify(error instanceof Error ? error.message : "That did not go through. Try again.", "warn");
       return false;
     } finally {
       setBusy(false);
@@ -111,12 +111,12 @@ export function DangerZone() {
       });
       const data = await response.json();
       if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "Could not reach Stripe");
+        throw new Error(data.error ?? "Stripe did not open. Try again in a moment.");
       }
       window.location.assign(data.url);
     } catch (error) {
       setBusy(false);
-      notify(error instanceof Error ? error.message : "Could not reach Stripe", "warn");
+      notify(error instanceof Error ? error.message : "Stripe did not open. Try again in a moment.", "warn");
     }
   }
 
@@ -134,7 +134,7 @@ export function DangerZone() {
           <Row
             icon={<ArrowRightLeft className="size-4" />}
             title="Hand over the presidency"
-            detail="Give the office to another household. You stay in the association as a resident, because you still own a home."
+            detail="Give the office to another owner. You stay in the association as a resident, because you still own a home."
             action="Hand over"
             open={flow === "transfer"}
             onOpen={() => setFlow(flow === "transfer" ? null : "transfer")}
@@ -148,7 +148,7 @@ export function DangerZone() {
                 onChange={(e) => setSuccessor(e.target.value)}
                 className="w-full [&>select]:h-10"
               >
-                <option value="">Choose a household</option>
+                <option value="">Choose an owner</option>
                 {others.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name} · {homeLabel(community, a.unit)}
@@ -158,7 +158,7 @@ export function DangerZone() {
             </label>
             {!others.length ? (
               <Callout tone="warn" title="There is nobody else yet">
-                Invite another household and wait for them to sign up. Somebody has to be able
+                Invite another owner and wait for them to sign up. Somebody has to be able
                 to accept the office.
               </Callout>
             ) : null}
@@ -190,7 +190,7 @@ export function DangerZone() {
           detail={
             isPresident
               ? "You cannot leave while you hold the office. Hand it over first, then come back here."
-              : "Removes your access. Your household stays on the register and your balance is unaffected, because the home is what owes money, not you."
+              : "Removes your access. Your home stays listed and your balance is unaffected, because the home is what owes money, not you."
           }
           action="Leave"
           disabled={isPresident}
@@ -198,7 +198,7 @@ export function DangerZone() {
           onOpen={() => setFlow(flow === "leave" ? null : "leave")}
         >
           <Callout tone="warn" title="You will lose access immediately">
-            Somebody with the permissions capability can add you back, but you will not be able
+            A board member who manages access can add you back, but you will not be able
             to do it yourself.
           </Callout>
           <Button

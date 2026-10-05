@@ -687,11 +687,11 @@ export function SettingsScreen() {
             {(
               [
                 [documents.length, "documents"],
-                [community.history?.ledgerCount ?? ledger.length, "ledger entries"],
-                [community.owners.length, "homeowner records"],
-                [vendors.length, "vendor contacts"],
+                [community.history?.ledgerCount ?? ledger.length, "transactions"],
+                [community.owners.length, "owners"],
+                [vendors.length, "vendors"],
                 [community.meetings.length, "meetings on record"],
-                [requests.length, "requests with history"],
+                [requests.length, "requests"],
               ] as const
             ).map(([count, noun]) => (
               <div key={noun} className="bg-surface px-5 py-3">
@@ -715,7 +715,7 @@ export function SettingsScreen() {
             title="What each member can do"
             subtitle={
               isPresident
-                ? "You hold the only capability that cannot be granted away"
+                ? "Only you can change these"
                 : "Only the President can change these"
             }
             icon={<ShieldCheck className="size-4" />}
@@ -723,7 +723,7 @@ export function SettingsScreen() {
           {!isPresident ? (
             <div className="px-5 pt-4">
               <Callout tone="neutral" icon={<Lock className="size-4" />} title="Read only">
-                Capabilities are set by the President.
+                Access is set by the President.
               </Callout>
             </div>
           ) : null}
@@ -768,7 +768,7 @@ export function SettingsScreen() {
             <span className="inline-flex items-center gap-1.5"><Eye className="size-3.5" aria-hidden /> Can see</span>
             <span className="inline-flex items-center gap-1.5"><Pencil className="size-3.5" aria-hidden /> Can change</span>
             <span className="basis-full leading-relaxed">
-              Press a cell to move it along. The President&apos;s own row is locked on purpose: an
+              Press a box to change it. The President&apos;s own row is locked on purpose: an
               association that can strip its President of access has no way back in.
             </span>
           </div>
@@ -1126,8 +1126,7 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
           ))}
         </ul>
         <p className="mt-4 text-body leading-relaxed text-fg-muted">
-          Stripe is the bank-grade processor behind the payments. Your HOAsis never sees these
-          numbers.
+          Stripe handles the payments. Your HOAsis never sees these numbers.
         </p>
         <Button
           variant="primary"
@@ -1172,7 +1171,7 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
         </Button>
       ) : (
         <Button variant="primary" size="sm" onClick={openOnboarding} disabled={redirecting}>
-          {redirecting ? "Opening…" : "Continue"}
+          {redirecting ? "Opening…" : "Continue setup"}
         </Button>
       )}
     </SettingRow>

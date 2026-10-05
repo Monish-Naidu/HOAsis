@@ -172,8 +172,8 @@ function DocumentsScreen() {
           <Card>
             <EmptyState
               icon={<FileText className="size-5" />}
-              title="No documents yet"
-              description="The declaration, bylaws, budget, and minutes appear here as the board uploads them."
+              title="Your board has not posted any documents yet"
+              description="The CC&Rs, bylaws, budget and minutes will appear here once the board adds them."
             />
           </Card>
         </section>

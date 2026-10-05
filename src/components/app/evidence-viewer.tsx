@@ -40,7 +40,7 @@ export function EvidenceViewer({
         <p className="flex items-center gap-2 text-body text-fg-muted">
           <Camera className="size-4 shrink-0 text-fg-subtle" />
           {emptyNote ??
-            "No photographs are attached. A notice with no evidence behind it is one an owner can simply deny."}
+            "No photographs are attached. A notice with no evidence behind it is one an owner can deny."}
         </p>
       </Card>
     );

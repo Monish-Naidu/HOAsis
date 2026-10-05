@@ -25,7 +25,7 @@ export function readableLinkError(raw: string, next?: string | null): string {
     return "That confirmation link has expired. Sign in below, or create the account again to get a fresh one.";
   }
   if (text.includes("already") || text.includes("used")) {
-    return "That link has already been used. Your email is confirmed, so just sign in.";
+    return "That link has already been used. Your email is confirmed, so sign in.";
   }
-  return "That link did not work. Sign in below and we will sort it out.";
+  return "That link did not work. Try signing in below. If that fails, create the account again.";
 }

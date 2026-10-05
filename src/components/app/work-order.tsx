@@ -143,7 +143,7 @@ export function WorkOrderPanel({
             size="sm"
             onClick={() => {
               setWorkOrder(request.id, null);
-              notify(`Work order taken off ${request.reference}.`, "info");
+              notify(`Work order removed from ${request.reference}.`, "info");
             }}
           >
             <Trash2 className="size-3.5" />

@@ -246,7 +246,7 @@ export function parseRosterCsv(text: string): RosterParse {
     if (dues !== undefined && dues !== null && dues > 0) row.duesCents = dues;
 
     if (!unit) {
-      row.problems.push("No unit, lot or address, so there is nothing to put on the register.");
+      row.problems.push("No unit, lot or address, so there is no home to add.");
     } else {
       const key = unit.toLowerCase();
       const first = seen.get(key);

@@ -78,7 +78,7 @@ export function TestModeGuide({
             </li>
             <li>
               To save a method for autopay, use <strong>Add a payment method</strong> instead, then
-              switch autopay on. The cron runs daily at 14:30 UTC.
+              switch autopay on. Autopay runs once a day, at 14:30 UTC.
             </li>
           </ol>
         )}

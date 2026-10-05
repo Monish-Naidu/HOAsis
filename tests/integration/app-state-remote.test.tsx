@@ -267,7 +267,7 @@ describe("a write aimed at one row", () => {
     ["Saving settings", "update associations", (s) => s.updateSettings({ showFundsToResidents: false })],
     ["Removing the amenity", "delete amenities", (s, c) => s.removeAmenity(c.amenities[0].id)],
     [
-      "Saving permissions",
+      "Saving access",
       "update memberships",
       (s, c) => s.setCapability(c.accounts.find((a) => a.role !== "president")!.id, "vendors", "change"),
     ],
@@ -673,7 +673,7 @@ describe("approving a request to join", () => {
     expect(ok).toBe(false);
     expect(targets()).toEqual(["rpc:add_household"]);
     expect(fetched).toEqual([]);
-    expect(errors).toEqual(["Adding the household: That home is already on the roster"]);
+    expect(errors).toEqual(["Adding the home: That home is already on the roster"]);
   });
 });
 
@@ -1213,7 +1213,7 @@ describe("an officer recording the sale of their own home", () => {
     expect(ok).toBe(false);
     expect(targets()).toEqual([]);
     expect(errors).toEqual([
-      "Recording the sale: the closing date is before this owner's tenure began. Check the date",
+      "Recording the sale: the closing date is before this owner took ownership. Check the date",
     ]);
   });
 
@@ -1542,7 +1542,7 @@ describe("what a real association is not offered yet", () => {
     // A note has no column to live in, so the box is not shown to be lost.
     expect(screen.queryByLabelText("Note on this payment")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Record it" }));
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
     await settled();
 
     // Paid, needing no approval, and on the books from the same press.
@@ -1565,9 +1565,9 @@ describe("what a real association is not offered yet", () => {
 
     // The vendor's usual category is not one the form offers, so nothing is
     // chosen and the button waits.
-    expect(screen.getByRole("button", { name: "Record it" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Record payment" })).toBeDisabled();
     await user.selectOptions(screen.getByLabelText("Category"), "Landscaping");
-    await user.click(screen.getByRole("button", { name: "Record it" }));
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
     await settled();
 
     expect(writes()[1].values).toMatchObject({ amount_cents: -20_000, category: "Landscaping" });
@@ -1684,7 +1684,7 @@ describe("the opening balances screen, for a real association", () => {
       screen.getByLabelText(`Opening balance for ${home.displayName}, ${home.unit}`),
       "500",
     );
-    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+    await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
 
     // Two statements per home, one after the other. A second press part way
     // through used to start a second pass over the same homes.

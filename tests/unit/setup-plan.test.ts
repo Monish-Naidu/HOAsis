@@ -120,7 +120,7 @@ describe("the situation card is not a second list", () => {
       "Get an EIN",
       "Register the association and name a registered agent",
       "Decide what the unsold lots pay, and write it down",
-      "Fund reserves from the first assessment",
+      "Fund reserves from the first dues bill",
     ]);
     expect(portingPlan("existing", "platform")!.steps).toEqual([]);
     expect(portingPlan("existing", "manager")!.steps).toEqual([]);
@@ -559,7 +559,7 @@ describe("each origin gets exactly its own group", () => {
       "Get an EIN",
       "Register the association and name a registered agent",
       "Decide what the unsold lots pay, and write it down",
-      "Fund reserves from the first assessment",
+      "Fund reserves from the first dues bill",
     ]);
     expect(plan.phases.map((p) => p.id)).not.toContain("before-handover");
   });

@@ -68,13 +68,13 @@ export function AccountStep({
     } catch (error) {
       result = {
         ok: false,
-        message: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        message: error instanceof Error ? error.message : "That did not work. Try again.",
       };
     }
     setBusy(false);
 
     if (!result.ok) {
-      setFailure(result.message ?? "Something went wrong. Please try again.");
+      setFailure(result.message ?? "That did not work. Try again.");
       return;
     }
     // A user and no session means the project confirms addresses by email.

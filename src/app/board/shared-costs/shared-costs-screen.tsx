@@ -136,7 +136,7 @@ export function SharedCostsScreen() {
             ) : null}
             <Button size="sm" onClick={() => setAdding(true)}>
               <Plus className="size-4" />
-              Add
+              Add a shared cost
             </Button>
           </div>
         }
@@ -270,7 +270,7 @@ export function SharedCostsScreen() {
                       postSharedCostBill({ ...bill, sharedCostId: row.cost.id });
                       setBillFor(null);
                       notify(
-                        `Posted. Every home's share is on their next statement.`,
+                        `Bill posted. Every home's share is on its next statement.`,
                       );
                     }}
                   />
@@ -424,8 +424,7 @@ function AddSharedCost({
               className={field}
             />
             <span className="mt-1.5 block text-footnote text-fg-muted">
-              Shown to owners. It is the question they ask most and the one no other
-              product answers.
+              Shown to owners, so they can see who the money goes to.
             </span>
           </label>
           <label className="block">
@@ -510,7 +509,7 @@ function AddSharedCost({
             })
           }
         >
-          Add it
+          Add shared cost
         </Button>
       </div>
     </Card>
@@ -619,7 +618,7 @@ function PostBill({
             });
           }}
         >
-          Post it
+          Post bill
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>
           Cancel

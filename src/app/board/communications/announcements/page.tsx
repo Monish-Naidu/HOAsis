@@ -82,7 +82,7 @@ function AnnouncementsManager({
 
   function post() {
     if (!title.trim() || !body.trim()) {
-      notify("An announcement needs a title and a body", "warn");
+      notify("Add a title and a message before you post", "warn");
       return;
     }
     addAnnouncement({ title: title.trim(), body: body.trim(), category, pinned });

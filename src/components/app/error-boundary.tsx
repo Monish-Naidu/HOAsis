@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" />
           <div className="min-w-0 flex-1">
             <p className="text-body font-semibold text-fg">
-              {this.props.label ? `${this.props.label} could not load` : "Something broke here"}
+              {this.props.label ? `${this.props.label} could not load` : "Something went wrong here"}
             </p>
             <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
               The rest of the page is fine. Try again, and if it keeps happening the detail

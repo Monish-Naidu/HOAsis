@@ -60,7 +60,7 @@ export function MessagesScreen() {
         setComposing(false);
       }
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not send it", "warn");
+      notify(error instanceof Error ? error.message : "Your message did not send. Check your connection and try again.", "warn");
     } finally {
       setSending(false);
     }

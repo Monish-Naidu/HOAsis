@@ -150,7 +150,7 @@ test.describe("how a notice reaches people", () => {
     expect(health.text, "the board is not told paper is the notice").toContain(
       "the letter is the notice",
     );
-    expect(health.text).toContain("does not discharge the duty");
+    expect(health.text).toContain("does not count as official notice");
   });
 
   test("text is off, and says exactly what would switch it on", async ({ page }) => {

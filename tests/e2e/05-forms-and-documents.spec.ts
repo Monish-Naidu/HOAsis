@@ -344,7 +344,7 @@ test.describe("forms", () => {
     await page.waitForLoadState("networkidle");
 
     // Nothing filled in, so submitting must not be possible.
-    const submit = page.getByRole("button", { name: "Sign and submit" });
+    const submit = page.getByRole("button", { name: "Sign and send" });
     await expect(submit, "an empty form could be submitted").toBeDisabled();
 
     await page.getByLabel(/^Material/).selectOption("Cedar");
@@ -393,7 +393,7 @@ test.describe("forms", () => {
     });
     await page.getByLabel("Type your full legal name").fill("Monish Naidu");
     await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Sign and submit" }).click();
+    await page.getByRole("button", { name: "Sign and send" }).click();
     await page.waitForTimeout(700);
 
     const reference = (await inspect(page)).text.match(/REQ-\d{4}-\d+/)?.[0];

@@ -72,7 +72,7 @@ const ORIGINS: {
     detail:
       "You are the builder or developer. The association has to exist before the first home closes.",
     changes:
-      "Homes come straight from your site plan, the ones that have not sold are billed to you, and reserves get funded from the first assessment. When the owners elect their board, you hand them the presidency from Settings. Nothing is set up twice.",
+      "Homes come straight from your site plan, the ones that have not sold are billed to you, and reserves get funded from the first dues. When the owners elect their board, you hand them the presidency from Settings. Nothing is set up twice.",
     icon: HardHat,
   },
   {

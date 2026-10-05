@@ -136,12 +136,12 @@ export async function sendInvitations(
         answer = ((await response.json().catch(() => null)) ?? {}) as typeof answer;
         ok = response.ok;
       } catch {
-        refusal = "The mail service could not be reached";
+        refusal = "The mail service could not be reached. Try again in a few minutes.";
         break;
       }
       if (!ok) {
         refusal =
-          typeof answer.error === "string" && answer.error ? answer.error : "Could not send the invitations";
+          typeof answer.error === "string" && answer.error ? answer.error : "Could not send the invitations. Try again in a few minutes.";
         break;
       }
       remaining = counted(answer.remaining);
@@ -180,14 +180,14 @@ export function inviteToast(
   only?: string,
 ): { message: string; tone: "ok" | "warn" } {
   if (outcome.refused && outcome.sent + outcome.already === 0) {
-    return { message: outcome.reason ?? "Could not send the invitations", tone: "warn" };
+    return { message: outcome.reason ?? "Could not send the invitations. Try again in a few minutes.", tone: "warn" };
   }
   if (only && outcome.sent === 1 && outcome.failed === 0) {
     return { message: `Invitation sent to ${only}`, tone: "ok" };
   }
   const parts = [`${pluralize(outcome.sent, "invitation")} sent`];
   if (outcome.already) parts.push(`${outcome.already} already invited in the last hour`);
-  if (outcome.failed) parts.push(`${outcome.failed} failed`);
+  if (outcome.failed) parts.push(`${outcome.failed} not sent`);
   const why = outcome.failed && outcome.reason ? `. ${outcome.reason}` : "";
   return { message: `${parts.join(", ")}${why}`, tone: outcome.failed ? "warn" : "ok" };
 }
@@ -302,7 +302,7 @@ export function HomeownersScreen() {
   const segments: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: "All", count: owners.length },
     { key: "paid", label: "Paid up", count: paidUp },
-    { key: "behind", label: "Behind", count: delinq.past.length },
+    { key: "behind", label: "Past due", count: delinq.past.length },
   ];
 
   function toggle(owner: Owner, withComposer = false) {
@@ -409,7 +409,7 @@ export function HomeownersScreen() {
       );
       notify(message, tone);
     } catch {
-      notify("Could not send the invitations", "warn");
+      notify("Could not send the invitations. Try again in a few minutes.", "warn");
     } finally {
       setInviting(false);
     }
@@ -456,8 +456,8 @@ export function HomeownersScreen() {
   if (!maySeeRoster) {
     return (
       <Callout tone="warn" icon={<Lock className="size-4" />} title="You cannot see the homeowner register">
-        It carries every household&apos;s balance and contact details, so it needs the money or
-        communications capability. The President grants those.
+        It shows every household&apos;s balance and contact details, so it needs access to Finances
+        or Messages. The President can give you that access.
       </Callout>
     );
   }
@@ -769,7 +769,7 @@ export function HomeownersScreen() {
         {/* Roster */}
         {visible.length === 0 ? (
           <EmptyState
-            title={query.trim() ? "Nobody matches" : filter === "behind" ? "Nobody is behind" : "No households yet"}
+            title={query.trim() ? "Nobody matches" : filter === "behind" ? "Nobody is past due" : "No households yet"}
             description={query.trim() ? "Try a name, unit, address or email." : undefined}
           />
         ) : (

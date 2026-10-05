@@ -496,7 +496,7 @@ export function disputeEmail(kind: "opened" | "won" | "lost", input: DisputeEmai
           ]
         : [
             `${first}, the bank decided the disputed ${amount} payment${forHome} for the cardholder. The ${amount} and Stripe's dispute fee stay out of the association's balance.`,
-            `The owner's statement here still shows the payment as paid, and the ledger still shows the deposit, so the books are ahead of the bank by this amount.`,
+            `The owner's statement here still shows the payment as paid, and the books still show the deposit, so your books are ahead of the bank by this amount.`,
           ];
 
   return {
@@ -574,7 +574,7 @@ function noticeFooter(input: NoticeEmailInput, why: string): string {
   if (why) {
     return `${sender} ${why} It is sent to every owner and cannot be turned off.`;
   }
-  return `${sender} You are getting this because the board has this address on its register for your home. Create your account to choose which emails you get.`;
+  return `${sender} You are getting this because the board has this address on file for your home. Create your account to choose which emails you get.`;
 }
 
 function firstName(name: string): string {

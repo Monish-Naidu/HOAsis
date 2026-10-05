@@ -53,7 +53,7 @@ export interface SendResult {
 
 function resend(): Resend {
   const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY is missing, so nothing can be sent.");
+  if (!key) throw new Error("Email is not set up, so nothing was sent.");
   return new Resend(key);
 }
 
@@ -102,7 +102,7 @@ export async function sendDuesEmails(input: {
     p_category: input.category,
     p_only_past_due: input.category === "delinquency",
   });
-  if (error) throw new Error(`Could not build the recipient list: ${error.message}`);
+  if (error) throw new Error(`Could not work out who to send this to: ${error.message}`);
 
   const client = input.dryRun ? null : resend();
   const pacer = input.pacer ?? createPacer();

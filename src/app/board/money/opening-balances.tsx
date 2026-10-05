@@ -79,7 +79,7 @@ function OpeningRow({ account }: { account: BankAccount }) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="86000.00"
-              aria-label={`Opening balance for ${name}`}
+              aria-label={`Starting balance for ${name}`}
               className={fieldClass}
             />
           </Field>
@@ -89,7 +89,7 @@ function OpeningRow({ account }: { account: BankAccount }) {
               max={today}
               value={asOf}
               onChange={(e) => setAsOf(e.target.value)}
-              aria-label={`Opening balance date for ${name}`}
+              aria-label={`Starting balance date for ${name}`}
               className={fieldClass}
             />
           </Field>

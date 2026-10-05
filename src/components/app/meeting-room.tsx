@@ -114,7 +114,7 @@ export function MeetingRoom({
 
   function copyLink() {
     void navigator.clipboard?.writeText(link).then(
-      () => notify("Copied", "ok"),
+      () => notify("Link copied", "ok"),
       () => notify(link, "info"),
     );
   }
@@ -138,7 +138,7 @@ export function MeetingRoom({
           className="press inline-flex min-h-9 items-center gap-1 rounded-md px-1.5 text-footnote font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
         >
           <Copy className="size-3.5" />
-          Copy
+          Copy link
         </button>
       </p>
       {meeting.dialIn ? (

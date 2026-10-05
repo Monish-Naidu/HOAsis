@@ -137,7 +137,7 @@ export default function BoardCompliance() {
           label="Past due"
           value={String(register.overdue.length)}
           tone={register.overdue.length ? "danger" : "ok"}
-          hint="The date has gone"
+          hint="The date has passed"
           icon={<AlertTriangle className="size-4" />}
         />
         <Stat
@@ -275,7 +275,7 @@ export default function BoardCompliance() {
               because it is the finding rather than an empty panel. */}
           <Card>
             <CardHeader
-              title="How often a reserve study is due"
+              title="Reserve study"
               icon={<GraduationCap className="size-4" />}
             />
             {funding.measurable ? (
@@ -306,7 +306,7 @@ export default function BoardCompliance() {
               <EmptyState
                 icon={<GraduationCap className="size-6" />}
                 title="No reserve study on file"
-                description="Percent funded compares savings to the reserve study target. Add a study to see it."
+                description="Percent funded compares savings to the reserve study target. Upload a reserve study in Documents to see it."
               />
             )}
           </Card>
@@ -336,8 +336,8 @@ export default function BoardCompliance() {
             </div>
             <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
               {register.cited
-                ? `Every cited row traces to the ${association.stateName} guide in the library, which carries its own sources. The dates are worked out from your fiscal year. Whether you did it is yours to mark, and none of this is legal advice.`
-                : `${association.stateName} sections are not written into the register yet, so these are the duties almost every association has, with no statute attached. The library has the ${association.stateName} guide, and the sections will follow.`}
+                ? `Each deadline with a section comes from the ${association.stateName} guide in the library, which lists its sources. Dates are worked out from your fiscal year. You mark when a deadline is done. None of this is legal advice.`
+                : `${association.stateName} sections are not written into the register yet, so these are the duties almost every association has, with no law cited. The library has the ${association.stateName} guide, and the sections will follow.`}
             </p>
           </Card>
 

@@ -15,7 +15,7 @@ export default function NotFound() {
             There is nothing here
           </h1>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-            The link may be old, or the record may belong to a different account.
+            The link may be old, or it may belong to a different account.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <ButtonLink href="/signin" variant="primary" size="lg">

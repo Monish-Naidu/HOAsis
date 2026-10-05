@@ -118,7 +118,7 @@ export function DuesMailer() {
       });
       const body = await response.json();
       if (!response.ok) {
-        notify(body.error ?? "Could not send", "warn");
+        notify(body.error ?? "The email was not sent. Try again.", "warn");
         return;
       }
       setOutcome({ ...body, dryRun });
@@ -128,7 +128,7 @@ export function DuesMailer() {
         notify(toast.message, toast.tone);
       }
     } catch {
-      notify("Could not reach the mail service", "warn");
+      notify("The email service did not respond. Try again in a moment.", "warn");
     } finally {
       setBusy(null);
     }
@@ -157,7 +157,7 @@ export function DuesMailer() {
 
       <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
         <Run
-          title="Assessment coming due"
+          title="Dues coming due"
           detail={
             duesVary(community.association, community.owners)
               ? `Everyone, each at their own amount. Due ${community.nextChargeDate}.`
@@ -178,7 +178,7 @@ export function DuesMailer() {
               : "Nobody owes anything, so this would reach no one."
           }
           count={delinq.past.length}
-          countLabel="behind"
+          countLabel="past due"
           tone="warn"
           busy={busy?.category === "delinquency" ? (busy.dryRun ? "preview" : "send") : null}
           disabled={Boolean(busy) || delinq.past.length === 0}
@@ -190,7 +190,7 @@ export function DuesMailer() {
       {unreachable > 0 ? (
         <p className="flex items-start gap-2 border-t border-border px-5 py-3 text-footnote leading-snug text-warn">
           <AlertTriangle className="mt-px size-3.5 shrink-0" />
-          {pluralize(unreachable, "household")} without an email address will not receive
+          {pluralize(unreachable, "owner")} without an email address will not receive
           anything. Add one on the Homeowners tab.
         </p>
       ) : null}

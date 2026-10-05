@@ -113,7 +113,7 @@ export function TrialBanner() {
           </ButtonLink>
         }
       >
-        Stripe will retry. Updating the card on file clears it sooner.
+        Stripe will try the card again. Update the card on file to fix it sooner.
       </Callout>
     );
   }

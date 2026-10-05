@@ -27,7 +27,7 @@ export function ReserveTransferForm({ onClose }: { onClose: () => void }) {
     <Card className="mb-6">
       <CardHeader
         title="Move money to reserves"
-        subtitle="Books the transfer on both accounts"
+        subtitle="Records it in the operating and reserve accounts"
         action={
           <Button variant="ghost" size="sm" onClick={onClose}>
             Cancel
@@ -44,7 +44,7 @@ export function ReserveTransferForm({ onClose }: { onClose: () => void }) {
             notify(`${money(cents)} moved to reserves`);
             onClose();
           } catch (error) {
-            notify(error instanceof Error ? error.message : "Could not record it");
+            notify(error instanceof Error ? error.message : "The transfer was not recorded. Check the amount and try again.");
           }
         }}
       >

@@ -9,7 +9,7 @@ import { todayIsoDate } from "@/lib/utils";
  *
  * A real association's request is numbered by the database, so the form's own
  * number is a guess and is never shown or linked to. And a write that failed
- * must not land on "Request submitted": the owner would wait on a request the
+ * must not land on "Request sent": the owner would wait on a request the
  * board never received.
  */
 
@@ -91,8 +91,8 @@ describe("the new request form", () => {
     await send();
 
     expect(addRequest).toHaveBeenCalledTimes(1);
-    expect(await screen.findByRole("alert")).toHaveTextContent("That did not send");
-    expect(screen.queryByText("Request submitted")).not.toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("did not send");
+    expect(screen.queryByText("Request sent")).not.toBeInTheDocument();
     // Still filled in, and the button is live again for a second try.
     expect(screen.getByPlaceholderText("Short summary")).toHaveValue("Gate will not close");
     expect(screen.getByRole("button", { name: "Send request" })).toBeEnabled();
@@ -105,7 +105,7 @@ describe("the new request form", () => {
     await screen.findByRole("alert");
     await userEvent.setup().click(screen.getByRole("button", { name: "Send request" }));
 
-    expect(await screen.findByText("Request submitted")).toBeInTheDocument();
+    expect(await screen.findByText("Request sent")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -113,7 +113,7 @@ describe("the new request form", () => {
     answer = () => Promise.resolve("REQ-2026-201");
     await send();
 
-    expect(await screen.findByText("Request submitted")).toBeInTheDocument();
+    expect(await screen.findByText("Request sent")).toBeInTheDocument();
     expect(screen.getByText("Reference REQ-2026-201")).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(guess()))).not.toBeInTheDocument();
   });
@@ -125,17 +125,17 @@ describe("a form filled in on the page", () => {
     wrap(<FillForm formId="fence" />);
     await user.type(screen.getByRole("textbox", { name: /What are you building/ }), "Cedar fence");
     await user.type(screen.getByPlaceholderText("Rhea Calloway"), "Pat Okafor");
-    await user.click(screen.getByRole("button", { name: "Sign and submit" }));
+    await user.click(screen.getByRole("button", { name: "Sign and send" }));
   }
 
   it("sends a real association to its requests, with no guessed number anywhere", async () => {
     await sign();
 
     expect(await screen.findByText("Sent to the committee")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Track it" })).toHaveAttribute("href", "/resident/requests");
+    expect(screen.getByRole("link", { name: "See your requests" })).toHaveAttribute("href", "/resident/requests");
     // Not on the card and not in the toast.
     expect(screen.queryByText(new RegExp(guess()))).not.toBeInTheDocument();
-    expect(screen.getByText(/Its number is in your requests/)).toBeInTheDocument();
+    expect(screen.getByText(/You can find its number under Requests/)).toBeInTheDocument();
   });
 
   it("aims at a date and never writes a deemed-approved promise for the association", async () => {
@@ -154,16 +154,16 @@ describe("a form filled in on the page", () => {
 
     expect(await screen.findByText("Sent to the committee")).toBeInTheDocument();
     expect(screen.getByText("REQ-2026-201")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Track it" })).toHaveAttribute("href", "/resident/requests");
+    expect(screen.getByRole("link", { name: "See your requests" })).toHaveAttribute("href", "/resident/requests");
   });
 
   it("says it did not send when the write answers null", async () => {
     answer = () => Promise.resolve(null);
     await sign();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("That did not send");
+    expect(await screen.findByRole("alert")).toHaveTextContent("did not send");
     expect(screen.queryByText("Sent to the committee")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign and submit" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Sign and send" })).toBeEnabled();
   });
 
   it("keeps the demo's own number and its link to the request", async () => {
@@ -171,7 +171,7 @@ describe("a form filled in on the page", () => {
     await sign();
 
     expect(await screen.findByText("Sent to the committee")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Track it" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "See your requests" })).toHaveAttribute(
       "href",
       `/resident/requests/${guess()}`,
     );

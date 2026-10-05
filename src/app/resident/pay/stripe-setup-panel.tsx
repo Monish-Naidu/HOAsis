@@ -42,11 +42,11 @@ export function StripeSetupPanel({
           body: JSON.stringify({ associationId, unitId }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? "Could not start");
+        if (!response.ok) throw new Error(data.error ?? "The form did not open. Try again.");
         if (!cancelled) setSetup({ clientSecret: data.clientSecret, account: data.stripeAccountId });
       } catch (error) {
         if (!cancelled) {
-          setProblem(error instanceof Error ? error.message : "Could not start");
+          setProblem(error instanceof Error ? error.message : "The form did not open. Try again.");
         }
       }
     })();
@@ -136,7 +136,7 @@ function SetupForm({
     });
     if (result.error) {
       setBusy(false);
-      setProblem(result.error.message ?? "The method could not be saved.");
+      setProblem(result.error.message ?? "Your bank account or card could not be saved. Try again.");
       return;
     }
     const intent = result.setupIntent;
@@ -145,7 +145,7 @@ function SetupForm({
       intent.next_action?.type === "verify_with_microdeposits";
     if (!intent || (intent.status !== "succeeded" && !microdeposits)) {
       setBusy(false);
-      setProblem("The method could not be saved. Nothing was charged.");
+      setProblem("Your bank account or card could not be saved. Nothing was charged. Try again.");
       return;
     }
     // Saved either way. A bank on micro-deposits is a row marked verifying,
@@ -159,7 +159,7 @@ function SetupForm({
     setBusy(false);
     if (!response.ok) {
       const data = await response.json();
-      setProblem(data.error ?? "The method could not be saved.");
+      setProblem(data.error ?? "Your bank account or card could not be saved. Try again.");
       return;
     }
     await refreshRemote();
@@ -207,7 +207,7 @@ function SetupForm({
         options={PAYMENT_ELEMENT_OPTIONS}
         onReady={() => setReady(true)}
         onLoadError={(event) =>
-          setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")
+          setProblem(event.error?.message ?? "The payment form did not load. Try again.")
         }
       />
       {problem ? <p className="mt-3 text-footnote font-medium text-danger">{problem}</p> : null}
@@ -222,7 +222,7 @@ function SetupForm({
       </Button>
       <p className="mt-2.5 flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
         <ShieldCheck className="mt-px size-3 shrink-0" />
-        Handled by Stripe. Your card number or bank login never reaches Your HOAsis.
+        Handled by the payment processor. Your card number or bank login never reaches Your HOAsis.
       </p>
     </Card>
   );

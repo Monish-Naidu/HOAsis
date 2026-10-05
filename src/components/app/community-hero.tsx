@@ -366,7 +366,7 @@ export function useCoverPhotoUpload() {
       notify("Cover photo updated", "ok");
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : "Could not upload that image",
+        error instanceof Error ? error.message : "That image was not saved. Try again.",
         "warn",
       );
     } finally {

@@ -14,7 +14,8 @@ keeping is written into a row below.
 (pull request #5 merged). In progress on branch `dues-by-home`, at Monish's
 ask the same day: dues that differ home by home (section 9), a pass over
 every button and description in the product (section 10), and small
-interface fixes. Still open: a few section 1 rows, section 6 (small known
+interface fixes; all three are built and sit in pull request #6, waiting
+for Monish to look and merge. Still open: a few section 1 rows, section 6 (small known
 gaps), section 7 (decisions), section 8 (staging and Resend, both waiting on
 Monish). Not yet built from the reviews: changing or cancelling a meeting
 and adding minutes, real file upload on requests, emailing the board when
@@ -207,6 +208,22 @@ as Monish brought them.
 
 | Area | Status |
 | --- | --- |
-| Marketing, sign-in, join, setup wizard and setup list | next, after section 9 lands |
-| Resident side | next |
-| Board side | next |
+| Marketing, sign-in, join, setup wizard and setup list | done 2026-10-05 (branch dues-by-home): 45 strings in 21 files |
+| Resident side | done 2026-10-05 (branch dues-by-home): 58 strings in 20 files |
+| Board side | done 2026-10-05 (branch dues-by-home): about 175 strings across pages, shared components and the letters |
+
+Left for Monish to decide, because rewording would not make them true. Each
+is a line on a screen that nothing in the code keeps:
+
+| Where | What it says | Status |
+| --- | --- | --- |
+| Settings, forms | "Upload your own forms" button stores no file | waiting: hide it or build the upload |
+| Notices queue | "Send notice" may only open the notice, not send it | next: check, then rename or wire it |
+| Delivery panel | Describes text message opt in and opt out; there are no texts | waiting: remove until texts exist |
+| About page | "Dual approval is the default here" | waiting: true only for vendor payments over the limit |
+| Pricing, included list | Several items the launch scope has switched off | next: match the list to `modules.ts` |
+| Resident report form | "Your name goes to the board and to nobody else", "The board will not share the outcome with you" | waiting: policy call |
+| Notices, stages | "Fix it by the date below and there is no fine" | waiting: policy call, the app does not issue fines |
+| Assistant | "reminder emails stop while autopay is running" | next: check against the dues reminder job |
+| Names | "roster", "register" and "Homeowners" for one list; letters and some screens hardcode "unit" | waiting: pick one name; "unit" should follow the home kind |
+| `feature-tabs.tsx` | Unused file with old landing claims | next: delete |

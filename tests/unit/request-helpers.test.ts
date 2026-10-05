@@ -8,7 +8,7 @@ import {
 import { confirmedReference } from "@/lib/request-reference";
 
 /**
- * The number on the "Request submitted" screen. For a real association the
+ * The number on the "Request sent" screen. For a real association the
  * form can only guess it, and the database renumbers a guess that is taken.
  */
 describe("confirmedReference", () => {

@@ -37,7 +37,7 @@ export default function PricingPage() {
               One price. Every feature.
             </h1>
             <p className="mt-5 text-[17px] leading-relaxed text-fg-muted sm:text-[19px]">
-              No tiers, no seats, no add-ons. Set your size and read the number.
+              No tiers, no per-person fees, no add-ons. Set your size and read the number.
             </p>
           </header>
         </Reveal>

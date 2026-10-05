@@ -31,7 +31,8 @@ describe("assistant", () => {
   it("finds upcoming meetings", () => {
     const answer = answerQuestion("are there any meetings coming up?", scope());
     expect(answer.text.length).toBeGreaterThan(0);
-    expect(answer.action?.href).toBe("/resident/vote");
+    // Meetings live on the Meetings page. This pointed at Voting.
+    expect(answer.action?.href).toBe("/resident/calendar");
   });
 
   it("routes a drafting request to the form rather than inventing prose", () => {

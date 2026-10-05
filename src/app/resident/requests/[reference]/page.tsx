@@ -31,7 +31,7 @@ export default function RequestDetail({
     return (
       <EmptyState
         title="Request not found"
-        description="It may have been submitted from a different account."
+        description="It may belong to a different account. Go back to Requests and pick it from the list."
       />
     );
   }

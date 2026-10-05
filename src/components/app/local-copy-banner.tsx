@@ -32,7 +32,7 @@ export function LocalCopyBanner() {
       }
     >
       Nothing here is saved anywhere else and nobody else can sign in. Create an account, then
-      run Quick Setup again signed in. It takes about three minutes.
+      go through Setting up again once you are signed in. It takes about three minutes.
     </Callout>
   );
 }

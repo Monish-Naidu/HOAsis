@@ -133,7 +133,7 @@ export function NoAssociationYet() {
           Finish setting up {unfinished}
         </h1>
         <p className="mt-2 text-body leading-relaxed text-fg-muted">
-          Your email is confirmed and your answers are saved on this device. One more press creates
+          Your email is confirmed and your answers are saved on this device. One more step creates
           the association.
         </p>
         <div className="mt-6 flex flex-col items-center gap-3">
@@ -157,7 +157,7 @@ export function NoAssociationYet() {
   return (
     <div className={shell}>
       <h1 className="text-title2 font-semibold tracking-[-0.02em] text-fg">
-        Let&apos;s find your association
+        Join or set up your association
       </h1>
       <p className="mt-2 text-body leading-relaxed text-fg-muted">
         Join yours with the code from your board, or set up a new one.
@@ -176,7 +176,7 @@ export function NoAssociationYet() {
       </div>
       {email ? (
         <p className="mt-6 text-footnote leading-snug text-fg-subtle">
-          Your board said they added you? They may have used a different email. Ask them to change it
+          Did your board say they added you? They may have used a different email. Ask them to change it
           to {email}.
         </p>
       ) : null}

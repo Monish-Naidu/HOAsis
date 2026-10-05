@@ -229,10 +229,10 @@ function because(
   switch (task.key) {
     case "roster": {
       const r = rosterStatus(c, p);
-      if (r.homes <= 1) return "Only your own home is on the register.";
+      if (r.homes <= 1) return "Only your own home is listed.";
       if (r.withoutOwner === 0) return `${pluralize(r.homes, "home")}, every one with an owner listed.`;
       if (r.stillSelling) {
-        return `${pluralize(r.homes, "home")} on the register. ${r.withoutOwner} not sold yet, which is expected while you are still selling.`;
+        return `${pluralize(r.homes, "home")} listed. ${r.withoutOwner} not sold yet, which is expected while you are still selling.`;
       }
       return `${r.withoutOwner} of ${pluralize(r.homes, "home")} ${r.withoutOwner === 1 ? "has" : "have"} no owner listed.`;
     }
@@ -253,12 +253,12 @@ function because(
       }
       if (a.stripeChargesEnabled) {
         return a.stripePayout
-          ? `Stripe has verified the association. Dues settle to ${a.stripePayout.bank} ••${a.stripePayout.last4}.`
-          : "Stripe has verified the association. Owners can pay online.";
+          ? `Online payments are on. Dues go to ${a.stripePayout.bank} ••${a.stripePayout.last4}.`
+          : "Online payments are on. Owners can pay online.";
       }
       return a.stripeAccountId
         ? "Started, not finished. Stripe still needs something from the treasurer."
-        : "Owners cannot pay online until Stripe has verified the association.";
+        : "Owners cannot pay online until online payments are approved.";
     }
 
     case "first-bill": {
@@ -337,7 +337,7 @@ function because(
 
     case "vendors":
       return p.origin === "handover"
-        ? "Some of these contracts are in the builder's name rather than the association's, and those simply stop when the builder leaves. Ask each one to confirm in writing who the counterparty is now."
+        ? "Some of these contracts are in the builder's name rather than the association's, and those stop when the builder leaves. Ask each one to confirm in writing who the counterparty is now."
         : undefined;
 
     case "documents":

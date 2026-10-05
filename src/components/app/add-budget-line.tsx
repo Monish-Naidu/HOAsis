@@ -95,7 +95,7 @@ export function AddBudgetLine() {
           </Select>
         </label>
         <label className="block">
-          <span className="text-footnote font-semibold text-fg-muted">A year</span>
+          <span className="text-footnote font-semibold text-fg-muted">Amount per year</span>
           <input
             type="number"
             min="0"
@@ -108,7 +108,7 @@ export function AddBudgetLine() {
           />
         </label>
         <Button type="submit" disabled={cents <= 0}>
-          Add it
+          Add budget line
         </Button>
       </form>
     </Card>

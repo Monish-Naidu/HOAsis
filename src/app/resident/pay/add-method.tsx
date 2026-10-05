@@ -29,7 +29,7 @@ const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth()
 type Rail = "ach" | "card";
 
 const RAILS: { id: Rail; label: string; icon: typeof Landmark; hint: string }[] = [
-  { id: "ach", label: "Bank", icon: Landmark, hint: "Costs the HOA least" },
+  { id: "ach", label: "Bank", icon: Landmark, hint: "About 4 business days" },
   { id: "card", label: "Card", icon: CreditCard, hint: "Paid today" },
 ];
 
@@ -61,7 +61,7 @@ export function AddMethod({ onDone }: { onDone: () => void }) {
         <Card className="p-4">
           <p className="text-body font-medium text-fg">Online payments are not set up yet</p>
           <p className="mt-1 text-footnote text-fg-muted">
-            A payment method can be saved once the board finishes payment setup in Settings.
+            You can save a bank account or card once the board finishes setting up payments.
           </p>
         </Card>
       );

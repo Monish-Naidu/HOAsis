@@ -42,8 +42,8 @@ export function ImportScreen() {
     return (
       <>
         <PageHeader eyebrow="Homeowners" title="Import the roster" />
-        <Callout tone="warn" icon={<Lock className="size-4" />} title="This needs the settings capability">
-          Adding homes to the register is settings work. The President grants it.
+        <Callout tone="warn" icon={<Lock className="size-4" />} title="You need Settings access to import">
+          Adding homes to the register takes Settings access. The President can give you that access.
         </Callout>
       </>
     );
@@ -85,7 +85,7 @@ export function ImportScreen() {
       }
       notify(`Roster imported: ${pluralize(rows.length, w.home)}`, "ok");
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "Could not import the roster");
+      setFailure(error instanceof Error ? error.message : "Could not import the roster. Check the file and try again.");
     } finally {
       setBusy(false);
     }

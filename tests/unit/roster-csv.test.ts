@@ -101,7 +101,7 @@ describe("parseRosterCsv", () => {
     expect(rows[3].problems[0]).toMatch(/does not look like an email/);
     expect(rows[3].openingBalanceCents).toBe(-2000);
     expect(rows[4].problems[0]).toMatch(/Same home as line 3/);
-    expect(rows[5].problems[0]).toMatch(/nothing to put on the register/);
+    expect(rows[5].problems[0]).toMatch(/no home to add/);
     expect(rows[6].problems[0]).toMatch(/not an amount/);
   });
 

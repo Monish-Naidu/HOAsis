@@ -293,7 +293,7 @@ describe("a notice to somebody with no account yet", () => {
   it("does not call an announcement something that cannot be turned off", () => {
     const built = announcementEmail({ ...seatless, title: "Pool party Saturday", body: "Bring a towel." });
     expect(built.html).not.toContain("cannot be turned off");
-    expect(built.html).toContain("the board has this address on its register");
+    expect(built.html).toContain("the board has this address on file");
     expect(built.html).toContain("Create your account to choose which emails you get.");
     expect(links(built.html)).toEqual([person.url]);
   });

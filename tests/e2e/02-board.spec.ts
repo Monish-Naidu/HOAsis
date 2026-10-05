@@ -335,7 +335,7 @@ test.describe("turning a layer on", () => {
     await page.getByLabel(/What owners will see on their statement/).fill("Water and sewer");
     await page.getByLabel(/Who the association pays/).fill("Kirkland Public Utilities");
     await page.getByLabel(/By people living there/).check();
-    await page.getByRole("button", { name: "Add it" }).click();
+    await page.getByRole("button", { name: "Add shared cost" }).click();
     await page.waitForTimeout(600);
 
     const added = await inspect(page);
@@ -351,7 +351,7 @@ test.describe("turning a layer on", () => {
     const preview = await inspect(page);
     expect(preview.text, "the split was not previewed").toMatch(/across \d+ homes is/);
 
-    await page.getByRole("button", { name: "Post it" }).click();
+    await page.getByRole("button", { name: "Post bill" }).click();
     await page.waitForTimeout(700);
 
     const posted = await inspect(page);
@@ -372,7 +372,7 @@ test.describe("turning a layer on", () => {
     await page.getByRole("button", { name: "Add a shared cost" }).click();
     await page.waitForTimeout(300);
     await page.getByLabel(/What owners will see on their statement/).fill("Trash");
-    await page.getByRole("button", { name: "Add it" }).click();
+    await page.getByRole("button", { name: "Add shared cost" }).click();
     await page.waitForTimeout(500);
 
     await page.getByRole("button", { name: /Stop passing on Trash/ }).click();
@@ -524,7 +524,7 @@ test.describe("vendors", () => {
     await page.getByLabel("Reference").fill("1042");
     await page.waitForTimeout(300);
 
-    await page.getByRole("button", { name: "Record it" }).click();
+    await page.getByRole("button", { name: "Record payment" }).click();
     await page.waitForTimeout(700);
 
     const health = await expectHealthy(page, "vendors after recording a payment");

@@ -361,7 +361,7 @@ test.describe("the plan is its own screen", () => {
     // A plan that has to be finished before the product opens is a plan people
     // abandon, so both exits are asserted: the header, and the welcome's own.
     await expect(page.getByRole("link", { name: "Skip for now" })).toBeVisible();
-    await page.getByRole("link", { name: /Go to the dashboard/ }).first().click();
+    await page.getByRole("link", { name: /Open the dashboard/ }).first().click();
     await page.waitForTimeout(900);
 
     expect(page.url(), "the dashboard link did not leave the plan").toContain("/board");
@@ -506,7 +506,7 @@ test.describe("the first weeks of a community still being built", () => {
     expect(health.text, "nobody tells the builder to charge itself").toContain(
       "what the unsold lots pay",
     );
-    expect(health.text).toContain("Fund reserves from the first assessment");
+    expect(health.text).toContain("Fund reserves from the first dues bill");
     expect(
       health.text.indexOf("Before the bank will open an account"),
       "the bank paperwork should come before Get paid",
@@ -604,7 +604,7 @@ test.describe("an association that already runs itself", () => {
     const box = page.getByLabel(/^Opening balance for .*, 2 Founder Way$/);
     await box.fill("1240.50");
     await page.waitForTimeout(300);
-    await page.getByRole("button", { name: /^Set \d+ balances?$/ }).click();
+    await page.getByRole("button", { name: /^Save \d+ balances?$/ }).click();
     await page.waitForTimeout(600);
 
     await page.goto("/board/homeowners");

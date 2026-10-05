@@ -181,7 +181,7 @@ export function OverviewScreen() {
         <Card className="mt-6">
           <CardHeader
             title={`${pluralize(needsReview.length, "transaction")} ${needsReview.length === 1 ? "needs" : "need"} a decision`}
-            subtitle="Confirm each category, or remove the line."
+            subtitle="Confirm each transaction, or remove it."
             action={<SectionLink href="/board/money/transactions?status=needs-review">Open in Transactions</SectionLink>}
           />
           <ul className="divide-y divide-border">
@@ -369,7 +369,7 @@ export function OverviewScreen() {
         <p className="mt-4 flex items-center gap-1.5 text-footnote text-fg-muted">
           <Landmark className="size-3.5" />
           {recon.staleFeeds.map((a) => `${a.institution} ••${a.mask}`).join(", ")}{" "}
-          {recon.staleFeeds.length === 1 ? "has" : "have"} not synced recently.
+          {recon.staleFeeds.length === 1 ? "has" : "have"} not updated recently.
         </p>
       ) : null}
     </>

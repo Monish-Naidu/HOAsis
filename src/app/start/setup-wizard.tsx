@@ -325,7 +325,7 @@ function WizardQuestions({
       // on a plan is asked, in the order that gets money moving first.
       router.push("/start/plan");
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "Could not create the association");
+      setFailure(error instanceof Error ? error.message : "The association could not be created. Try again.");
       setBusy(false);
     }
   }
@@ -420,8 +420,8 @@ function WizardQuestions({
         group: "Your community",
         title: "What does each home pay?",
         detail: isMixed(draft)
-          ? "The regular assessment. Kinds of home can pay different amounts."
-          : "The regular assessment. Special assessments and anything else come later.",
+          ? "The regular dues. Kinds of home can pay different amounts."
+          : "The regular dues. Special assessments and anything else come later.",
         enterContinues: true,
         canContinue:
           draft.duesCents > 0 &&
@@ -1090,8 +1090,8 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
       <MixLine draft={draft} />
 
       <Callout tone="info" icon={<Users className="size-4" />} title="You can stop here">
-        Your own {w.home} is already on the list. Add the rest now, or add households one at a
-        time from the roster once you are in. Nothing is lost by moving on.
+        Your own {w.home} is already on the list. Add the rest now, or add owners one at a
+        time from Homeowners once you are in. Nothing is lost by moving on.
       </Callout>
     </div>
   );
@@ -1509,7 +1509,7 @@ function RangesStep({ draft, patch }: StepProps) {
           </>
         ) : (
           <>
-            You do not need them now. Add owners here, or invite everyone from the roster
+            You do not need them now. Add owners here, or invite everyone from Homeowners
             once you are in. A {w.home} with nobody on it still has a balance and a vote, so
             nothing is missing from your budget while you fill them in.
           </>
@@ -1844,12 +1844,12 @@ function FounderNumber({
   const hint = w.fromBuilder
     ? draft.origin === "builder"
       ? `As it appears on the site plan. The ${w.homes} on the next screen are numbered the same way.`
-      : `As it appears on the plat or the register. The ${w.homes} on the next screen are numbered the same way.`
-    : `As it appears on your register. The ${w.homes} on the next screen are numbered the same way.`;
+      : `As it appears on the plat or your records. The ${w.homes} on the next screen are numbered the same way.`
+    : `As it appears on your records. The ${w.homes} on the next screen are numbered the same way.`;
   return (
     <Field
       label={required ? `${w.Home} number` : `${w.Home} number, if you use them`}
-      hint={required ? hint : "Leave it blank if homes go by address. Otherwise, as it appears on your register."}
+      hint={required ? hint : "Leave it blank if homes go by address. Otherwise, as it appears on your records."}
     >
       <input
         value={draft.founder.unit}

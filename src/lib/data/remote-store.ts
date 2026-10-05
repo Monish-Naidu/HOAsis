@@ -459,7 +459,7 @@ async function runWrite(label: string, write: RemoteWrite, timeoutMs: number): P
     return true;
   } catch (error) {
     reportRemoteError(
-      `${label}: ${error instanceof Error ? error.message : "the database refused it"}`,
+      `${label}: ${error instanceof Error ? error.message : "it was not saved"}`,
     );
     await reread();
     return false;

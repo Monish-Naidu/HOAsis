@@ -80,8 +80,7 @@ export function ReservesScreen() {
           title="No reserve study, so nothing here can be measured"
         >
           Percent funded compares what you have set aside against what the things you own
-          will cost to replace. Without a study there is no second number, so the honest
-          answer is that nobody knows.
+          will cost to replace. Without a study there is nothing to compare against.
         </Callout>
 
         <ReserveStudyCard />

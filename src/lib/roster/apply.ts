@@ -71,7 +71,7 @@ async function registerLabels(associationId: string): Promise<string[]> {
       .order("id")
       .range(from, from + 999);
     // Importing blind is how the duplicates were made. Better to stop.
-    if (error) throw new Error(`Could not check the homes already on the register: ${error.message}`);
+    if (error) throw new Error(`Could not check which homes are already added: ${error.message}`);
     labels.push(...(data ?? []).map((u) => u.label as string));
     if ((data ?? []).length < 1000) return labels;
   }
@@ -164,7 +164,7 @@ export async function importRoster(
     try {
       dues = await setHomeDues(associationId, withDues);
     } catch (caught) {
-      duesError = caught instanceof Error ? caught.message : "Dues amounts were not saved";
+      duesError = caught instanceof Error ? caught.message : "The dues amounts were not saved";
     }
   }
   await refreshRemote();

@@ -55,9 +55,9 @@ export function CollectionsLadder() {
   if (ladder.rows.length === 0) {
     return (
       <Card className="mt-6 p-5">
-        <p className="text-body font-semibold text-fg">Everybody is current</p>
+        <p className="text-body font-semibold text-fg">Nobody is past due</p>
         <p className="mt-1 text-body text-fg-muted">
-          Nothing to chase. The ladder starts at {policy.reminderDay} days past due.
+          Nothing to collect. Reminders start at {policy.reminderDay} days past due.
         </p>
       </Card>
     );
@@ -68,7 +68,7 @@ export function CollectionsLadder() {
       {/* The title counts the list under it. The count that needs a notice
           today is a subset, so it is the subtitle, not the headline. */}
       <CardHeader
-        title={`${pluralize(ladder.rows.length, "household")} behind`}
+        title={`${pluralize(ladder.rows.length, "home")} past due`}
         subtitle={`${
           ladder.dueNow.length
             ? `${ladder.dueNow.length} ${ladder.dueNow.length === 1 ? "needs" : "need"} a notice today`

@@ -62,7 +62,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
       agenda: items,
       ballotIds: [],
     });
-    notify(`${title.trim()} is on the calendar for ${formatDate(date, "long")}.`);
+    notify(`${title.trim()} is scheduled for ${formatDate(date, "long")}.`);
     onClose();
   }
 
@@ -78,7 +78,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
       <CardHeader
         icon={<CalendarPlus className="size-4" />}
         title="Schedule a meeting"
-        subtitle="Residents see it on their calendar the moment it is saved"
+        subtitle="Residents see it on their calendar as soon as you schedule it"
         action={
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="size-3.5" />
@@ -89,7 +89,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
       <div className="space-y-4 px-5 py-4">
         <div className="grid gap-4 sm:grid-cols-[1fr_14rem]">
           <label className="block">
-            <span className={label}>What it is called</span>
+            <span className={label}>Meeting name</span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -99,7 +99,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
             />
           </label>
           <label className="block">
-            <span className={label}>Kind</span>
+            <span className={label}>Type of meeting</span>
             <Select
               value={kind}
               onChange={(e) => setKind(e.target.value as Meeting["kind"])}
@@ -182,10 +182,10 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" variant="primary" size="md" disabled={!ready}>
-            Put it on the calendar
+            Schedule meeting
           </Button>
           <span className="text-footnote text-fg-subtle">
-            Send the notice from Messages once it is scheduled.
+            Once it is scheduled, press Send notice on the meeting to tell every owner.
           </span>
         </div>
       </div>

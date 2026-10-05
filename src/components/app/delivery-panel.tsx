@@ -49,7 +49,7 @@ export function DeliveryPanel() {
       <CardHeader
         icon={<MessageSquare className="size-4" />}
         title="How a notice reaches people"
-        subtitle="Choose how this notice is delivered"
+        subtitle="Pick a kind of notice to see how it is delivered"
       />
 
       <div className="border-b border-border px-5 py-4">
@@ -82,8 +82,8 @@ export function DeliveryPanel() {
           </p>
           <p className="mt-1 text-body leading-relaxed text-fg-muted">{rule.why}</p>
           <p className="mt-1.5 text-footnote leading-relaxed text-fg-muted">
-            Send the email or portal copy as well if you like. It does not discharge the duty,
-            and the association should not record it as though it had.
+            Send the email or portal copy as well if you like. It does not count as official notice,
+            and the association should not record it as though it did.
           </p>
         </div>
       ) : (
@@ -115,7 +115,7 @@ export function DeliveryPanel() {
                 {!allowed
                   ? "Not for this notice"
                   : count === audience.total
-                    ? "Every household"
+                    ? "Every home"
                     : `of ${audience.total}`}
               </p>
             </div>
@@ -133,8 +133,8 @@ export function DeliveryPanel() {
           {/* A gate, not a maybe. Unregistered application to person traffic
               is filtered by the carriers without an error anybody sees. */}
           <p className="mt-1 text-body leading-relaxed text-fg-muted">
-            Carriers filter unregistered traffic silently, so a reminder would look sent and
-            never arrive. Three things unlock it:
+            Phone carriers quietly block texts from unregistered senders, so a reminder would look
+            sent and never arrive. Three things turn it on:
           </p>
           <ul className="mt-2 space-y-1">
             {sms.missing.map((item) => (
@@ -152,7 +152,7 @@ export function DeliveryPanel() {
 
       {audience.unreachable > 0 ? (
         <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-warn">
-          {pluralize(audience.unreachable, "household")} cannot be reached any way at all.
+          {pluralize(audience.unreachable, "home")} cannot be reached any way at all.
           Those are the ones who later say they were never told.
         </p>
       ) : null}

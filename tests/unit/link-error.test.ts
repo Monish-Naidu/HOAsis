@@ -30,7 +30,7 @@ describe("what the sign-in page says about a failed link", () => {
     expect(readableLinkError("Email link is invalid or has expired")).toContain("confirmation link has expired");
     expect(readableLinkError("Token already used", null)).toContain("already been used");
     expect(readableLinkError("something odd", "/resident/pay")).toBe(
-      "That link did not work. Sign in below and we will sort it out.",
+      "That link did not work. Try signing in below. If that fails, create the account again.",
     );
   });
 });

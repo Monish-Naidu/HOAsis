@@ -59,7 +59,7 @@ const BELIEFS: { icon: typeof ShieldCheck; tint: TintName; title: string; body: 
     icon: Ruler,
     tint: "amber",
     title: "A first budget that sells houses is not a first budget",
-    body: "Low dues in year one make a community easier to sell and hand the incoming board a shortfall it did not choose. We show what reserves actually require before the assessment is set, on the theory that a builder would rather know than find out at a deposition.",
+    body: "Low dues in year one make a community easier to sell and hand the incoming board a shortfall it did not choose. We show what reserves actually require before the dues are set, on the theory that a builder would rather know than find out at a deposition.",
   },
 ];
 

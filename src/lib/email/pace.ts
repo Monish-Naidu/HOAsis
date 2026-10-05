@@ -101,7 +101,7 @@ export async function logAttempt(
 }
 
 /** What a board reads when mail went out and its record could not be kept. */
-export const UNRECORDED = "The record of this send could not be saved.";
+export const UNRECORDED = "The log of this send could not be saved.";
 
 /**
  * The line a board reads when a send stopped because email_log could not be

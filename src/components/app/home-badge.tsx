@@ -35,7 +35,7 @@ export function HomeBadge() {
       setPhoto(await shrinkImage(file));
       notify("Home photo added", "ok");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not read that image", "warn");
+      notify(error instanceof Error ? error.message : "That image could not be read. Try a different photo.", "warn");
     }
   }
 

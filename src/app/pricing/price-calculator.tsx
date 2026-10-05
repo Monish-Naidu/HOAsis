@@ -197,7 +197,7 @@ export function PriceCalculator() {
             <p className="mt-1.5 text-[14px] leading-snug opacity-90">
               kept in your accounts each year, at {homes} homes. Full service management is
               published at {money(MANAGEMENT_RANGE_PER_HOME.low, { cents: false })} to{" "}
-              {money(MANAGEMENT_RANGE_PER_HOME.high, { cents: false })} a door.
+              {money(MANAGEMENT_RANGE_PER_HOME.high, { cents: false })} a home.
             </p>
           </div>
         </div>

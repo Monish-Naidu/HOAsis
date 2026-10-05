@@ -136,7 +136,7 @@ export const BUILDER_STEPS: PortingStep[] = [
   },
   {
     key: "builder-reserves",
-    title: "Fund reserves from the first assessment",
+    title: "Fund reserves from the first dues bill",
     detail: "Get a study while the components are new and their replacement dates are known exactly.",
     because: "A budget that omits reserves sets a low first-year due, and the board that inherits it has to raise dues in its first month. That is the handover everybody remembers.",
     href: "/board/reserves",
@@ -192,7 +192,7 @@ export function portingPlan(
   if (previously === "manager") {
     return {
       title: "Take the work in house",
-      lede: "Your manager held the records; now you do. Ask for them back in writing, with a date: the register, the ledger as of your last statement, the bank signatories, the contracts and the recorded documents. They belong to the association, not the firm.",
+      lede: "Your manager held the records; now you do. Ask for them back in writing, with a date: the owner list, the ledger as of your last statement, the bank signatories, the contracts and the recorded documents. They belong to the association, not the firm.",
       introduces: true,
       steps,
     };
