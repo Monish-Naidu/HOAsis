@@ -254,14 +254,14 @@ annual dues, month ends, the dues job running twice, view-only seats).
 | Situation | What happens today | Status |
 | --- | --- | --- |
 | Dues post and nobody is told | The daily job bills and adds late fees but sends no email; owners not on autopay hear nothing unless the board presses the dues mailer | next: send the bill email from the job (decision: automatic, or a dashboard row "bill posted, send it") |
-| A one-off charge or special assessment | No screen posts one; the SQL exists (`levy_special_assessment`) but nothing calls it | next: "Add a charge" on a household and "Charge every home" on Finances |
+| A one-off charge or special assessment | No screen posts one; the SQL exists (`levy_special_assessment`) but nothing calls it | done 2026-10-05 (branch first-year, migration 0086 applied): "Add a charge" on a household, "Charge every home" under Dues in Settings; category `other`, so no late fee and not counted as dues |
 | A check recorded twice, or against the wrong home | No undo; only "Add a credit", which leaves collected and the bank balance overstated | next: reverse a payment recorded by hand; warn on same home, amount and date |
 | One of two owners leaves; a second owner added by mistake | No way to end one seat; only a fake sale, which wipes the other owner's autopay and saved bank | next: "Remove this owner" for settings holders |
 | A signed-in owner changes or loses their email | Nothing in the resident account page; the board is refused | next: owner changes their own email, with confirmation |
 | The buyer of a home reads the seller's history | Payments, request threads, board messages and votes are readable by anyone with a current seat on the home, with no date filter | next: owner-side reads start at the seat's start date; statement shows the balance carried in |
 | A credit balance at sale | Carries to the buyer without a word; the sale dialog only settles money owed | next: the dialog says so and offers to leave or clear it |
-| Autopay fails once | Never retried that month, even after the owner fixes the card; the board is not told | next: retry a failed month on later days, three at most; list failures on Past due |
-| Stripe restricts the association's account | Autopay still tries and owners get "problem with your payment method" | next: skip autopay while charges are off; email finance holders |
+| Autopay fails once | Never retried that month, even after the owner fixes the card; the board is not told | done 2026-10-05 for the retry (branch first-year, migration 0085 applied): tried again only when the owner has added a method since, never twice a day, three times a month at most. Still next: list failures on Past due |
+| Stripe restricts the association's account | Autopay still tries and owners get "problem with your payment method" | done 2026-10-05 for the wait (branch first-year): autopay holds off while Stripe has charges off. Still next: email finance holders when Stripe restricts the account |
 | An owner with two or three homes | Sees, pays and votes for one home only | next: a home switcher on the resident side; one vote cast per home held |
 | The president cannot be reached | Only the sitting president can name the next one | next: platform admin can reassign; later a vote of officers |
 | A lost card dispute or a late bank return | Finance holders are emailed; the owner's statement still says paid | next: book it as a returned payment |
@@ -269,10 +269,10 @@ annual dues, month ends, the dues job running twice, view-only seats).
 | A home that should not be billed (builder lots) | No exempt flag; zero means "not set" | later, with vacant lots |
 | A home added mid-period | Waits for the next bill; no proration | later: say so on the add-home form |
 | A home removed or two lots merged after the first bill | Refused; it keeps being billed | next: allow when the balance is zero |
-| Deleting the association | Members lose sight of it at once, nothing is purged, Stripe is untouched; the screen promises a 30 day window | next: make the screen say what happens; later a purge job |
+| Deleting the association | Members lose sight of it at once, nothing is purged, Stripe is untouched; the screen promises a 30 day window | done 2026-10-05 for the wording (branch first-year): the screen says nobody can sign in once it is deleted and that support restores it for thirty days. Later: a restore button, a purge job, what happens to Stripe |
 | Votes | No quorum field, no "dues must be current", no paper or proxy votes entered by the board | later |
 | Year end | Owner statement CSV and board transactions CSV only; no printable statement, no all-homes statement run | later |
 | Documents | No versions; a new upload sits beside the old one | later |
-| A late fee on a starting balance | Looks like a brought-forward balance gets a late fee 30 days after its date once a fee is set; not run to confirm | next: check with `verify-late-fees` |
-| A sale with a closing date in the future | Looks like seller and buyer are both current until then; not traced | next: check |
+| A late fee on a starting balance | Confirmed on the live database: a balance as of months ago drew a late fee on the first morning | done 2026-10-05 (branch first-year, migration 0087 applied): a brought-forward line never draws a fee; dues billed here still do |
+| A sale with a closing date in the future | Checked 2026-10-05: the sale takes effect the moment it is recorded, whatever the date, so the seller is locked out early | next: the sale form refuses a date after today and says so |
 

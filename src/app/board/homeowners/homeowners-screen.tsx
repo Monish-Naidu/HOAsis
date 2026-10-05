@@ -23,7 +23,7 @@ import { RemindersComposer } from "@/components/app/reminders-composer";
 import { AskedToJoin } from "./asked-to-join";
 import { JoinCodeRow } from "./join-code-row";
 import { ChangeEmailForm, SecondOwnerForm } from "./owner-forms";
-import { AddCreditForm, ChangeDuesForm, RecordPaymentForm } from "./household-money";
+import { AddChargeForm, AddCreditForm, ChangeDuesForm, RecordPaymentForm } from "./household-money";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -210,6 +210,7 @@ export function HomeownersScreen() {
     setHomeDues,
     recordManualPayment,
     addCredit,
+    addCharge,
     can,
     sees,
     isRemote,
@@ -904,6 +905,15 @@ export function HomeownersScreen() {
                               })
                           : undefined
                       }
+                      onAddCharge={
+                        changesMoney && !o.placeholder
+                          ? (input) =>
+                              Promise.resolve(addCharge({ ownerId: o.id, ...input })).then((ok) => {
+                                if (ok) notify(`Charge added to ${homeLabel(community, o.unit)}.`, "ok");
+                                return ok;
+                              })
+                          : undefined
+                      }
                       onChangeDues={
                         changesMoney
                           ? (cents) =>
@@ -1072,6 +1082,7 @@ function HouseholdDetail({
   onSale,
   onRecordPayment,
   onAddCredit,
+  onAddCharge,
   onInvite,
   onEmailInvite,
   onChangeEmail,
@@ -1101,6 +1112,8 @@ function HouseholdDetail({
   }) => Promise<boolean>;
   /** A credit, such as a waived fee. Absent when this seat may not change finances. */
   onAddCredit?: (input: { amountCents: number; reason: string }) => Promise<boolean>;
+  /** A one-off charge. Absent when this seat may not change finances. */
+  onAddCharge?: (input: { amountCents: number; label: string; dueOn: string }) => Promise<boolean>;
   onInvite: () => void;
   onEmailInvite?: () => void;
   /** Correct the address the listed owner claims their seat with. Absent when this seat may not, or they have signed in. */
@@ -1128,7 +1141,7 @@ function HouseholdDetail({
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
-  const [editing, setEditing] = useState<"email" | "second" | "payment" | "credit" | "dues" | null>(null);
+  const [editing, setEditing] = useState<"email" | "second" | "payment" | "credit" | "charge" | "dues" | null>(null);
 
   function startFromLetter() {
     if (!letter) return;
@@ -1277,6 +1290,13 @@ function HouseholdDetail({
       {editing === "credit" && onAddCredit ? (
         <AddCreditForm unit={owner.unit} onSave={onAddCredit} onCancel={() => setEditing(null)} />
       ) : null}
+      {editing === "charge" && onAddCharge ? (
+        <AddChargeForm
+          heading={`A charge for home ${owner.unit}`}
+          onSave={onAddCharge}
+          onCancel={() => setEditing(null)}
+        />
+      ) : null}
       {editing === "dues" && onChangeDues ? (
         <ChangeDuesForm
           unit={owner.unit}
@@ -1311,6 +1331,17 @@ function HouseholdDetail({
           >
             <Plus className="size-3.5" />
             Add a credit
+          </Button>
+        ) : null}
+        {onAddCharge ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(editing === "charge" ? null : "charge")}
+            aria-label={`Add a charge to ${owner.displayName}`}
+          >
+            <Plus className="size-3.5" />
+            Add a charge
           </Button>
         ) : null}
         {onChangeDues ? (

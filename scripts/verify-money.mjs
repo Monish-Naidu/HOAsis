@@ -241,6 +241,87 @@ try {
   const { data: myOwn } = await admin.from("units").select("dues_cents").eq("id", myUnit).single();
   check("the refused writes changed nothing", myOwn?.dues_cents === null, String(myOwn?.dues_cents));
 
+  // One-off charges (0086). Balances are read as the President, never as the
+  // service role: the balance view gives the admin client no rows.
+  const balanceOf = async (unitId) => {
+    const { data } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", unitId).single();
+    return data?.balance_cents;
+  };
+  const gateBefore = await balanceOf(neighborUnit.id);
+  const { data: gateId, error: gateError } = await president.client.rpc("add_charge", {
+    p_unit_id: neighborUnit.id, p_amount_cents: 12345, p_label: "Gate remote replacement", p_due_on: day(-2),
+  });
+  const gateAfter = await balanceOf(neighborUnit.id);
+  check("a finance holder adds a one-off charge", !gateError && Boolean(gateId), gateError?.message ?? "");
+  check("the home's balance rises by exactly that", gateAfter === gateBefore + 12345, `${gateBefore} then ${gateAfter}`);
+  const { data: gateRow } = await admin.from("charges").select("kind, category, label, amount_cents").eq("id", gateId).single();
+  check("it is a charge with its label, and not dues",
+    gateRow?.kind === "charge" && gateRow?.label === "Gate remote replacement" &&
+      gateRow?.amount_cents === 12345 && gateRow?.category !== "dues", JSON.stringify(gateRow));
+  const { data: gateActivity } = await president.client.from("activity").select("summary").eq("subject_id", gateId);
+  check("the activity record names the charge", (gateActivity ?? []).length === 1, JSON.stringify(gateActivity));
+
+  const { error: residentCharge } = await resident.client.rpc("add_charge", {
+    p_unit_id: myUnit, p_amount_cents: 100, p_label: "Sneaky", p_due_on: day(0),
+  });
+  check("a resident cannot add a charge", residentCharge?.code === "42501", residentCharge?.message?.slice(0, 60) ?? "no error");
+  const { error: residentChargeAll } = await resident.client.rpc("add_charge_to_all", {
+    p_association_id: associationId, p_amount_cents: 100, p_label: "Sneaky", p_due_on: day(0),
+  });
+  check("a resident cannot charge every home", residentChargeAll?.code === "42501", residentChargeAll?.message?.slice(0, 60) ?? "no error");
+  const { error: anonCharge } = await nobody.rpc("add_charge", {
+    p_unit_id: myUnit, p_amount_cents: 100, p_label: "Sneaky", p_due_on: day(0),
+  });
+  check("a signed out visitor cannot add a charge", refused(anonCharge), anonCharge?.message?.slice(0, 60) ?? "no error");
+  const refusedCharge = async (name, args) => {
+    const { error } = await president.client.rpc("add_charge", { p_unit_id: neighborUnit.id, p_amount_cents: 100, p_label: "Fee", p_due_on: day(0), ...args });
+    check(name, error?.code === "22000", error?.message?.slice(0, 60) ?? "no error");
+  };
+  await refusedCharge("an amount of 0 is refused", { p_amount_cents: 0 });
+  await refusedCharge("an amount over $100,000 is refused", { p_amount_cents: 10000001 });
+  await refusedCharge("an empty label is refused", { p_label: "   " });
+  await refusedCharge("a label over 80 characters is refused", { p_label: "x".repeat(81) });
+  await refusedCharge("a due date more than a year ahead is refused", { p_due_on: day(367) });
+  await refusedCharge("a due date more than a year back is refused", { p_due_on: day(-367) });
+  const { error: nobodyHome } = await president.client.rpc("add_charge", {
+    p_unit_id: crypto.randomUUID(), p_amount_cents: 100, p_label: "Fee", p_due_on: day(0),
+  });
+  check("a home that does not exist is refused", Boolean(nobodyHome), nobodyHome?.message?.slice(0, 60) ?? "no error");
+  check("the refused charges changed nothing", (await balanceOf(neighborUnit.id)) === gateAfter);
+
+  // No late fee on a one-off charge. The policy is set so dues lines that are
+  // past due would draw one; the check is that this charge's own line does not.
+  await admin.from("associations").update({
+    settings: { collectionPolicy: { lateNoticeDay: 1, lateFeeCents: 500 } },
+  }).eq("id", associationId);
+  const { error: feeError } = await admin.rpc("assess_late_fees", { p_association_id: associationId });
+  const { data: feeLines } = await admin.from("charges").select("label").eq("association_id", associationId).eq("category", "late_fee");
+  check("a late fee run completes", !feeError, feeError?.message ?? "");
+  check("a one-off charge draws no late fee",
+    !(feeLines ?? []).some((c) => c.label.includes("Gate remote replacement")), JSON.stringify(feeLines));
+
+  // A payment by hand pays it, oldest first, like any other charge.
+  const owedNow = await balanceOf(neighborUnit.id);
+  const { data: gatePayment, error: gatePayError } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: neighborUnit.id, p_amount_cents: owedNow, p_method: "check", p_reference: "2001", p_received_on: day(-1),
+  });
+  const { data: gateAllocations } = await admin.from("payment_allocations").select("amount_cents").eq("payment_id", gatePayment).eq("charge_id", gateId);
+  check("a check pays the one-off charge",
+    !gatePayError && (gateAllocations ?? []).reduce((t, a) => t + a.amount_cents, 0) === 12345, gatePayError?.message ?? JSON.stringify(gateAllocations));
+  check("and clears the balance", (await balanceOf(neighborUnit.id)) === 0);
+
+  // The same charge to every home, in one call.
+  const everyBefore = [await balanceOf(neighborUnit.id), await balanceOf(myUnit)];
+  const { data: charged, error: allError } = await president.client.rpc("add_charge_to_all", {
+    p_association_id: associationId, p_amount_cents: 2500, p_label: "Roof assessment", p_due_on: day(-1),
+  });
+  check("charging every home reports how many it charged", !allError && charged === 2, allError?.message ?? String(charged));
+  const everyAfter = [await balanceOf(neighborUnit.id), await balanceOf(myUnit)];
+  check("every home's balance rises by exactly that",
+    everyAfter[0] === everyBefore[0] + 2500 && everyAfter[1] === everyBefore[1] + 2500, `${everyBefore} then ${everyAfter}`);
+  const { data: roofLines } = await admin.from("charges").select("category").eq("association_id", associationId).eq("label", "Roof assessment");
+  check("none of those lines is dues", (roofLines ?? []).length === 2 && roofLines.every((c) => c.category !== "dues"), JSON.stringify(roofLines));
+
   // Runs that overlap (0069). The cron delivered twice, or a board member
   // pressing "bill dues now" while it runs: each call used to look for an
   // existing bill before the other had committed, and every home got two.

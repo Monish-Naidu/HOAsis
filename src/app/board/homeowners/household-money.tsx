@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Field, Select, fieldClass } from "@/components/ui/primitives";
+import { chargeCents, chargeProblem, MAX_CHARGE_LABEL } from "@/lib/payments/charges";
 import { MANUAL_METHOD_LABEL, type ManualMethod } from "@/lib/payments/instruments";
 import { money, todayIsoDate } from "@/lib/utils";
 
@@ -178,6 +179,98 @@ export function AddCreditForm({
         </Button>
         <Button type="submit" variant="primary" size="sm" disabled={busy || !ready}>
           Save credit
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * A one-off charge: a repair, a key fob, a special assessment. It raises what
+ * the home owes and shows on its statement under the words typed here. It is
+ * not dues, so it draws no late fee. The same form bills every home when a
+ * heading and a summary line are passed in.
+ */
+export function AddChargeForm({
+  heading,
+  summary,
+  submitLabel = "Add charge",
+  onSave,
+  onCancel,
+}: {
+  heading: string;
+  /** A line worked out from the records, given the amount typed so far. */
+  summary?: (amountCents: number) => string;
+  submitLabel?: string;
+  onSave: (input: { amountCents: number; label: string; dueOn: string }) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const today = todayIsoDate();
+  const [amount, setAmount] = useState("");
+  const [label, setLabel] = useState("");
+  const [dueOn, setDueOn] = useState(today);
+  const [busy, setBusy] = useState(false);
+  const cents = chargeCents(amount);
+  const input = { amountCents: cents, label: label.trim(), dueOn };
+  const problem = chargeProblem(input, today);
+  return (
+    <form
+      className="mt-4 space-y-2 border-t border-border pt-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (problem || busy) return;
+        setBusy(true);
+        void onSave(input)
+          .then((ok) => ok && onCancel())
+          .finally(() => setBusy(false));
+      }}
+    >
+      <p className="text-footnote font-semibold text-fg-muted">{heading}</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label="Amount">
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="85.00"
+            aria-label="Charge amount"
+            className={fieldClass}
+            autoFocus
+          />
+        </Field>
+        <Field label="Due">
+          <input
+            type="date"
+            value={dueOn}
+            onChange={(e) => setDueOn(e.target.value)}
+            aria-label="Charge due date"
+            className={fieldClass}
+          />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="What is it for?">
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              maxLength={MAX_CHARGE_LABEL}
+              placeholder="Gate remote replacement"
+              aria-label="What the charge is for"
+              className={fieldClass}
+              required
+            />
+          </Field>
+        </div>
+      </div>
+      {summary && cents > 0 ? <p className="tnum text-footnote text-fg-muted">{summary(cents)}</p> : null}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" size="sm" disabled={busy || Boolean(problem)}>
+          {submitLabel}
         </Button>
       </div>
     </form>

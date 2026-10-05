@@ -108,6 +108,7 @@ import type {
   Capabilities,
 } from "@/lib/types";
 import { canRaiseNotice } from "@/lib/violations";
+import { chargeProblem } from "@/lib/payments/charges";
 import { MANUAL_METHOD_LABEL, manualPaymentLabel, type ManualMethod, type PaymentInstrument } from "@/lib/payments/instruments";
 import { placeLabel } from "@/lib/wording";
 import { videoJoinUrl } from "@/lib/meetings/video";
@@ -413,6 +414,23 @@ interface AppState {
     ownerId: string;
     amountCents: number;
     reason: string;
+  }) => boolean | Promise<boolean>;
+  /**
+   * A one-off charge on one home's statement: a repair, a key fob, a special
+   * assessment. Raises the balance and is paid oldest first like dues, but is
+   * not dues, so it draws no late fee. Resolves true once it is on the books.
+   */
+  addCharge: (input: {
+    ownerId: string;
+    amountCents: number;
+    label: string;
+    dueOn: string;
+  }) => boolean | Promise<boolean>;
+  /** The same one-off charge on every home's statement, in one write. */
+  addChargeToAll: (input: {
+    amountCents: number;
+    label: string;
+    dueOn: string;
   }) => boolean | Promise<boolean>;
   /** What an account held when the books started here. Replaces an earlier figure. */
   setOpeningBankBalance: (
@@ -1857,6 +1875,86 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
+
+  /** One charge line on a home's demo statement, with the balance it leaves. */
+  const addLocalCharge = useCallback(
+    (ownerId: string, amountCents: number, label: string, dueOn: string) => {
+      const owner = sliceStore(communityId, "owners")
+        .getSnapshot()
+        .find((o) => o.id === ownerId);
+      const balanceAfter = (owner?.balanceCents ?? 0) + amountCents;
+      sliceStore(communityId, "ownerCharges").update((all) => ({
+        ...all,
+        [ownerId]: [
+          {
+            id: `charge-${dueOn}-${ownerId}-${(all[ownerId] ?? []).length + 1}`,
+            date: dueOn,
+            label,
+            kind: "charge" as const,
+            amountCents,
+            balanceAfterCents: balanceAfter,
+          },
+          ...(all[ownerId] ?? []),
+        ],
+      }));
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) => (o.id === ownerId ? { ...o, balanceCents: balanceAfter } : o)),
+      );
+    },
+    [communityId],
+  );
+
+  /**
+   * A one-off charge on one home. Real associations go through add_charge
+   * (0086), which checks the amount, the label and the date again and writes
+   * the activity record; the demo puts the line on the statement locally.
+   * The charge is not dues, so it draws no late fee.
+   */
+  const addCharge = useCallback(
+    (input: { ownerId: string; amountCents: number; label: string; dueOn: string }) => {
+      const label = input.label.trim();
+      if (!can("finances")) return false;
+      if (chargeProblem({ ...input, label }, todayIsoDate())) return false;
+      if (remote.community) {
+        return remoteWrite("Adding the charge", () =>
+          supabaseBrowser().rpc("add_charge", {
+            p_unit_id: input.ownerId,
+            p_amount_cents: input.amountCents,
+            p_label: label,
+            p_due_on: input.dueOn,
+          }),
+        );
+      }
+      addLocalCharge(input.ownerId, input.amountCents, label, input.dueOn);
+      return true;
+    },
+    [can, remote.community, addLocalCharge],
+  );
+
+  /** The same one-off charge on every home, in one transaction. */
+  const addChargeToAll = useCallback(
+    (input: { amountCents: number; label: string; dueOn: string }) => {
+      const label = input.label.trim();
+      if (!can("finances")) return false;
+      if (chargeProblem({ ...input, label }, todayIsoDate())) return false;
+      if (remote.community) {
+        const rc = remote.community;
+        return remoteWrite("Adding the charge to every home", () =>
+          supabaseBrowser().rpc("add_charge_to_all", {
+            p_association_id: rc.id,
+            p_amount_cents: input.amountCents,
+            p_label: label,
+            p_due_on: input.dueOn,
+          }),
+        );
+      }
+      for (const o of sliceStore(communityId, "owners").getSnapshot()) {
+        addLocalCharge(o.id, input.amountCents, label, input.dueOn);
+      }
+      return true;
+    },
+    [can, remote.community, communityId, addLocalCharge],
+  );
 
   /**
    * What one bank account held on the day the books started here. One
@@ -5241,6 +5339,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     recordPayment,
     recordManualPayment,
     addCredit,
+    addCharge,
+    addChargeToAll,
     setOpeningBankBalance,
     addPost,
     addAnnouncement,
