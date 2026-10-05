@@ -227,3 +227,52 @@ is a line on a screen that nothing in the code keeps:
 | Assistant | "reminder emails stop while autopay is running", "comes out on the 1st" | done 2026-10-05: neither was true (the dues email goes to every home; the owner picks the day), so the answer now says dues are paid for you when they come due |
 | Names | "roster", "register" and "Homeowners" for one list; letters and some screens hardcode "unit" | waiting: pick one name; "unit" should follow the home kind |
 | `feature-tabs.tsx` | Unused file with old landing claims | done 2026-10-05: deleted |
+
+## 11. Landing page and the demo
+
+Asked for by Monish on 2026-10-05: make the landing page more engaging and
+get people to sign up. Deck headlines, hero art and the aerial photo stay.
+
+| Item | Status |
+| --- | --- |
+| "Try the demo" opens the sample association in one click (`/demo`, `/demo?as=owner`) | done 2026-10-05 (pull request #7) |
+| The demo says it is one and links to setup | done 2026-10-05 (pull request #7) |
+| Price slider in place of the flat price band; price in the hero | done 2026-10-05 (pull request #7) |
+| Three setup steps; six questions boards ask | done 2026-10-05 (pull request #7) |
+| `src/app/robots.ts` tells every search engine to stay away from the whole site | waiting: Monish says when the site should be findable; then allow `/`, `/pricing`, `/about`, `/library` and add a sitemap |
+| No proof from real associations (quotes, a count) | later: nothing to show until there are customers; do not invent any |
+| A short screen recording of setup in the hero or the steps row | later |
+
+## 12. What a real association hits in its first years
+
+From a read of the code against thirty situations on 2026-10-05. Most likely
+and most damaging first. "Handled" situations are not listed; they were
+proven against the verify scripts (sale of a home, two owners, join
+requests, partial and over payments, refunds, dues by home, quarterly and
+annual dues, month ends, the dues job running twice, view-only seats).
+
+| Situation | What happens today | Status |
+| --- | --- | --- |
+| Dues post and nobody is told | The daily job bills and adds late fees but sends no email; owners not on autopay hear nothing unless the board presses the dues mailer | next: send the bill email from the job (decision: automatic, or a dashboard row "bill posted, send it") |
+| A one-off charge or special assessment | No screen posts one; the SQL exists (`levy_special_assessment`) but nothing calls it | next: "Add a charge" on a household and "Charge every home" on Finances |
+| A check recorded twice, or against the wrong home | No undo; only "Add a credit", which leaves collected and the bank balance overstated | next: reverse a payment recorded by hand; warn on same home, amount and date |
+| One of two owners leaves; a second owner added by mistake | No way to end one seat; only a fake sale, which wipes the other owner's autopay and saved bank | next: "Remove this owner" for settings holders |
+| A signed-in owner changes or loses their email | Nothing in the resident account page; the board is refused | next: owner changes their own email, with confirmation |
+| The buyer of a home reads the seller's history | Payments, request threads, board messages and votes are readable by anyone with a current seat on the home, with no date filter | next: owner-side reads start at the seat's start date; statement shows the balance carried in |
+| A credit balance at sale | Carries to the buyer without a word; the sale dialog only settles money owed | next: the dialog says so and offers to leave or clear it |
+| Autopay fails once | Never retried that month, even after the owner fixes the card; the board is not told | next: retry a failed month on later days, three at most; list failures on Past due |
+| Stripe restricts the association's account | Autopay still tries and owners get "problem with your payment method" | next: skip autopay while charges are off; email finance holders |
+| An owner with two or three homes | Sees, pays and votes for one home only | next: a home switcher on the resident side; one vote cast per home held |
+| The president cannot be reached | Only the sitting president can name the next one | next: platform admin can reassign; later a vote of officers |
+| A lost card dispute or a late bank return | Finance holders are emailed; the owner's statement still says paid | next: book it as a returned payment |
+| Two officers approve the same vendor payment at once | One approval can be lost (the whole list is written from the browser) | next: an `approve_payout` function that adds the caller |
+| A home that should not be billed (builder lots) | No exempt flag; zero means "not set" | later, with vacant lots |
+| A home added mid-period | Waits for the next bill; no proration | later: say so on the add-home form |
+| A home removed or two lots merged after the first bill | Refused; it keeps being billed | next: allow when the balance is zero |
+| Deleting the association | Members lose sight of it at once, nothing is purged, Stripe is untouched; the screen promises a 30 day window | next: make the screen say what happens; later a purge job |
+| Votes | No quorum field, no "dues must be current", no paper or proxy votes entered by the board | later |
+| Year end | Owner statement CSV and board transactions CSV only; no printable statement, no all-homes statement run | later |
+| Documents | No versions; a new upload sits beside the old one | later |
+| A late fee on a starting balance | Looks like a brought-forward balance gets a late fee 30 days after its date once a fee is set; not run to confirm | next: check with `verify-late-fees` |
+| A sale with a closing date in the future | Looks like seller and buyer are both current until then; not traced | next: check |
+
