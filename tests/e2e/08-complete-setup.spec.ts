@@ -181,6 +181,7 @@ async function completeEverything(page: Page, property: Kind) {
   await page.waitForTimeout(300);
   await page.getByPlaceholder("Cascade Grounds Co.").fill("Bellevue Lawn");
   await page.getByPlaceholder("Grounds and irrigation").fill("Grounds");
+  await page.getByLabel("What they do for you").selectOption("Landscaping");
   await page.getByRole("button", { name: "Save vendor" }).click();
   await page.waitForTimeout(600);
 }

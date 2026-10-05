@@ -167,7 +167,7 @@ function NeedsYou() {
     },
     {
       count: vendors.count,
-      label: pluralize(vendors.count, "vendor bill") + " waiting on you",
+      label: pluralize(vendors.count, "vendor payment") + " waiting on a signature",
       href: "/board/vendors",
       icon: Receipt,
       tint: "amber",

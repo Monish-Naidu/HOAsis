@@ -749,7 +749,8 @@ export async function loadCommunity(
       id: b.id,
       name: `${b.kind[0].toUpperCase()}${b.kind.slice(1)} account`,
       institution: b.institution,
-      mask: b.mask,
+      // The column is char(4): an account with no number comes back as spaces.
+      mask: (b.mask ?? "").trim(),
       kind: b.kind,
       // What the books say is in the account. There is no bank feed yet, so
       // the ledger is the only source; a fixed zero read as "broke" on the

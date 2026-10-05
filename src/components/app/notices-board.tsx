@@ -232,7 +232,11 @@ function NoticeRow({
             <p className="text-footnote text-fg-subtle">Rule: {violation.ruleCitation}</p>
           ) : null}
 
-          {violation.photos.length > 0 ? <EvidenceViewer photos={violation.photos} /> : null}
+          {/* Only a photo with a file is shown. A grey frame holding a sentence
+              about a picture that does not exist is not evidence of anything. */}
+          {violation.photos.some((p) => p.src) ? (
+            <EvidenceViewer photos={violation.photos.filter((p) => p.src)} />
+          ) : null}
 
           {!resolved ? (
             <div className="flex flex-wrap items-center gap-2">

@@ -155,6 +155,61 @@ try {
   });
   check("a finance holder can record a payment for any home", !boardPayError, boardPayError?.message ?? "");
 
+  // A check handed to the treasurer (0083). record_payment cannot take it:
+  // it knows only the processor rails and stamps the line "Card payment". A
+  // fresh period is billed first so the neighbor owes $60 to pay.
+  await president.client.rpc("issue_assessment", {
+    p_association_id: associationId, p_label: "Check period", p_due_on: day(-5),
+  });
+  // Read as the President: the balance view answers a signed-in seat and
+  // gives the service role no rows.
+  const { data: owedBefore } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", neighborUnit.id).single();
+  const { data: checkId, error: checkError } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: neighborUnit.id, p_amount_cents: 6000, p_method: "check", p_reference: "1042", p_received_on: day(-1),
+  });
+  check("a finance holder records a $60 check", !checkError && Boolean(checkId), checkError?.message ?? "");
+  const { data: owedAfter } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", neighborUnit.id).single();
+  check("the check clears the balance", owedBefore?.balance_cents === 6000 && owedAfter?.balance_cents === 0,
+    `${owedBefore?.balance_cents} then ${owedAfter?.balance_cents}`);
+  const { data: neighborLines } = await admin.from("charges").select("kind, label, amount_cents").eq("unit_id", neighborUnit.id);
+  check("the statement line reads Check payment #1042",
+    (neighborLines ?? []).some((c) => c.kind === "payment" && c.label === "Check payment #1042" && c.amount_cents === -6000),
+    JSON.stringify(neighborLines));
+  const { data: checkPayment } = await admin.from("payments").select("rail, state, processor_fee_cents, platform_fee_cents").eq("id", checkId).single();
+  check("it is a settled payment on the check rail with no fee",
+    checkPayment?.rail === "check" && checkPayment?.state === "settled" &&
+      checkPayment?.processor_fee_cents === 0 && checkPayment?.platform_fee_cents === 0,
+    JSON.stringify(checkPayment));
+  const { data: checkLedger } = await president.client.from("ledger_entries").select("amount_cents, category, confirmed_at, occurred_on").eq("payment_id", checkId);
+  check("the ledger shows $60 in, with no fee taken out, confirmed",
+    (checkLedger ?? []).length === 1 && checkLedger[0].amount_cents === 6000 &&
+      checkLedger[0].category === "Assessments" && checkLedger[0].confirmed_at !== null && checkLedger[0].occurred_on === day(-1),
+    JSON.stringify(checkLedger));
+  const { data: checkAllocations } = await admin.from("payment_allocations").select("amount_cents").eq("payment_id", checkId);
+  check("the check is allocated to the charge it cleared",
+    (checkAllocations ?? []).length === 1 && checkAllocations[0].amount_cents === 6000, JSON.stringify(checkAllocations));
+  const { error: residentCheck } = await resident.client.rpc("record_manual_payment", {
+    p_unit_id: myUnit, p_amount_cents: 100, p_method: "check", p_reference: "1", p_received_on: day(0),
+  });
+  check("a resident cannot record a check", residentCheck?.code === "42501", residentCheck?.message?.slice(0, 45) ?? "no error");
+  const { error: anonCheck } = await nobody.rpc("record_manual_payment", {
+    p_unit_id: myUnit, p_amount_cents: 100, p_method: "check", p_reference: "1", p_received_on: day(0),
+  });
+  check("a signed out visitor cannot record a check", refused(anonCheck), anonCheck?.message?.slice(0, 60) ?? "no error");
+  const { error: futureCheck } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: neighborUnit.id, p_amount_cents: 100, p_method: "check", p_reference: "2", p_received_on: day(5),
+  });
+  check("a check cannot be dated in the future", Boolean(futureCheck), futureCheck?.message?.slice(0, 60) ?? "no error");
+  const { error: badMethod } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: neighborUnit.id, p_amount_cents: 100, p_method: "bitcoin", p_reference: "", p_received_on: day(0),
+  });
+  check("a method that is not check, cash or other is refused", Boolean(badMethod), badMethod?.message?.slice(0, 60) ?? "no error");
+  const { data: cashId, error: cashError } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: neighborUnit.id, p_amount_cents: 500, p_method: "cash", p_reference: "", p_received_on: day(0),
+  });
+  const { data: cashLine } = await admin.from("charges").select("label").eq("unit_id", neighborUnit.id).eq("label", "Cash payment");
+  check("cash reads Cash payment with no number", !cashError && Boolean(cashId) && (cashLine ?? []).length === 1, cashError?.message ?? JSON.stringify(cashLine));
+
   // Runs that overlap (0069). The cron delivered twice, or a board member
   // pressing "bill dues now" while it runs: each call used to look for an
   // existing bill before the other had committed, and every home got two.

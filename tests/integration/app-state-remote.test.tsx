@@ -914,7 +914,7 @@ describe("founding an association", () => {
     expect(store.remoteSnapshot().activeId).toBe("assoc-new");
     expect(errors).toHaveLength(2);
     expect(errors[0]).toContain("shared spaces were not saved (amenities is down)");
-    expect(errors[1]).toContain("bank account was not saved (bank_accounts is down)");
+    expect(errors[1]).toContain("operating account was not created (bank_accounts is down)");
   });
 });
 
@@ -1102,6 +1102,13 @@ describe("two presses in quick succession", () => {
           ),
         });
       }
+      if (s.target === "requests") {
+        change({
+          requests: server().requests.map((r) =>
+            r.id === id ? { ...r, thread: values.thread as typeof r.thread } : r,
+          ),
+        });
+      }
       if (s.target === "payouts") {
         change({
           payouts: server().payouts.map((p) => (p.id === id ? ({ ...p, ...values } as typeof p) : p)),
@@ -1131,6 +1138,57 @@ describe("two presses in quick succession", () => {
     expect(last, "the second press dropped the first grant").toEqual(
       expect.arrayContaining(["vendors", "documents"]),
     );
+  });
+
+  it("keeps both replies to an owner on their request, and tells the owner after each is saved", async () => {
+    keepWrites();
+    const request = server().requests[0];
+    const before = request.thread.length;
+    const { result } = renderApp();
+    let saved: boolean[] = [];
+    await act(async () => {
+      // Both presses are made from the same render, before either write is back.
+      saved = await Promise.all([
+        result.current.replyToRequest(request.id, "Can you send a photo?"),
+        result.current.replyToRequest(request.id, "And the colour sample."),
+      ]);
+    });
+    await settled();
+
+    expect(saved).toEqual([true, true]);
+    const thread = server().requests.find((r) => r.id === request.id)!.thread;
+    expect(thread.slice(before).map((e) => e.body), "the second reply erased the first").toEqual([
+      "Can you send a photo?",
+      "And the colour sample.",
+    ]);
+    expect(thread.slice(before).map((e) => e.kind)).toEqual(["note", "note"]);
+    expect(new Set(thread.map((e) => e.id)).size, "two events shared an id").toBe(thread.length);
+    // The existing "request updated" email, once per saved reply.
+    const mails = fetched.filter((f) => f.url === "/api/email/notify").map((f) => f.body);
+    expect(mails).toMatchObject([
+      { kind: "request", id: request.id, body: "Can you send a photo?" },
+      { kind: "request", id: request.id, body: "And the colour sample." },
+    ]);
+  });
+
+  it("saves the board's reason with a denial, on the row and on the owner's thread", async () => {
+    keepWrites();
+    const request = server().requests[0];
+    const { result } = renderApp();
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.updateRequestStatus(request.id, "denied", "Denied. The fence is over the height limit.");
+    });
+    await settled();
+
+    expect(ok).toBe(true);
+    const update = writes().find((s) => s.target === "requests")!;
+    expect(update.values).toMatchObject({
+      status: "denied",
+      decided_note: "Denied. The fence is over the height limit.",
+    });
+    const thread = server().requests.find((r) => r.id === request.id)!.thread;
+    expect(thread.at(-1)).toMatchObject({ kind: "status", body: "Denied. The fence is over the height limit." });
   });
 
   it("sends both replies on a thread, one after the other, for the database to append", async () => {
@@ -1311,7 +1369,124 @@ describe("what a real association is not offered yet", () => {
     // Paid, needing no approval, and on the books from the same press.
     expect(targets()).toEqual(["insert payouts", "insert ledger_entries"]);
     expect(writes()[0].values).toMatchObject({ status: "paid", approvals_required: 0, amount_cents: 138_000 });
-    expect(writes()[1].values).toMatchObject({ amount_cents: -138_000 });
+    // Vendor 0 has a usual category; the form starts from it.
+    expect(writes()[1].values).toMatchObject({
+      amount_cents: -138_000,
+      category: server().vendors[0].defaultCategory,
+    });
+  });
+
+  it("asks what the payment was for, and books it under that", async () => {
+    const user = userEvent.setup();
+    change({ vendors: server().vendors.map((v, i) => (i === 0 ? { ...v, defaultCategory: "Vendors" as never } : v)) });
+    await act(async () => {
+      await store.refreshRemote();
+    });
+    renderScreen(<screens.RecordPayment onClose={() => {}} initialAmount="200" />);
+
+    // The vendor's usual category is not one the form offers, so nothing is
+    // chosen and the button waits.
+    expect(screen.getByRole("button", { name: "Record it" })).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText("Category"), "Landscaping");
+    await user.click(screen.getByRole("button", { name: "Record it" }));
+    await settled();
+
+    expect(writes()[1].values).toMatchObject({ amount_cents: -20_000, category: "Landscaping" });
+  });
+});
+
+describe("recording an owner's check or cash", () => {
+  const UNIT = "0b9d6c1e-6f0a-4c56-9d53-3f1f0a8d2c21";
+
+  it("calls record_manual_payment, whose signature record_payment does not share", async () => {
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.recordManualPayment({
+        ownerId: UNIT,
+        amountCents: 6_000,
+        method: "check",
+        reference: " 1042 ",
+        receivedOn: "2026-10-01",
+      });
+    });
+    expect(ok).toBe(true);
+    expect(targets()).toEqual(["rpc:record_manual_payment"]);
+    expect(writes()[0].values).toEqual({
+      p_unit_id: UNIT,
+      p_amount_cents: 6_000,
+      p_method: "check",
+      p_reference: "1042",
+      p_received_on: "2026-10-01",
+    });
+  });
+
+  it("answers false when the database refused it, so no screen says recorded", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:record_manual_payment" ? { error: { message: "You cannot record a payment for that home" } } : undefined;
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.recordManualPayment({
+        ownerId: UNIT, amountCents: 100, method: "cash", reference: "", receivedOn: "2026-10-01",
+      });
+    });
+    expect(ok).toBe(false);
+    expect(errors.join(" ")).toMatch(/cannot record a payment/);
+  });
+});
+
+describe("a credit on a statement", () => {
+  it("inserts one negative credit charge with the reason as its label, and no ledger line", async () => {
+    const owner = server().owners[0];
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: " Late fee waived " });
+    });
+    expect(ok).toBe(true);
+    expect(targets()).toEqual(["insert charges"]);
+    expect(writes()[0].values).toMatchObject({
+      unit_id: owner.id,
+      kind: "credit",
+      label: "Late fee waived",
+      amount_cents: -2_500,
+    });
+  });
+});
+
+describe("an opening bank balance", () => {
+  const ACCOUNT = "0b9d6c1e-6f0a-4c56-9d53-3f1f0a8d2c31";
+
+  it("clears an earlier opening line for the account, then writes one confirmed line", async () => {
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 8_600_000, asOf: "2026-09-01" });
+    });
+    expect(ok).toBe(true);
+    expect(targets()).toEqual(["delete ledger_entries", "insert ledger_entries"]);
+    expect(writes()[0].filters).toEqual(
+      expect.arrayContaining([["eq", "bank_account_id", ACCOUNT], ["eq", "category", "Opening balance"]]),
+    );
+    expect(writes()[1].values).toMatchObject({
+      bank_account_id: ACCOUNT,
+      category: "Opening balance",
+      amount_cents: 8_600_000,
+      occurred_on: "2026-09-01",
+    });
+    expect((writes()[1].values as { confirmed_at: string | null }).confirmed_at).toBeTruthy();
+  });
+
+  it("writes nothing if the delete was refused", async () => {
+    db.answer = (s) => (s.op === "delete" ? { error: { message: "denied" } } : undefined);
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 1, asOf: "2026-09-01" });
+    });
+    expect(ok).toBe(false);
+    expect(targets()).toEqual(["delete ledger_entries"]);
   });
 });
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Inbox, Wrench } from "lucide-react";
+import { RequestDetail } from "./request-detail";
 import {
   Avatar,
   Badge,
@@ -11,16 +12,21 @@ import {
   CardHeader,
   EmptyState,
   PageHeader,
+  fieldClass,
 } from "@/components/ui/primitives";
 import { bucketRequests, useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { WorkOrderPanel } from "@/components/app/work-order";
-import { daysFromToday, formatDate, pluralize } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, pluralize } from "@/lib/utils";
 import { statusLabel, statusTone } from "@/lib/request-status";
 import { homeLabel } from "@/lib/wording";
+import type { HomeRequest } from "@/lib/types";
 
 export default function BoardRequests() {
-  const { community, requests, updateRequestStatus } = useAppState();
+  const { community, requests, updateRequestStatus, replyToRequest, can } = useAppState();
+  // A seat that may only look reads the request and the conversation and sees
+  // no button that changes either.
+  const canChange = can("requests");
   const { notify } = useToast();
   const { open, decided, history } = bucketRequests(requests);
   // Work the board has taken on and not finished. Each one's panel sits in
@@ -28,14 +34,51 @@ export default function BoardRequests() {
   const inProgress = requests.filter((r) => r.workOrder && !r.workOrder.completedOn);
   // Denying is the one answer an owner cannot undo, so it asks once.
   const [denying, setDenying] = useState<string | null>(null);
+  // Why, in the board's words. The owner is told this, so it is required.
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState(false);
+  // The request whose decision is being saved, so a second press waits.
+  const [saving, setSaving] = useState<string | null>(null);
   // Which maintenance request has its work order form open.
   const [ordering, setOrdering] = useState<string | null>(null);
+
+  function stopDenying() {
+    setDenying(null);
+    setReason("");
+    setReasonError(false);
+  }
+
+  // Said only once the decision is saved: a refused write must not read as done.
+  async function decide(r: HomeRequest, status: HomeRequest["status"], note: string, said: string, tone?: "warn") {
+    if (saving) return false;
+    setSaving(r.id);
+    const ok = await updateRequestStatus(r.id, status, note);
+    setSaving(null);
+    if (ok) notify(said, tone);
+    return ok;
+  }
+
+  async function deny(r: HomeRequest) {
+    const why = reason.trim();
+    if (!why) {
+      setReasonError(true);
+      return;
+    }
+    const ok = await decide(r, "denied", `Denied. ${why}`, `${r.reference} denied`, "warn");
+    if (ok) stopDenying();
+  }
+
+  async function reply(requestId: string, body: string) {
+    const ok = await replyToRequest(requestId, body);
+    if (ok) notify("Reply sent");
+    return ok;
+  }
 
   return (
     <>
       <PageHeader
         title="Requests"
-        description="Requests from owners and where each one stands."
+        description="Requests from owners and where each one stands. Open one to read it all and reply."
       />
 
       {/* Two lists, not tiles and a list. The count sits in each header where
@@ -90,7 +133,7 @@ export default function BoardRequests() {
                     {r.attachments.length ? ` · ${pluralize(r.attachments.length, "file")}` : ""}
                   </span>
                   <span className="ml-auto flex gap-1.5">
-                    {r.kind === "maintenance" ? (
+                    {!canChange ? null : r.kind === "maintenance" ? (
                       // A streetlight is not approved or denied. It is fixed,
                       // usually through the work order below.
                       <>
@@ -103,28 +146,25 @@ export default function BoardRequests() {
                       <Button
                         variant={open.length === 1 && index === 0 ? "primary" : "secondary"}
                         size="sm"
-                        onClick={() => {
-                          updateRequestStatus(r.id, "closed", "Fixed. Closed by the board.");
-                          notify(`${r.reference} marked fixed`);
-                        }}
+                        disabled={saving === r.id}
+                        onClick={() =>
+                          void decide(r, "closed", "Fixed. Closed by the board.", `${r.reference} marked fixed`)
+                        }
                       >
                         Mark fixed
                       </Button>
                       </>
                     ) : denying === r.id ? (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => setDenying(null)}>
+                        <Button variant="ghost" size="sm" onClick={stopDenying}>
                           Keep open
                         </Button>
                         <Button
                           variant="secondary"
                           size="sm"
                           className="text-danger"
-                          onClick={() => {
-                            updateRequestStatus(r.id, "denied", "Denied by the board.");
-                            notify(`${r.reference} denied`, "warn");
-                            setDenying(null);
-                          }}
+                          disabled={saving === r.id}
+                          onClick={() => void deny(r)}
                         >
                           Deny it
                         </Button>
@@ -137,23 +177,59 @@ export default function BoardRequests() {
                         <Button
                           variant={open.length === 1 && index === 0 ? "primary" : "secondary"}
                           size="sm"
-                          onClick={() => {
-                            updateRequestStatus(r.id, "approved", "Approved by the board.");
-                            notify(`${r.reference} approved`);
-                          }}
+                          disabled={saving === r.id}
+                          onClick={() =>
+                            void decide(r, "approved", "Approved by the board.", `${r.reference} approved`)
+                          }
                         >
                           Approve
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDenying(r.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setReason("");
+                            setReasonError(false);
+                            setDenying(r.id);
+                          }}
+                        >
                           Deny
                         </Button>
                       </>
                     )}
                   </span>
                 </div>
+                {denying === r.id && canChange ? (
+                  <div className="mt-3">
+                    <label htmlFor={`deny-${r.id}`} className="text-footnote font-semibold text-fg-muted">
+                      Why is it denied? The owner is told.
+                    </label>
+                    <input
+                      id={`deny-${r.id}`}
+                      value={reason}
+                      onChange={(e) => {
+                        setReason(e.target.value);
+                        setReasonError(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void deny(r);
+                      }}
+                      aria-invalid={reasonError || undefined}
+                      aria-describedby={reasonError ? `deny-${r.id}-error` : undefined}
+                      placeholder="For example: the fence is taller than the rules allow"
+                      className={cn(fieldClass, "mt-1.5", reasonError && "border-danger")}
+                    />
+                    {reasonError ? (
+                      <p id={`deny-${r.id}-error`} role="alert" className="mt-1 text-footnote text-danger">
+                        Give the owner a reason before you deny it.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+                <RequestDetail request={r} canChange={canChange} onReply={reply} />
                 <WorkOrderPanel
                   request={r}
-                  editing={ordering === r.id}
+                  editing={canChange && ordering === r.id}
                   onEditingChange={(v) => setOrdering(v ? r.id : null)}
                 />
               </div>
@@ -174,7 +250,7 @@ export default function BoardRequests() {
             <div
               key={r.id}
               id={`req-${r.id}`}
-              className="flex scroll-mt-32 lg:scroll-mt-24 items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex scroll-mt-32 lg:scroll-mt-24 items-start gap-3 border-b border-border px-5 py-3 last:border-b-0"
             >
               <Avatar name={r.ownerName} tone="neutral" />
               <div className="min-w-0 flex-1">
@@ -182,6 +258,7 @@ export default function BoardRequests() {
                 <p className="text-footnote text-fg-muted">
                   {r.ownerName} · {homeLabel(community, r.unit)} · {formatDate(r.submittedDate)}
                 </p>
+                <RequestDetail request={r} canChange={canChange} onReply={reply} />
               </div>
               <Badge tone={statusTone[r.status]}>{statusLabel[r.status]}</Badge>
             </div>

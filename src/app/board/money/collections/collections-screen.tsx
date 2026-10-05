@@ -23,7 +23,7 @@ export function CollectionsScreen() {
   return (
     <>
       <PageHeader
-        title="Collections"
+        title="Past due"
         description="Past due balances and the next notice for each."
       />
 

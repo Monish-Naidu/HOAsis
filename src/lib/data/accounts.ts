@@ -14,15 +14,17 @@ export const GRANTABLE: Capability[] = [
 ];
 
 export const CAPABILITY_LABEL: Record<Capability, string> = {
-  finances: "Money and reserves",
-  requests: "Requests and violations",
+  // The sidebar's own names, so the seat grid, the chips beside a name and
+  // the refusal message all call an area what the person clicked to get there.
+  finances: "Finances",
+  requests: "Requests",
   documents: "Documents",
-  communications: "Communications",
-  voting: "Voting and meetings",
-  vendors: "Vendors and payables",
-  compliance: "Compliance register",
-  forum: "Forum moderation",
-  settings: "Community settings",
+  communications: "Messages",
+  voting: "Meetings",
+  vendors: "Vendors",
+  compliance: "Compliance",
+  forum: "Community",
+  settings: "Settings",
   permissions: "Grant capabilities to others",
 };
 

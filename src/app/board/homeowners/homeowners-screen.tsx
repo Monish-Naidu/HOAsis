@@ -2,6 +2,7 @@
 
 import {
   ArrowRightLeft,
+  Banknote,
   Building2,
   ChevronDown,
   Download,
@@ -22,6 +23,7 @@ import { RemindersComposer } from "@/components/app/reminders-composer";
 import { AskedToJoin } from "./asked-to-join";
 import { JoinCodeRow } from "./join-code-row";
 import { ChangeEmailForm, SecondOwnerForm } from "./owner-forms";
+import { AddCreditForm, RecordPaymentForm } from "./household-money";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -31,6 +33,7 @@ import { communitySlug, delinquency } from "@/lib/metrics";
 import { policyFor } from "@/lib/collections";
 import { dueLetter, renderLetter } from "@/lib/letters";
 import type { HomeType, MessageThread, Owner } from "@/lib/types";
+import type { ManualMethod } from "@/lib/payments/instruments";
 import { HOME_TYPE_LABEL, HOME_TYPES, countByType, duesVary, ownerDues } from "@/lib/home-types";
 import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
@@ -196,6 +199,8 @@ export function HomeownersScreen() {
     addSecondOwner,
     changeOwnerEmail,
     setHomeType,
+    recordManualPayment,
+    addCredit,
     can,
     sees,
     isRemote,
@@ -477,7 +482,7 @@ export function HomeownersScreen() {
                 {inviting ? "Sending" : `Invite ${notSignedUp.length} not signed up`}
               </Button>
             ) : null}
-            {/* Reminders are sent from Finances > Collections, which opens
+            {/* Reminders are sent from Finances > Past due, which opens
                 the composer here with ?remind=1. One place to send them. */}
           </div>
         }
@@ -869,6 +874,24 @@ export function HomeownersScreen() {
                         })
                       }
                       onSale={changesMoney ? () => startSale(o) : undefined}
+                      onRecordPayment={
+                        changesMoney && !o.placeholder
+                          ? (input) =>
+                              Promise.resolve(recordManualPayment({ ownerId: o.id, ...input })).then((ok) => {
+                                if (ok) notify(`Recorded ${money(input.amountCents)} from ${o.displayName}`, "ok");
+                                return ok;
+                              })
+                          : undefined
+                      }
+                      onAddCredit={
+                        changesMoney && !o.placeholder
+                          ? (input) =>
+                              Promise.resolve(addCredit({ ownerId: o.id, ...input })).then((ok) => {
+                                if (ok) notify(`Added a ${money(input.amountCents)} credit to ${o.displayName}`, "ok");
+                                return ok;
+                              })
+                          : undefined
+                      }
                       duesLine={
                         duesVary(community.association)
                           ? `${money(ownerDues(community.association, o))} ${community.association.duesCadence}`
@@ -1006,6 +1029,8 @@ function HouseholdDetail({
   onSend,
   onSetOwner,
   onSale,
+  onRecordPayment,
+  onAddCredit,
   onInvite,
   onEmailInvite,
   onChangeEmail,
@@ -1024,6 +1049,15 @@ function HouseholdDetail({
   /** For a home with no owner on record: name them. */
   onSetOwner: (name: string, email: string) => void;
   onSale?: () => void;
+  /** A check or cash received. Absent when this seat may not change finances. */
+  onRecordPayment?: (input: {
+    amountCents: number;
+    method: ManualMethod;
+    reference: string;
+    receivedOn: string;
+  }) => Promise<boolean>;
+  /** A credit, such as a waived fee. Absent when this seat may not change finances. */
+  onAddCredit?: (input: { amountCents: number; reason: string }) => Promise<boolean>;
   onInvite: () => void;
   onEmailInvite?: () => void;
   /** Correct the address the listed owner claims their seat with. Absent when this seat may not, or they have signed in. */
@@ -1041,7 +1075,7 @@ function HouseholdDetail({
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
-  const [editing, setEditing] = useState<"email" | "second" | null>(null);
+  const [editing, setEditing] = useState<"email" | "second" | "payment" | "credit" | null>(null);
 
   function startFromLetter() {
     if (!letter) return;
@@ -1184,7 +1218,36 @@ function HouseholdDetail({
         <SecondOwnerForm unit={owner.unit} onSave={onAddSecondOwner} onCancel={() => setEditing(null)} />
       ) : null}
 
+      {editing === "payment" && onRecordPayment ? (
+        <RecordPaymentForm unit={owner.unit} onSave={onRecordPayment} onCancel={() => setEditing(null)} />
+      ) : null}
+      {editing === "credit" && onAddCredit ? (
+        <AddCreditForm unit={owner.unit} onSave={onAddCredit} onCancel={() => setEditing(null)} />
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-border pt-3">
+        {onRecordPayment ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(editing === "payment" ? null : "payment")}
+            aria-label={`Record a payment from ${owner.displayName}`}
+          >
+            <Banknote className="size-3.5" />
+            Record a payment
+          </Button>
+        ) : null}
+        {onAddCredit ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(editing === "credit" ? null : "credit")}
+            aria-label={`Add a credit to ${owner.displayName}`}
+          >
+            <Plus className="size-3.5" />
+            Add a credit
+          </Button>
+        ) : null}
         {onSale ? (
           <Button
             variant="ghost"

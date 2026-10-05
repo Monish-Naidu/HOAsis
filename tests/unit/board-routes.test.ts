@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BOARD_ROUTES, capabilitiesFor, sectionFor, sectionPages } from "@/lib/board-routes";
-import { GRANTABLE } from "@/lib/data";
+import { CAPABILITY_LABEL, GRANTABLE } from "@/lib/data";
 
 /**
  * The route table is the gate.
@@ -104,9 +104,39 @@ describe("sections", () => {
     expect(sectionPages(money).map((r) => r.tab ?? r.label).slice(0, 4)).toEqual([
       "Overview",
       "Transactions",
-      "Collections",
+      "Past due",
       "Reserves",
     ]);
+  });
+
+  it("names every section's tabs the way the rail and the page titles do", () => {
+    const tabs = (key: string) =>
+      sectionPages(BOARD_ROUTES.find((r) => r.key === key)!).map((r) => r.tab ?? r.label);
+    expect(tabs("money")).toEqual(["Overview", "Transactions", "Past due", "Reserves", "Budget", "Trends", "Shared costs"]);
+    expect(tabs("requests")).toEqual(["Requests", "Notices"]);
+    expect(tabs("communications")).toEqual(["Inbox", "Announcements", "Community"]);
+    expect(tabs("meetings")).toEqual(["Meetings", "Voting"]);
+  });
+
+  it("calls each access area what the rail calls it, in Settings and in the refusal", () => {
+    const railName: Record<string, string> = {
+      finances: "money",
+      requests: "requests",
+      communications: "communications",
+      voting: "meetings",
+      vendors: "vendors",
+      documents: "documents",
+      forum: "forum",
+      settings: "settings",
+    };
+    for (const [capability, key] of Object.entries(railName)) {
+      const route = BOARD_ROUTES.find((r) => r.key === key)!;
+      expect(CAPABILITY_LABEL[capability as keyof typeof CAPABILITY_LABEL], capability).toBe(route.label);
+    }
+  });
+
+  it("keeps the Past due URL, so a bookmark to Collections still opens", () => {
+    expect(BOARD_ROUTES.find((r) => r.key === "money-collections")?.href).toBe("/board/money/collections");
   });
 
   it("gives a folded money page the section's teal", () => {

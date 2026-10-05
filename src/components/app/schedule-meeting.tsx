@@ -185,7 +185,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
             Put it on the calendar
           </Button>
           <span className="text-footnote text-fg-subtle">
-            Send the notice from Communications once it is scheduled.
+            Send the notice from Messages once it is scheduled.
           </span>
         </div>
       </div>

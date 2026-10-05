@@ -22,6 +22,42 @@ import type { Cents } from "@/lib/types";
 
 export type InstrumentKind = "ach" | "card" | "apple-pay";
 
+/**
+ * Every way money reaches the association, as the database names it: the
+ * processor rails an owner pays on, and the two a board records by hand.
+ */
+export type PaymentRail = InstrumentKind | "google-pay" | "check" | "cash";
+
+/** What a person reads for a rail. */
+export const RAIL_LABEL: Record<PaymentRail, string> = {
+  ach: "Bank transfer",
+  card: "Card",
+  "apple-pay": "Apple Pay",
+  "google-pay": "Google Pay",
+  check: "Check",
+  cash: "Cash",
+};
+
+/** How a board says an owner paid when it enters the payment itself. */
+export type ManualMethod = "check" | "cash" | "other";
+
+export const MANUAL_METHOD_LABEL: Record<ManualMethod, string> = {
+  check: "Check",
+  cash: "Cash",
+  other: "Other",
+};
+
+/**
+ * The statement line for a payment entered by hand: "Check payment #1042",
+ * "Cash payment", or just "Payment" for something else. The database writes
+ * the same words (0083), so the demo and a real association read alike.
+ */
+export function manualPaymentLabel(method: ManualMethod, reference?: string): string {
+  const ref = reference?.trim();
+  const base = method === "other" ? "Payment" : `${MANUAL_METHOD_LABEL[method]} payment`;
+  return ref ? `${base} #${ref}` : base;
+}
+
 export type CardBrand = "visa" | "mastercard" | "amex" | "discover" | "unknown";
 
 export interface PaymentInstrument {

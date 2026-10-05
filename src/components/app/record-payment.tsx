@@ -2,10 +2,31 @@
 
 import { useState } from "react";
 import { Receipt, X } from "lucide-react";
-import { Button, Card, CardHeader, Checkbox, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
+import { Button, Card, CardHeader, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
+import type { LedgerCategory, Vendor } from "@/lib/types";
 import { cn, money, todayIsoDate } from "@/lib/utils";
+
+/**
+ * What a vendor payment can have been for: the spending categories the books
+ * already use, the ones Transactions and "Where it went" group by.
+ */
+export const VENDOR_PAYMENT_CATEGORIES: LedgerCategory[] = [
+  "Landscaping",
+  "Utilities",
+  "Insurance",
+  "Repairs & maintenance",
+  "Management",
+  "Legal & professional",
+];
+
+/** The vendor's usual category when it is one of those, else nothing chosen yet. */
+function usualCategory(vendor: Vendor | undefined): LedgerCategory | "" {
+  return vendor && VENDOR_PAYMENT_CATEGORIES.includes(vendor.defaultCategory)
+    ? vendor.defaultCategory
+    : "";
+}
 
 /**
  * A payment that already happened, entered after the fact.
@@ -32,25 +53,21 @@ export function RecordPayment({
   const [paidOn, setPaidOn] = useState(todayIsoDate());
   const [method, setMethod] = useState<"ach" | "check" | "card">("ach");
   const [reference, setReference] = useState("");
-  const [throughUs, setThroughUs] = useState(false);
+  const [category, setCategory] = useState<LedgerCategory | "">(usualCategory(vendors[0]));
   const [note, setNote] = useState("");
 
   const field =
     fieldClass;
   const cents = Math.round((Number(amount) || 0) * 100);
   const vendor = vendors.find((v) => v.id === vendorId);
-  const ready = Boolean(vendor) && cents > 0 && Boolean(paidOn);
+  const ready = Boolean(vendor) && cents > 0 && Boolean(paidOn) && category !== "";
 
   return (
     <Card as="form" onSubmit={(e) => e.preventDefault()} className="mb-5">
       <CardHeader
         icon={<Receipt className="size-4" />}
         title="Record a payment"
-        subtitle={
-          isRemote
-            ? "One you already made from your own bank"
-            : "Including one you already made from your own bank"
-        }
+        subtitle="One you already made from your own bank"
         action={
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="size-4" />
@@ -64,7 +81,11 @@ export function RecordPayment({
             <span className="text-footnote font-semibold text-fg-muted">Who you paid</span>
             <Select
               value={vendorId}
-              onChange={(e) => setVendorId(e.target.value)}
+              onChange={(e) => {
+                setVendorId(e.target.value);
+                // Each vendor has its own usual category; start from that.
+                setCategory(usualCategory(vendors.find((v) => v.id === e.target.value)));
+              }}
               aria-label="Vendor"
               className="mt-1.5 w-full [&>select]:h-10"
             >
@@ -89,6 +110,23 @@ export function RecordPayment({
             />
           </label>
         </div>
+
+        <label className="block">
+          <span className="text-footnote font-semibold text-fg-muted">What it was for</span>
+          <Select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as LedgerCategory)}
+            aria-label="Category"
+            className="mt-1.5 w-full [&>select]:h-10"
+          >
+            {category === "" ? <option value="">Choose one</option> : null}
+            {VENDOR_PAYMENT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
+        </label>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block">
@@ -130,44 +168,21 @@ export function RecordPayment({
           </label>
         </div>
 
-        {/* Two things the demo shows that a real association is not offered
-            yet. Nothing sends a vendor payment for one: a payment queued
-            here would collect its approvals, read "Scheduled" for good, and
-            never reach the vendor or the books. And a payment has nowhere to
-            keep a note, so one typed here would be gone on the next load. A
-            real association records payments it has already made, which is
-            the box left unticked. */}
+        {/* A payment has nowhere to keep a note for a real association, so
+            one typed there would be gone on the next load. The demo keeps it
+            in the browser. */}
         {isRemote ? null : (
-          <>
-            <label className="block">
-              <span className="text-footnote font-semibold text-fg-muted">Note (optional)</span>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={2}
-                placeholder="Anything the next treasurer should know"
-                aria-label="Note on this payment"
-                className={cn(textareaClass, "mt-1.5 resize-none")}
-              />
-            </label>
-
-            <label className="flex items-start gap-2.5">
-              <Checkbox
-                checked={throughUs}
-                onChange={(e) => setThroughUs(e.target.checked)}
-                className="mt-0.5"
-              />
-              <span className="min-w-0">
-                <span className="block text-body font-medium text-fg">
-                  Send this payment through Your HOAsis
-                </span>
-                <span className="block text-footnote leading-snug text-fg-muted">
-                  Leave it off to record a payment you already made yourself. The books are the
-                  same either way, which is the point.
-                </span>
-              </span>
-            </label>
-          </>
+          <label className="block">
+            <span className="text-footnote font-semibold text-fg-muted">Note (optional)</span>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="Anything the next treasurer should know"
+              aria-label="Note on this payment"
+              className={cn(textareaClass, "mt-1.5 resize-none")}
+            />
+          </label>
         )}
 
         <Button
@@ -185,22 +200,21 @@ export function RecordPayment({
               method,
               // A payment already made needs no approval, and pretending it
               // does would put a decision on the board for money that is gone.
-              status: throughUs ? "needs-approval" : "paid",
+              // Nothing here sends a vendor money, so every payment is one the
+              // board already made.
+              status: "paid",
               issuedDate: paidOn,
               expectedDate: paidOn,
               approvals: [],
-              approvalsRequired: throughUs ? 2 : 0,
+              approvalsRequired: 0,
               notes: note.trim() || undefined,
+              category: category || undefined,
             });
-            notify(
-              throughUs
-                ? `${vendor.name} queued for ${money(cents)}. It needs approvals before it goes.`
-                : `Recorded ${money(cents)} to ${vendor.name} on ${paidOn}.`,
-            );
+            notify(`Recorded ${money(cents)} to ${vendor.name} on ${paidOn}.`);
             onClose();
           }}
         >
-          {throughUs ? "Queue the payment" : "Record it"}
+          Record it
         </Button>
       </div>
     </Card>

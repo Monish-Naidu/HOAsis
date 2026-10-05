@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, CalendarPlus, ChevronDown, Megaphone } from "lucide-react";
-import { Badge, Button, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
-import { MeetingRoom } from "@/components/app/meeting-room";
+import { CalendarDays, CalendarPlus, ChevronDown, Megaphone, Video } from "lucide-react";
+import { Button, Card, CardHeader, EmptyState, PageHeader, buttonClass } from "@/components/ui/primitives";
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
 import { meetingPhase } from "@/lib/phases";
-import { cn, formatDate, pluralize } from "@/lib/utils";
+import { cn, formatDate, pluralize, todayIsoDate } from "@/lib/utils";
 import { useToast } from "@/components/app/toast";
 import type { Meeting } from "@/lib/types";
 import { useHomeLabel } from "@/components/app/use-home-label";
@@ -61,12 +60,17 @@ export default function BoardMeetings() {
   // Meetings whose notice is on its way. A real roster is emailed before the
   // notice goes on record, which can take most of a minute.
   const [sending, setSending] = useState<string[]>([]);
-  const live = community.meetings.find((m) => m.status === "live");
-  // The live meeting has its own card above, so it is not also a row here.
+  // On the day, the call is one press away. Nothing sets a real
+  // association's meeting to "live", so the date is what says it is today.
+  // A meeting still marked live (the demo's) counts as today too.
+  const today = todayIsoDate();
+  const todays = community.meetings.filter(
+    (m) => m.status !== "ended" && (m.date === today || m.status === "live"),
+  );
   // Split by phase, not stored status: nothing marks a real association's
   // meeting ended, so its date does. One held today is still upcoming.
   const upcoming = [...community.meetings]
-    .filter((m) => meetingPhase(m) === "scheduled")
+    .filter((m) => meetingPhase(m) !== "ended")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
   // Newest first. What was on the agenda, and who came, is the record the
   // next board inherits; it used to vanish the day the meeting ended.
@@ -89,7 +93,7 @@ export default function BoardMeetings() {
     <>
       <PageHeader
         title="Meetings"
-        description="Upcoming meetings, attendance, and action items."
+        description="Upcoming meetings, who is coming, and action items."
         action={
           scheduling ? null : (
             <Button variant="primary" size="md" onClick={() => setScheduling(true)}>
@@ -102,59 +106,27 @@ export default function BoardMeetings() {
 
       {scheduling ? <ScheduleMeeting onClose={() => setScheduling(false)} /> : null}
 
-      {live ? (
-        <Card className="overflow-hidden border-ok/30">
-          <div className="flex flex-wrap items-center gap-3 border-b border-border bg-ok-soft px-5 py-3">
-            <Badge tone="ok" dot>
-              Live
-            </Badge>
+      {todays.map((m) => (
+        <Card key={m.id} className="mb-6 overflow-hidden border-ok/30">
+          <div className="flex flex-wrap items-center gap-3 bg-ok-soft px-5 py-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-body font-semibold text-ok">{live.title}</p>
-              <p className="text-footnote text-ok opacity-90">
-                {live.time} · {live.attendees.length} joined · notice sent{" "}
-                {formatDate(live.noticeSentDate!, "long")}
-              </p>
+              <p className="truncate text-body font-semibold text-ok">{m.title}</p>
+              <p className="text-footnote text-ok opacity-90">Today, {m.time}</p>
             </div>
-          </div>
-          <div className="grid lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              {/* Secondary: Schedule a meeting is the page's filled button. */}
-              <MeetingRoom meeting={live} joinVariant="secondary" />
-              <div className="border-t border-border px-4 py-3">
-                <p className="text-footnote font-semibold text-fg-muted">
-                  In the room
-                </p>
-                <ul className="mt-2 space-y-1">
-                  {live.attendees.map((a) => (
-                    <li key={a.name} className="flex items-center gap-2 text-footnote text-fg-muted">
-                      <span className="size-1.5 shrink-0 rounded-full bg-ok" />
-                      <span className="truncate">{a.name}</span>
-                      <span className="ml-auto shrink-0 text-fg-subtle">
-                        {a.role ?? placeLabel(a.unit ?? "")} · {a.channel}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="border-t border-border px-5 py-4 lg:col-span-2 lg:border-l lg:border-t-0">
-              <p className="text-footnote font-semibold text-fg-muted">
-                Agenda
-              </p>
-              <ol className="mt-2 space-y-1.5">
-                {live.agenda.map((item, i) => (
-                  <li key={item} className="flex gap-2 text-body text-fg-muted">
-                    <span className="tnum shrink-0 text-fg-subtle">{i + 1}.</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <a
+              href={videoJoinUrl(m, community.association.id)}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass("secondary", "md")}
+            >
+              <Video className="size-3.5" />
+              Join the call
+            </a>
           </div>
         </Card>
-      ) : null}
+      ))}
 
-      <Card className={live ? "mt-6" : undefined}>
+      <Card>
         <CardHeader title="Upcoming" subtitle="On every resident's calendar" />
         {upcoming.length === 0 ? (
           <EmptyState
@@ -224,7 +196,7 @@ export default function BoardMeetings() {
 
       {past.length > 0 ? (
         <Card className="mt-6">
-          <CardHeader title="Past meetings" subtitle="What was on the agenda, and who came" />
+          <CardHeader title="Past meetings" subtitle="What was on the agenda" />
           {past.map((m) => (
             <details
               key={m.id}
@@ -246,7 +218,6 @@ export default function BoardMeetings() {
                     {formatDate(m.date, "long")} · {m.time} · {m.location}
                     {m.attendees.length ? ` · ${m.attendees.length} attended` : ""}
                     {m.ballotIds.length ? ` · ${pluralize(m.ballotIds.length, "ballot")}` : ""}
-                    {m.recordingAvailable ? " · recording" : ""}
                   </p>
                 </div>
                 <ChevronDown className="mt-1 size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />

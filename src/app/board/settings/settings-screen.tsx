@@ -513,11 +513,11 @@ export function SettingsScreen() {
               label="Show live vote results"
             />
           </SettingRow>
-          <SettingRow title="Forum" description="Neighbor to neighbor posts">
+          <SettingRow title="Community posts" description="Neighbor to neighbor posts">
             <Toggle
               checked={settings.forumEnabled}
               onChange={(v) => updateSettings({ forumEnabled: v })}
-              label="Enable the forum"
+              label="Allow community posts"
             />
           </SettingRow>
         </Card>
@@ -731,10 +731,10 @@ export function SettingsScreen() {
             <table className="w-full min-w-[720px] text-left">
               <thead>
                 <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
-                  <th className="px-5 py-2.5 font-semibold">Admin</th>
-                  {GRANTABLE.map((c) => (
+                  <th className="px-5 py-2.5 font-semibold">Board member</th>
+                  {GRID_AREAS.map((c) => (
                     <th key={c} className="px-2 py-2.5 text-center font-semibold">
-                      {CAPABILITY_LABEL[c].split(" ")[0]}
+                      {CAPABILITY_LABEL[c]}
                     </th>
                   ))}
                 </tr>
@@ -748,7 +748,7 @@ export function SettingsScreen() {
                         <p className="text-body font-medium text-fg">{a.name}</p>
                         <p className="text-footnote text-fg-muted">{ROLE_LABEL[a.role]}</p>
                       </td>
-                      {GRANTABLE.map((c) => (
+                      {GRID_AREAS.map((c) => (
                         <td key={c} className="px-2 py-2 text-center">
                           <AccessControl
                             level={accessLevel(a, c)}
@@ -1179,13 +1179,19 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
   );
 }
 
+/**
+ * The grid's columns. Compliance is a page that is switched off for launch,
+ * so a column for it would grant access to nothing.
+ */
+const GRID_AREAS = GRANTABLE.filter((c) => c !== "compliance" || moduleOn("compliance"));
+
 /** A seat's capabilities, in the words on the sidebar. */
 const SECTION_NAME: Partial<Record<Capability, string>> = {
   finances: "Finances",
   vendors: "Vendors",
-  requests: "Requests and notices",
+  requests: "Requests",
   communications: "Messages",
-  voting: "Meetings and voting",
+  voting: "Meetings",
   documents: "Documents",
   forum: "Community",
   settings: "Settings",

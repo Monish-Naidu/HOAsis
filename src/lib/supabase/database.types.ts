@@ -3047,6 +3047,16 @@ export type Database = {
         }
         Returns: string
       }
+      record_manual_payment: {
+        Args: {
+          p_amount_cents: number
+          p_method: string
+          p_received_on: string
+          p_reference: string
+          p_unit_id: string
+        }
+        Returns: string
+      }
       record_refund: {
         Args: { p_amount_cents: number; p_stripe_payment_intent_id: string }
         Returns: string | null
@@ -3187,7 +3197,7 @@ export type Database = {
         | "invite"
         | "message"
         | "request"
-      payment_rail: "ach" | "card" | "apple-pay" | "google-pay"
+      payment_rail: "ach" | "card" | "apple-pay" | "google-pay" | "check" | "cash"
       payment_state: "pending" | "settled" | "failed" | "refunded"
       post_status: "pending" | "published" | "rejected"
       property_type: "single-family" | "townhomes" | "condos"
@@ -3393,7 +3403,7 @@ export const Constants = {
         "message",
         "request",
       ],
-      payment_rail: ["ach", "card", "apple-pay", "google-pay"],
+      payment_rail: ["ach", "card", "apple-pay", "google-pay", "check", "cash"],
       payment_state: ["pending", "settled", "failed", "refunded"],
       post_status: ["pending", "published", "rejected"],
       property_type: ["single-family", "townhomes", "condos"],

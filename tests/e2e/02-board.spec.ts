@@ -176,7 +176,7 @@ test.describe("board actions", () => {
   });
 
   test("a past due notice fills in the household's real figures", async ({ page }) => {
-    // Reminders are sent from Collections, which opens the composer on the roster.
+    // Reminders are sent from Past due, which opens the composer on the roster.
     await page.goto("/board/money/collections");
     await page.waitForLoadState("networkidle");
 
@@ -229,7 +229,7 @@ test.describe("board actions", () => {
       .filter({ has: page.locator("xpath=.") })
       .nth(0);
     // Find the forum toggle by its row rather than by position.
-    const row = page.locator("main label, main div").filter({ hasText: "Forum" }).first();
+    const row = page.locator("main label, main div").filter({ hasText: "Community posts" }).first();
     await expect(row).toBeVisible();
 
     const toggle = page.locator('button[role="switch"]').first();
@@ -531,17 +531,16 @@ test.describe("vendors", () => {
     expect(health.text, "the recorded payment never appeared").toContain("1042");
   });
 
-  test("routing a payment through us queues it for approval instead", async ({ page }) => {
+  test("there is no route that sends a vendor money, only a payment already made", async ({ page }) => {
     await page.goto("/board/vendors");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Record a payment" }).click();
     await page.waitForTimeout(400);
 
-    await page.getByLabel("Amount paid").fill("500");
-    await page.getByText("Send this payment through Your HOAsis").click();
-    await page.waitForTimeout(300);
-
-    // Money that has already gone needs no approval; money that has not, does.
-    await expect(page.getByRole("button", { name: "Queue the payment" })).toBeVisible();
+    await expect(page.getByText("Send this payment through Your HOAsis")).toHaveCount(0);
+    await expect(page.getByLabel("Category")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Queue the payment" })).toHaveCount(0);
+    await expect(page.getByText(/Vendors email bills to/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Attach an invoice" })).toHaveCount(0);
   });
 });
