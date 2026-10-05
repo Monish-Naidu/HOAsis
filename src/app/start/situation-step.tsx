@@ -5,7 +5,6 @@ import { Building2, Check, HardHat, Home, KeyRound, Plus, Rows3, X } from "lucid
 import type {
   AssociationOrigin,
   CommunityDraft,
-  ExtraCollection,
   PreviousSetup,
   PropertyType,
   SharedSpace,
@@ -107,19 +106,6 @@ const SPACES: { id: SharedSpace; label: string }[] = [
   { id: "playground", label: "Playground" },
   { id: "gate", label: "Gate" },
   { id: "elevator", label: "Elevator" },
-];
-
-const COLLECTS: { id: ExtraCollection; label: string; detail: string }[] = [
-  {
-    id: "special-assessment",
-    label: "A special assessment",
-    detail: "A one off cost being paid down over time",
-  },
-  {
-    id: "utilities",
-    label: "Utilities we pass on",
-    detail: "Water, trash or gas the association pays and splits between homes",
-  },
 ];
 
 type Patch = (next: Partial<CommunityDraft>) => void;
@@ -329,65 +315,6 @@ export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: P
           ) : null}
         </div>
       ))}
-    </div>
-  );
-}
-
-/**
- * Anything billed besides dues. "Just dues" is the first card rather than a
- * way past the question, because for most associations it is the answer,
- * and an answer should look like one.
- */
-export function CollectsPicker({ draft, patch }: { draft: CommunityDraft; patch: Patch }) {
-  const justDues = draft.collects.length === 0;
-  const card = (picked: boolean) =>
-    cn(
-      "flex w-full items-start gap-3 rounded-card border p-4 text-left transition-colors",
-      picked ? "border-primary bg-primary-soft" : "border-border-2 bg-surface hover:bg-surface-2",
-    );
-  const box = (picked: boolean) =>
-    cn(
-      "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2",
-      picked ? "border-primary bg-primary text-primary-fg" : "border-border-2",
-    );
-  return (
-    <div className="space-y-2">
-      <button
-        type="button"
-        aria-pressed={justDues}
-        onClick={() => patch({ collects: [] })}
-        className={card(justDues)}
-      >
-        <span className={cn(box(justDues), "rounded-full")} aria-hidden>
-          {justDues ? <span className="block size-1.5 rounded-full bg-current" /> : null}
-        </span>
-        <span className="min-w-0">
-          <span className="block text-body font-semibold text-fg">Just dues</span>
-          <span className="block text-footnote leading-snug text-fg-muted">
-            One flat amount per home, and nothing else
-          </span>
-        </span>
-      </button>
-      {COLLECTS.map(({ id, label, detail }) => {
-        const picked = draft.collects.includes(id);
-        return (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={picked}
-            onClick={() => patch({ collects: toggle(draft.collects, id) })}
-            className={card(picked)}
-          >
-            <span className={box(picked)} aria-hidden>
-              {picked ? <span className="block size-1.5 rounded-[1px] bg-current" /> : null}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-body font-semibold text-fg">{label}</span>
-              <span className="block text-footnote leading-snug text-fg-muted">{detail}</span>
-            </span>
-          </button>
-        );
-      })}
     </div>
   );
 }

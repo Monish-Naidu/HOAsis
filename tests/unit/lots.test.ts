@@ -241,7 +241,7 @@ describe("the founder's own lot", () => {
     const draft = {
       ...emptyDraft(),
       name: "Ridgeline",
-      builderName: "Ridgeline Homes",
+      origin: "builder" as const,
       founder: { name: "Pat", email: "pat@example.com", unit: "Lot 1" },
       households: expandPhases([{ id: "p1", label: "Phase 1", from: 1, to: 4 }], "Lot").map(
         (unit) => ({ name: "", email: "", unit }),
@@ -252,10 +252,11 @@ describe("the founder's own lot", () => {
     expect(community.owners).toHaveLength(4);
     expect(new Set(community.owners.map((o) => o.id)).size).toBe(4);
     expect(community.owners.find((o) => o.unit === "Lot 1")?.displayName).toBe("Pat");
-    // An unsold lot is not vacant. Somebody owns it and owes the assessment.
-    expect(community.owners.find((o) => o.unit === "Lot 2")?.displayName).toBe(
-      "Ridgeline Homes",
-    );
+    // An unsold lot is still a home that owes the assessment, and the roster
+    // says it has no owner yet rather than naming a builder nobody typed.
+    const unsold = community.owners.find((o) => o.unit === "Lot 2");
+    expect(unsold?.displayName).toBe("Not sold yet");
+    expect(unsold?.placeholder).toBe(true);
   });
 
   it("is counted once when the number was typed bare and the plat adds a prefix", () => {

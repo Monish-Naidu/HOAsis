@@ -33,9 +33,35 @@ export const DEFAULT_COLLECTION_POLICY: CollectionPolicy = {
   lateNoticeDay: 30,
   demandDay: 45,
   counselDay: 90,
-  lateFeeCents: 25_00,
+  // No fee until the board sets one. A charge the board never chose, taken
+  // from owners on the strength of a default, is the one to avoid.
+  lateFeeCents: 0,
   minimumPlanMonths: 12,
 };
+
+/**
+ * The policy a founder's late fee answer makes.
+ *
+ * The fee falls on the formal notice, so "days after the due date" is the
+ * notice day. The other rungs keep their usual days unless the notice moves
+ * past them, because a ladder that does not climb is refused
+ * (`policyProblems`). No fee, or an amount of nothing, leaves every day at
+ * its default and the fee at zero.
+ */
+export function policyWithLateFee(lateFeeCents: number, days: number): CollectionPolicy {
+  const base = DEFAULT_COLLECTION_POLICY;
+  if (!(lateFeeCents > 0) || !Number.isInteger(days) || days < 2) return { ...base };
+  const reminderDay = Math.min(base.reminderDay, days - 1);
+  const demandDay = Math.max(base.demandDay, days + 1);
+  return {
+    ...base,
+    reminderDay,
+    lateNoticeDay: days,
+    demandDay,
+    counselDay: Math.max(base.counselDay, demandDay + 1),
+    lateFeeCents,
+  };
+}
 
 /** The board's own ladder where it set one, the default where it did not. */
 export function policyFor(settings: Pick<CommunitySettings, "collectionPolicy">): CollectionPolicy {

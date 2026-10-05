@@ -46,6 +46,8 @@ async function found(page: Page, name: string, property: Kind) {
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: "Washington" });
   await next();
+  await page.getByRole("button", { name: /We are building the community/ }).click();
+  await next();
   await page.getByRole("button", { name: new RegExp(property) }).click();
   await next();
   await page.getByLabel(/Each home pays/i).fill("250");
@@ -53,18 +55,11 @@ async function found(page: Page, name: string, property: Kind) {
 
   await page.getByRole("button", { name: /^Pool$/ }).click();
   await next();
-  await page.getByRole("button", { name: /We are building the community/ }).click();
-  await next();
-  await next();
-  // The books: fiscal year and first bill, taken as offered.
-  await next();
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
   await page.getByLabel("Your home address").fill("1 Founder Way");
   await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("1");
-  await next();
-  await page.getByLabel("Builder name").fill("Ridgeline Homes");
   await next();
   await page.getByLabel("Phase 1 first lot").fill("1");
   await page.getByLabel("Phase 1 last lot").fill("3");
@@ -79,11 +74,10 @@ async function found(page: Page, name: string, property: Kind) {
   await page.waitForTimeout(300);
   await next();
 
-  // Connect a bank, so the collect phase can actually finish. Picking an
-  // institution then an account, which is the real two step flow.
-  await page.getByRole("button", { name: /^BECU/ }).click();
-  await page.waitForTimeout(900);
-  await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
+  // When billing starts, taken as offered. The last question; its button
+  // founds the association. The look-around copy gets one plainly named
+  // operating account, so the collect phase can finish without a bank step.
+  await page.getByRole("button", { name: "Create the association" }).click();
   await page.waitForTimeout(1200);
 }
 

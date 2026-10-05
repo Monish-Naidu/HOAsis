@@ -76,14 +76,20 @@ export function householdsNeedingBooks(draft: CommunityDraft): (DraftHousehold &
 }
 
 /**
- * Today off the wall clock, as YYYY-MM-DD.
+ * Today off the wall clock, as YYYY-MM-DD, in the reader's own time zone.
  *
  * The product pins its clock per association so demo dates never drift, and
  * that is right everywhere but here: a real board founding a real
  * association needs the real date for "balances as of" and "first bill".
  * Only the books question and the follow-up call read it, and the books
  * question is never in the prerendered HTML, so there is nothing to mismatch.
+ *
+ * Built from the local date parts. `toISOString` is the UTC date, which on a
+ * US evening is already tomorrow, and the form offered a balance date and a
+ * first bill a day ahead of the person typing. The clock is a parameter so a
+ * test can hold it still.
  */
-export function wallToday(): string {
-  return new Date().toISOString().slice(0, 10);
+export function wallToday(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }

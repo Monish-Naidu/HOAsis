@@ -55,10 +55,8 @@ type Answers = {
     | "We are taking over from the builder"
     | "We already run our association";
   spaces?: string[];
-  collects?: string[];
   /** Lots to generate from the plat, as the builder would type them. */
   lots?: { from: number; to: number };
-  builder?: string;
   /** For an established association: where it is coming from. */
   previously?: "A management company" | "Another platform" | "Nothing yet";
 };
@@ -84,9 +82,15 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await page.getByLabel(/State/i).selectOption({ label: a.state });
   await step(page);
 
-  // The community: kind of homes, then what each pays, what is shared, who
-  // is setting up, what else is billed. The two multi-selects are
+  // The community: who is setting up (which words every later screen uses),
+  // kind of homes, what each pays, what is shared. Shared spaces are
   // legitimately empty.
+  await page.getByRole("button", { name: new RegExp(a.origin) }).click();
+  // Owners who already run it are asked where they are coming from.
+  if (a.origin === "We already run our association") {
+    await page.getByRole("button", { name: new RegExp(a.previously ?? "Another platform") }).click();
+  }
+  await step(page);
   await page.getByRole("button", { name: new RegExp(a.property) }).click();
   await step(page);
   await page.getByLabel(/Each home pays/i).fill(a.dues);
@@ -95,31 +99,15 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
     await page.getByRole("button", { name: new RegExp(`^${space}$`) }).click();
   }
   await step(page);
-  await page.getByRole("button", { name: new RegExp(a.origin) }).click();
-  // Owners who already run it are asked where they are coming from.
-  if (a.origin === "We already run our association") {
-    await page.getByRole("button", { name: new RegExp(a.previously ?? "Another platform") }).click();
-  }
-  await step(page);
-  for (const collect of a.collects ?? []) {
-    await page.getByRole("button", { name: new RegExp(collect) }).click();
-  }
-  await step(page);
 
-  // The books: fiscal year and first bill, taken as offered.
-  await step(page);
-
-  // The homes: which is yours, who built it, and the plat.
+  // The homes: which is yours, and the plat.
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
   await page.getByLabel("Your home address").fill("1 Founder Way");
-  // An established association's number is optional and says so.
+  // Where homes go by number the founder's number is required; for detached
+  // homes by address it is optional. Filled either way.
   await page.getByLabel(/^(Lot|Home|Unit) number/).fill("1");
   await step(page);
-  if ((await page.getByLabel("Builder name").count()) > 0) {
-    if (a.builder) await page.getByLabel("Builder name").fill(a.builder);
-    await step(page);
-  }
   // A builder's homes come in phases; an established association's in
   // groups. At least one range is required, so a test that names none gets
   // a small default.
@@ -139,8 +127,9 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await page.waitForTimeout(300);
   await step(page);
 
-  // Bank. Skipping is a supported path, and either button founds it.
-  await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
+  // When billing starts, taken as offered. It is the last question and
+  // its button founds the association.
+  await page.getByRole("button", { name: "Create the association" }).click();
   await page.waitForTimeout(1200);
 }
 
@@ -154,6 +143,11 @@ test.describe("the three questions", () => {
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
     await step(page);
     const go = page.getByRole("button", { name: /^Continue/ });
+    await expect(go, "an unanswered origin let the board through").toBeDisabled();
+    await page.getByRole("button", { name: /We are building the community/ }).click();
+    await expect(go, "the origin was answered and still blocked").toBeEnabled();
+    await step(page);
+
     await expect(go, "an unanswered kind of homes let the board through").toBeDisabled();
     await page.getByRole("button", { name: /Detached homes/ }).click();
     await expect(go, "the kind of homes was answered and still blocked").toBeEnabled();
@@ -165,17 +159,8 @@ test.describe("the three questions", () => {
     await expect(page.getByRole("button", { name: "Nothing shared" })).toBeVisible();
     await step(page);
 
-    await expect(go, "an unanswered origin let the board through").toBeDisabled();
-    await page.getByRole("button", { name: /We are building the community/ }).click();
-    await expect(go, "the origin was answered and still blocked").toBeEnabled();
-    await step(page);
-
-    // Just dues is an answer, and the default one, so this screen never blocks.
-    await expect(page.getByRole("button", { name: /^Just dues/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await expect(go).toBeEnabled();
+    // Nobody founds an association without saying who they are.
+    await expect(go, "a blank name and email let the board through").toBeDisabled();
   });
 
   test("names the two situations it supports, and what each one changes", async ({
@@ -187,11 +172,6 @@ test.describe("the three questions", () => {
     await step(page);
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
-    await step(page);
-    await page.getByRole("button", { name: /Detached homes/ }).click();
-    await step(page);
-    await page.getByLabel(/Each home pays/i).fill("120");
-    await step(page);
     await step(page);
 
     const health = await inspect(page);
@@ -271,7 +251,6 @@ test.describe("the plan is built from the answers", () => {
       property: "Condominiums",
       origin: "We are taking over from the builder",
       spaces: ["Pool", "Gym"],
-      collects: ["Utilities we pass on"],
     });
 
     await page.goto("/board/setup");
@@ -327,17 +306,15 @@ test.describe("getting to money", () => {
       dues: "100",
       property: "Detached homes",
       origin: "We are building the community",
-      builder: "Ridgeline Homes",
       lots: { from: 1, to: 12 },
     });
 
     await page.goto("/board/homeowners");
     const health = await expectHealthy(page, "roster generated from the plat");
-    // An unsold lot is not vacant. Somebody owns it and owes the assessment,
-    // and a roster that leaves those out is a budget that is short.
-    expect(health.text, "the builder is not named against its own lots").toContain(
-      "Ridgeline Homes",
-    );
+    // An unsold lot is not vacant. It owes the assessment, and a roster that
+    // leaves those out is a budget that is short. The builder setting the
+    // community up says "Not sold yet"; no builder's name is asked or shown.
+    expect(health.text, "the unsold lots are not on the roster").toContain("Not sold yet");
     // Twelve lots, of which the founder holds one.
     // The roster's All filter carries the count.
     expect(health.text, "the homes never arrived").toMatch(/All\s*12\b/);
@@ -479,7 +456,6 @@ test.describe("the first weeks of a community still being built", () => {
       dues: "120",
       property: "Detached homes",
       origin: "We are building the community",
-      builder: "Greenfield Homes",
     });
 
     const health = await inspect(page);
@@ -654,6 +630,8 @@ test.describe("a community with more than one kind of home", () => {
     await step(page);
 
     // Two kinds picked. Both stay pressed.
+    await page.getByRole("button", { name: /We are building the community/ }).click();
+    await step(page);
     await page.getByRole("button", { name: /Townhomes/ }).click();
     await page.getByRole("button", { name: /Condominiums/ }).click();
     await expect(page.getByRole("button", { name: /Townhomes/ })).toHaveAttribute("aria-pressed", "true");
@@ -666,16 +644,11 @@ test.describe("a community with more than one kind of home", () => {
     await page.getByLabel("Condos pay").fill("420");
     await step(page);
     await step(page); // nothing shared
-    await page.getByRole("button", { name: /We are building the community/ }).click();
-    await step(page);
-    await step(page); // just dues
-    await step(page); // the books, as offered
 
     await page.getByLabel("Your name").fill("Pat Founder");
     await page.getByLabel("Your email").fill("pat@example.com");
     await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("25");
     await step(page);
-    await step(page); // builder, not sure yet
 
     // Two ranges: townhomes 1 to 20, a condo building 21 to 40.
     await page.getByLabel(/^Phase 1 first lot$/).fill("1");
@@ -692,7 +665,7 @@ test.describe("a community with more than one kind of home", () => {
     // 20 x 300 + 20 x 420, the founder's condo included.
     expect(summary.text).toContain("$14,400 per month");
     await step(page);
-    await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
+    await page.getByRole("button", { name: "Create the association" }).click();
     await page.waitForTimeout(1200);
 
     await page.goto("/board/homeowners");
@@ -757,15 +730,13 @@ test.describe("get started and signing up are the same flow", () => {
     await page.getByLabel(/City/i).fill("Bothell");
     await page.getByLabel(/State/i).selectOption({ label: "Washington" });
     await step(page);
+    await page.getByRole("button", { name: /We are building the community/ }).click();
+    await step(page);
     await page.getByRole("button", { name: /Detached homes/ }).click();
     await step(page);
     await page.getByLabel(/Each home pays/i).fill("120");
     await step(page);
-    await step(page);
-    await page.getByRole("button", { name: /We are building the community/ }).click();
-    await step(page);
-    await step(page);
-    await step(page); // the books, as offered
+    await step(page); // nothing shared
     await expect(page.getByLabel("Your name"), "the name was not carried forward").toHaveValue(
       "Pat Founder",
     );

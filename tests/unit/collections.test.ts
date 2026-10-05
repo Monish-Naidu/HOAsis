@@ -4,6 +4,7 @@ import {
   collectionsLadder,
   policyFor,
   policyProblems,
+  policyWithLateFee,
   stageFor,
 } from "@/lib/collections";
 import { mehrMeadows } from "@/lib/data/communities";
@@ -189,6 +190,20 @@ describe("the board's policy", () => {
     expect(policy.lateFeeCents).toBe(50_00);
     expect(policy.counselDay).toBe(120);
     expect(policy.reminderDay).toBe(P.reminderDay);
+  });
+
+  it("starts with no late fee until the board sets one", () => {
+    expect(P.lateFeeCents).toBe(0);
+    expect(policyFor({}).lateFeeCents).toBe(0);
+  });
+
+  it("makes a policy from a founder's fee, keeping the ladder in order", () => {
+    expect(policyWithLateFee(0, 30)).toEqual(P);
+    const p = policyWithLateFee(25_00, 30);
+    expect(p).toMatchObject({ lateFeeCents: 25_00, lateNoticeDay: 30 });
+    expect(policyProblems(policyWithLateFee(25_00, 2))).toEqual([]);
+    expect(policyProblems(policyWithLateFee(25_00, 120))).toEqual([]);
+    expect(policyWithLateFee(25_00, 1)).toEqual(P);
   });
 
   it("accepts the default and a zero fee", () => {

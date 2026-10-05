@@ -11,6 +11,7 @@ import { wordingFor } from "@/lib/wording";
 import { homeTypesOf, soleType } from "@/lib/home-types";
 import { expandPhases, lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor } from "@/lib/lots";
 import { addDays, nextDueOnOrAfter } from "@/lib/utils";
+import { policyWithLateFee } from "@/lib/collections";
 
 /**
  * Defaults nobody is asked about during setup.
@@ -146,18 +147,18 @@ export interface CommunityDraft {
    */
   parkedHouseholds?: DraftHousehold[];
   /**
-   * Who built it, when the association knows.
-   *
-   * Named on the roster against every lot that has not sold, because an unsold
-   * lot is not vacant: somebody owns it and owes the assessment on it, and a
-   * roster that leaves those blank is a budget that is short.
+   * The late fee the founder chose on the dues question. Unset or `charge`
+   * false means no fee, which is what a new association starts with.
    */
-  builderName?: string;
+  lateFee?: { charge: boolean; cents: Cents; days: number };
   /** What the plat calls a lot. Printed as part of the number. */
   lotPrefix?: string;
   /** The ranges the homes were generated from, kept so they can be edited. */
   phases?: LotPhase[];
-  /** Where dues land. Optional only because a board can connect it later. */
+  /**
+   * Not asked by the wizard any more: money goes through Stripe, set up after
+   * the association exists. Kept because the create path still honours one.
+   */
   bankAccount?: BankAccount;
 
   /**
@@ -371,13 +372,44 @@ export function homesAnswered(draft: CommunityDraft): boolean {
   return expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0;
 }
 
+/** The collections policy the draft's late fee answer makes: no fee unless one was chosen. */
+export function draftCollectionPolicy(draft: CommunityDraft) {
+  const fee = draft.lateFee;
+  return fee?.charge ? policyWithLateFee(fee.cents, fee.days) : policyWithLateFee(0, 0);
+}
+
+/**
+ * Keeps the founder inside the ranges when homes are entered by number.
+ *
+ * A founder whose number is blank or matches no range used to become a home
+ * of their own, keyed by their address, beside the homes the ranges made:
+ * twelve units typed, thirteen created and billed. Where the founder is not
+ * in the ranges they take the first home nobody is named on, so the count
+ * stays what was typed. Addresses and unranged lists are left alone, as is a
+ * list with no free home to give.
+ */
+function placeFounder(draft: CommunityDraft): CommunityDraft {
+  const phases = draft.phases ?? [];
+  const byNumber = (draft.homeNaming ?? defaultHomeNaming(draft)) === "numbers";
+  if (!byNumber || !phases.length) return draft;
+  const mine = founderLabel(draft);
+  const lots = expandPhases(phases, draft.lotPrefix ?? "").map((l) => l.trim());
+  if (mine && lots.includes(mine)) return draft;
+  const free = draft.households.find(
+    (h) => h.unit.trim() !== "" && !h.name.trim() && !h.email.trim() && lots.includes(h.unit.trim()),
+  );
+  if (!free) return draft;
+  return { ...draft, founder: { ...draft.founder, unit: free.unit.trim() } };
+}
+
 /**
  * The draft as it is handed to whichever thing creates the association.
  *
  * Blank rows from the address list are dropped, the founder's key is settled,
  * and everything is trimmed once here rather than in two creators.
  */
-export function finalizeDraft(draft: CommunityDraft): CommunityDraft {
+export function finalizeDraft(entered: CommunityDraft): CommunityDraft {
+  const draft = placeFounder(entered);
   const unit = founderLabel(draft);
   const types = homeTypesOf(draft);
   const sole = soleType(types);
@@ -457,10 +489,10 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     homeType: draft.founder.homeType,
   };
 
-  // An unsold lot is held by the builder, and saying so on the roster is the
-  // whole point of creating it. A blank row reads as missing data; a row
-  // naming the builder reads as the assessment somebody owes.
-  const unsoldLabel = draft.builderName?.trim() || "Unsold";
+  // A home with nobody named. Only the builder setting the community up can
+  // say it has not sold; a turnover board's neighbours and an established
+  // association's unnamed homes are not the builder's.
+  const unsoldLabel = draft.origin === "builder" ? "Not sold yet" : "No owner listed";
 
   const otherOwners: Owner[] = otherHomes(draft).map((household) => {
     const sold = Boolean(household.name.trim());
@@ -478,6 +510,9 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       standing: "current",
       daysPastDue: 0,
       homeType: household.homeType,
+      // Marked as the real data layer marks them, so the roster badge does
+      // not read "Paid up" beside a home nobody owns.
+      placeholder: !sold,
     };
   });
 
@@ -559,13 +594,15 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       paymentFeePaidBy: "association",
       paymentFeeWaivedOnAch: true,
       forumEnabled: true,
+      collectionPolicy: draftCollectionPolicy(draft),
     },
 
     owners,
     accounts: [founderAccount, ...otherAccounts],
     instruments: [],
 
-    // Nothing financial exists until they connect a bank and record something.
+    // Nothing financial exists until they record something. No bank is
+    // claimed: payments are set up after founding, through Stripe.
     bankAccounts: draft.bankAccount ? [draft.bankAccount] : [],
     ledger: [],
     budget: [
