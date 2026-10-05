@@ -65,6 +65,8 @@ pnpm db:verify    # every database check, against the real Supabase project in .
 and `pnpm db:verify` when it touches SQL, a migration or the data layer; it runs every
 script and lists the ones that failed. A change to the onboarding wizard's steps needs
 the helpers in `tests/e2e/07-onboarding.spec.ts` and `08-complete-setup.spec.ts` updated.
+Every push also runs `pnpm check` and the browser suite in GitHub Actions
+(`.github/workflows/ci.yml`), with no secrets, against the signed-out demo.
 
 All routes should prerender. `pnpm lint` is strict about `setState` in effects, use
 `useSyncExternalStore` for anything reading browser state.

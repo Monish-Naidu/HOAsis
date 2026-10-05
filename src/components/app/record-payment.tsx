@@ -24,7 +24,7 @@ export function RecordPayment({
   /** Dollars as typed, from the search shortcut. */
   initialAmount?: string;
 }) {
-  const { vendors, addPayout } = useAppState();
+  const { vendors, addPayout, isRemote } = useAppState();
   const { notify } = useToast();
 
   const [vendorId, setVendorId] = useState(vendors[0]?.id ?? "");
@@ -46,7 +46,11 @@ export function RecordPayment({
       <CardHeader
         icon={<Receipt className="size-4" />}
         title="Record a payment"
-        subtitle="Including one you already made from your own bank"
+        subtitle={
+          isRemote
+            ? "One you already made from your own bank"
+            : "Including one you already made from your own bank"
+        }
         action={
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="size-4" />
@@ -126,34 +130,45 @@ export function RecordPayment({
           </label>
         </div>
 
-        <label className="block">
-          <span className="text-footnote font-semibold text-fg-muted">Note (optional)</span>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={2}
-            placeholder="Anything the next treasurer should know"
-            aria-label="Note on this payment"
-            className={cn(textareaClass, "mt-1.5 resize-none")}
-          />
-        </label>
+        {/* Two things the demo shows that a real association is not offered
+            yet. Nothing sends a vendor payment for one: a payment queued
+            here would collect its approvals, read "Scheduled" for good, and
+            never reach the vendor or the books. And a payment has nowhere to
+            keep a note, so one typed here would be gone on the next load. A
+            real association records payments it has already made, which is
+            the box left unticked. */}
+        {isRemote ? null : (
+          <>
+            <label className="block">
+              <span className="text-footnote font-semibold text-fg-muted">Note (optional)</span>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                placeholder="Anything the next treasurer should know"
+                aria-label="Note on this payment"
+                className={cn(textareaClass, "mt-1.5 resize-none")}
+              />
+            </label>
 
-        <label className="flex items-start gap-2.5">
-          <Checkbox
-            checked={throughUs}
-            onChange={(e) => setThroughUs(e.target.checked)}
-            className="mt-0.5"
-          />
-          <span className="min-w-0">
-            <span className="block text-body font-medium text-fg">
-              Send this payment through Your HOAsis
-            </span>
-            <span className="block text-footnote leading-snug text-fg-muted">
-              Leave it off to record a payment you already made yourself. The books are the
-              same either way, which is the point.
-            </span>
-          </span>
-        </label>
+            <label className="flex items-start gap-2.5">
+              <Checkbox
+                checked={throughUs}
+                onChange={(e) => setThroughUs(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span className="min-w-0">
+                <span className="block text-body font-medium text-fg">
+                  Send this payment through Your HOAsis
+                </span>
+                <span className="block text-footnote leading-snug text-fg-muted">
+                  Leave it off to record a payment you already made yourself. The books are the
+                  same either way, which is the point.
+                </span>
+              </span>
+            </label>
+          </>
+        )}
 
         <Button
           type="submit"

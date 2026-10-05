@@ -373,20 +373,20 @@ export function SettingsScreen() {
                 <Megaphone className="size-3.5" />
                 Banner text
               </p>
-              <input
+              <DraftField
                 value={settings.banner.title}
-                onChange={(e) =>
-                  updateSettings({ banner: { ...settings.banner, title: e.target.value } })
-                }
+                // Only the field that changed. Sent with the whole banner as
+                // this render saw it, the detail saved a moment later put the
+                // old title back.
+                onCommit={(title) => updateSettings({ banner: { title } })}
                 aria-label="Banner title"
                 className={cn(fieldClass, "font-medium")}
               />
-              <textarea
+              <DraftField
+                multiline
                 rows={2}
                 value={settings.banner.detail}
-                onChange={(e) =>
-                  updateSettings({ banner: { ...settings.banner, detail: e.target.value } })
-                }
+                onCommit={(detail) => updateSettings({ banner: { detail } })}
                 aria-label="Banner detail"
                 className={cn(textareaClass, "mt-2 resize-none")}
               />
@@ -404,9 +404,9 @@ export function SettingsScreen() {
           <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
             <label className="block sm:col-span-2">
               <span className="text-footnote font-semibold text-fg-muted">Carrier</span>
-              <input
+              <DraftField
                 value={community.association.insuranceCarrier ?? ""}
-                onChange={(e) => updateAssociation({ insuranceCarrier: e.target.value })}
+                onCommit={(insuranceCarrier) => updateAssociation({ insuranceCarrier })}
                 placeholder="Farmers Insurance"
                 aria-label="Insurance carrier"
                 className={cn(fieldClass, "mt-1.5")}
@@ -414,9 +414,9 @@ export function SettingsScreen() {
             </label>
             <label className="block">
               <span className="text-footnote font-semibold text-fg-muted">Policy number</span>
-              <input
+              <DraftField
                 value={community.association.insurancePolicyNo ?? ""}
-                onChange={(e) => updateAssociation({ insurancePolicyNo: e.target.value })}
+                onCommit={(insurancePolicyNo) => updateAssociation({ insurancePolicyNo })}
                 placeholder="WA-CA-4471982"
                 aria-label="Policy number"
                 className={cn(fieldClass, "mt-1.5")}
@@ -966,6 +966,74 @@ type OnboardingStatus =
   | { name: "needs"; needs: string[] }
   | { name: "checking" }
   | { name: "live"; payout: { bank: string; last4: string } | null };
+
+/**
+ * A text field that keeps what is being typed to itself and saves once, when
+ * the field is left (or on Enter, for a single line).
+ *
+ * These fields used to save on every keystroke. For a real association the
+ * value on screen is the loaded record, which only moves after the write and
+ * a full re-read, so each key was put back to the old text before the next
+ * one landed: typing a carrier's name saved a letter or two of it, and every
+ * key was its own write and its own line in the activity record.
+ *
+ * When the saved value changes underneath (the save landed, or the person
+ * switched association) the draft follows it, but never while the field is
+ * being typed in: an earlier save landing must not wipe the words typed
+ * since. That is done while rendering, not in an effect, so there is no
+ * frame showing the last association's text.
+ */
+export function DraftField({
+  value,
+  onCommit,
+  multiline = false,
+  ...rest
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  multiline?: boolean;
+  rows?: number;
+  placeholder?: string;
+  className?: string;
+  "aria-label": string;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [seen, setSeen] = useState(value);
+  const [typing, setTyping] = useState(false);
+  if (value !== seen && !typing) {
+    setSeen(value);
+    setDraft(value);
+  }
+  const commit = () => {
+    setTyping(false);
+    // What is typed stays on screen until the saved value next moves, which
+    // for a real association is when the write has been read back.
+    setSeen(value);
+    const next = draft.trim();
+    if (next !== draft) setDraft(next);
+    if (next !== value) onCommit(next);
+  };
+  return multiline ? (
+    <textarea
+      {...rest}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onFocus={() => setTyping(true)}
+      onBlur={commit}
+    />
+  ) : (
+    <input
+      {...rest}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onFocus={() => setTyping(true)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      onBlur={commit}
+    />
+  );
+}
 
 const CHECKING_POLL_MS = 10_000;
 

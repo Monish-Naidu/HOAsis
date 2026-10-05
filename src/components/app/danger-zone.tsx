@@ -10,6 +10,7 @@ import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { loadRemote } from "@/lib/data/remote-store";
 import { signOutOfSupabase } from "@/lib/auth";
+import { subscriptionExit } from "@/lib/stripe/subscription-exit";
 import { cn } from "@/lib/utils";
 
 /**
@@ -42,7 +43,13 @@ export function DangerZone() {
 
   const isPresident = account?.role === "president";
   const others = community.accounts.filter((a) => a.id !== account?.id);
-  const canceled = community.association.subscriptionStatus === "canceled";
+  // Where a cancel has to happen. A Stripe subscription on file is ended on
+  // Stripe's page, because marking our own row leaves the card being charged.
+  const exit = subscriptionExit({
+    status: community.association.subscriptionStatus,
+    subscriptionId: community.association.billing?.subscriptionId,
+  });
+  const canceled = exit === "restart";
 
   // A demo has nothing to cancel or delete. What it can do is start over,
   // which used to be a button in the page header, beside the title, where a
@@ -89,6 +96,27 @@ export function DangerZone() {
       return false;
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Stripe's hosted billing page, the same one Settings opens to manage the
+  // card. The cancel is made there and the billing webhook writes the result.
+  async function openBillingPage() {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/billing/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ associationId: community.id }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "Could not reach Stripe");
+      }
+      window.location.assign(data.url);
+    } catch (error) {
+      setBusy(false);
+      notify(error instanceof Error ? error.message : "Could not reach Stripe", "warn");
     }
   }
 
@@ -224,6 +252,26 @@ export function DangerZone() {
             >
               Restart billing
             </Button>
+          ) : exit === "portal" ? (
+            <>
+              <Callout tone="info" title="Your records stay put">
+                Cancelling stops the bill. It does not delete anything, and it does not lock
+                anybody out. Your books, documents and history remain exactly as they are.
+              </Callout>
+              <p className="text-footnote leading-relaxed text-fg-muted">
+                The card is billed through Stripe, so the cancel is made on Stripe&apos;s
+                billing page. This screen follows once Stripe confirms it.
+              </p>
+              <Button
+                variant="secondary"
+                size="md"
+                className="self-start"
+                disabled={busy}
+                onClick={openBillingPage}
+              >
+                {busy ? "Opening…" : "Cancel on Stripe's page"}
+              </Button>
+            </>
           ) : (
             <>
               <label className="block">
@@ -267,7 +315,13 @@ export function DangerZone() {
           <Row
             icon={<Trash2 className="size-4" />}
             title="Delete this association"
-            detail="Removes it for everybody. Recoverable for thirty days, then gone."
+            // The database refuses a delete while a paid subscription is on
+            // file (migration 0073), and said so only in a toast afterwards.
+            detail={
+              community.association.billing?.subscriptionId
+                ? "Removes it for everybody. Recoverable for thirty days, then gone. Cancel the subscription first: it cannot be deleted while billing is on file."
+                : "Removes it for everybody. Recoverable for thirty days, then gone."
+            }
             action="Delete"
             tone="danger"
             open={flow === "delete"}

@@ -284,6 +284,9 @@ try {
 
   /* ---------------------------------------------------------- amending a bylaw */
 
+  // The closing date is still ahead while the homes vote: a vote is refused
+  // once it is more than a day gone (0076), and the first of this month
+  // usually is. It is set to the first once the votes are in.
   const { data: ballot } = await treasurer.client.from("ballots").insert({
     association_id: hoa,
     title: "Amend Article VII to permit rooftop solar",
@@ -291,7 +294,7 @@ try {
     kind: "amendment",
     status: "open",
     opens_on: monthsAgo(1),
-    closes_on: monthsAgo(0),
+    closes_on: monthsAgo(-1),
     quorum_required: 3,
     threshold_label: "Two thirds of votes cast",
   }).select().single();
@@ -324,6 +327,7 @@ try {
     p_ballot_id: ballot.id, p_option_id: options[0].id,
   });
   check("somebody who sold cannot vote", Boolean(sellerVote), sellerVote?.message?.slice(0, 45) ?? "no error");
+  await treasurer.client.from("ballots").update({ closes_on: monthsAgo(0) }).eq("id", ballot.id);
 
   /* ------------------------------------------------------------- vendors */
 
@@ -404,7 +408,10 @@ try {
   for (const id of cleanup.associations) {
     await admin.from("memberships").update({ role: "resident" })
       .eq("association_id", id).eq("role", "president");
-    await admin.from("associations").delete().eq("id", id);
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) check("cleanup removed the association", false, error.message);
   }
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }

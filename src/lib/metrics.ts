@@ -1,6 +1,7 @@
 import type { Community } from "@/lib/data/community";
 import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
+import { ballotPhase } from "@/lib/phases";
 import { daysFromToday, money } from "@/lib/utils";
 import { totalDues } from "@/lib/home-types";
 
@@ -73,9 +74,14 @@ export function lateFeesOwed(c: Community): number {
     lines.forEach((line, i) => {
       if (line.balanceAfterCents <= 0) since = i + 1;
     });
+    let fees = 0;
     for (const line of lines.slice(since)) {
-      if (line.kind === "charge" && /late fee/i.test(line.label)) total += line.amountCents;
+      if (line.kind === "charge" && /late fee/i.test(line.label)) fees += line.amountCents;
     }
+    // Never more than the household still owes. $325 billed and $310 paid
+    // leaves $15 past due, and "$15 past due, $25 of it late fees" is a
+    // sentence nobody can add up. The database caps its figure the same way.
+    total += Math.min(owner.balanceCents, fees);
   }
   return total;
 }
@@ -997,7 +1003,10 @@ export function calendarEntries(c: Community) {
   }
   for (const b of c.ballots) {
     if (b.audience !== "owners") continue;
-    if (b.status === "scheduled") {
+    // By phase, so a ballot past its closing date drops its "Last day to
+    // vote" row the same way one the board closed by hand does.
+    const phase = ballotPhase(b);
+    if (phase === "scheduled") {
       rows.push({
         id: `cal-${b.id}-open`,
         date: b.opensDate,
@@ -1007,7 +1016,7 @@ export function calendarEntries(c: Community) {
         href: "/resident/vote",
       });
     }
-    if (b.status === "open" || b.status === "scheduled") {
+    if (phase === "open" || phase === "scheduled") {
       rows.push({
         id: `cal-${b.id}-close`,
         date: b.closesDate,
@@ -1080,6 +1089,18 @@ export function communitySlug(c: Community): string {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "") || "association"
   );
+}
+
+/**
+ * The address vendors email bills to, or null where there is none to give.
+ *
+ * Nothing receives mail at it yet. In the demo it shows what the inbox will
+ * look like. A real board that copied it and handed it to the landscaper
+ * had the invoice bounce, so a real association is not shown one until mail
+ * sent there is kept.
+ */
+export function invoiceAddress(c: Community, isRemote: boolean): string | null {
+  return isRemote ? null : `invoices@${communitySlug(c)}.yourhoasis.com`;
 }
 
 /** Where an association publishes the records it has to make available. */

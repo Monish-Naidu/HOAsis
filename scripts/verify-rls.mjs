@@ -316,11 +316,70 @@ async function run() {
       String((treasurerRows ?? []).length),
     );
   }
+
+  // The email on a profile is not the person's to set (0066). Two board
+  // functions seat people by it, so writing a neighbour's address here was
+  // a way to be handed their home at the next roster import.
+  {
+    const { error } = await asResident
+      .from("profiles")
+      .update({ email: s.neighbor.email })
+      .eq("id", s.resident.id);
+    const { data: after } = await admin
+      .from("profiles")
+      .select("email")
+      .eq("id", s.resident.id)
+      .single();
+    check(
+      "a person cannot change the email on their own profile",
+      Boolean(error) && after?.email === s.resident.email,
+      error?.message ?? `now ${after?.email}`,
+    );
+
+    const { error: nameError } = await asResident
+      .from("profiles")
+      .update({ full_name: "Renamed Resident", phone: "425 555 0100" })
+      .eq("id", s.resident.id);
+    check(
+      "but can still change their own name and phone",
+      !nameError,
+      nameError?.message ?? "",
+    );
+
+    const { error: homeError } = await asResident
+      .from("profiles")
+      .update({ home_association_id: s.alpha.id })
+      .eq("id", s.resident.id);
+    const { data: home } = await admin
+      .from("profiles")
+      .select("home_association_id")
+      .eq("id", s.resident.id)
+      .single();
+    check(
+      "and choose the association they land in",
+      !homeError && home?.home_association_id === s.alpha.id,
+      homeError?.message ?? String(home?.home_association_id),
+    );
+
+    const { data: stolen } = await asResident
+      .from("profiles")
+      .update({ full_name: "Not me" })
+      .eq("id", s.neighbor.id)
+      .select("id");
+    check(
+      "nobody edits another person's profile",
+      (stolen ?? []).length === 0,
+      `${(stolen ?? []).length} rows`,
+    );
+  }
 }
 
 async function cleanup() {
   for (const id of created.associations) {
-    await admin.from("associations").delete().eq("id", id);
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) check("cleanup removed the association", false, error.message);
   }
   for (const id of created.users) {
     await admin.auth.admin.deleteUser(id).catch(() => {});

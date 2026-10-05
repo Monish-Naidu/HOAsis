@@ -9,6 +9,7 @@ import {
   delinquency,
   duesCollection,
   filterLedger,
+  invoiceAddress,
   lateFeesOwed,
   ledgerTotals,
   ledgerYears,
@@ -383,7 +384,7 @@ describe("lateFeesOwed", () => {
   ): ChargeLine => ({ id, date, label, kind: amountCents < 0 ? "payment" : "charge", amountCents, balanceAfterCents });
   const owner = (id: string, balanceCents: number) => ({ ...mehrMeadows.owners[0], id, balanceCents });
 
-  // Four statements written out by hand, each kept newest first as the app
+  // Five statements written out by hand, each kept newest first as the app
   // keeps them. Dues are $300 and a late fee is $25.
   const statements: Record<string, ChargeLine[]> = {
     // Never back to zero: both fees are still owed.
@@ -409,6 +410,13 @@ describe("lateFeesOwed", () => {
       line("s2", "2026-07-16", "Late fee", 2_500, 32_500),
       line("s1", "2026-07-01", "July dues", 30_000, 30_000),
     ],
+    // Billed $325 and paid $310 of it without ever reaching zero: $15 is
+    // owed, so $15 is the most that can be fees, not the whole $25.
+    partly: [
+      line("y3", "2026-07-20", "Payment", -31_000, 1_500),
+      line("y2", "2026-07-16", "Late fee", 2_500, 32_500),
+      line("y1", "2026-07-01", "July dues", 30_000, 30_000),
+    ],
     // Owes nothing, so an old fee on the statement is not a fee owed.
     paid: [
       line("p3", "2026-07-20", "Payment", -32_500, 0),
@@ -419,7 +427,13 @@ describe("lateFeesOwed", () => {
   const c: Community = {
     ...mehrMeadows,
     history: undefined,
-    owners: [owner("never", 65_000), owner("again", 32_500), owner("sameDay", 20_000), owner("paid", 0)],
+    owners: [
+      owner("never", 65_000),
+      owner("again", 32_500),
+      owner("sameDay", 20_000),
+      owner("partly", 1_500),
+      owner("paid", 0),
+    ],
     ownerCharges: statements,
   };
   const only = (id: string): Community => ({ ...c, owners: c.owners.filter((o) => o.id === id) });
@@ -428,13 +442,27 @@ describe("lateFeesOwed", () => {
     expect(lateFeesOwed(only("never"))).toBe(5_000);
     expect(lateFeesOwed(only("again"))).toBe(2_500);
     expect(lateFeesOwed(only("paid"))).toBe(0);
-    expect(lateFeesOwed(c)).toBe(7_500);
+    expect(lateFeesOwed(c)).toBe(9_000);
+  });
+
+  it("never counts more in fees than the household still owes", () => {
+    expect(lateFeesOwed(only("partly"))).toBe(1_500);
   });
 
   it("reads a fee and the payment that cleared it the same day in the order they happened", () => {
     // Kept newest first and sorted by date alone, the payment came before
     // the fee, and a fee paid that afternoon was counted as still owed.
     expect(lateFeesOwed(only("sameDay"))).toBe(0);
+  });
+});
+
+describe("invoiceAddress", () => {
+  it("shows the demo the address its seeded invoices arrived at", () => {
+    expect(invoiceAddress(mehrMeadows, false)).toMatch(/^invoices@[a-z0-9-]+\.yourhoasis\.com$/);
+  });
+
+  it("gives a real association no address, since mail sent to it is not kept", () => {
+    expect(invoiceAddress(mehrMeadows, true)).toBeNull();
   });
 });
 

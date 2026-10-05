@@ -133,10 +133,113 @@ try {
     p_stripe_payment_intent_id: intentA, p_amount_cents: 1,
   });
   check("a signed-in person cannot record a refund", Boolean(browserRefund), browserRefund?.message ?? "allowed");
+
+  // 5. Partial refunds, and a refund larger than what the statement was
+  // credited (0070). Stripe sends the running total refunded on the charge,
+  // so each call books the difference from the last. The $25.00 payment
+  // from section 2 stands for a charge of $27.00: dues plus a $2.00 fee the
+  // owner paid on top, as older payments were.
+  const refundsOf = async () => {
+    const { data: lines } = await admin.from("charges").select("amount_cents, category").eq("unit_id", unit).ilike("label", "Refund%");
+    const { data: books } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", pendingRow.id).lt("amount_cents", 0);
+    const { data: row } = await admin.from("payments").select("state, refunded_cents").eq("id", pendingRow.id).single();
+    return {
+      // Section 4 left one $60.00 line on this home's statement.
+      statement: (lines ?? []).reduce((t, l) => t + l.amount_cents, 0) - 6000,
+      lines: (lines ?? []).length - 1,
+      asDues: (lines ?? []).filter((l) => l.category === "dues").length,
+      books: (books ?? []).reduce((t, e) => t + e.amount_cents, 0),
+      state: row?.state,
+      total: row?.refunded_cents,
+    };
+  };
+
+  await admin.rpc("record_refund", { p_stripe_payment_intent_id: intentB, p_amount_cents: 1000 });
+  const first = await refundsOf();
+  check("a partial refund books what came back and leaves the payment settled",
+    first.statement === 1000 && first.books === -1000 && first.state === "settled" && first.total === 1000, JSON.stringify(first));
+
+  await admin.rpc("record_refund", { p_stripe_payment_intent_id: intentB, p_amount_cents: 1800 });
+  const second = await refundsOf();
+  check("a second partial refund books only the difference",
+    second.statement === 1800 && second.books === -1800 && second.lines === 2 && second.state === "settled", JSON.stringify(second));
+
+  await admin.rpc("record_refund", { p_stripe_payment_intent_id: intentB, p_amount_cents: 1800 });
+  await admin.rpc("record_refund", { p_stripe_payment_intent_id: intentB, p_amount_cents: 1000 });
+  const replayed = await refundsOf();
+  check("a redelivered or late event books nothing",
+    replayed.statement === 1800 && replayed.books === -1800 && replayed.lines === 2, JSON.stringify(replayed));
+
+  await admin.rpc("record_refund", { p_stripe_payment_intent_id: intentB, p_amount_cents: 2700 });
+  const whole = await refundsOf();
+  check("a full refund never puts more on the statement than the payment took off",
+    whole.statement === 2500 && whole.state === "refunded" && whole.total === 2700, JSON.stringify(whole));
+  check("while the books lose everything that left the bank", whole.books === -2700, String(whole.books));
+  check("and no refund line is filed as dues", whole.asDues === 0, `${whole.asDues} lines`);
+
+  // 6. A refund that arrives before its payment (0078). charge.refunded can
+  // be delivered ahead of a delayed payment_intent.succeeded, and finds the
+  // pending row. Booked there, a full refund marked the row refunded, and
+  // record_payment then did nothing: the refund was on the books and the
+  // payment never was. It has to book nothing and answer null, which the
+  // webhook turns into "send it again".
+  const intentC = `pi_verify_c_${stamp}`;
+  const { data: waitingRow } = await admin.from("payments").insert({
+    association_id: associationId, unit_id: unit, amount_cents: 3000,
+    rail: "ach", state: "pending", stripe_payment_intent_id: intentC,
+  }).select("id").single();
+  const booksOf = async () => {
+    const { data: lines } = await admin.from("charges").select("amount_cents").eq("unit_id", unit).ilike("label", "Refund%");
+    const { data: credits } = await admin.from("charges").select("amount_cents").eq("unit_id", unit).eq("kind", "payment");
+    const { data: books } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", waitingRow.id);
+    const { data: row } = await admin.from("payments").select("state, refunded_cents").eq("id", waitingRow.id).single();
+    return {
+      refundLines: (lines ?? []).length,
+      credits: (credits ?? []).length,
+      debits: (books ?? []).filter((e) => e.amount_cents < 0).reduce((t, e) => t + e.amount_cents, 0),
+      deposits: (books ?? []).filter((e) => e.amount_cents > 0).length,
+      state: row?.state,
+      total: row?.refunded_cents,
+    };
+  };
+  const before = await booksOf();
+
+  const { data: early, error: earlyError } = await admin.rpc("record_refund", {
+    p_stripe_payment_intent_id: intentC, p_amount_cents: 3000,
+  });
+  const held = await booksOf();
+  check("a refund against a payment still pending books nothing and answers null",
+    !earlyError && early === null && held.state === "pending" && held.total === 0
+      && held.refundLines === before.refundLines && held.debits === 0,
+    earlyError?.message ?? `${early}, ${JSON.stringify(held)}`);
+
+  const { data: lateId, error: lateError } = await admin.rpc("record_payment", {
+    p_unit_id: unit, p_amount_cents: 3000, p_rail: "ach",
+    p_processor_fee_cents: 24, p_stripe_payment_intent_id: intentC,
+  });
+  const arrived = await booksOf();
+  check("the payment that arrives after it is still credited",
+    !lateError && lateId === waitingRow.id && arrived.state === "settled"
+      && arrived.credits === before.credits + 1 && arrived.deposits === 1,
+    lateError?.message ?? JSON.stringify(arrived));
+
+  const { data: resent } = await admin.rpc("record_refund", {
+    p_stripe_payment_intent_id: intentC, p_amount_cents: 3000,
+  });
+  const settledThenRefunded = await booksOf();
+  check("and the refund, sent again, is then booked once against it",
+    resent === waitingRow.id && settledThenRefunded.state === "refunded" && settledThenRefunded.total === 3000
+      && settledThenRefunded.refundLines === before.refundLines + 1 && settledThenRefunded.debits === -3000,
+    `${resent}, ${JSON.stringify(settledThenRefunded)}`);
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
-  for (const id of cleanup.associations) await admin.from("associations").delete().eq("id", id);
+  for (const id of cleanup.associations) {
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) check("cleanup removed the association", false, error.message);
+  }
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }
 

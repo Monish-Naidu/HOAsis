@@ -55,10 +55,12 @@ test.describe("officers", () => {
       for (const tab of tabs) {
         await openTab(page, "/board", tab);
         const health = await expectHealthy(page, `${officer.name} on ${tab}`);
+        // The refusal itself, by its marker. This used to look for a
+        // sentence the app never prints, so it could not fail.
         expect(
-          health.text,
-          `${officer.name} was offered ${tab} and then told they cannot use it`,
-        ).not.toContain("You do not have the");
+          await page.getByTestId("board-refusal").count(),
+          `${officer.name} was offered ${tab} and then told they cannot open it`,
+        ).toBe(0);
       }
     });
   }
@@ -95,7 +97,13 @@ test.describe("officers", () => {
       // shows their own balance. That is theirs to see; what matters is that
       // the board page did not render, so the figures are checked only if
       // the browser is still on it.
-      if (!new URL(page.url()).pathname.startsWith("/board")) continue;
+      const landed = new URL(page.url()).pathname;
+      if (!landed.startsWith("/board")) {
+        // Sent home is the right answer. Sent to sign in would mean the
+        // session never took, and the test would be passing on nothing.
+        expect(landed, `${path} sent a resident somewhere other than their own home`).toBe("/resident");
+        continue;
+      }
 
       // Assert the property rather than the wording, so rephrasing the refusal
       // does not silently turn this test off: whatever it says, the board's
@@ -116,20 +124,45 @@ test.describe("resident experience", () => {
     await seedSession(page, { seat: SEATS.resident, view: "resident" });
   });
 
+  // Rows a module can switch off for everyone. Only these may be absent;
+  // the rest are on every resident's rail, and a missing one is a failure.
+  const MODULE_GATED = new Set(["Community", "Meetings", "Association funds"]);
+
   for (const tab of RESIDENT_TABS) {
     test(`${tab} works`, async ({ page }) => {
       await page.goto("/resident");
       await page.waitForLoadState("networkidle");
 
+      // A row with something waiting carries its count inside the link, so
+      // "Payments" reads "Payments1". Anchoring on the bare label skipped
+      // exactly the rows a resident with a balance most needs to work.
       const present = await page
         .locator(`a[href^="/resident"]`)
-        .filter({ hasText: new RegExp(`^${tab}$`) })
+        .filter({ hasText: new RegExp(`^${tab}\\d*$`) })
         .locator("visible=true")
         .count();
-      test.skip(present === 0, `${tab} is switched off for this association`);
+      if (MODULE_GATED.has(tab)) {
+        test.skip(present === 0, `${tab} is switched off for this association`);
+      } else {
+        expect(present, `${tab} is missing from the resident rail`).toBeGreaterThan(0);
+      }
 
       await openTab(page, "/resident", tab);
       await expectHealthy(page, `resident ${tab}`);
+    });
+  }
+
+  // Not rows on the rail: each lives under another row as a section tab, so
+  // they are opened by address.
+  for (const [name, path] of [
+    ["Voting", "/resident/vote"],
+    ["Account", "/resident/account"],
+  ] as const) {
+    test(`${name} works`, async ({ page }) => {
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+      expect(new URL(page.url()).pathname, `${name} did not open`).toBe(path);
+      await expectHealthy(page, `resident ${name}`);
     });
   }
 

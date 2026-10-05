@@ -1,28 +1,32 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
+  Archive,
   ArrowRight,
   Bell,
   BookOpen,
-  Briefcase,
   CalendarDays,
-  ChartNoAxesColumn,
   Check,
   ChevronRight,
   CircleCheck,
   CircleDollarSign,
-  CircleX,
   ClipboardCheck,
   Clock,
   CreditCard,
   FileText,
-  Headphones,
+  Headset,
+  Landmark,
+  LockOpen,
+  Megaphone,
   MessagesSquare,
+  PencilRuler,
+  PiggyBank,
   ShieldCheck,
   Sparkles,
+  Timer,
+  Truck,
   Video,
   Vote,
-  Zap,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
 import { Avatar, Card, IconTile, type TintName } from "@/components/ui/primitives";
@@ -63,56 +67,67 @@ export const metadata = {
  * with icons. Every item is a promise the product keeps today; the free trial
  * moved to the pricing line, where the question it answers is asked.
  */
-const ASSURANCES: { icon: typeof Zap; label: string }[] = [
-  { icon: Zap, label: "Set up in minutes" },
-  { icon: CreditCard, label: "No card to start" },
-  { icon: CircleX, label: "Cancel whenever" },
-  { icon: Headphones, label: "Live support" },
+const ASSURANCES: { icon: typeof Timer; label: string; tint: TintName }[] = [
+  { icon: Timer, label: "Set up in minutes", tint: "amber" },
+  { icon: CreditCard, label: "No card to start", tint: "teal" },
+  // An open lock, not a cross in a circle: the cross read as an error.
+  { icon: LockOpen, label: "Cancel whenever", tint: "blue" },
+  { icon: Headset, label: "Live support", tint: "violet" },
 ];
 
 /**
- * Every icon on the page wears the one quiet tile, in the brand's blue. They
- * were five hues until 2026-10-04, one per idea, and seventeen coloured tiles
- * down a page read as decoration: the picture at the top is the one loud
- * thing here. Colour is kept for a state (paid, expiring, live), the way the
- * product itself uses it.
+ * A colour means one thing and keeps meaning it, here and in the product:
+ * teal is money and anything approved, blue is people and talking, amber is
+ * time and work waiting, violet is the record (documents, votes, guides),
+ * coral is something that wants attention. For one evening on 2026-10-04
+ * every tile was blue; Monish asked for the colour back where it highlights
+ * something, and for glyphs that say what they are. The tiles are the quiet
+ * two-tone kind (`IconTile`), so five hues read as a system and not as
+ * decoration.
  */
-const BENEFITS: { icon: typeof Clock; title: string; body: string }[] = [
+const BENEFITS: { icon: typeof Clock; tint: TintName; title: string; body: string }[] = [
   {
     icon: Clock,
+    tint: "amber",
     title: "Save time",
     body: "Automate everyday HOA tasks and reduce busywork.",
   },
   {
-    icon: CircleDollarSign,
+    icon: PiggyBank,
+    tint: "teal",
     title: "Save money",
     body: "Get professional tools without professional management fees.",
   },
   {
-    icon: ShieldCheck,
+    icon: Archive,
+    tint: "violet",
     title: "Keep every record",
     body: "Documents, decisions, and money in one place the next board inherits.",
   },
 ];
 
-const POCKET: { icon: typeof Clock; title: string; body: string }[] = [
+const POCKET: { icon: typeof Clock; tint: TintName; title: string; body: string }[] = [
   {
     icon: CircleCheck,
+    tint: "teal",
     title: "Approve",
     body: "Review requests, invoices, and documents on the go.",
   },
   {
     icon: MessagesSquare,
+    tint: "blue",
     title: "Communicate",
     body: "Message homeowners and send notices to everyone.",
   },
   {
     icon: Bell,
+    tint: "amber",
     title: "Stay informed",
     body: "Get real-time updates on what matters most.",
   },
   {
     icon: Video,
+    tint: "violet",
     title: "Meet",
     body: "Hold board meetings anyone can join with a call-in link.",
   },
@@ -438,14 +453,16 @@ function KnowledgeMini() {
  * cards do, so the row reads as the rest of the product and not as a
  * footnote; the grid gives every item the same width.
  */
-const EVERYTHING_ELSE: { label: string; icon: typeof Bell }[] = [
-  { label: "Notices", icon: Bell },
-  { label: "Architectural requests", icon: ClipboardCheck },
-  { label: "Documents", icon: FileText },
-  { label: "Communication", icon: MessagesSquare },
-  { label: "Meetings", icon: CalendarDays },
-  { label: "Voting", icon: Vote },
-  ...(moduleOn("compliance") ? [{ label: "Board guides", icon: BookOpen }] : []),
+const EVERYTHING_ELSE: { label: string; icon: typeof Bell; tint: TintName }[] = [
+  { label: "Notices", icon: Megaphone, tint: "coral" },
+  { label: "Architectural requests", icon: PencilRuler, tint: "blue" },
+  { label: "Documents", icon: FileText, tint: "violet" },
+  { label: "Communication", icon: MessagesSquare, tint: "blue" },
+  { label: "Meetings", icon: CalendarDays, tint: "amber" },
+  { label: "Voting", icon: Vote, tint: "violet" },
+  ...(moduleOn("compliance")
+    ? [{ label: "Board guides", icon: BookOpen, tint: "violet" as TintName }]
+    : []),
 ];
 
 /**
@@ -456,18 +473,22 @@ const EVERYTHING_ELSE: { label: string; icon: typeof Bell }[] = [
 const FEATURES = [
   {
     icon: CreditCard,
+    tint: "teal" as TintName,
     title: "Payments & dues",
     line: "Collected, posted, reconciled.",
     mini: <PaymentsMini />,
   },
   {
-    icon: Briefcase,
+    // The product's own Vendors icon, so the page and the app agree.
+    icon: Truck,
+    tint: "amber" as TintName,
     title: "Vendor management",
     line: "Contracts and invoices, one place.",
     mini: <VendorMini />,
   },
   {
-    icon: ChartNoAxesColumn,
+    icon: Landmark,
+    tint: "teal" as TintName,
     title: "Reserve tracking",
     line: "Know if you're on track.",
     mini: <ReserveMini />,
@@ -475,13 +496,15 @@ const FEATURES = [
   moduleOn("compliance")
     ? {
         icon: ShieldCheck,
-            title: "Compliance updates",
+        tint: "violet" as TintName,
+        title: "Compliance updates",
         line: "Stay ahead of changing laws.",
         mini: <ComplianceMini />,
       }
     : {
         icon: BookOpen,
-            title: "Board guides",
+        tint: "violet" as TintName,
+        title: "Board guides",
         line: "Plain answers for every board job.",
         mini: <KnowledgeMini />,
       },
@@ -604,16 +627,18 @@ function PocketNotices({
 
 function IconRow({
   icon,
+  tint,
   title,
   body,
 }: {
   icon: typeof Clock;
+  tint: TintName;
   title: string;
   body: string;
 }) {
   return (
     <li className="flex items-start gap-4 py-5">
-      <IconTile icon={icon} size="xl" />
+      <IconTile icon={icon} tint={tint} size="xl" />
       <div>
         <p className="text-[19px] font-semibold tracking-[-0.02em] text-fg">{title}</p>
         <p className="mt-1 text-[16px] leading-relaxed text-fg-muted">{body}</p>
@@ -628,16 +653,18 @@ function IconRow({
  */
 function PocketTile({
   icon,
+  tint,
   title,
   body,
 }: {
   icon: typeof Clock;
+  tint: TintName;
   title: string;
   body: string;
 }) {
   return (
     <li className="lift rounded-2xl border border-border bg-surface p-4 shadow-card">
-      <IconTile icon={icon} size="md" />
+      <IconTile icon={icon} tint={tint} size="md" />
       <p className="mt-3 text-[16px] font-semibold tracking-[-0.015em] text-fg">{title}</p>
       <p className="mt-0.5 text-[14px] leading-snug text-fg-muted">{body}</p>
     </li>
@@ -863,9 +890,9 @@ export default function MarketingHome() {
             reads as evenly spaced from edge to edge rather than as a list
             that starts on the left and runs out. */}
         <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-4 gap-y-5 px-5 py-7 text-[15px] font-semibold sm:grid-cols-4 sm:text-[17px] sm:tracking-[-0.01em]">
-          {ASSURANCES.map(({ icon, label }) => (
+          {ASSURANCES.map(({ icon, label, tint }) => (
             <li key={label} className="flex items-center justify-center gap-3">
-              <IconTile icon={icon} size="md" />
+              <IconTile icon={icon} tint={tint} size="md" />
               {label}
             </li>
           ))}
@@ -986,11 +1013,11 @@ export default function MarketingHome() {
               and a sliver; the fifth is the strip underneath now. Each card
               sits at its own height: the minis differ. */}
           <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
-            {FEATURES.map(({ icon, title, line, mini }) => (
+            {FEATURES.map(({ icon, tint, title, line, mini }) => (
               <div key={title} className="w-[300px] shrink-0 snap-start lg:w-auto">
                 <Card className="lift relative overflow-hidden p-6">
                   <div className="flex flex-col items-center text-center">
-                    <IconTile icon={icon} size="xl" />
+                    <IconTile icon={icon} tint={tint} size="xl" />
                     <h3 className="mt-4 text-[19px] font-semibold tracking-[-0.02em] text-fg">
                       {title}
                     </h3>
@@ -1005,7 +1032,7 @@ export default function MarketingHome() {
           <div>
             <Card className="mt-6 overflow-hidden">
               <div className="flex items-center gap-3 border-b border-border/70 px-6 py-4">
-                <IconTile icon={Sparkles} size="sm" />
+                <IconTile icon={Sparkles} tint="neutral" size="sm" />
                 <h3 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
                   And everything else
                 </h3>
@@ -1019,12 +1046,12 @@ export default function MarketingHome() {
               <ul
                 className="grid grid-cols-2 gap-px bg-border/60 sm:grid-cols-3 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none"
               >
-                {EVERYTHING_ELSE.map(({ label, icon }) => (
+                {EVERYTHING_ELSE.map(({ label, icon, tint }) => (
                   <li
                     key={label}
                     className="lift flex flex-col items-center gap-3 bg-surface px-3 py-6 text-center"
                   >
-                    <IconTile icon={icon} size="lg" />
+                    <IconTile icon={icon} tint={tint} size="lg" />
                     <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em] text-fg">
                       <Check className="size-3.5 shrink-0 text-ok" strokeWidth={3} />
                       {label}
@@ -1149,42 +1176,41 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Close. The same neighborhood the page opened on, after dark: every
-          window lit and nobody at a kitchen table with a spreadsheet. It was
-          a stock aerial photograph under a navy wash until 2026-10-04, which
-          put a second kind of picture on a page that opens on a drawn one.
-          The words sit in the picture's own sky, left of the homes; the band
-          is night in both themes, so its inks are fixed. */}
-      <section className="relative isolate overflow-hidden bg-[#070d24] text-navy-50">
-        <Image
-          src="/marketing/hero-night.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="-z-30 object-cover object-[78%_100%]"
-        />
-        {/* Enough dark behind the words to hold them on any crop: from the
-            left on a wide screen, over the whole band on a phone, where the
-            homes sit under the copy rather than beside it. */}
+      {/* Close. The aerial photograph under a navy wash. It was swapped for
+          the night illustration on 2026-10-04 and Monish asked for the
+          photograph back the same evening: he likes it here. */}
+      <section className="relative isolate overflow-hidden bg-navy-900 text-navy-50 dark:bg-navy-800">
+        <Image src="/marketing/aerial.jpg" alt="" fill sizes="100vw" className="-z-30 object-cover" />
         <div
-          className="absolute inset-0 -z-20 bg-[#070d24]/70 lg:bg-transparent lg:bg-gradient-to-r lg:from-[#070d24] lg:via-[#070d24]/70 lg:to-transparent"
+          className="absolute inset-0 -z-20 bg-gradient-to-b from-navy-950/85 via-navy-950/75 to-navy-950/90"
           aria-hidden
         />
-        <div className="mx-auto w-full max-w-6xl px-5 py-24 lg:py-36">
-          <div className="max-w-2xl">
-            <h2 className="text-[36px] font-semibold leading-[1.08] tracking-[-0.035em] sm:text-[52px]">
+        {/* Two pools of colour on the navy, so the band glows rather than
+            sits: blue low left, violet high right. Fixed, because the band
+            is the same navy in both themes. */}
+        <div
+          className="pointer-events-none absolute -bottom-40 -left-24 -z-10 size-[34rem] rounded-full bg-[radial-gradient(closest-side,rgb(63_130_242/0.45),transparent)] blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -right-24 -top-40 -z-10 size-[30rem] rounded-full bg-[radial-gradient(closest-side,rgb(143_118_255/0.4),transparent)] blur-3xl"
+          aria-hidden
+        />
+        <div className="mx-auto w-full max-w-6xl px-5 py-24 text-center">
+          <div>
+            <h2 className="mx-auto max-w-2xl text-[36px] font-semibold leading-tight tracking-[-0.035em] sm:text-[52px]">
               Fast for the board.
               <br />
               Calm for the neighborhood.
             </h2>
-            <p className="mt-4 max-w-md text-[18px] leading-relaxed text-navy-100">
+            <p className="mx-auto mt-4 max-w-lg text-[18px] leading-relaxed text-navy-200">
               Set up your community in minutes. No card to start, {TRIAL_DAYS} days free, cancel
               whenever.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/start"
-                className="press group inline-flex h-12 items-center gap-2 rounded-xl bg-white px-6 text-[16px] font-semibold text-navy-950 shadow-float hover:-translate-y-0.5"
+                className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-white px-6 text-[16px] font-semibold text-navy-950 shadow-float hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-12px_rgb(143_180_255/0.6)]"
               >
                 Get started
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />

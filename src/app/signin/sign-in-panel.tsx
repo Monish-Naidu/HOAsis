@@ -13,7 +13,8 @@ import { requestPasswordReset, signInWithPassword, signUp } from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 import { fetchJoinStatus } from "@/lib/join-status";
-import { useRemote } from "@/lib/data/remote-store";
+import { retryRemote, useRemote } from "@/lib/data/remote-store";
+import { readableLinkError } from "@/lib/email/link-error";
 
 /**
  * Real seats on the real database for trying the product, read at build
@@ -91,7 +92,9 @@ export function SignInPanel() {
   const [busy, setBusy] = useState(false);
   const params = useSearchParams();
   const [notice, setNotice] = useState<{ tone: "danger" | "ok"; text: string } | null>(
-    params.get("error") ? { tone: "danger", text: readableLinkError(params.get("error")!) } : null,
+    params.get("error")
+      ? { tone: "danger", text: readableLinkError(params.get("error")!, params.get("next")) }
+      : null,
   );
 
   function enter(accountId: string) {
@@ -120,7 +123,19 @@ export function SignInPanel() {
       setNotice({ tone: "danger", text: result.message ?? "That test login did not work." });
       return;
     }
+    await reloadAfterFailedLoad();
     router.push(await destinationAfterSignIn(params.get("next")));
+  }
+
+  /**
+   * Somebody whose association failed to load and who signs in again as the
+   * same person: auth sees nobody new and announces nothing, so the failed
+   * load stood until a hard reload. Ask for it again before moving on.
+   * retryRemote reads the store as it is now and does nothing unless the
+   * last load failed, so this is safe after any sign in.
+   */
+  async function reloadAfterFailedLoad() {
+    await retryRemote();
   }
 
   async function submit(e: React.FormEvent) {
@@ -149,6 +164,7 @@ export function SignInPanel() {
       return;
     }
 
+    await reloadAfterFailedLoad();
     // The same question the confirmation link asks: what do they already
     // belong to? Sending every board member to the resident side and making
     // them find the switch was a small daily insult.
@@ -447,16 +463,4 @@ function Field({
       </span>
     </label>
   );
-}
-
-/** Confirmation links fail in a few ordinary ways. Say which. */
-function readableLinkError(raw: string): string {
-  const text = raw.toLowerCase();
-  if (text.includes("expired")) {
-    return "That confirmation link has expired. Sign in below, or create the account again to get a fresh one.";
-  }
-  if (text.includes("already") || text.includes("used")) {
-    return "That link has already been used. Your email is confirmed, so just sign in.";
-  }
-  return "That link did not work. Sign in below and we will sort it out.";
 }

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, EmptyState, IconTile, SectionTitle, TINT_FIELD, type TintName } from "@/components/ui/primitives";
 import { calendarEntries } from "@/lib/metrics";
+import { ballotPhase } from "@/lib/phases";
 import {
   useAppState,
   useCurrentOwner,
@@ -36,7 +37,7 @@ export default function ResidentHome() {
   const { community } = useAppState();
   const live = community.meetings.find((m) => m.status === "live");
   const toVote = community.ballots.filter(
-    (b) => b.audience === "owners" && b.status === "open" && !b.myVoteOptionId,
+    (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
   );
 
   return (
@@ -201,30 +202,29 @@ function AccountSummary() {
 function QuickActions() {
   // Three, and each goes somewhere different. Five tiles used to resolve to
   // three destinations, two of them already in the tab bar.
-  const actions: { href: string; label: string; icon: typeof Wrench }[] = [
-    { href: "/resident/requests/new", label: "New request", icon: Wrench },
-    { href: "/resident/documents", label: "Documents", icon: FileText },
-    { href: "/resident/vote", label: "Vote", icon: Vote },
+  const actions: { href: string; label: string; icon: typeof Wrench; tint: TintName }[] = [
+    { href: "/resident/requests/new", label: "New request", icon: Wrench, tint: "blue" },
+    { href: "/resident/documents", label: "Documents", icon: FileText, tint: "violet" },
+    { href: "/resident/vote", label: "Vote", icon: Vote, tint: "teal" },
   ];
-  // A row of three buttons, no card around them. A card titled "Quick
-  // actions" wrapping three links was the tallest thing on the page after
-  // the photo, for the least information. All three wear the one quiet
-  // field: they were blue, violet and teal, and three colours beside the
-  // balance pulled the eye off the number and the Pay button.
+  // A row of three tinted buttons, no card around them. A card titled
+  // "Quick actions" wrapping three links was the tallest thing on the page
+  // after the photo, for the least information. Each wears the colour its
+  // section wears everywhere else.
   return (
     <nav aria-label="Quick actions" className="grid grid-cols-3 gap-3 @xl:gap-4">
-      {actions.map(({ href, label, icon }) => (
+      {actions.map(({ href, label, icon, tint }) => (
         <Link
           key={label}
           href={href}
           className={cn(
             "press group flex min-h-[4.75rem] flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-center transition-colors @xl:min-h-16 @xl:flex-row @xl:gap-3 @xl:px-4",
-            TINT_FIELD.blue,
+            TINT_FIELD[tint],
           )}
         >
           <IconTile
             icon={icon}
-            tint="blue"
+            tint={tint}
             variant="solid"
             size="md"
             className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"

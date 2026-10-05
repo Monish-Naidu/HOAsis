@@ -239,14 +239,14 @@ describe("requests", () => {
   it("shows a submitted request to the person who filed it", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    act(() => result.current.state.addRequest(draft("own-007")));
+    act(() => void result.current.state.addRequest(draft("own-007")));
     expect(result.current.myRequests.map((r) => r.reference)).toContain("REQ-TEST-1");
   });
 
   it("does not show it to a different household", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    act(() => result.current.state.addRequest(draft("own-007")));
+    act(() => void result.current.state.addRequest(draft("own-007")));
 
     act(() => result.current.state.signIn(MONISH));
     expect(result.current.myRequests.map((r) => r.reference)).not.toContain("REQ-TEST-1");
@@ -256,14 +256,14 @@ describe("requests", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
     const before = bucketRequests(result.current.state.requests).open.length;
-    act(() => result.current.state.addRequest(draft("own-007")));
+    act(() => void result.current.state.addRequest(draft("own-007")));
     expect(bucketRequests(result.current.state.requests).open.length).toBe(before + 1);
   });
 
   it("persists across a reload", () => {
     const first = renderApp();
     act(() => first.result.current.state.signIn(ARYA));
-    act(() => first.result.current.state.addRequest(draft("own-007")));
+    act(() => void first.result.current.state.addRequest(draft("own-007")));
     first.unmount();
 
     const second = renderApp();
@@ -274,10 +274,11 @@ describe("requests", () => {
   it("leaves the queue when decided but never leaves the record", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    act(() =>
-      result.current.state.addRequest(
-        draft("own-007", { reference: "REQ-TEST-2", status: "approved" }),
-      ),
+    act(
+      () =>
+        void result.current.state.addRequest(
+          draft("own-007", { reference: "REQ-TEST-2", status: "approved" }),
+        ),
     );
 
     const buckets = bucketRequests(result.current.myRequests);

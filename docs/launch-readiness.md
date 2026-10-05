@@ -23,7 +23,7 @@ trial converts. **Later** = when a board asks.
 | 9 | **Support inbox and status page.** No support address anywhere in code. `support@yourhoasis.com` (Cloudflare Email Routing), on `/terms`, footer, billing wall, `error.tsx`. Free Instatus page. | Stripe asks for a support URL; a locked-out president needs somewhere to write. | `src/app/error.tsx`, `billing-gate.tsx` |
 | 10 | **Demo text a customer can reach.** (a) `add-method.tsx` says "This prototype has no payment processor" and `pay-flow.tsx:514` renders it inside the `isRemote` branch; delete it there. (b) `invoice-inbox.tsx` shows a vendor forwarding address that is "not wired yet". (c) Landing lists Apple Pay and Google Pay; `applePayDomains.create` is unbuilt. (d) `robots.ts` blocks indexing "for the prototype". (e) Remote bank card reads "matched through today, 0 unreconciled" from constants at `remote.ts:452`. (f) `/about` is placeholder copy. | Each is the word "prototype" or an invented number in front of a customer. | files as named |
 | 11 | **Late fees promised, never charged.** Pay page and policy describe one; nothing books it. Charge on the grace day in the assessments cron, or cut the copy. | Books that ignore the board's own policy. | `src/app/api/assessments/run/route.ts` |
-| 12 | **Keep `/api/dev/reset` out of production.** Gated by `ALLOW_TEST_RESET` only. | One env var away from emptying every customer. | `src/app/api/dev/reset/route.ts` |
+| 12 | **Done 2026-10-04.** `/api/dev/reset`, `/api/dev/associations` and `pnpm db:seed` share four locks: not production, `ALLOW_TEST_RESET=true`, `TEST_RESET_PROJECT_REF` equal to the project in `NEXT_PUBLIC_SUPABASE_URL`, and no association with a subscription or live charges. Still owed: delete `ALLOW_TEST_RESET=true` from the laptop's `.env.local`. | It was one env var away from emptying every customer. | `src/app/api/dev/guard.ts`, `scripts/seed-demo.mjs` |
 | 13 | **Landing overclaims:** knowledge center, instant vendor messaging, video calls with vendors. | First ticket: "where is the thing on your homepage". | `src/app/page.tsx` |
 
 ## 2. Product gaps by persona
@@ -51,13 +51,13 @@ trial converts. **Later** = when a board asks.
 
 | Item | Today | Do | Why |
 | --- | --- | --- | --- |
-| CI | No `.github/workflows`. | On push and PR: lint, `tsc`, `vitest` (4s), `next build`; about 3 min. Playwright (2 min) nightly against the preview URL. `db:verify` manual, it hits prod. | A broken build should not reach Vercel. |
+| CI | **Done 2026-10-04:** `.github/workflows/ci.yml` runs `pnpm check` (lint, `tsc`, `vitest`, `next build`) on every push and PR, with no secrets. | Still to do: Playwright nightly against the preview URL. `db:verify` stays manual, it hits prod. | A broken build should not reach Vercel. |
 | Payments e2e | `STRIPE_E2E` spec never written. | Write against a second test account and staging; nightly. | The webhook is the only writer of settled money. |
 | Staging | None; `db push` from laptop to prod. | Second Supabase project (free), Vercel Preview pointed at it with test keys; push there first. | 0043 to 0050 hit prod before review on localhost. |
 | Migrations | Personal token, hand-patched `database.types.ts`. | Run from CI on merge; no drops or renames without two steps; generate types. | The one incident with no undo. |
 | Secrets | All keys on one laptop plus Vercel. | Password manager; rotate the Supabase token (expired once) and use a restricted Stripe key; confirm `.gitignore` covers `.env*`. | One laptop is one point of failure. |
 | Dependencies | Next 16.3, Stripe 22, Supabase 2.112. | Dependabot weekly, security auto-merge. | Stripe and Supabase ship breaking auth changes. |
-| Rate limits | In-memory per instance: sign-up 10/h, join lookup 30/min. | Fine to launch; add a limit on `/api/email/invite`; move to Postgres when Vercel runs more than one instance. | A script can burn the 3,000/mo Resend quota. |
+| Rate limits | In-memory per instance: sign-up 10/h, join lookup 30/min. | Fine to launch. `/api/email/invite` is capped at 600 messages per association per hour since 2026-10-04 (`src/lib/email/invite-limit.ts`). Move to Postgres when Vercel runs more than one instance. | A script can burn the 3,000/mo Resend quota. |
 | Observability | Nothing. `docs/observability.md` in progress. | Sentry free tier; Vercel log drain; alerts on webhook 5xx, cron non-200, `email_log` failures over 5/hour. | Today a customer finds the outage. |
 | Accessibility statement | Text-size pass done; no page. | `/accessibility`: WCAG 2.1 AA target, known gaps, support address. | HOAs are quasi-public; ADA complaints exist. |
 | Performance budget | `loadCommunity` reads every ledger row (`docs/scale.md` §3). | Budget: first paint under 3s at 250 homes, 5 years. Window the ledger to 12 months before the first 250-home customer. | The five-year QA found truncation; the next find is time. |
@@ -111,3 +111,7 @@ Runbook, top five:
 ## Added 2026-09-26
 
 View versus change access per area, and an append-only board activity record, both compared against PayHOA, Buildium and AppFolio in the session that built them. Details in docs/design/ui-baseline.md under "Board offices".
+
+## Added 2026-10-04
+
+An 18 agent audit of the whole product (115 findings, 114 confirmed on a second read) and the first two rounds of fixes. Closed that day: signed-out callers could bill an association and record payments (migration 0062), an owner could settle their own dues, late fees landed on paid-up homes, dues emails read every balance as zero, emailed sign-in links did not sign anyone in, and the callback could be bent into an open redirect. The per-payment fee was removed: the price is the monthly rate and nothing else. `pnpm db:verify` now runs all nineteen suites and lists the failures instead of stopping at the first. What is still open is tracked in the session notes and the audit file, not here; the items above marked done are the ones this document had listed.

@@ -57,6 +57,12 @@ export interface BoardRoute {
   /** Any one of these opens it. Absent means every member may look. */
   need?: Capability[];
   /**
+   * A page that exists only to change something (opening balances, the
+   * roster import). Looking is not enough to open it: the gate asks whether
+   * the seat may change the area.
+   */
+  changes?: boolean;
+  /**
    * Whether this association has anything on the tab at all.
    *
    * Capability answers "may they", this answers "is there anything there". An
@@ -229,6 +235,31 @@ export const BOARD_ROUTES: BoardRoute[] = [
     // due to any resident who reached the URL.
     need: ["finances", "communications"],
   },
+  // Two pages under Homeowners that only write. They had no entry, so the
+  // register's own gate served them to a seat that may look at the roster
+  // and nothing more.
+  {
+    href: "/board/homeowners/opening-balances",
+    label: "Opening balances",
+    icon: Users,
+    key: "opening-balances",
+    module: "homeowners",
+    need: ["finances"],
+    changes: true,
+    hidden: true,
+    parent: "homeowners",
+  },
+  {
+    href: "/board/homeowners/import",
+    label: "Import a roster",
+    icon: Users,
+    key: "roster-import",
+    module: "homeowners",
+    need: ["settings"],
+    changes: true,
+    hidden: true,
+    parent: "homeowners",
+  },
   { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", tint: "amber", need: ["vendors"], module: "vendors" },
   {
     href: "/board/requests",
@@ -380,7 +411,9 @@ export function sectionFor(pathname: string): BoardRoute | undefined {
 
 /** A section's pages in tab order: the row itself, then its children. */
 export function sectionPages(section: BoardRoute): BoardRoute[] {
-  return [section, ...BOARD_ROUTES.filter((r) => r.parent === section.key)];
+  // A page that only writes is reached from a link on its section's screen,
+  // not from a tab of its own.
+  return [section, ...BOARD_ROUTES.filter((r) => r.parent === section.key && !r.changes)];
 }
 
 /**

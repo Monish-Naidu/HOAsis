@@ -1525,6 +1525,7 @@ export type Database = {
           platform_fee_cents: number
           processor_fee_cents: number
           rail: Database["public"]["Enums"]["payment_rail"]
+          refunded_cents: number
           settled_at: string | null
           state: Database["public"]["Enums"]["payment_state"]
           stripe_payment_intent_id: string | null
@@ -1539,6 +1540,7 @@ export type Database = {
           platform_fee_cents?: number
           processor_fee_cents?: number
           rail: Database["public"]["Enums"]["payment_rail"]
+          refunded_cents?: number
           settled_at?: string | null
           state?: Database["public"]["Enums"]["payment_state"]
           stripe_payment_intent_id?: string | null
@@ -1553,6 +1555,7 @@ export type Database = {
           platform_fee_cents?: number
           processor_fee_cents?: number
           rail?: Database["public"]["Enums"]["payment_rail"]
+          refunded_cents?: number
           settled_at?: string | null
           state?: Database["public"]["Enums"]["payment_state"]
           stripe_payment_intent_id?: string | null
@@ -3038,9 +3041,13 @@ export type Database = {
       }
       record_refund: {
         Args: { p_amount_cents: number; p_stripe_payment_intent_id: string }
-        Returns: string
+        Returns: string | null
       }
       remove_household: { Args: { p_unit_id: string }; Returns: undefined }
+      reply_as_board: {
+        Args: { p_body: string; p_thread_id: string }
+        Returns: Json
+      }
       reply_as_owner: {
         Args: { p_body: string; p_thread_id: string }
         Returns: undefined

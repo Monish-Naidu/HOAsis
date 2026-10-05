@@ -4,6 +4,7 @@ import { ResidentTitle } from "@/components/app/resident-title";
 import { Vote } from "lucide-react";
 import { EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { ballotPhase } from "@/lib/phases";
 import { BallotVote } from "./ballot-vote";
 
 /**
@@ -16,11 +17,13 @@ import { BallotVote } from "./ballot-vote";
 export default function ResidentVote() {
   const { community } = useAppState();
   const mine = community.ballots.filter((b) => b.audience === "owners");
+  // By phase: a ballot past its closing date sits under Closed, where its
+  // card already says Closed, not in the list of things to vote on.
   const open = mine
-    .filter((b) => b.status === "open")
+    .filter((b) => ballotPhase(b) === "open")
     .sort((a, b) => a.closesDate.localeCompare(b.closesDate));
   const past = mine
-    .filter((b) => b.status === "certified" || b.status === "closed")
+    .filter((b) => ["closed", "certified"].includes(ballotPhase(b)))
     .sort((a, b) => b.closesDate.localeCompare(a.closesDate));
 
   return (

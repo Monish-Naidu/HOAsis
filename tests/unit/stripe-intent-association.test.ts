@@ -24,7 +24,7 @@ function query(table: string) {
 
 vi.mock("@/lib/supabase/server", () => ({
   supabaseServer: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: "profile-1" } } }) },
+    auth: { getUser: async () => ({ data: { user: { id: "profile-1", email: "gwen@example.com" } } }) },
     rpc: async () => ({ data: false }),
     from: (table: string) => query(table),
   }),
@@ -81,6 +81,22 @@ describe("creating a payment intent", () => {
       expect.objectContaining({
         metadata: expect.objectContaining({ association_id: "assoc-a", unit_id: "unit-1", assessment_cents: "28500" }),
       }),
+      { stripeAccount: "acct_a" },
+    );
+  });
+});
+
+describe("the receipt for a payment made by hand", () => {
+  it("asks Stripe to email the person paying when the money settles", async () => {
+    const create = vi
+      .spyOn(stripe().paymentIntents, "create")
+      .mockResolvedValue({ id: "pi_1", client_secret: "secret" } as never);
+    const response = await payment.POST(
+      post("/api/stripe/payment-intent", { associationId: "assoc-a", unitId: "unit-1", amountCents: 28500, rail: "ach" }),
+    );
+    expect(response.status).toBe(200);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ receipt_email: "gwen@example.com" }),
       { stripeAccount: "acct_a" },
     );
   });

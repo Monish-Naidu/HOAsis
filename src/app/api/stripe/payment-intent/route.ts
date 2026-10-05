@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { costFor, stripe } from "@/lib/stripe/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
+import { currentMemberIds, savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { logger } from "@/lib/log";
 
 /**
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
   if (instrumentId) {
     const { data: instrument } = await supabase
       .from("payment_instruments")
-      .select("unit_id, kind, detail")
+      .select("unit_id, profile_id, kind, detail")
       .eq("id", instrumentId)
       .maybeSingle();
     if (!instrument || instrument.unit_id !== unitId) {
@@ -128,6 +129,23 @@ export async function POST(request: NextRequest) {
     if (detail?.status === "verifying") {
       return NextResponse.json(
         { error: "That bank account is still verifying. Confirm the deposits first." },
+        { status: 409 },
+      );
+    }
+    // Saved methods are shared by the home, but only among the people who
+    // hold it today. One left behind by a previous owner is on the home's
+    // list and is not this household's to charge.
+    let members: string[];
+    try {
+      members = await currentMemberIds(supabaseAdmin(), unitId);
+    } catch (problem) {
+      log.error("could not read the home's members", { err: problem, unitId, instrumentId });
+      return NextResponse.json({ error: "Could not check that payment method. Try again." }, { status: 500 });
+    }
+    if (!savedByCurrentMember(instrument.profile_id, members)) {
+      log.warn("saved method belongs to nobody on the home", { unitId, instrumentId });
+      return NextResponse.json(
+        { error: "That payment method belongs to someone no longer at this home. Remove it and add your own." },
         { status: 409 },
       );
     }
@@ -158,6 +176,12 @@ export async function POST(request: NextRequest) {
       currency: "usd",
       customer: customerId,
       payment_method: paymentMethodId,
+      // Stripe emails its own receipt to the person paying when the money
+      // settles, which for a bank payment is days after this screen. Without
+      // it a payment made by hand ended in silence, while a neighbour on
+      // autopay got an email. Autopay intents are made elsewhere and send
+      // their own notice, so nobody gets two.
+      receipt_email: auth.user.email ?? undefined,
       payment_method_types: rail === "ach" ? ["us_bank_account"] : ["card"],
       payment_method_options:
         rail === "ach"

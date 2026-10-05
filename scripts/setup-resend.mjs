@@ -100,6 +100,31 @@ console.log(`\nResend key works. Domains: ${domainNote}`);
 
 /* ------------------------------------- 2. point Supabase Auth at Resend */
 
+/**
+ * The password reset email, which Supabase sends itself.
+ *
+ * Its stock template links through Supabase's own verify address and comes
+ * back to us with a one-time code. The browser client here speaks PKCE, so
+ * that code can only be exchanged in the browser that asked for the reset.
+ * Asked for on a laptop and opened on a phone, or opened inside a mail app,
+ * it failed every time, and the person was sent to a sign-in form they could
+ * not use.
+ *
+ * This template carries the token hash to our own /auth/callback instead,
+ * the same shape every email we send ourselves uses
+ * (src/lib/email/sign-in-link.ts). The callback verifies it on the server,
+ * so it works in whichever browser the email opens in, and then follows
+ * `next` to the page where the new password is chosen.
+ *
+ * The link is built on the project's Site URL, which must be the public
+ * site. Step 3 prints it so a wrong value is seen.
+ */
+const recoverySubject = "Reset your password for Your HOAsis";
+const recoveryTemplate = `<h2>Reset your password</h2>
+<p>Somebody asked to reset the password for this address on Your HOAsis. If that was you, choose a new one here:</p>
+<p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset">Choose a new password</a></p>
+<p>The link works once, in any browser. If you did not ask for this, ignore this message and nothing changes.</p>`;
+
 const response = await fetch(
   `https://api.supabase.com/v1/projects/${projectRef}/config/auth`,
   {
@@ -121,6 +146,9 @@ const response = await fetch(
       // The built in cap was two an hour, which is what made onboarding
       // untestable. Resend's own limits apply beyond this.
       rate_limit_email_sent: 100,
+      // A reset link that works in any browser. See recoveryTemplate above.
+      mailer_subjects_recovery: recoverySubject,
+      mailer_templates_recovery_content: recoveryTemplate,
     }),
   },
 );
@@ -145,6 +173,14 @@ console.log(`  user          ${config.smtp_user}`);
 console.log(`  from          ${config.smtp_sender_name} <${config.smtp_admin_email}>`);
 console.log(`  rate limit    ${config.rate_limit_email_sent} an hour`);
 console.log(`  confirmation  ${config.mailer_autoconfirm ? "OFF, signups auto confirm" : "ON, a link is emailed"}`);
+console.log(
+  `  reset link    ${
+    (config.mailer_templates_recovery_content ?? "").includes("token_hash={{ .TokenHash }}")
+      ? "verified on our own /auth/callback, works in any browser"
+      : "NOT updated, still Supabase's stock template"
+  }`,
+);
+console.log(`  site url      ${config.site_url}  (the reset link is built on this)`);
 
 if (usingSharedSender) {
   console.log(

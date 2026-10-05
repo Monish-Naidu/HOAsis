@@ -290,6 +290,46 @@ describe("the association a link asked for", () => {
     await loadRemote("pat");
     expect(remoteSnapshot().activeId).toBe("maple");
   });
+
+  it("is still the one opened when the first load fails and is asked again", async () => {
+    // This browser had Maple Ridge open last, and the link names Oak Hills.
+    window.localStorage.setItem("hoasis:last-association", "maple");
+    reads.loadMyAssociations.mockResolvedValue([MAPLE, OAK]);
+    preferRemoteSlug("oak-slug");
+
+    reads.loadCommunity.mockRejectedValueOnce(new Error("Could not load the homes: timeout"));
+    await loadRemote("pat");
+    expect(remoteSnapshot().status).toBe("error");
+
+    // The ask was not spent on the load that failed.
+    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) => copy(id, "loaded"));
+    await retryRemote();
+    expect(remoteSnapshot()).toMatchObject({ status: "ready", activeId: "oak" });
+
+    // And once honoured it is spent, as before.
+    await setRemoteAssociation("maple");
+    await loadRemote("pat");
+    expect(remoteSnapshot().activeId).toBe("maple");
+  });
+
+  it("gives way to a switch the member made while its load was still away", async () => {
+    reads.loadMyAssociations.mockResolvedValue([MAPLE, OAK]);
+    preferRemoteSlug("oak-slug");
+    const slow = pending<Community>();
+    reads.loadCommunity.mockReturnValueOnce(slow.promise);
+    const load = loadRemote("pat");
+    await vi.waitFor(() => expect(reads.loadCommunity).toHaveBeenCalledTimes(1));
+
+    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) => copy(id, "loaded"));
+    await setRemoteAssociation("maple");
+    slow.resolve(copy("oak", "too late"));
+    await load;
+
+    // The link's load never landed, so its ask was never spent. A later full
+    // load must still stay where the member chose to go.
+    await loadRemote("pat");
+    expect(remoteSnapshot().activeId).toBe("maple");
+  });
 });
 
 describe("remoteWrite", () => {
@@ -322,11 +362,204 @@ describe("remoteWrite", () => {
     expect(messages).toEqual([]);
   });
 
+  it("runs one at a time, the next only after the one before has been re-read", async () => {
+    // Two quick presses that each replace a whole list. Side by side, both
+    // built on the same old copy and the second erased the first.
+    await signedIn();
+    const order: string[] = [];
+    const label = () => (remoteSnapshot().community as unknown as { label: string }).label;
+    const firstWrite = pending<{ error: null }>();
+    const reread = pending<Community>();
+    reads.loadCommunity.mockReturnValueOnce(reread.promise);
+
+    const one = remoteWrite("First", () => {
+      order.push(`first starts on ${label()}`);
+      return firstWrite.promise;
+    });
+    const two = remoteWrite("Second", async () => {
+      order.push(`second starts on ${label()}`);
+      return { error: null };
+    });
+
+    await vi.waitFor(() => expect(order).toEqual(["first starts on maple first"]));
+    firstWrite.resolve({ error: null });
+    // The first has landed and is being read back. The second still waits.
+    await vi.waitFor(() => expect(reads.loadCommunity).toHaveBeenCalledTimes(2));
+    expect(order).toEqual(["first starts on maple first"]);
+
+    reads.loadCommunity.mockResolvedValue(copy("maple", "after both"));
+    reread.resolve(copy("maple", "after the first write"));
+    expect(await one).toBe(true);
+    expect(await two).toBe(true);
+    expect(order).toEqual([
+      "first starts on maple first",
+      "second starts on maple after the first write",
+    ]);
+  });
+
+  it("keeps the queue moving after a write that failed", async () => {
+    const { messages, stop } = reported();
+    const one = remoteWrite("First", async () => {
+      throw new Error("the network dropped");
+    });
+    const two = remoteWrite("Second", async () => ({ error: null }));
+    expect(await one).toBe(false);
+    expect(await two).toBe(true);
+    stop();
+    expect(messages).toEqual(["First: the network dropped"]);
+  });
+
+  it("re-reads after a write that failed, so a retry is not built on the old copy", async () => {
+    // A write of several statements can fail after the first few landed.
+    await signedIn();
+    const { stop } = reported();
+    reads.loadCommunity.mockResolvedValueOnce(copy("maple", "after the failure"));
+    const ok = await remoteWrite("Recording the sale", async () => ({
+      error: { message: "the closing date is before the tenure began" },
+    }));
+    stop();
+
+    expect(ok).toBe(false);
+    expect(remoteSnapshot().community).toMatchObject({ label: "maple after the failure" });
+  });
+
   it("still reports what the database said when it did refuse outright", async () => {
     const { messages, stop } = reported();
     const ok = await remoteWrite("Saving", async () => ({ error: { message: "permission denied" }, count: null }));
     stop();
     expect(ok).toBe(false);
     expect(messages).toEqual(["Saving: permission denied"]);
+  });
+
+  describe("when nothing comes back", () => {
+    // A browser request has no time limit of its own. One that never
+    // answered held every later write behind it until the tab was reloaded.
+    const never = () => new Promise<never>(() => {});
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      return () => {
+        vi.useRealTimers();
+      };
+    });
+
+    it("gives up on a write that never answers, says so, and runs the next one", async () => {
+      const { messages, stop } = reported();
+      const ran: string[] = [];
+      const one = remoteWrite("Saving settings", never);
+      const two = remoteWrite("Posting the announcement", async () => {
+        ran.push("second");
+        return { error: null };
+      });
+
+      // Still inside the allowance: the second waits its turn.
+      await vi.advanceTimersByTimeAsync(29_000);
+      expect(ran).toEqual([]);
+      expect(messages).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(await one).toBe(false);
+      expect(await two).toBe(true);
+      stop();
+      expect(ran).toEqual(["second"]);
+      expect(messages).toEqual([
+        "Saving settings: no answer after 30 seconds. Check your connection. It may still have gone through, so look before you try again",
+      ]);
+    });
+
+    it("gives up on a re-read that never answers, and the write still counts", async () => {
+      vi.useRealTimers();
+      await signedIn();
+      vi.useFakeTimers();
+      const { messages, stop } = reported();
+      reads.loadCommunity.mockReturnValueOnce(never());
+      const ran: string[] = [];
+      const one = remoteWrite("First", async () => ({ error: null }));
+      const two = remoteWrite("Second", async () => {
+        ran.push("second");
+        return { error: null };
+      });
+
+      await vi.advanceTimersByTimeAsync(19_000);
+      expect(ran).toEqual([]);
+
+      reads.loadCommunity.mockResolvedValue(copy("maple", "after the second"));
+      await vi.advanceTimersByTimeAsync(1_000);
+      // The first write landed; only its re-read was lost, so it is not
+      // reported as a failure.
+      expect(await one).toBe(true);
+      expect(await two).toBe(true);
+      stop();
+      expect(messages).toEqual([]);
+      expect(remoteSnapshot().community).toMatchObject({ label: "maple after the second" });
+    });
+
+    it("lets a write of many rows ask for longer", async () => {
+      const { messages, stop } = reported();
+      const slow = pending<{ error: null }>();
+      const one = remoteWrite("Saving opening balances", () => slow.promise, { timeoutMs: 90_000 });
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(messages).toEqual([]);
+      slow.resolve({ error: null });
+      expect(await one).toBe(true);
+      stop();
+    });
+
+    it("does not report a write twice when it answers after it was given up on", async () => {
+      const { messages, stop } = reported();
+      const late = pending<{ error: { message: string } }>();
+      const one = remoteWrite("Saving", () => late.promise);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(await one).toBe(false);
+      late.resolve({ error: { message: "permission denied" } });
+      await vi.advanceTimersByTimeAsync(0);
+      stop();
+      expect(messages).toHaveLength(1);
+    });
+
+    it("reads the association again when a write it gave up on lands after all", async () => {
+      // The re-read at the timeout ran before the write landed. Without a
+      // second one the payment is missing from the screen the message says
+      // to look at, and it gets entered twice.
+      vi.useRealTimers();
+      await signedIn();
+      vi.useFakeTimers();
+      const { stop } = reported();
+      const late = pending<{ error: null }>();
+      reads.loadCommunity.mockResolvedValueOnce(copy("maple", "before it landed"));
+      const one = remoteWrite("Recording the payment", () => late.promise);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(await one).toBe(false);
+      expect(remoteSnapshot().community).toMatchObject({ label: "maple before it landed" });
+      const readsSoFar = reads.loadCommunity.mock.calls.length;
+
+      reads.loadCommunity.mockResolvedValueOnce(copy("maple", "with the late write"));
+      late.resolve({ error: null });
+      await vi.advanceTimersByTimeAsync(0);
+      stop();
+      expect(reads.loadCommunity).toHaveBeenCalledTimes(readsSoFar + 1);
+      expect(remoteSnapshot().community).toMatchObject({ label: "maple with the late write" });
+    });
+
+    it("reads again when the write it gave up on fails late, since part of it may have landed", async () => {
+      vi.useRealTimers();
+      await signedIn();
+      vi.useFakeTimers();
+      const { messages, stop } = reported();
+      const late = pending<{ error: null }>();
+      reads.loadCommunity.mockResolvedValueOnce(copy("maple", "at the timeout"));
+      const one = remoteWrite("Recording the sale", () => late.promise);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(await one).toBe(false);
+
+      reads.loadCommunity.mockResolvedValueOnce(copy("maple", "after the late failure"));
+      late.reject(new Error("the second statement was refused"));
+      await vi.advanceTimersByTimeAsync(0);
+      stop();
+      // Said once, at the timeout. The late answer only brings the screen up to date.
+      expect(messages).toHaveLength(1);
+      expect(remoteSnapshot().community).toMatchObject({ label: "maple after the late failure" });
+    });
   });
 });

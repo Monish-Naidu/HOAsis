@@ -9,7 +9,7 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { wordingFor } from "@/lib/wording";
 import { homeTypesOf, soleType } from "@/lib/home-types";
-import { lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor } from "@/lib/lots";
+import { expandPhases, lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor } from "@/lib/lots";
 import { addDays, nextDueOnOrAfter } from "@/lib/utils";
 
 /**
@@ -134,6 +134,17 @@ export interface CommunityDraft {
   };
   /** Every home in the community, not counting the founder's own. */
   households: DraftHousehold[];
+  /**
+   * Rows with an owner, an email or a balance that no range covers right now.
+   *
+   * Only the wizard's homes question reads this. A range being retyped passes
+   * through shorter ones on the way, and a spreadsheet can arrive before any
+   * range does; the rows wait here instead of being dropped, and go back into
+   * `households` when a range covers their number (`rebuildLotHomes`). They
+   * are not homes: nothing counts them or bills them, and `finalizeDraft`
+   * leaves them behind, so they are never created.
+   */
+  parkedHouseholds?: DraftHousehold[];
   /**
    * Who built it, when the association knows.
    *
@@ -315,7 +326,11 @@ export function founderLabel(draft: CommunityDraft): string {
     // A range past the limit is a typo and creates no homes; not worth walking.
     if (lotsInPhase(phase) > MAX_LOTS_PER_PHASE) continue;
     for (let n = phase.from; n <= phase.to; n += 1) {
-      const label = lotLabel(prefix, n);
+      // Trimmed, as `otherHomes` and `finalizeDraft` trim the rows they hold
+      // against it. A prefix typed with a space in front (" A-") prints
+      // " A-2", which no trimmed row equals, and the founder's lot was
+      // created twice: once as theirs and once as an unsold home beside it.
+      const label = lotLabel(prefix, n).trim();
       if (label.toLowerCase() === wanted || String(n) === wanted || String(n) === bare) return label;
     }
   }
@@ -330,6 +345,30 @@ export function defaultHomeNaming(draft: CommunityDraft): HomeNaming {
   // share one street address. Only an all-detached community goes by street.
   const attached = types.some((t) => t !== "single-family");
   return w.fromBuilder || attached ? "numbers" : "addresses";
+}
+
+/**
+ * Whether the homes question can be left.
+ *
+ * Ranges must produce at least one home, or the plan asks for the register
+ * again on the next screen. A list of addresses may be empty: the founder's
+ * own home is already one, and the rest can be added from the roster.
+ *
+ * Rows parked outside the ranges hold the question too. `finalizeDraft`
+ * leaves them behind, so walking on with a 60 row file and a range typed as
+ * 1 to 40 founded the association twenty owners short and said nothing. The
+ * board either covers them with a range or says to leave them out.
+ *
+ * They are looked at before the way homes are named. That answer is only
+ * stored once the board presses the switch; until then it follows the kinds
+ * of home and where the association came from, so going Back and changing
+ * either can turn a numbered list into one by address with rows still
+ * parked. The address screen shows them and offers to leave them out.
+ */
+export function homesAnswered(draft: CommunityDraft): boolean {
+  if (draft.parkedHouseholds?.length) return false;
+  if ((draft.homeNaming ?? defaultHomeNaming(draft)) === "addresses") return true;
+  return expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0;
 }
 
 /**
@@ -372,6 +411,9 @@ export function finalizeDraft(draft: CommunityDraft): CommunityDraft {
         homeType: typed(h.homeType),
       }))
       .filter((h) => h.unit !== "" && h.unit !== unit),
+    // Rows no range covered were never homes. They stop here, so neither
+    // creator, nor the copy held while an email is confirmed, ever sees them.
+    parkedHouseholds: undefined,
     customSpaces: (draft.customSpaces ?? []).map((c) => c.trim()).filter(Boolean),
   };
 }

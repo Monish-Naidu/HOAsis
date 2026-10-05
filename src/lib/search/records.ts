@@ -5,6 +5,7 @@ import type { Owner } from "@/lib/types";
 import { money } from "@/lib/utils";
 import { statusLabel } from "@/lib/request-status";
 import { homeLabel } from "@/lib/wording";
+import { ballotPhase, meetingPhase } from "@/lib/phases";
 import type { Searchable } from "./match";
 
 /**
@@ -219,10 +220,12 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `mtg-${m.id}`,
       kind: "meeting",
       title: m.title,
-      subtitle: `${m.date} · ${m.time} · ${m.location}${m.status === "ended" ? " · ended" : ""}`,
+      // By phase, as the Meetings page reads it: nothing marks a real
+      // association's meeting ended, so its date does.
+      subtitle: `${m.date} · ${m.time} · ${m.location}${meetingPhase(m) === "ended" ? " · ended" : ""}`,
       date: m.date,
       href: `/board/meetings#mtg-${m.id}`,
-      keywords: `${m.kind} ${m.status} ${m.agenda.join(" ")} ${dateWords(m.date)}`,
+      keywords: `${m.kind} ${meetingPhase(m)} ${m.agenda.join(" ")} ${dateWords(m.date)}`,
     });
   }
   for (const b of c.ballots) {
@@ -230,7 +233,8 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `bal-${b.id}`,
       kind: "ballot",
       title: b.title,
-      subtitle: `${b.reference} · ${b.status} · closes ${b.closesDate}`,
+      // A ballot past its closing date reads closed, pressed or not.
+      subtitle: `${b.reference} · ${ballotPhase(b)} · closes ${b.closesDate}`,
       date: b.closesDate,
       href: `/board/voting#ballot-${b.id}`,
       keywords: `${b.kind} ${b.reference} ${b.body.join(" ").slice(0, 400)} ${dateWords(b.closesDate)}`,
@@ -343,7 +347,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       id: `mtg-${m.id}`,
       kind: "meeting",
       title: m.title,
-      subtitle: `${m.date} · ${m.time} · ${m.location}${m.status === "ended" ? " · ended" : ""}`,
+      subtitle: `${m.date} · ${m.time} · ${m.location}${meetingPhase(m) === "ended" ? " · ended" : ""}`,
       date: m.date,
       href: `/resident/calendar`,
       keywords: `${m.kind} ${m.agenda.join(" ")} ${dateWords(m.date)}`,
@@ -355,7 +359,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       id: `bal-${b.id}`,
       kind: "ballot",
       title: b.title,
-      subtitle: `${b.status} · closes ${b.closesDate}`,
+      subtitle: `${ballotPhase(b)} · closes ${b.closesDate}`,
       date: b.closesDate,
       href: `/resident/vote#ballot-${b.id}`,
       keywords: `${b.kind} ${b.body.join(" ").slice(0, 400)} ${dateWords(b.closesDate)}`,

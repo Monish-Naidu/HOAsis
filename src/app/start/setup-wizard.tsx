@@ -16,6 +16,7 @@ import {
   finalizeDraft,
   founderLabel,
   founderUnit,
+  homesAnswered,
   otherHomes,
   unitCount,
   type CommunityDraft,
@@ -29,7 +30,8 @@ import {
   lotsInPhase,
   nextPhase,
   phaseProblems,
-  typedLots,
+  rebuildLotHomes,
+  sortParked,
   type LotPhase,
 } from "@/lib/lots";
 import { HOME_TYPE_LABEL, homeTypesOf, isMixed } from "@/lib/home-types";
@@ -606,13 +608,10 @@ function WizardQuestions({
               : draft.origin === "handover"
                 ? `Give the number ranges, including any the builder still owns. Every ${w.home} gets a balance and a vote.`
                 : `Give the number ranges you already use. Every ${w.home} gets a balance and a vote, and owner names can come now or later.`,
-        // Ranges must produce at least one home, or the plan asks for the
-        // register again on the next screen. A list of addresses may be
-        // empty: the founder's own home is already one, and the rest can be
-        // added from the roster.
-        canContinue:
-          (draft.homeNaming ?? defaultHomeNaming(draft)) === "addresses" ||
-          expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0,
+        // Ranges must produce at least one home, and no row with an owner or
+        // a balance may be left outside them unanswered: creating the
+        // association drops those rows (`homesAnswered`).
+        canContinue: homesAnswered(draft),
         body: <HomesStep draft={draft} patch={patch} />,
       },
       bank: {
@@ -746,8 +745,15 @@ function HomesStep({ draft, patch }: StepProps) {
     if (next === naming) return;
     // Switching ways of naming homes starts the list over. Rows built from
     // ranges are not addresses and addresses are not ranges; carrying one
-    // into the other produces a roster nobody typed.
-    patch({ homeNaming: next, households: [], phases: undefined, lotPrefix: undefined });
+    // into the other produces a roster nobody typed. The rows parked
+    // outside the ranges go with them, for the same reason.
+    patch({
+      homeNaming: next,
+      households: [],
+      parkedHouseholds: undefined,
+      phases: undefined,
+      lotPrefix: undefined,
+    });
   }
 
   const modes = (
@@ -783,11 +789,44 @@ function HomesStep({ draft, patch }: StepProps) {
   const importer = <RosterImport draft={draft} patch={patch} homeWord={w.home} />;
 
   if (naming === "addresses") {
+    // Rows parked while this list went by number. The switch above clears
+    // them, but the naming also follows the kinds of home and the origin
+    // until it is pressed, so going Back can land here with rows still
+    // parked. Creating the association drops them, so they are shown and
+    // Continue waits (`homesAnswered`).
+    const parked = draft.parkedHouseholds ?? [];
     return (
       <div className="flex flex-col gap-5">
         {modes}
         {importer}
         <AddressList draft={draft} patch={patch} w={w} />
+        {parked.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-footnote leading-relaxed text-warn">
+              {parked.length} {parked.length === 1 ? "row" : "rows"} from your file{" "}
+              {parked.length === 1 ? "is" : "are"} not on this list (
+              {parked
+                .slice(0, 3)
+                .map((h) => h.unit)
+                .join(", ")}
+              {parked.length > 3 ? ` and ${parked.length - 3} more` : ""}).{" "}
+              {parked.length === 1 ? "It was" : "They were"} set aside while {w.homes} went by
+              number. Add any that belong to the list above.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => patch({ parkedHouseholds: undefined })}
+              >
+                Leave {parked.length === 1 ? "this" : "these"} out
+              </Button>
+              <span className="text-footnote text-fg-muted">
+                Leave {parked.length === 1 ? "it" : "them"} out to continue.
+              </span>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -1107,17 +1146,26 @@ function RangesStep({ draft, patch }: StepProps) {
    * Rebuilds the homes whenever the ranges change.
    *
    * Buyers already recorded against a lot survive, because a builder editing
-   * Phase 3 must not lose the four families who closed last month.
+   * Phase 3 must not lose the four families who closed last month. This runs
+   * on every keystroke, and retyping "44" as "48" passes through "4", so a
+   * row with details that no range covers for the moment is parked on the
+   * draft and comes back when one does (`rebuildLotHomes`).
    */
   function setPhases(next: LotPhase[], nextPrefix = prefix) {
-    const known = new Map(draft.households.map((h) => [h.unit, h]));
-    // Each home takes its range's kind, every time the ranges change, so
-    // moving Building A from townhomes to condos moves every home in it.
-    const households: DraftHousehold[] = typedLots(next, nextPrefix).map(({ unit, homeType }) => ({
-      ...(known.get(unit) ?? { name: "", email: "", unit }),
-      homeType: homeType ?? types[0],
-    }));
-    patch({ phases: next, lotPrefix: nextPrefix, households });
+    const rebuilt = rebuildLotHomes<DraftHousehold>({
+      phases: next,
+      prefix: nextPrefix,
+      previousPrefix: prefix,
+      households: draft.households,
+      parked: draft.parkedHouseholds,
+      fallbackType: types[0],
+    });
+    patch({
+      phases: next,
+      lotPrefix: nextPrefix,
+      households: rebuilt.households,
+      parkedHouseholds: rebuilt.parked.length ? rebuilt.parked : undefined,
+    });
   }
 
   /** A new range starts as a kind no range has yet, since that is usually why it was added. */
@@ -1145,6 +1193,16 @@ function RangesStep({ draft, patch }: StepProps) {
   // theirs and does not offer "It has sold".
   const mine = founderLabel(draft);
   const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
+  // Rows with an owner or a balance that no range covers yet. Said out loud,
+  // because they are not homes until one does, and split by whether a range
+  // can still bring them back so neither line promises what cannot happen.
+  const parked = draft.parkedHouseholds ?? [];
+  const { waiting, unplaced } = sortParked({ parked, phases, prefix });
+  const labels = (rows: DraftHousehold[]) =>
+    `${rows
+      .slice(0, 3)
+      .map((h) => h.unit)
+      .join(", ")}${rows.length > 3 ? ` and ${rows.length - 3} more` : ""}`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -1281,7 +1339,7 @@ function RangesStep({ draft, patch }: StepProps) {
             // The founder's own lot comes out of the plat like any other, and
             // it is already entered above. Offering to sell it to somebody
             // else here is how a builder ends up not owning their own home.
-            const isMine = mine !== "" && home.unit === mine;
+            const isMine = mine !== "" && home.unit.trim() === mine;
             return (
             <div key={home.unit} className="px-3.5 py-2.5">
               <div className="flex items-center gap-3">
@@ -1384,6 +1442,45 @@ function RangesStep({ draft, patch }: StepProps) {
             </button>
           ) : null}
         </Card>
+      ) : null}
+
+      {parked.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {waiting.length > 0 ? (
+            <p className="text-footnote leading-relaxed text-warn">
+              {waiting.length} {waiting.length === 1 ? w.home : w.homes} with details on{" "}
+              {waiting.length === 1 ? "it matches" : "them match"} no range yet ({labels(waiting)}
+              ). {waiting.length === 1 ? "It is kept, and comes" : "They are kept, and come"} back
+              when a range covers {waiting.length === 1 ? "it" : "them"}.
+            </p>
+          ) : null}
+          {/* These never return on their own, so the line does not say they
+              will. A word before the number does match once it is typed
+              above, which is the one thing a board can do about it here. */}
+          {unplaced.length > 0 ? (
+            <p className="text-footnote leading-relaxed text-warn">
+              {unplaced.length} {unplaced.length === 1 ? "row" : "rows"} with details cannot be
+              matched to a {w.home} ({labels(unplaced)}). The label is not a number as this list
+              prints them, or another row already has that number. If your list puts a word before
+              the number, type it above.
+            </p>
+          ) : null}
+          {/* Creating the association drops whatever is still here, so
+              Continue waits until every row is covered or the board says so. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => patch({ parkedHouseholds: undefined })}
+            >
+              Leave {parked.length === 1 ? "this" : "these"} out
+            </Button>
+            <span className="text-footnote text-fg-muted">
+              Cover {parked.length === 1 ? "it" : "them"} with a range or leave{" "}
+              {parked.length === 1 ? "it" : "them"} out to continue.
+            </span>
+          </div>
+        </div>
       ) : null}
 
       <p className="flex items-center gap-2 text-footnote text-fg-muted">

@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Scratch scripts and run output, none of it tracked: lint was counting
+    // warnings in files git does not know about.
+    "scripts/.qa/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

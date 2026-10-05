@@ -19,6 +19,7 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
 import { duesFor } from "@/lib/home-types";
+import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { addDays, clockTime, nextDueOnOrAfter } from "@/lib/utils";
 
 /**
@@ -473,6 +474,16 @@ export async function loadCommunity(
     if (!holderByUnit.has(m.unit_id)) holderByUnit.set(m.unit_id, m);
   }
 
+  // Everyone who holds a seat on each home today, by account. A saved bank
+  // or card is shown only while the person who saved it is one of them.
+  const seatedByUnit = new Map<string, string[]>();
+  for (const m of memberRows) {
+    if (!m.profile_id) continue;
+    const seated = seatedByUnit.get(m.unit_id);
+    if (seated) seated.push(m.profile_id);
+    else seatedByUnit.set(m.unit_id, [m.profile_id]);
+  }
+
   const owners: Owner[] = unitRows.map((unit) => {
     const holder = holderByUnit.get(unit.id);
     const summary = unitSummary.get(unit.id);
@@ -682,16 +693,26 @@ export async function loadCommunity(
 
     owners,
     accounts,
-    instruments: (instruments.data ?? []).map((i) => ({
-      ...(i.detail ?? {}),
-      id: i.id,
-      ownerId: i.unit_id,
-      kind: i.kind,
-      label: i.label,
-      mask: i.mask,
-      isDefault: i.is_default,
-      addedDate: i.added_on,
-    })),
+    // Saved methods are kept by home, so two people on one title share them,
+    // and row level security hands a member every row on their home. After a
+    // sale that included the seller's: the buyer's pay screen showed the
+    // seller's bank by name and last four. The same rule the server charges
+    // by (src/lib/stripe/saved-method-owner.ts) decides what is shown: a
+    // method whose saver still holds a seat on the home, which covers the
+    // person signed in and a co-owner. One with no saver on record is shown
+    // to nobody, as it is charged by nobody.
+    instruments: (instruments.data ?? [])
+      .filter((i) => savedByCurrentMember(i.profile_id, seatedByUnit.get(i.unit_id) ?? []))
+      .map((i) => ({
+        ...(i.detail ?? {}),
+        id: i.id,
+        ownerId: i.unit_id,
+        kind: i.kind,
+        label: i.label,
+        mask: i.mask,
+        isDefault: i.is_default,
+        addedDate: i.added_on,
+      })),
 
     pendingPayments: (paymentRows.data ?? []).map((p) => ({
       id: p.id,

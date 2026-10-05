@@ -83,7 +83,10 @@ try {
   for (const id of cleanup.associations) {
     await admin.from("memberships").update({ role: "resident" })
       .eq("association_id", id).eq("role", "president");
-    await admin.from("associations").delete().eq("id", id);
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) check("cleanup removed the association", false, error.message);
   }
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }

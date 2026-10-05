@@ -132,9 +132,11 @@ Added the same night:
   payment setup". The payout bank fills the operating row in
   `bank_accounts` when the board never typed one, and Settings says
   "Dues are paid out to STRIPE TEST BANK ••6789".
-- **Refunds.** `charge.refunded` calls `record_refund` (0049): the payment
-  flips to refunded, the owner's statement gets the money back as a charge,
-  the ledger loses the deposit. Idempotent on the intent; refused to any
+- **Refunds.** `charge.refunded` calls `record_refund` (0049, rewritten in
+  0070): the owner's statement gets back what came back as a charge, and
+  the ledger loses the same amount. The payment flips to refunded only once
+  the whole of it has been returned; a partial refund leaves it settled.
+  Idempotent on the intent and the running total; refused to any
   signed-in caller. `verify-stripe.mjs` covers it (12 checks).
 - **The webhook checks the account.** A `payment_intent.*` event only
   touches a unit whose association owns `event.account`.

@@ -326,8 +326,8 @@ export function useCoverPhotoUpload() {
           reader.onerror = () => reject(reader.error);
           reader.readAsDataURL(file);
         });
-        updateSettings({ photoUrl: dataUrl });
-        notify("Cover photo updated", "ok");
+        // Said only when the save took.
+        if (await updateSettings({ photoUrl: dataUrl })) notify("Cover photo updated", "ok");
         return;
       }
 

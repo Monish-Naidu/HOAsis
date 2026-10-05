@@ -21,10 +21,17 @@ export function createInviteLimiter(now?: () => number): Limiter {
 }
 
 /**
- * Spends one count per message for the association, before anything is
- * sent. All or nothing: a batch that would pass the ceiling is refused
- * whole, so the board is told plainly instead of finding half a street
- * invited.
+ * Spends one count per message for the association, before it is sent. All
+ * or nothing for the number asked.
+ *
+ * The route asks for one at a time, just before each message that is really
+ * about to go (src/app/api/email/invite/route.ts). It used to ask for the
+ * whole batch up front on every press. A long batch stops at the time limit
+ * and is finished by pressing again, and each press was charged for every
+ * address, the ones already invited included: two hundred addresses over
+ * four presses spent eight hundred and was refused before the last of them
+ * was reached. Counting what is sent, the same batch spends two hundred
+ * however many presses it takes.
  */
 export function spendInvites(
   limiter: Limiter,

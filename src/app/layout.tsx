@@ -12,13 +12,38 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
+const DESCRIPTION =
+  "Everything your HOA needs to get things done quickly, all in one place.";
+
 export const metadata: Metadata = {
+  // What a relative image or link in the metadata resolves against.
+  metadataBase: new URL("https://yourhoasis.com"),
   title: {
     default: "Your HOAsis",
     template: "%s · Your HOAsis",
   },
-  description:
-    "Books that reconcile, an app residents use, and compliance handled.",
+  // The landing page's own line. It used to promise reconciliation and
+  // "compliance handled", neither of which the product does for a board.
+  description: DESCRIPTION,
+  // What a link to the site looks like when somebody pastes it into a
+  // message. There was none, so a board member sharing the address got a
+  // bare URL.
+  openGraph: {
+    type: "website",
+    siteName: "Your HOAsis",
+    title: "Your community. Your HOAsis.",
+    description: DESCRIPTION,
+    url: "/",
+    images: [{ url: "/marketing/hero-oasis-light.jpg", width: 1672, height: 941, alt: "An illustrated neighborhood around a lake" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Your community. Your HOAsis.",
+    description: DESCRIPTION,
+    images: ["/marketing/hero-oasis-light.jpg"],
+  },
+  // Still closed to search engines, here and in robots.ts. Opening the
+  // marketing pages is Monish's call at launch.
   robots: { index: false, follow: false },
 };
 

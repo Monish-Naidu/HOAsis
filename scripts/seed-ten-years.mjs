@@ -144,7 +144,8 @@ async function deleteAssociation(id) {
     .eq("association_id", id).eq("role", "president");
   const { data: files } = await admin.storage.from("documents").list(id, { limit: 1000 });
   if (files?.length) await admin.storage.from("documents").remove(files.map((f) => `${id}/${f.name}`));
-  await admin.from("associations").delete().eq("id", id);
+  const { error } = await admin.from("associations").delete().eq("id", id);
+  return error;
 }
 
 async function qaUsers() {
@@ -159,7 +160,14 @@ async function qaUsers() {
 if (REMOVE) {
   const { data: kept } = await admin.from("associations").select("id, name").eq("settings->>qa", QA);
   for (const a of kept ?? []) {
-    await deleteAssociation(a.id);
+    // A delete that failed leaves the association in the live project with
+    // the dues cron still billing it. Say so and stop, before its people
+    // are deleted and nobody is left who can open it.
+    const error = await deleteAssociation(a.id);
+    if (error) {
+      console.error(`could not remove ${a.name} ${a.id}: ${error.message}`);
+      process.exit(1);
+    }
     console.log(`removed ${a.name} ${a.id}`);
   }
   const users = await qaUsers();
@@ -528,9 +536,14 @@ try {
 
   async function runBallot({ title, kind, body, options, opens, closes, voters, favour, meetingId, leaveOpen = false, seats = 1 }) {
     const id = randomUUID();
+    // A vote is refused once the closing date is more than a day gone
+    // (0076), and most of these ballots closed years ago. So each is held
+    // with a closing date still ahead while the homes vote, and given its
+    // real one afterwards.
+    const votingUntil = closes > TODAY ? closes : addDays(TODAY, 7);
     await must(`ballot ${title}`, secretary.client.from("ballots").insert({
       id, association_id: hoa, title, body, kind, audience: "owners", status: "open",
-      opens_on: opens, closes_on: closes, seats, quorum_required: 10,
+      opens_on: opens, closes_on: votingUntil, seats, quorum_required: 10,
       threshold_label: kind === "special-assessment" ? "Two thirds of votes cast" : kind === "election" ? "Most votes" : "Simple majority",
       meeting_id: meetingId ?? null, live_results_visible: false, created_at: `${addDays(opens, -7)}T16:00:00Z`,
     }));
@@ -551,8 +564,10 @@ try {
     });
     if (!leaveOpen) {
       await must("certify", secretary.client.from("ballots").update({
-        status: "certified", certified_by: secretary.name, certified_on: addDays(closes, 2),
+        status: "certified", closes_on: closes, certified_by: secretary.name, certified_on: addDays(closes, 2),
       }).eq("id", id));
+    } else if (votingUntil !== closes) {
+      await must("the real closing date", secretary.client.from("ballots").update({ closes_on: closes }).eq("id", id));
     }
     ballotCount++;
     return { id, options: sorted };
@@ -580,6 +595,10 @@ try {
       body: `${title}. Submitted with photos and a sketch.`, status: "submitted", submitted_on: date,
       attachments: [], thread: [], created_at: `${date}T15:00:00Z`,
     }));
+    // The database stamps a request with the day it arrives (0077), so the
+    // day in the past it stands for is set behind the product's back, like
+    // the payments.
+    await must("dating the request", admin.from("requests").update({ submitted_on: date }).eq("id", id));
     if (status === "submitted") return;
     const decision = status ?? (kind === "architectural" ? (random() < 0.78 ? "approved" : "denied") : "closed");
     const decidedOn = addDays(date, 12 + Math.floor(random() * 20));
@@ -636,10 +655,15 @@ try {
 
   async function post(unit, date, category, title, body, replies) {
     const id = randomUUID();
+    // An owner's post waits for a moderator; one that arrives published is
+    // refused (0068). So it is filed pending and the President approves it,
+    // which is what the forum does.
     await must("post", people[unit].client.from("posts").insert({
       id, association_id: hoa, author_id: people[unit].id, author_name: home(unit).name,
-      unit_label: unit, category, title, body, status: "published", created_at: `${date}T18:00:00Z`,
+      unit_label: unit, category, title, body, status: "pending", created_at: `${date}T18:00:00Z`,
     }));
+    await must("approving the post", president.client.from("posts")
+      .update({ status: "published", moderated_by: president.name }).eq("id", id));
     for (let i = 0; i < replies; i++) {
       const who = pick(accountUnits());
       await people[who].client.from("post_replies").insert({
@@ -662,8 +686,6 @@ try {
 
   const lastLetter = new Map();
   const t0 = Date.now();
-  let assessment1 = null;
-  let assessment2 = null;
 
   for (let m = 0; m < MONTHS; m++) {
     const first = monthStart(MONTHS - 1 - m);
@@ -893,7 +915,7 @@ try {
         options: ["Approve the assessment", "Reject"], opens: dayOf(first, 1), closes: dayOf(first, 21),
         voters, favour: 0.82,
       });
-      assessment1 = await must("levy", treasurer.client.rpc("levy_special_assessment", {
+      await must("levy", treasurer.client.rpc("levy_special_assessment", {
         p_association_id: hoa, p_title: "Storm drain repair", p_reason: "Collapsed drain under Larkspur Court; approved by owners in September 2020",
         p_total_cents: 40_000_00, p_allocation: "equal", p_installments: 4,
         p_first_due_on: next, p_ballot_id: ballot.id,
@@ -914,7 +936,7 @@ try {
         options: ["Approve the assessment", "Reject"], opens: dayOf(first, 1), closes: dayOf(first, 22),
         voters, favour: 0.74,
       });
-      assessment2 = await must("levy", treasurer.client.rpc("levy_special_assessment", {
+      await must("levy", treasurer.client.rpc("levy_special_assessment", {
         p_association_id: hoa, p_title: "Street repaving shortfall", p_reason: "Repaving quoted above the reserve; approved by owners in March 2024",
         p_total_cents: 30_000_00, p_allocation: "equal", p_installments: 3,
         p_first_due_on: next, p_ballot_id: ballot.id,

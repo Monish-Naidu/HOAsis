@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { syncAccountStatus } from "@/lib/stripe/account-status";
 import { recordAppError } from "@/lib/app-errors";
+import { sendDisputeNotice } from "@/lib/email/dispute";
 import { logger } from "@/lib/log";
 
 /**
@@ -284,18 +285,32 @@ export async function POST(request: NextRequest) {
     case "setup_intent.succeeded": {
       // The micro-deposits matched. The row loses its verifying mark and
       // becomes chargeable, by hand and by autopay.
+      //
+      // Stripe says this once. A read or a write that fails and is answered
+      // with a 200 leaves the bank marked verifying for good: the owner did
+      // everything right and can never pay with it. So a failure asks for
+      // the event again. Clearing the mark twice is harmless, because a row
+      // already cleared no longer matches the SetupIntent id.
       const intent = event.data.object;
       const admin = supabaseAdmin();
-      const { data: rows } = await admin
+      const { data: rows, error: readError } = await admin
         .from("payment_instruments")
         .select("id, detail")
         .eq("detail->>setupIntentId", intent.id);
+      if (readError) {
+        log.error("could not read the verifying bank", { err: readError.message, setupIntentId: intent.id });
+        return retryLater(readError.message);
+      }
       for (const row of rows ?? []) {
         const detail = { ...((row.detail as Record<string, unknown>) ?? {}) };
         delete detail.status;
         delete detail.verifyUrl;
         delete detail.setupIntentId;
-        await admin.from("payment_instruments").update({ detail }).eq("id", row.id);
+        const { error } = await admin.from("payment_instruments").update({ detail }).eq("id", row.id);
+        if (error) {
+          log.error("could not clear the verifying mark", { err: error.message, setupIntentId: intent.id, instrumentId: row.id });
+          return retryLater(error.message);
+        }
       }
       break;
     }
@@ -303,12 +318,18 @@ export async function POST(request: NextRequest) {
     case "setup_intent.setup_failed":
     case "setup_intent.canceled": {
       // Wrong amounts too many times, or the owner gave up. A bank that can
-      // never be charged is not a payment method.
+      // never be charged is not a payment method. A delete that fails is
+      // asked for again, or the row sits on the pay screen as a bank still
+      // verifying, with a link that no longer leads anywhere.
       const intent = event.data.object;
-      await supabaseAdmin()
+      const { error } = await supabaseAdmin()
         .from("payment_instruments")
         .delete()
         .eq("detail->>setupIntentId", intent.id);
+      if (error) {
+        log.error("could not remove the failed bank", { err: error.message, setupIntentId: intent.id });
+        return retryLater(error.message);
+      }
       break;
     }
 
@@ -327,23 +348,59 @@ export async function POST(request: NextRequest) {
     }
 
     case "charge.refunded": {
-      // Issued from the Stripe dashboard. The books hear about it here:
-      // the payment flips to refunded, the owner's statement gets the money
-      // back, and the deposit leaves the ledger. record_refund is idempotent
-      // on the intent, so a redelivery is harmless.
+      // Issued from the Stripe dashboard. The books hear about it here: the
+      // owner's statement gets back what came back, the same amount leaves
+      // the ledger, and the payment reads refunded only once the whole of
+      // it has been returned. A partial refund leaves it settled (migration
+      // 0070). The amount passed is Stripe's running total on the charge,
+      // and record_refund books the difference from the last one it saw,
+      // so a redelivery is harmless.
       const charge = event.data.object;
       const intentId =
         typeof charge.payment_intent === "string"
           ? charge.payment_intent
           : (charge.payment_intent?.id ?? null);
       if (!intentId || !charge.amount_refunded) break;
-      const { error } = await supabaseAdmin().rpc("record_refund", {
+      const { data: refundedPayment, error } = await supabaseAdmin().rpc("record_refund", {
         p_stripe_payment_intent_id: intentId,
         p_amount_cents: charge.amount_refunded,
       });
       if (error) {
         log.error("record_refund failed", { err: error.message, intentId });
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      if (!refundedPayment) {
+        // No payment carries this intent, or the one that does is still
+        // pending (migration 0078), so nothing was booked. Events arrive
+        // out of order, and a refund issued moments after a payment can get
+        // here before the payment is recorded. Answered with a 200, that
+        // refund was lost: Stripe does not say it twice. So when the
+        // intent is one of ours, on the account this event came from, ask
+        // for the event again. An intent that is not ours is acknowledged
+        // as before: every other charge on a connected account passes
+        // through here too, and no retry will ever find a payment for it.
+        let refundedIntent: Stripe.PaymentIntent;
+        try {
+          refundedIntent = await stripe().paymentIntents.retrieve(
+            intentId,
+            {},
+            event.account ? { stripeAccount: event.account } : undefined,
+          );
+        } catch (problem) {
+          // Not known to be ours or not. Asking again costs nothing.
+          log.error("could not read the refunded intent", { err: problem, intentId });
+          return retryLater("Could not look up the refunded payment");
+        }
+        const meta = intentMetadata(refundedIntent);
+        const ours = meta ? await belongsToAccount(meta.unitId, event.account) : "no";
+        if (ours === "error") {
+          log.error("account lookup failed", { intentId, unitId: meta?.unitId });
+          return retryLater("Could not look up the unit");
+        }
+        if (ours === "yes") {
+          log.warn("refund arrived before its payment", { intentId, associationId: meta?.associationId });
+          return retryLater("The refunded payment is not recorded yet");
+        }
       }
       break;
     }
@@ -352,21 +409,56 @@ export async function POST(request: NextRequest) {
     case "charge.dispute.closed": {
       // A chargeback. With losses_collector = stripe the association carries
       // it, and the treasurer needs to know today, not on the next
-      // statement. It lands on /admin as an error with the amounts, and the
-      // payment keeps its state: the money is contested, not gone.
+      // statement. The people who hold finances are emailed, with the day
+      // evidence is due, and again when the bank decides. It also lands on
+      // /admin as an error with the amounts. The payment keeps its state:
+      // the money is contested, not gone. A lost dispute is not yet booked
+      // against the owner's statement or the ledger; the email says so.
       const dispute = event.data.object;
       const intentId =
         typeof dispute.payment_intent === "string"
           ? dispute.payment_intent
           : (dispute.payment_intent?.id ?? null);
       const admin = supabaseAdmin();
-      const { data: payment } = intentId
+      const { data: payment, error: paymentError } = intentId
         ? await admin
             .from("payments")
             .select("association_id, unit_id, amount_cents")
             .eq("stripe_payment_intent_id", intentId)
             .maybeSingle()
-        : { data: null };
+        : { data: null, error: null };
+      if (paymentError) {
+        // Without the payment there is nobody to tell. Nothing has been
+        // sent or recorded yet, so asking for the event again is safe.
+        log.error("could not read the disputed payment", { err: paymentError.message, intentId, disputeId: dispute.id });
+        return retryLater(paymentError.message);
+      }
+
+      const opened = event.type === "charge.dispute.created";
+      const kind = opened ? "opened" : dispute.status === "won" ? "won" : dispute.status === "lost" ? "lost" : null;
+      // The email must never turn into a 500: Stripe would send the event
+      // again for a problem that is ours. sendDisputeNotice does not throw,
+      // and each send is keyed so a redelivery mails nobody twice.
+      let emailed = { sent: 0, failed: 0 };
+      if (kind && payment?.association_id) {
+        const dueBy = dispute.evidence_details?.due_by;
+        try {
+          emailed = await sendDisputeNotice({
+            associationId: payment.association_id,
+            unitId: payment.unit_id ?? null,
+            kind,
+            disputeId: dispute.id,
+            amountCents: dispute.amount,
+            reason: dispute.reason ?? null,
+            evidenceDueOn: opened && dueBy ? new Date(dueBy * 1000).toISOString().slice(0, 10) : null,
+          });
+        } catch (problem) {
+          log.error("dispute email failed", { err: problem, disputeId: dispute.id });
+        }
+        if (emailed.sent === 0) {
+          log.warn("nobody was emailed about the dispute", { disputeId: dispute.id, associationId: payment.association_id, failed: emailed.failed });
+        }
+      }
       await recordAppError({
         level: event.type === "charge.dispute.created" ? "error" : "warn",
         source: "server",
@@ -376,7 +468,16 @@ export async function POST(request: NextRequest) {
             ? `Chargeback opened for $${(dispute.amount / 100).toFixed(2)} (${dispute.reason ?? "no reason given"})`
             : `Chargeback closed: ${dispute.status}`,
         associationId: payment?.association_id ?? null,
-        extra: { disputeId: dispute.id, intentId, unitId: payment?.unit_id ?? null, account: event.account ?? null },
+        extra: {
+          disputeId: dispute.id,
+          intentId,
+          unitId: payment?.unit_id ?? null,
+          account: event.account ?? null,
+          // How many finance holders were told, so /admin shows a dispute
+          // that reached nobody.
+          emailed: emailed.sent,
+          emailFailed: emailed.failed,
+        },
       });
       break;
     }

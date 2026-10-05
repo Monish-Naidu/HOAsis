@@ -16,6 +16,16 @@ import { videoJoinUrl } from "@/lib/meetings/video";
 import { emailSender, resendKey } from "./sender";
 import { unsubscribeUrl } from "./tokens";
 import { signInUrl } from "./sign-in-link";
+import {
+  createPacer,
+  logAttempt,
+  recentlySent,
+  sentKey,
+  stoppedLine,
+  unrecordedLine,
+  UNRECORDED,
+  type Pacer,
+} from "./pace";
 
 /**
  * Everything the board sends that is not a dues run or an invitation.
@@ -25,6 +35,13 @@ import { signInUrl } from "./sign-in-link";
  * each person gets one link that signs them in; every attempt lands in
  * `email_log`, sent or not; and the words come from the row the board just
  * wrote, read back here, rather than from whatever the browser posted.
+ *
+ * A notice to more than one home passes over anybody who got the same
+ * notice in the last hour (src/lib/email/pace.ts). One call can stop at the
+ * time limit with part of the roster unreached, and that is what lets the
+ * next call carry on from there instead of starting over. That rests on
+ * `email_log` alone, so a send to several homes whose log row cannot be
+ * written stops there, with nobody left as `remaining` to call again for.
  *
  * Server only. The API route checks the caller's capability before this
  * runs, and this trusts that check the way the dues sender does.
@@ -48,13 +65,27 @@ export interface NotifyInput {
   origin: string;
   /** Build and log nothing, send nothing. */
   dryRun?: boolean;
+  /** The pace and the time budget. Passed in by tests; made here otherwise. */
+  pacer?: Pacer;
 }
 
 export interface NotifyResult {
   sent: number;
+  /** Includes anybody not reached when the send stopped at the time limit. */
   failed: number;
+  /** A home that was asked for and has nobody to write to. */
   skipped: number;
   errors: string[];
+  /** Passed over because the same notice reached them in the last hour. */
+  already: number;
+  /** Not reached, because the send stopped at the time limit. Call again to reach them. */
+  remaining: number;
+  /**
+   * Why `email_log` could not be written, when it could not. A send to
+   * several homes stopped there, and whoever it did not reach is in `failed`
+   * and not in `remaining`: calling again would write to the same people.
+   */
+  unrecorded?: string;
 }
 
 const CATEGORY: Record<NotifyKind, Category> = {
@@ -95,14 +126,9 @@ async function signInLink(
   return signInUrl(admin, { email: person.email, type: "magiclink", origin, path });
 }
 
-/** Resend's free tier allows two requests a second; a roster send must not trip it. */
-function pause(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export async function sendNotification(input: NotifyInput): Promise<NotifyResult> {
   const admin = supabaseAdmin();
-  const result: NotifyResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
+  const result: NotifyResult = { sent: 0, failed: 0, skipped: 0, errors: [], already: 0, remaining: 0 };
   const category = CATEGORY[input.kind];
   const statutory = category === "meeting" || category === "ballot" || category === "delinquency";
 
@@ -133,18 +159,63 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
   let path = LANDING[input.kind];
   if (input.kind === "request" && content.reference) path = `/resident/requests/${content.reference}`;
 
-  for (const person of people) {
-    const url = input.dryRun
-      ? `${input.origin}${path}`
-      : await signInLink(admin, person, path, input.origin, association.join_code);
-    const unsub =
-      statutory || !person.profile_id ? null : unsubscribeUrl(input.origin, person.profile_id, category);
-    const built = content.build({
+  // Resend allows two requests a second, and the function has a time limit.
+  // The pacer keeps under the first and stops the loop before the second
+  // (src/lib/email/pace.ts), so a long roster ends with a count of who was
+  // not reached. It used to end when the platform cut the function off.
+  const pacer = input.pacer ?? createPacer();
+
+  // A send that stopped is finished by calling again, and the second call
+  // must not start over at the top of the roster. So whoever got this notice
+  // in the last hour is passed over, as the dues run and the invitations do.
+  //
+  // Not for one home. A reply in a thread or a second update on a request
+  // goes out under the subject of the first on purpose, and there is no
+  // telling it from a repeat. One home is a handful of addresses, so that
+  // send is never stopped at the time limit either: with nothing to tell a
+  // repeat by, calling again would write to the first of them twice.
+  const oneHome = wanted?.size === 1;
+  const alreadySent = oneHome
+    ? new Set<string>()
+    : await recentlySent(admin, { associationId: input.associationId, category });
+
+  const plainUrl = `${input.origin}${path}`;
+  const build = (person: Recipient, url: string) =>
+    content.build({
       associationName: association.name,
       ownerName: person.full_name || "Neighbor",
       url,
-      unsubscribeUrl: unsub,
+      unsubscribeUrl:
+        statutory || !person.profile_id ? null : unsubscribeUrl(input.origin, person.profile_id, category),
+      // Decides the line under the button and the footer for somebody the
+      // board only has an address for: their link is the join page.
+      hasAccount: Boolean(person.profile_id),
     });
+  // Asked of the subject alone, which does not depend on the link, so no
+  // sign-in link is minted for somebody who will not be sent anything.
+  const hasIt = (person: Recipient) =>
+    alreadySent.size > 0 &&
+    alreadySent.has(sentKey(person.email, build(person, plainUrl).subject, person.unit_id));
+
+  for (let index = 0; index < people.length; index++) {
+    const person = people[index];
+    if (!input.dryRun && !oneHome && pacer.outOfTime()) {
+      // Whoever already has it is not waiting for it.
+      result.remaining = people.slice(index).filter((rest) => !hasIt(rest)).length;
+      if (result.remaining > 0) {
+        result.failed += result.remaining;
+        result.errors.unshift(stoppedLine(result.remaining, true));
+      }
+      break;
+    }
+    if (hasIt(person)) {
+      result.already++;
+      continue;
+    }
+    const url = input.dryRun
+      ? plainUrl
+      : await signInLink(admin, person, path, input.origin, association.join_code);
+    const built = build(person, url);
 
     if (input.dryRun) {
       result.sent++;
@@ -157,6 +228,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
       sendError = "RESEND_API_KEY is missing, so nothing can be sent.";
     } else {
       try {
+        await pacer.turn();
         const sent = await client.emails.send({
           from: emailSender(),
           to: person.email,
@@ -171,7 +243,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
       }
     }
 
-    await admin.from("email_log").insert({
+    const unrecorded = await logAttempt(admin, {
       association_id: input.associationId,
       profile_id: person.profile_id,
       unit_id: person.unit_id,
@@ -188,7 +260,27 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
     } else {
       result.sent++;
     }
-    if (people.length > 1) await pause(550);
+
+    if (unrecorded) {
+      // The log row is what the next call passes this person over by. With
+      // no row, the browser asking again while anybody remains writes to the
+      // same people on every call. So stop here, and leave `remaining` at
+      // nothing: the people not reached are counted as failed, which the
+      // browser reports and does not call again for.
+      //
+      // One home carries on. Nothing calls again for it, and stopping would
+      // leave a co-owner unwritten with no way to reach them alone.
+      if (oneHome) {
+        if (!result.unrecorded) result.errors.unshift(UNRECORDED);
+        result.unrecorded = unrecorded;
+        continue;
+      }
+      result.unrecorded = unrecorded;
+      const notReached = people.slice(index + 1).filter((rest) => !hasIt(rest)).length;
+      result.failed += notReached;
+      result.errors.unshift(unrecordedLine(notReached));
+      break;
+    }
   }
 
   return result;
@@ -202,6 +294,7 @@ interface Content {
     ownerName: string;
     url: string;
     unsubscribeUrl: string | null;
+    hasAccount: boolean;
   }) => { subject: string; html: string; text: string };
 }
 

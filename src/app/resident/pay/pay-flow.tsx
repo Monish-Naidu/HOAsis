@@ -27,12 +27,12 @@ import {
   type PaymentInstrument,
   NO_PLATFORM_FEE,
 } from "@/lib/payments/instruments";
-import { cn, formatDate, money, ordinal, pluralize, relativeDays, today } from "@/lib/utils";
+import { cn, formatDate, money, ordinal, pluralize, relativeDays, today, todayIsoDate } from "@/lib/utils";
 import { AddMethod } from "./add-method";
 import { InstrumentMenu } from "./instrument-menu";
 import { StripePayPanel } from "./stripe-pay-panel";
 import { refreshRemote } from "@/lib/data/remote-store";
-import { isChargeable } from "@/lib/payments/autopay";
+import { autopaySource, nextAutopayDate } from "@/lib/payments/autopay-card";
 import { useToast } from "@/components/app/toast";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { policyFor } from "@/lib/collections";
@@ -100,14 +100,17 @@ export function PayFlow() {
     instruments.find((i) => i.isDefault) ??
     instruments[0];
 
-  // What autopay would draw from. For a real association that has to be a
-  // method Stripe can charge with nobody present: the one chosen in the
-  // panel if it is saved and verified, else the household's default.
-  const autopayInstrument = isRemote
-    ? (instruments.find((i) => i.id === stripeSelection && isChargeable(i)) ??
-      instruments.find((i) => i.isDefault && isChargeable(i)) ??
-      instruments.find((i) => isChargeable(i)))
-    : selected;
+  // What autopay draws from: one answer for the line that names it, the
+  // switch that is gated on it and the plan that is saved with it. For a
+  // real association that is a method Stripe can charge with nobody present,
+  // and a plan already saved keeps its own.
+  const autopayFrom = autopaySource({
+    isRemote,
+    instruments,
+    planInstrumentId: plan?.instrumentId,
+    panelSelection: stripeSelection,
+    selected,
+  });
 
   const amountCents = useMemo(() => {
     if (amountMode === "balance") return balanceCents > 0 ? balanceCents : duesCents;
@@ -115,18 +118,28 @@ export function PayFlow() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [amountMode, custom, balanceCents, duesCents]);
 
-  // Months are arithmetic on the association's own next charge date, so the
-  // screen never drifts from the demo clock or a real one.
-  const chargeMonth = nextCharge.slice(0, 7);
-  const monthAfter = (ym: string, steps = 1) => {
-    const year = Number(ym.slice(0, 4));
-    const month = Number(ym.slice(5, 7)) - 1 + steps;
-    return `${year + Math.floor(month / 12)}-${String((month % 12) + 1).padStart(2, "0")}`;
-  };
-  const upcomingMonth = monthAfter(chargeMonth, 0);
+  // A new plan starts in the month of the association's next charge. A
+  // saved one keeps the start it was saved with, which for an older plan is
+  // none at all, and the daily run reads it the same way. When autopay next
+  // runs is worked out from the plan and today as the run does it, not from
+  // the next dues month: the two differ between the due day and the autopay
+  // day. The next charge date goes in for the one case where the run draws
+  // on the day dues post, not on the plan's day: a due day later in the
+  // month than the autopay day.
+  const startMonth = plan ? plan.startMonth : nextCharge.slice(0, 7);
+  const upcomingMonth = nextAutopayDate({
+    plan: { day: autopayDay, startMonth },
+    today: todayIsoDate(),
+    nextChargeDate: nextCharge,
+  }).slice(0, 7);
   const skipsUpcoming = skipMonth === upcomingMonth;
-  const autopayMonth = skipsUpcoming ? monthAfter(upcomingMonth) : upcomingMonth;
-  const autopayDate = `${autopayMonth}-${String(autopayDay).padStart(2, "0")}`;
+  // The skip offer and the date below it read the same plan, so they can
+  // never name different months.
+  const autopayDate = nextAutopayDate({
+    plan: { day: autopayDay, startMonth, skipMonth: skipMonth ?? undefined },
+    today: todayIsoDate(),
+    nextChargeDate: nextCharge,
+  });
   const monthLabel = (ym: string) => formatDate(`${ym}-01`, "long").replace(/ 1,/, "");
 
   function persistAutopay(next: {
@@ -144,15 +157,25 @@ export function PayFlow() {
             day,
             capCents: cap ?? undefined,
             skipMonth: skip ?? undefined,
-            instrumentId: autopayInstrument?.id,
+            instrumentId: autopayFrom?.id,
             // Kept from the first save, so changing the day later does not
             // move the start; set now, so the promise on screen ("Next
             // autopay: October 1") is the month the cron waits for.
-            startMonth: plan?.startMonth ?? upcomingMonth,
+            startMonth,
           }
         : null,
     ).then((ok) => {
-      if (!ok) return;
+      if (!ok) {
+        // The save was refused and a toast has said why. Put the card back
+        // to what is actually saved, so a switch that reads on, or a day
+        // that reads the 5th, is never something the database does not hold.
+        setAutopayOn(owner?.autopay ?? false);
+        setAutopayDay(plan?.day ?? 1);
+        setCapCents(plan?.capCents ?? null);
+        setCapText(plan?.capCents ? String(plan.capCents / 100) : "");
+        setSkipMonth(plan?.skipMonth ?? null);
+        return;
+      }
       if (!next.on) notify("Autopay is off. Nothing will be taken.", "info");
       else if (next.skipMonth) notify(`${monthLabel(next.skipMonth)} will be skipped.`);
       else if (next.skipMonth === null) notify("Nothing is skipped now.");
@@ -295,9 +318,11 @@ export function PayFlow() {
                   Autopay your balance on the {ordinal(autopayDay)}
                 </p>
                 <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
-                  {selected
-                    ? `Usually ${money(duesCents)}. Any fee or other charge on your account is included. From ${describeInstrument(selected)}. Cancel any time.`
-                    : "Add a payment method to turn this on."}
+                  {autopayFrom
+                    ? `Usually ${money(duesCents)}. Any fee or other charge on your account is included. From ${describeInstrument(autopayFrom)}. Cancel any time.`
+                    : instruments.length > 0
+                      ? "Confirm your bank to turn this on."
+                      : "Add a payment method to turn this on."}
                 </p>
               </div>
               <Toggle
@@ -306,7 +331,9 @@ export function PayFlow() {
                   setAutopayOn(on);
                   persistAutopay({ on });
                 }}
-                disabled={!selected}
+                // Off is always allowed: a plan whose method has gone must
+                // still be possible to cancel.
+                disabled={!autopayFrom && !autopay}
                 label="Enable autopay"
               />
             </div>

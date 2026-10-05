@@ -31,14 +31,22 @@ export function CollectionPolicyCard() {
   const saved = policyFor(community.settings);
   const [draft, setDraft] = useState<CollectionPolicy>(saved);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const problems = policyProblems(draft);
   const isDefault = !community.settings.collectionPolicy;
 
   const set = (patch: Partial<CollectionPolicy>) => setDraft((d) => ({ ...d, ...patch }));
 
-  function save() {
-    if (problems.length) return;
-    updateSettings({ collectionPolicy: draft });
+  async function save() {
+    if (problems.length || saving) return;
+    // Held until the write is back. A seat that may not change settings used
+    // to be told "saved" and "nothing was changed" in the same breath.
+    setSaving(true);
+    const ok = await updateSettings({ collectionPolicy: draft });
+    setSaving(false);
+    // A refusal has already been said by the write itself, and the form
+    // stays open with what was typed.
+    if (!ok) return;
     setEditing(false);
     notify("Collections policy saved", "ok");
   }
@@ -135,8 +143,13 @@ export function CollectionPolicyCard() {
           ) : null}
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button variant="primary" size="md" onClick={save} disabled={problems.length > 0}>
-              Save policy
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => void save()}
+              disabled={problems.length > 0 || saving}
+            >
+              {saving ? "Saving" : "Save policy"}
             </Button>
             <Button variant="ghost" size="md" onClick={() => setEditing(false)}>
               Cancel

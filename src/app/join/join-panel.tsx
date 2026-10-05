@@ -9,6 +9,8 @@ import { useAppState, useCommunityById, useStorageReady } from "@/lib/app-state"
 import { useAuth, signUp } from "@/lib/auth";
 import { parseInvitation } from "@/lib/invitations";
 import { hasSupabase } from "@/lib/supabase/env";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { joinReturnPath, openInvitedHome } from "./invited";
 import { cn, money } from "@/lib/utils";
 
 /**
@@ -284,6 +286,15 @@ function JoinForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<"check-email" | "waiting" | null>(null);
+  // Set when somebody signed in opened an invitation that was sent to a
+  // different address. The form then becomes the ordinary request to join,
+  // with the home field, so the board does hear from them.
+  const [byRequest, setByRequest] = useState(false);
+  const asInvite = invited && !byRequest;
+  // Set when the signed-in account already has a home here and the
+  // invitation went to a different address. They are told which, and the
+  // button then goes to the home they do hold (src/app/join/invited.ts).
+  const [otherSeat, setOtherSeat] = useState<{ message: string; path: string } | null>(null);
 
   if (!found) {
     return (
@@ -310,9 +321,40 @@ function JoinForm({
 
   async function submit() {
     if (!ready || busy) return;
+    if (otherSeat) {
+      window.location.assign(otherSeat.path);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
+      // Invited and already signed in. No account to make and no request to
+      // send, which used to mean nothing happened and the screen said the
+      // board had been asked. Claim the seat and open the home, or say the
+      // invitation was for another address (src/app/join/invited.ts).
+      if (asInvite && signedIn && hasSupabase) {
+        const client = supabaseBrowser();
+        const outcome = await openInvitedHome(
+          {
+            claimSeats: () => client.rpc("claim_my_seats"),
+            memberOf: (joinCode) =>
+              client.from("associations").select("slug").eq("join_code", joinCode).maybeSingle(),
+          },
+          { code, signedInEmail, invitedEmail },
+        );
+        if (outcome.kind === "open") {
+          // A full load, so the app starts again knowing about the seat.
+          window.location.assign(outcome.path);
+          return;
+        }
+        if (outcome.kind === "other-seat") {
+          setOtherSeat({ message: outcome.message, path: outcome.path });
+          return;
+        }
+        setError(outcome.message);
+        if (outcome.kind === "other-address") setByRequest(true);
+        return;
+      }
       if (needsAccount) {
         const made = await signUp(email, password, name);
         if (!made.ok) {
@@ -320,7 +362,7 @@ function JoinForm({
           return;
         }
       }
-      if (!invited) {
+      if (!asInvite) {
         const result = await requestToJoin({
           code,
           name: signedIn ? signedInName || name : name,
@@ -379,14 +421,14 @@ function JoinForm({
       <div className="border-b border-border px-6 py-5">
         <p className="flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
           <DoorOpen className="size-3.5" />
-          {invited ? "You were invited to" : "Join"}
+          {asInvite ? "You were invited to" : "Join"}
         </p>
         <h1 className="mt-1 text-title3 font-semibold leading-tight tracking-[-0.02em] text-fg">
           {found.name}
         </h1>
         {found.place ? <p className="mt-1 text-body text-fg-muted">{found.place}</p> : null}
         <p className="mt-2 text-body leading-relaxed text-fg-muted">
-          {invited
+          {asInvite
             ? signedIn
               ? "Your board added your home. Your account is signed in, so it opens on its own."
               : "Your board added your home. Create your account with this email and it opens on its own."
@@ -447,7 +489,7 @@ function JoinForm({
           </>
         )}
 
-        {!invited ? (
+        {!asInvite ? (
           <>
             <label className="block">
               <span className={label}>Your home</span>
@@ -472,6 +514,12 @@ function JoinForm({
           </>
         ) : null}
 
+        {otherSeat ? (
+          <p role="status" className="text-footnote leading-snug text-fg-muted">
+            {otherSeat.message}
+          </p>
+        ) : null}
+
         {error ? (
           <p role="alert" className="text-footnote font-medium text-danger">
             {error}
@@ -479,7 +527,7 @@ function JoinForm({
               <>
                 {" "}
                 <Link
-                  href={`/signin?next=${encodeURIComponent(`/join?${invited ? "invite" : "code"}=${code}`)}`}
+                  href={`/signin?next=${encodeURIComponent(joinReturnPath({ invited, code, email: invitedEmail }))}`}
                   className="underline"
                 >
                   Sign in, then come back here.
@@ -492,13 +540,15 @@ function JoinForm({
         <Button variant="primary" size="md" type="submit" className="w-full" disabled={!ready || busy}>
           {busy
             ? "One moment"
-            : invited
-              ? signedIn
-                ? "Open my home"
-                : "Create my account"
-              : needsAccount
-                ? "Create my account and ask to join"
-                : "Ask to join"}
+            : otherSeat
+              ? "Go to my home"
+              : asInvite
+                ? signedIn
+                  ? "Open my home"
+                  : "Create my account"
+                : needsAccount
+                  ? "Create my account and ask to join"
+                  : "Ask to join"}
           <ArrowRight className="size-4" />
         </Button>
 
@@ -506,7 +556,7 @@ function JoinForm({
           <p className="text-center text-footnote text-fg-subtle">
             Already have an account?{" "}
             <Link
-              href={`/signin?next=${encodeURIComponent(`/join?${invited ? "invite" : "code"}=${code}`)}`}
+              href={`/signin?next=${encodeURIComponent(joinReturnPath({ invited, code, email: invitedEmail }))}`}
               className="font-medium text-primary hover:underline"
             >
               Sign in

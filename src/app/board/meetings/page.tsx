@@ -8,6 +8,7 @@ import { videoJoinUrl } from "@/lib/meetings/video";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
+import { meetingPhase } from "@/lib/phases";
 import { cn, formatDate, pluralize } from "@/lib/utils";
 import { useToast } from "@/components/app/toast";
 import type { Meeting } from "@/lib/types";
@@ -57,16 +58,32 @@ export default function BoardMeetings() {
   const { community, sendMeetingNotice } = useAppState();
   const { notify } = useToast();
   const [scheduling, setScheduling] = useState(false);
+  // Meetings whose notice is on its way. A real roster is emailed before the
+  // notice goes on record, which can take most of a minute.
+  const [sending, setSending] = useState<string[]>([]);
   const live = community.meetings.find((m) => m.status === "live");
   // The live meeting has its own card above, so it is not also a row here.
+  // Split by phase, not stored status: nothing marks a real association's
+  // meeting ended, so its date does. One held today is still upcoming.
   const upcoming = [...community.meetings]
-    .filter((m) => m.status === "scheduled")
+    .filter((m) => meetingPhase(m) === "scheduled")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
   // Newest first. What was on the agenda, and who came, is the record the
   // next board inherits; it used to vanish the day the meeting ended.
   const past = [...community.meetings]
-    .filter((m) => m.status === "ended")
+    .filter((m) => meetingPhase(m) === "ended")
     .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  async function sendNotice(m: Meeting) {
+    if (sending.includes(m.id)) return;
+    // Held until the send is back. This used to say "posted" at once, over a
+    // send that was still running and, for some, then failed.
+    setSending((ids) => [...ids, m.id]);
+    const ok = await sendMeetingNotice(m.id);
+    setSending((ids) => ids.filter((id) => id !== m.id));
+    // Anything that fell short has been said by the send itself.
+    if (ok) notify(`Notice of ${m.title} posted to every home`);
+  }
 
   return (
     <>
@@ -194,13 +211,11 @@ export default function BoardMeetings() {
                 variant="secondary"
                 size="sm"
                 className="shrink-0"
-                onClick={() => {
-                  sendMeetingNotice(m.id);
-                  notify(`Notice of ${m.title} posted to every home`);
-                }}
+                disabled={sending.includes(m.id)}
+                onClick={() => void sendNotice(m)}
               >
                 <Megaphone className="size-3.5" />
-                Send notice
+                {sending.includes(m.id) ? "Sending" : "Send notice"}
               </Button>
             )}
           </div>
