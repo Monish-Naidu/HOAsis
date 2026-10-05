@@ -166,6 +166,11 @@ export interface Owner {
   /** Households can have two names on title. One record, one bill. */
   displayName: string;
   members: string[];
+  /**
+   * Each person's own seat on the home, set for a real association. The board
+   * ends one of two with remove_owner; `members` alone cannot say which seat.
+   */
+  seats?: { id: string; name: string; accountId?: string; removable: boolean }[];
   email: string;
   phone: string;
   /** Where paper goes when it is not the home. Set by the owner. */

@@ -503,6 +503,20 @@ export async function loadCommunity(
       .map((m) => m.full_name)
       .filter(Boolean);
 
+    // Each person's seat, so the board can end one of two. A seat with an
+    // office or a capability is not offered: remove_owner would refuse it.
+    const seats = memberRows
+      .filter((m) => m.unit_id === unit.id && m.full_name)
+      .map((m) => ({
+        id: m.id as string,
+        name: m.full_name as string,
+        accountId: (m.profile_id as string | null) ?? undefined,
+        removable:
+          m.role === "resident" &&
+          !(m.capabilities ?? []).length &&
+          !(m.views ?? []).length,
+      }));
+
     // Who held the home before, newest first. A seat that closed the day
     // it opened is a correction, not a tenure.
     const previousOwners = everySeat
@@ -520,6 +534,7 @@ export async function loadCommunity(
       displayName: holder?.full_name || placeholder,
       placeholder: !holder?.full_name,
       members: members.length ? members : [holder?.full_name || placeholder],
+      seats,
       email: holder?.invited_email ?? "",
       phone: holder?.phone ?? "",
       mailingAddress: holder?.mailing_address || undefined,

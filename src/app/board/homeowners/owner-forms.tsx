@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Field, fieldClass } from "@/components/ui/primitives";
+import { firstName, removeConfirmText, type OwnerSeat } from "@/lib/co-owners";
 
 const looksLikeEmail = (value: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 
@@ -121,5 +122,76 @@ export function SecondOwnerForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * The two people on a home, each with a quiet way to take them off it.
+ *
+ * Only offered where the person's seat may be ended (see removableSeats), and
+ * always behind a confirm that says who loses access and who stays, because
+ * ending a seat also removes the payment methods that person saved.
+ */
+export function PeopleOnHome({
+  people,
+  removable,
+  homeLabel,
+  onRemove,
+}: {
+  people: OwnerSeat[];
+  removable: OwnerSeat[];
+  homeLabel: string;
+  onRemove: (seat: OwnerSeat) => Promise<boolean>;
+}) {
+  const [confirming, setConfirming] = useState<OwnerSeat | null>(null);
+  const [busy, setBusy] = useState(false);
+  const others = confirming ? people.filter((p) => p.id !== confirming.id) : [];
+  return (
+    <div className="py-1.5">
+      <dt className="text-body text-fg-muted">On title</dt>
+      <dd className="mt-1 space-y-1">
+        {people.map((p) => (
+          <div key={p.id} className="flex items-center justify-between gap-3">
+            <span className="min-w-0 truncate text-body text-fg">{p.name}</span>
+            {removable.some((r) => r.id === p.id) && confirming?.id !== p.id ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirming(p)}
+                aria-label={`Remove ${p.name} from ${homeLabel}`}
+              >
+                Remove {firstName(p.name)}
+              </Button>
+            ) : null}
+          </div>
+        ))}
+        {confirming ? (
+          <div role="group" aria-label={`Remove ${confirming.name}`} className="mt-2 space-y-2 border-t border-border pt-2">
+            <p className="text-footnote text-fg-muted">
+              {removeConfirmText(confirming.name, others.map((o) => o.name).join(" and "), homeLabel)}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  void onRemove(confirming)
+                    .then((ok) => ok && setConfirming(null))
+                    .finally(() => setBusy(false));
+                }}
+              >
+                Remove {firstName(confirming.name)}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </dd>
+    </div>
   );
 }

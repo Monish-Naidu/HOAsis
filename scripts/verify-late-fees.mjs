@@ -138,6 +138,38 @@ try {
     `${onDues}, ${JSON.stringify(movedFees)}`,
   );
 
+  // A check that is reversed leaves the dues it paid unpaid, and late (0091).
+  // A third association, so the statement is dues, the check and its reversal.
+  const { data: bouncedId, error: bouncedError } = await president.client.rpc("create_association", {
+    p_name: "Late Fee Bounced Check HOA", p_city: "Bothell", p_state: "WA",
+    p_dues_cents: 10000, p_dues_cadence: "monthly", p_due_day: 1,
+    p_founder_name: "Pat Founder", p_founder_unit: "1",
+    p_households: [],
+  });
+  if (bouncedError) throw new Error(bouncedError.message);
+  cleanup.associations.push(bouncedId);
+  await admin.from("associations").update({
+    billing_starts_on: day(-60),
+    settings: { collectionPolicy: { lateNoticeDay: 30, lateFeeCents: 2500 } },
+  }).eq("id", bouncedId);
+  const { data: bouncedUnits } = await admin.from("units").select("id").eq("association_id", bouncedId);
+  await admin.rpc("issue_assessment", { p_association_id: bouncedId, p_label: "Bounced dues", p_due_on: day(-40) });
+  const { data: checkId, error: checkError } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: bouncedUnits[0].id, p_amount_cents: 10000, p_method: "check", p_reference: "2201", p_received_on: day(-1),
+  });
+  check("a check pays the dues", !checkError && Boolean(checkId), checkError?.message ?? "");
+  const { data: whilePaid } = await admin.rpc("assess_late_fees", { p_association_id: bouncedId, p_today: day(0) });
+  check("paid dues draw no fee", whilePaid === 0, String(whilePaid));
+  const { error: reverseError } = await president.client.rpc("reverse_manual_payment", { p_payment_id: checkId, p_reason: "Returned by the bank" });
+  check("the check is reversed", !reverseError, reverseError?.message ?? "");
+  const { data: afterBounce } = await admin.rpc("assess_late_fees", { p_association_id: bouncedId, p_today: day(0) });
+  const { data: bouncedFees } = await admin.from("charges").select("label").eq("association_id", bouncedId).eq("category", "late_fee");
+  check(
+    "the dues it had paid are late again, once",
+    afterBounce === 1 && (bouncedFees ?? []).length === 1 && bouncedFees[0].label === "Late fee, Bounced dues",
+    `${afterBounce}, ${JSON.stringify(bouncedFees)}`,
+  );
+
   // The board's own policy is honoured: no fee when it says zero.
   const { error: policyError } = await admin.from("associations").update({ settings: { collectionPolicy: { lateFeeCents: 0 } } }).eq("id", associationId);
   check("the policy change is saved", !policyError, policyError?.message ?? "");

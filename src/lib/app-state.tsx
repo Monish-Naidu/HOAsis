@@ -364,6 +364,12 @@ interface AppState {
   setHouseholdOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
   /** A second person on a home that already has an owner, with a sign-in of their own. */
   addSecondOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
+  /**
+   * Ends one of two owners' seats on a home today. `seatId` is the membership
+   * id for a real association and the account id in the demo. The other owner
+   * stays. (removeOwner, above, removes a whole household.)
+   */
+  removeCoOwner: (ownerId: string, seatId: string) => Promise<boolean>;
   /** The address a not yet signed in owner claims their seat with. */
   changeOwnerEmail: (ownerId: string, email: string) => Promise<boolean>;
   /** Which kind of home these are: detached, townhome or condo. */
@@ -2402,6 +2408,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return Promise.resolve(seatInDemo(ownerId, input, true));
     },
     [remote.community, seatInDemo],
+  );
+
+  /**
+   * One owner of two taken off the home, today. The other owner keeps the
+   * home, the bill and the vote. A real association asks remove_owner (0090),
+   * which refuses the only owner, the president and anybody on the board; the
+   * demo drops the second name and account from the household.
+   */
+  const removeCoOwner = useCallback(
+    (ownerId: string, seatId: string) => {
+      if (remote.community) {
+        return remoteWrite("Removing the owner", () =>
+          supabaseBrowser().rpc("remove_owner", { p_membership_id: seatId }),
+        );
+      }
+      const accounts = sliceStore(communityId, "accounts");
+      const gone = accounts.getSnapshot().find((a) => a.id === seatId && a.ownerId === ownerId);
+      const onHome = accounts.getSnapshot().filter((a) => a.ownerId === ownerId);
+      if (!gone || onHome.length < 2) return Promise.resolve(false);
+      accounts.update((all) => all.filter((a) => a.id !== seatId));
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) => {
+          if (o.id !== ownerId) return o;
+          const members = o.members.filter((m) => m !== gone.name);
+          const first = members[0] ?? o.displayName;
+          return {
+            ...o,
+            members,
+            displayName: o.displayName === gone.name ? first : o.displayName,
+            email: o.email === gone.email ? (onHome.find((a) => a.id !== seatId)?.email ?? o.email) : o.email,
+          };
+        }),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, communityId],
   );
 
   /**
@@ -5500,6 +5542,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setOpeningBalances,
     setHouseholdOwner,
     addSecondOwner,
+    removeCoOwner,
     changeOwnerEmail,
     setHomeType,
     setHomeDues,
