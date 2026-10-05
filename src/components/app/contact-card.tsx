@@ -6,6 +6,7 @@ import { Button, Card, SectionTitle, fieldClass } from "@/components/ui/primitiv
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { requestEmailChange, useAuth } from "@/lib/auth";
 import { checkNewEmail, emailChangeSent } from "@/lib/email-change";
+import { checkPhone } from "@/lib/input-checks";
 import { useToast } from "@/components/app/toast";
 
 /**
@@ -28,6 +29,7 @@ export function ContactCard() {
   const [editing, setEditing] = useState(false);
   const [phone, setPhone] = useState(owner?.phone ?? "");
   const [mailing, setMailing] = useState(owner?.mailingAddress ?? "");
+  const [phoneProblem, setPhoneProblem] = useState<string | null>(null);
 
   if (!owner) return null;
 
@@ -35,7 +37,13 @@ export function ContactCard() {
     fieldClass;
 
   function save() {
-    void updateMyContact({ phone: phone.trim(), mailingAddress: mailing.trim() }).then((ok) => {
+    const checked = checkPhone(phone);
+    if (!checked.ok) {
+      setPhoneProblem(checked.message);
+      return;
+    }
+    setPhoneProblem(null);
+    void updateMyContact({ phone: checked.phone, mailingAddress: mailing.trim() }).then((ok) => {
       if (!ok) return;
       setEditing(false);
       notify("Contact details saved. The board sees them on your record.");
@@ -55,6 +63,7 @@ export function ContactCard() {
             onClick={() => {
               setPhone(owner.phone);
               setMailing(owner.mailingAddress ?? "");
+              setPhoneProblem(null);
               setEditing(true);
             }}
           >
@@ -79,11 +88,20 @@ export function ContactCard() {
                 type="tel"
                 autoComplete="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setPhoneProblem(null);
+                }}
                 placeholder="(937) 555-0140"
+                aria-invalid={phoneProblem ? true : undefined}
                 className={field}
                 autoFocus
               />
+              {phoneProblem ? (
+                <span role="alert" className="mt-1 block text-footnote text-danger">
+                  {phoneProblem}
+                </span>
+              ) : null}
             </label>
             <label className="block">
               <span className="mb-1 block text-footnote font-semibold text-fg-muted">

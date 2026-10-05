@@ -289,10 +289,10 @@ confirmed and survived a reload, 390px on about forty pages.
 | --- | --- | --- |
 | Dark mode on `/start`, `/board/setup`, `/board` | A hydration error drops the dark theme and the page renders light | next |
 | Wizard, homes by number | Preview says 5 homes and $1,000; the association is made with 4 and $800, the founder's home merged into a range | next |
-| Resident pay, "Other amount" | -5 reads "Pay $5.00"; 99999 on a $285 balance has no warning; 0 disables the button without saying why | next |
-| Resident settings, phone | "abc" saves | next |
-| Wizard | Dues of 0 erased silently, no upper limit; founder email "notanemail" accepted; pasted list keeps "3 Founder Way" and "3 founder way" as two homes; Continue disabled with no reason in four places | next |
-| Meetings, schedule | Time "banana" accepted; the notice adds a video link the board never entered | next |
+| Resident pay, "Other amount" | -5 reads "Pay $5.00"; 99999 on a $285 balance has no warning; 0 disables the button without saying why | done 2026-10-05 (pull request #8): refused with a reason; an overpayment says the extra stays as credit; the server already refused bad amounts |
+| Resident settings, phone | "abc" saves | done 2026-10-05 (pull request #8) |
+| Wizard | Dues of 0 erased silently, no upper limit; founder email "notanemail" accepted; pasted list keeps "3 Founder Way" and "3 founder way" as two homes; Continue disabled with no reason in four places | done 2026-10-05 (pull request #8): each field says what is wrong; dues cap $100,000; name cap 80; a paste says how many were added and skipped |
+| Meetings, schedule | Time "banana" accepted; the notice adds a video link the board never entered | done 2026-10-05 for the time (pull request #8). The link is left: every meeting gets a video room in the app ("Join the call"), so the notice matches it. Waiting on Monish: keep a room on every meeting, or only when the board asks for one |
 | Demo only: a dues change | Past bills and "dues collected" move with it, against what Settings says; Home says $310 while the September line says $285 | next: the demo should bill from the records the way the database does |
 | Demo only: vendor payment recorded | Cash on hand, the vendor's total and Transactions do not move | next |
 | Demo only: counts | Hero says 88 homes after a household is added (89 elsewhere); Voting mixes "of 88" and "of 89" | next |

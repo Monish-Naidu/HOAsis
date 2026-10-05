@@ -12,6 +12,7 @@ import { homeTypesOf, soleType } from "@/lib/home-types";
 import { expandPhases, lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor } from "@/lib/lots";
 import { addDays, nextDueOnOrAfter } from "@/lib/utils";
 import { policyWithLateFee } from "@/lib/collections";
+import { associationNameProblem, duesProblem } from "@/lib/input-checks";
 
 /**
  * Defaults nobody is asked about during setup.
@@ -420,6 +421,31 @@ export function homesAnswered(draft: CommunityDraft): boolean {
   if (draft.parkedHouseholds?.length) return false;
   if ((draft.homeNaming ?? defaultHomeNaming(draft)) === "addresses") return true;
   return expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0;
+}
+
+/**
+ * Whether any amount a range, row or the founder carries is one the dues
+ * rules refuse: typed as zero, or past the per-period ceiling. Blank is fine,
+ * it means the usual amount. Only checked while billing by home, the one
+ * mode where those amounts are asked.
+ */
+export function draftOwnDuesProblem(draft: CommunityDraft): string | null {
+  if (!draft.duesByHome) return null;
+  const amounts = [
+    draft.founder.duesCents,
+    ...(draft.phases ?? []).map((p) => p.duesCents),
+    ...draft.households.map((h) => h.duesCents),
+  ];
+  for (const cents of amounts) {
+    const problem = duesProblem(cents);
+    if (problem) return problem;
+  }
+  return null;
+}
+
+/** The association name, held to the same length the field allows. */
+export function draftNameProblem(draft: CommunityDraft): string | null {
+  return associationNameProblem(draft.name);
 }
 
 /** The collections policy the draft's late fee answer makes: no fee unless one was chosen. */

@@ -6,6 +6,7 @@ import { Button, Card, CardHeader, Select, fieldClass, textareaClass } from "@/c
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { addDays, formatDate, todayIsoDate } from "@/lib/utils";
+import { checkMeetingTime } from "@/lib/input-checks";
 import type { Meeting } from "@/lib/types";
 
 const KINDS: { value: Meeting["kind"]; label: string; hint: string }[] = [
@@ -35,6 +36,10 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
   const [dialIn, setDialIn] = useState("");
   const [passcode, setPasscode] = useState("");
   const [agenda, setAgenda] = useState("");
+  // The time is checked once it has been left or the form has been tried, so
+  // an untouched form does not open with a complaint.
+  const [timeTouched, setTimeTouched] = useState(false);
+  const checkedTime = checkMeetingTime(time);
 
   const field =
     fieldClass;
@@ -44,6 +49,10 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
 
   function schedule() {
     if (!ready) return;
+    if (!checkedTime.ok) {
+      setTimeTouched(true);
+      return;
+    }
     const items = agenda
       .split("\n")
       .map((line) => line.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim())
@@ -52,7 +61,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
       id: `mtg-${Date.now()}`,
       title: title.trim(),
       date,
-      time: time.trim() || "7:00 PM",
+      time: checkedTime.time,
       status: "scheduled",
       kind,
       location: location.trim(),
@@ -133,9 +142,16 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
             <input
               value={time}
               onChange={(e) => setTime(e.target.value)}
+              onBlur={() => setTimeTouched(true)}
               placeholder="7:00 PM"
+              aria-invalid={timeTouched && !checkedTime.ok}
               className={field}
             />
+            {timeTouched && !checkedTime.ok ? (
+              <span role="alert" className="mt-1 block text-footnote text-danger">
+                {checkedTime.message}
+              </span>
+            ) : null}
           </label>
           <label className="block">
             <span className={label}>Where</span>
