@@ -80,7 +80,7 @@ export const announcements: Announcement[] = [
   {
     id: "ann-1",
     title: "Pool resurfacing begins September 8",
-    body: "The pool and deck close Monday September 8 for resurfacing and will reopen Friday September 19, weather permitting. The spa stays open the entire time. Gate codes are unchanged.",
+    body: "The pool and deck close Tuesday September 8 for resurfacing and will reopen Saturday September 19, weather permitting. The spa stays open the entire time. Gate codes are unchanged.",
     postedDate: "2026-08-18",
     author: "Arya Mehr, Board President",
     pinned: true,

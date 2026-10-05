@@ -64,7 +64,7 @@ export default function BoardRequests() {
       setReasonError(true);
       return;
     }
-    const ok = await decide(r, "denied", `Denied. ${why}`, `${r.reference} denied`, "warn");
+    const ok = await decide(r, "denied", `Denied. ${why}`, `Denied: ${r.title}`, "warn");
     if (ok) stopDenying();
   }
 
@@ -179,7 +179,7 @@ export default function BoardRequests() {
                           size="sm"
                           disabled={saving === r.id}
                           onClick={() =>
-                            void decide(r, "approved", "Approved by the board.", `${r.reference} approved`)
+                            void decide(r, "approved", "Approved by the board.", `Approved: ${r.title}`)
                           }
                         >
                           Approve

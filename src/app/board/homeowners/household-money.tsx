@@ -44,6 +44,7 @@ export function RecordPaymentForm({
   }) => Promise<boolean>;
   onCancel: () => void;
 }) {
+  const label = homeName ?? unit;
   const today = todayIsoDate();
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<ManualMethod>("check");
@@ -68,7 +69,7 @@ export function RecordPaymentForm({
           .finally(() => setBusy(false));
       }}
     >
-      <p className="text-footnote font-semibold text-fg-muted">A payment received for home {unit}</p>
+      <p className="text-footnote font-semibold text-fg-muted">A payment received for {label}</p>
       <div className="grid gap-2 sm:grid-cols-2">
         <Field label="Amount">
           <input
@@ -141,13 +142,17 @@ export function RecordPaymentForm({
  */
 export function AddCreditForm({
   unit,
+  homeName,
   onSave,
   onCancel,
 }: {
   unit: string;
+  /** How the board names this home, for the heading. Falls back to the unit. */
+  homeName?: string;
   onSave: (input: { amountCents: number; reason: string }) => Promise<boolean>;
   onCancel: () => void;
 }) {
+  const label = homeName ?? unit;
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -165,7 +170,7 @@ export function AddCreditForm({
           .finally(() => setBusy(false));
       }}
     >
-      <p className="text-footnote font-semibold text-fg-muted">A credit for home {unit}</p>
+      <p className="text-footnote font-semibold text-fg-muted">A credit for {label}</p>
       <p className="text-footnote text-fg-muted">
         It lowers what they owe. It is not money received, so the books do not change.
       </p>
@@ -306,6 +311,7 @@ export function AddChargeForm({
  */
 export function ChangeDuesForm({
   unit,
+  homeName,
   period,
   nowCents,
   sourceLabel,
@@ -315,6 +321,8 @@ export function ChangeDuesForm({
   onCancel,
 }: {
   unit: string;
+  /** How the board names this home, for the heading. Falls back to the unit. */
+  homeName?: string;
   /** "month", "quarter" or "year". */
   period: string;
   nowCents: number;
@@ -327,7 +335,9 @@ export function ChangeDuesForm({
   onSave: (cents: number | null) => Promise<boolean>;
   onCancel: () => void;
 }) {
-  const [amount, setAmount] = useState(hasOwn ? String(nowCents / 100) : "");
+  const label = homeName ?? unit;
+  // Opens on what the home pays now, so a change starts from the real figure.
+  const [amount, setAmount] = useState(String(nowCents / 100));
   const [busy, setBusy] = useState(false);
   const cents = toCents(amount);
   const ready = cents > 0 && cents !== nowCents;
@@ -346,7 +356,7 @@ export function ChangeDuesForm({
         if (ready) save(cents);
       }}
     >
-      <p className="text-footnote font-semibold text-fg-muted">Dues for home {unit}</p>
+      <p className="text-footnote font-semibold text-fg-muted">Dues for {label}</p>
       <p className="text-footnote text-fg-muted">
         Pays {money(nowCents)} a {period} now, from {sourceLabel}. A change applies from the next
         bill; bills already sent keep their amount.

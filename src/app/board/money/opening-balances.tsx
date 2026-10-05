@@ -78,7 +78,7 @@ function OpeningRow({ account }: { account: BankAccount }) {
               inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="86000.00"
+              placeholder="0.00"
               aria-label={`Starting balance for ${name}`}
               className={fieldClass}
             />

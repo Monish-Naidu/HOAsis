@@ -47,6 +47,7 @@ import {
 import { clockTime, cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { moduleOn } from "@/lib/modules";
+import { NEXT_ACCESS } from "@/lib/access";
 import { joinNeeds } from "@/lib/stripe/requirements";
 
 /** The jump row under the title, in page order. */
@@ -86,6 +87,13 @@ export function SettingsScreen() {
     requests,
   } = useAppState();
   const { notify } = useToast();
+
+  // Said only once the write resolved true: a refused save must not read as done.
+  function saveSetting(patch: Parameters<typeof updateSettings>[0], said: string) {
+    void Promise.resolve(updateSettings(patch)).then((ok) => {
+      if (ok) notify(said, "ok");
+    });
+  }
 
   const [newAmenity, setNewAmenity] = useState("");
   const [name, setName] = useState(settings.displayName);
@@ -499,7 +507,12 @@ export function SettingsScreen() {
           >
             <Toggle
               checked={settings.showFundsToResidents}
-              onChange={(v) => updateSettings({ showFundsToResidents: v })}
+              onChange={(v) =>
+                saveSetting(
+                  { showFundsToResidents: v },
+                  v ? "Residents can see association funds." : "Residents cannot see association funds.",
+                )
+              }
               label="Show association funds to residents"
             />
           </SettingRow>
@@ -509,14 +522,21 @@ export function SettingsScreen() {
           >
             <Toggle
               checked={settings.showLiveVoteResults}
-              onChange={(v) => updateSettings({ showLiveVoteResults: v })}
+              onChange={(v) =>
+                saveSetting(
+                  { showLiveVoteResults: v },
+                  v ? "Live vote results are on." : "Live vote results are off.",
+                )
+              }
               label="Show live vote results"
             />
           </SettingRow>
           <SettingRow title="Community posts" description="Neighbor to neighbor posts">
             <Toggle
               checked={settings.forumEnabled}
-              onChange={(v) => updateSettings({ forumEnabled: v })}
+              onChange={(v) =>
+                saveSetting({ forumEnabled: v }, v ? "Community posts are on." : "Community posts are off.")
+              }
               label="Allow community posts"
             />
           </SettingRow>
@@ -754,7 +774,12 @@ export function SettingsScreen() {
                             level={accessLevel(a, c)}
                             disabled={!isPresident || a.role === "president"}
                             label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
-                            onChange={(level) => setCapability(a.id, c, level)}
+                            onChange={(level) => {
+                              setCapability(a.id, c, level);
+                              // setCapability gives no answer to wait for; a refused
+                              // signed-in write is reported by the write itself.
+                              notify(accessSaid(a.name, c, level), "ok");
+                            }}
                           />
                         </td>
                       ))}
@@ -1196,6 +1221,13 @@ const SECTION_NAME: Partial<Record<Capability, string>> = {
   settings: "Settings",
 };
 
+function accessSaid(who: string, c: Capability, level: AccessLevel): string {
+  const area = CAPABILITY_LABEL[c];
+  if (level === "change") return `${who} can now change ${area}.`;
+  if (level === "view") return `${who} can now see ${area}.`;
+  return `${who} can no longer see ${area}.`;
+}
+
 function sectionNames(capabilities: Capability[]): string[] {
   return capabilities.map((c) => SECTION_NAME[c]).filter((n): n is string => Boolean(n));
 }
@@ -1216,7 +1248,6 @@ function AccessControl({
   label: string;
   onChange: (level: AccessLevel) => void;
 }) {
-  const next: Record<AccessLevel, AccessLevel> = { none: "view", view: "change", change: "none" };
   const words: Record<AccessLevel, string> = { none: "no access", view: "can see", change: "can change" };
   const Icon = level === "change" ? Pencil : level === "view" ? Eye : Minus;
   return (
@@ -1225,7 +1256,7 @@ function AccessControl({
       disabled={disabled}
       aria-label={`${label}: ${words[level]}`}
       title={words[level]}
-      onClick={() => onChange(next[level])}
+      onClick={() => onChange(NEXT_ACCESS[level])}
       className={cn(
         "press inline-flex size-9 items-center justify-center rounded-lg border transition-colors",
         level === "change" && "border-primary bg-primary text-primary-fg",

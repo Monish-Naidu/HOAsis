@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { disputeDashboardUrl, disputeRecipients } from "@/lib/email/dispute";
-import { disputeEmail } from "@/lib/email/templates";
+import { disputeEmail, paymentsPausedEmail } from "@/lib/email/templates";
 
 /**
  * A dispute has a deadline, so the notice has to reach whoever holds
@@ -88,11 +88,11 @@ describe("disputeEmail", () => {
     expect(built.html).not.toContain("The reason given");
   });
 
-  it("says plainly that a lost dispute is not yet in the books", () => {
+  it("says a lost dispute has been taken off the books", () => {
     const built = disputeEmail("lost", { ...input, evidenceDueOn: null });
     expect(built.subject).toBe("Dispute lost: $325.00 · Unit 7 · Maple Court HOA");
     expect(built.html).toContain("for the cardholder");
-    expect(built.html).toContain("still shows the payment as paid");
+    expect(built.html).toContain("as owed again");
   });
 
   it("says the money stays when the association wins", () => {
@@ -108,3 +108,26 @@ describe("disputeEmail", () => {
     expect(built.html).not.toContain("<HOA>");
   });
 });
+
+describe("paymentsPausedEmail", () => {
+  const paused = {
+    associationName: "Maple Court HOA",
+    recipientName: "Taylor Whitcomb",
+    settingsUrl: "https://yourhoasis.com/c/maple-court/board/settings",
+  };
+
+  it("names what Stripe is waiting for and where to answer it", () => {
+    const built = paymentsPausedEmail({ ...paused, needs: ["A photo of the treasurer's ID"] });
+    expect(built.subject).toBe("Online payments are paused · Maple Court HOA");
+    expect(built.text).toContain("Taylor, Stripe has paused online payments");
+    expect(built.text).toContain("A photo of the treasurer's ID");
+    expect(built.html).toContain(paused.settingsUrl);
+  });
+
+  it("says Stripe is checking when it has asked for nothing", () => {
+    const built = paymentsPausedEmail({ ...paused, needs: [] });
+    expect(built.text).toContain("checking what it already has");
+    expect(built.text).toContain("Checks and cash can still be recorded by hand");
+  });
+});
+

@@ -535,3 +535,14 @@ export function buildPlan(
     skipped: SETUP_TASKS.filter((t) => !HIDDEN_BY_SWITCH.has(t.key) && !included.has(t.key)).length,
   };
 }
+
+/**
+ * The two numbers every screen shows for setup: tasks done, and tasks in the
+ * plan. Done ones stay in the total and dismissed or unavailable ones are out
+ * of it, because `buildPlan` already left them out. Anything that says "3 of 9"
+ * or "6 left" reads this, so the dashboard, the rail, the stepper and the
+ * return bar cannot disagree.
+ */
+export function setupCounts(plan: Pick<ReturnType<typeof buildPlan>, "done" | "total">) {
+  return { done: plan.done, total: plan.total, left: plan.total - plan.done };
+}

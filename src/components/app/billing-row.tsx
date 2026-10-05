@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { Badge, Button, SettingRow } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { homeCount } from "@/lib/metrics";
 import { useToast } from "@/components/app/toast";
 import { monthlyFor } from "@/lib/pricing";
 import { formatDate, money } from "@/lib/utils";
@@ -22,7 +23,7 @@ export function BillingRow() {
   const [busy, setBusy] = useState(false);
 
   const a = community.association;
-  const homes = a.unitCount;
+  const homes = homeCount(community);
   const price = `${money(monthlyFor(homes), { cents: false })} a month for ${homes} ${homes === 1 ? "home" : "homes"}`;
   // Read after hydration only: the page prerenders with no query string.
   const justAdded = useSyncExternalStore(

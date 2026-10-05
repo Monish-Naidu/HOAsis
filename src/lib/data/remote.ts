@@ -19,6 +19,7 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
 import { duesFor } from "@/lib/home-types";
+import { compareStatement } from "@/lib/statement";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { addDays, clockTime, nextDueOnOrAfter } from "@/lib/utils";
 
@@ -237,6 +238,8 @@ type ChargeRow = {
   label: string;
   kind: "charge" | "payment" | "credit";
   amount_cents: number;
+  /** "dues", "late_fee" and so on. Tables written before it existed leave it out. */
+  category?: string | null;
 };
 
 /**
@@ -251,9 +254,10 @@ type ChargeRow = {
 export function statementLines(rows: ChargeRow[], carriedCents = 0): ChargeLine[] {
   let running = carriedCents;
   const lines: ChargeLine[] = [];
-  for (const c of [...rows].sort((x, y) =>
-    x.due_on === y.due_on ? x.created_at.localeCompare(y.created_at) : x.due_on.localeCompare(y.due_on),
-  )) {
+  // By date, and on one date the charge before the payment that settles it,
+  // so the running balance never dips before the bill it pays. Two lines of
+  // one kind keep the order they were written in.
+  for (const c of [...rows].sort((x, y) => compareStatement({ date: x.due_on, kind: x.kind }, { date: y.due_on, kind: y.kind }) || x.created_at.localeCompare(y.created_at))) {
     running += c.amount_cents;
     lines.push({
       id: c.id,
@@ -262,6 +266,7 @@ export function statementLines(rows: ChargeRow[], carriedCents = 0): ChargeLine[
       kind: c.kind,
       amountCents: c.amount_cents,
       balanceAfterCents: running,
+      ...(c.category ? { category: c.category } : {}),
     });
   }
   return lines.reverse();

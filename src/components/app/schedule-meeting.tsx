@@ -46,6 +46,14 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
   const label = "mb-1 block text-footnote font-semibold text-fg-muted";
 
   const ready = title.trim().length > 0 && date >= todayIsoDate() && location.trim().length > 0;
+  // The first thing still missing, said beside the button that waits on it.
+  const missing = !title.trim()
+    ? "Give the meeting a title."
+    : !location.trim()
+      ? "Say where it will be held."
+      : date < todayIsoDate()
+        ? "Pick a date that has not passed."
+        : null;
 
   function schedule() {
     if (!ready) return;
@@ -200,9 +208,13 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
           <Button type="submit" variant="primary" size="md" disabled={!ready}>
             Schedule meeting
           </Button>
-          <span className="text-footnote text-fg-subtle">
-            Once it is scheduled, press Send notice on the meeting to tell every owner.
-          </span>
+          {missing ? (
+            <span className="text-footnote text-fg-muted">{missing}</span>
+          ) : (
+            <span className="text-footnote text-fg-subtle">
+              Once it is scheduled, press Send notice on the meeting to tell every owner.
+            </span>
+          )}
         </div>
       </div>
     </Card>

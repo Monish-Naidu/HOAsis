@@ -228,6 +228,11 @@ try {
   await admin.from("units").update({ stripe_customer_id: `cus_seller_${stamp}` }).eq("id", soldUnit);
   await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "charge", label: "Assessment", amount_cents: 25_000, due_on: day(-30) });
   const { error: closingError } = await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "payment", label: "Paid at closing", amount_cents: -25_000, due_on: day(0) });
+  // A sale takes effect when it is recorded, so one dated next month is
+  // refused (0092) and the seller keeps their seat until it happens.
+  const { error: earlySale } = await president.client.rpc("transfer_home", { p_unit_id: soldUnit, p_new_name: "Buyer", p_new_email: `buyer-${stamp}@example.com`, p_closing_date: day(30) });
+  const { data: stillSeated } = await admin.from("memberships").select("id").eq("unit_id", soldUnit).is("ends_on", null);
+  check("transfer_home: a closing still to come is refused, and the seller stays", Boolean(earlySale) && (stillSeated ?? []).length === 1, earlySale?.message ?? `allowed, ${(stillSeated ?? []).length} current`);
   const { data: newSeat, error: saleError } = await president.client.rpc("transfer_home", { p_unit_id: soldUnit, p_new_name: "Buyer", p_new_email: `buyer-${stamp}@example.com`, p_closing_date: day(0) });
   check("transfer_home: the board records a sale", !closingError && !saleError && Boolean(newSeat), saleError?.message ?? closingError?.message ?? "");
   const { data: seats } = await admin.from("memberships").select("full_name,ends_on").eq("unit_id", soldUnit).order("starts_on");
@@ -316,6 +321,25 @@ try {
   check("reply_as_board: and not a general one", generalError?.code === "42501", generalError?.message ?? "no error");
   const { data: afterAll } = await admin.from("threads").select("messages").eq("id", thread.id).single();
   check("reply_as_board: a refused reply adds nothing", afterAll?.messages?.length === 4, String(afterAll?.messages?.length));
+
+  // Two officers approve one vendor payment at the same moment (0094). Each
+  // used to write a list of one over the other's.
+  const { data: bill } = await admin.from("payouts").insert({
+    association_id: associationId, vendor_name: "Two Signers Roofing", amount_cents: 90_000, approvals_required: 2,
+  }).select("id").single();
+  const [byPresident, byTreasurer] = await Promise.all([
+    president.client.rpc("approve_payout", { p_payout_id: bill.id }),
+    treasurer.client.rpc("approve_payout", { p_payout_id: bill.id }),
+  ]);
+  const { data: signed } = await admin.from("payouts").select("approvals, status").eq("id", bill.id).single();
+  check("approve_payout: two approvals at once are both kept, and the payment is scheduled",
+    !byPresident.error && !byTreasurer.error && (signed?.approvals ?? []).length === 2 && signed?.status === "scheduled",
+    byPresident.error?.message ?? byTreasurer.error?.message ?? JSON.stringify(signed));
+  await treasurer.client.rpc("approve_payout", { p_payout_id: bill.id });
+  const { data: signedAgain } = await admin.from("payouts").select("approvals").eq("id", bill.id).single();
+  check("approve_payout: the same officer cannot sign twice", (signedAgain?.approvals ?? []).length === 2, JSON.stringify(signedAgain?.approvals));
+  const { error: neighborApproves } = await neighbor.client.rpc("approve_payout", { p_payout_id: bill.id });
+  check("approve_payout: an owner without finances is refused", neighborApproves?.code === "42501", neighborApproves?.message ?? "no error");
 } catch (error) {
   check("the run itself", false, error instanceof Error ? error.message : String(error));
 } finally {

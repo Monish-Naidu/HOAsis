@@ -35,6 +35,14 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
     choices.filter((c) => c.trim()).length >= 2 &&
     !closingDateProblem(closesOn, today);
   const dateProblem = closingDateProblem(closesOn, today);
+  // The first thing still missing, said beside the button that waits on it.
+  // The closing date has its own message under the field.
+  const missing =
+    title.trim().length <= 2
+      ? "Give the ballot a title."
+      : choices.filter((c) => c.trim()).length < 2
+        ? "Add at least two choices."
+        : null;
 
   function open() {
     const seq = ballots.length + 1;
@@ -164,9 +172,12 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
           ) : null}
         </label>
 
-        <Button type="submit" size="lg" disabled={!ready} onClick={open}>
-          Open the ballot
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" size="lg" disabled={!ready} onClick={open}>
+            Open the ballot
+          </Button>
+          {missing ? <span className="text-footnote text-fg-muted">{missing}</span> : null}
+        </div>
       </div>
     </Card>
   );

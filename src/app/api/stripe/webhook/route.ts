@@ -5,6 +5,8 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { syncAccountStatus } from "@/lib/stripe/account-status";
 import { recordAppError } from "@/lib/app-errors";
 import { sendDisputeNotice } from "@/lib/email/dispute";
+import { sendPaymentsPausedNotice } from "@/lib/email/payments-paused";
+import { communityPath } from "@/lib/community-links";
 import { logger } from "@/lib/log";
 
 /**
@@ -340,10 +342,25 @@ export async function POST(request: NextRequest) {
       const admin = supabaseAdmin();
       const { data: row } = await admin
         .from("associations")
-        .select("id")
+        .select("id, name, slug, stripe_charges_enabled")
         .eq("stripe_account_id", account.id)
         .maybeSingle();
-      if (row) await syncAccountStatus(row.id, account.id);
+      if (row) {
+        const status = await syncAccountStatus(row.id, account.id);
+        // Payments were on and are now off: the people who hold finances
+        // hear today. An account still on its way through onboarding was
+        // never on, so it is not told it has been paused.
+        if (row.stripe_charges_enabled && !status.chargesEnabled) {
+          const told = await sendPaymentsPausedNotice({
+            associationId: row.id,
+            associationName: row.name,
+            needs: status.needs,
+            settingsUrl: `${request.nextUrl.origin}${communityPath(row.slug, "/board/settings")}`,
+            day: new Date().toISOString().slice(0, 10),
+          });
+          log.warn("payments paused by Stripe", { associationId: row.id, emailed: told.sent, emailFailed: told.failed });
+        }
+      }
       break;
     }
 
@@ -411,9 +428,10 @@ export async function POST(request: NextRequest) {
       // it, and the treasurer needs to know today, not on the next
       // statement. The people who hold finances are emailed, with the day
       // evidence is due, and again when the bank decides. It also lands on
-      // /admin as an error with the amounts. The payment keeps its state:
-      // the money is contested, not gone. A lost dispute is not yet booked
-      // against the owner's statement or the ledger; the email says so.
+      // /admin as an error with the amounts. While it is open the payment
+      // keeps its state: the money is contested, not gone. A lost dispute
+      // is booked like a refund (migration 0093), so the owner's statement
+      // and the ledger stop saying the money is here.
       const dispute = event.data.object;
       const intentId =
         typeof dispute.payment_intent === "string"
@@ -436,6 +454,27 @@ export async function POST(request: NextRequest) {
 
       const opened = event.type === "charge.dispute.created";
       const kind = opened ? "opened" : dispute.status === "won" ? "won" : dispute.status === "lost" ? "lost" : null;
+
+      // Booked before anybody is told, so the email's "the statement shows
+      // it as owed again" is true when it is read. A failure is answered
+      // with a 500 and Stripe sends the event again; the dispute's id on
+      // the payment makes the second booking a no-op.
+      if (kind === "lost" && intentId) {
+        const { data: booked, error: lossError } = await admin.rpc("record_dispute_loss", {
+          p_stripe_payment_intent_id: intentId,
+          p_dispute_id: dispute.id,
+          p_amount_cents: dispute.amount,
+        });
+        if (lossError) {
+          log.error("record_dispute_loss failed", { err: lossError.message, intentId, disputeId: dispute.id });
+          return NextResponse.json({ error: lossError.message }, { status: 500 });
+        }
+        if (!booked && payment) {
+          // The payment is ours but not settled here yet. Ask again.
+          log.warn("a lost dispute arrived before its payment settled", { intentId, disputeId: dispute.id });
+          return retryLater("The disputed payment is not recorded yet");
+        }
+      }
       // The email must never turn into a 500: Stripe would send the event
       // again for a problem that is ours. sendDisputeNotice does not throw,
       // and each send is keyed so a redelivery mails nobody twice.

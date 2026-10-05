@@ -23,7 +23,8 @@ import {
   useOwnerCharges,
 } from "@/lib/app-state";
 import { HomeSchedule } from "@/components/app/home-schedule";
-import { cn, formatDate, money, pastDueLabel, relativeDays } from "@/lib/utils";
+import { cn, formatDate, money, pastDueLabel, relativeDays, todayIsoDate } from "@/lib/utils";
+import { balanceSplit } from "@/lib/statement";
 import { ownerDues } from "@/lib/home-types";
 import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { Announcements } from "./announcements";
@@ -136,13 +137,25 @@ export default function ResidentHome() {
 function AccountSummary() {
   const { community } = useAppState();
   const owner = useCurrentOwner();
+  const charges = useOwnerCharges();
   if (!owner) return null;
 
   const past = owner.daysPastDue > 0;
   const nextCharge = community.nextChargeDate;
+  // Two different things: what the statement says is owed, and what this home
+  // pays a month. The card and the button follow the statement; the rate only
+  // stands in when no bill is posted yet.
+  const split = balanceSplit(charges, owner.balanceCents, todayIsoDate());
+  // Everything owed is a bill that has not fallen due. The daily run posts a
+  // bill up to a week early, and calling that "current balance" next to a
+  // "Paid up" badge on the board is two answers to one question.
+  const early = !past && split.owedNowCents === 0 && split.notYetDueCents > 0;
+  const shown = early ? split.notYetDueCents : owner.balanceCents;
   // This home's own amount: in a mixed community kinds pay differently.
   const amount =
-    owner.balanceCents > 0 ? owner.balanceCents : ownerDues(community.association, owner);
+    owner.balanceCents > 0
+      ? shown
+      : (split.upcoming?.amountCents ?? ownerDues(community.association, owner));
   const covered = owner.autopay && owner.balanceCents <= 0;
 
   return (
@@ -164,7 +177,7 @@ function AccountSummary() {
           <IconTile icon={CreditCard} tint={past ? "coral" : "blue"} variant="solid" size="lg" />
           <div className="min-w-0">
             <p className="text-footnote font-semibold text-fg-muted">
-              {past ? "Past due" : "Current balance"}
+              {past ? "Past due" : early ? "Next bill" : "Current balance"}
             </p>
             <p
               className={cn(
@@ -174,7 +187,7 @@ function AccountSummary() {
             >
               {/* The figure itself, not a count up from $0: a glance
                   mid-animation read a wrong balance. */}
-              {money(owner.balanceCents)}
+              {money(shown)}
             </p>
           </div>
         </div>
@@ -195,7 +208,9 @@ function AccountSummary() {
           <p className="text-footnote text-fg-muted">
             {past
               ? pastDueLabel(owner.daysPastDue)
-              : `Next dues ${formatDate(nextCharge, "long")}`}
+              : early && split.nextBill
+                ? `Due ${formatDate(split.nextBill.date, "long")}`
+                : `Next dues ${formatDate(split.upcoming?.date ?? nextCharge, "long")}`}
           </p>
         </div>
         {/* Present even at a zero balance: paying ahead of the next
@@ -213,7 +228,11 @@ function AccountSummary() {
               : "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow",
           )}
         >
-          {covered ? "Pay early" : `Pay ${money(amount, { cents: false })}`}
+          {covered
+            ? "Pay early"
+            : early || owner.balanceCents <= 0
+              ? `Pay early: ${money(amount, { cents: false })}`
+              : `Pay ${money(amount, { cents: false })}`}
         </Link>
       </div>
     </Card>

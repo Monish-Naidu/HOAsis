@@ -22,7 +22,7 @@ export const threads: MessageThread[] = [
         fromRole: "board",
         direction: "outbound",
         channel: "email",
-        body: "The pool and deck close Monday September 8 for resurfacing and reopen Friday September 19, weather permitting. The spa stays open throughout.",
+        body: "The pool and deck close Tuesday September 8 for resurfacing and reopen Saturday September 19, weather permitting. The spa stays open throughout.",
       },
       {
         id: "m-2",

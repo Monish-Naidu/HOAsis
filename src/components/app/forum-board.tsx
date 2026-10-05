@@ -111,7 +111,11 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
       <EmptyState
         icon={<MessageSquareText className="size-5" />}
         title="Community is switched off"
-        description="An admin can turn it back on in community settings."
+        description={
+          account?.role === "resident"
+            ? "The board has turned community posts off."
+            : "An admin can turn it back on in community settings."
+        }
       />
     );
   }

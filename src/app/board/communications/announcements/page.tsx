@@ -1,5 +1,6 @@
 "use client";
 
+import { pinnedFirst } from "@/lib/announcements";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Pin, Send } from "lucide-react";
@@ -76,9 +77,7 @@ function AnnouncementsManager({
   const category: Announcement["category"] = "Notice";
   const [pinned, setPinned] = useState(false);
 
-  const announcements = [...community.announcements].sort((a, b) =>
-    a.postedDate < b.postedDate ? 1 : -1,
-  );
+  const announcements = pinnedFirst(community.announcements);
 
   function post() {
     if (!title.trim() || !body.trim()) {

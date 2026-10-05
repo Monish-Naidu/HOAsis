@@ -24,10 +24,11 @@ import { DOCUMENT_ACCEPT } from "@/lib/documents";
 import {
   buildPlan,
   profileFromCommunity,
+  setupCounts,
   type PlanPhase,
   type PlanTask,
 } from "@/lib/setup-plan";
-import { BUILDER_KEYS, HANDOVER_KEYS, whereIs } from "@/lib/setup";
+import { BUILDER_KEYS, HANDOVER_KEYS, hasOwner, whereIs } from "@/lib/setup";
 import { ADMIN_ROLES, ROLE_LABEL, type AccountRole } from "@/lib/types";
 import { cn, money, pluralize } from "@/lib/utils";
 import { HummingbirdArriving } from "@/components/app/hummingbird";
@@ -151,6 +152,7 @@ export function SetupFlow({ welcome = false }: { welcome?: boolean }) {
 function SetupQuestions({ welcome }: { welcome: boolean }) {
   const { community, dismissedSetupTasks, dismissSetupTask } = useAppState();
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
+  const counts = setupCounts(plan);
   // A step this association cannot do where it lives is listed in the
   // overview and never asked as a question.
   const tasks = plan.phases.flatMap((phase) => phase.tasks).filter((task) => !task.unavailable);
@@ -169,16 +171,6 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
   const index = Math.max(0, tasks.findIndex((task) => task.key === flow.current));
   const task = tasks[index];
 
-  // The count shown is of questions actually being asked this visit: the
-  // ones open when the flow started. Counting the finished ones too made
-  // the number jump from 2 to 4 as the flow stepped over them.
-  const [asked] = useState(() => tasks.filter((t) => !t.complete).map((t) => t.key));
-  const askedIndex = asked.indexOf(flow.current);
-  const shownIndex =
-    askedIndex >= 0
-      ? askedIndex
-      : Math.max(0, asked.findIndex((key) => tasks.findIndex((t) => t.key === key) > index));
-
   // Forward lands on the next question still open. Nobody should have to
   // click through things the records already answer; Back still reaches them.
   function forward() {
@@ -196,7 +188,7 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
     return (
       <Welcome
         plan={plan}
-        count={tasks.filter((t) => !t.complete).length}
+        count={counts.left}
         onStart={() => setStage("questions")}
       />
     );
@@ -268,8 +260,10 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
   return (
     <QuestionFlow
       question={question}
-      index={shownIndex}
-      total={Math.max(asked.length, 1)}
+      // The position in the whole list, so the total never shrinks as tasks
+      // finish and agrees with every other setup count.
+      index={index}
+      total={Math.max(counts.total, 1)}
       direction={flow.direction}
       leaving={flow.leaving}
       onBack={index > 0 || welcome ? back : undefined}
@@ -284,7 +278,7 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
 function WayOut() {
   return (
     <p className="mt-10 text-center text-footnote text-fg-subtle">
-      Come back to this any time from Getting started.{" "}
+      Come back to this any time from Setting up.{" "}
       <Link href="/board" className="font-medium text-accent hover:underline">
         Open the dashboard
       </Link>
@@ -377,7 +371,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
       <p className="mt-8 text-body leading-relaxed text-fg-muted">
         {count === 0
           ? "Nothing is outstanding."
-          : `${pluralize(count, "question")} left, one at a time. None of it is urgent, and anything that does not apply can be skipped.`}
+          : `${pluralize(count, "step")} left, one at a time. None of it is urgent, and anything that does not apply can be skipped.`}
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button variant="primary" size="lg" onClick={onStart}>
@@ -450,7 +444,7 @@ function Finished({
       <p className="mt-3 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
         {plan.allDone
           ? "Nothing outstanding. Setting up stays in the sidebar in case you add something later."
-          : `${plan.done} of ${plan.total} done. ${plan.payments.sentence}`}
+          : `${setupCounts(plan).done} of ${setupCounts(plan).total} done. ${plan.payments.sentence}`}
       </p>
 
       {leftOpen.length ? (
@@ -483,7 +477,7 @@ function Finished({
 }
 
 /* -------------------------------------------------------------------------- */
-/* The overview, under Getting started                                        */
+/* The overview, under Setting up                                        */
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -521,7 +515,8 @@ export function SetupOverview() {
 
   const tasks = plan.phases.flatMap((phase) => phase.tasks);
   const firstOpen = tasks.find((task) => !task.complete)?.key;
-  const remaining = plan.total - plan.done;
+  const counts = setupCounts(plan);
+  const remaining = counts.left;
 
   return (
     <div className="space-y-6">
@@ -540,7 +535,7 @@ export function SetupOverview() {
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <p className="tnum text-body font-semibold text-fg-muted">
-              {plan.done} of {plan.total}
+              {counts.done} of {counts.total}
             </p>
             <ButtonLink
               variant="primary"
@@ -999,10 +994,23 @@ function InsuranceInline({ task }: { task: PlanTask }) {
 }
 
 function HouseholdInline({ task }: { task: PlanTask }) {
-  const { addOwner } = useAppState();
+  const { addOwner, setHouseholdOwner, community } = useAppState();
   const { notify } = useToast();
   const [entry, setEntry] = useState({ name: "", email: "", unit: "" });
   function save() {
+    // A home that is listed with nobody named gets its owner here, rather than
+    // a refusal that says the home is already on the roster.
+    const listed = community.owners.find((o) => o.unit === entry.unit.trim() && !hasOwner(o));
+    if (listed) {
+      const name = entry.name.trim();
+      void setHouseholdOwner(listed.id, { name, email: entry.email }).then((ok) => {
+        // Said only once the write resolved, like every other saved message.
+        if (!ok) return;
+        notify(`${name} added as the owner of ${homeLabel(community, listed.unit)}.`, "ok");
+        setEntry({ name: "", email: "", unit: "" });
+      });
+      return;
+    }
     try {
       const owner = addOwner(entry);
       notify(`Added ${owner.displayName}, home ${owner.unit}`);
@@ -1214,21 +1222,22 @@ export function SetupPlanSummary() {
   const { community, dismissedSetupTasks } = useAppState();
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   if (plan.allDone) return null;
+  const counts = setupCounts(plan);
   const next = plan
     .phases.flatMap((phase) => phase.tasks)
     .find((task) => !task.complete && !task.unavailable);
 
   // Straight into the next question. The overview stays one click away
-  // under Getting started in the sidebar for anyone who wants the whole list.
+  // under Setting up in the sidebar for anyone who wants the whole list.
   return (
     <Link
       href={next ? `/start/plan?task=${next.key}` : "/board/setup"}
       className="mb-5 flex items-center gap-4 rounded-card border border-border bg-surface px-5 py-4 transition-colors hover:bg-surface-2"
     >
-      <Ring percent={plan.percent} done={plan.done} total={plan.total} />
+      <Ring percent={plan.percent} done={counts.done} total={counts.total} />
       <span className="min-w-0 flex-1">
         <span className="block text-headline font-semibold tracking-[-0.015em] text-fg">
-          Setting up: {plan.done} of {plan.total} done
+          Setting up: {counts.done} of {counts.total} done
         </span>
         <span className="mt-0.5 block truncate text-footnote leading-relaxed text-fg-muted">
           {next ? `Next: ${next.label}.` : ""}{" "}

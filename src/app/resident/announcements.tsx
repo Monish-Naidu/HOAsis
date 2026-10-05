@@ -1,5 +1,6 @@
 "use client";
 
+import { pinnedFirst } from "@/lib/announcements";
 import { ChevronDown, Megaphone } from "lucide-react";
 import { Card, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
@@ -20,9 +21,7 @@ const SHOWN = 3;
  */
 export function Announcements() {
   const { community } = useAppState();
-  const newestFirst = [...community.announcements].sort((a, b) =>
-    a.postedDate < b.postedDate ? 1 : -1,
-  );
+  const newestFirst = pinnedFirst(community.announcements);
   const pinned = newestFirst.find((a) => a.pinned);
   const others = newestFirst.filter((a) => a !== pinned);
   const shown = others.slice(0, pinned ? SHOWN - 1 : SHOWN);

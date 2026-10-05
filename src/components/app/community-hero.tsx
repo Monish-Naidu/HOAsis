@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Building2, Camera, Check, ChevronDown, Plus } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
 import { cn, pluralize } from "@/lib/utils";
+import { homeCount } from "@/lib/metrics";
 import { sameAssociationName } from "@/lib/community-links";
 import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -198,7 +199,7 @@ export function CommunityHero({
   const line =
     subtitle ??
     (withLocation
-      ? `${community.association.addressLine} · ${pluralize(community.association.unitCount, "home")}`
+      ? `${community.association.addressLine} · ${pluralize(homeCount(community), "home")}`
       : undefined);
 
   return (
@@ -510,7 +511,7 @@ export function PhotoStrip({
   if (pathname === "/board" || pathname === "/resident") return null;
   const line =
     subtitle ??
-    `${community.association.addressLine} · ${pluralize(community.association.unitCount, "home")}`;
+    `${community.association.addressLine} · ${pluralize(homeCount(community), "home")}`;
   return (
     <section
       className={cn(

@@ -496,7 +496,7 @@ export function disputeEmail(kind: "opened" | "won" | "lost", input: DisputeEmai
           ]
         : [
             `${first}, the bank decided the disputed ${amount} payment${forHome} for the cardholder. The ${amount} and Stripe's dispute fee stay out of the association's balance.`,
-            `The owner's statement here still shows the payment as paid, and the books still show the deposit, so your books are ahead of the bank by this amount.`,
+            `The payment has been taken off the books here: the owner's statement shows the ${amount} as owed again and the deposit has been reversed in the ledger.`,
           ];
 
   return {
@@ -514,6 +514,48 @@ export function disputeEmail(kind: "opened" | "won" | "lost", input: DisputeEmai
       signsIn: false,
     }),
     text: `${title}\n\n${lines.join("\n\n")}\n\n${input.disputeUrl}\n\nYour HOAsis`,
+  };
+}
+
+export interface PaymentsPausedEmailInput {
+  associationName: string;
+  recipientName: string;
+  /** What Stripe is waiting for, as plain sentences. May be empty. */
+  needs: string[];
+  /** The board's payments settings, where the Stripe forms are opened. */
+  settingsUrl: string;
+}
+
+/**
+ * Stripe has stopped the association from taking payments.
+ *
+ * It goes to the people who hold finances the day it happens. Until now the
+ * only sign was an owner writing in to say Pay had gone, or autopay failing
+ * and blaming the owner's card. What Stripe wants is usually a form or a
+ * document, and it is the treasurer who has it.
+ */
+export function paymentsPausedEmail(input: PaymentsPausedEmailInput) {
+  const first = firstName(input.recipientName);
+  const title = "Online payments are paused";
+  const lines = [
+    `${first}, Stripe has paused online payments for ${input.associationName}. Owners cannot pay online and autopay is waiting, so nobody is charged a failed payment in the meantime.`,
+    input.needs.length
+      ? `Stripe is waiting for:\n${input.needs.map((n) => `• ${n}`).join("\n")}`
+      : `Stripe has not asked for anything more, which usually means it is checking what it already has. That can take a day or two.`,
+    `Payments come back on by themselves once Stripe is satisfied. Checks and cash can still be recorded by hand.`,
+  ];
+  return {
+    subject: `Online payments are paused · ${input.associationName}`,
+    html: layout({
+      associationName: input.associationName,
+      preheader: input.needs[0] ?? "Stripe is checking the association's account.",
+      body: `${heading(title)}${paragraphs(lines.join("\n\n"))}`,
+      cta: { label: "Open payments settings", url: input.settingsUrl },
+      footer: `Sent to the people who hold finances for ${escapeHtml(input.associationName)} by Your HOAsis. This is about money in the association's account, so it cannot be turned off.`,
+      // A plain link to the board's own settings; whoever opens it signs in as usual.
+      signsIn: false,
+    }),
+    text: `${title}\n\n${lines.join("\n\n")}\n\n${input.settingsUrl}\n\nYour HOAsis`,
   };
 }
 

@@ -42,7 +42,13 @@ let ballots: Ballot[] = [];
 const closeBallot = vi.fn();
 vi.mock("@/lib/app-state", async (original) => ({
   ...(await original<typeof import("@/lib/app-state")>()),
-  useAppState: () => ({ ballots, closeBallot, settings: { showLiveVoteResults: false } }),
+  useAppState: () => ({
+    ballots,
+    closeBallot,
+    settings: { showLiveVoteResults: false },
+    // The card compares a ballot's count with the register.
+    community: { owners: [], association: { unitCount: 88 } },
+  }),
 }));
 
 const { ToastProvider } = await import("@/components/app/toast");
