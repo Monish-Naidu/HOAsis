@@ -88,7 +88,7 @@ export function policyProblems(policy: CollectionPolicy): string[] {
     problems.push("The notice has to come before the demand.");
   }
   if (!(policy.demandDay < policy.counselDay)) {
-    problems.push("The demand has to come before counsel.");
+    problems.push("The demand has to come before the referral to the attorney.");
   }
   if (!Number.isFinite(policy.lateFeeCents) || policy.lateFeeCents < 0) {
     problems.push("The late fee cannot be negative. Zero means no fee.");
@@ -112,7 +112,7 @@ export const STAGE_LABEL: Record<CollectionStage, string> = {
   reminder: "Reminder due",
   "late-notice": "Notice due",
   demand: "Demand due",
-  counsel: "Refer to counsel",
+  counsel: "Refer to attorney",
 };
 
 /** What the board is meant to do next, in the words of the policy. */
@@ -121,7 +121,7 @@ export const STAGE_ACTION: Record<CollectionStage, string> = {
   reminder: "Send a friendly reminder with the amount and how to pay",
   "late-notice": "Send the formal notice, with the late fee stated",
   demand: "Send a demand offering a payment plan, before anything is recorded",
-  counsel: "Hand the file to counsel, with every notice attached",
+  counsel: "Hand the file to the attorney, with every notice attached",
 };
 
 export function stageFor(daysPastDue: number, policy: CollectionPolicy): CollectionStage {

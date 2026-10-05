@@ -14,7 +14,8 @@ keeping is written into a row below.
 (pull request #5 merged). In progress on branch `dues-by-home`, at Monish's
 ask the same day: dues that differ home by home (section 9), a pass over
 every button and description in the product (section 10), and small
-interface fixes. Still open: a few section 1 rows, section 6 (small known
+interface fixes; all three are built and sit in pull request #6, waiting
+for Monish to look and merge. Still open: a few section 1 rows, section 6 (small known
 gaps), section 7 (decisions), section 8 (staging and Resend, both waiting on
 Monish). Not yet built from the reviews: changing or cancelling a meeting
 and adding minutes, real file upload on requests, emailing the board when
@@ -207,6 +208,71 @@ as Monish brought them.
 
 | Area | Status |
 | --- | --- |
-| Marketing, sign-in, join, setup wizard and setup list | next, after section 9 lands |
-| Resident side | next |
-| Board side | next |
+| Marketing, sign-in, join, setup wizard and setup list | done 2026-10-05 (branch dues-by-home): 45 strings in 21 files |
+| Resident side | done 2026-10-05 (branch dues-by-home): 58 strings in 20 files |
+| Board side | done 2026-10-05 (branch dues-by-home): about 175 strings across pages, shared components and the letters |
+
+Left for Monish to decide, because rewording would not make them true. Each
+is a line on a screen that nothing in the code keeps:
+
+| Where | What it says | Status |
+| --- | --- | --- |
+| Settings, forms | "Upload your own forms" button stores no file | waiting: hide it or build the upload |
+| Notices | "Send notice" posts the notice in the owner's app and emails nobody | waiting: email it too (the route can already send a letter to one home), or say "Post notice" |
+| Delivery panel | Describes text message opt in and opt out; there are no texts | waiting: remove until texts exist |
+| About page | "Dual approval is the default here" | waiting: true only for vendor payments over the limit |
+| Pricing, included list | Read against `modules.ts` 2026-10-05: every item is on. Two are Monish's to confirm: "Live support from the people who built it" (support is email to him) and "Accounting" (it is dues, vendor payments and reserves, not a general ledger) | waiting |
+| Resident report form | "Your name goes to the board and to nobody else", "The board will not share the outcome with you" | waiting: policy call |
+| Notices, stages | "Fix it by the date below and there is no fine" | waiting: policy call, the app does not issue fines |
+| Assistant | "reminder emails stop while autopay is running", "comes out on the 1st" | done 2026-10-05: neither was true (the dues email goes to every home; the owner picks the day), so the answer now says dues are paid for you when they come due |
+| Names | "roster", "register" and "Homeowners" for one list; letters and some screens hardcode "unit" | waiting: pick one name; "unit" should follow the home kind |
+| `feature-tabs.tsx` | Unused file with old landing claims | done 2026-10-05: deleted |
+
+## 11. Landing page and the demo
+
+Asked for by Monish on 2026-10-05: make the landing page more engaging and
+get people to sign up. Deck headlines, hero art and the aerial photo stay.
+
+| Item | Status |
+| --- | --- |
+| "Try the demo" opens the sample association in one click (`/demo`, `/demo?as=owner`) | done 2026-10-05 (pull request #7) |
+| The demo says it is one and links to setup | done 2026-10-05 (pull request #7) |
+| Price slider in place of the flat price band; price in the hero | done 2026-10-05 (pull request #7) |
+| Three setup steps; six questions boards ask | done 2026-10-05 (pull request #7) |
+| `src/app/robots.ts` tells every search engine to stay away from the whole site | waiting: Monish says when the site should be findable; then allow `/`, `/pricing`, `/about`, `/library` and add a sitemap |
+| No proof from real associations (quotes, a count) | later: nothing to show until there are customers; do not invent any |
+| A short screen recording of setup in the hero or the steps row | later |
+
+## 12. What a real association hits in its first years
+
+From a read of the code against thirty situations on 2026-10-05. Most likely
+and most damaging first. "Handled" situations are not listed; they were
+proven against the verify scripts (sale of a home, two owners, join
+requests, partial and over payments, refunds, dues by home, quarterly and
+annual dues, month ends, the dues job running twice, view-only seats).
+
+| Situation | What happens today | Status |
+| --- | --- | --- |
+| Dues post and nobody is told | The daily job bills and adds late fees but sends no email; owners not on autopay hear nothing unless the board presses the dues mailer | next: send the bill email from the job (decision: automatic, or a dashboard row "bill posted, send it") |
+| A one-off charge or special assessment | No screen posts one; the SQL exists (`levy_special_assessment`) but nothing calls it | done 2026-10-05 (branch first-year, migration 0086 applied): "Add a charge" on a household, "Charge every home" under Dues in Settings; category `other`, so no late fee and not counted as dues |
+| A check recorded twice, or against the wrong home | No undo; only "Add a credit", which leaves collected and the bank balance overstated | done 2026-10-05 (branch first-year, migration 0088 applied): "Payments recorded by hand" on a household lists them with Reverse; the payment form warns on the same amount and date. Stripe payments are still refunded in Stripe |
+| One of two owners leaves; a second owner added by mistake | No way to end one seat; only a fake sale, which wipes the other owner's autopay and saved bank | next: "Remove this owner" for settings holders |
+| A signed-in owner changes or loses their email | Nothing in the resident account page; the board is refused | next: owner changes their own email, with confirmation |
+| The buyer of a home reads the seller's history | Payments, request threads, board messages and votes are readable by anyone with a current seat on the home, with no date filter | done 2026-10-05 for requests, threads, votes and rule notices (branch first-year, migration 0089 applied, `verify-sale-privacy`): hidden from the buyer where a previous household owned the home. The money ledger stays whole on purpose: the balance is summed from it |
+| A credit balance at sale | Carries to the buyer without a word; the sale dialog only settles money owed | done 2026-10-05 (branch first-year): the sale form says the credit stays with the home unless the board settles it with the seller first |
+| Autopay fails once | Never retried that month, even after the owner fixes the card; the board is not told | done 2026-10-05 for the retry (branch first-year, migration 0085 applied): tried again only when the owner has added a method since, never twice a day, three times a month at most. Still next: list failures on Past due |
+| Stripe restricts the association's account | Autopay still tries and owners get "problem with your payment method" | done 2026-10-05 for the wait (branch first-year): autopay holds off while Stripe has charges off. Still next: email finance holders when Stripe restricts the account |
+| An owner with two or three homes | Sees, pays and votes for one home only | next: a home switcher on the resident side; one vote cast per home held |
+| The president cannot be reached | Only the sitting president can name the next one | next: platform admin can reassign; later a vote of officers |
+| A lost card dispute or a late bank return | Finance holders are emailed; the owner's statement still says paid | next: book it as a returned payment |
+| Two officers approve the same vendor payment at once | One approval can be lost (the whole list is written from the browser) | next: an `approve_payout` function that adds the caller |
+| A home that should not be billed (builder lots) | No exempt flag; zero means "not set" | later, with vacant lots |
+| A home added mid-period | Waits for the next bill; no proration | later: say so on the add-home form |
+| A home removed or two lots merged after the first bill | Refused; it keeps being billed | next: allow when the balance is zero |
+| Deleting the association | Members lose sight of it at once, nothing is purged, Stripe is untouched; the screen promises a 30 day window | done 2026-10-05 for the wording (branch first-year): the screen says nobody can sign in once it is deleted and that support restores it for thirty days. Later: a restore button, a purge job, what happens to Stripe |
+| Votes | No quorum field, no "dues must be current", no paper or proxy votes entered by the board | later |
+| Year end | Owner statement CSV and board transactions CSV only; no printable statement, no all-homes statement run | later |
+| Documents | No versions; a new upload sits beside the old one | later |
+| A late fee on a starting balance | Confirmed on the live database: a balance as of months ago drew a late fee on the first morning | done 2026-10-05 (branch first-year, migration 0087 applied): a brought-forward line never draws a fee; dues billed here still do |
+| A sale with a closing date in the future | Checked 2026-10-05: the sale takes effect the moment it is recorded, whatever the date, so the seller is locked out early | done 2026-10-05 in the form (branch first-year). Later: the same refusal in `transfer_home` |
+| A check that bounces after dues read as paid | Reversing the payment puts the money back on the balance, but `assess_late_fees` reads the old dues line as covered (the reversal is a later charge), so no late fee follows; a Stripe refund has the same gap | next: leave reversal and refund lines out of the "billed after it" sum |

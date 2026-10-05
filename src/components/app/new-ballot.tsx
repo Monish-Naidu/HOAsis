@@ -56,7 +56,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
           votes: 0,
         })),
     });
-    notify(`Open. Homes can vote until ${formatDate(closesOn, "long")}.`);
+    notify(`Ballot is open. Homes can vote until ${formatDate(closesOn, "long")}.`);
     onClose();
   }
 
@@ -134,7 +134,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
             onClick={() => setChoices([...choices, ""])}
           >
             <Plus className="size-4" />
-            Another choice
+            Add a choice
           </Button>
         </div>
 

@@ -4,7 +4,7 @@ import { RequireCapability } from "@/components/app/require-capability";
 import { BoardOnly } from "@/components/app/board-only";
 import { SetupReturnBar } from "@/components/app/setup-return-bar";
 import { SectionTabs } from "@/components/app/section-tabs";
-import { LocalCopyBanner } from "@/components/app/local-copy-banner";
+import { DemoBanner, LocalCopyBanner } from "@/components/app/local-copy-banner";
 import { TrialBanner } from "@/components/app/trial-banner";
 import { BillingGate } from "@/components/app/billing-gate";
 import {
@@ -69,6 +69,7 @@ export default function BoardLayout({
 
           <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-6 lg:py-8">
             <main className="min-w-0">
+              <DemoBanner />
               <LocalCopyBanner />
               <TrialBanner />
               <SetupReturnBar />

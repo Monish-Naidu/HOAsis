@@ -155,11 +155,11 @@ describe("what the route answers", () => {
   });
 
   it("carries them when the send itself fails, with the reason and a reference", async () => {
-    sendNotification.mockRejectedValueOnce(new Error("Nothing to send: the record was not found"));
+    sendNotification.mockRejectedValueOnce(new Error("Nothing to send: that item was not found"));
     const response = await POST(notify(announcement));
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body).toMatchObject({ error: "Nothing to send: the record was not found", ...NOTHING });
+    expect(body).toMatchObject({ error: "Nothing to send: that item was not found", ...NOTHING });
     expect(typeof body.reference).toBe("string");
   });
 });

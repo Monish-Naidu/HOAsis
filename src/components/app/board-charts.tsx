@@ -57,11 +57,11 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
       <div className="flex items-center gap-4 px-5 pt-4" aria-hidden>
         <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
           <span className="size-2.5 rounded-sm bg-chart-3" />
-          Money In
+          Money in
         </span>
         <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
           <span className="size-2.5 rounded-sm bg-chart-1" />
-          Money Out
+          Money out
         </span>
       </div>
 
@@ -102,14 +102,14 @@ export function MoneyFlowChart({ months }: { months: MonthFlow[] }) {
                   </p>
                   <p className="mt-1 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-3" />
-                    Money In
+                    Money in
                     <span className="tnum ml-auto pl-3 font-semibold text-fg">
                       {money(m.inCents, { cents: false })}
                     </span>
                   </p>
                   <p className="mt-0.5 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-1" />
-                    Money Out
+                    Money out
                     <span className="tnum ml-auto pl-3 font-semibold text-fg">
                       {money(m.outCents, { cents: false })}
                     </span>

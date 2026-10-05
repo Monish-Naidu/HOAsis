@@ -70,7 +70,7 @@ export function BankConnect({
       setError(null);
       onConnect(connectManualAccount({ ...manual, kind }, todayIsoDate()));
     } catch (caught) {
-      setError(isHoasisError(caught) ? caught.message : "Could not connect that account");
+      setError(isHoasisError(caught) ? caught.message : "That account was not connected. Check the details and try again.");
     }
   }
 

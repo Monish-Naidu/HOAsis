@@ -143,7 +143,7 @@ function useResidentNotices(): Notice[] {
   if (owner && owner.balanceCents > 0) {
     notices.push({
       id: "balance",
-      title: owner.daysPastDue > 0 ? "Your account is past due" : "A payment is coming up",
+      title: owner.daysPastDue > 0 ? "Your dues are past due" : "A payment is coming up",
       detail: `${money(owner.balanceCents)} ${owner.daysPastDue > 0 ? `· ${pastDueLabel(owner.daysPastDue)}` : `· due ${relativeDays(community.nextChargeDate)}`}`,
       href: "/resident/pay",
       icon: CircleDollarSign,

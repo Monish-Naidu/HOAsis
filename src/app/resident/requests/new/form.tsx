@@ -38,7 +38,7 @@ const kinds = [
   {
     id: "records",
     label: "Records",
-    hint: "Inspect association records",
+    hint: "See the association's records",
     icon: FileSearch,
     clock: SEEN,
     // A statutory records request is not a month-one homeowner action.
@@ -112,15 +112,15 @@ export function NewRequestForm() {
           <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
             <CheckCircle2 className="size-6" />
           </span>
-          <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">Request submitted</h1>
+          <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">Request sent</h1>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-            {reference ? `Reference ${reference}` : "Its number is in your requests."}
+            {reference ? `Reference ${reference}` : "You can find its number under Requests."}
           </p>
           <Link
             href="/resident/requests"
             className="mt-5 flex h-10 items-center justify-center rounded-lg bg-brand text-body font-medium text-brand-fg"
           >
-            Track it
+            See your requests
           </Link>
         </Card>
         {chosen ? (
@@ -441,7 +441,7 @@ export function NewRequestForm() {
       ) : null}
       {failed ? (
         <p role="alert" className="-mt-3 text-center text-footnote text-danger">
-          That did not send. Nothing was submitted. Try again.
+          Your request did not send, so nothing reached the board. Check your connection and try again.
         </p>
       ) : null}
     </form>

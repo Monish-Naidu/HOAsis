@@ -35,7 +35,7 @@ const intents: Intent[] = [
       const o = c.owner;
       if (o.daysPastDue > 0) {
         return {
-          text: `Yes. Your account is ${o.daysPastDue} days past due with ${money(o.balanceCents)} outstanding.`,
+          text: `Yes. Your dues are ${o.daysPastDue} days past due, and you owe ${money(o.balanceCents)}.`,
           facts: [
             { label: "Balance", value: money(o.balanceCents) },
             { label: "Days past due", value: String(o.daysPastDue) },
@@ -47,7 +47,7 @@ const intents: Intent[] = [
       if (o.balanceCents === 0) {
         return {
           text: "No late payment. Your balance is zero and nothing is outstanding.",
-          action: { label: "View account", href: "/resident/account" },
+          action: { label: "See your statement", href: "/resident/account" },
         };
       }
       return {
@@ -74,7 +74,7 @@ const intents: Intent[] = [
         text: `Your last payment was ${money(p.amountCents)} on ${formatDate(p.date, "long")}${
           p.method ? ` from ${p.method}` : ""
         }.${p.appliedTo.length ? ` It cleared ${p.appliedTo.join(" and ")}.` : ""}`,
-        action: { label: "Full history", href: "/resident/account" },
+        action: { label: "See your statement", href: "/resident/account" },
       };
     },
   },
@@ -84,8 +84,8 @@ const intents: Intent[] = [
     phrases: ["turn on autopay", "set up autopay"],
     answer: (c) => ({
       text: c.owner.autopay
-        ? `Autopay is on. ${money(c.association.duesCents)} comes out on the 1st and reminder emails stop while it is running.`
-        : `Autopay is off. Turning it on pays ${money(c.association.duesCents)} on the 1st and stops the reminder emails.`,
+        ? `Autopay is on. Your dues of ${money(c.association.duesCents)} are paid for you when they come due.`
+        : `Autopay is off. Turn it on and your dues of ${money(c.association.duesCents)} are paid for you when they come due.`,
       action: { label: "Autopay settings", href: "/resident/pay#autopay" },
     }),
   },
@@ -97,7 +97,7 @@ const intents: Intent[] = [
       if (c.liveMeeting) {
         return {
           text: `${c.liveMeeting.title} is happening right now with ${c.liveMeeting.attendees} people on the call.`,
-          action: { label: "Join the call", href: "/resident/vote" },
+          action: { label: "Join the call", href: "/resident/calendar" },
         };
       }
       const next = c.meetings.slice(0, 3);
@@ -108,7 +108,7 @@ const intents: Intent[] = [
           label: m.title,
           value: `${formatDate(m.date, "long")}, ${m.time}`,
         })),
-        action: { label: "Meetings and dial-in", href: "/resident/vote" },
+        action: { label: "See meetings", href: "/resident/calendar" },
       };
     },
   },
@@ -201,13 +201,13 @@ const intents: Intent[] = [
       facts: [
         { label: "Operating", value: money(c.association.operatingCents, { cents: false }) },
         { label: "Reserves", value: money(c.association.reserveCents, { cents: false }) },
-        { label: "Interest YTD", value: money(c.association.interestYtdCents, { cents: false }) },
+        { label: "Interest this year", value: money(c.association.interestYtdCents, { cents: false }) },
         {
           label: "Reserves funded",
           value: `${Math.round(c.association.reservePercentFunded * 100)}%`,
         },
       ],
-      action: { label: "Full breakdown", href: "/resident/finances" },
+      action: { label: "See association funds", href: "/resident/finances" },
       };
     },
   },
@@ -228,7 +228,7 @@ const intents: Intent[] = [
     phrases: ["where are the documents", "find the ccrs", "meeting minutes"],
     answer: (c) => ({
       text: `${c.documentCount} documents are available to you, including the CC&Rs, bylaws, rules, the adopted budget, the reserve study, and meeting minutes.`,
-      action: { label: "Open documents", href: "/resident/documents" },
+      action: { label: "See documents", href: "/resident/documents" },
     }),
   },
   {

@@ -23,7 +23,14 @@ import { RemindersComposer } from "@/components/app/reminders-composer";
 import { AskedToJoin } from "./asked-to-join";
 import { JoinCodeRow } from "./join-code-row";
 import { ChangeEmailForm, SecondOwnerForm } from "./owner-forms";
-import { AddCreditForm, ChangeDuesForm, RecordPaymentForm } from "./household-money";
+import {
+  AddChargeForm,
+  AddCreditForm,
+  ChangeDuesForm,
+  HandPaymentsPanel,
+  RecordPaymentForm,
+  type HandPaymentsState,
+} from "./household-money";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -34,6 +41,7 @@ import { policyFor } from "@/lib/collections";
 import { dueLetter, renderLetter } from "@/lib/letters";
 import type { HomeType, MessageThread, Owner } from "@/lib/types";
 import type { ManualMethod } from "@/lib/payments/instruments";
+import type { ManualPaymentRow } from "@/lib/payments/manual-payments";
 import {
   HOME_TYPE_LABEL,
   HOME_TYPES,
@@ -136,12 +144,12 @@ export async function sendInvitations(
         answer = ((await response.json().catch(() => null)) ?? {}) as typeof answer;
         ok = response.ok;
       } catch {
-        refusal = "The mail service could not be reached";
+        refusal = "The mail service could not be reached. Try again in a few minutes.";
         break;
       }
       if (!ok) {
         refusal =
-          typeof answer.error === "string" && answer.error ? answer.error : "Could not send the invitations";
+          typeof answer.error === "string" && answer.error ? answer.error : "Could not send the invitations. Try again in a few minutes.";
         break;
       }
       remaining = counted(answer.remaining);
@@ -180,14 +188,14 @@ export function inviteToast(
   only?: string,
 ): { message: string; tone: "ok" | "warn" } {
   if (outcome.refused && outcome.sent + outcome.already === 0) {
-    return { message: outcome.reason ?? "Could not send the invitations", tone: "warn" };
+    return { message: outcome.reason ?? "Could not send the invitations. Try again in a few minutes.", tone: "warn" };
   }
   if (only && outcome.sent === 1 && outcome.failed === 0) {
     return { message: `Invitation sent to ${only}`, tone: "ok" };
   }
   const parts = [`${pluralize(outcome.sent, "invitation")} sent`];
   if (outcome.already) parts.push(`${outcome.already} already invited in the last hour`);
-  if (outcome.failed) parts.push(`${outcome.failed} failed`);
+  if (outcome.failed) parts.push(`${outcome.failed} not sent`);
   const why = outcome.failed && outcome.reason ? `. ${outcome.reason}` : "";
   return { message: `${parts.join(", ")}${why}`, tone: outcome.failed ? "warn" : "ok" };
 }
@@ -209,7 +217,10 @@ export function HomeownersScreen() {
     setHomeType,
     setHomeDues,
     recordManualPayment,
+    reverseManualPayment,
+    manualPaymentsFor,
     addCredit,
+    addCharge,
     can,
     sees,
     isRemote,
@@ -302,7 +313,7 @@ export function HomeownersScreen() {
   const segments: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: "All", count: owners.length },
     { key: "paid", label: "Paid up", count: paidUp },
-    { key: "behind", label: "Behind", count: delinq.past.length },
+    { key: "behind", label: "Past due", count: delinq.past.length },
   ];
 
   function toggle(owner: Owner, withComposer = false) {
@@ -409,7 +420,7 @@ export function HomeownersScreen() {
       );
       notify(message, tone);
     } catch {
-      notify("Could not send the invitations", "warn");
+      notify("Could not send the invitations. Try again in a few minutes.", "warn");
     } finally {
       setInviting(false);
     }
@@ -456,8 +467,8 @@ export function HomeownersScreen() {
   if (!maySeeRoster) {
     return (
       <Callout tone="warn" icon={<Lock className="size-4" />} title="You cannot see the homeowner register">
-        It carries every household&apos;s balance and contact details, so it needs the money or
-        communications capability. The President grants those.
+        It shows every household&apos;s balance and contact details, so it needs access to Finances
+        or Messages. The President can give you that access.
       </Callout>
     );
   }
@@ -671,8 +682,8 @@ export function HomeownersScreen() {
                 </p>
                 <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
                   {seller
-                    ? `${seller.displayName} moves out on the closing date. The home keeps its history and the buyer starts with a clean statement.`
-                    : "Pick the home. The seller moves out on the closing date and the buyer starts with a clean statement."}
+                    ? `${seller.displayName} loses access as soon as you record this, so record it on or after closing. The home keeps its statement. The buyer does not see the seller's requests, messages or votes.`
+                    : "Pick the home. The seller loses access as soon as you record the sale, so record it on or after closing."}
                 </p>
               </div>
               <Button
@@ -724,6 +735,10 @@ export function HomeownersScreen() {
                 <input
                   type="date"
                   value={sale.closingDate}
+                  // A sale takes effect when it is recorded, whatever its
+                  // date: the seller's seat ends there and then. A date
+                  // still to come would lock them out before they had sold.
+                  max={todayIsoDate()}
                   onChange={(e) => setSale({ ...sale, closingDate: e.target.value })}
                   aria-label="Closing date"
                   className={input}
@@ -732,7 +747,10 @@ export function HomeownersScreen() {
               <Button
                 variant="primary"
                 size="md"
-                disabled={!seller || !sale.name.trim() || !sale.closingDate}
+                // The picker's max stops a click; this stops a typed date.
+                disabled={
+                  !seller || !sale.name.trim() || !sale.closingDate || sale.closingDate > todayIsoDate()
+                }
                 onClick={recordSale}
               >
                 Record the sale
@@ -763,13 +781,29 @@ export function HomeownersScreen() {
                 </label>
               </div>
             ) : null}
+            {/* Credit goes with the home. Nothing here moves it, so the
+                board hears about it before the buyer inherits it. */}
+            {seller && seller.balanceCents < 0 ? (
+              <p className="mt-3 text-footnote text-fg-muted">
+                <span className="font-medium text-fg">
+                  This home has {money(-seller.balanceCents)} in credit.
+                </span>{" "}
+                It stays with the home, so the buyer gets it unless you settle it with the seller
+                first.
+              </p>
+            ) : null}
+            {sale.closingDate > todayIsoDate() ? (
+              <p className="mt-3 text-footnote font-medium text-warn">
+                Closing has not happened yet. Come back and record the sale on that day.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
         {/* Roster */}
         {visible.length === 0 ? (
           <EmptyState
-            title={query.trim() ? "Nobody matches" : filter === "behind" ? "Nobody is behind" : "No households yet"}
+            title={query.trim() ? "Nobody matches" : filter === "behind" ? "Nobody is past due" : "No households yet"}
             description={query.trim() ? "Try a name, unit, address or email." : undefined}
           />
         ) : (
@@ -895,11 +929,31 @@ export function HomeownersScreen() {
                               })
                           : undefined
                       }
+                      homeName={homeLabel(community, o.unit)}
+                      onLoadHandPayments={changesMoney && !o.placeholder ? () => manualPaymentsFor(o.id) : undefined}
+                      onReverseHandPayment={
+                        changesMoney && !o.placeholder
+                          ? (paymentId, reason) =>
+                              Promise.resolve(reverseManualPayment(paymentId, reason)).then((ok) => {
+                                if (ok) notify(`Payment reversed for ${homeLabel(community, o.unit)}.`, "ok");
+                                return ok;
+                              })
+                          : undefined
+                      }
                       onAddCredit={
                         changesMoney && !o.placeholder
                           ? (input) =>
                               Promise.resolve(addCredit({ ownerId: o.id, ...input })).then((ok) => {
                                 if (ok) notify(`Added a ${money(input.amountCents)} credit to ${o.displayName}`, "ok");
+                                return ok;
+                              })
+                          : undefined
+                      }
+                      onAddCharge={
+                        changesMoney && !o.placeholder
+                          ? (input) =>
+                              Promise.resolve(addCharge({ ownerId: o.id, ...input })).then((ok) => {
+                                if (ok) notify(`Charge added to ${homeLabel(community, o.unit)}.`, "ok");
                                 return ok;
                               })
                           : undefined
@@ -1071,7 +1125,11 @@ function HouseholdDetail({
   onSetOwner,
   onSale,
   onRecordPayment,
+  homeName,
+  onLoadHandPayments,
+  onReverseHandPayment,
   onAddCredit,
+  onAddCharge,
   onInvite,
   onEmailInvite,
   onChangeEmail,
@@ -1099,8 +1157,16 @@ function HouseholdDetail({
     reference: string;
     receivedOn: string;
   }) => Promise<boolean>;
+  /** How the board names this home, as "Unit 4". */
+  homeName: string;
+  /** This home's checks and cash entered by hand. Absent when this seat may not change finances. */
+  onLoadHandPayments?: () => Promise<ManualPaymentRow[]>;
+  /** Takes one of them back off the books, with the reason. */
+  onReverseHandPayment?: (paymentId: string, reason: string) => Promise<boolean>;
   /** A credit, such as a waived fee. Absent when this seat may not change finances. */
   onAddCredit?: (input: { amountCents: number; reason: string }) => Promise<boolean>;
+  /** A one-off charge. Absent when this seat may not change finances. */
+  onAddCharge?: (input: { amountCents: number; label: string; dueOn: string }) => Promise<boolean>;
   onInvite: () => void;
   onEmailInvite?: () => void;
   /** Correct the address the listed owner claims their seat with. Absent when this seat may not, or they have signed in. */
@@ -1128,7 +1194,27 @@ function HouseholdDetail({
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
-  const [editing, setEditing] = useState<"email" | "second" | "payment" | "credit" | "dues" | null>(null);
+  const [editing, setEditing] = useState<"email" | "second" | "payment" | "hand" | "credit" | "charge" | "dues" | null>(null);
+  const [hand, setHand] = useState<HandPaymentsState>({ status: "loading" });
+
+  // Read in the click that opens the form or the list, not in an effect, and
+  // again after a reversal so the row reads Reversed.
+  function loadHandPayments() {
+    if (!onLoadHandPayments) return Promise.resolve();
+    return onLoadHandPayments().then(
+      (rows) => setHand({ status: "ready", rows }),
+      () => setHand({ status: "error" }),
+    );
+  }
+  function openHandPayments(next: "payment" | "hand") {
+    if (editing === next) {
+      setEditing(null);
+      return;
+    }
+    setEditing(next);
+    setHand({ status: "loading" });
+    void loadHandPayments();
+  }
 
   function startFromLetter() {
     if (!letter) return;
@@ -1272,10 +1358,33 @@ function HouseholdDetail({
       ) : null}
 
       {editing === "payment" && onRecordPayment ? (
-        <RecordPaymentForm unit={owner.unit} onSave={onRecordPayment} onCancel={() => setEditing(null)} />
+        <RecordPaymentForm
+          unit={owner.unit}
+          homeName={homeName}
+          existing={hand.status === "ready" ? hand.rows : undefined}
+          onSave={(input) => onRecordPayment(input).then((ok) => ok && loadHandPayments().then(() => ok))}
+          onCancel={() => setEditing(null)}
+        />
+      ) : null}
+      {editing === "hand" && onReverseHandPayment ? (
+        <HandPaymentsPanel
+          homeName={homeName}
+          state={hand}
+          onReverse={(paymentId, reason) =>
+            onReverseHandPayment(paymentId, reason).then((ok) => ok && loadHandPayments().then(() => ok))
+          }
+          onClose={() => setEditing(null)}
+        />
       ) : null}
       {editing === "credit" && onAddCredit ? (
         <AddCreditForm unit={owner.unit} onSave={onAddCredit} onCancel={() => setEditing(null)} />
+      ) : null}
+      {editing === "charge" && onAddCharge ? (
+        <AddChargeForm
+          heading={`A charge for home ${owner.unit}`}
+          onSave={onAddCharge}
+          onCancel={() => setEditing(null)}
+        />
       ) : null}
       {editing === "dues" && onChangeDues ? (
         <ChangeDuesForm
@@ -1295,11 +1404,22 @@ function HouseholdDetail({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setEditing(editing === "payment" ? null : "payment")}
+            onClick={() => openHandPayments("payment")}
             aria-label={`Record a payment from ${owner.displayName}`}
           >
             <Banknote className="size-3.5" />
             Record a payment
+          </Button>
+        ) : null}
+        {onRecordPayment && onLoadHandPayments && onReverseHandPayment ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-fg-muted"
+            onClick={() => openHandPayments("hand")}
+            aria-label={`Payments recorded by hand for ${owner.displayName}`}
+          >
+            Payments recorded by hand
           </Button>
         ) : null}
         {onAddCredit ? (
@@ -1311,6 +1431,17 @@ function HouseholdDetail({
           >
             <Plus className="size-3.5" />
             Add a credit
+          </Button>
+        ) : null}
+        {onAddCharge ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(editing === "charge" ? null : "charge")}
+            aria-label={`Add a charge to ${owner.displayName}`}
+          >
+            <Plus className="size-3.5" />
+            Add a charge
           </Button>
         ) : null}
         {onChangeDues ? (

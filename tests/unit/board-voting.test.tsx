@@ -71,7 +71,7 @@ describe("the board's Voting page", () => {
     show();
 
     // Out of the Open list, so there is no Close now to press.
-    expect(screen.queryByRole("button", { name: "Close now" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "End voting now" })).not.toBeInTheDocument();
     expect(screen.getByText("Nothing is open for a vote")).toBeInTheDocument();
     // A ballot already closed in the record has nothing left to write.
     expect(row("sealed").queryByRole("button")).not.toBeInTheDocument();
@@ -82,11 +82,11 @@ describe("the board's Voting page", () => {
     expect(await screen.findByText(/Recorded\. Yes won · 12 of 20 homes voted\./)).toBeInTheDocument();
   });
 
-  it("keeps Close now, and nothing else, on a ballot still running", () => {
+  it("keeps End voting now, and nothing else, on a ballot still running", () => {
     ballots = [ballot({ id: "running", closesDate: "2026-10-10" })];
     show();
 
-    expect(row("running").getByRole("button", { name: "Close now" })).toBeInTheDocument();
+    expect(row("running").getByRole("button", { name: "End voting now" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Record the result" })).not.toBeInTheDocument();
   });
 });

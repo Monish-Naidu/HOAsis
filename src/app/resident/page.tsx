@@ -354,7 +354,7 @@ function RecentActivity() {
             href="/resident/account"
             className="text-footnote font-medium text-accent hover:underline"
           >
-            View all
+            See statement
           </Link>
         }
       />

@@ -47,7 +47,7 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
             href="/resident/calendar"
             className="text-footnote font-medium text-accent hover:underline"
           >
-            Full calendar
+            All meetings
           </Link>
         }
       />
@@ -85,7 +85,7 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
               className="flex items-center gap-2 border-t border-border px-4 py-2.5 text-footnote font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
             >
               <CalendarDays className="size-3.5" />
-              Open the calendar
+              See all meetings and events
               <ChevronRight className="ml-auto size-3.5" />
             </Link>
           </>

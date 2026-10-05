@@ -392,6 +392,8 @@ export interface ChargeLine {
   method?: string;
   feeCents?: Cents;
   feePaidBy?: "association" | "owner";
+  /** Demo only: a payment entered by hand that the board has since reversed. */
+  reversed?: boolean;
 }
 
 export interface Payout {

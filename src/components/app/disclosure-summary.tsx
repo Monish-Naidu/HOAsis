@@ -147,7 +147,7 @@ export function DisclosureSummary({
                   <div>
                     <p className="text-body leading-relaxed text-fg">
                       {showUnconfirmed
-                        ? "These articles use words that suggest they settle this. Nobody has confirmed that they do, so nothing here is presented as an answer. Open each one and tag it, or leave it, but do not treat this list as a finding."
+                        ? "These articles use words that suggest they settle this. Nobody has confirmed that they do, so nothing here is an answer yet. Open each one and tag it, or leave it. Do not treat this list as an answer."
                         : "Some articles mention this, but nobody on the board has confirmed which one settles it. Ask the board rather than reading a guess here."}
                     </p>
                     {showUnconfirmed ? (

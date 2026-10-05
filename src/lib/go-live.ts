@@ -82,7 +82,7 @@ export function billingStatus(community: Community, today: ISODate) {
       ? `Free until ${formatDate(phase.endsOn, "long")}, ${phase.daysLeft} days left`
       : phase?.phase === "ended"
         ? `The free days ended ${formatDate(phase.endsOn, "long")}`
-        : "The clock starts when the association is founded";
+        : "The free period starts when you create the association";
   const urgent = !done && (phase?.phase === "ended" || (phase?.phase === "trialing" && phase.closing));
   return { phase, done, detail, urgent: Boolean(urgent) };
 }
@@ -122,10 +122,10 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
   const items: GoLiveItem[] = [
     {
       key: "roster",
-      label: "Roster in",
+      label: "Homes added",
       detail: rosterDone
-        ? `${owners.length} homes on the register, ${named.length} with an owner named`
-        : "Only your own home is on the register",
+        ? `${owners.length} homes listed, ${named.length} with an owner named`
+        : "Only your own home is listed",
       done: rosterDone,
       href: "/board/homeowners/import",
       action: rosterDone ? "Add more" : "Import a spreadsheet",
@@ -142,21 +142,21 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
     },
     {
       key: "stripe",
-      label: "Stripe live",
+      label: "Online payments on",
       detail: stripeDone
         ? a.stripePayout
           ? `Cards and bank payments settle to ${a.stripePayout.bank} ••${a.stripePayout.last4}`
           : "Cards and bank payments settle to the association"
         : a.stripeAccountId
           ? "Started, not finished. Stripe still needs something from the treasurer"
-          : "Residents cannot pay online until the association is verified with Stripe",
+          : "Owners cannot pay online until online payments are approved",
       done: stripeDone,
       href: "/board/settings#money",
-      action: a.stripeAccountId ? "Finish with Stripe" : "Connect Stripe",
+      action: a.stripeAccountId ? "Finish setting up online payments" : "Set up online payments",
     },
     {
       key: "first-bill",
-      label: "First assessment scheduled",
+      label: "First bill scheduled",
       detail: issued
         ? `Dues have been billed. Next bill ${formatDate(next, "long")}`
         : scheduled
@@ -172,10 +172,10 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
       detail: invitesDone
         ? invitesSent
           ? `${community.emailLog.filter((e) => e.category === "invite" && !e.error).length} invitation emails sent`
-          : "Every household with an email has signed in"
+          : "Every owner with an email has signed in"
         : reachable.length
-          ? `${reachable.length} households have an email and no invitation yet`
-          : "No household has an email address yet",
+          ? `${reachable.length} ${reachable.length === 1 ? "owner has" : "owners have"} an email and no invitation yet`
+          : "No owner has an email address yet",
       done: invitesDone,
       href: "/board/homeowners",
       action: reachable.length ? "Invite" : "Add emails",
@@ -184,7 +184,7 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
       key: "joined",
       label: "A resident signed in",
       detail: joined
-        ? `${residents.length} ${residents.length === 1 ? "household has" : "households have"} an account`
+        ? `${residents.length} ${residents.length === 1 ? "resident has" : "residents have"} an account`
         : "Nobody but you has signed in yet",
       done: joined,
       href: "/board/homeowners",

@@ -146,7 +146,7 @@ export function NoticesScreen() {
                   </p>
                   <EvidenceViewer
                     photos={violation.photos}
-                    emptyNote="No photographs have been attached to this one. You are entitled to ask what the finding is based on."
+                    emptyNote="No photos are attached to this notice. You can ask the board what it is based on."
                   />
                 </div>
 
@@ -178,7 +178,7 @@ function OpenFooter({ violation }: { violation: Violation }) {
     void markViolationFixed(violation.id, note).then((ok) => {
       if (!ok) return;
       setSaying(false);
-      notify("The board has been told. They close the notice once they have checked.");
+      notify("Sent to the board. They close the notice once they have checked.");
     });
   }
 

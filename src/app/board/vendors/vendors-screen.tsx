@@ -124,7 +124,7 @@ export function VendorsScreen() {
             title="New vendor"
             subtitle={
               moduleOn("vendor-tax-forms")
-                ? "Over $600 a year, the IRS needs a W-9 from them in January"
+                ? "Over $600 a year, you need their W-9 to file a 1099 in January"
                 : "Who they are and what they do for you"
             }
           />
@@ -172,7 +172,7 @@ export function VendorsScreen() {
                     checked={draft.achEnabled}
                     onChange={(e) => setDraft({ ...draft, achEnabled: e.target.checked })}
                   />
-                  Pays by ACH
+                  Paid by bank transfer (ACH)
                 </label>
                 <label className="flex items-center gap-2 text-body text-fg">
                   <Checkbox
@@ -215,7 +215,7 @@ export function VendorsScreen() {
               onClick={() => {
                 markW9Requested(gaps.missingW9[0].id);
                 // Nothing is emailed: this only records that the board asked.
-                notify(`Noted that you asked ${gaps.missingW9[0].name} for a W-9. Ask them yourself; nothing was emailed.`);
+                notify(`Saved that you asked ${gaps.missingW9[0].name} for a W-9. Nothing was emailed, so ask them yourself.`);
               }}
             >
               Mark as asked
@@ -223,7 +223,7 @@ export function VendorsScreen() {
           }
         >
           Paid {money(gaps.missingW9[0].ytdPaidCents)} this year, past the $600 line for a
-          1099-NEC. Without the W-9 the January filing will be wrong.
+          1099-NEC. Without the W-9 you cannot file it correctly.
         </Callout>
       ) : null}
 
@@ -239,7 +239,7 @@ export function VendorsScreen() {
           }
         >
           {gaps.expiringCoi.length === 1
-            ? "Ask for the renewed certificate before the next visit. An uninsured vendor on your property is your problem."
+            ? "Ask for the renewed certificate before the next visit. An uninsured vendor is a risk to the association."
             : gaps.expiringCoi.map((v) => v.name).join(", ")}
         </Callout>
       ) : null}
@@ -511,7 +511,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
               Cancel
             </Button>
             <Button variant="secondary" size="sm" onClick={save}>
-              Save
+              Save note
             </Button>
           </div>
         </div>

@@ -141,14 +141,14 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
 
   // What the notice says, read from the row rather than the request.
   const content = await readContent(admin, input);
-  if (!content) throw new Error("Nothing to send: the record was not found");
+  if (!content) throw new Error("Nothing to send: that item was not found");
 
   const { data: recipients, error } = await admin.rpc("email_recipients", {
     p_association_id: input.associationId,
     p_category: category,
     p_only_past_due: false,
   });
-  if (error) throw new Error(`Could not build the recipient list: ${error.message}`);
+  if (error) throw new Error(`Could not work out who to send this to: ${error.message}`);
 
   const wanted = content.unitIds ? new Set(content.unitIds) : null;
   const people = ((recipients ?? []) as Recipient[]).filter((p) => p.email && (!wanted || wanted.has(p.unit_id)));
@@ -225,7 +225,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
     let providerId: string | null = null;
     let sendError: string | null = null;
     if (!client) {
-      sendError = "RESEND_API_KEY is missing, so nothing can be sent.";
+      sendError = "Email is not set up, so nothing was sent.";
     } else {
       try {
         await pacer.turn();

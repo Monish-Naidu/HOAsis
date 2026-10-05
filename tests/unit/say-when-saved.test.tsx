@@ -60,7 +60,7 @@ describe("the reserve study card", () => {
     given({ community: { settings: filed, documents: [] }, updateSettings });
     render(<ReserveStudyCard />, { wrapper: inToasts });
 
-    await userEvent.click(screen.getByRole("button", { name: "Not the study" }));
+    await userEvent.click(screen.getByRole("button", { name: "Unlink this study" }));
     expect(updateSettings).toHaveBeenCalledWith({ reserveStudy: undefined });
     expect(screen.queryByText(/Unlinked/)).not.toBeInTheDocument();
 
@@ -72,7 +72,7 @@ describe("the reserve study card", () => {
     given({ community: { settings: filed, documents: [] }, updateSettings: vi.fn(async () => false) });
     render(<ReserveStudyCard />, { wrapper: inToasts });
 
-    await userEvent.click(screen.getByRole("button", { name: "Not the study" }));
+    await userEvent.click(screen.getByRole("button", { name: "Unlink this study" }));
     await act(async () => {});
     expect(screen.queryByText(/Unlinked/)).not.toBeInTheDocument();
   });
@@ -156,13 +156,13 @@ describe("the meetings page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send notice" }));
     const button = screen.getByRole("button", { name: "Sending" });
     expect(button).toBeDisabled();
-    expect(screen.queryByText(/posted to every home/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/sent to every home/)).not.toBeInTheDocument();
     // A press while it is held starts nothing.
     await userEvent.click(button);
     expect(sendMeetingNotice).toHaveBeenCalledTimes(1);
 
     await act(async () => send.answer(true));
-    expect(screen.getByText("Notice of Annual meeting posted to every home")).toBeInTheDocument();
+    expect(screen.getByText("Notice of Annual meeting sent to every home")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send notice" })).toBeEnabled();
   });
 
@@ -171,7 +171,7 @@ describe("the meetings page", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Send notice" }));
     await act(async () => {});
-    expect(screen.queryByText(/posted to every home/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/sent to every home/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send notice" })).toBeEnabled();
   });
 
@@ -179,7 +179,7 @@ describe("the meetings page", () => {
     open(vi.fn(() => true));
 
     await userEvent.click(screen.getByRole("button", { name: "Send notice" }));
-    expect(await screen.findByText("Notice of Annual meeting posted to every home")).toBeInTheDocument();
+    expect(await screen.findByText("Notice of Annual meeting sent to every home")).toBeInTheDocument();
   });
 });
 
@@ -209,7 +209,7 @@ describe("deleting an association", () => {
 
   it("says nothing of it during the free period, with nothing to cancel", () => {
     open({ subscriptionStatus: "trialing" });
-    expect(screen.getByText("Removes it for everybody. Recoverable for thirty days, then gone.")).toBeInTheDocument();
+    expect(screen.getByText("Removes it for everybody right away. Support can bring it back for thirty days.")).toBeInTheDocument();
     expect(screen.queryByText(/Cancel the subscription first/)).not.toBeInTheDocument();
   });
 });

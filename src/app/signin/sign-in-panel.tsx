@@ -156,7 +156,7 @@ export function SignInPanel() {
     setBusy(false);
 
     if (!result.ok) {
-      setNotice({ tone: "danger", text: result.message ?? "Something went wrong. Please try again." });
+      setNotice({ tone: "danger", text: result.message ?? "That did not work. Try again." });
       return;
     }
     if (result.message) {
@@ -190,7 +190,7 @@ export function SignInPanel() {
               size="sm"
               onClick={async () => router.push(await destinationAfterSignIn(params.get("next")))}
             >
-              Continue
+              Open my account
               <ArrowRight className="size-3.5" />
             </Button>
           </div>
@@ -266,7 +266,7 @@ export function SignInPanel() {
                   if (!email.trim()) {
                     setNotice({
                       tone: "danger",
-                      text: "Type your email address first, then press this again.",
+                      text: "Type your email first, then press Forgot your password again.",
                     });
                     return;
                   }
@@ -323,7 +323,7 @@ export function SignInPanel() {
               Test logins
             </p>
             <p className="mt-1 text-body font-semibold text-fg">
-              Real seats on the real association in the database.
+              Real accounts on a real association.
             </p>
             <p className="mt-1 text-footnote leading-snug text-fg-muted">
               Pick one and you are in. Sign out from the card at the foot of the sidebar to try
@@ -405,7 +405,7 @@ export function SignInPanel() {
         {hasSupabase ? (
           <div className="border-t border-border p-3">
             <ButtonLink href="/start" variant="ghost" size="sm" className="w-full">
-              Or set up your own community
+              Or set up your own association
             </ButtonLink>
           </div>
         ) : null}

@@ -117,7 +117,7 @@ export async function sendDisputeNotice(input: {
       let providerId: string | null = null;
       let error: string | null = null;
       if (!client) {
-        error = "RESEND_API_KEY is missing, so nothing can be sent.";
+        error = "Email is not set up, so nothing was sent.";
       } else {
         try {
           const sent = await client.emails.send(

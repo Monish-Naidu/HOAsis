@@ -69,7 +69,7 @@ export function CollectionPolicyCard() {
           <span className="mt-0.5 block text-footnote leading-snug text-fg-muted">
             {isDefault
               ? "The default steps. Change the days or the fee to match your bylaws."
-              : "Your steps. Every household runs the same ones."}
+              : "Your steps. Every home gets the same steps."}
           </span>
         </span>
         <ChevronDown className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
@@ -161,7 +161,7 @@ export function CollectionPolicyCard() {
                 className="ml-auto"
                 onClick={() => setDraft(DEFAULT_COLLECTION_POLICY)}
               >
-                Back to the default
+                Use the default steps
               </Button>
             ) : null}
           </div>

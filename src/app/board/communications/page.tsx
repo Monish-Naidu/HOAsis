@@ -204,8 +204,8 @@ function CommunicationsScreen() {
 
           {moduleOn("delivery-panel") ? (
             <Callout tone="brand" icon={<MailCheck className="size-4" />} title="Delivery is evidence">
-              Every send records who got it, who opened it, and what bounced. That log is what proves
-              you noticed the membership.
+              Every send records who got it, who opened it, and what bounced. That log is your proof
+              that owners were notified.
             </Callout>
           ) : null}
         </div>

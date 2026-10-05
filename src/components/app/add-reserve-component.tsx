@@ -79,7 +79,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-footnote font-medium text-fg">Lasts</span>
+          <span className="text-footnote font-medium text-fg">Lasts (years)</span>
           <input
             type="number"
             min="1"
@@ -101,7 +101,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-footnote font-medium text-fg">Costs to replace</span>
+          <span className="text-footnote font-medium text-fg">Cost to replace</span>
           <input
             type="number"
             min="0"
@@ -113,7 +113,7 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
           />
         </label>
         <Button type="submit" disabled={!name.trim() || cents <= 0}>
-          Add it
+          Add component
         </Button>
       </form>
     </Card>

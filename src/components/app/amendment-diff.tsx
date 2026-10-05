@@ -46,7 +46,7 @@ export function AmendmentDiff({
         <div>
           <p className="flex items-center gap-1.5 text-footnote font-semibold text-danger">
             <Minus className="size-3.5" strokeWidth={2.6} />
-            {amendment.kind === "remove" ? "Struck in full" : "Struck"}
+            {amendment.kind === "remove" ? "Removed in full" : "Removed"}
           </p>
           <div className="mt-1.5 space-y-2">
             {removed.map((p, i) => (

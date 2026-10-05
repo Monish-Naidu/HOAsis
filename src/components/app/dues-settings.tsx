@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Button, Card, CardHeader, fieldClass } from "@/components/ui/primitives";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
+import { AddChargeForm } from "@/app/board/homeowners/household-money";
+import { chargeAllLine } from "@/lib/payments/charges";
 import {
   HOME_TYPE_LABEL,
   countByType,
@@ -28,7 +30,7 @@ import { cn, money } from "@/lib/utils";
  * one number every household is billed from.
  */
 export function DuesSettings() {
-  const { community, updateAssociation } = useAppState();
+  const { community, updateAssociation, addChargeToAll, can } = useAppState();
   const { notify } = useToast();
   const association = community.association;
   const present = countByType(community.owners);
@@ -47,6 +49,8 @@ export function DuesSettings() {
     >;
   const [base, setBase] = useState(association.duesCents / 100);
   const [byKind, setByKind] = useState(initial);
+  const [charging, setCharging] = useState(false);
+  const homes = community.owners.length;
   const [split, setSplit] = useState(
     mixed && kinds.some((k) => duesFor(association, k) !== association.duesCents),
   );
@@ -150,6 +154,31 @@ export function DuesSettings() {
             Save dues
           </Button>
         </div>
+
+        {/* A one-off charge is not dues: it draws no late fee and does not
+            move the dues figures. It sits here because this is where the
+            board looks at what every home is billed. */}
+        {can("finances") && homes > 0 ? (
+          <div className="border-t border-border pt-3">
+            <Button variant="ghost" size="sm" onClick={() => setCharging((open) => !open)}>
+              Charge every home
+            </Button>
+            {charging ? (
+              <AddChargeForm
+                heading="A one-off charge for every home"
+                summary={(cents) => chargeAllLine(homes, cents)}
+                submitLabel={`Charge ${homes} ${homes === 1 ? "home" : "homes"}`}
+                onSave={(input) =>
+                  Promise.resolve(addChargeToAll(input)).then((ok) => {
+                    if (ok) notify(`Charge added to ${homes} ${homes === 1 ? "home" : "homes"}.`, "ok");
+                    return ok;
+                  })
+                }
+                onCancel={() => setCharging(false)}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </Card>
   );

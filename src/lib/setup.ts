@@ -195,15 +195,15 @@ export const SETUP_TASKS: SetupTask[] = [
   {
     key: "roster",
     label: "Add every home and its owner",
-    detail: "The register of who owns what.",
-    why: "Everything else hangs off this. A home that is not on the register has no balance, no vote, and no way to sign in, and an owner who is not listed cannot be invited. Associations are required to keep a membership register anyway, so this is a list your board already owes somebody.",
+    detail: "A list of who owns what.",
+    why: "Everything else hangs off this. A home that is not listed has no balance, no vote, and no way to sign in, and an owner who is not listed cannot be invited. Associations are required to keep a membership register anyway, so this is a list your board already owes somebody.",
     href: "/board/homeowners",
     done: (c, f) => rosterStatus(c, f).done,
   },
   {
     key: "opening-balances",
     label: "Enter what each home owes today",
-    detail: "What each household owed on the day you switched, as one figure.",
+    detail: "What each home owed on the day you switched, as one figure.",
     why: "An association that already ran itself has balances on the day it switches, and nothing before that day has to come across. One figure per home makes the books correct from here. Set them before the first bill goes out: a bill sent against the wrong balance is the one that costs a board its credibility in week one.",
     href: "/board/homeowners/opening-balances",
     done: (c) => openingBalanceCount(c) > 0,
@@ -214,7 +214,7 @@ export const SETUP_TASKS: SetupTask[] = [
   {
     key: "payments",
     label: "Turn on online payments",
-    detail: "Connect the association to Stripe so owners can pay dues online.",
+    detail: "Set up online payments so owners can pay dues from their phone.",
     why: "Owners cannot pay online until Stripe has verified the association and turned charges on. Stripe asks for the EIN letter, a bank account in the association's name and the treasurer's details. Until it says charges are enabled, nothing here claims that payments work.",
     href: "/board/settings#money",
     done: (c) => {
@@ -259,8 +259,8 @@ export const SETUP_TASKS: SetupTask[] = [
     // Only while the Budget page is switched on (module `money-budget`).
     key: "budget",
     label: "Budget what you spend",
-    detail: "What the assessments have to cover.",
-    why: "Assessment income is already here. Adding the expenses turns it into a budget, which most states require you to distribute to owners between thirty and ninety days before the fiscal year ends. It is also the only way the dashboard can tell you whether spending is on pace.",
+    detail: "What the dues have to cover.",
+    why: "Dues income is already here. Adding the expenses turns it into a budget, which most states require you to distribute to owners between thirty and ninety days before the fiscal year ends. It is also the only way the dashboard can tell you whether spending is on pace.",
     href: "/board/money",
     done: (c) => c.budget.some((line) => line.kind === "expense"),
   },
@@ -319,7 +319,7 @@ export const SETUP_TASKS: SetupTask[] = [
     href: "/board/settings",
     done: (c) => c.accounts.filter((a) => a.role !== "resident").length > 1,
     optional: true,
-    dismissLabel: "I am the only officer",
+    dismissLabel: "I am the only board member",
   },
   {
     key: "vendors",

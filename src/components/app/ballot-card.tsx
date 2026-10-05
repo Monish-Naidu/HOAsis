@@ -34,7 +34,7 @@ export function tally(ballot: Ballot) {
 /** "Yes won, 41 of 60 homes voted", or why there is no winner yet. */
 export function resultLine(ballot: Ballot): string {
   const t = tally(ballot);
-  const who = ballot.audience === "board" ? "directors" : "homes";
+  const who = ballot.audience === "board" ? "board members" : "homes";
   if (t.cast === 0) return "Nobody voted";
   const seats = Math.max(1, ballot.seats ?? 1);
   if (seats > 1) {
@@ -42,7 +42,7 @@ export function resultLine(ballot: Ballot): string {
     const ranked = [...ballot.options].sort((a, b) => b.votes - a.votes);
     const last = ranked[seats - 1];
     if (last && ranked[seats] && ranked[seats].votes === last.votes) {
-      return `Tied for the last seat · ${t.cast} of ${ballot.eligible} ${who} voted`;
+      return `Tied for the last place · ${t.cast} of ${ballot.eligible} ${who} voted`;
     }
     const elected = ranked.slice(0, seats).filter((o) => o.votes > 0).map((o) => o.label);
     return `${elected.join(" and ")} elected · ${t.cast} of ${ballot.eligible} ${who} voted`;
@@ -72,7 +72,7 @@ export function BallotCard({
   const phase = ballotPhase(ballot);
   const scheduled = phase === "scheduled";
   const open = phase === "open";
-  const who = ballot.audience === "board" ? "directors" : "homes";
+  const who = ballot.audience === "board" ? "board members" : "homes";
   // Sealed until close, unless the board turned live results on in Settings.
   const showResults = (!open && !scheduled) || settings.showLiveVoteResults || t.daysLeft < 0;
 
@@ -150,7 +150,7 @@ export function BallotCard({
             Ends on its own {formatDate(ballot.closesDate, "long")}.
           </span>
           <Button variant="secondary" size="sm" onClick={() => onClose(ballot)}>
-            Close now
+            End voting now
           </Button>
         </div>
       ) : null}

@@ -219,7 +219,7 @@ describe("the board's policy", () => {
       "The reminder has to come before the notice.",
     );
     expect(policyProblems({ ...P, counselDay: 10 })).toContain(
-      "The demand has to come before counsel.",
+      "The demand has to come before the referral to the attorney.",
     );
   });
 

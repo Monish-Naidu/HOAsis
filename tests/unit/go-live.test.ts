@@ -57,13 +57,13 @@ describe("goLiveChecklist", () => {
   it("calls Stripe live only when charges are enabled, and links to the finish", () => {
     const none = community();
     expect(item(none, "stripe").done).toBe(false);
-    expect(item(none, "stripe").action).toBe("Connect Stripe");
+    expect(item(none, "stripe").action).toBe("Set up online payments");
 
     const started = community((x) => {
       x.association.stripeAccountId = "acct_1";
     });
     expect(item(started, "stripe").done).toBe(false);
-    expect(item(started, "stripe").action).toBe("Finish with Stripe");
+    expect(item(started, "stripe").action).toBe("Finish setting up online payments");
 
     const live = community((x) => {
       x.association.stripeAccountId = "acct_1";
@@ -98,7 +98,7 @@ describe("goLiveChecklist", () => {
   it("counts invitations from the email log, or from everyone reachable having signed in", () => {
     const none = community();
     expect(item(none, "invites").done).toBe(false);
-    expect(item(none, "invites").detail).toMatch(/1 households have an email/);
+    expect(item(none, "invites").detail).toMatch(/1 owner has an email/);
 
     const sent = community((x) => {
       x.emailLog = [{ id: "e1", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-09-25T10:00:00Z" }];

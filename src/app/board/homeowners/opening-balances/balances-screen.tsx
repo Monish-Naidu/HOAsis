@@ -151,7 +151,7 @@ export function BalancesScreen() {
     setDateMoved(false);
     setSaved(true);
     notify(
-      `Opening balances set for ${pluralize(sending.length, "home")}. Statements show them as of ${asOf}.`,
+      `Opening balances saved for ${pluralize(sending.length, "home")}. Statements show them as of ${asOf}.`,
     );
   }
 
@@ -174,7 +174,7 @@ export function BalancesScreen() {
                 variant="primary"
                 size="md"
               >
-                Go to the roster
+                Go to Homeowners
               </ButtonLink>
             }
           />
@@ -192,9 +192,9 @@ export function BalancesScreen() {
       />
 
       <Callout tone="info" icon={<Scale className="size-4" />} title="Nothing before this date moves">
-        History stays where it is. Copying years of somebody else&apos;s ledger is how a
-        switch stalls, and the copy is never quite right. What matters is that the balance is right
-        on the day you start billing from here.
+        History stays where it is. Copying years of old records is how a switch stalls, and
+        the copy is never quite right. What matters is that each balance is right on the day you
+        start billing here.
       </Callout>
 
       <Card className="mt-5">
@@ -276,10 +276,10 @@ export function BalancesScreen() {
           {saving
             ? "Saving"
             : changed.length > 0
-              ? `Set ${pluralize(changed.length, "balance")}`
+              ? `Save ${pluralize(changed.length, "balance")}`
               : saved
                 ? "Saved"
-                : "Set balances"}
+                : "Save balances"}
         </Button>
         {bad.length > 0 ? (
           <p className="text-footnote text-danger">
@@ -298,15 +298,14 @@ export function BalancesScreen() {
           that ladder runs off the calendar from the switch date, which is what
           makes it defensible at a hearing. */}
       <p className="mt-4 max-w-2xl text-footnote leading-relaxed text-fg-subtle">
-        Setting a balance does not put anybody into collections. How far past due a
-        household is comes from your own records, and the ladder here starts counting from
-        the date above rather than backdating somebody on their first day.
+        Saving a balance does not make any home past due. Days past due are counted from
+        the date above, so nobody starts out behind.
       </p>
 
       <p className="mt-8 text-footnote text-fg-subtle">
         <Link href="/board/homeowners" className="text-brand hover:underline">
           <ArrowLeft className="mr-1 inline size-3" />
-          Back to the roster
+          Back to Homeowners
         </Link>
       </p>
     </>

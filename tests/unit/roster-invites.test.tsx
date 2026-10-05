@@ -113,7 +113,7 @@ describe("sendInvitations", () => {
     expect(calls).toHaveLength(2);
     expect(outcome).toEqual({ sent: 150, already: 0, failed: 250, reason: OVER, refused: true });
     expect(inviteToast(outcome)).toEqual({
-      message: `150 invitations sent, 250 failed. ${OVER}`,
+      message: `150 invitations sent, 250 not sent. ${OVER}`,
       tone: "warn",
     });
   });
@@ -140,7 +140,7 @@ describe("sendInvitations", () => {
       sent: 200,
       already: 0,
       failed: 100,
-      reason: "The mail service could not be reached",
+      reason: "The mail service could not be reached. Try again in a few minutes.",
       refused: true,
     });
   });
@@ -158,7 +158,7 @@ describe("inviteToast", () => {
     expect(
       inviteToast({ sent: 38, already: 0, failed: 2, reason: "ana@example.com: The domain is not verified" }),
     ).toEqual({
-      message: "38 invitations sent, 2 failed. ana@example.com: The domain is not verified",
+      message: "38 invitations sent, 2 not sent. ana@example.com: The domain is not verified",
       tone: "warn",
     });
   });

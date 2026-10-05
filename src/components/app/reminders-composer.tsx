@@ -124,9 +124,9 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
         title="Reminders"
         subtitle={
           due.length
-            ? "Each household gets the letter its account is due under the collection policy, filled in from its own record."
+            ? "Each home gets the letter that fits how late it is, filled in from its own account."
             : waiting.some((r) => r.sentOn)
-              ? "Every household that is due a letter has been sent it."
+              ? "Every home that is due a letter has been sent it."
               : "Nobody has reached the reminder day yet."
         }
         action={
@@ -215,8 +215,8 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
             ) : null
           ) : (
             <p className="text-body leading-relaxed text-fg-muted">
-              The ladder starts at {policy.reminderDay} days past due. Nothing goes out before
-              that, and every household gets the same steps on the same days.
+              Reminders start at {policy.reminderDay} days past due. Nothing goes out before
+              that, and every home gets the same steps on the same days.
             </p>
           )}
         </div>
@@ -227,10 +227,10 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
           {sending
             ? "Sending. Keep this page open until it finishes."
             : due.length
-              ? `Lands on each household's thread under Messages.`
+              ? `Each letter goes to that owner's thread under Messages.`
               : ""}
           {!sending && notYet.length
-            ? ` ${pluralize(notYet.length, "household")} behind but not yet at the reminder day.`
+            ? ` ${pluralize(notYet.length, "home")} past due but not yet at the reminder day.`
             : ""}
         </p>
         <Button
@@ -292,7 +292,7 @@ function LetterEditor({
   return (
     <div>
       <p className="text-footnote text-fg-muted">
-        Editing &ldquo;{template.name}&rdquo;. The change applies to every household getting this
+        Editing &ldquo;{template.name}&rdquo;. The change applies to every home getting this
         letter, now and next month.
       </p>
       <label className="mt-3 block">
@@ -310,13 +310,13 @@ function LetterEditor({
           value={body}
           onChange={(e) => onChange({ body: e.target.value })}
           rows={11}
-          aria-label="Template body"
+          aria-label="Letter text"
           className={cn(field, "resize-none py-2 leading-relaxed")}
         />
       </label>
       <p className="mt-3 mb-1.5 flex items-center gap-1.5 text-footnote font-semibold text-fg-muted">
         <Wand2 className="size-3" />
-        Filled in per household
+        Filled in for each home
       </p>
       <div className="flex flex-wrap gap-1.5">
         {TEMPLATE_TOKENS.map((t) => (

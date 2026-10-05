@@ -37,7 +37,7 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
       setPhoto(await shrinkImage(file));
       notify("Home photo added", "ok");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not read that image", "warn");
+      notify(error instanceof Error ? error.message : "That image could not be read. Try a different photo.", "warn");
     }
   }
 
@@ -71,7 +71,7 @@ export function MyHomeCard({ detailsLink = true }: { detailsLink?: boolean }) {
         </button>
       </div>
       <div className="min-w-0 flex-1 p-4">
-        <p className="text-headline font-semibold tracking-[-0.015em] text-fg">My Home</p>
+        <p className="text-headline font-semibold tracking-[-0.015em] text-fg">My home</p>
         <p className="mt-0.5 truncate text-body text-fg-muted">{owner.address}</p>
         <p className="truncate text-footnote text-fg-subtle">
           {kind ? `${kind} · ` : ""}

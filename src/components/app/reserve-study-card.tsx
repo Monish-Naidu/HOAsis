@@ -38,7 +38,7 @@ export function ReserveStudyCard() {
       const outcome = await uploadDocuments([file], { category: "Financial" });
       const filed = outcome.filed[0];
       if (!filed) {
-        notify(outcome.rejected[0]?.reason ?? "Could not upload that", "warn");
+        notify(outcome.rejected[0]?.reason ?? "The file was not uploaded. Check it and try again.", "warn");
         return;
       }
       // Said only once the link is saved. A refusal has been said by the
@@ -48,7 +48,7 @@ export function ReserveStudyCard() {
       });
       if (ok) notify(`${filed.name} is on file. It is under Documents too.`);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not upload", "warn");
+      notify(error instanceof Error ? error.message : "The file was not uploaded. Try again.", "warn");
     } finally {
       setBusy(false);
     }
@@ -151,7 +151,7 @@ export function ReserveStudyCard() {
             if (ok) notify("Unlinked. The file is still under Documents.", "info");
           }}
         >
-          Not the study
+          Unlink this study
         </Button>
       </div>
     </Card>

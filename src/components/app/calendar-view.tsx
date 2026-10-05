@@ -87,7 +87,7 @@ export function CalendarView({
                 key={c.date}
                 type="button"
                 onClick={() => setSelected(c.date)}
-                aria-label={`${formatDate(c.date, "long")}, ${c.entries.length} items`}
+                aria-label={`${formatDate(c.date, "long")}, ${c.entries.length === 1 ? "1 item" : `${c.entries.length} items`}`}
                 aria-pressed={isSelected}
                 className={cn(
                   "relative flex aspect-square flex-col items-center justify-center gap-1 bg-surface transition-colors",

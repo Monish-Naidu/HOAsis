@@ -55,7 +55,7 @@ export function RosterPreview({
       setParsed({
         rows: [],
         columns: {},
-        problems: [error instanceof Error ? error.message : "Could not read the file"],
+        problems: [error instanceof Error ? error.message : "That file could not be read. Check that it is a CSV and try again."],
       });
     } finally {
       setReading(false);
@@ -123,7 +123,7 @@ export function RosterPreview({
               <p className="text-body text-fg">
                 <span className="font-semibold">{fileName}</span>: {pluralize(parsed.rows.length, "row")}.{" "}
                 {summary.creating.length ? `${pluralize(summary.creating.length, `new ${homeWord}`)}` : `no new ${homeWord}s`}
-                {summary.updating.length ? `, ${summary.updating.length} already on the register (details filled in)` : ""}
+                {summary.updating.length ? `, ${summary.updating.length} already added (details filled in)` : ""}
                 {summary.withEmail.length ? `, ${summary.withEmail.length} with an email` : ""}
                 {showBalances && summary.withBalance.length
                   ? `, ${money(summary.owedCents)} owed across ${summary.withBalance.length}`
@@ -183,7 +183,7 @@ export function RosterPreview({
                             {bad ? (
                               <span className="text-warn">{row.problems.join(" ")}</span>
                             ) : known ? (
-                              <span className="text-fg-muted">On the register, will be updated</span>
+                              <span className="text-fg-muted">Already added, will be updated</span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-ok">
                                 <Check className="size-3" strokeWidth={3} />
@@ -211,7 +211,7 @@ export function RosterPreview({
                 </Button>
                 {summary.problems.length ? (
                   <span className="text-footnote text-fg-muted">
-                    Fix the {pluralize(summary.problems.length, "row")} in the file and pick it again, or add them by hand after.
+                    Fix the {pluralize(summary.problems.length, "row")} in the file and pick it again, or add those homes by hand later.
                   </span>
                 ) : null}
               </div>

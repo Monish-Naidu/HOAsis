@@ -591,7 +591,7 @@ describe("reports from residents", () => {
           ownerName: "Somebody",
         }),
       ),
-    ).toThrow(/go and look/i);
+    ).toThrow(/look at the home/i);
     expect(result.current.state.community.violations).toHaveLength(before);
   });
 

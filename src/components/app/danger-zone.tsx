@@ -11,6 +11,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { loadRemote } from "@/lib/data/remote-store";
 import { signOutOfSupabase } from "@/lib/auth";
 import { subscriptionExit } from "@/lib/stripe/subscription-exit";
+import { SUPPORT_EMAIL } from "@/lib/support";
 import { cn } from "@/lib/utils";
 
 /**
@@ -92,7 +93,7 @@ export function DangerZone() {
       notify(label, "ok");
       return true;
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Something went wrong. Please try again.", "warn");
+      notify(error instanceof Error ? error.message : "That did not go through. Try again.", "warn");
       return false;
     } finally {
       setBusy(false);
@@ -111,12 +112,12 @@ export function DangerZone() {
       });
       const data = await response.json();
       if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "Could not reach Stripe");
+        throw new Error(data.error ?? "Stripe did not open. Try again in a moment.");
       }
       window.location.assign(data.url);
     } catch (error) {
       setBusy(false);
-      notify(error instanceof Error ? error.message : "Could not reach Stripe", "warn");
+      notify(error instanceof Error ? error.message : "Stripe did not open. Try again in a moment.", "warn");
     }
   }
 
@@ -134,7 +135,7 @@ export function DangerZone() {
           <Row
             icon={<ArrowRightLeft className="size-4" />}
             title="Hand over the presidency"
-            detail="Give the office to another household. You stay in the association as a resident, because you still own a home."
+            detail="Give the office to another owner. You stay in the association as a resident, because you still own a home."
             action="Hand over"
             open={flow === "transfer"}
             onOpen={() => setFlow(flow === "transfer" ? null : "transfer")}
@@ -148,7 +149,7 @@ export function DangerZone() {
                 onChange={(e) => setSuccessor(e.target.value)}
                 className="w-full [&>select]:h-10"
               >
-                <option value="">Choose a household</option>
+                <option value="">Choose an owner</option>
                 {others.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name} · {homeLabel(community, a.unit)}
@@ -158,7 +159,7 @@ export function DangerZone() {
             </label>
             {!others.length ? (
               <Callout tone="warn" title="There is nobody else yet">
-                Invite another household and wait for them to sign up. Somebody has to be able
+                Invite another owner and wait for them to sign up. Somebody has to be able
                 to accept the office.
               </Callout>
             ) : null}
@@ -190,7 +191,7 @@ export function DangerZone() {
           detail={
             isPresident
               ? "You cannot leave while you hold the office. Hand it over first, then come back here."
-              : "Removes your access. Your household stays on the register and your balance is unaffected, because the home is what owes money, not you."
+              : "Removes your access. Your home stays listed and your balance is unaffected, because the home is what owes money, not you."
           }
           action="Leave"
           disabled={isPresident}
@@ -198,7 +199,7 @@ export function DangerZone() {
           onOpen={() => setFlow(flow === "leave" ? null : "leave")}
         >
           <Callout tone="warn" title="You will lose access immediately">
-            Somebody with the permissions capability can add you back, but you will not be able
+            A board member who manages access can add you back, but you will not be able
             to do it yourself.
           </Callout>
           <Button
@@ -319,8 +320,8 @@ export function DangerZone() {
             // file (migration 0073), and said so only in a toast afterwards.
             detail={
               community.association.billing?.subscriptionId
-                ? "Removes it for everybody. Recoverable for thirty days, then gone. Cancel the subscription first: it cannot be deleted while billing is on file."
-                : "Removes it for everybody. Recoverable for thirty days, then gone."
+                ? "Removes it for everybody right away. Support can bring it back for thirty days. Cancel the subscription first: it cannot be deleted while billing is on file."
+                : "Removes it for everybody right away. Support can bring it back for thirty days."
             }
             action="Delete"
             tone="danger"
@@ -330,8 +331,9 @@ export function DangerZone() {
             <Callout tone="danger" title="This affects every owner, not just you">
               Owners have payment records here that they are entitled to, and that your
               association is usually required to keep for years. Export anything you need
-              first. You have thirty days to change your mind, after which it cannot be
-              recovered.
+              first: once it is deleted, nobody can sign in to it, you included. For thirty
+              days you can write to {SUPPORT_EMAIL} to have it brought back. After that it
+              cannot be recovered.
             </Callout>
             <label className="block">
               <span className="mb-1.5 block text-footnote font-medium text-fg">

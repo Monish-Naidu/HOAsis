@@ -56,7 +56,7 @@ export function FillForm({ formId }: { formId: string }) {
   if (!form) {
     return (
       <Card>
-        <EmptyState title="No such form" description="It may have been replaced." />
+        <EmptyState title="We could not find that form" description="It may have been removed. Go back to Documents to pick another." />
       </Card>
     );
   }
@@ -182,7 +182,7 @@ export function FillForm({ formId }: { formId: string }) {
     const shown = confirmedReference({ isRemote, guessed, stored });
     setReference(shown);
     setSubmitted(request);
-    notify(shown ? `Submitted as ${shown}` : "Submitted");
+    notify(shown ? `Sent as ${shown}` : "Sent");
   }
 
   if (submitted) {
@@ -199,7 +199,7 @@ export function FillForm({ formId }: { formId: string }) {
                 Your reference is <span className="font-semibold text-fg">{reference}</span>.
               </>
             ) : (
-              "Its number is in your requests."
+              "You can find its number under Requests."
             )}{" "}
             A copy of what you signed is attached to it.
           </p>
@@ -217,7 +217,7 @@ export function FillForm({ formId }: { formId: string }) {
               href={isRemote ? "/resident/requests" : `/resident/requests/${submitted.reference}`}
               className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-body font-semibold text-brand-fg"
             >
-              Track it
+              See your requests
             </Link>
             <button
               type="button"
@@ -287,11 +287,11 @@ export function FillForm({ formId }: { formId: string }) {
         disabled={!canSubmit || sending}
         onClick={() => void submit()}
       >
-        Sign and submit
+        Sign and send
       </Button>
       {failed ? (
         <p role="alert" className="text-center text-footnote text-danger">
-          That did not send. Nothing was submitted. Try again.
+          Your form did not send, so nothing reached the board. Check your connection and try again.
         </p>
       ) : null}
       <p className="pb-2 text-center text-footnote text-fg-subtle">

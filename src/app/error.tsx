@@ -48,7 +48,7 @@ export default function RouteError({
             Something went wrong
           </h1>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-            Nothing was lost. Try again, or head back and come at it from another direction.
+            Nothing was lost. Try again, or go back and try another way.
             If it keeps happening, write to{" "}
             <a href={supportMailto("Something went wrong")} className="font-medium text-accent underline underline-offset-2">
               {SUPPORT_EMAIL}

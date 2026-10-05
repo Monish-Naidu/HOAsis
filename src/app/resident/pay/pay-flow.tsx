@@ -319,7 +319,7 @@ export function PayFlow() {
                 </p>
                 <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
                   {autopayFrom
-                    ? `Usually ${money(duesCents)}. Any fee or other charge on your account is included. From ${describeInstrument(autopayFrom)}. Cancel any time.`
+                    ? `Usually ${money(duesCents)}. Anything else you owe, such as a late fee, is included. From ${describeInstrument(autopayFrom)}. Cancel any time.`
                     : instruments.length > 0
                       ? "Confirm your bank to turn this on."
                       : "Add a payment method to turn this on."}
@@ -334,7 +334,7 @@ export function PayFlow() {
                 // Off is always allowed: a plan whose method has gone must
                 // still be possible to cancel.
                 disabled={!autopayFrom && !autopay}
-                label="Enable autopay"
+                label="Turn on autopay"
               />
             </div>
 
@@ -575,7 +575,7 @@ export function PayFlow() {
             }
           >
             {stripeAccountId && !publishableKey ? (
-              "Please tell your board. You can still pay the way you used to."
+              "Tell your board. You can still pay the way you did before."
             ) : can("finances") && stripeAccountId ? (
               <>
                 Stripe still needs a few details from the board.{" "}
@@ -618,7 +618,7 @@ export function PayFlow() {
           <Card className="p-5 text-center">
             <p className="text-body font-medium text-fg">No payment method yet</p>
             <p className="mt-1 text-footnote text-fg-muted">
-              A bank transfer costs less than a card.
+              Add a bank account or card to pay here.
             </p>
           </Card>
         ) : (

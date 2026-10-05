@@ -5,7 +5,7 @@ import { libraryArticles } from "@/lib/data";
 export const metadata = {
   title: "Library, free guidance for HOA boards",
   description:
-    "How to run a meeting, read a budget, collect a late assessment, and what your state actually requires. Free, no account needed.",
+    "How to run a meeting, read a budget, collect past due dues, and what your state actually requires. Free, no account needed.",
 };
 
 export default function LibraryPage() {

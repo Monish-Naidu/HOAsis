@@ -62,7 +62,7 @@ export default function BoardVoting() {
           {open.length > 0 && !settings.showLiveVoteResults ? (
             <p className="inline-flex items-center gap-1.5 text-footnote text-fg-subtle">
               <Lock className="size-3" />
-              Results show when voting ends. Live results are a switch in Settings.
+              Results show when voting ends. To see them sooner, turn on live results in Settings.
             </p>
           ) : null}
         </div>
@@ -71,7 +71,7 @@ export default function BoardVoting() {
             <EmptyState
               icon={<Vote className="size-5" />}
               title="Nothing is open for a vote"
-              description="A question, the choices, and a closing date."
+              description="Press New ballot to ask a question. It will show here while owners vote."
             />
           </Card>
         ) : (

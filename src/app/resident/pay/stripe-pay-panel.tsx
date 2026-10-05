@@ -180,7 +180,7 @@ export function StripePayPanel({
         ),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not start the payment");
+      if (!response.ok) throw new Error(data.error ?? "The payment did not start. Check your connection and try again.");
       setPhase(
         saved
           ? {
@@ -199,7 +199,7 @@ export function StripePayPanel({
             },
       );
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : "Could not start the payment");
+      setProblem(error instanceof Error ? error.message : "The payment did not start. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -285,7 +285,7 @@ export function StripePayPanel({
 
   /* Method choice. The exact total lands when the server prices the intent. */
   const fresh = [
-    { value: "new-ach", label: "New bank account", hint: "Costs the association least", icon: Landmark },
+    { value: "new-ach", label: "New bank account", hint: "About 4 business days", icon: Landmark },
     { value: "new-card", label: "New card", hint: "Paid today", icon: CreditCard },
   ];
   const rowClass = (active: boolean, disabled = false) =>
@@ -329,7 +329,7 @@ export function StripePayPanel({
                     {verifying
                       ? "Confirm the two small deposits to use it"
                       : stale
-                        ? "Please add this card or account again"
+                        ? "Add this card or account again"
                         : instrument.kind === "ach"
                           ? "Bank transfer"
                           : "Card"}
@@ -465,7 +465,7 @@ function ConfirmSaved({
     });
     setBusy(false);
     if (result.error) {
-      setProblem(result.error.message ?? "The payment could not be completed.");
+      setProblem(result.error.message ?? "The payment did not go through. Try again, or use another card or bank account.");
       return;
     }
     const intent = result.paymentIntent;
@@ -528,7 +528,7 @@ function ConfirmForm({
     });
     setBusy(false);
     if (result.error) {
-      setProblem(result.error.message ?? "The payment could not be completed.");
+      setProblem(result.error.message ?? "The payment did not go through. Try again, or use another card or bank account.");
       return;
     }
     const intent = result.paymentIntent;
@@ -554,7 +554,7 @@ function ConfirmForm({
       <PaymentElement
         options={PAYMENT_ELEMENT_OPTIONS}
         onLoadError={(event) =>
-          setProblem(event.error?.message ?? "Stripe could not open the form. Try again.")
+          setProblem(event.error?.message ?? "The payment form did not load. Try again.")
         }
       />
       {problem ? <p className="mt-3 text-footnote font-medium text-danger">{problem}</p> : null}
@@ -615,7 +615,7 @@ function Receipt({
               link ? "border border-border text-fg" : "bg-brand text-brand-fg",
             )}
           >
-            View account
+            See statement
           </Link>
         </div>
       </Card>

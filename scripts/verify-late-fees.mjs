@@ -106,6 +106,38 @@ try {
   const { data: after } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(0) });
   check("and it posts once that payment fails", after === 1, String(after));
 
+  // A balance brought forward from another system never draws a fee (0087),
+  // while dues billed here on the same home still do. A second association,
+  // so the home's statement holds nothing but these two lines.
+  const { data: movedId, error: movedError } = await president.client.rpc("create_association", {
+    p_name: "Late Fee Moved-in HOA", p_city: "Bothell", p_state: "WA",
+    p_dues_cents: 10000, p_dues_cadence: "monthly", p_due_day: 1,
+    p_founder_name: "Pat Founder", p_founder_unit: "1",
+    p_households: [],
+  });
+  if (movedError) throw new Error(movedError.message);
+  cleanup.associations.push(movedId);
+  await admin.from("associations").update({
+    billing_starts_on: day(-60),
+    settings: { collectionPolicy: { lateNoticeDay: 30, lateFeeCents: 2500 } },
+  }).eq("id", movedId);
+  const { data: movedUnits } = await admin.from("units").select("id").eq("association_id", movedId);
+  const { error: broughtError } = await admin.from("charges").insert({
+    association_id: movedId, unit_id: movedUnits[0].id, kind: "charge", category: "dues",
+    label: "Balance brought forward", amount_cents: 50000, due_on: day(-200),
+  });
+  check("a starting balance is on the statement", !broughtError, broughtError?.message ?? "");
+  const { data: onOld } = await admin.rpc("assess_late_fees", { p_association_id: movedId, p_today: day(0) });
+  check("a starting balance draws no late fee, however old", onOld === 0, String(onOld));
+  await admin.rpc("issue_assessment", { p_association_id: movedId, p_label: "Moved-in dues", p_due_on: day(-40) });
+  const { data: onDues } = await admin.rpc("assess_late_fees", { p_association_id: movedId, p_today: day(0) });
+  const { data: movedFees } = await admin.from("charges").select("label").eq("association_id", movedId).eq("category", "late_fee");
+  check(
+    "dues billed here on the same home still draw one",
+    onDues === 1 && (movedFees ?? []).length === 1 && movedFees[0].label === "Late fee, Moved-in dues",
+    `${onDues}, ${JSON.stringify(movedFees)}`,
+  );
+
   // The board's own policy is honoured: no fee when it says zero.
   const { error: policyError } = await admin.from("associations").update({ settings: { collectionPolicy: { lateFeeCents: 0 } } }).eq("id", associationId);
   check("the policy change is saved", !policyError, policyError?.message ?? "");

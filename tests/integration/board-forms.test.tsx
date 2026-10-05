@@ -98,7 +98,7 @@ describe("opening balances", () => {
 
   it("has nothing to save until a box is changed", () => {
     wrap(<BalancesScreen />);
-    expect(screen.getByRole("button", { name: "Set balances" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save balances" })).toBeDisabled();
   });
 
   it("saves the one home that was changed and leaves every other statement alone", async () => {
@@ -110,9 +110,9 @@ describe("opening balances", () => {
     );
 
     await user.type(box(target.id), "1240.50");
-    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+    await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
 
-    expect(await screen.findByText(/^Opening balances set for 1 home\./)).toBeInTheDocument();
+    expect(await screen.findByText(/^Opening balances saved for 1 home\./)).toBeInTheDocument();
     expect(openingLine(target.id)?.amountCents).toBe(124_050);
     // Pressing the button with every box prefilled from today's balance
     // gave each of these a brought-forward line of its own.
@@ -132,13 +132,13 @@ describe("opening balances", () => {
     const target = seen.state.community.owners[0];
 
     await user.type(box(target.id), "300");
-    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+    await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
 
     expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
     // A correction is a change again, and replaces the line rather than adding one.
     await user.clear(box(target.id));
     await user.type(box(target.id), "250");
-    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+    await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
     await screen.findByRole("button", { name: "Saved" });
 
     const lines = (seen.state.community.ownerCharges[target.id] ?? []).filter((l) => l.label === OPENING);
@@ -149,7 +149,7 @@ describe("opening balances", () => {
 
 describe("correcting the date on opening balances", () => {
   const dateBox = () => screen.getByLabelText("Balances as of") as HTMLInputElement;
-  const anySet = /^Set \d+ balances?$/;
+  const anySet = /^Save \d+ balances?$/;
 
   it("moves the date on a line already set, without the amount being typed again", async () => {
     const user = userEvent.setup();
@@ -158,7 +158,7 @@ describe("correcting the date on opening balances", () => {
     const typedOn = dateBox().value;
 
     await user.type(box(target.id), "410");
-    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+    await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
     await screen.findByRole("button", { name: "Saved" });
     expect(openingLine(target.id)?.date).toBe(typedOn);
 
@@ -178,7 +178,7 @@ describe("correcting the date on opening balances", () => {
     unmount();
     wrap(<BalancesScreen />);
     expect(dateBox().value).toBe("2026-07-01");
-    expect(screen.getByRole("button", { name: "Set balances" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save balances" })).toBeDisabled();
   });
 
   it("does not offer to save with the date cleared", async () => {
@@ -304,7 +304,7 @@ describe("opening bank balances on Finances", () => {
     act(() => seen.state.signIn("acct-arya"));
     const accounts = seen.state.community.bankAccounts;
     expect(accounts.length).toBeGreaterThan(0);
-    const input = screen.getByLabelText(new RegExp(`^Opening balance for ${accounts[0].name}`));
+    const input = screen.getByLabelText(new RegExp(`^Starting balance for ${accounts[0].name}`));
     await user.type(input, "86000");
     await user.click(within(input.closest("form")!).getByRole("button", { name: "Save" }));
 
@@ -313,7 +313,7 @@ describe("opening bank balances on Finances", () => {
     );
     expect(lines).toHaveLength(1);
     expect(lines[0].amountCents).toBe(86_000_00);
-    expect(screen.queryByLabelText(new RegExp(`^Opening balance for ${accounts[0].name}`))).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(new RegExp(`^Starting balance for ${accounts[0].name}`))).not.toBeInTheDocument();
   });
 });
 

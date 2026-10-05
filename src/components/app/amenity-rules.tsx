@@ -175,7 +175,7 @@ export function AmenityRules({
                 The board approves each booking
               </span>
               <span className="block text-footnote leading-snug text-fg-muted">
-                Leave this off and a free slot is simply taken, which is what most spaces want.
+                Leave this off and a free slot is booked right away, which is what most spaces want.
                 Turn it on for anything with a deposit or a key.
               </span>
             </span>

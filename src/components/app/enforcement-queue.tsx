@@ -76,8 +76,8 @@ import { placeLabel as placeLabelOf } from "@/lib/wording";
  */
 const CITATION_PROBLEM: Record<NonNullable<CitationMatch["problem"]>, string> = {
   "no-document": "does not name which document",
-  "not-in-this-document": "names no article that exists",
-  "document-not-loaded": "that document is not on file as text",
+  "not-in-this-document": "names a section that is not in that document",
+  "document-not-loaded": "that document is not on file as text, so the section cannot be checked",
 };
 
 const STAGE: Record<Violation["stage"], { tone: Tone; label: string }> = {
@@ -98,7 +98,7 @@ const REPORT_STATUS: Record<ViolationReport["status"], { tone: Tone; label: stri
   new: { tone: "warn", label: "Nobody has looked yet" },
   verifying: { tone: "warn", label: "Being looked at" },
   verified: { tone: "ok", label: "Confirmed by the board" },
-  dismissed: { tone: "neutral", label: "Nothing in it" },
+  dismissed: { tone: "neutral", label: "Closed, nothing found" },
 };
 
 const SOURCE: Record<ViolationSource, { label: string; icon: LucideIcon; tone: Tone }> = {
@@ -208,7 +208,7 @@ export function EnforcementQueue() {
     try {
       if (mode === "verify") {
         verifyReport(report.id, who, note);
-        notify(`${report.reference} confirmed. A notice can now rest on what you saw.`);
+        notify(`${report.reference} confirmed. You can now send a notice based on what you saw.`);
       } else {
         dismissReport(report.id, note);
         notify(`${report.reference} closed. The reporter is not told who looked.`);
@@ -216,7 +216,7 @@ export function EnforcementQueue() {
       setEditor(null);
       setNote("");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not save that", "warn");
+      notify(error instanceof Error ? error.message : "That was not saved. Try again.", "warn");
     }
   }
 
@@ -234,7 +234,7 @@ export function EnforcementQueue() {
       setEditor(null);
       setOpenId(null);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not open that notice", "warn");
+      notify(error instanceof Error ? error.message : "The notice was not opened. Try again.", "warn");
     }
   }
 
@@ -281,7 +281,7 @@ export function EnforcementQueue() {
               switchTab(daysFromToday(input.deadline) <= 14 ? "needsYou" : "open");
               setSource("all");
             } catch (error) {
-              notify(error instanceof Error ? error.message : "Could not log that", "warn");
+              notify(error instanceof Error ? error.message : "The city notice was not logged. Try again.", "warn");
             }
           }}
         />
@@ -722,7 +722,7 @@ function ReportDetail({
             onClick={() => onStart({ id: report.id, mode: "dismiss" })}
           >
             <X className="size-3.5" />
-            Nothing in it
+            Close this report
           </Button>
         </div>
       ) : null}
@@ -753,7 +753,7 @@ function ReportDetail({
           </label>
           {noteMode === "verify" ? (
             <p className="mt-1.5 text-footnote leading-relaxed text-fg-subtle">
-              This is what a notice would rest on, not what the neighbour told you. Write what
+              This is what a notice would rest on, not what the neighbor told you. Write what
               you personally observed and when.
             </p>
           ) : null}
@@ -788,7 +788,7 @@ function ReportDetail({
           ) : null}
           {!owner ? (
             <p className="text-footnote text-warn">
-              No owner on file for unit {report.subjectUnit}. Add the household first.
+              No owner on file for unit {report.subjectUnit}. Add the owner under Homeowners first.
             </p>
           ) : null}
           {editor?.mode === "notice" && owner ? (
@@ -808,11 +808,11 @@ function ReportDetail({
                 />
               </label>
               <label className="mt-3 block">
-                <span className={LABEL}>Which provision</span>
+                <span className={LABEL}>Which rule or section</span>
                 <input
                   value={noticeCitation}
                   onChange={(e) => onNoticeCitation(e.target.value)}
-                  aria-label="Which provision the notice rests on"
+                  aria-label="Which rule or section the notice is based on"
                   placeholder="CC&Rs Art. IX §2(b)"
                   className={INPUT}
                 />
@@ -897,7 +897,7 @@ function ViolationDetail({
             Received {formatDate(violation.openedDate)}. Deadline{" "}
             <span className="font-medium text-fg">{formatDate(violation.nextActionDate)}</span>
             {openMatter ? ` (${relativeDays(violation.nextActionDate)})` : ""}. An agency notice
-            is not hearsay: nobody needs to go and look, it needs fixing by the date.
+            is not a neighbor&apos;s report, so nobody needs to check it first. It needs fixing by the date.
           </p>
         </div>
       ) : cited ? (
@@ -1036,8 +1036,8 @@ function CityNoticeForm({
         <div className="min-w-0 flex-1">
           <p className="text-body font-semibold text-fg">Log a city notice</p>
           <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
-            A notice from a city or county agency. It goes in the queue with its deadline and
-            nobody has to go and look.
+            A notice from a city or county agency. It is added to the list with its deadline.
+            Nobody needs to check it first.
           </p>
         </div>
       </div>

@@ -108,7 +108,16 @@ import type {
   Capabilities,
 } from "@/lib/types";
 import { canRaiseNotice } from "@/lib/violations";
+import { chargeProblem } from "@/lib/payments/charges";
 import { MANUAL_METHOD_LABEL, manualPaymentLabel, type ManualMethod, type PaymentInstrument } from "@/lib/payments/instruments";
+import {
+  parseManualLabel,
+  reversalReasonProblem,
+  pairManualPayments,
+  recentManualPayments,
+  type HandMethod,
+  type ManualPaymentRow,
+} from "@/lib/payments/manual-payments";
 import { placeLabel } from "@/lib/wording";
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { statusLabel } from "@/lib/request-status";
@@ -408,11 +417,39 @@ interface AppState {
     reference: string;
     receivedOn: string;
   }) => boolean | Promise<boolean>;
+  /**
+   * Takes back a check or cash the board entered by mistake. The home owes the
+   * money again and the books lose the deposit. Resolves true once it is done.
+   */
+  reverseManualPayment: (paymentId: string, reason: string) => boolean | Promise<boolean>;
+  /**
+   * One home's checks and cash entered by hand, newest first, ten at most.
+   * Real associations read them on demand; the demo returns what this session
+   * entered. Rejects when the read fails.
+   */
+  manualPaymentsFor: (ownerId: string) => Promise<ManualPaymentRow[]>;
   /** A credit on one home's statement, such as a waived late fee. Not money in the bank. */
   addCredit: (input: {
     ownerId: string;
     amountCents: number;
     reason: string;
+  }) => boolean | Promise<boolean>;
+  /**
+   * A one-off charge on one home's statement: a repair, a key fob, a special
+   * assessment. Raises the balance and is paid oldest first like dues, but is
+   * not dues, so it draws no late fee. Resolves true once it is on the books.
+   */
+  addCharge: (input: {
+    ownerId: string;
+    amountCents: number;
+    label: string;
+    dueOn: string;
+  }) => boolean | Promise<boolean>;
+  /** The same one-off charge on every home's statement, in one write. */
+  addChargeToAll: (input: {
+    amountCents: number;
+    label: string;
+    dueOn: string;
   }) => boolean | Promise<boolean>;
   /** What an account held when the books started here. Replaces an earlier figure. */
   setOpeningBankBalance: (
@@ -1265,7 +1302,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         Object.entries({ ...set, [capability]: on })
           .filter(([, v]) => v)
           .map(([name]) => name);
-      void remoteWrite("Saving permissions", () => {
+      void remoteWrite("Saving access", () => {
         // The seat as the last write left it. Built from the copy on screen,
         // the second of two quick presses on the grid dropped the first.
         const account = latest(rc).accounts.find((a) => a.id === id) ?? seat;
@@ -1408,7 +1445,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         } catch (duesError) {
           reportRemoteError(
             `Your association is set up, but some homes were not given their own dues (${
-              duesError instanceof Error ? duesError.message : "the database refused it"
+              duesError instanceof Error ? duesError.message : "it was not saved"
             }). Open Homeowners and use Change dues on those homes. Until then they pay the usual amount.`,
           );
         }
@@ -1682,7 +1719,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         {
           id: `led-${date}-${input.ownerId}-${all.length + 1}`,
           date,
-          description: `Assessment payment, unit ${owner?.unit ?? "?"}`,
+          description: `Dues payment, ${placeLabel(owner?.unit ?? "?")}`,
           counterparty: owner?.displayName ?? "Owner",
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
@@ -1808,6 +1845,161 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   /**
+   * Takes a check or cash back off the books. Real associations go through
+   * reverse_manual_payment (0088), which stores it as a full refund: the
+   * payment reads refunded, the home is charged the amount again and the
+   * deposit is offset. The demo does the same locally.
+   */
+  const reverseManualPayment = useCallback(
+    (paymentId: string, reason: string) => {
+      const why = reason.trim();
+      if (!can("finances")) return false;
+      if (reversalReasonProblem(why)) return false;
+      if (remote.community) {
+        return remoteWrite("Reversing the payment", () =>
+          supabaseBrowser().rpc("reverse_manual_payment", {
+            p_payment_id: paymentId,
+            p_reason: why,
+          }),
+        );
+      }
+      const date = todayIsoDate();
+      const charges = sliceStore(communityId, "ownerCharges");
+      let ownerId: string | null = null;
+      let amountCents = 0;
+      for (const [id, lines] of Object.entries(charges.getSnapshot())) {
+        const line = lines.find((l) => l.id === paymentId);
+        if (line) {
+          ownerId = id;
+          amountCents = -line.amountCents;
+        }
+      }
+      if (!ownerId || amountCents <= 0) return false;
+      const owners = sliceStore(communityId, "owners");
+      const owner = owners.getSnapshot().find((o) => o.id === ownerId);
+      const balanceAfter = (owner?.balanceCents ?? 0) + amountCents;
+      const homeId = ownerId;
+      charges.update((all) => ({
+        ...all,
+        [homeId]: [
+          {
+            id: `reversal-${date}-${paymentId}`,
+            date,
+            label: `Payment reversed: ${why}`,
+            kind: "charge" as const,
+            amountCents,
+            balanceAfterCents: balanceAfter,
+          },
+          ...(all[homeId] ?? []).map((l) => (l.id === paymentId ? { ...l, reversed: true } : l)),
+        ],
+      }));
+      owners.update((all) =>
+        all.map((o) => (o.id === homeId ? { ...o, balanceCents: balanceAfter } : o)),
+      );
+      // The deposit comes back out of the books and the bank, as the money
+      // went in, so collected and the bank balance fall with the balance.
+      const operating = sliceStore(communityId, "bankAccounts")
+        .getSnapshot()
+        .find((a) => a.kind === "operating");
+      sliceStore(communityId, "ledger").update((all) => [
+        {
+          id: `led-reversal-${date}-${paymentId}`,
+          date,
+          description: `Payment reversed, ${placeLabel(owner?.unit ?? "?")}`,
+          counterparty: owner?.displayName ?? "Owner",
+          category: "Assessments" as const,
+          accountId: operating?.id ?? "unassigned",
+          amountCents: -amountCents,
+          status: "cleared" as const,
+          matchedBy: "auto" as const,
+          ownerId: homeId,
+        },
+        ...all,
+      ]);
+      sliceStore(communityId, "budget").update((all) =>
+        all.map((line) =>
+          line.kind === "income" && line.category === "Assessments"
+            ? { ...line, ytdActualCents: line.ytdActualCents - amountCents }
+            : line,
+        ),
+      );
+      if (operating) {
+        sliceStore(communityId, "bankAccounts").update((all) =>
+          all.map((a) =>
+            a.id === operating.id ? { ...a, balanceCents: a.balanceCents - amountCents } : a,
+          ),
+        );
+      }
+      return true;
+    },
+    [can, remote.community, communityId],
+  );
+
+  /**
+   * One home's checks and cash entered by hand. A payments row carries no
+   * date or reference, so those are read off the statement line written
+   * beside it. Row level security already lets a finance holder read both.
+   */
+  const manualPaymentsFor = useCallback(
+    async (ownerId: string): Promise<ManualPaymentRow[]> => {
+      if (remote.community) {
+        if (!isUuid(ownerId)) return [];
+        const supabase = supabaseBrowser();
+        const [paid, lines] = await Promise.all([
+          supabase
+            .from("payments")
+            .select("id, amount_cents, rail, state, refunded_cents, created_at")
+            .eq("unit_id", ownerId)
+            .in("rail", ["check", "cash"])
+            .order("created_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("charges")
+            .select("label, amount_cents, due_on")
+            .eq("unit_id", ownerId)
+            .eq("kind", "payment")
+            .or("label.like.Check payment*,label.like.Cash payment*")
+            .order("created_at", { ascending: true }),
+        ]);
+        if (paid.error) throw new Error(paid.error.message);
+        if (lines.error) throw new Error(lines.error.message);
+        return recentManualPayments(
+          pairManualPayments(
+            [...(paid.data ?? [])].reverse().map((p) => ({
+              id: p.id,
+              amountCents: p.amount_cents,
+              method: p.rail as HandMethod,
+              reversed: p.state === "refunded" || p.refunded_cents > 0,
+              createdOn: p.created_at.slice(0, 10),
+            })),
+            (lines.data ?? []).map((l) => ({
+              label: l.label,
+              amountCents: -l.amount_cents,
+              date: l.due_on,
+            })),
+          ),
+        );
+      }
+      const lines = sliceStore(communityId, "ownerCharges").getSnapshot()[ownerId] ?? [];
+      const rows: ManualPaymentRow[] = [];
+      for (const l of lines) {
+        const parsed = l.kind === "payment" ? parseManualLabel(l.label) : null;
+        if (!parsed) continue;
+        rows.push({
+          id: l.id,
+          amountCents: -l.amountCents,
+          method: parsed.method,
+          receivedOn: l.date,
+          reference: parsed.reference,
+          reversed: Boolean(l.reversed),
+        });
+      }
+      return recentManualPayments(rows);
+    },
+    [remote.community, communityId],
+  );
+
+  /**
    * A credit on one home's statement, such as a late fee waived. It lowers
    * what the home owes and is not money in the bank, so the books get no
    * line. A finance holder may insert a charge directly (charges_write), so
@@ -1857,6 +2049,86 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
+
+  /** One charge line on a home's demo statement, with the balance it leaves. */
+  const addLocalCharge = useCallback(
+    (ownerId: string, amountCents: number, label: string, dueOn: string) => {
+      const owner = sliceStore(communityId, "owners")
+        .getSnapshot()
+        .find((o) => o.id === ownerId);
+      const balanceAfter = (owner?.balanceCents ?? 0) + amountCents;
+      sliceStore(communityId, "ownerCharges").update((all) => ({
+        ...all,
+        [ownerId]: [
+          {
+            id: `charge-${dueOn}-${ownerId}-${(all[ownerId] ?? []).length + 1}`,
+            date: dueOn,
+            label,
+            kind: "charge" as const,
+            amountCents,
+            balanceAfterCents: balanceAfter,
+          },
+          ...(all[ownerId] ?? []),
+        ],
+      }));
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) => (o.id === ownerId ? { ...o, balanceCents: balanceAfter } : o)),
+      );
+    },
+    [communityId],
+  );
+
+  /**
+   * A one-off charge on one home. Real associations go through add_charge
+   * (0086), which checks the amount, the label and the date again and writes
+   * the activity record; the demo puts the line on the statement locally.
+   * The charge is not dues, so it draws no late fee.
+   */
+  const addCharge = useCallback(
+    (input: { ownerId: string; amountCents: number; label: string; dueOn: string }) => {
+      const label = input.label.trim();
+      if (!can("finances")) return false;
+      if (chargeProblem({ ...input, label }, todayIsoDate())) return false;
+      if (remote.community) {
+        return remoteWrite("Adding the charge", () =>
+          supabaseBrowser().rpc("add_charge", {
+            p_unit_id: input.ownerId,
+            p_amount_cents: input.amountCents,
+            p_label: label,
+            p_due_on: input.dueOn,
+          }),
+        );
+      }
+      addLocalCharge(input.ownerId, input.amountCents, label, input.dueOn);
+      return true;
+    },
+    [can, remote.community, addLocalCharge],
+  );
+
+  /** The same one-off charge on every home, in one transaction. */
+  const addChargeToAll = useCallback(
+    (input: { amountCents: number; label: string; dueOn: string }) => {
+      const label = input.label.trim();
+      if (!can("finances")) return false;
+      if (chargeProblem({ ...input, label }, todayIsoDate())) return false;
+      if (remote.community) {
+        const rc = remote.community;
+        return remoteWrite("Adding the charge to every home", () =>
+          supabaseBrowser().rpc("add_charge_to_all", {
+            p_association_id: rc.id,
+            p_amount_cents: input.amountCents,
+            p_label: label,
+            p_due_on: input.dueOn,
+          }),
+        );
+      }
+      for (const o of sliceStore(communityId, "owners").getSnapshot()) {
+        addLocalCharge(o.id, input.amountCents, label, input.dueOn);
+      }
+      return true;
+    },
+    [can, remote.community, communityId, addLocalCharge],
+  );
 
   /**
    * What one bank account held on the day the books started here. One
@@ -1964,7 +2236,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       if (remote.community) {
         const rc = remote.community;
-        const saved = remoteWrite("Adding the household", async () => {
+        const saved = remoteWrite("Adding the home", async () => {
           const added = await supabaseBrowser().rpc("add_household", {
             p_association_id: rc.id,
             p_unit_id: ownerId,
@@ -2458,7 +2730,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!report) throw new ValidationError("That report is not on file", { reportId });
       if (!canRaiseNotice(report)) {
         throw new ValidationError(
-          "Somebody has to go and look before a notice can rest on this",
+          "Someone has to look at the home and mark this report verified before a notice can be sent",
           { reportId },
         );
       }
@@ -2546,7 +2818,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const addNotice = useCallback(
     (input: { ownerId: string; ownerName: string; unit: string; rule: string; ruleCitation?: string }) => {
       if (!input.rule.trim() || !input.unit.trim()) {
-        throw new ValidationError("A notice needs a home and what was seen", {});
+        throw new ValidationError("Choose a home and say what was seen", {});
       }
       const existing = remote.community
         ? remote.community.violations
@@ -2798,7 +3070,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               association_id: rc.id,
               bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
               occurred_on: input.closingDate,
-              description: `Paid at closing, unit ${owner?.unit ?? ""}`.trim(),
+              description: `Paid at closing, ${placeLabel(owner?.unit ?? "")}`.trim(),
               counterparty: owner?.displayName ?? "Title company",
               category: "Assessments",
               amount_cents: owed,
@@ -2824,7 +3096,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             // The one refusal that can be seen coming, checked before any
             // money is written.
             if (owner && input.closingDate < owner.moveInDate) {
-              throw new Error("the closing date is before this owner's tenure began. Check the date");
+              throw new Error("the closing date is before this owner took ownership. Check the date");
             }
             const { error } = await recordPayment();
             if (error) throw new Error(error.message);
@@ -3473,7 +3745,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const addActionItem = useCallback(
     (input: { title: string; ownerName: string; dueOn?: string; meetingId?: string }) => {
       const title = input.title.trim();
-      if (!title) throw new ValidationError("An action item needs to say what", { title });
+      if (!title) throw new ValidationError("Describe the action item", { title });
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the item", () =>
@@ -3651,9 +3923,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const code = input.code.trim().toUpperCase();
       const name = input.name.trim();
       const email = input.email.trim();
-      if (!code) return { ok: false as const, error: "Type the code from your board." };
+      if (!code) return { ok: false as const, error: "Enter the join code from your board." };
       if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-        return { ok: false as const, error: "A name and a working email address are needed." };
+        return { ok: false as const, error: "Enter your name and a working email address." };
       }
       // A demo association answers from the browser, so the flow can be
       // tried without an account. A real one goes to the database as anyone.
@@ -3683,7 +3955,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         p_note: input.note.trim(),
       });
       if (error || !data) {
-        return { ok: false as const, error: error?.message ?? "No association has that code." };
+        return { ok: false as const, error: error?.message ?? "No association has that join code. Check it with your board." };
       }
       return { ok: true as const, association: data };
     },
@@ -3909,7 +4181,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           });
           if (!response.ok) {
             const data = await response.json().catch(() => ({}));
-            throw new Error(data.error ?? "Could not remove the payment method");
+            throw new Error(data.error ?? "The payment method was not removed. Try again");
           }
         });
         return undefined;
@@ -4223,7 +4495,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const messageBoard = useCallback(
     async (ownerId: string, subject: string, body: string, tag: MessageThread["tag"] = "General") => {
       if (!subject.trim() || !body.trim()) {
-        throw new ValidationError("Add a subject and a few words", {});
+        throw new ValidationError("Add a subject and a message", {});
       }
       if (remote.community) {
         return remoteWrite("Sending your message", () =>
@@ -5240,7 +5512,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addBankAccount,
     recordPayment,
     recordManualPayment,
+    reverseManualPayment,
+    manualPaymentsFor,
     addCredit,
+    addCharge,
+    addChargeToAll,
     setOpeningBankBalance,
     addPost,
     addAnnouncement,

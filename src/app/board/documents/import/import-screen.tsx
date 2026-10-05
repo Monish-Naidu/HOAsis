@@ -188,7 +188,7 @@ export function ImportScreen() {
 
       <Callout tone="info" icon={<ScanLine className="size-4" />} title="What this does and does not do">
         It finds where your articles start and keeps the wording exactly as written. It does
-        not summarise a provision, decide what one means, or work out who is in violation of
+        not summarize a provision, decide what one means, or work out who is in violation of
         one. Those are readings of your documents, and they belong to your board rather than
         to us.
       </Callout>
@@ -245,7 +245,7 @@ export function ImportScreen() {
               }
               subtitle={
                 extraction.linesWithText > 0
-                  ? `${Math.round((extraction.linesPlaced / extraction.linesWithText) * 100)}% of the lines with text landed inside an article`
+                  ? `${Math.round((extraction.linesPlaced / extraction.linesWithText) * 100)}% of the text was placed inside an article`
                   : undefined
               }
             />

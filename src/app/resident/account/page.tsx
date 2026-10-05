@@ -113,7 +113,7 @@ export default function ResidentAccount() {
                 </summary>
                 <div className="border-t border-border bg-surface-2 px-4 py-3">
                   <p className="mb-2 text-footnote font-semibold text-fg-muted">
-                    Applied to
+                    Paid toward
                   </p>
                   <ul className="space-y-1.5">
                     {line.appliedTo.map((a) => (
@@ -210,7 +210,7 @@ export default function ResidentAccount() {
               <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-footnote font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden">
                 {year === paidYear ? `Earlier in ${year}` : year}
                 <span className="flex items-center gap-2 font-medium text-fg-subtle">
-                  {lines.length} entries
+                  {lines.length} transactions
                   <ChevronDown className="size-3.5 transition-transform group-open/year:rotate-180" />
                 </span>
               </summary>
@@ -226,9 +226,9 @@ export default function ResidentAccount() {
             >
               <span className="flex items-center gap-2">
                 <History className="size-3.5" />
-                {loadingEarlier ? "Loading" : `Show entries before ${formatDate(history?.from ?? "", "long")}`}
+                {loadingEarlier ? "Loading" : `Show transactions before ${formatDate(history?.from ?? "", "long")}`}
               </span>
-              <span className="font-medium text-fg-subtle">{earlierCount} entries</span>
+              <span className="font-medium text-fg-subtle">{earlierCount} transactions</span>
             </button>
           ) : null}
         </Card>

@@ -41,12 +41,12 @@ export function BillingRow() {
       });
       const data = await response.json();
       if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "Could not reach Stripe");
+        throw new Error(data.error ?? "Stripe did not open. Try again in a moment.");
       }
       window.location.assign(data.url);
     } catch (error) {
       setBusy(false);
-      notify(error instanceof Error ? error.message : "Could not reach Stripe", "warn");
+      notify(error instanceof Error ? error.message : "Stripe did not open. Try again in a moment.", "warn");
     }
   }
 

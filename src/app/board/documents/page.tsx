@@ -113,7 +113,7 @@ function DocumentsScreen() {
                     notify(`${refused.name}: ${refused.reason}`, "warn");
                   }
                 } catch (error) {
-                  notify(error instanceof Error ? error.message : "Could not upload", "warn");
+                  notify(error instanceof Error ? error.message : "Could not upload. Try again.", "warn");
                 } finally {
                   setUploading(false);
                 }
@@ -293,7 +293,7 @@ function DocumentsScreen() {
                         notify(`${d.name} is now ${VISIBILITY_WORD[next]}`);
                       } catch (error) {
                         notify(
-                          error instanceof Error ? error.message : "Could not change who can see it",
+                          error instanceof Error ? error.message : "Could not change who can see it. Try again.",
                           "warn",
                         );
                       }
@@ -318,7 +318,7 @@ function DocumentsScreen() {
                           undo ? { label: "Undo", onClick: undo } : undefined,
                         );
                       } catch (error) {
-                        notify(error instanceof Error ? error.message : "Could not remove it", "warn");
+                        notify(error instanceof Error ? error.message : "Could not remove it. Try again.", "warn");
                       }
                     }}
                     className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
