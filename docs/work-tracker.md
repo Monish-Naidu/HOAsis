@@ -74,7 +74,7 @@ The worst kind: a board acts on them. Each is small.
 | Printable letter or flyer with the join code | later |
 | Emails say "reply to this email" with no reply address set | next: a board contact address in Settings; emails say "reply" only once it is set (approved) |
 | Confirmation link has no resend | next |
-| Sign-in links in emails last one hour | next: raise to 24 hours (approved) |
+| Sign-in links in emails last one hour | done 2026-10-04: 24 hours, set on the live project and in `supabase/config.toml` |
 | Renters, and a board seat with no office | later |
 
 ## 4. Board: what a real year needs
@@ -123,8 +123,8 @@ Small, known, and not blocking a push. Each was found by a reviewer.
 | A time zone per association (everything runs on UTC, so US evenings are a day ahead) | Add one, asked in the wizard from the state, changeable in Settings |
 | Which "percent funded" the Reserves screen shows (41% or about 61% for the demo) | The accrued-liability figure the library describes |
 | Re-sending the same notice within an hour is skipped as a duplicate | Keep, and say so on screen |
-| Test logins on the live sign-in page (kept "for now" on 2026-09-26) | Remove from the live site, keep on localhost |
-| "Join with a code" link on the landing header and footer | Add it |
+| Test logins on the live sign-in page (kept "for now" on 2026-09-26) | Done 2026-10-04: `NEXT_PUBLIC_TEST_LOGINS` removed from Vercel Production; gone from the live site at the next deploy, still on localhost |
+| "Join with a code" link on the landing header and footer | Done 2026-10-04: in the phone menu and the footer (the desktop bar stays at the deck's three links) |
 | Signed-out demo shows features a paying board does not get | Hide them |
 | Vacant lots as a kind of home; condo dues by ownership share; a builder's representative as President without a lot | Later: each changes the data model |
 
@@ -132,10 +132,10 @@ Small, known, and not blocking a push. Each was found by a reviewer.
 
 | Item | Status |
 | --- | --- |
-| GitHub Actions runs the checks on every push and pull request | workflow is in; GitHub will not start it: "recent account payments have failed or your spending limit needs to be increased". Monish to look at GitHub > Settings > Billing and plans. Actions itself is free for this use (2,000 minutes a month on a private repo; a run here is about ten) |
+| GitHub Actions runs the checks on every push and pull request | done 2026-10-04: first green run on pull request #4 (check 4 minutes, browser suite 7). The browser suite runs on pull requests only, to stay inside the 2,000 free minutes a month. Nothing is billed while the account's spending limit is $0 |
 | Stripe billing page with cancellation on (`pnpm stripe:setup` now creates it) | done in test mode; run again with the live key |
 | Resend: verify yourhoasis.com, set `EMAIL_FROM` on Vercel | parked by Monish 2026-10-04, pick up below |
-| A staging copy: second Supabase project, Vercel preview pointed at it, Stripe test keys. Test associations move there and production holds only real ones | waiting on one click from Monish, see below |
+| A staging copy: second Supabase project, Vercel preview pointed at it, Stripe test keys. Test associations move there and production holds only real ones | one click left for Monish (create the project; the Supabase token here cannot, and the Vercel CLI needs a person for it too). Then `pnpm staging:setup` does the rest |
 | `ALLOW_TEST_RESET` removed from `.env.local` | done by Monish |
 
 ### Picking up Resend
@@ -166,8 +166,9 @@ step:
    key into `.env.staging` (the file is already there with the four names,
    and is never committed), with the password.
 
-Then Claude: pushes every migration to it, sets the three Supabase values
-on Vercel for Preview only, seeds a test association, and runs
-`pnpm db:verify:staging` (already wired: every script reads `ENV_FILE`).
+Then one command, `pnpm staging:setup`: every migration goes in and the
+three Supabase values are set on Vercel for Preview only. After it,
+`pnpm db:verify:staging` runs the checks there (every script reads
+`ENV_FILE`).
 From then on `pnpm db:verify` against production is for a release, not for
 day to day.

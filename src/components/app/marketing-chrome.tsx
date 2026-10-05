@@ -24,6 +24,15 @@ const LINKS = [
   { href: "/library", label: "Resources" },
 ];
 
+/**
+ * The door for an owner. A board hands out a join code on a flyer or in an
+ * email, and somebody who typed the site's address had no way in from the
+ * front page: every button led to setting up a new association. In the
+ * phone menu and the footer, not the desktop bar, which the deck fixed at
+ * three links (Monish said yes to this link on 2026-10-04).
+ */
+const JOIN = { href: "/join", label: "Join with a code" };
+
 function subscribeToScroll(onChange: () => void) {
   window.addEventListener("scroll", onChange, { passive: true });
   return () => window.removeEventListener("scroll", onChange);
@@ -135,7 +144,7 @@ export function MarketingHeader() {
 
       {open ? (
         <nav className="border-t border-border px-5 py-2 md:hidden" aria-label="Main">
-          {LINKS.map((link) => (
+          {[...LINKS, JOIN].map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -180,6 +189,7 @@ export function MarketingFooter() {
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
           {[
             ...LINKS,
+            JOIN,
             { href: "/terms", label: "Terms" },
             { href: "/privacy", label: "Privacy" },
             { href: "/signin", label: "Log in" },
