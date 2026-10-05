@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { Building2, Camera, Check, ChevronDown, Plus } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
@@ -20,6 +21,7 @@ import { refreshRemote } from "@/lib/data/remote-store";
 export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
   const { settings, community, communities, setCommunity, isRemote } = useAppState();
   const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<{ left: number; top: number } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -61,7 +63,14 @@ export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`Switch association, now ${settings.displayName}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={(event) => {
+          // Measured on the press, so the menu can be drawn outside the
+          // banner: the banner clips its own corners, and a menu inside it
+          // was cut off after its first row on every inner page.
+          const box = event.currentTarget.getBoundingClientRect();
+          setPlace({ left: box.left, top: box.bottom + 4 });
+          setOpen((v) => !v);
+        }}
         className={cn(
           "inline-flex max-w-full items-center gap-1.5 rounded-lg px-2 py-1 font-medium",
           onPhoto
@@ -80,7 +89,8 @@ export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
         <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", onPhoto ? "text-white/80" : "text-fg-subtle", open && "rotate-180")} />
       </button>
 
-      {open ? (
+      {open && place
+        ? createPortal(
         <>
           <button
             type="button"
@@ -90,7 +100,8 @@ export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
           />
           <ul
             role="listbox"
-            className="absolute left-0 z-50 mt-1 w-64 overflow-hidden rounded-card border border-border bg-surface shadow-float"
+            style={{ left: place.left, top: place.top }}
+            className="fixed z-50 w-64 max-w-[calc(100vw-1rem)] overflow-hidden rounded-card border border-border bg-surface shadow-float"
           >
             {communities.map((option) => (
               <li key={option.id}>
@@ -135,8 +146,10 @@ export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
               </li>
             ) : null}
           </ul>
-        </>
-      ) : null}
+        </>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
