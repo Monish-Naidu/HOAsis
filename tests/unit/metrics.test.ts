@@ -72,15 +72,17 @@ describe("compareYears", () => {
       .reduce((t, e) => t - e.amountCents, 0);
     expect(s.reserveCents).toBe(operatingSide);
     expect(s.reserveCents).toBeGreaterThan(0);
+    // The year comparison leaves them out as well; the headline and the
+    // spending list already did, and the comparison showed them as the
+    // biggest category.
     const cmp = compareYears(c, 2024, 2025);
-    expect(cmp.categories.find((r) => r.category === "Reserve contributions")?.aCents).toBe(operatingSide);
+    expect(cmp.categories.map((r) => r.category)).not.toContain("Reserve contributions");
+    expect(cmp.categories.map((r) => r.category)).not.toContain("Reserve transfer");
   });
 
   it("gives every category the same change arithmetic as the headline", () => {
     const cmp = compareYears(c, 2024, 2025);
-    const spendA = cmp.categories
-      .filter((r) => r.category !== "Reserve contributions")
-      .reduce((t, r) => t + r.aCents, 0);
+    const spendA = cmp.categories.reduce((t, r) => t + r.aCents, 0);
     expect(spendA).toBe(cmp.a.spendCents);
     for (const row of cmp.categories) {
       expect(row.change.cents).toBe(row.bCents - row.aCents);
