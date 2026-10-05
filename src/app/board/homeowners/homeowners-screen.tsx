@@ -682,8 +682,8 @@ export function HomeownersScreen() {
                 </p>
                 <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
                   {seller
-                    ? `${seller.displayName} moves out on the closing date. The home keeps its history and the buyer starts with a clean statement.`
-                    : "Pick the home. The seller moves out on the closing date and the buyer starts with a clean statement."}
+                    ? `${seller.displayName} loses access as soon as you record this, so record it on or after closing. The home keeps its statement. The buyer does not see the seller's requests, messages or votes.`
+                    : "Pick the home. The seller loses access as soon as you record the sale, so record it on or after closing."}
                 </p>
               </div>
               <Button
@@ -735,6 +735,10 @@ export function HomeownersScreen() {
                 <input
                   type="date"
                   value={sale.closingDate}
+                  // A sale takes effect when it is recorded, whatever its
+                  // date: the seller's seat ends there and then. A date
+                  // still to come would lock them out before they had sold.
+                  max={todayIsoDate()}
                   onChange={(e) => setSale({ ...sale, closingDate: e.target.value })}
                   aria-label="Closing date"
                   className={input}
@@ -743,7 +747,10 @@ export function HomeownersScreen() {
               <Button
                 variant="primary"
                 size="md"
-                disabled={!seller || !sale.name.trim() || !sale.closingDate}
+                // The picker's max stops a click; this stops a typed date.
+                disabled={
+                  !seller || !sale.name.trim() || !sale.closingDate || sale.closingDate > todayIsoDate()
+                }
                 onClick={recordSale}
               >
                 Record the sale
@@ -773,6 +780,22 @@ export function HomeownersScreen() {
                   Carries to the buyer
                 </label>
               </div>
+            ) : null}
+            {/* Credit goes with the home. Nothing here moves it, so the
+                board hears about it before the buyer inherits it. */}
+            {seller && seller.balanceCents < 0 ? (
+              <p className="mt-3 text-footnote text-fg-muted">
+                <span className="font-medium text-fg">
+                  This home has {money(-seller.balanceCents)} in credit.
+                </span>{" "}
+                It stays with the home, so the buyer gets it unless you settle it with the seller
+                first.
+              </p>
+            ) : null}
+            {sale.closingDate > todayIsoDate() ? (
+              <p className="mt-3 text-footnote font-medium text-warn">
+                Closing has not happened yet. Come back and record the sale on that day.
+              </p>
             ) : null}
           </div>
         ) : null}
