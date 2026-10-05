@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Field, Select, fieldClass } from "@/components/ui/primitives";
+import { Badge, Button, Field, Select, fieldClass } from "@/components/ui/primitives";
 import { chargeCents, chargeProblem, MAX_CHARGE_LABEL } from "@/lib/payments/charges";
 import { MANUAL_METHOD_LABEL, type ManualMethod } from "@/lib/payments/instruments";
-import { money, todayIsoDate } from "@/lib/utils";
+import {
+  duplicatePaymentWarning,
+  findDuplicatePayment,
+  MAX_REVERSAL_REASON,
+  reversalReasonProblem,
+  type ManualPaymentRow,
+} from "@/lib/payments/manual-payments";
+import { formatDate, money, todayIsoDate } from "@/lib/utils";
 
 /** Dollars as typed to whole cents, or 0 when it is not a positive amount. */
 function toCents(text: string): number {
@@ -19,10 +26,16 @@ function toCents(text: string): number {
  */
 export function RecordPaymentForm({
   unit,
+  homeName,
+  existing,
   onSave,
   onCancel,
 }: {
   unit: string;
+  /** How the board names this home, for the repeat warning. Falls back to the unit. */
+  homeName?: string;
+  /** This home's checks and cash already entered, once they have loaded. */
+  existing?: readonly ManualPaymentRow[];
   onSave: (input: {
     amountCents: number;
     method: ManualMethod;
@@ -40,6 +53,9 @@ export function RecordPaymentForm({
   const cents = toCents(amount);
   // The date input's max stops the picker; this stops a typed date.
   const ready = cents > 0 && Boolean(receivedOn) && receivedOn <= today;
+  // Said before saving, and saving is still allowed: two checks of the same
+  // amount on one day happen, but a double entry is the likelier cause.
+  const repeat = existing ? findDuplicatePayment(existing, { amountCents: cents, receivedOn }) : null;
   return (
     <form
       className="mt-4 space-y-2 border-t border-border pt-3"
@@ -102,12 +118,17 @@ export function RecordPaymentForm({
           />
         </Field>
       </div>
+      {repeat ? (
+        <p role="alert" className="rounded-md bg-warn-soft px-3 py-2 text-footnote font-medium text-warn">
+          {duplicatePaymentWarning(homeName ?? unit, repeat)}
+        </p>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" variant="primary" size="sm" disabled={busy || !ready}>
-          Save payment
+          {repeat ? "Record it again" : "Save payment"}
         </Button>
       </div>
     </form>
@@ -359,6 +380,130 @@ export function ChangeDuesForm({
           Save dues
         </Button>
       </div>
+    </form>
+  );
+}
+
+/** What the list of hand-recorded payments is showing: reading, read, or failed. */
+export type HandPaymentsState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; rows: ManualPaymentRow[] };
+
+/**
+ * A home's checks and cash entered by hand, newest first. A live row can be
+ * reversed, which is how a payment entered twice or against the wrong home
+ * comes back off the books.
+ */
+export function HandPaymentsPanel({
+  homeName,
+  state,
+  onReverse,
+  onClose,
+}: {
+  homeName: string;
+  state: HandPaymentsState;
+  onReverse: (paymentId: string, reason: string) => Promise<boolean>;
+  onClose: () => void;
+}) {
+  const [reversing, setReversing] = useState<string | null>(null);
+  return (
+    <div className="mt-4 space-y-2 border-t border-border pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-footnote font-semibold text-fg-muted">Payments recorded by hand for {homeName}</p>
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+      {state.status === "loading" ? <p className="text-footnote text-fg-muted">Loading.</p> : null}
+      {state.status === "error" ? (
+        <p role="alert" className="text-footnote font-medium text-danger">
+          Could not load these payments. Close this and try again.
+        </p>
+      ) : null}
+      {state.status === "ready" && state.rows.length === 0 ? (
+        <p className="text-footnote text-fg-muted">No checks or cash recorded for this home.</p>
+      ) : null}
+      {state.status === "ready" && state.rows.length > 0 ? (
+        <ul className="divide-y divide-border">
+          {state.rows.map((p) => (
+            <li key={p.id} className="py-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-footnote">
+                <span className="text-fg-muted">{formatDate(p.receivedOn)}</span>
+                <span className="font-semibold tabular-nums text-fg">{money(p.amountCents)}</span>
+                <span className="text-fg-muted">
+                  {MANUAL_METHOD_LABEL[p.method]}
+                  {p.reference ? ` #${p.reference}` : ""}
+                </span>
+                {p.reversed ? (
+                  <Badge tone="neutral">Reversed</Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => setReversing(reversing === p.id ? null : p.id)}
+                    aria-label={`Reverse the ${money(p.amountCents)} ${MANUAL_METHOD_LABEL[p.method].toLowerCase()} payment from ${formatDate(p.receivedOn)}`}
+                  >
+                    Reverse
+                  </Button>
+                )}
+              </div>
+              {reversing === p.id ? (
+                <ReversePaymentForm
+                  onSave={(reason) => onReverse(p.id, reason)}
+                  onCancel={() => setReversing(null)}
+                />
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/** One field: why. The reason is kept on the statement and in the activity record. */
+export function ReversePaymentForm({
+  onSave,
+  onCancel,
+}: {
+  onSave: (reason: string) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const ready = reversalReasonProblem(reason) === null;
+  return (
+    <form
+      className="mt-2 flex flex-wrap items-end gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!ready || busy) return;
+        setBusy(true);
+        void onSave(reason.trim())
+          .then((ok) => ok && onCancel())
+          .finally(() => setBusy(false));
+      }}
+    >
+      <Field label="Why?" className="min-w-[12rem] flex-1">
+        <input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Entered twice"
+          maxLength={MAX_REVERSAL_REASON}
+          aria-label="Why reverse this payment"
+          className={fieldClass}
+          autoFocus
+        />
+      </Field>
+      <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+        Cancel
+      </Button>
+      <Button type="submit" variant="primary" size="sm" disabled={busy || !ready}>
+        Reverse payment
+      </Button>
     </form>
   );
 }

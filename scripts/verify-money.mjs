@@ -322,6 +322,58 @@ try {
   const { data: roofLines } = await admin.from("charges").select("category").eq("association_id", associationId).eq("label", "Roof assessment");
   check("none of those lines is dues", (roofLines ?? []).length === 2 && roofLines.every((c) => c.category !== "dues"), JSON.stringify(roofLines));
 
+  // Taking back a check (0088). Balances are read as the President from the
+  // balance view, as above; the payment and the books are read as admin.
+  const handBefore = await balanceOf(neighborUnit.id);
+  const { data: handId, error: handError } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: neighborUnit.id, p_amount_cents: 1500, p_method: "check", p_reference: "3001", p_received_on: day(-1),
+  });
+  const handPaid = await balanceOf(neighborUnit.id);
+  check("a finance holder records a check by hand", !handError && Boolean(handId), handError?.message ?? "");
+  check("the balance falls by exactly that", handPaid === handBefore - 1500, `${handBefore} then ${handPaid}`);
+
+  const { error: residentReverse } = await resident.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
+  check("a resident cannot reverse a payment", residentReverse?.code === "42501", residentReverse?.message?.slice(0, 60) ?? "no error");
+  const { error: anonReverse } = await nobody.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
+  check("a signed out visitor cannot reverse a payment", refused(anonReverse), anonReverse?.message?.slice(0, 60) ?? "no error");
+  for (const [name, reason] of [["a reason of one character", "x"], ["an empty reason", "  "], ["a reason over 120 characters", "x".repeat(121)]]) {
+    const { error } = await president.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: reason });
+    check(`${name} is refused`, error?.code === "22000", error?.message?.slice(0, 60) ?? "no error");
+  }
+  check("the refused reversals changed nothing", (await balanceOf(neighborUnit.id)) === handPaid);
+
+  const { data: reversedId, error: reverseError } = await president.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
+  check("a finance holder reverses it", !reverseError && reversedId === handId, reverseError?.message ?? "");
+  check("the balance is back to exactly what it was", (await balanceOf(neighborUnit.id)) === handBefore, `${handBefore} then ${await balanceOf(neighborUnit.id)}`);
+  const { data: handRow } = await admin.from("payments").select("state, refunded_cents, amount_cents").eq("id", handId).single();
+  check("the payment reads reversed, as a full refund does",
+    handRow?.state === "refunded" && handRow?.refunded_cents === 1500 && handRow?.amount_cents === 1500, JSON.stringify(handRow));
+  const { data: handLines } = await admin.from("charges").select("kind, category, label, amount_cents")
+    .eq("unit_id", neighborUnit.id).like("label", "Payment reversed:%");
+  check("the statement says why",
+    (handLines ?? []).length === 1 && handLines[0].label === "Payment reversed: Entered twice" &&
+      handLines[0].amount_cents === 1500 && handLines[0].kind === "charge" && handLines[0].category !== "dues", JSON.stringify(handLines));
+  const { data: handBooks } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", handId);
+  check("the bank ledger nets to zero for that payment",
+    (handBooks ?? []).length === 2 && handBooks.reduce((t, e) => t + e.amount_cents, 0) === 0, JSON.stringify(handBooks));
+  const { data: handActivity } = await president.client.from("activity").select("summary").eq("subject_id", handId);
+  check("the activity record has the entry and the reversal", (handActivity ?? []).length === 2, JSON.stringify(handActivity));
+
+  const { error: secondReverse } = await president.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
+  check("a second reversal is refused", secondReverse?.message?.includes("already reversed"), secondReverse?.message?.slice(0, 60) ?? "no error");
+  check("and changes nothing", (await balanceOf(neighborUnit.id)) === handBefore);
+
+  const { data: stripeId, error: stripeInsertError } = await admin.from("payments").insert({
+    association_id: associationId, unit_id: neighborUnit.id, amount_cents: 700, rail: "card", state: "settled",
+    stripe_payment_intent_id: `pi_verify_reverse_${stamp}`, settled_at: new Date().toISOString(),
+  }).select("id").single();
+  check("a Stripe payment can be set up for the check", !stripeInsertError && Boolean(stripeId?.id), stripeInsertError?.message ?? "");
+  const { error: stripeReverse } = await president.client.rpc("reverse_manual_payment", { p_payment_id: stripeId?.id, p_reason: "Entered twice" });
+  check("a Stripe payment is refused and sent to Stripe",
+    stripeReverse?.message?.includes("came through Stripe"), stripeReverse?.message?.slice(0, 80) ?? "no error");
+  const { data: stripeRow } = await admin.from("payments").select("state, refunded_cents").eq("id", stripeId?.id).single();
+  check("and is left as it was", stripeRow?.state === "settled" && stripeRow?.refunded_cents === 0, JSON.stringify(stripeRow));
+
   // Runs that overlap (0069). The cron delivered twice, or a board member
   // pressing "bill dues now" while it runs: each call used to look for an
   // existing bill before the other had committed, and every home got two.

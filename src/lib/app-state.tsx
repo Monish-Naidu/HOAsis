@@ -110,6 +110,14 @@ import type {
 import { canRaiseNotice } from "@/lib/violations";
 import { chargeProblem } from "@/lib/payments/charges";
 import { MANUAL_METHOD_LABEL, manualPaymentLabel, type ManualMethod, type PaymentInstrument } from "@/lib/payments/instruments";
+import {
+  parseManualLabel,
+  reversalReasonProblem,
+  pairManualPayments,
+  recentManualPayments,
+  type HandMethod,
+  type ManualPaymentRow,
+} from "@/lib/payments/manual-payments";
 import { placeLabel } from "@/lib/wording";
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { statusLabel } from "@/lib/request-status";
@@ -409,6 +417,17 @@ interface AppState {
     reference: string;
     receivedOn: string;
   }) => boolean | Promise<boolean>;
+  /**
+   * Takes back a check or cash the board entered by mistake. The home owes the
+   * money again and the books lose the deposit. Resolves true once it is done.
+   */
+  reverseManualPayment: (paymentId: string, reason: string) => boolean | Promise<boolean>;
+  /**
+   * One home's checks and cash entered by hand, newest first, ten at most.
+   * Real associations read them on demand; the demo returns what this session
+   * entered. Rejects when the read fails.
+   */
+  manualPaymentsFor: (ownerId: string) => Promise<ManualPaymentRow[]>;
   /** A credit on one home's statement, such as a waived late fee. Not money in the bank. */
   addCredit: (input: {
     ownerId: string;
@@ -1823,6 +1842,161 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return true;
     },
     [remote.community, applyLocalPayment],
+  );
+
+  /**
+   * Takes a check or cash back off the books. Real associations go through
+   * reverse_manual_payment (0088), which stores it as a full refund: the
+   * payment reads refunded, the home is charged the amount again and the
+   * deposit is offset. The demo does the same locally.
+   */
+  const reverseManualPayment = useCallback(
+    (paymentId: string, reason: string) => {
+      const why = reason.trim();
+      if (!can("finances")) return false;
+      if (reversalReasonProblem(why)) return false;
+      if (remote.community) {
+        return remoteWrite("Reversing the payment", () =>
+          supabaseBrowser().rpc("reverse_manual_payment", {
+            p_payment_id: paymentId,
+            p_reason: why,
+          }),
+        );
+      }
+      const date = todayIsoDate();
+      const charges = sliceStore(communityId, "ownerCharges");
+      let ownerId: string | null = null;
+      let amountCents = 0;
+      for (const [id, lines] of Object.entries(charges.getSnapshot())) {
+        const line = lines.find((l) => l.id === paymentId);
+        if (line) {
+          ownerId = id;
+          amountCents = -line.amountCents;
+        }
+      }
+      if (!ownerId || amountCents <= 0) return false;
+      const owners = sliceStore(communityId, "owners");
+      const owner = owners.getSnapshot().find((o) => o.id === ownerId);
+      const balanceAfter = (owner?.balanceCents ?? 0) + amountCents;
+      const homeId = ownerId;
+      charges.update((all) => ({
+        ...all,
+        [homeId]: [
+          {
+            id: `reversal-${date}-${paymentId}`,
+            date,
+            label: `Payment reversed: ${why}`,
+            kind: "charge" as const,
+            amountCents,
+            balanceAfterCents: balanceAfter,
+          },
+          ...(all[homeId] ?? []).map((l) => (l.id === paymentId ? { ...l, reversed: true } : l)),
+        ],
+      }));
+      owners.update((all) =>
+        all.map((o) => (o.id === homeId ? { ...o, balanceCents: balanceAfter } : o)),
+      );
+      // The deposit comes back out of the books and the bank, as the money
+      // went in, so collected and the bank balance fall with the balance.
+      const operating = sliceStore(communityId, "bankAccounts")
+        .getSnapshot()
+        .find((a) => a.kind === "operating");
+      sliceStore(communityId, "ledger").update((all) => [
+        {
+          id: `led-reversal-${date}-${paymentId}`,
+          date,
+          description: `Payment reversed, ${placeLabel(owner?.unit ?? "?")}`,
+          counterparty: owner?.displayName ?? "Owner",
+          category: "Assessments" as const,
+          accountId: operating?.id ?? "unassigned",
+          amountCents: -amountCents,
+          status: "cleared" as const,
+          matchedBy: "auto" as const,
+          ownerId: homeId,
+        },
+        ...all,
+      ]);
+      sliceStore(communityId, "budget").update((all) =>
+        all.map((line) =>
+          line.kind === "income" && line.category === "Assessments"
+            ? { ...line, ytdActualCents: line.ytdActualCents - amountCents }
+            : line,
+        ),
+      );
+      if (operating) {
+        sliceStore(communityId, "bankAccounts").update((all) =>
+          all.map((a) =>
+            a.id === operating.id ? { ...a, balanceCents: a.balanceCents - amountCents } : a,
+          ),
+        );
+      }
+      return true;
+    },
+    [can, remote.community, communityId],
+  );
+
+  /**
+   * One home's checks and cash entered by hand. A payments row carries no
+   * date or reference, so those are read off the statement line written
+   * beside it. Row level security already lets a finance holder read both.
+   */
+  const manualPaymentsFor = useCallback(
+    async (ownerId: string): Promise<ManualPaymentRow[]> => {
+      if (remote.community) {
+        if (!isUuid(ownerId)) return [];
+        const supabase = supabaseBrowser();
+        const [paid, lines] = await Promise.all([
+          supabase
+            .from("payments")
+            .select("id, amount_cents, rail, state, refunded_cents, created_at")
+            .eq("unit_id", ownerId)
+            .in("rail", ["check", "cash"])
+            .order("created_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("charges")
+            .select("label, amount_cents, due_on")
+            .eq("unit_id", ownerId)
+            .eq("kind", "payment")
+            .or("label.like.Check payment*,label.like.Cash payment*")
+            .order("created_at", { ascending: true }),
+        ]);
+        if (paid.error) throw new Error(paid.error.message);
+        if (lines.error) throw new Error(lines.error.message);
+        return recentManualPayments(
+          pairManualPayments(
+            [...(paid.data ?? [])].reverse().map((p) => ({
+              id: p.id,
+              amountCents: p.amount_cents,
+              method: p.rail as HandMethod,
+              reversed: p.state === "refunded" || p.refunded_cents > 0,
+              createdOn: p.created_at.slice(0, 10),
+            })),
+            (lines.data ?? []).map((l) => ({
+              label: l.label,
+              amountCents: -l.amount_cents,
+              date: l.due_on,
+            })),
+          ),
+        );
+      }
+      const lines = sliceStore(communityId, "ownerCharges").getSnapshot()[ownerId] ?? [];
+      const rows: ManualPaymentRow[] = [];
+      for (const l of lines) {
+        const parsed = l.kind === "payment" ? parseManualLabel(l.label) : null;
+        if (!parsed) continue;
+        rows.push({
+          id: l.id,
+          amountCents: -l.amountCents,
+          method: parsed.method,
+          receivedOn: l.date,
+          reference: parsed.reference,
+          reversed: Boolean(l.reversed),
+        });
+      }
+      return recentManualPayments(rows);
+    },
+    [remote.community, communityId],
   );
 
   /**
@@ -5338,6 +5512,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addBankAccount,
     recordPayment,
     recordManualPayment,
+    reverseManualPayment,
+    manualPaymentsFor,
     addCredit,
     addCharge,
     addChargeToAll,

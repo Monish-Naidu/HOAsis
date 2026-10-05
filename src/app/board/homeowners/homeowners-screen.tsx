@@ -23,7 +23,14 @@ import { RemindersComposer } from "@/components/app/reminders-composer";
 import { AskedToJoin } from "./asked-to-join";
 import { JoinCodeRow } from "./join-code-row";
 import { ChangeEmailForm, SecondOwnerForm } from "./owner-forms";
-import { AddChargeForm, AddCreditForm, ChangeDuesForm, RecordPaymentForm } from "./household-money";
+import {
+  AddChargeForm,
+  AddCreditForm,
+  ChangeDuesForm,
+  HandPaymentsPanel,
+  RecordPaymentForm,
+  type HandPaymentsState,
+} from "./household-money";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -34,6 +41,7 @@ import { policyFor } from "@/lib/collections";
 import { dueLetter, renderLetter } from "@/lib/letters";
 import type { HomeType, MessageThread, Owner } from "@/lib/types";
 import type { ManualMethod } from "@/lib/payments/instruments";
+import type { ManualPaymentRow } from "@/lib/payments/manual-payments";
 import {
   HOME_TYPE_LABEL,
   HOME_TYPES,
@@ -209,6 +217,8 @@ export function HomeownersScreen() {
     setHomeType,
     setHomeDues,
     recordManualPayment,
+    reverseManualPayment,
+    manualPaymentsFor,
     addCredit,
     addCharge,
     can,
@@ -896,6 +906,17 @@ export function HomeownersScreen() {
                               })
                           : undefined
                       }
+                      homeName={homeLabel(community, o.unit)}
+                      onLoadHandPayments={changesMoney && !o.placeholder ? () => manualPaymentsFor(o.id) : undefined}
+                      onReverseHandPayment={
+                        changesMoney && !o.placeholder
+                          ? (paymentId, reason) =>
+                              Promise.resolve(reverseManualPayment(paymentId, reason)).then((ok) => {
+                                if (ok) notify(`Payment reversed for ${homeLabel(community, o.unit)}.`, "ok");
+                                return ok;
+                              })
+                          : undefined
+                      }
                       onAddCredit={
                         changesMoney && !o.placeholder
                           ? (input) =>
@@ -1081,6 +1102,9 @@ function HouseholdDetail({
   onSetOwner,
   onSale,
   onRecordPayment,
+  homeName,
+  onLoadHandPayments,
+  onReverseHandPayment,
   onAddCredit,
   onAddCharge,
   onInvite,
@@ -1110,6 +1134,12 @@ function HouseholdDetail({
     reference: string;
     receivedOn: string;
   }) => Promise<boolean>;
+  /** How the board names this home, as "Unit 4". */
+  homeName: string;
+  /** This home's checks and cash entered by hand. Absent when this seat may not change finances. */
+  onLoadHandPayments?: () => Promise<ManualPaymentRow[]>;
+  /** Takes one of them back off the books, with the reason. */
+  onReverseHandPayment?: (paymentId: string, reason: string) => Promise<boolean>;
   /** A credit, such as a waived fee. Absent when this seat may not change finances. */
   onAddCredit?: (input: { amountCents: number; reason: string }) => Promise<boolean>;
   /** A one-off charge. Absent when this seat may not change finances. */
@@ -1141,7 +1171,27 @@ function HouseholdDetail({
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
-  const [editing, setEditing] = useState<"email" | "second" | "payment" | "credit" | "charge" | "dues" | null>(null);
+  const [editing, setEditing] = useState<"email" | "second" | "payment" | "hand" | "credit" | "charge" | "dues" | null>(null);
+  const [hand, setHand] = useState<HandPaymentsState>({ status: "loading" });
+
+  // Read in the click that opens the form or the list, not in an effect, and
+  // again after a reversal so the row reads Reversed.
+  function loadHandPayments() {
+    if (!onLoadHandPayments) return Promise.resolve();
+    return onLoadHandPayments().then(
+      (rows) => setHand({ status: "ready", rows }),
+      () => setHand({ status: "error" }),
+    );
+  }
+  function openHandPayments(next: "payment" | "hand") {
+    if (editing === next) {
+      setEditing(null);
+      return;
+    }
+    setEditing(next);
+    setHand({ status: "loading" });
+    void loadHandPayments();
+  }
 
   function startFromLetter() {
     if (!letter) return;
@@ -1285,7 +1335,23 @@ function HouseholdDetail({
       ) : null}
 
       {editing === "payment" && onRecordPayment ? (
-        <RecordPaymentForm unit={owner.unit} onSave={onRecordPayment} onCancel={() => setEditing(null)} />
+        <RecordPaymentForm
+          unit={owner.unit}
+          homeName={homeName}
+          existing={hand.status === "ready" ? hand.rows : undefined}
+          onSave={(input) => onRecordPayment(input).then((ok) => ok && loadHandPayments().then(() => ok))}
+          onCancel={() => setEditing(null)}
+        />
+      ) : null}
+      {editing === "hand" && onReverseHandPayment ? (
+        <HandPaymentsPanel
+          homeName={homeName}
+          state={hand}
+          onReverse={(paymentId, reason) =>
+            onReverseHandPayment(paymentId, reason).then((ok) => ok && loadHandPayments().then(() => ok))
+          }
+          onClose={() => setEditing(null)}
+        />
       ) : null}
       {editing === "credit" && onAddCredit ? (
         <AddCreditForm unit={owner.unit} onSave={onAddCredit} onCancel={() => setEditing(null)} />
@@ -1315,11 +1381,22 @@ function HouseholdDetail({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setEditing(editing === "payment" ? null : "payment")}
+            onClick={() => openHandPayments("payment")}
             aria-label={`Record a payment from ${owner.displayName}`}
           >
             <Banknote className="size-3.5" />
             Record a payment
+          </Button>
+        ) : null}
+        {onRecordPayment && onLoadHandPayments && onReverseHandPayment ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-fg-muted"
+            onClick={() => openHandPayments("hand")}
+            aria-label={`Payments recorded by hand for ${owner.displayName}`}
+          >
+            Payments recorded by hand
           </Button>
         ) : null}
         {onAddCredit ? (
