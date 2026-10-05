@@ -12,6 +12,7 @@ import { hasSupabase } from "@/lib/supabase/env";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { joinReturnPath, openInvitedHome } from "./invited";
 import { resendConfirmation } from "./resend";
+import { ownerDues } from "@/lib/home-types";
 import { cn, money } from "@/lib/utils";
 
 /**
@@ -103,7 +104,7 @@ export function JoinPanel() {
         <Row label="Unit" value={owner.unit} />
         <Row
           label="Dues"
-          value={`${money(community.association.duesCents)} ${community.association.duesCadence}`}
+          value={`${money(ownerDues(community.association, owner))} ${community.association.duesCadence}`}
         />
 
         <Button variant="primary" size="md" className="mt-2 w-full" onClick={accept}>

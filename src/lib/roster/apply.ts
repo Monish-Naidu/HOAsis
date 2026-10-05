@@ -17,6 +17,10 @@ export interface ImportOutcome {
   updated: number;
   balances: number;
   skipped: number;
+  /** Homes given their own dues amount after the import. */
+  dues?: number;
+  /** Set when the homes were imported but their dues amounts were not all saved. */
+  duesError?: string;
 }
 
 /**
@@ -73,6 +77,69 @@ async function registerLabels(associationId: string): Promise<string[]> {
   }
 }
 
+/**
+ * Gives homes their own dues amount, by the label each is keyed on.
+ *
+ * `import_households` and `create_association` take no per-home amount, so
+ * it follows them, the way opening balances do, through `set_home_dues`
+ * (migration 0084). Labels are read fresh, with the spelling the register
+ * holds, and a home no longer found is counted as a failure rather than
+ * skipped quietly. Returns how many were saved; throws once every home has
+ * been tried, naming how many were not.
+ */
+export async function setHomeDues(
+  associationId: string,
+  homes: { unit: string; duesCents: number }[],
+): Promise<number> {
+  if (!homes.length) return 0;
+  const supabase = supabaseBrowser();
+  const ids = new Map<string, string>();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("units")
+      .select("id, label")
+      .eq("association_id", associationId)
+      .order("label")
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw new Error(`Could not find the homes to set dues on: ${error.message}`);
+    for (const u of data ?? []) ids.set((u.label as string).trim().toLowerCase(), u.id as string);
+    if ((data ?? []).length < 1000) break;
+  }
+  let saved = 0;
+  let failed = 0;
+  let firstError = "";
+  // A few at a time: a long roster is hundreds of small calls.
+  for (let i = 0; i < homes.length; i += 8) {
+    await Promise.all(
+      homes.slice(i, i + 8).map(async (home) => {
+        const id = ids.get(home.unit.trim().toLowerCase());
+        if (!id) {
+          failed++;
+          firstError ||= `${home.unit} is not on the register`;
+          return;
+        }
+        const { error } = await supabase.rpc("set_home_dues", {
+          p_unit_id: id,
+          p_dues_cents: home.duesCents,
+        });
+        if (error) {
+          failed++;
+          firstError ||= error.message;
+        } else {
+          saved++;
+        }
+      }),
+    );
+  }
+  if (failed) {
+    throw new Error(
+      `${failed} of ${homes.length} homes did not get their own dues amount (${firstError}). ${saved} did.`,
+    );
+  }
+  return saved;
+}
+
 export async function importRoster(
   associationId: string,
   rows: RosterRow[],
@@ -85,6 +152,21 @@ export async function importRoster(
     p_as_of: asOf,
   });
   if (error) throw new Error(error.message);
+  // Each home's own amount, once the homes exist. A failure here is said
+  // with the outcome and does not undo the import: the homes are on the
+  // register and Change dues on each household is the way to finish.
+  let dues = 0;
+  let duesError: string | undefined;
+  const withDues = rows
+    .filter((r) => r.duesCents !== undefined && r.duesCents > 0)
+    .map((r) => ({ unit: r.unit, duesCents: r.duesCents as number }));
+  if (withDues.length) {
+    try {
+      dues = await setHomeDues(associationId, withDues);
+    } catch (caught) {
+      duesError = caught instanceof Error ? caught.message : "Dues amounts were not saved";
+    }
+  }
   await refreshRemote();
   const out = (data ?? {}) as Partial<ImportOutcome>;
   return {
@@ -92,6 +174,7 @@ export async function importRoster(
     updated: out.updated ?? 0,
     balances: out.balances ?? 0,
     skipped: out.skipped ?? 0,
+    ...(withDues.length ? { dues, duesError } : {}),
   };
 }
 

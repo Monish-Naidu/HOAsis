@@ -86,6 +86,28 @@ describe("creating a payment intent", () => {
   });
 });
 
+describe("the largest amount a home may pay at once", () => {
+  const big = { associationId: "assoc-a", unitId: "unit-1", amountCents: 1_000_000, rail: "ach" };
+
+  it("is measured against two years of the home's own dues when they are larger", async () => {
+    // $10,000 is over two years of $285 and under two years of $500.
+    rows.associations = { ...(rows.associations as object), dues_cents: 28500 };
+    rows.units = { association_id: "assoc-a", stripe_customer_id: "cus_1", label: "12B", dues_cents: 50_000 };
+    vi.spyOn(stripe().paymentIntents, "create").mockResolvedValue({ id: "pi_1", client_secret: "secret" } as never);
+    expect((await payment.POST(post("/api/stripe/payment-intent", big))).status).toBe(200);
+  });
+
+  it("is still refused for a home on the association's amount", async () => {
+    rows.associations = { ...(rows.associations as object), dues_cents: 28500 };
+    rows.units = { association_id: "assoc-a", stripe_customer_id: "cus_1", label: "12B", dues_cents: null };
+    const create = vi.spyOn(stripe().paymentIntents, "create");
+    create.mockClear();
+    const response = await payment.POST(post("/api/stripe/payment-intent", big));
+    expect(response.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
 describe("the receipt for a payment made by hand", () => {
   it("asks Stripe to email the person paying when the money settles", async () => {
     const create = vi

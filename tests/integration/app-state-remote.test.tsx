@@ -89,6 +89,8 @@ vi.mock("@/lib/supabase/client", () => {
     }
     builder.select = () => builder;
     builder.single = () => builder;
+    builder.order = () => builder;
+    builder.range = () => builder;
     return builder;
   }
   const rpc = (name: string, args: unknown) =>
@@ -915,6 +917,183 @@ describe("founding an association", () => {
     expect(errors).toHaveLength(2);
     expect(errors[0]).toContain("shared spaces were not saved (amenities is down)");
     expect(errors[1]).toContain("operating account was not created (bank_accounts is down)");
+  });
+});
+
+describe("a home's own dues", () => {
+  const home = () => server().owners.find((o) => !o.placeholder && !o.homeType)!;
+
+  it("writes through set_home_dues, which is the only way a finance holder may", async () => {
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setHomeDues([{ ownerId: home().id, cents: 28_500 }]);
+    });
+    expect(ok).toBe(true);
+    expect(targets()).toEqual(["rpc:set_home_dues"]);
+    expect(writes()[0].values).toEqual({ p_unit_id: home().id, p_dues_cents: 28_500 });
+  });
+
+  it("sends null to clear it", async () => {
+    const { result } = renderApp();
+    await act(async () => {
+      await result.current.setHomeDues([{ ownerId: home().id, cents: null }]);
+    });
+    expect(writes()[0].values).toEqual({ p_unit_id: home().id, p_dues_cents: null });
+  });
+
+  it("answers false and says why when the database refused it", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:set_home_dues" ? { error: { message: "You cannot change dues for that home" } } : undefined;
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setHomeDues([{ ownerId: home().id, cents: 100 }]);
+    });
+    expect(ok).toBe(false);
+    expect(errors.join(" ")).toMatch(/Saving dues: You cannot change dues for that home/);
+  });
+
+  it("refuses a negative amount before it is sent", async () => {
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setHomeDues([{ ownerId: home().id, cents: -1 }]);
+    });
+    expect(ok).toBe(false);
+    expect(writes()).toHaveLength(0);
+  });
+
+  it("Change dues says it only once the write has landed", async () => {
+    const user = userEvent.setup();
+    const owner = home();
+    renderScreen(<screens.HomeownersScreen />);
+    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.type(screen.getByLabelText("Dues for this home"), "310");
+    await user.click(screen.getByRole("button", { name: "Save dues" }));
+    await settled();
+
+    expect(writes().map((w) => w.target)).toEqual(["rpc:set_home_dues"]);
+    expect(writes()[0].values).toEqual({ p_unit_id: owner.id, p_dues_cents: 31_000 });
+    expect(await screen.findByText(/pays \$310(\.00)? from the next bill/)).toBeInTheDocument();
+  });
+
+  it("Change dues stays open and says nothing was saved when the write is refused", async () => {
+    const user = userEvent.setup();
+    const owner = home();
+    db.answer = (s) =>
+      s.target === "rpc:set_home_dues" ? { error: { message: "You cannot change dues for that home" } } : undefined;
+    renderScreen(<screens.HomeownersScreen />);
+    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.type(screen.getByLabelText("Dues for this home"), "310");
+    await user.click(screen.getByRole("button", { name: "Save dues" }));
+    await settled();
+
+    expect(errors.join(" ")).toMatch(/cannot change dues/);
+    expect(screen.queryByText(/pays \$310(\.00)? from the next bill/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Dues for this home")).toBeInTheDocument();
+  });
+
+  it("Use the standard rate clears it and says what the home pays then", async () => {
+    const user = userEvent.setup();
+    const owner = home();
+    change({ owners: server().owners.map((o) => (o.id === owner.id ? { ...o, duesCents: 28_500 } : o)) });
+    await act(async () => {
+      await store.refreshRemote();
+    });
+    renderScreen(<screens.HomeownersScreen />);
+    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    expect(screen.getByText(/from its own amount/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use the standard rate" }));
+    await settled();
+
+    expect(writes()[0].values).toEqual({ p_unit_id: owner.id, p_dues_cents: null });
+    const standard = server().association.duesCents;
+    expect(
+      await screen.findByText(new RegExp(`pays \\$${standard / 100}(\\.00)? from the next bill`)),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("founding an association with dues by home", () => {
+  const draft = (households: unknown[]) =>
+    ({
+      name: "Harbor Court",
+      city: "Bothell",
+      state: "WA",
+      stateName: "Washington",
+      duesCents: 21_000,
+      duesByHome: true,
+      duesCadence: "monthly",
+      dueDay: 1,
+      founder: { name: "Pat Lee", email: "pat@example.com", unit: "101" },
+      households,
+      collects: [],
+      sharedSpaces: [],
+    }) as unknown as Parameters<ReturnType<State["useAppState"]>["createRemoteAssociation"]>[0];
+
+  const rows = [
+    { name: "", email: "", unit: "201", duesCents: 28_500 },
+    { name: "", email: "", unit: "202", duesCents: 28_500 },
+    { name: "", email: "", unit: "102" },
+  ];
+
+  /** The register as create_association left it, so labels find their ids. */
+  function register(s: Statement) {
+    if (s.target === "rpc:create_association") return { data: "assoc-new" };
+    if (s.target === "units" && s.op === "select") {
+      return {
+        data: ["101", "102", "201", "202"].map((label) => ({ id: `unit-${label}`, label })),
+      };
+    }
+    return undefined;
+  }
+
+  it("writes each home's own amount after the association exists, and no other home's", async () => {
+    db.answer = register;
+    reads.loadMyAssociations.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "assoc-new", isHome: false }]);
+    const { result } = renderApp();
+    await act(async () => {
+      await result.current.createRemoteAssociation(draft(rows));
+    });
+    const calls = writes().filter((w) => w.target === "rpc:set_home_dues");
+    expect(calls.map((c) => c.values)).toEqual([
+      { p_unit_id: "unit-201", p_dues_cents: 28_500 },
+      { p_unit_id: "unit-202", p_dues_cents: 28_500 },
+    ]);
+    expect(targets()[0]).toBe("rpc:create_association");
+    expect(errors).toEqual([]);
+  });
+
+  it("says which homes did not get theirs, and still lands in the association", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:set_home_dues" && (s.values as { p_unit_id: string }).p_unit_id === "unit-202"
+        ? { error: { message: "set_home_dues is down" } }
+        : register(s);
+    reads.loadMyAssociations.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "assoc-new", isHome: false }]);
+    const { result } = renderApp();
+    let id: string | undefined;
+    await act(async () => {
+      id = await result.current.createRemoteAssociation(draft(rows));
+    });
+    expect(id).toBe("assoc-new");
+    expect(store.remoteSnapshot().activeId).toBe("assoc-new");
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("1 of 2 homes did not get their own dues amount");
+    expect(errors[0]).toContain("Change dues");
+  });
+
+  it("writes nothing for homes when no home has its own amount", async () => {
+    db.answer = register;
+    reads.loadMyAssociations.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "assoc-new", isHome: false }]);
+    const { result } = renderApp();
+    await act(async () => {
+      await result.current.createRemoteAssociation(draft([{ name: "", email: "", unit: "102" }]));
+    });
+    expect(targets()).not.toContain("rpc:set_home_dues");
   });
 });
 

@@ -26,6 +26,7 @@ export function RosterPreview({
   onConfirm,
   busy = false,
   showBalances = true,
+  showDues = false,
 }: {
   /** Register keys already on the roster, so a row can say "will be updated". */
   existingUnits: string[];
@@ -36,6 +37,8 @@ export function RosterPreview({
   busy?: boolean;
   /** Whether the balance column means anything on this screen. */
   showBalances?: boolean;
+  /** Whether the optional Dues column means anything here: a home's own regular assessment. */
+  showDues?: boolean;
 }) {
   const [parsed, setParsed] = useState<RosterParse | null>(null);
   const [fileName, setFileName] = useState("");
@@ -95,7 +98,7 @@ export function RosterPreview({
       </div>
       <p className="text-footnote leading-relaxed text-fg-muted">
         Columns can be in any order and most names work: Name, Email, Unit or Lot, Address,
-        Phone{showBalances ? ", Opening balance" : ""}. Save as CSV from Excel or Google Sheets.
+        Phone{showBalances ? ", Opening balance" : ""}{showDues ? ", Dues (what that home pays, if not the usual)" : ""}. Save as CSV from Excel or Google Sheets.
         Only the home is required.
       </p>
 
@@ -125,6 +128,9 @@ export function RosterPreview({
                 {showBalances && summary.withBalance.length
                   ? `, ${money(summary.owedCents)} owed across ${summary.withBalance.length}`
                   : ""}
+                {showDues && summary.withDues.length
+                  ? `, ${pluralize(summary.withDues.length, "home")} with their own dues`
+                  : ""}
                 {summary.problems.length ? (
                   <span className="text-warn">
                     {" "}
@@ -142,6 +148,7 @@ export function RosterPreview({
                       <th className="px-3 py-2 font-semibold">Owner</th>
                       <th className="px-3 py-2 font-semibold">Email</th>
                       {showBalances ? <th className="px-3 py-2 text-right font-semibold">Owes</th> : null}
+                      {showDues ? <th className="px-3 py-2 text-right font-semibold">Dues</th> : null}
                       <th className="px-3 py-2 font-semibold">Result</th>
                     </tr>
                   </thead>
@@ -165,6 +172,11 @@ export function RosterPreview({
                               {row.openingBalanceCents !== undefined && row.openingBalanceCents !== 0
                                 ? money(row.openingBalanceCents)
                                 : ""}
+                            </td>
+                          ) : null}
+                          {showDues ? (
+                            <td className="tnum px-3 py-2 text-right text-fg">
+                              {row.duesCents ? money(row.duesCents) : ""}
                             </td>
                           ) : null}
                           <td className="px-3 py-2">

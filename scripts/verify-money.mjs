@@ -210,6 +210,37 @@ try {
   const { data: cashLine } = await admin.from("charges").select("label").eq("unit_id", neighborUnit.id).eq("label", "Cash payment");
   check("cash reads Cash payment with no number", !cashError && Boolean(cashId) && (cashLine ?? []).length === 1, cashError?.message ?? JSON.stringify(cashLine));
 
+  // Dues that differ home by home (0084). The neighbor's home is given its
+  // own amount; the resident's home is left on the association's.
+  const billedOn = async (due) => {
+    const { data } = await admin.from("charges").select("unit_id, amount_cents")
+      .eq("association_id", associationId).eq("category", "dues").eq("due_on", due);
+    return Object.fromEntries((data ?? []).map((c) => [c.unit_id, c.amount_cents]));
+  };
+  const { error: ownError } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: 21000 });
+  check("a finance holder sets one home's own amount", !ownError, ownError?.message ?? "");
+  await president.client.rpc("issue_assessment", { p_association_id: associationId, p_label: "Own amount period", p_due_on: day(-40) });
+  const ownBilled = await billedOn(day(-40));
+  check("a home with its own amount is billed it, and its neighbor the association's",
+    ownBilled[neighborUnit.id] === 21000 && ownBilled[myUnit] === 6000, JSON.stringify(ownBilled));
+
+  const { error: clearError } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: null });
+  check("a home's own amount can be cleared", !clearError, clearError?.message ?? "");
+  await president.client.rpc("issue_assessment", { p_association_id: associationId, p_label: "Cleared period", p_due_on: day(-45) });
+  const clearedBilled = await billedOn(day(-45));
+  check("a cleared home is back on the association's amount from the next bill",
+    clearedBilled[neighborUnit.id] === 6000 && clearedBilled[myUnit] === 6000, JSON.stringify(clearedBilled));
+  check("the bill already issued keeps the amount it was issued at", (await billedOn(day(-40)))[neighborUnit.id] === 21000);
+
+  const { error: negativeDues } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: -1 });
+  check("a negative amount is refused", Boolean(negativeDues), negativeDues?.message?.slice(0, 60) ?? "no error");
+  const { error: residentDues } = await resident.client.rpc("set_home_dues", { p_unit_id: myUnit, p_dues_cents: 100 });
+  check("a resident cannot set a home's amount", residentDues?.code === "42501", residentDues?.message?.slice(0, 60) ?? "no error");
+  const { error: anonDues } = await nobody.rpc("set_home_dues", { p_unit_id: myUnit, p_dues_cents: 100 });
+  check("a signed out visitor cannot set a home's amount", refused(anonDues), anonDues?.message?.slice(0, 60) ?? "no error");
+  const { data: myOwn } = await admin.from("units").select("dues_cents").eq("id", myUnit).single();
+  check("the refused writes changed nothing", myOwn?.dues_cents === null, String(myOwn?.dues_cents));
+
   // Runs that overlap (0069). The cron delivered twice, or a board member
   // pressing "bill dues now" while it runs: each call used to look for an
   // existing bill before the other had committed, and every home got two.

@@ -159,7 +159,7 @@ export function DuesMailer() {
         <Run
           title="Assessment coming due"
           detail={
-            duesVary(community.association)
+            duesVary(community.association, community.owners)
               ? `Everyone, each at their own amount. Due ${community.nextChargeDate}.`
               : `Everyone. ${money(community.association.duesCents)} due ${community.nextChargeDate}.`
           }

@@ -49,7 +49,16 @@ export default function ResidentHome() {
 
   return (
     <div className="stagger space-y-6">
-      {/* What expires today, in one card rather than a stack of banners. */}
+      {/* The huddle's layout: the center of the screen answers "what do I
+          owe and how do I pay" with no scrolling. Account summary and Quick
+          Actions run the full width; activity and events share the rest.
+          Community left the dashboard on purpose (a five-home association
+          would see an empty card); it stays a sidebar tab. */}
+      <AccountSummary />
+
+      {/* What expires today, in one card rather than a stack of banners.
+          Under the balance since 2026-10-05: on a phone it sat above it and
+          pushed the number an owner opens the app for off the first screen. */}
       {live || notice || toVote.length ? (
         <Card className="divide-y divide-border">
           {live ? (
@@ -100,12 +109,6 @@ export default function ResidentHome() {
         </Card>
       ) : null}
 
-      {/* The huddle's layout: the center of the screen answers "what do I
-          owe and how do I pay" with no scrolling. Account summary and Quick
-          Actions run the full width; activity and events share the rest.
-          Community left the dashboard on purpose (a five-home association
-          would see an empty card); it stays a sidebar tab. */}
-      <AccountSummary />
       <QuickActions />
 
       {/* Activity and the schedule side by side on equal footing, both

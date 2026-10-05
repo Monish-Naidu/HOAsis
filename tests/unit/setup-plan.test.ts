@@ -382,6 +382,16 @@ describe("check the first bill", () => {
     expect(t.because).toMatch(/^First bill .*2026.*\$250\.00 per home, billed monthly\.$/);
   });
 
+  it("says each home pays what it pays, with the total, when some homes have their own amount", () => {
+    const c = signedIn((x) => {
+      x.owners = x.owners.map((o, i) => (i === 1 ? { ...o, duesCents: 31_000 } : o));
+    });
+    const t = taskOf(c, "first-bill")!;
+    const total = c.owners.length * 25_000 + 6_000;
+    expect(t.because).toContain(`$${(total / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })} across ${c.owners.length} homes, each at what it pays`);
+    expect(t.because).not.toContain("per home, billed");
+  });
+
   it("is not done with no dues set", () => {
     const c = signedIn((x) => { x.association.duesCents = 0; });
     expect(taskOf(c, "first-bill")!.complete).toBe(false);

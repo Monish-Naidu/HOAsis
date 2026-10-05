@@ -121,6 +121,12 @@ export interface CommunityDraft {
    * means every home pays `duesCents`.
    */
   duesByType?: Partial<Record<PropertyType, Cents>>;
+  /**
+   * The board bills by home: `duesCents` is what most homes pay, and a range
+   * (`LotPhase.duesCents`) or a row (`DraftHousehold.duesCents`) may carry
+   * its own amount. Kept apart from `duesByType`, which it replaces.
+   */
+  duesByHome?: boolean;
   duesCadence: "monthly" | "quarterly" | "annually";
   /** Day of the month an assessment is billed. */
   dueDay: number;
@@ -132,6 +138,8 @@ export interface CommunityDraft {
     address?: string;
     /** Only asked of a mixed community. */
     homeType?: PropertyType;
+    /** Set by `finalizeDraft` from the founder's range, when it has its own amount. */
+    duesCents?: Cents;
   };
   /** Every home in the community, not counting the founder's own. */
   households: DraftHousehold[];
@@ -211,6 +219,11 @@ export interface DraftHousehold {
   address?: string;
   /** Which kind of home, in a mixed community. */
   homeType?: PropertyType;
+  /**
+   * This home's own amount, from a spreadsheet row or the address list. Wins
+   * over its range's. Read only when the draft bills by home.
+   */
+  duesCents?: Cents;
 }
 
 /** A URL-safe id from a name, with a suffix so two "Oak Ridge"s do not collide. */
@@ -250,10 +263,47 @@ function annualDues(draft: CommunityDraft): Cents {
   return draftDuesTotal(draft) * perYear;
 }
 
-/** What one home in the draft pays per period. */
-export function draftDuesFor(draft: CommunityDraft, homeType?: PropertyType): Cents {
-  const own = homeType ? draft.duesByType?.[homeType] : undefined;
-  return own && own > 0 ? own : draft.duesCents;
+/**
+ * What one home in the draft pays per period: the rule `ownerDues` applies,
+ * on the wizard's answers. A home's own amount (a row's, else its range's)
+ * counts only when the draft bills by home; otherwise its kind's, else the
+ * fallback.
+ */
+export function draftDuesFor(
+  draft: CommunityDraft,
+  homeType?: PropertyType,
+  unit?: string,
+  ownCents?: Cents,
+): Cents {
+  const own = draftOwnDues(draft, unit, ownCents);
+  if (own) return own;
+  const kind = homeType ? draft.duesByType?.[homeType] : undefined;
+  return kind && kind > 0 ? kind : draft.duesCents;
+}
+
+/**
+ * The amount a home carries of its own, or undefined. A row's amount wins
+ * over its range's; one equal to the fallback is no amount of its own.
+ */
+export function draftOwnDues(draft: CommunityDraft, unit?: string, ownCents?: Cents): Cents | undefined {
+  if (!draft.duesByHome) return undefined;
+  const numbered = (draft.homeNaming ?? defaultHomeNaming(draft)) === "numbers";
+  const range =
+    numbered && unit
+      ? phaseFor(draft.phases ?? [], draft.lotPrefix ?? "", unit)?.duesCents
+      : undefined;
+  const cents = ownCents && ownCents > 0 ? ownCents : range;
+  return cents && cents > 0 && cents !== draft.duesCents ? cents : undefined;
+}
+
+/** How many homes in the draft carry an amount of their own. */
+export function draftOwnDuesCount(draft: CommunityDraft): number {
+  if (!draft.duesByHome) return 0;
+  const mine = founderLabel(draft);
+  return (
+    otherHomes(draft).filter((h) => draftOwnDues(draft, h.unit, h.duesCents)).length +
+    (draftOwnDues(draft, mine) ? 1 : 0)
+  );
 }
 
 /**
@@ -273,8 +323,8 @@ export function draftDuesTotal(draft: CommunityDraft): Cents {
   const types = homeTypesOf(draft);
   const founderType = founderHomeType(draft);
   return otherHomes(draft).reduce(
-    (sum, h) => sum + draftDuesFor(draft, h.homeType ?? types[0]),
-    draftDuesFor(draft, founderType),
+    (sum, h) => sum + draftDuesFor(draft, h.homeType ?? types[0], h.unit, h.duesCents),
+    draftDuesFor(draft, founderType, founderLabel(draft)),
   );
 }
 
@@ -423,15 +473,22 @@ export function finalizeDraft(entered: CommunityDraft): CommunityDraft {
       .map((t) => [t, draft.duesByType?.[t]] as const)
       .filter(([, cents]) => cents && cents > 0 && cents !== draft.duesCents),
   ) as CommunityDraft["duesByType"];
+  // Billing by home replaces billing by kind. A home keeps an amount only
+  // where it has one of its own: its row's, else its range's. If nobody has
+  // one, every home pays the fallback and nothing else is stored.
+  const byHome = Boolean(draft.duesByHome);
   return {
     ...draft,
     propertyType: sole,
     homeTypes: types,
-    duesByType: types.length > 1 && Object.keys(byType ?? {}).length ? byType : undefined,
+    duesByType:
+      !byHome && types.length > 1 && Object.keys(byType ?? {}).length ? byType : undefined,
+    duesByHome: byHome ? true : undefined,
     founder: {
       ...draft.founder,
       unit,
       homeType: founderHomeType(draft),
+      duesCents: draftOwnDues(draft, unit),
     },
     households: draft.households
       .map((h) => ({
@@ -441,6 +498,7 @@ export function finalizeDraft(entered: CommunityDraft): CommunityDraft {
         unit: h.unit.trim(),
         address: h.address?.trim() || undefined,
         homeType: typed(h.homeType),
+        duesCents: draftOwnDues(draft, h.unit.trim(), h.duesCents),
       }))
       .filter((h) => h.unit !== "" && h.unit !== unit),
     // Rows no range covered were never homes. They stop here, so neither
@@ -487,6 +545,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     daysPastDue: 0,
     boardRole: "President",
     homeType: draft.founder.homeType,
+    duesCents: draft.duesByHome ? draft.founder.duesCents : undefined,
   };
 
   // A home with nobody named. Only the builder setting the community up can
@@ -510,6 +569,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       standing: "current",
       daysPastDue: 0,
       homeType: household.homeType,
+      duesCents: draft.duesByHome ? household.duesCents : undefined,
       // Marked as the real data layer marks them, so the roster badge does
       // not read "Paid up" beside a home nobody owns.
       placeholder: !sold,

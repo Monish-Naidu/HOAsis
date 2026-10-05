@@ -28,6 +28,11 @@ export interface RosterRow {
   phone: string;
   /** Present only when the file has a balance column and the cell says something. */
   openingBalanceCents?: Cents;
+  /**
+   * This home's own regular assessment, when the file has a dues column and
+   * the cell has an amount. A blank cell leaves the home on the usual rate.
+   */
+  duesCents?: Cents;
   /** What is wrong with this row, in words. Empty means it can be imported. */
   problems: string[];
 }
@@ -40,7 +45,7 @@ export interface RosterParse {
   problems: string[];
 }
 
-export type RosterColumn = "name" | "email" | "unit" | "address" | "phone" | "balance";
+export type RosterColumn = "name" | "email" | "unit" | "address" | "phone" | "balance" | "dues";
 
 /** What each column may be called in the file, lower case, punctuation stripped. */
 const HEADERS: Record<RosterColumn, string[]> = {
@@ -49,18 +54,19 @@ const HEADERS: Record<RosterColumn, string[]> = {
   unit: ["unit", "unitnumber", "unitno", "unit#", "lot", "lotnumber", "lotno", "lot#", "home", "homenumber", "number", "no", "#", "apt", "apartment", "space", "site"],
   address: ["address", "streetaddress", "street", "propertyaddress", "homeaddress", "situs", "situsaddress", "location"],
   phone: ["phone", "phonenumber", "telephone", "mobile", "cell", "tel"],
+  dues: ["dues", "assessment", "monthlydues", "regulardues", "regularassessment", "monthlyassessment", "duesamount", "assessmentamount"],
   balance: ["openingbalance", "balance", "balancedue", "owed", "amountowed", "amountdue", "due", "outstanding", "arrears", "balanceforward", "balancebroughtforward", "startingbalance"],
 };
 
 /** The file a board downloads to fill in. */
-export const ROSTER_TEMPLATE_COLUMNS = ["Name", "Email", "Unit", "Address", "Phone", "Opening balance"] as const;
+export const ROSTER_TEMPLATE_COLUMNS = ["Name", "Email", "Unit", "Address", "Phone", "Opening balance", "Dues"] as const;
 
 export function rosterTemplateCsv(): string {
   const lines = [
     ROSTER_TEMPLATE_COLUMNS.join(","),
-    'Pat Alvarez,pat@example.com,12,"1428 Willow Creek Lane",425-555-0114,0',
-    'Marcus Bell,marcus@example.com,14,"1432 Willow Creek Lane",,185.00',
-    ',,16,"1436 Willow Creek Lane",,',
+    'Pat Alvarez,pat@example.com,12,"1428 Willow Creek Lane",425-555-0114,0,',
+    'Marcus Bell,marcus@example.com,14,"1432 Willow Creek Lane",,185.00,285.00',
+    ',,16,"1436 Willow Creek Lane",,,',
   ];
   return `﻿${lines.join("\r\n")}\r\n`;
 }
@@ -142,6 +148,7 @@ export function columnFor(header: string): RosterColumn | null {
   }
   // "Opening balance ($)" and friends.
   if (/balance|owed|arrears/.test(key)) return "balance";
+  if (/dues|assessment/.test(key)) return "dues";
   if (/email/.test(key)) return "email";
   if (/phone|mobile|cell/.test(key)) return "phone";
   if (/address|street/.test(key)) return "address";
@@ -223,6 +230,8 @@ export function parseRosterCsv(text: string): RosterParse {
     const email = cellAt(cells, "email").toLowerCase();
     const rawBalance = cellAt(cells, "balance");
     const balance = index.balance === undefined ? undefined : moneyToCents(rawBalance);
+    const rawDues = cellAt(cells, "dues");
+    const dues = index.dues === undefined ? undefined : moneyToCents(rawDues);
     const row: RosterRow = {
       line,
       name: cellAt(cells, "name"),
@@ -233,6 +242,8 @@ export function parseRosterCsv(text: string): RosterParse {
       problems: [],
     };
     if (balance !== undefined && balance !== null) row.openingBalanceCents = balance;
+    // Zero reads as no amount, as it does everywhere a home's dues are read.
+    if (dues !== undefined && dues !== null && dues > 0) row.duesCents = dues;
 
     if (!unit) {
       row.problems.push("No unit, lot or address, so there is nothing to put on the register.");
@@ -250,6 +261,9 @@ export function parseRosterCsv(text: string): RosterParse {
     }
     if (balance === null) {
       row.problems.push(`"${rawBalance}" is not an amount. Use 185.00, $185, or (20.00) for a credit.`);
+    }
+    if (dues === null || (dues !== undefined && dues < 0)) {
+      row.problems.push(`"${rawDues}" is not a dues amount. Use 285.00 or $285.`);
     }
     return row;
   });
@@ -269,6 +283,7 @@ export function rosterSummary(rows: RosterRow[], existingUnits: string[] = []) {
   const updating = ok.filter((r) => existing.has(r.unit.toLowerCase()));
   const withEmail = ok.filter((r) => r.email);
   const withBalance = ok.filter((r) => (r.openingBalanceCents ?? 0) !== 0);
+  const withDues = ok.filter((r) => (r.duesCents ?? 0) > 0);
   const owedCents = withBalance.reduce((t, r) => t + (r.openingBalanceCents ?? 0), 0);
   return {
     ok,
@@ -276,6 +291,7 @@ export function rosterSummary(rows: RosterRow[], existingUnits: string[] = []) {
     updating,
     withEmail,
     withBalance,
+    withDues,
     owedCents,
     problems: rows.filter((r) => r.problems.length > 0),
   };

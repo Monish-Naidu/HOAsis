@@ -1,10 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button, Card, CardHeader, fieldClass } from "@/components/ui/primitives";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
-import { HOME_TYPE_LABEL, countByType, duesFor, homeTypesOf, totalDues } from "@/lib/home-types";
+import {
+  HOME_TYPE_LABEL,
+  countByType,
+  duesFor,
+  homeTypesOf,
+  homesWithOwnDues,
+  totalDues,
+} from "@/lib/home-types";
 import type { HomeType } from "@/lib/types";
 import { cn, money } from "@/lib/utils";
 
@@ -29,6 +37,8 @@ export function DuesSettings() {
     homeTypes: [...homeTypesOf(community.profile), ...present.map((p) => p.type)],
   });
   const mixed = kinds.length > 1;
+  // Homes that pay an amount of their own, set on Homeowners.
+  const ownCount = homesWithOwnDues(community.owners);
 
   const initial = () =>
     Object.fromEntries(kinds.map((k) => [k, duesFor(association, k) / 100])) as Record<
@@ -114,13 +124,22 @@ export function DuesSettings() {
             ))
           ) : (
             <Amount
-              label={`Each home, per ${cadence}`}
-              hint={countLine(community.owners.length)}
+              label={ownCount ? `Standard rate, per ${cadence}` : `Each home, per ${cadence}`}
+              hint={countLine(community.owners.length - ownCount)}
               value={base}
               onChange={setBase}
             />
           )}
         </div>
+
+        {ownCount > 0 ? (
+          <p className="text-footnote text-fg-muted">
+            {ownCount === 1 ? "1 home pays its own amount" : `${ownCount} homes pay their own amount`}.{" "}
+            <Link href="/board/homeowners" className="font-medium text-accent hover:underline">
+              See them on Homeowners
+            </Link>
+          </p>
+        ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-footnote text-fg-muted">

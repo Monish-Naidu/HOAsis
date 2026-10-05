@@ -10,14 +10,15 @@ review (257 findings, seven walkers). Both are summarised here; the full
 findings were session files and are not in the repo, so anything worth
 keeping is written into a row below.
 
-**Where it stands (2026-10-05):** sections 0, 2, 3 and 5 are on
-production. Section 4 is done on pull request #5, waiting for Monish to look
-and merge. What is left: the open rows of section 1 (the insurance promise
-line is fixed; check the list), section 6 (small known gaps), section 7
-(decisions), and section 8 (staging and Resend, both waiting on Monish).
-Not yet built from the reviews: changing or cancelling a meeting and adding
-minutes, real file upload on requests, emailing the board when somebody asks
-to join, a reply address for association emails.
+**Where it stands (2026-10-05):** sections 0 and 2 to 5 are on production
+(pull request #5 merged). In progress on branch `dues-by-home`, at Monish's
+ask the same day: dues that differ home by home (section 9), a pass over
+every button and description in the product (section 10), and small
+interface fixes. Still open: a few section 1 rows, section 6 (small known
+gaps), section 7 (decisions), section 8 (staging and Resend, both waiting on
+Monish). Not yet built from the reviews: changing or cancelling a meeting
+and adding minutes, real file upload on requests, emailing the board when
+somebody asks to join, a reply address for association emails.
 
 Status words: **done** (in the working tree and checked), **doing**,
 **next**, **waiting** (on Monish), **later** (not for launch).
@@ -144,7 +145,7 @@ Small, known, and not blocking a push. Each was found by a reviewer.
 | GitHub Actions runs the checks on every push and pull request | done 2026-10-04: first green run on pull request #4 (check 4 minutes, browser suite 7). The browser suite runs on pull requests only, to stay inside the 2,000 free minutes a month. Nothing is billed while the account's spending limit is $0 |
 | Stripe billing page with cancellation on (`pnpm stripe:setup` now creates it) | done in test mode; run again with the live key |
 | Resend: verify yourhoasis.com, set `EMAIL_FROM` on Vercel | parked by Monish 2026-10-04, pick up below |
-| A staging copy: second Supabase project, Vercel preview pointed at it, Stripe test keys. Test associations move there and production holds only real ones | one click left for Monish (create the project; the Supabase token here cannot, and the Vercel CLI needs a person for it too). Then `pnpm staging:setup` does the rest |
+| A staging copy: second Supabase project, Vercel preview pointed at it, Stripe test keys. Test associations move there and production holds only real ones | one click left for Monish: accept Supabase's marketplace terms at https://vercel.com/monish-naidus-projects/~/integrations/accept-terms/supabase?source=cli (legal terms are his to accept). Then Claude creates the free project through Vercel and runs `pnpm staging:setup`. Supabase's own API refuses the token on this machine (tried three ways) |
 | `ALLOW_TEST_RESET` removed from `.env.local` | done by Monish |
 
 ### Picking up Resend
@@ -181,3 +182,31 @@ three Supabase values are set on Vercel for Preview only. After it,
 `ENV_FILE`).
 From then on `pnpm db:verify` against production is for a release, not for
 day to day.
+
+## 9. Dues that differ home by home
+
+Asked for by Monish on 2026-10-05: "staggered HOA dues for condos and
+townhomes with different sized units", captured in onboarding and the rest
+of the app. The rule: a home pays its own amount if it has one, else its
+kind's, else the association's.
+
+| Item | Status |
+| --- | --- |
+| `units.dues_cents`, `issue_assessment` bills by the rule, `set_home_dues` (migration 0084) | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
+| Wizard: "Different by home" on the dues step; an amount per range or per row; a "Dues" column in the spreadsheet | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
+| Homeowners: "Change dues" on a household; the import column; the export | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
+| Every screen and email that states a dues amount uses the rule | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
+
+## 10. Wording pass
+
+Asked for by Monish on 2026-10-05: check every button and description in
+the product and simplify. Rules: short, plain, sentence case, no em dashes;
+a button says what happens; the same thing has the same name everywhere;
+nothing promised that is not there. The landing page's deck headlines stay
+as Monish brought them.
+
+| Area | Status |
+| --- | --- |
+| Marketing, sign-in, join, setup wizard and setup list | next, after section 9 lands |
+| Resident side | next |
+| Board side | next |

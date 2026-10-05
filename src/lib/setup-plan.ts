@@ -264,7 +264,9 @@ function because(
     case "first-bill": {
       const bill = firstBill(c);
       if (!bill.done) return "No dues amount is set, so nothing can be billed.";
-      const amount = bill.varies
+      const amount = bill.ownCount > 0
+        ? `${money(bill.totalCents)} across ${pluralize(bill.homes, "home")}, each at what it pays`
+        : bill.varies
         ? "each kind of home at its own amount"
         : `${money(bill.cents)} per home, billed ${bill.cadence}`;
       return `${bill.issued ? "Dues have been billed. Next bill" : "First bill"} ${formatDate(bill.date, "long")}, ${amount}.`;

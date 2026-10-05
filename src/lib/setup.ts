@@ -3,7 +3,7 @@ import type { AssociationOrigin, PreviousSetup } from "@/lib/data/new-community"
 import type { Owner } from "@/lib/types";
 import { OPENING_LINE, billingStatus } from "@/lib/go-live";
 import { BEFORE_THE_BANK, BUILDER_STEPS, HANDOVER_STEPS, type PortingStep } from "@/lib/porting";
-import { duesVary } from "@/lib/home-types";
+import { duesVary, homesWithOwnDues, totalDues } from "@/lib/home-types";
 import { todayIsoDate } from "@/lib/utils";
 
 /**
@@ -122,7 +122,11 @@ export function firstBill(c: Community) {
     date: c.nextChargeDate,
     cents,
     cadence: c.association.duesCadence,
-    varies: duesVary(c.association),
+    // Counts a home's own amount as well as a kind's.
+    varies: duesVary(c.association, c.owners),
+    ownCount: homesWithOwnDues(c.owners),
+    totalCents: totalDues(c.association, c.owners),
+    homes: c.owners.length,
     issued,
     done: cents > 0 && Boolean(c.nextChargeDate),
   };

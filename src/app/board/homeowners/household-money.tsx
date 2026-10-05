@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, Field, Select, fieldClass } from "@/components/ui/primitives";
 import { MANUAL_METHOD_LABEL, type ManualMethod } from "@/lib/payments/instruments";
-import { todayIsoDate } from "@/lib/utils";
+import { money, todayIsoDate } from "@/lib/utils";
 
 /** Dollars as typed to whole cents, or 0 when it is not a positive amount. */
 function toCents(text: string): number {
@@ -178,6 +178,92 @@ export function AddCreditForm({
         </Button>
         <Button type="submit" variant="primary" size="sm" disabled={busy || !ready}>
           Save credit
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * What one home pays, changed. Shows the amount it pays now and where that
+ * comes from, takes a new amount, and offers the standard rate back. Applies
+ * from the next bill; bills already sent keep their amount. The button waits
+ * for the write, and the form closes only when it went through.
+ */
+export function ChangeDuesForm({
+  unit,
+  period,
+  nowCents,
+  sourceLabel,
+  hasOwn,
+  standardCents,
+  onSave,
+  onCancel,
+}: {
+  unit: string;
+  /** "month", "quarter" or "year". */
+  period: string;
+  nowCents: number;
+  /** "its own amount", "townhome rate" or "the association's rate". */
+  sourceLabel: string;
+  hasOwn: boolean;
+  /** What the home would pay with no amount of its own. */
+  standardCents: number;
+  /** A null amount clears the home's own. */
+  onSave: (cents: number | null) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const [amount, setAmount] = useState(hasOwn ? String(nowCents / 100) : "");
+  const [busy, setBusy] = useState(false);
+  const cents = toCents(amount);
+  const ready = cents > 0 && cents !== nowCents;
+  function save(next: number | null) {
+    if (busy) return;
+    setBusy(true);
+    void onSave(next)
+      .then((ok) => ok && onCancel())
+      .finally(() => setBusy(false));
+  }
+  return (
+    <form
+      className="mt-4 space-y-2 border-t border-border pt-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready) save(cents);
+      }}
+    >
+      <p className="text-footnote font-semibold text-fg-muted">Dues for home {unit}</p>
+      <p className="text-footnote text-fg-muted">
+        Pays {money(nowCents)} a {period} now, from {sourceLabel}. A change applies from the next
+        bill; bills already sent keep their amount.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label={`Dues, per ${period}`}>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={String(standardCents / 100)}
+            aria-label="Dues for this home"
+            className={fieldClass}
+            autoFocus
+          />
+        </Field>
+      </div>
+      <div className="flex flex-wrap justify-end gap-2">
+        {hasOwn ? (
+          <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => save(null)}>
+            Use the standard rate
+          </Button>
+        ) : null}
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" size="sm" disabled={busy || !ready}>
+          Save dues
         </Button>
       </div>
     </form>
