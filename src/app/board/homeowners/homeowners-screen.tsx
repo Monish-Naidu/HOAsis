@@ -482,7 +482,7 @@ export function HomeownersScreen() {
                 {inviting ? "Sending" : `Invite ${notSignedUp.length} not signed up`}
               </Button>
             ) : null}
-            {/* Reminders are sent from Finances > Collections, which opens
+            {/* Reminders are sent from Finances > Past due, which opens
                 the composer here with ?remind=1. One place to send them. */}
           </div>
         }

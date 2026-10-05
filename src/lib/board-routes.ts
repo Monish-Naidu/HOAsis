@@ -173,7 +173,9 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/money/collections",
     hidden: true,
     parent: "money",
-    label: "Collections",
+    // Called Past due since 2026-10-05: that is what a board is looking for.
+    // The URL keeps its old name for links that point at it.
+    label: "Past due",
     icon: Banknote,
     key: "money-collections",
     tint: "teal",
@@ -266,7 +268,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
   {
     href: "/board/requests",
     label: "Requests",
-    tab: "From owners",
+    tab: "Requests",
     icon: Inbox,
     key: "requests",
     tint: "blue",
@@ -281,8 +283,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
     // actions. The route keeps its name because links point at it. It sits
     // under Requests because both are the board answering one household.
     label: "Notices",
-    // The other direction from requests: the board writing to a home.
-    tab: "To owners",
+    tab: "Notices",
     icon: TriangleAlert,
     key: "violations", tint: "coral",
     module: "notices",

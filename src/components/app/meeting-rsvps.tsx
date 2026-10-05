@@ -1,15 +1,15 @@
 "use client";
 
-import { CalendarOff, Copy, Radio, Users } from "lucide-react";
-import { MeetingRoom } from "@/components/app/meeting-room";
+import { CalendarOff, Copy, Radio, Users, Video } from "lucide-react";
 import { useToast } from "@/components/app/toast";
-import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, SectionTitle, buttonClass } from "@/components/ui/primitives";
 import { EntryRow } from "@/components/app/calendar-view";
 import { kindLabel, kindTone, upcomingFrom } from "@/lib/calendar";
 import { calendarEntries } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { videoJoinUrl } from "@/lib/meetings/video";
 import type { Meeting } from "@/lib/types";
+import { liveMeetingLine } from "@/lib/resident-wording";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
 
 /**
@@ -159,12 +159,20 @@ export function LiveMeetingCard() {
         <Radio className="size-3.5 shrink-0 text-ok" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-body font-semibold text-ok">{live.title}</p>
-          <p className="text-footnote text-ok opacity-90">
-            Meeting on now · {live.attendees.length} joined
-          </p>
+          <p className="text-footnote text-ok opacity-90">{liveMeetingLine(live.attendees.length)}</p>
         </div>
+        {/* A link to the call, and nothing drawn to look like one. The room
+            of initials and camera tiles had no call behind it. */}
+        <a
+          href={videoJoinUrl(live, community.association.id)}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonClass("secondary", "md")}
+        >
+          <Video className="size-3.5" />
+          Join the call
+        </a>
       </div>
-      <MeetingRoom meeting={live} compact />
     </Card>
   );
 }

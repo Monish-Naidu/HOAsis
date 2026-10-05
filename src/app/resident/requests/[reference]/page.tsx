@@ -41,6 +41,11 @@ export default function RequestDetail({
   const validThrough = certificateValidThrough(request);
   const openStates = ["draft", "submitted", "in-review", "info-needed"];
   const isOpen = openStates.includes(request.status);
+  // What the board wrote with the denial, without the word that opens it.
+  const deniedWhy = [...request.thread]
+    .reverse()
+    .find((e) => e.kind === "status" && /^Denied\.\s+\S/.test(e.body))
+    ?.body.replace(/^Denied\.\s+/, "");
 
   return (
     <div className="animate-rise space-y-5">
@@ -120,6 +125,15 @@ export default function RequestDetail({
               </Button>
             </div>
           </div>
+        </Card>
+      ) : null}
+
+      {/* The board's own words for a denial, above the activity list where
+          it would otherwise be one line among several. */}
+      {request.status === "denied" && deniedWhy ? (
+        <Card className="p-4">
+          <p className="text-footnote font-semibold text-fg-muted">Why it was denied</p>
+          <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg">{deniedWhy}</p>
         </Card>
       ) : null}
 

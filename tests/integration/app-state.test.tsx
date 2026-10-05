@@ -438,7 +438,11 @@ describe("admin actions change real records", () => {
     const open = result.current.state.requests.find((r) => r.status === "in-review")!;
     const before = open.thread.length;
 
-    act(() => result.current.state.updateRequestStatus(open.id, "approved"));
+    act(() => {
+      // The local path has nothing to wait for; the promise it hands back is
+      // not what act should be waiting on.
+      void result.current.state.updateRequestStatus(open.id, "approved");
+    });
     const decided = result.current.state.requests.find((r) => r.id === open.id)!;
     expect(decided.status).toBe("approved");
     expect(decided.decidedBy).toBe("Arya Mehr");

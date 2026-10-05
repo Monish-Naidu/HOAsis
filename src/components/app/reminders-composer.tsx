@@ -227,7 +227,7 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
           {sending
             ? "Sending. Keep this page open until it finishes."
             : due.length
-              ? `Lands on each household's thread under Communications.`
+              ? `Lands on each household's thread under Messages.`
               : ""}
           {!sending && notYet.length
             ? ` ${pluralize(notYet.length, "household")} behind but not yet at the reminder day.`

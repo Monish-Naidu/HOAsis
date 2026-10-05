@@ -28,7 +28,7 @@ test.describe("notices", () => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
-  test("the board opens the photographs rather than reading a count", async ({ page }) => {
+  test("an opened notice draws no empty photograph frames", async ({ page }) => {
     await page.goto("/board/violations");
     await expectHealthy(page, "notices with evidence");
     await openTab(page, "Open");
@@ -38,9 +38,13 @@ test.describe("notices", () => {
       .click();
     await page.waitForTimeout(700);
 
+    // The demo's notices list photographs with no file behind them. They
+    // were drawn as grey frames captioned "Photograph 1 of 3"; a frame with
+    // nothing in it is not evidence, so the viewer only draws real files.
     const opened = await inspect(page);
-    expect(opened.text, "no photograph opened").toContain("Photograph 1 of 3");
-    expect(opened.text, "the vantage is not recorded").toContain("From the street");
+    expect(opened.crashed, "opening the notice crashed").toBe(false);
+    expect(opened.text, "the notice did not open").toContain("Commercial vehicle parked overnight");
+    expect(opened.text, "an empty photograph frame is still drawn").not.toContain("Photograph 1 of 3");
   });
 
   test("a notice is a home, what needs fixing, and one button", async ({ page }) => {

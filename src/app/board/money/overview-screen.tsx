@@ -318,7 +318,7 @@ export function OverviewScreen() {
 
       {/* Budget pace, a glance and a link, once the budget module is on.
           The dues collection card that sat beside it said what the
-          Collections tab says in more detail, one click away. */}
+          Past due tab says in more detail, one click away. */}
       {showBudget ? (
           <Card className="mt-6">
             <CardHeader

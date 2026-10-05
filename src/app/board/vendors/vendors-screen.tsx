@@ -12,14 +12,14 @@ import {
   Trash2,
   Truck,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, Checkbox, EmptyState, PageHeader, fieldClass, textareaClass } from "@/components/ui/primitives";
+import { Badge, Button, Callout, Card, CardHeader, Checkbox, EmptyState, PageHeader, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useVendorGaps } from "@/lib/app-state";
 import { InvoiceInbox } from "@/components/app/invoice-inbox";
-import { RecordPayment } from "@/components/app/record-payment";
+import { RecordPayment, VENDOR_PAYMENT_CATEGORIES } from "@/components/app/record-payment";
 import { useToast } from "@/components/app/toast";
-import type { Payout } from "@/lib/types";
+import type { LedgerCategory, Payout } from "@/lib/types";
 import { cn, daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 import { vendorDecisions } from "@/lib/metrics";
@@ -53,6 +53,9 @@ export function VendorsScreen() {
   const [draft, setDraft] = useState({
     name: "",
     service: "",
+    // Chosen, not assumed: the payment form starts from it, so a guess here
+    // files a stranger's bill under repairs.
+    category: "" as LedgerCategory | "",
     achEnabled: true,
     w9OnFile: false,
   });
@@ -62,7 +65,7 @@ export function VendorsScreen() {
   const decisions = vendorDecisions(community).count;
 
   function saveVendor() {
-    if (!draft.name.trim()) return;
+    if (!draft.name.trim() || !draft.category) return;
     addVendor({
       id: `v-${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       name: draft.name.trim(),
@@ -70,12 +73,12 @@ export function VendorsScreen() {
       achEnabled: draft.achEnabled,
       w9OnFile: draft.w9OnFile,
       ytdPaidCents: 0,
-      defaultCategory: "Repairs & maintenance",
+      defaultCategory: draft.category,
     });
     notify(
       draft.w9OnFile ? `Added ${draft.name}` : `Added ${draft.name}. No W-9 on file yet.`,
     );
-    setDraft({ name: "", service: "", achEnabled: true, w9OnFile: false });
+    setDraft({ name: "", service: "", category: "", achEnabled: true, w9OnFile: false });
     setAdding(false);
   }
 
@@ -144,6 +147,22 @@ export function VendorsScreen() {
                 className={field}
               />
             </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 block text-footnote font-medium text-fg">What they do for you</span>
+              <Select
+                value={draft.category}
+                onChange={(e) => setDraft({ ...draft, category: e.target.value as LedgerCategory })}
+                aria-label="What they do for you"
+                className="w-full [&>select]:h-10"
+              >
+                {draft.category === "" ? <option value="">Choose one</option> : null}
+                {VENDOR_PAYMENT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+            </label>
           </div>
           <div className="flex flex-wrap gap-4 border-t border-border px-5 py-3">
             {moduleOn("vendor-tax-forms") ? (
@@ -168,7 +187,7 @@ export function VendorsScreen() {
               <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={!draft.name.trim()} onClick={saveVendor}>
+              <Button type="submit" variant="primary" size="sm" disabled={!draft.name.trim() || !draft.category} onClick={saveVendor}>
                 Save vendor
               </Button>
             </div>

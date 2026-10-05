@@ -1102,6 +1102,13 @@ describe("two presses in quick succession", () => {
           ),
         });
       }
+      if (s.target === "requests") {
+        change({
+          requests: server().requests.map((r) =>
+            r.id === id ? { ...r, thread: values.thread as typeof r.thread } : r,
+          ),
+        });
+      }
       if (s.target === "payouts") {
         change({
           payouts: server().payouts.map((p) => (p.id === id ? ({ ...p, ...values } as typeof p) : p)),
@@ -1131,6 +1138,57 @@ describe("two presses in quick succession", () => {
     expect(last, "the second press dropped the first grant").toEqual(
       expect.arrayContaining(["vendors", "documents"]),
     );
+  });
+
+  it("keeps both replies to an owner on their request, and tells the owner after each is saved", async () => {
+    keepWrites();
+    const request = server().requests[0];
+    const before = request.thread.length;
+    const { result } = renderApp();
+    let saved: boolean[] = [];
+    await act(async () => {
+      // Both presses are made from the same render, before either write is back.
+      saved = await Promise.all([
+        result.current.replyToRequest(request.id, "Can you send a photo?"),
+        result.current.replyToRequest(request.id, "And the colour sample."),
+      ]);
+    });
+    await settled();
+
+    expect(saved).toEqual([true, true]);
+    const thread = server().requests.find((r) => r.id === request.id)!.thread;
+    expect(thread.slice(before).map((e) => e.body), "the second reply erased the first").toEqual([
+      "Can you send a photo?",
+      "And the colour sample.",
+    ]);
+    expect(thread.slice(before).map((e) => e.kind)).toEqual(["note", "note"]);
+    expect(new Set(thread.map((e) => e.id)).size, "two events shared an id").toBe(thread.length);
+    // The existing "request updated" email, once per saved reply.
+    const mails = fetched.filter((f) => f.url === "/api/email/notify").map((f) => f.body);
+    expect(mails).toMatchObject([
+      { kind: "request", id: request.id, body: "Can you send a photo?" },
+      { kind: "request", id: request.id, body: "And the colour sample." },
+    ]);
+  });
+
+  it("saves the board's reason with a denial, on the row and on the owner's thread", async () => {
+    keepWrites();
+    const request = server().requests[0];
+    const { result } = renderApp();
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.updateRequestStatus(request.id, "denied", "Denied. The fence is over the height limit.");
+    });
+    await settled();
+
+    expect(ok).toBe(true);
+    const update = writes().find((s) => s.target === "requests")!;
+    expect(update.values).toMatchObject({
+      status: "denied",
+      decided_note: "Denied. The fence is over the height limit.",
+    });
+    const thread = server().requests.find((r) => r.id === request.id)!.thread;
+    expect(thread.at(-1)).toMatchObject({ kind: "status", body: "Denied. The fence is over the height limit." });
   });
 
   it("sends both replies on a thread, one after the other, for the database to append", async () => {

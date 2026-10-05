@@ -176,7 +176,7 @@ test.describe("board actions", () => {
   });
 
   test("a past due notice fills in the household's real figures", async ({ page }) => {
-    // Reminders are sent from Collections, which opens the composer on the roster.
+    // Reminders are sent from Past due, which opens the composer on the roster.
     await page.goto("/board/money/collections");
     await page.waitForLoadState("networkidle");
 
@@ -229,7 +229,7 @@ test.describe("board actions", () => {
       .filter({ has: page.locator("xpath=.") })
       .nth(0);
     // Find the forum toggle by its row rather than by position.
-    const row = page.locator("main label, main div").filter({ hasText: "Forum" }).first();
+    const row = page.locator("main label, main div").filter({ hasText: "Community posts" }).first();
     await expect(row).toBeVisible();
 
     const toggle = page.locator('button[role="switch"]').first();

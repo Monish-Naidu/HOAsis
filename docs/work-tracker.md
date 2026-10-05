@@ -10,10 +10,14 @@ review (257 findings, seven walkers). Both are summarised here; the full
 findings were session files and are not in the repo, so anything worth
 keeping is written into a row below.
 
-**Where it stands (2026-10-05):** sections 0, 2, 3 and 5 are done and on
-production, with the rows marked otherwise below. The money rows of section
-4 are done on branch `board-money`. Next: the rest of section 4 (opening a
-request to read and reply, names), then what is left of section 1.
+**Where it stands (2026-10-05):** sections 0, 2, 3 and 5 are on
+production. Section 4 is done on pull request #5, waiting for Monish to look
+and merge. What is left: the open rows of section 1 (the insurance promise
+line is fixed; check the list), section 6 (small known gaps), section 7
+(decisions), and section 8 (staging and Resend, both waiting on Monish).
+Not yet built from the reviews: changing or cancelling a meeting and adding
+minutes, real file upload on requests, emailing the board when somebody asks
+to join, a reply address for association emails.
 
 Status words: **done** (in the working tree and checked), **doing**,
 **next**, **waiting** (on Monish), **later** (not for launch).
@@ -49,7 +53,7 @@ The worst kind: a board acts on them. Each is small.
 | Wizard asks "Anything billed besides dues?" and, for a real association, the builder's name; nothing reads either | setup wizard | done 2026-10-04 (c9d560f, branch staging-and-onboarding) |
 | Setup and Reserves point at the Budget page, which is switched off | setup plan, reserves screen | done 2026-10-04: hidden while the module is off |
 | "Paid up" badge beside a $285 balance; "View home details" opens the statement | resident home | done 2026-10-05 (pull request #4): "Not late", and the home card link reads "See your statement" |
-| Demo-only controls shown to a real association: live meeting room and attendance, emailed-in vendor bills, Pay by ACH, bank picker, "Public" document setting, "Match transactions" | board screens | vendor and finance ones done 2026-10-05 (branch board-money) (emailed-in bills, Approve and Pay by ACH, send-through-us, the bank picker, Match transactions; the dashboard and rail count only payments waiting on a signature). Meeting room, attendance and recording are next |
+| Demo-only controls shown to a real association: live meeting room and attendance, emailed-in vendor bills, Pay by ACH, bank picker, "Public" document setting, "Match transactions" | board screens | done 2026-10-05 (pull request #5): vendor and finance controls, the pretend meeting room, attendance and "recording", and empty photograph frames on notices are gone for everyone. "Public" on documents went earlier |
 | Real sign-in page is headed with the demo association's name for every real homeowner | `src/app/signin/` | done |
 
 ## 2. Onboarding: the founder
@@ -87,12 +91,12 @@ The worst kind: a board acts on them. Each is small.
 | Item | Status |
 | --- | --- |
 | Record an owner's check or cash payment, and a credit or waived fee | done 2026-10-05 (branch board-money): "Record a payment" and "Add a credit" on a household, migrations 0082 and 0083 applied |
-| Open a request: read it in full, reply in words, deny with a reason | next |
+| Open a request: read it in full, reply in words, deny with a reason | done 2026-10-05 (pull request #5): opens in place with what the owner sent, the conversation and a reply box; Deny asks for a reason the owner is shown |
 | Vendor payments all land as "Repairs & maintenance"; ask for a category | done 2026-10-05 (branch board-money): the form asks what it was for |
 | Opening bank balances | done 2026-10-05 (branch board-money): a "Starting balances" card on Finances, and every new association gets a plain operating account for its books |
 | Association switcher menu is clipped by the photo band on inner pages | done 2026-10-05 (pull request #4) |
-| Names drift: tabs say "From owners / To owners" over pages titled Requests and Notices; Settings uses three vocabularies for the same access areas | next |
-| Rail and tabs as recommended: Dashboard; Setting up; Finances (Overview, Transactions, Past due, Reserves); Homeowners; Vendors; Requests (Requests, Notices); Messages (Inbox, Announcements, Community); Meetings (Meetings, Voting); Documents; Settings | next: names only, the set is already right |
+| Names drift: tabs say "From owners / To owners" over pages titled Requests and Notices; Settings uses three vocabularies for the same access areas | done 2026-10-05 (pull request #5): Past due, Requests and Notices, Messages; Settings uses the rail's names for access areas |
+| Rail and tabs as recommended: Dashboard; Setting up; Finances (Overview, Transactions, Past due, Reserves); Homeowners; Vendors; Requests (Requests, Notices); Messages (Inbox, Announcements, Community); Meetings (Meetings, Voting); Documents; Settings | done 2026-10-05 (pull request #5) |
 
 ## 5. Resident
 

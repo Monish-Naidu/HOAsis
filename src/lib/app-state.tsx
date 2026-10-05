@@ -531,7 +531,20 @@ interface AppState {
   /** Records a vote and returns the receipt the voter is shown. */
   /** One choice, or up to `seats` of them in a multi seat election. */
   castVote: (ballotId: string, optionIds: string | string[]) => string;
-  updateRequestStatus: (requestId: string, status: HomeRequest["status"], note?: string) => void;
+  /**
+   * Moves a request to a status, with the words the owner is told. Resolves
+   * true once the decision is saved, so a screen can say so only then.
+   */
+  updateRequestStatus: (
+    requestId: string,
+    status: HomeRequest["status"],
+    note?: string,
+  ) => Promise<boolean>;
+  /**
+   * The board writing to the owner on their request. Appends one line to the
+   * request's conversation and changes nothing else. Resolves true once saved.
+   */
+  replyToRequest: (requestId: string, body: string) => Promise<boolean>;
   likePost: (postId: string) => void;
   /**
    * A neighbour answering a post. Returns false when nothing was kept, which
@@ -1318,7 +1331,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             .eq("id", associationId);
       if (policyError) {
         reportRemoteError(
-          `Your association is set up, but its late fee setting was not saved (${policyError.message}). No late fee is charged until you set one in Finances, Collections.`,
+          `Your association is set up, but its late fee setting was not saved (${policyError.message}). No late fee is charged until you set one in Finances, Past due.`,
         );
       }
     }
@@ -3657,7 +3670,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const updateRequestStatus = useCallback(
-    (requestId: string, status: HomeRequest["status"], note?: string) => {
+    (requestId: string, status: HomeRequest["status"], note?: string): Promise<boolean> => {
       const decided = ["approved", "denied"].includes(status);
       const event = (request: HomeRequest, actorName: string) => ({
         id: `rt-${request.id}-${request.thread.length}`,
@@ -3670,9 +3683,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (remote.community) {
         const rc = remote.community;
         const request = rc.requests.find((r) => r.id === requestId);
-        if (!request) return;
+        if (!request) return Promise.resolve(false);
         const actor = rc.accounts.find((a) => a.id === remote.profileId);
-        void remoteWrite("Saving the decision", () => {
+        return remoteWrite("Saving the decision", () => {
           // The request as the last write left it, so the note lands after
           // whatever was just added to the thread instead of replacing it.
           const now = latest(rc).requests.find((r) => r.id === requestId) ?? request;
@@ -3691,8 +3704,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             .eq("id", requestId);
         }).then((ok) => {
           if (ok) void emailNotice(rc.id, { kind: "request", id: requestId, body: note });
+          return ok;
         });
-        return;
       }
       const actor = sliceStore(communityId, "accounts")
         .getSnapshot()
@@ -3710,6 +3723,56 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             : request,
         ),
       );
+      return Promise.resolve(true);
+    },
+    [remote.community, remote.profileId, communityId],
+  );
+
+  const replyToRequest = useCallback(
+    (requestId: string, body: string): Promise<boolean> => {
+      const text = body.trim();
+      if (!text) return Promise.resolve(false);
+      const event = (request: HomeRequest, actorName: string) => ({
+        id: `rt-${request.id}-${request.thread.length}`,
+        at: todayIsoDate(),
+        actor: actorName,
+        actorRole: "board" as const,
+        body: text,
+        kind: "note" as const,
+      });
+      if (remote.community) {
+        const rc = remote.community;
+        const request = rc.requests.find((r) => r.id === requestId);
+        if (!request) return Promise.resolve(false);
+        const actor = rc.accounts.find((a) => a.id === remote.profileId);
+        return remoteWrite("Sending the reply", () => {
+          // Built from the thread as the write before this one left it, not
+          // the copy this press started from: two quick replies are both kept.
+          const now = latest(rc).requests.find((r) => r.id === requestId) ?? request;
+          return supabaseBrowser()
+            .from("requests")
+            .update({ thread: [...now.thread, event(now, actor?.name ?? "Board")] }, { count: "exact" })
+            .eq("id", requestId);
+        }).then((ok) => {
+          // Told only once the reply is on the record. The same email kind
+          // as a decision: it says the request was updated and carries the words.
+          if (ok) void emailNotice(rc.id, { kind: "request", id: requestId, body: text });
+          return ok;
+        });
+      }
+      const actor = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      // The demo has no database to wait on; the store's latest copy is read
+      // inside the update, so two quick replies are both kept here too.
+      sliceStore(communityId, "requests").update((all) =>
+        all.map((request) =>
+          request.id === requestId
+            ? { ...request, thread: [...request.thread, event(request, actor?.name ?? "Board")] }
+            : request,
+        ),
+      );
+      return Promise.resolve(true);
     },
     [remote.community, remote.profileId, communityId],
   );
@@ -5134,6 +5197,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setDocumentVisibility,
     castVote,
     updateRequestStatus,
+    replyToRequest,
     likePost,
     replyToPost,
     updateMyContact,

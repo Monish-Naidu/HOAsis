@@ -147,7 +147,7 @@ describe("pages and shortcuts", () => {
     const pages = prepareIndex(boardPages(mehrMeadows, all));
     expect(searchIndex(pages, "settings")[0].item.href).toBe("/board/settings");
     expect(searchIndex(pages, "money")[0].item.title).toBe("Finances");
-    expect(searchIndex(pages, "past due")[0].item.title).toBe("Collections");
+    expect(searchIndex(pages, "past due")[0].item.title).toBe("Past due");
     expect(searchIndex(pages, "roster")[0].item.title).toBe("Homeowners");
   });
 
