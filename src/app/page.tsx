@@ -160,13 +160,13 @@ const POCKET: { icon: typeof Clock; tint: TintName; title: string; body: string 
  */
 function MonitorFrame({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="tilt-stage relative mx-auto w-full max-w-[820px]">
+    <div className="relative mx-auto w-full max-w-[820px]">
       {/* The glow the screen throws on the desk. */}
       <div
         className="pointer-events-none absolute -inset-x-10 -top-10 bottom-10 -z-10 rounded-[40%] bg-[radial-gradient(closest-side,rgb(63_130_242/0.22),transparent)] blur-2xl dark:bg-[radial-gradient(closest-side,rgb(77_139_245/0.28),transparent)]"
         aria-hidden
       />
-      <div className="tilt relative">
+      <div className="relative">
         <Image
           src="/marketing/device-monitor.png"
           alt=""
@@ -532,7 +532,7 @@ function Notice({
   return (
     <div
       className={cn(
-        "lift rounded-2xl border border-border bg-surface p-3.5 shadow-float",
+        "rounded-2xl border border-border bg-surface p-3.5 shadow-float",
         className,
       )}
     >
@@ -663,7 +663,7 @@ function PocketTile({
   body: string;
 }) {
   return (
-    <li className="lift rounded-2xl border border-border bg-surface p-4 shadow-card">
+    <li className="rounded-2xl border border-border bg-surface p-4 shadow-card">
       <IconTile icon={icon} tint={tint} size="md" />
       <p className="mt-3 text-[16px] font-semibold tracking-[-0.015em] text-fg">{title}</p>
       <p className="mt-0.5 text-[14px] leading-snug text-fg-muted">{body}</p>
@@ -975,8 +975,8 @@ export default function MarketingHome() {
                 On 2026-09-03 the slide's render gave way to a real photo of a
                 real person, because a render reads as fake to exactly the
                 people we are asking to trust us. */}
-            <div className="tilt-stage">
-            <div className="tilt overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
+            <div>
+            <div className="overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
               <Image
                 src="/marketing/eric-story.jpg"
                 alt="Eric at his kitchen table in a tan overshirt, glasses set down, one hand at his temple, a laptop, a notebook and a spread of printed reports in front of him"
@@ -1010,12 +1010,15 @@ export default function MarketingHome() {
               width and scroll sideways, because a card at 180px cannot hold
               a screen anyone can read. It was five with a "...and more" card
               that only showed on a 1280px viewport, so most laptops saw four
-              and a sliver; the fifth is the strip underneath now. Each card
-              sits at its own height: the minis differ. */}
-          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+              and a sliver; the fifth is the strip underneath now. The cards
+              are one height with each miniature resting at the bottom: at
+              four different heights the row read as unfinished. Nothing here
+              lifts or tilts under the pointer either; on this page only
+              buttons move. */}
+          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
             {FEATURES.map(({ icon, tint, title, line, mini }) => (
-              <div key={title} className="w-[300px] shrink-0 snap-start lg:w-auto">
-                <Card className="lift relative overflow-hidden p-6">
+              <div key={title} className="flex w-[300px] shrink-0 snap-start lg:w-auto">
+                <Card className="relative flex w-full flex-col overflow-hidden p-6">
                   <div className="flex flex-col items-center text-center">
                     <IconTile icon={icon} tint={tint} size="xl" />
                     <h3 className="mt-4 text-[19px] font-semibold tracking-[-0.02em] text-fg">
@@ -1023,7 +1026,7 @@ export default function MarketingHome() {
                     </h3>
                     <p className="mt-1 text-[15px] leading-snug text-fg-muted">{line}</p>
                   </div>
-                  <div className="mt-5">{mini}</div>
+                  <div className="mt-auto pt-5">{mini}</div>
                 </Card>
               </div>
             ))}
@@ -1049,7 +1052,7 @@ export default function MarketingHome() {
                 {EVERYTHING_ELSE.map(({ label, icon, tint }) => (
                   <li
                     key={label}
-                    className="lift flex flex-col items-center gap-3 bg-surface px-3 py-6 text-center"
+                    className="flex flex-col items-center gap-3 bg-surface px-3 py-6 text-center"
                   >
                     <IconTile icon={icon} tint={tint} size="lg" />
                     <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em] text-fg">
@@ -1100,8 +1103,8 @@ export default function MarketingHome() {
               {/* The phone is drawn at 500px so its screen lines up with the
                   frame. A phone reading the page shrinks the whole drawing
                   with zoom instead, which keeps the two aligned. */}
-              <div className="tilt-stage mx-auto w-fit max-sm:[zoom:0.62] max-[400px]:[zoom:0.55] lg:absolute lg:left-1/2 lg:top-0 lg:-translate-x-1/2">
-                <div className="tilt">
+              <div className="mx-auto w-fit max-sm:[zoom:0.62] max-[400px]:[zoom:0.55] lg:absolute lg:left-1/2 lg:top-0 lg:-translate-x-1/2">
+                <div>
                   <PhoneFrame
                     src="/marketing/product-resident.png"
                     alt="The resident app showing a balance due, a live board meeting, and open ballots"
