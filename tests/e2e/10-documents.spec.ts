@@ -13,7 +13,7 @@ test.describe("documents", () => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
-  test("an upload is listed, published, removed and brought back", async ({ page }) => {
+  test("an upload is listed, kept to the board, removed and brought back", async ({ page }) => {
     await page.goto("/board/documents");
     await expectHealthy(page, "documents");
 
@@ -25,8 +25,10 @@ test.describe("documents", () => {
     const row = page.getByText("Board minutes, August", { exact: true });
     await expect(row, "the upload did not appear").toBeVisible();
 
-    await page.getByLabel("Who can see Board minutes, August").selectOption("public");
-    await expect(page.getByText("Board minutes, August is now public")).toBeVisible();
+    // Two audiences, owners and the board. "Public" was a third choice with
+    // no public page behind it.
+    await page.getByLabel("Who can see Board minutes, August").selectOption("board");
+    await expect(page.getByText("Board minutes, August is now board only")).toBeVisible();
 
     await page.getByLabel("Remove Board minutes, August").click();
     await expect(row).toHaveCount(0);

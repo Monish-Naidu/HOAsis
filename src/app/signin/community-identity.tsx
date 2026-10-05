@@ -1,5 +1,6 @@
 "use client";
 
+import { hasSupabase } from "@/lib/supabase/env";
 import { useAppState } from "@/lib/app-state";
 import { pluralize } from "@/lib/utils";
 
@@ -19,8 +20,31 @@ import { pluralize } from "@/lib/utils";
  *
  * Hidden below the large breakpoint, where there is no width to spend.
  */
-export function CommunityPanel() {
+/**
+ * What the page is headed with.
+ *
+ * The demo association's own name and size, where the site is only a demo.
+ * On the real site every homeowner of every association signs in here, and
+ * the page was greeting all of them as "Willow Creek Estates, 88 homes".
+ * There it says what the page is for and names nobody.
+ */
+function useHeading(): { title: string; line: string } {
   const { settings, community } = useAppState();
+  if (hasSupabase) {
+    return {
+      title: "Sign in to your association",
+      line: "Dues, documents and requests, in one place.",
+    };
+  }
+  return {
+    title: settings.displayName,
+    line: `${community.association.addressLine} · ${pluralize(community.association.unitCount, "home")}`,
+  };
+}
+
+export function CommunityPanel() {
+  const { settings } = useAppState();
+  const heading = useHeading();
   return (
     // Pinned to the viewport rather than stretched by the grid. The form column
     // scrolls well past one screen, and a stretched aside puts the community
@@ -39,11 +63,9 @@ export function CommunityPanel() {
       />
       <div className="relative flex h-full flex-col justify-end p-10 xl:p-14">
         <h1 className="text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] text-white xl:text-[52px]">
-          {settings.displayName}
+          {heading.title}
         </h1>
-        <p className="mt-3 text-headline text-white/75">
-          {community.association.addressLine} · {pluralize(community.association.unitCount, "home")}
-        </p>
+        <p className="mt-3 text-headline text-white/75">{heading.line}</p>
         {settings.photoCredit ? (
           <p className="mt-8 text-footnote text-white/45">Photo, {settings.photoCredit}</p>
         ) : null}
@@ -54,15 +76,11 @@ export function CommunityPanel() {
 
 /** The same identity, stacked above the form, for phones and tablets. */
 export function CommunityMasthead() {
-  const { settings, community } = useAppState();
+  const heading = useHeading();
   return (
     <div className="mb-7 lg:hidden">
-      <h1 className="text-title1 font-semibold tracking-[-0.03em] text-fg">
-        {settings.displayName}
-      </h1>
-      <p className="mt-1 text-body text-fg-muted">
-        {community.association.addressLine} · {pluralize(community.association.unitCount, "home")}
-      </p>
+      <h1 className="text-title1 font-semibold tracking-[-0.03em] text-fg">{heading.title}</h1>
+      <p className="mt-1 text-body text-fg-muted">{heading.line}</p>
     </div>
   );
 }

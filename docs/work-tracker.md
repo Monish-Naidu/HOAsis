@@ -20,8 +20,8 @@ Status words: **done** (in the working tree and checked), **doing**,
 | Audit fixes, round one (money functions closed, late fees, dues email, magic links) | done, live since 4d157ca |
 | Audit fixes, round two (view-only seats, column guards, refunds, write queue, wizard parked rows, email pacing) | done in the tree, migrations 0063 to 0078 applied |
 | Design pass: two-tone icons, colour by meaning, aerial photo back in the closing band | done in the tree, Monish said yes |
-| Full check on the tree: `pnpm check`, `pnpm e2e`, `pnpm db:verify` | next |
-| Commit locally, push as a branch, open a pull request so GitHub runs the checks and Vercel builds a preview | next |
+| Full check on the tree: `pnpm check`, `pnpm e2e`, `pnpm db:verify` | done 2026-10-04: 1,237 unit, 134 browser, every database suite bar `EMAIL_FROM` |
+| Commit locally, push as a branch, open a pull request so GitHub runs the checks and Vercel builds a preview | done: branch `round-two`, pull request #1. GitHub Actions still fails to start on the account (not the workflow file); Vercel builds the preview |
 | Monish reads the preview, then merge (that is the push to production) | waiting |
 
 How a change reaches production from here on: branch, pull request, the
@@ -36,16 +36,16 @@ The worst kind: a board acts on them. Each is small.
 | --- | --- | --- |
 | Wizard's last step takes routing and account numbers, discards them, then says "Connected" and "You can already take payments" | `src/app/start/setup-wizard.tsx`, `src/lib/setup-plan.ts` | next |
 | "Invite your neighbors" shows done when nobody was invited | `src/lib/setup-plan.ts` | next |
-| Adding a vendor says "W-9 requested by email"; nothing is sent | `src/app/board/vendors/` | next |
-| New request screen promises reply times nobody set (2 business days, 30 days, 3 days) | `src/app/resident/requests/new/form.tsx` | next |
-| Real pay screen still mentions a payment fee | `src/app/resident/pay/` | next |
-| "Add photos or documents" on a request: the file never leaves the browser | resident requests and forms | next: hide until upload is real |
-| "Both can change in Settings" and "you get told before it lapses" in the wizard and plan | setup wizard, setup plan | next |
+| Adding a vendor says "W-9 requested by email"; nothing is sent | `src/app/board/vendors/` | done |
+| New request screen promises reply times nobody set (2 business days, 30 days, 3 days) | `src/app/resident/requests/new/form.tsx` | done |
+| Real pay screen still mentions a payment fee | `src/app/resident/pay/` | done |
+| "Add photos or documents" on a request: the file never leaves the browser | resident requests and forms | done: hidden for a real association until upload is real |
+| "Both can change in Settings" and "you get told before it lapses" in the wizard and plan | setup wizard, setup plan | first done; the insurance line is next |
 | Wizard asks "Anything billed besides dues?" and, for a real association, the builder's name; nothing reads either | setup wizard | next: remove |
 | Setup and Reserves point at the Budget page, which is switched off | setup plan, reserves screen | next: remove the four mentions |
-| "Paid up" badge beside a $285 balance; "View home details" opens the statement | resident home | next |
+| "Paid up" badge beside a $285 balance; "View home details" opens the statement | resident home | badge done ("Not late"); the link label is next |
 | Demo-only controls shown to a real association: live meeting room and attendance, emailed-in vendor bills, Pay by ACH, bank picker, "Public" document setting, "Match transactions" | board screens | next |
-| Real sign-in page is headed with the demo association's name for every real homeowner | `src/app/signin/` | next |
+| Real sign-in page is headed with the demo association's name for every real homeowner | `src/app/signin/` | done |
 
 ## 2. Onboarding: the founder
 
@@ -112,6 +112,9 @@ Small, known, and not blocking a push. Each was found by a reviewer.
 - Selling a home as an officer who has settings but not finances cannot settle the balance in the same step.
 - `verify-five-years --remove` demotes the President before a delete that may fail.
 - Recipient lists over 1,000 rows are read in one unpaged call.
+- A meeting's notice date is written even when homes were left unreached or the announcement itself was refused (a seat with voting but not communications). Write it only when nothing remains and the post landed.
+- Raising a notice from a report: if the connection drops between the claim and the insert, the report keeps a link to a notice that does not exist. Needs one database function.
+- Two quick edits to different amenities or forms before the screen re-reads can revert the first.
 
 ## 7. Decisions for Monish
 

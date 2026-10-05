@@ -29,8 +29,8 @@ const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth()
 type Rail = "ach" | "card";
 
 const RAILS: { id: Rail; label: string; icon: typeof Landmark; hint: string }[] = [
-  { id: "ach", label: "Bank", icon: Landmark, hint: "Cheapest" },
-  { id: "card", label: "Card", icon: CreditCard, hint: "Small fee" },
+  { id: "ach", label: "Bank", icon: Landmark, hint: "Costs the HOA least" },
+  { id: "card", label: "Card", icon: CreditCard, hint: "Paid today" },
 ];
 
 /**
