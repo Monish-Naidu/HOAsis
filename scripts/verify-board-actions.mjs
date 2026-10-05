@@ -340,6 +340,18 @@ try {
   check("approve_payout: the same officer cannot sign twice", (signedAgain?.approvals ?? []).length === 2, JSON.stringify(signedAgain?.approvals));
   const { error: neighborApproves } = await neighbor.client.rpc("approve_payout", { p_payout_id: bill.id });
   check("approve_payout: an owner without finances is refused", neighborApproves?.code === "42501", neighborApproves?.message ?? "no error");
+
+  // Support can seat a new President when the old one cannot be reached
+  // (0095); a board member cannot.
+  const { error: boardReassign } = await treasurer.client.rpc("reassign_presidency", { p_association_id: associationId, p_to_profile: treasurer.id });
+  check("reassign_presidency: a board member is refused", boardReassign?.code === "42501", boardReassign?.message ?? "no error");
+  const { error: strangerSeat } = await admin.rpc("reassign_presidency", { p_association_id: associationId, p_to_profile: stranger.id });
+  check("reassign_presidency: a stranger cannot be made President", Boolean(strangerSeat), strangerSeat?.message ?? "no error");
+  const { error: reassigned } = await admin.rpc("reassign_presidency", { p_association_id: associationId, p_to_profile: treasurer.id });
+  const { data: presidents } = await admin.from("memberships").select("profile_id, role").eq("association_id", associationId).eq("role", "president").is("ends_on", null);
+  check("reassign_presidency: support seats the Treasurer as the one President",
+    !reassigned && (presidents ?? []).length === 1 && presidents[0].profile_id === treasurer.id,
+    reassigned?.message ?? JSON.stringify(presidents));
 } catch (error) {
   check("the run itself", false, error instanceof Error ? error.message : String(error));
 } finally {
