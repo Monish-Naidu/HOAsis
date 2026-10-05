@@ -5,6 +5,8 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { syncAccountStatus } from "@/lib/stripe/account-status";
 import { recordAppError } from "@/lib/app-errors";
 import { sendDisputeNotice } from "@/lib/email/dispute";
+import { sendPaymentsPausedNotice } from "@/lib/email/payments-paused";
+import { communityPath } from "@/lib/community-links";
 import { logger } from "@/lib/log";
 
 /**
@@ -340,10 +342,25 @@ export async function POST(request: NextRequest) {
       const admin = supabaseAdmin();
       const { data: row } = await admin
         .from("associations")
-        .select("id")
+        .select("id, name, slug, stripe_charges_enabled")
         .eq("stripe_account_id", account.id)
         .maybeSingle();
-      if (row) await syncAccountStatus(row.id, account.id);
+      if (row) {
+        const status = await syncAccountStatus(row.id, account.id);
+        // Payments were on and are now off: the people who hold finances
+        // hear today. An account still on its way through onboarding was
+        // never on, so it is not told it has been paused.
+        if (row.stripe_charges_enabled && !status.chargesEnabled) {
+          const told = await sendPaymentsPausedNotice({
+            associationId: row.id,
+            associationName: row.name,
+            needs: status.needs,
+            settingsUrl: `${request.nextUrl.origin}${communityPath(row.slug, "/board/settings")}`,
+            day: new Date().toISOString().slice(0, 10),
+          });
+          log.warn("payments paused by Stripe", { associationId: row.id, emailed: told.sent, emailFailed: told.failed });
+        }
+      }
       break;
     }
 

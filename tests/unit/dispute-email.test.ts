@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { disputeDashboardUrl, disputeRecipients } from "@/lib/email/dispute";
-import { disputeEmail } from "@/lib/email/templates";
+import { disputeEmail, paymentsPausedEmail } from "@/lib/email/templates";
 
 /**
  * A dispute has a deadline, so the notice has to reach whoever holds
@@ -108,3 +108,26 @@ describe("disputeEmail", () => {
     expect(built.html).not.toContain("<HOA>");
   });
 });
+
+describe("paymentsPausedEmail", () => {
+  const paused = {
+    associationName: "Maple Court HOA",
+    recipientName: "Taylor Whitcomb",
+    settingsUrl: "https://yourhoasis.com/c/maple-court/board/settings",
+  };
+
+  it("names what Stripe is waiting for and where to answer it", () => {
+    const built = paymentsPausedEmail({ ...paused, needs: ["A photo of the treasurer's ID"] });
+    expect(built.subject).toBe("Online payments are paused · Maple Court HOA");
+    expect(built.text).toContain("Taylor, Stripe has paused online payments");
+    expect(built.text).toContain("A photo of the treasurer's ID");
+    expect(built.html).toContain(paused.settingsUrl);
+  });
+
+  it("says Stripe is checking when it has asked for nothing", () => {
+    const built = paymentsPausedEmail({ ...paused, needs: [] });
+    expect(built.text).toContain("checking what it already has");
+    expect(built.text).toContain("Checks and cash can still be recorded by hand");
+  });
+});
+
