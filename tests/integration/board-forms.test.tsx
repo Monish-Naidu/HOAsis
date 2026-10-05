@@ -17,7 +17,10 @@ const { BalancesScreen, openingFigures } = await import(
 );
 const { AmendScreen } = await import("@/app/board/documents/governing/amend-screen");
 const { RecordPayment } = await import("@/components/app/record-payment");
-const { AddCreditForm, RecordPaymentForm } = await import("@/app/board/homeowners/household-money");
+const { AddCreditForm, ChangeDuesForm, RecordPaymentForm } = await import("@/app/board/homeowners/household-money");
+const { DuesSettings } = await import("@/components/app/dues-settings");
+const { HomeownersScreen } = await import("@/app/board/homeowners/homeowners-screen");
+const { ownerDues } = await import("@/lib/home-types");
 const { OpeningBalances } = await import("@/app/board/money/opening-balances");
 const { DraftField } = await import("@/app/board/settings/settings-screen");
 const { CollectionsLadder } = await import("@/components/app/collections-ladder");
@@ -415,5 +418,102 @@ describe("a settings field that saves when it is left", () => {
     expect(onCommit).not.toHaveBeenCalled();
     await user.tab();
     expect(onCommit).toHaveBeenCalledWith("Pool closes\non Labor Day");
+  });
+});
+
+describe("a home's own dues in the browser copy", () => {
+  it("Change dues writes the amount onto the home and says it from the next bill", async () => {
+    const user = userEvent.setup();
+    wrap(<HomeownersScreen />);
+    // The President may change finances; nobody is signed in to begin with.
+    act(() => seen.state.signIn("acct-arya"));
+    const owner = seen.state.community.owners.find((o) => !o.placeholder)!;
+    const standard = ownerDues(seen.state.community.association, { homeType: owner.homeType });
+
+    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    // What it pays now, and where that comes from, before anything is typed.
+    expect(screen.getByText(/Pays .* a month now, from /)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Dues for this home"), String(standard / 100 + 75));
+    await user.click(screen.getByRole("button", { name: "Save dues" }));
+
+    const after = seen.state.community.owners.find((o) => o.id === owner.id)!;
+    expect(after.duesCents).toBe(standard + 7_500);
+    expect(ownerDues(seen.state.community.association, after)).toBe(standard + 7_500);
+    // The neighbour is untouched.
+    const other = seen.state.community.owners.find((o) => o.id !== owner.id)!;
+    expect(other.duesCents).toBeUndefined();
+    expect(await screen.findByText(/pays .* from the next bill\./)).toBeInTheDocument();
+  });
+
+  it("Use the standard rate clears it again", async () => {
+    const user = userEvent.setup();
+    wrap(<HomeownersScreen />);
+    act(() => seen.state.signIn("acct-arya"));
+    const owner = seen.state.community.owners.find((o) => !o.placeholder)!;
+    await act(async () => {
+      await seen.state.setHomeDues([{ ownerId: owner.id, cents: 41_000 }]);
+    });
+    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    expect(screen.getByText(/from its own amount/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use the standard rate" }));
+    expect(seen.state.community.owners.find((o) => o.id === owner.id)!.duesCents).toBeUndefined();
+  });
+
+  it("the form offers the standard rate only to a home that has its own amount", () => {
+    render(
+      <ChangeDuesForm
+        unit="12"
+        period="month"
+        nowCents={28_500}
+        sourceLabel="the association's rate"
+        hasOwn={false}
+        standardCents={28_500}
+        onSave={async () => true}
+        onCancel={() => {}}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Use the standard rate" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Pays \$285\.00 a month now, from the association's rate/)).toBeInTheDocument();
+  });
+
+  it("the form stays open when the write says it was refused", async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+    render(
+      <ChangeDuesForm
+        unit="12"
+        period="month"
+        nowCents={28_500}
+        sourceLabel="the association's rate"
+        hasOwn={false}
+        standardCents={28_500}
+        onSave={async () => false}
+        onCancel={onCancel}
+      />,
+    );
+    await user.type(screen.getByLabelText("Dues for this home"), "310");
+    await user.click(screen.getByRole("button", { name: "Save dues" }));
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("the dues settings card says how many homes pay their own amount, with a link", async () => {
+    wrap(<DuesSettings />);
+    expect(screen.queryByText(/pay their own amount|pays its own amount/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^Each home, per month/)).toBeInTheDocument();
+
+    const [a, b, c] = seen.state.community.owners;
+    await act(async () => {
+      await seen.state.setHomeDues([
+        { ownerId: a.id, cents: 31_000 },
+        { ownerId: b.id, cents: 33_000 },
+        { ownerId: c.id, cents: 35_000 },
+      ]);
+    });
+    expect(screen.getByText(/3 homes pay their own amount/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See them on Homeowners" })).toHaveAttribute("href", "/board/homeowners");
+    // The standard rate is still its own field, no longer "each home".
+    expect(screen.getByLabelText(/^Standard rate, per month/)).toBeInTheDocument();
   });
 });

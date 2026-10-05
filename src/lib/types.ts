@@ -187,6 +187,12 @@ export interface Owner {
   /** Detached, townhome or condo, where the association has said. */
   homeType?: HomeType;
   /**
+   * This home's own regular assessment, where it differs from the rest.
+   * Unset means it pays what its kind or the association pays. Read through
+   * `ownerDues`, never directly.
+   */
+  duesCents?: Cents;
+  /**
    * A photograph of the home, where the association holds one.
    *
    * Falls behind anything the owner uploads in their own browser and ahead of

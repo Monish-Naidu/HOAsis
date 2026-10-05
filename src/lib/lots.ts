@@ -14,7 +14,7 @@
  * both its budget and its vote thresholds wrong.
  */
 
-import type { HomeType } from "@/lib/types";
+import type { Cents, HomeType } from "@/lib/types";
 
 export interface LotPhase {
   /** Stable across edits so a list can key on it. */
@@ -29,6 +29,11 @@ export interface LotPhase {
    * or a condo building is almost always one kind throughout.
    */
   homeType?: HomeType;
+  /**
+   * What each home in this run pays, when the board bills by home and this
+   * run differs from the rest. Unset means the fallback amount.
+   */
+  duesCents?: Cents;
 }
 
 /**

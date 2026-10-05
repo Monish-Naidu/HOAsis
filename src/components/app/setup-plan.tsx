@@ -31,7 +31,7 @@ import { BUILDER_KEYS, HANDOVER_KEYS, whereIs } from "@/lib/setup";
 import { ADMIN_ROLES, ROLE_LABEL, type AccountRole } from "@/lib/types";
 import { cn, money, pluralize } from "@/lib/utils";
 import { HummingbirdArriving } from "@/components/app/hummingbird";
-import { describeMix, duesVary, isMixed, totalDues } from "@/lib/home-types";
+import { describeMix, duesVary, homesWithOwnDues, isMixed, totalDues } from "@/lib/home-types";
 import { homeLabel } from "@/lib/wording";
 
 /**
@@ -313,7 +313,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
   const cadence = community.association.duesCadence;
   // A mixed community names its kinds, and says so when they pay differently.
   const mix = describeMix(community.owners);
-  const varies = duesVary(community.association);
+  const varies = duesVary(community.association, community.owners);
 
   return (
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
@@ -346,7 +346,13 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
                 ? `${money(totalDues(community.association, community.owners))} ${cadence} in assessments`
                 : `${money(dues)} ${cadence} assessment`
             }
-            detail={varies ? "Each kind of home at its own amount" : "Billed to every home"}
+            detail={
+              homesWithOwnDues(community.owners) > 0
+                ? "Each home at what it pays"
+                : varies
+                  ? "Each kind of home at its own amount"
+                  : "Billed to every home"
+            }
           />
         ) : null}
         {plan.canTakePayments ? (

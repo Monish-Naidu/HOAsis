@@ -11,6 +11,7 @@ import { US_STATES } from "@/lib/data/library";
 import {
   defaultHomeNaming,
   draftDuesTotal,
+  draftOwnDuesCount,
   emptyDraft,
   founderHomeType,
   finalizeDraft,
@@ -428,10 +429,17 @@ function WizardQuestions({
           lateFeeAnswered(draft),
         body: (
           <div className="flex flex-col gap-4">
-            {isMixed(draft) ? <DuesByType draft={draft} patch={patch} /> : null}
+            <DuesMode draft={draft} patch={patch} />
           <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
             {draft.duesByType ? null : (
-            <Field label="Each home pays">
+            <Field
+              label={draft.duesByHome ? "Most homes pay" : "Each home pays"}
+              hint={
+                draft.duesByHome
+                  ? "A range or a home that pays something else is set when you list the homes."
+                  : undefined
+              }
+            >
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
                   $
@@ -892,6 +900,11 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
   const [pasted, setPasted] = useState("");
   const mine = founderUnit(draft);
   const rows = draft.households;
+  // One more column for the amount, only while the board bills by home.
+  const byHome = Boolean(draft.duesByHome);
+  const cols = byHome
+    ? "sm:grid-cols-[1.4fr_1fr_1fr_7rem_2rem]"
+    : "sm:grid-cols-[1.4fr_1fr_1fr_2rem]";
 
   function setRows(next: DraftHousehold[]) {
     patch({ households: next });
@@ -933,13 +946,14 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="divide-y divide-border overflow-hidden">
-        <div className="hidden grid-cols-[1.4fr_1fr_1fr_2rem] items-center gap-2 bg-surface-2 px-3.5 py-2 text-footnote font-semibold text-fg-muted sm:grid">
+        <div className={cn("hidden items-center gap-2 bg-surface-2 px-3.5 py-2 text-footnote font-semibold text-fg-muted sm:grid", cols)}>
           <span>Address</span>
           <span>Owner</span>
           <span>Email</span>
+          {byHome ? <span>Pays</span> : null}
           <span />
         </div>
-        <div className="grid grid-cols-1 items-center gap-2 px-3.5 py-2.5 sm:grid-cols-[1.4fr_1fr_1fr_2rem]">
+        <div className={cn("grid grid-cols-1 items-center gap-2 px-3.5 py-2.5", cols)}>
           <span className="truncate text-body font-medium text-fg">
             {draft.founder.address?.trim() || mine || `Your ${w.home}`}
           </span>
@@ -948,9 +962,10 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
             <span className="ml-1.5 text-footnote text-fg-subtle">yours</span>
           </span>
           <span className="truncate text-footnote text-fg-subtle">{draft.founder.email}</span>
+          {byHome ? <span /> : null}
           <span />
           {mixed ? (
-            <div className="flex flex-wrap items-center gap-1.5 sm:col-span-4">
+            <div className="flex flex-wrap items-center gap-1.5 sm:col-span-full">
               <TypeChips
                 types={types}
                 value={draft.founder.homeType ?? types[0]}
@@ -961,10 +976,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
           ) : null}
         </div>
         {rows.map((row, index) => (
-          <div
-            key={index}
-            className="grid grid-cols-1 items-center gap-2 px-3.5 py-2.5 sm:grid-cols-[1.4fr_1fr_1fr_2rem]"
-          >
+          <div key={index} className={cn("grid grid-cols-1 items-center gap-2 px-3.5 py-2.5", cols)}>
             <label className="block">
               {/* The column headers hide on a phone; the words come back here. */}
               <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Address</span>
@@ -999,6 +1011,17 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
                 className={input}
               />
             </label>
+            {byHome ? (
+              <label className="block">
+                <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Pays</span>
+                <OwnAmount
+                  label={`Dues for home ${index + 1}`}
+                  value={row.duesCents}
+                  fallback={draft.duesCents}
+                  onChange={(duesCents) => editRow(index, { duesCents })}
+                />
+              </label>
+            ) : null}
             <button
               type="button"
               aria-label={`Remove home ${index + 1}`}
@@ -1008,7 +1031,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
               <Trash2 className="size-3.5" />
             </button>
             {mixed ? (
-              <div className="flex flex-wrap items-center gap-1.5 sm:col-span-4">
+              <div className="flex flex-wrap items-center gap-1.5 sm:col-span-full">
                 <TypeChips
                   types={types}
                   value={row.homeType ?? types[0]}
@@ -1060,6 +1083,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
           <>
             {" · "}
             {money(draftDuesTotal(draft), { cents: false })} per {cadenceNoun(draft)}
+            <OwnDuesNote draft={draft} />
           </>
         ) : null}
       </p>
@@ -1254,6 +1278,23 @@ function RangesStep({ draft, patch }: StepProps) {
                     <span className="order-2 sm:order-none" />
                   )}
                 </div>
+                {draft.duesByHome ? (
+                  <div className="flex flex-wrap items-center gap-2 px-3.5 pb-2.5">
+                    <span className="text-footnote text-fg-subtle">Each home in this range pays</span>
+                    <div className="w-28">
+                      <OwnAmount
+                        label={`Each home in this range pays, ${phase.label}`}
+                        value={phase.duesCents}
+                        fallback={draft.duesCents}
+                        compact
+                        onChange={(duesCents) => editPhase(phase.id, { duesCents })}
+                      />
+                    </div>
+                    <span className="text-footnote text-fg-subtle">
+                      {phase.duesCents ? "" : "Blank means the usual amount."}
+                    </span>
+                  </div>
+                ) : null}
                 {mixed ? (
                   <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">
                     <span className="mr-1 text-footnote text-fg-subtle">These are</span>
@@ -1450,6 +1491,7 @@ function RangesStep({ draft, patch }: StepProps) {
           <>
             {" · "}
             {money(draftDuesTotal(draft), { cents: false })} per {cadenceNoun(draft)}
+            <OwnDuesNote draft={draft} />
           </>
         ) : null}
       </p>
@@ -1522,57 +1564,68 @@ function TypeChips({
 }
 
 /**
- * What each kind pays, for a mixed community.
+ * How dues are set: one amount, one per kind, or one per home.
  *
- * Starts as one amount for everybody, which is still the common answer, and
- * opens into one field per kind when the board says they differ.
+ * Starts as one amount for everybody, which is still the common answer.
+ * Kinds are offered only where more than one was picked. "Different by
+ * home" is for a building where a larger unit pays more: the amount below
+ * stays what most homes pay, and the homes step takes the exceptions. The
+ * three are exclusive; each switch clears the others' answers so nothing
+ * stale is billed.
  */
-function DuesByType({ draft, patch }: StepProps) {
+function DuesMode({ draft, patch }: StepProps) {
   const types = homeTypesOf(draft);
-  const split = Boolean(draft.duesByType);
+  const mixed = types.length > 1;
+  const mode: "same" | "kind" | "home" = draft.duesByHome ? "home" : draft.duesByType ? "kind" : "same";
   function setAmount(t: PropertyType, cents: number) {
     const next = { ...(draft.duesByType ?? {}), [t]: cents };
     // The association's own amount is the first kind's, so a home whose
     // kind somehow went missing is still billed something sensible.
     patch({ duesByType: next, duesCents: next[types[0]] ?? 0 });
   }
+  const choices = [
+    { id: "same" as const, label: "Same for every home" },
+    ...(mixed ? [{ id: "kind" as const, label: "Different by kind" }] : []),
+    { id: "home" as const, label: "Different by home" },
+  ];
+  function choose(next: "same" | "kind" | "home") {
+    if (next === "same") patch({ duesByType: undefined, duesByHome: undefined });
+    else if (next === "home") patch({ duesByType: undefined, duesByHome: true });
+    else
+      patch({
+        duesByHome: undefined,
+        duesByType: Object.fromEntries(
+          types.map((t) => [t, draft.duesCents]),
+        ) as CommunityDraft["duesByType"],
+      });
+  }
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="inline-flex w-fit gap-1 rounded-xl bg-surface-2 p-1"
+        className="inline-flex w-fit flex-wrap gap-1 rounded-xl bg-surface-2 p-1"
         role="radiogroup"
-        aria-label="Do kinds of home pay the same"
+        aria-label="Do homes pay the same"
       >
-        {[
-          { id: false, label: "Same for every home" },
-          { id: true, label: "Different by kind" },
-        ].map((mode) => (
+        {choices.map((choice) => (
           <button
-            key={String(mode.id)}
+            key={choice.id}
             type="button"
             role="radio"
-            aria-checked={split === mode.id}
-            onClick={() =>
-              patch(
-                mode.id
-                  ? {
-                      duesByType: Object.fromEntries(
-                        types.map((t) => [t, draft.duesCents]),
-                      ) as CommunityDraft["duesByType"],
-                    }
-                  : { duesByType: undefined },
-              )
-            }
+            aria-checked={mode === choice.id}
+            onClick={() => choose(choice.id)}
             className={cn(
               "rounded-lg px-3.5 py-2 text-body font-medium transition-colors",
-              split === mode.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
+              mode === choice.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
             )}
           >
-            {mode.label}
+            {choice.label}
           </button>
         ))}
       </div>
-      {split ? (
+      {mode === "home" ? (
+        <p className="text-footnote text-fg-subtle">For buildings where a larger unit pays more.</p>
+      ) : null}
+      {mode === "kind" ? (
         <div className="grid gap-3 sm:grid-cols-3">
           {types.map((t, i) => (
             <Field key={t} label={`${HOME_TYPE_LABEL[t].many} pay`}>
@@ -1597,6 +1650,52 @@ function DuesByType({ draft, patch }: StepProps) {
       ) : null}
     </div>
   );
+}
+
+/**
+ * An optional amount on a range or a row, blank meaning "the usual". Shown
+ * only when the board bills by home.
+ */
+function OwnAmount({
+  label,
+  value,
+  fallback,
+  onChange,
+  compact,
+}: {
+  label: string;
+  value?: number;
+  fallback: number;
+  onChange: (cents: number | undefined) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
+        $
+      </span>
+      <input
+        type="number"
+        min={0}
+        step="0.01"
+        value={value ? value / 100 : ""}
+        onChange={(e) => {
+          const cents = Math.round(Number(e.target.value) * 100);
+          onChange(cents > 0 ? cents : undefined);
+        }}
+        placeholder={fallback > 0 ? String(fallback / 100) : "Usual"}
+        aria-label={label}
+        className={cn(input, "tnum pl-7", compact && "h-9")}
+      />
+    </div>
+  );
+}
+
+/** "3 pay their own amount", under the totals while billing by home. */
+function OwnDuesNote({ draft }: { draft: CommunityDraft }) {
+  const n = draftOwnDuesCount(draft);
+  if (!draft.duesByHome || n === 0) return null;
+  return <> ({n} at their own amount)</>;
 }
 
 /**

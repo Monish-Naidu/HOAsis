@@ -26,7 +26,7 @@ import { formatDate, money, pluralize } from "@/lib/utils";
  * own form uses, so the plan and the register agree either way.
  */
 export function ImportScreen() {
-  const { community, can, isRemote, addOwner, setOpeningBalances } = useAppState();
+  const { community, can, isRemote, addOwner, setOpeningBalances, setHomeDues } = useAppState();
   const { notify } = useToast();
   const w = homeWording(community);
   const [asOf, setAsOf] = useState(community.asOf);
@@ -60,18 +60,28 @@ export function ImportScreen() {
         // The browser copy: the same store the roster's own form writes to.
         let created = 0;
         const balances: { ownerId: string; amountCents: number }[] = [];
+        const dues: { ownerId: string; cents: number }[] = [];
         for (const row of rows) {
           const known = community.owners.find((o) => o.unit.toLowerCase() === row.unit.toLowerCase());
           if (known) {
             if (row.openingBalanceCents !== undefined) balances.push({ ownerId: known.id, amountCents: row.openingBalanceCents });
+            if (row.duesCents) dues.push({ ownerId: known.id, cents: row.duesCents });
             continue;
           }
           const owner = addOwner({ name: row.name, email: row.email, unit: row.unit });
           created++;
           if (row.openingBalanceCents !== undefined) balances.push({ ownerId: owner.id, amountCents: row.openingBalanceCents });
+          if (row.duesCents) dues.push({ ownerId: owner.id, cents: row.duesCents });
         }
         if (balances.length) setOpeningBalances(asOf, balances);
-        setOutcome({ created, updated: rows.length - created, balances: balances.filter((b) => b.amountCents !== 0).length, skipped: 0 });
+        if (dues.length) setHomeDues(dues);
+        setOutcome({
+          created,
+          updated: rows.length - created,
+          balances: balances.filter((b) => b.amountCents !== 0).length,
+          skipped: 0,
+          ...(dues.length ? { dues: dues.length } : {}),
+        });
       }
       notify(`Roster imported: ${pluralize(rows.length, w.home)}`, "ok");
     } catch (error) {
@@ -93,8 +103,15 @@ export function ImportScreen() {
           <p className="mt-4 text-headline font-semibold tracking-[-0.015em] text-fg">
             {pluralize(outcome.created, `new ${w.home}`)} on the register
             {outcome.updated ? `, ${outcome.updated} filled in` : ""}
-            {outcome.balances ? `, ${pluralize(outcome.balances, "opening balance")} as of ${formatDate(asOf, "long")}` : ""}.
+            {outcome.balances ? `, ${pluralize(outcome.balances, "opening balance")} as of ${formatDate(asOf, "long")}` : ""}
+            {outcome.dues ? `, ${pluralize(outcome.dues, w.home)} on their own dues from the next bill` : ""}.
           </p>
+          {outcome.duesError ? (
+            <Callout tone="warn" className="mt-3" title="Some dues amounts were not saved">
+              The homes are on the register. {outcome.duesError} Open each household and use Change
+              dues. Until then they pay the usual amount.
+            </Callout>
+          ) : null}
           <p className="mt-2 max-w-[60ch] text-body leading-relaxed text-fg-muted">
             {withEmail
               ? `${pluralize(withEmail, "household")} can be invited now. Each gets a link that opens on their own ${w.home}; nobody has been emailed yet.`
@@ -160,6 +177,7 @@ export function ImportScreen() {
           onConfirm={confirm}
           busy={busy}
           showBalances={seesMoney}
+          showDues={seesMoney}
         />
       </Card>
 
@@ -175,7 +193,9 @@ export function ImportScreen() {
 }
 
 function withoutBalance(row: RosterRow): RosterRow {
-  const { openingBalanceCents: _omit, ...rest } = row;
+  // Dues amounts are finance work as well, so they are left out with it.
+  const { openingBalanceCents: _omit, duesCents: _dues, ...rest } = row;
   void _omit;
+  void _dues;
   return rest;
 }

@@ -42,12 +42,14 @@ export function RosterImport({
   homeWord: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [result, setResult] = useState<{ added: number; waiting: number } | null>(null);
+  const [result, setResult] = useState<{ added: number; waiting: number; withDues: number } | null>(
+    null,
+  );
 
   function add(rows: RosterRow[]) {
     const merged = mergeRoster(draft, rows);
     patch(merged.patch);
-    setResult({ added: merged.added, waiting: merged.waiting });
+    setResult({ added: merged.added, waiting: merged.waiting, withDues: merged.withDues });
     setOpen(false);
   }
 
@@ -66,6 +68,10 @@ export function RosterImport({
             {result.waiting > 0
               ? ` ${result.waiting} more ${result.waiting === 1 ? "is" : "are"} not on the list yet. See below.`
               : " Check the list below."}
+            {/* Dues in the file switch the dues answer, so say so. */}
+            {result.withDues > 0
+              ? ` ${result.withDues} ${result.withDues === 1 ? "has" : "have"} their own dues, so dues are now set by home.`
+              : ""}
           </span>
         ) : (
           <span className="text-footnote text-fg-subtle">
@@ -89,6 +95,7 @@ export function RosterImport({
         homeWord={homeWord}
         onConfirm={add}
         showBalances={draft.origin !== "builder"}
+        showDues
       />
     </div>
   );
@@ -106,7 +113,7 @@ export function RosterImport({
 export function mergeRoster(
   draft: CommunityDraft,
   rows: RosterRow[],
-): { patch: Partial<CommunityDraft>; added: number; waiting: number } {
+): { patch: Partial<CommunityDraft>; added: number; waiting: number; withDues: number } {
   const numbered = (draft.homeNaming ?? defaultHomeNaming(draft)) === "numbers";
   const prefix = draft.lotPrefix ?? "";
   // One key per home however it is spelled: by lot number where homes are
@@ -135,6 +142,11 @@ export function mergeRoster(
   }
   // The homes this file touched, each once however many rows named it.
   const fromFile = new Set<string>();
+  // A row's amount rides on its home. Any amount in the file turns dues to
+  // "by home", or the amounts would be kept and never billed.
+  const withDues = rows.filter((r) => r.duesCents !== undefined && r.duesCents > 0).length;
+  const duesPatch: Partial<CommunityDraft> =
+    withDues > 0 ? { duesByHome: true, duesByType: undefined } : {};
   for (const row of rows) {
     const key = keyOf(row.unit);
     if (!key || mine.has(key)) continue;
@@ -148,11 +160,17 @@ export function mergeRoster(
       },
       { phone: row.phone || undefined, openingBalanceCents: row.openingBalanceCents },
     );
+    if (row.duesCents !== undefined && row.duesCents > 0) merged.duesCents = row.duesCents;
     byUnit.set(key, merged);
     fromFile.add(key);
   }
   if (!numbered) {
-    return { patch: { households: [...byUnit.values()] }, added: fromFile.size, waiting: 0 };
+    return {
+      patch: { households: [...byUnit.values()], ...duesPatch },
+      added: fromFile.size,
+      waiting: 0,
+      withDues,
+    };
   }
   // Back through the ranges, so each row sits on its lot under the label the
   // ranges print, and the rest wait for a range.
@@ -170,8 +188,10 @@ export function mergeRoster(
     patch: {
       households: rebuilt.households,
       parkedHouseholds: stillParked.length ? stillParked : undefined,
+      ...duesPatch,
     },
     added: rebuilt.households.filter(touched).length,
     waiting: rebuilt.parked.filter(touched).length,
+    withDues,
   };
 }

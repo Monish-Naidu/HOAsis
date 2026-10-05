@@ -196,6 +196,26 @@ function billing(
   };
 }
 
+describe("duesCollection, with homes on their own amounts", () => {
+  it("holds each bill against what every home pays, by the one rule", () => {
+    const owners = [
+      { ...mehrMeadows.owners[0], homeType: undefined, duesCents: 34_000 },
+      { ...mehrMeadows.owners[1], homeType: undefined, duesCents: undefined },
+      { ...mehrMeadows.owners[2], homeType: undefined, duesCents: undefined },
+    ];
+    const c: Community = {
+      ...billing(
+        { unitCount: 3, duesCents: 21_000, duesCadence: "monthly", fiscalYearStart: "01-01" },
+        "2026-08-20",
+        [["2026-08-05", "Assessments", 76_000]],
+      ),
+      owners,
+    };
+    const d = duesCollection(c, 2026);
+    expect(d.expectedCents).toBe(34_000 + 21_000 + 21_000);
+  });
+});
+
 describe("duesCollection, billed other than monthly", () => {
   it("holds an annual bill against the whole bill, not three months' share of it", () => {
     // Forty homes at $1,200, billed January 1. By March 15 thirty have paid.

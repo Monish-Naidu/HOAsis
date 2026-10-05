@@ -526,6 +526,7 @@ export async function loadCommunity(
       unit: unit.label,
       address: unit.address,
       homeType: unit.home_type ?? undefined,
+      duesCents: unit.dues_cents ?? undefined,
       moveInDate: holder?.starts_on ?? unit.created_at.slice(0, 10),
       balanceCents,
       autopay: Boolean(holder?.autopay),
@@ -803,7 +804,8 @@ export async function loadCommunity(
       : [
           {
             category: "Assessments",
-            // Every home at its own kind's amount, as issue_assessment bills it.
+            // Every home at what issue_assessment bills it: its own amount,
+            // else its kind's, else the association's.
             annualCents:
               unitRows.reduce(
                 (sum, u) =>
@@ -814,6 +816,7 @@ export async function loadCommunity(
                       duesByType: (a.dues_by_type ?? {}) as Record<string, number>,
                     },
                     u.home_type ?? undefined,
+                    u.dues_cents ?? undefined,
                   ),
                 0,
               ) * (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1),

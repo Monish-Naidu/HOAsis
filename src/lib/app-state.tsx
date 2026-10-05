@@ -34,6 +34,8 @@ import {
   NOTHING_CHANGED,
   WRITE_TIMEOUT_MS,
 } from "@/lib/data/remote-store";
+import { ownerDues } from "@/lib/home-types";
+import { setHomeDues as writeHomeDues } from "@/lib/roster/apply";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 import type { Json } from "@/lib/supabase/database.types";
@@ -357,6 +359,15 @@ interface AppState {
   changeOwnerEmail: (ownerId: string, email: string) => Promise<boolean>;
   /** Which kind of home these are: detached, townhome or condo. */
   setHomeType: (ownerIds: string[], homeType: HomeType) => boolean | Promise<boolean>;
+  /**
+   * What each of these homes pays of its own, from the next bill. A null
+   * amount clears it, so the home pays what its kind or the association
+   * pays. Resolves once a real association has the write, so a screen can
+   * wait before it says saved; false when it was refused.
+   */
+  setHomeDues: (
+    changes: { ownerId: string; cents: number | null }[],
+  ) => boolean | Promise<boolean>;
   removeOwner: (ownerId: string) => () => void;
   /**
    * A home changes hands. The seller's seat ends on the closing date, the
@@ -1378,6 +1389,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Each home's own dues amount, now the homes exist. create_association
+    // takes none, so they follow it through set_home_dues, the way balances
+    // follow an import. The association exists, so a failure is said and the
+    // founder still lands in it; Change dues on a household finishes the job.
+    {
+      const own = [
+        ...(draft.founder.duesCents
+          ? [{ unit: draft.founder.unit, duesCents: draft.founder.duesCents }]
+          : []),
+        ...draft.households
+          .filter((h) => h.duesCents && h.duesCents > 0)
+          .map((h) => ({ unit: h.unit, duesCents: h.duesCents as number })),
+      ];
+      if (draft.duesByHome && own.length) {
+        try {
+          await writeHomeDues(associationId, own);
+        } catch (duesError) {
+          reportRemoteError(
+            `Your association is set up, but some homes were not given their own dues (${
+              duesError instanceof Error ? duesError.message : "the database refused it"
+            }). Open Homeowners and use Change dues on those homes. Until then they pay the usual amount.`,
+          );
+        }
+      }
+    }
+
     // Land in the one just founded, not in whichever this browser had open.
     preferRemoteAssociation(associationId);
     await loadRemote(sessionUserId());
@@ -2146,6 +2183,47 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const ids = new Set(ownerIds);
       sliceStore(communityId, "owners").update((all) =>
         all.map((o) => (ids.has(o.id) ? { ...o, homeType } : o)),
+      );
+      return true;
+    },
+    [remote.community, communityId],
+  );
+
+  /**
+   * One home's own dues, or several. `set_home_dues` (0084) is the only way
+   * in: a finance holder may call it and a settings holder may too, which a
+   * plain update of the units table would not allow the first. Bills already
+   * issued keep their amount.
+   */
+  const setHomeDues = useCallback(
+    (changes: { ownerId: string; cents: number | null }[]) => {
+      if (!changes.length) return true;
+      if (changes.some((c) => c.cents !== null && (!Number.isInteger(c.cents) || c.cents < 0))) {
+        reportRemoteError("Dues cannot be negative");
+        return false;
+      }
+      if (remote.community) {
+        return remoteWrite("Saving dues", async () => {
+          const supabase = supabaseBrowser();
+          for (const { ownerId, cents } of changes) {
+            const { error } = await supabase.rpc("set_home_dues", {
+              p_unit_id: ownerId,
+              p_dues_cents: cents,
+            });
+            if (error) throw new Error(error.message);
+          }
+        }, { timeoutMs: WRITE_TIMEOUT_MS + changes.length * 1_000 });
+      }
+      const byOwner = new Map(changes.map((c) => [c.ownerId, c.cents]));
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) => {
+          if (!byOwner.has(o.id)) return o;
+          const cents = byOwner.get(o.id);
+          // Zero reads as no amount, as it does in the database.
+          const { duesCents: _was, ...rest } = o;
+          void _was;
+          return cents ? { ...rest, duesCents: cents } : rest;
+        }),
       );
       return true;
     },
@@ -5152,6 +5230,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addSecondOwner,
     changeOwnerEmail,
     setHomeType,
+    setHomeDues,
     removeOwner,
     transferHome,
     setAccountRole,
@@ -5441,7 +5520,9 @@ export function useAssistantContext() {
       },
       association: {
         name: community.association.name,
-        duesCents: community.association.duesCents,
+        // What this owner's home pays, which is the one figure the assistant
+        // says about dues.
+        duesCents: ownerDues(community.association, owner ?? undefined),
         unitCount: community.association.unitCount,
         operatingCents: cash.operating,
         reserveCents: reserveBalance,

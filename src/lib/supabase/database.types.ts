@@ -2341,6 +2341,7 @@ export type Database = {
           association_id: string
           bedrooms: number | null
           created_at: string
+          dues_cents: number | null
           home_type: Database["public"]["Enums"]["property_type"] | null
           id: string
           label: string
@@ -2353,6 +2354,7 @@ export type Database = {
           association_id: string
           bedrooms?: number | null
           created_at?: string
+          dues_cents?: number | null
           home_type?: Database["public"]["Enums"]["property_type"] | null
           id?: string
           label: string
@@ -2365,6 +2367,7 @@ export type Database = {
           association_id?: string
           bedrooms?: number | null
           created_at?: string
+          dues_cents?: number | null
           home_type?: Database["public"]["Enums"]["property_type"] | null
           id?: string
           label?: string
@@ -3097,6 +3100,10 @@ export type Database = {
         Args: { p_as_second?: boolean; p_request_id: string; p_unit_id: string }
         Returns: string
       }
+      set_home_dues: {
+        Args: { p_dues_cents: number | null; p_unit_id: string }
+        Returns: undefined
+      }
       set_my_autopay: {
         Args: { p_association_id: string; p_autopay: Json }
         Returns: undefined
@@ -3133,6 +3140,10 @@ export type Database = {
       unique_association_slug: {
         Args: { p_name: string; p_self?: string }
         Returns: string
+      }
+      unit_dues_cents: {
+        Args: { p_unit: Database["public"]["Tables"]["units"]["Row"] }
+        Returns: number
       }
       update_my_contact: {
         Args: {

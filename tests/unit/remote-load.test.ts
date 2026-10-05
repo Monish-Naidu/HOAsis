@@ -128,6 +128,23 @@ describe("loadCommunity", () => {
     expect(JSON.stringify(community.instruments)).not.toContain("4471");
   });
 
+  it("reads each home's own dues onto its owner, and the budget bills every home by the rule", async () => {
+    const unit = { association_id: "assoc-1", address: "", home_type: null, created_at: "2024-01-01T00:00:00Z" };
+    const community = await loadCommunity(
+      database({}, {
+        units: [
+          { ...unit, id: "unit-1", label: "101", dues_cents: null },
+          { ...unit, id: "unit-2", label: "201", dues_cents: 40_000 },
+        ],
+      }),
+      "assoc-1",
+    );
+    const own = Object.fromEntries(community.owners.map((o) => [o.unit, o.duesCents]));
+    expect(own).toEqual({ "101": undefined, "201": 40_000 });
+    // $300 association amount for the first, $400 for the second, four quarterly bills a year.
+    expect(community.budget.find((b) => b.category === "Assessments")?.annualCents).toBe((30_000 + 40_000) * 4);
+  });
+
   it.each([
     ["units", "the homes"],
     ["memberships", "the roster"],

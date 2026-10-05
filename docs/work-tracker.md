@@ -192,10 +192,10 @@ kind's, else the association's.
 
 | Item | Status |
 | --- | --- |
-| `units.dues_cents`, `issue_assessment` bills by the rule, `set_home_dues` (migration 0084) | doing |
-| Wizard: "Different by home" on the dues step; an amount per range or per row; a "Dues" column in the spreadsheet | doing |
-| Homeowners: "Change dues" on a household; the import column; the export | doing |
-| Every screen and email that states a dues amount uses the rule | doing |
+| `units.dues_cents`, `issue_assessment` bills by the rule, `set_home_dues` (migration 0084) | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
+| Wizard: "Different by home" on the dues step; an amount per range or per row; a "Dues" column in the spreadsheet | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
+| Homeowners: "Change dues" on a household; the import column; the export | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
+| Every screen and email that states a dues amount uses the rule | done 2026-10-05 (branch dues-by-home; migration 0084 applied) |
 
 ## 10. Wording pass
 

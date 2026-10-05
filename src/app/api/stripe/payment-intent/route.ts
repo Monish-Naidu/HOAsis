@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   // own, so a mismatch here is money taken that the books never show.
   const { data: home } = await supabase
     .from("units")
-    .select("association_id")
+    .select("association_id, dues_cents")
     .eq("id", unitId)
     .maybeSingle();
   if (!home || home.association_id !== associationId) {
@@ -100,7 +100,9 @@ export async function POST(request: NextRequest) {
   }
   // A fat-fingered amount should fail here, not become a refund conversation.
   // Two years of dues covers any realistic catch-up payment.
-  if (amountCents > Math.max(association.dues_cents * 24, 500_000)) {
+  // A home with its own amount is measured against that, if it is larger.
+  const biggestDues = Math.max(association.dues_cents, home.dues_cents ?? 0);
+  if (amountCents > Math.max(biggestDues * 24, 500_000)) {
     return NextResponse.json({ error: "That amount looks too large" }, { status: 400 });
   }
 

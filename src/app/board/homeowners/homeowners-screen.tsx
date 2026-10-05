@@ -23,7 +23,7 @@ import { RemindersComposer } from "@/components/app/reminders-composer";
 import { AskedToJoin } from "./asked-to-join";
 import { JoinCodeRow } from "./join-code-row";
 import { ChangeEmailForm, SecondOwnerForm } from "./owner-forms";
-import { AddCreditForm, RecordPaymentForm } from "./household-money";
+import { AddCreditForm, ChangeDuesForm, RecordPaymentForm } from "./household-money";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -34,7 +34,15 @@ import { policyFor } from "@/lib/collections";
 import { dueLetter, renderLetter } from "@/lib/letters";
 import type { HomeType, MessageThread, Owner } from "@/lib/types";
 import type { ManualMethod } from "@/lib/payments/instruments";
-import { HOME_TYPE_LABEL, HOME_TYPES, countByType, duesVary, ownerDues } from "@/lib/home-types";
+import {
+  HOME_TYPE_LABEL,
+  HOME_TYPES,
+  countByType,
+  duesSource,
+  duesSourceLabel,
+  duesVary,
+  ownerDues,
+} from "@/lib/home-types";
 import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -199,6 +207,7 @@ export function HomeownersScreen() {
     addSecondOwner,
     changeOwnerEmail,
     setHomeType,
+    setHomeDues,
     recordManualPayment,
     addCredit,
     can,
@@ -429,6 +438,9 @@ export function HomeownersScreen() {
         : []),
       { header: "Email", value: (o) => o.email },
       { header: "Phone", value: (o) => o.phone },
+      // What each home pays per period, by the one rule: its own amount,
+      // else its kind's, else the association's.
+      { header: "Dues", value: (o) => (ownerDues(community.association, o) / 100).toFixed(2) },
       ...(seesMoney
         ? [
             { header: "Balance", value: (o: Owner) => (o.balanceCents / 100).toFixed(2) },
@@ -892,8 +904,37 @@ export function HomeownersScreen() {
                               })
                           : undefined
                       }
+                      onChangeDues={
+                        changesMoney
+                          ? (cents) =>
+                              // Said once the write is back. A refusal has
+                              // already been said by the write itself.
+                              Promise.resolve(setHomeDues([{ ownerId: o.id, cents }])).then((ok) => {
+                                if (ok) {
+                                  const pays = ownerDues(community.association, {
+                                    homeType: o.homeType,
+                                    duesCents: cents ?? undefined,
+                                  });
+                                  notify(`${homeLabel(community, o.unit)} pays ${money(pays)} from the next bill.`, "ok");
+                                }
+                                return ok;
+                              })
+                          : undefined
+                      }
+                      duesNow={{
+                        cents: ownerDues(community.association, o),
+                        sourceLabel: duesSourceLabel(community.association, o),
+                        hasOwn: duesSource(community.association, o) === "own",
+                        standardCents: ownerDues(community.association, { homeType: o.homeType }),
+                        period:
+                          community.association.duesCadence === "monthly"
+                            ? "month"
+                            : community.association.duesCadence === "quarterly"
+                              ? "quarter"
+                              : "year",
+                      }}
                       duesLine={
-                        duesVary(community.association)
+                        duesVary(community.association, community.owners)
                           ? `${money(ownerDues(community.association, o))} ${community.association.duesCadence}`
                           : undefined
                       }
@@ -1039,6 +1080,8 @@ function HouseholdDetail({
   onRemove,
   duesLine,
   onSetKind,
+  onChangeDues,
+  duesNow,
 }: {
   owner: Owner;
   thread?: MessageThread;
@@ -1070,12 +1113,22 @@ function HouseholdDetail({
   duesLine?: string;
   /** Present when the community tracks kinds of home. */
   onSetKind?: (next: HomeType) => void;
+  /** Change what this home pays. Absent when this seat may not change finances. */
+  onChangeDues?: (cents: number | null) => Promise<boolean>;
+  /** What the home pays now and where that comes from, for the Change dues form. */
+  duesNow: {
+    cents: number;
+    sourceLabel: string;
+    hasOwn: boolean;
+    standardCents: number;
+    period: string;
+  };
 }) {
   const [draft, setDraft] = useState("");
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
-  const [editing, setEditing] = useState<"email" | "second" | "payment" | "credit" | null>(null);
+  const [editing, setEditing] = useState<"email" | "second" | "payment" | "credit" | "dues" | null>(null);
 
   function startFromLetter() {
     if (!letter) return;
@@ -1224,6 +1277,18 @@ function HouseholdDetail({
       {editing === "credit" && onAddCredit ? (
         <AddCreditForm unit={owner.unit} onSave={onAddCredit} onCancel={() => setEditing(null)} />
       ) : null}
+      {editing === "dues" && onChangeDues ? (
+        <ChangeDuesForm
+          unit={owner.unit}
+          period={duesNow.period}
+          nowCents={duesNow.cents}
+          sourceLabel={duesNow.sourceLabel}
+          hasOwn={duesNow.hasOwn}
+          standardCents={duesNow.standardCents}
+          onSave={onChangeDues}
+          onCancel={() => setEditing(null)}
+        />
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-border pt-3">
         {onRecordPayment ? (
@@ -1246,6 +1311,17 @@ function HouseholdDetail({
           >
             <Plus className="size-3.5" />
             Add a credit
+          </Button>
+        ) : null}
+        {onChangeDues ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(editing === "dues" ? null : "dues")}
+            aria-label={`Change the dues for ${owner.displayName}`}
+          >
+            <Banknote className="size-3.5" />
+            Change dues
           </Button>
         ) : null}
         {onSale ? (

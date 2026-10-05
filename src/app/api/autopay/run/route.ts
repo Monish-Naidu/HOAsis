@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
             .single(),
           admin
             .from("units")
-            .select("stripe_customer_id, label, home_type")
+            .select("stripe_customer_id, label, home_type, dues_cents")
             .eq("id", member.unit_id)
             .single(),
           // The service role is not "somebody", so unit_balances' security
@@ -180,7 +180,8 @@ export async function GET(request: NextRequest) {
           today,
           balanceCents,
           pendingCents,
-          // The home's own kind's amount, as issue_assessment billed it.
+          // What this home pays, as issue_assessment billed it: its own
+          // amount, else its kind's, else the association's.
           duesCents: duesFor(
             {
               duesCents: association.dues_cents,
@@ -190,6 +191,7 @@ export async function GET(request: NextRequest) {
               >,
             },
             unit?.home_type ?? undefined,
+            unit?.dues_cents ?? undefined,
           ),
         });
 
