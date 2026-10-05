@@ -170,6 +170,26 @@ try {
   check("a redelivered or late event books nothing",
     replayed.statement === 1800 && replayed.books === -1800 && replayed.lines === 2, JSON.stringify(replayed));
 
+  // A lost dispute takes back the rest (0093), once, however often Stripe says so.
+  const { data: payB } = await admin.from("payments").select("amount_cents").eq("stripe_payment_intent_id", intentB).single();
+  const disputeId = `dp_verify_${Date.now()}`;
+  const lose = () => admin.rpc("record_dispute_loss", {
+    p_stripe_payment_intent_id: intentB, p_dispute_id: disputeId, p_amount_cents: payB.amount_cents - 1800,
+  });
+  const { error: lostError } = await lose();
+  const lost = await refundsOf();
+  check("a lost dispute books the rest and the payment reads refunded",
+    !lostError && lost.statement === payB.amount_cents && lost.books === -payB.amount_cents && lost.state === "refunded",
+    lostError?.message ?? JSON.stringify(lost));
+  await lose();
+  const lostAgain = await refundsOf();
+  check("the same dispute delivered twice books nothing more",
+    lostAgain.statement === payB.amount_cents && lostAgain.books === -payB.amount_cents && lostAgain.lines === lost.lines, JSON.stringify(lostAgain));
+  const { error: browserDispute } = await president.client.rpc("record_dispute_loss", {
+    p_stripe_payment_intent_id: intentB, p_dispute_id: "dp_browser", p_amount_cents: 100,
+  });
+  check("a browser cannot record a lost dispute", Boolean(browserDispute), browserDispute?.message ?? "allowed");
+
   await admin.rpc("record_refund", { p_stripe_payment_intent_id: intentB, p_amount_cents: 2700 });
   const whole = await refundsOf();
   check("a full refund never puts more on the statement than the payment took off",

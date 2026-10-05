@@ -496,7 +496,7 @@ export function disputeEmail(kind: "opened" | "won" | "lost", input: DisputeEmai
           ]
         : [
             `${first}, the bank decided the disputed ${amount} payment${forHome} for the cardholder. The ${amount} and Stripe's dispute fee stay out of the association's balance.`,
-            `The owner's statement here still shows the payment as paid, and the books still show the deposit, so your books are ahead of the bank by this amount.`,
+            `The payment has been taken off the books here: the owner's statement shows the ${amount} as owed again and the deposit has been reversed in the ledger.`,
           ];
 
   return {

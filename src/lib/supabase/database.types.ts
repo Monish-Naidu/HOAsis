@@ -1525,6 +1525,7 @@ export type Database = {
         Row: {
           amount_cents: number
           association_id: string
+          dispute_lost_id: string | null
           created_at: string
           id: string
           paid_by: string | null
@@ -1540,6 +1541,7 @@ export type Database = {
         Insert: {
           amount_cents: number
           association_id: string
+          dispute_lost_id?: string | null
           created_at?: string
           id?: string
           paid_by?: string | null
@@ -1555,6 +1557,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           association_id?: string
+          dispute_lost_id?: string | null
           created_at?: string
           id?: string
           paid_by?: string | null
@@ -3065,6 +3068,14 @@ export type Database = {
           p_unit_id: string
         }
         Returns: string
+      }
+      record_dispute_loss: {
+        Args: {
+          p_amount_cents: number
+          p_dispute_id: string
+          p_stripe_payment_intent_id: string
+        }
+        Returns: string | null
       }
       record_refund: {
         Args: { p_amount_cents: number; p_stripe_payment_intent_id: string }

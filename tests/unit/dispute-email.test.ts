@@ -88,11 +88,11 @@ describe("disputeEmail", () => {
     expect(built.html).not.toContain("The reason given");
   });
 
-  it("says plainly that a lost dispute is not yet in the books", () => {
+  it("says a lost dispute has been taken off the books", () => {
     const built = disputeEmail("lost", { ...input, evidenceDueOn: null });
     expect(built.subject).toBe("Dispute lost: $325.00 · Unit 7 · Maple Court HOA");
     expect(built.html).toContain("for the cardholder");
-    expect(built.html).toContain("still shows the payment as paid");
+    expect(built.html).toContain("as owed again");
   });
 
   it("says the money stays when the association wins", () => {
