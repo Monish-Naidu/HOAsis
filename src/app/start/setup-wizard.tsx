@@ -11,6 +11,7 @@ import { US_STATES } from "@/lib/data/library";
 import {
   defaultHomeNaming,
   draftDuesTotal,
+  placeFounder,
   draftOwnDuesCount,
   emptyDraft,
   founderHomeType,
@@ -1188,7 +1189,9 @@ function RangesStep({ draft, patch }: StepProps) {
   // "Not sold yet" is the builder's own word. A turnover board's neighbours
   // and an established association's unnamed homes are not the builder's.
   const builderSetting = draft.origin === "builder";
-  const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
+  // Counted as the association will be made: a founder whose number is in no
+  // range takes the first free home rather than adding one.
+  const sold = otherHomes(placeFounder(draft)).filter((h) => h.name.trim()).length;
   // Rows with an owner or a balance that no range covers yet. Said out loud,
   // because they are not homes until one does, and split by whether a range
   // can still bring them back so neither line promises what cannot happen.
@@ -1882,7 +1885,10 @@ function LateFee({ draft, patch }: StepProps) {
 }
 
 /** "20 townhomes and 20 condos", under the homes list of a mixed community. */
-function MixLine({ draft }: { draft: CommunityDraft }) {
+function MixLine({ draft: entered }: { draft: CommunityDraft }) {
+  // The founder placed as creation will place them, so the mix adds up to
+  // the homes typed and their home is the kind its range says it is.
+  const draft = placeFounder(entered);
   const types = homeTypesOf(draft);
   if (types.length < 2) return null;
   const founderType = founderHomeType(draft);
