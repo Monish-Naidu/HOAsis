@@ -28,6 +28,10 @@ test.describe("board workspace", () => {
     test(`${tab} works`, async ({ page }) => {
       await page.goto("/board");
       await openTab(page, "/board", tab);
+      // Wait for the screen itself. Counting headings a fixed quarter second
+      // after the click read an empty page on a slow runner (Homeowners, on
+      // GitHub, 2026-10-05) where the same build passed everywhere else.
+      await expect(page.locator("main h1, main h2").first(), `${tab} rendered nothing`).toBeVisible();
       const health = await expectHealthy(page, `admin ${tab}`);
       expect(health.headingCount, `${tab} rendered nothing`).toBeGreaterThan(0);
     });

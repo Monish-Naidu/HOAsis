@@ -10,6 +10,12 @@ review (257 findings, seven walkers). Both are summarised here; the full
 findings were session files and are not in the repo, so anything worth
 keeping is written into a row below.
 
+**Where it stands (2026-10-05):** sections 0, 2, 3 and 5 are done and on
+production, with the rows marked otherwise below. Next up is section 4
+(board money: an owner's check, credits, vendor payment category, opening
+bank balances, hiding controls that are not real), then the rest of section
+4 (opening a request to reply, names), then what is left of section 1.
+
 Status words: **done** (in the working tree and checked), **doing**,
 **next**, **waiting** (on Monish), **later** (not for launch).
 
@@ -81,11 +87,11 @@ The worst kind: a board acts on them. Each is small.
 
 | Item | Status |
 | --- | --- |
-| Record an owner's check or cash payment, and a credit or waived fee | next (needs a small migration: `record_manual_payment`, rails `check` and `cash`) |
+| Record an owner's check or cash payment, and a credit or waived fee | next, and first: a full written spec exists (the agent given it on 2026-10-05 ran out of usage before changing anything). Needs migrations 0082 (rails `check`, `cash`) and 0083 (`record_manual_payment`) |
 | Open a request: read it in full, reply in words, deny with a reason | next |
 | Vendor payments all land as "Repairs & maintenance"; ask for a category | next |
 | Opening bank balances | next |
-| Association switcher menu is clipped by the photo band on inner pages | next |
+| Association switcher menu is clipped by the photo band on inner pages | done 2026-10-05 (pull request #4) |
 | Names drift: tabs say "From owners / To owners" over pages titled Requests and Notices; Settings uses three vocabularies for the same access areas | next |
 | Rail and tabs as recommended: Dashboard; Setting up; Finances (Overview, Transactions, Past due, Reserves); Homeowners; Vendors; Requests (Requests, Notices); Messages (Inbox, Announcements, Community); Meetings (Meetings, Voting); Documents; Settings | next: names only, the set is already right |
 
