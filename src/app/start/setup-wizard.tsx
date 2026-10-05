@@ -35,13 +35,13 @@ import {
   type LotPhase,
 } from "@/lib/lots";
 import { HOME_TYPE_LABEL, homeTypesOf, isMixed } from "@/lib/home-types";
-import { BankStep } from "./bank-step";
-import { CollectsPicker, OriginPicker, PropertyPicker, SpacesPicker } from "./situation-step";
+import { OriginPicker, PropertyPicker, SpacesPicker } from "./situation-step";
 import { AccountStep, CheckEmailPanel } from "./account-step";
 import { RosterImport } from "./roster-import";
 import {
   MONTHS,
   booksOf,
+  extrasOf,
   householdsNeedingBooks,
   nextDueOnOrAfter,
   wallToday,
@@ -49,6 +49,7 @@ import {
   type Books,
 } from "./books";
 import { importRoster, setBooksStart } from "@/lib/roster/apply";
+import { connectLinkedAccount } from "@/lib/payments/bank-accounts";
 import { SameNameNote } from "@/components/app/same-name-note";
 import {
   clearPendingDraft,
@@ -56,7 +57,7 @@ import {
   restoreDraft,
   savePendingDraft,
 } from "@/lib/pending-draft";
-import { cn, formatDate, money } from "@/lib/utils";
+import { cn, money } from "@/lib/utils";
 import { wordingFor, type Wording } from "@/lib/wording";
 import {
   clearProgress,
@@ -71,18 +72,17 @@ import {
  * Setting up an association, one question at a time.
  *
  * An account first, so the person exists before any of the work does and a
- * board that leaves halfway is a lead rather than nothing. Then a dozen short
+ * board that leaves halfway is a lead rather than nothing. Then a few short
  * questions, each on its own screen: what the association is called, where
- * it is, what a home pays, what kind of homes, what is shared, who is setting
- * it up, which homes exist, where the money lands. An association needs
- * exactly those things before it can take a dollar. Officers, documents,
+ * it is, who is setting it up, what kind of homes, what a home pays, what is
+ * shared, which homes exist, when billing starts. Officers, documents,
  * budgets, reserves and amenities are all real, and every one of them can
  * wait until somebody is logged in and already collecting; the plan asks
- * for them afterwards, the same way.
+ * for them afterwards, the same way. So does turning on online payments:
+ * nothing here connects a bank or says payments are on.
  *
- * Anything that legitimately has no answer (nothing shared, nothing billed
- * besides dues, no builder to name, no bank statement to hand) has a
- * labelled way past it. Nobody is made to invent an answer to move on.
+ * Anything that legitimately has no answer (nothing shared) has a labelled
+ * way past it. Nobody is made to invent an answer to move on.
  *
  * The homes question is the long one, and it is not a roster: in a
  * community still being built there are no residents to import, and in an
@@ -96,16 +96,13 @@ type QuestionId =
   | "account"
   | "name"
   | "place"
-  | "dues"
-  | "property"
-  | "spaces"
   | "origin"
-  | "collects"
-  | "books"
+  | "property"
+  | "dues"
+  | "spaces"
   | "you"
-  | "builder"
   | "homes"
-  | "bank";
+  | "books";
 
 const CADENCES = [
   { id: "monthly", label: "Monthly" },
@@ -114,30 +111,28 @@ const CADENCES = [
 ] as const;
 
 /**
- * Which questions exist, in order, for this reader.
+ * Which questions exist, in order.
  *
  * Somebody already signed in has an account, so they never see that screen.
- * Somebody who said the owners run the place has no builder to name.
  */
-function questionIds(signedIn: boolean, draft: CommunityDraft): QuestionId[] {
-  const w = wordingFor(homeTypesOf(draft), draft.origin);
+function questionIds(signedIn: boolean): QuestionId[] {
   return [
     ...(signedIn ? [] : (["account"] as const)),
     "name",
     "place",
+    // Who is setting this up comes first of the community questions: it
+    // sets the words on every screen after it.
+    "origin",
     // Kinds of home before dues, so a mixed community can say what each
     // kind pays on the dues screen instead of being asked twice.
     "property",
     "dues",
     "spaces",
-    "origin",
-    "collects",
-    // Where the books start, once we know whether there are any.
-    "books",
     "you",
-    ...(w.fromBuilder ? (["builder"] as const) : []),
     "homes",
-    "bank",
+    // Last, because it talks about balances that come in with the homes.
+    // It ends in Create.
+    "books",
   ];
 }
 
@@ -176,7 +171,7 @@ function WizardQuestions({
   const router = useRouter();
   const [draft, setDraft] = useState<CommunityDraft>(() => restored?.draft ?? emptyDraft());
   const signedIn = Boolean(auth.user);
-  const ids = questionIds(signedIn, draft);
+  const ids = questionIds(signedIn);
 
   const flow = useFlowPosition(restored?.current ?? (signedIn ? "name" : "account"));
   // The account question vanishes when a session arrives; land on the first
@@ -256,13 +251,24 @@ function WizardQuestions({
     if (!auth.user) {
       if (awaitingConfirmation) {
         // The pending draft holds it from here, through the email round trip.
-        savePendingDraft(finalizeDraft(draft), draft.founder.email.trim());
+        savePendingDraft(finalizeDraft({ ...draft, bankAccount: undefined }), draft.founder.email.trim());
         clearProgress();
         setSentToEmail(true);
         return;
       }
       if (exploring) {
-        createCommunity(finalizeDraft(draft));
+        // The look-around copy has the one account its Finances screens need,
+        // plainly named. It is not connected to anything: money goes through
+        // Stripe, set up after founding.
+        createCommunity(
+          finalizeDraft({
+            ...draft,
+            bankAccount: connectLinkedAccount(
+              { institution: "Operating account", mask: "", kind: "operating" },
+              wallToday(),
+            ),
+          }),
+        );
         clearProgress();
         router.push("/start/plan");
         return;
@@ -272,7 +278,9 @@ function WizardQuestions({
     }
     setBusy(true);
     try {
-      const final = finalizeDraft(draft);
+      // No bank from this wizard, even one left in a draft saved by an older
+      // version of it.
+      const final = finalizeDraft({ ...draft, bankAccount: undefined });
       const associationId = await createRemoteAssociation(final);
       // The fiscal year, the first bill, and what each home owed: none of it
       // is a founding parameter, so it lands right after, keyed by the
@@ -322,6 +330,7 @@ function WizardQuestions({
   }
 
   const w = wordingFor(homeTypesOf(draft), draft.origin);
+  const byNumber = (draft.homeNaming ?? defaultHomeNaming(draft)) === "numbers";
 
   const questions = useMemo(() => {
     const byId: Record<QuestionId, FlowQuestion> = {
@@ -415,7 +424,8 @@ function WizardQuestions({
         enterContinues: true,
         canContinue:
           draft.duesCents > 0 &&
-          (!draft.duesByType || homeTypesOf(draft).every((t) => (draft.duesByType?.[t] ?? 0) > 0)),
+          (!draft.duesByType || homeTypesOf(draft).every((t) => (draft.duesByType?.[t] ?? 0) > 0)) &&
+          lateFeeAnswered(draft),
         body: (
           <div className="flex flex-col gap-4">
             {isMixed(draft) ? <DuesByType draft={draft} patch={patch} /> : null}
@@ -468,6 +478,7 @@ function WizardQuestions({
               </select>
             </Field>
           </div>
+          <LateFee draft={draft} patch={patch} />
           </div>
         ),
       },
@@ -493,29 +504,11 @@ function WizardQuestions({
         id: "origin",
         group: "Your community",
         title: "Who is setting this up?",
-        detail:
-          "A builder standing the association up, owners taking it over from the builder, or owners who already run it. None of them asks you to export anything from wherever you are now.",
+        detail: "This sets the words on every screen after this one.",
         canContinue: Boolean(
           draft.origin && (draft.origin !== "existing" || draft.previously),
         ),
         body: <OriginPicker draft={draft} patch={patch} />,
-      },
-      collects: {
-        id: "collects",
-        group: "Your community",
-        title: "Anything billed besides dues?",
-        detail: "Most associations bill one flat amount.",
-        body: <CollectsPicker draft={draft} patch={patch} />,
-      },
-      books: {
-        id: "books",
-        group: "Money",
-        title: "When do the books start?",
-        detail:
-          draft.origin === "existing"
-            ? "The fiscal year, the first dues bill sent from here, and the day the balances you bring over are true."
-            : "The fiscal year and the first dues bill sent from here. Both can change in Settings.",
-        body: <BooksStep draft={draft} patch={patch} />,
       },
       you: {
         id: "you",
@@ -528,14 +521,17 @@ function WizardQuestions({
         // years has one for every home, and a builder's lots may not have
         // theirs from the county yet. Requiring it there stalls the whole
         // setup on a fact nobody has.
-        // A builder keys everything off the plat, so the number is required
-        // there. Everywhere else the address is what the founder knows, and
-        // the number is optional because plenty of communities never
+        // Where homes are entered by number, the founder's number is what
+        // places them among those homes, so everybody gives one. A blank
+        // one made the founder an extra home. A builder gives only the
+        // number. Everywhere else the address is what the founder knows,
+        // and the number is optional because plenty of communities never
         // numbered anything.
         canContinue: Boolean(
           draft.founder.name.trim() &&
             draft.founder.email.trim() &&
-            (w.fromBuilder ? draft.founder.unit.trim() : draft.founder.address?.trim()),
+            (byNumber ? draft.founder.unit.trim() : true) &&
+            (w.fromBuilder ? true : draft.founder.address?.trim()),
         ),
         body: (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -561,36 +557,16 @@ function WizardQuestions({
             {/* Whichever field the founder actually knows comes first. */}
             {w.fromBuilder ? (
               <>
-                <FounderNumber draft={draft} patch={patch} w={w} autoFocus />
+                <FounderNumber draft={draft} patch={patch} w={w} required autoFocus />
                 <FounderAddress draft={draft} patch={patch} w={w} />
               </>
             ) : (
               <>
                 <FounderAddress draft={draft} patch={patch} w={w} autoFocus />
-                <FounderNumber draft={draft} patch={patch} w={w} />
+                <FounderNumber draft={draft} patch={patch} w={w} required={byNumber} />
               </>
             )}
           </div>
-        ),
-      },
-      builder: {
-        id: "builder",
-        group: "Homes",
-        title: draft.origin === "builder" ? "Who is building it?" : "Who built it?",
-        detail: `Put against every ${w.home} that has not sold yet, because whoever owns it still owes the assessment on it.`,
-        enterContinues: true,
-        skipLabel: "Not sure yet",
-        onSkip: () => patch({ builderName: "" }),
-        body: (
-          <Field label="Builder name">
-            <input
-              value={draft.builderName ?? ""}
-              onChange={(e) => patch({ builderName: e.target.value })}
-              placeholder="Ridgeline Homes"
-              className={cn(input, "h-12 text-headline")}
-              autoFocus
-            />
-          </Field>
         ),
       },
       homes: {
@@ -614,36 +590,21 @@ function WizardQuestions({
         canContinue: homesAnswered(draft),
         body: <HomesStep draft={draft} patch={patch} />,
       },
-      bank: {
-        id: "bank",
+      books: {
+        id: "books",
         group: "Money",
-        title: draft.bankAccount ? "Where dues land" : "Where should dues land?",
-        detail: draft.bankAccount
-          ? "Connected. You can change this any time in Money."
-          : "An account in the association's name. Not a board member's personal account, which most states prohibit.",
+        title: "When should billing start?",
+        detail: "The date of the first bill sent from here, and the month your budget year starts.",
         continueLabel: busy ? "Creating" : "Create the association",
         onContinue: () => void finish(),
-        // Connecting a bank is the point of this screen, but refusing to let
-        // a board finish without one strands anybody whose treasurer holds
-        // the account details. The plan asks again.
-        skipLabel: draft.bankAccount ? undefined : "Skip for now",
-        onSkip: () => void finish(),
-        body: (
-          <BankStep
-            associationName={draft.name}
-            account={draft.bankAccount}
-            onConnect={(bankAccount) => patch({ bankAccount })}
-            onClear={() => patch({ bankAccount: undefined })}
-            linked={!auth.user}
-          />
-        ),
+        body: <BooksStep draft={draft} patch={patch} />,
       },
     };
     return byId;
     // Bodies close over the draft and the handlers; rebuilding them on every
     // render is the honest dependency, and cheap.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, awaitingConfirmation, busy, signedIn, w.home, w.Home]);
+  }, [draft, awaitingConfirmation, busy, signedIn, w.home, w.Home, byNumber]);
 
   if (sentToEmail && !auth.user) {
     return <CheckEmailPanel draft={draft} email={draft.founder.email.trim()} />;
@@ -658,10 +619,7 @@ function WizardQuestions({
       leaving={flow.leaving}
       onBack={index > 0 ? back : undefined}
       onContinue={forward}
-      onSkip={() => {
-        // Skipping the bank finishes; every other skip just moves on.
-        if (current !== "bank") forward();
-      }}
+      onSkip={forward}
       busy={busy}
       failure={failure}
       above={
@@ -678,7 +636,7 @@ function WizardQuestions({
                   onClick={() => {
                     setDraft(restoreDraft(pending));
                     clearPendingDraft();
-                    flow.jump("bank");
+                    flow.jump("books");
                   }}
                 >
                   Restore it
@@ -859,21 +817,31 @@ function BooksStep({ draft, patch }: StepProps) {
   const set = (next: Partial<Books>) => patch(withBooks(draft, { ...books, ...next }));
   const fyMonth = Number(books.fiscalYearStart.slice(0, 2)) || 1;
   const suggested = nextDueOnOrAfter(today, draft.dueDay, draft.duesCadence, books.fiscalYearStart);
-  const explicit = books.billingStartsOn !== null;
   const existing = draft.origin === "existing";
+  // The homes question came first, so a balance column may already be in.
+  const hasBalances = draft.households.some((h) => extrasOf(h).openingBalanceCents !== undefined);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label="Fiscal year starts in"
-          hint="Most associations run a calendar year. Quarterly and annual dues count from here."
+          label="First bill goes out on"
+          hint="We suggest the next due date. Pick a later one if owners were already billed for that period."
         >
+          <input
+            type="date"
+            value={books.billingStartsOn ?? suggested}
+            min={today}
+            onChange={(e) => set({ billingStartsOn: e.target.value || null })}
+            className={input}
+            autoFocus
+          />
+        </Field>
+        <Field label="Budget year starts in" hint="Most associations use January.">
           <select
             value={fyMonth}
             onChange={(e) => set({ fiscalYearStart: `${String(e.target.value).padStart(2, "0")}-01` })}
             className={input}
-            autoFocus
           >
             {MONTHS.map((name, i) => (
               <option key={name} value={i + 1}>
@@ -882,26 +850,10 @@ function BooksStep({ draft, patch }: StepProps) {
             ))}
           </select>
         </Field>
-        <Field
-          label="First dues bill from here"
-          hint={
-            explicit
-              ? "Anything due before this stays in the opening balances."
-              : `The next due date, ${formatDate(suggested, "long")}. Change it if that period is already billed elsewhere.`
-          }
-        >
-          <input
-            type="date"
-            value={books.billingStartsOn ?? suggested}
-            min={today}
-            onChange={(e) => set({ billingStartsOn: e.target.value || null })}
-            className={input}
-          />
-        </Field>
         {existing ? (
           <Field
-            label="Balances are true as of"
-            hint="The day you read what each home owes off the old books. The roster's balance column lands on each statement dated this day."
+            label="Date of the balances you are bringing over"
+            hint="The day you read what each home owes from your old records."
           >
             <input
               type="date"
@@ -915,9 +867,9 @@ function BooksStep({ draft, patch }: StepProps) {
       </div>
       {existing ? (
         <Callout tone="info" title="Opening balances">
-          Put what each home owes today in the spreadsheet you import on the homes question, or
-          type them one by one under Homeowners once you are in. Either way each figure is one
-          dated line on the owner&apos;s statement, so they can see where it came from.
+          {hasBalances
+            ? "Balances came in with your spreadsheet"
+            : "You can enter what each home owes after setup, under Homeowners."}
         </Callout>
       ) : null}
     </div>
@@ -1192,6 +1144,9 @@ function RangesStep({ draft, patch }: StepProps) {
   // The printed label, so the founder's own "Lot 12" row is recognised as
   // theirs and does not offer "It has sold".
   const mine = founderLabel(draft);
+  // "Not sold yet" is the builder's own word. A turnover board's neighbours
+  // and an established association's unnamed homes are not the builder's.
+  const builderSetting = draft.origin === "builder";
   const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
   // Rows with an owner or a balance that no range covers yet. Said out loud,
   // because they are not homes until one does, and split by whether a range
@@ -1376,9 +1331,7 @@ function RangesStep({ draft, patch }: StepProps) {
                     </>
                   ) : (
                     <span className="block truncate text-body text-fg-subtle">
-                      {w.fromBuilder
-                        ? `Not sold yet${draft.builderName?.trim() ? `, ${draft.builderName.trim()}` : ""}`
-                        : "No owner listed"}
+                      {builderSetting ? "Not sold yet" : "No owner listed"}
                     </span>
                   )}
                 </span>
@@ -1391,7 +1344,7 @@ function RangesStep({ draft, patch }: StepProps) {
                     }}
                     className="shrink-0 text-footnote font-medium text-primary hover:underline"
                   >
-                    {home.name.trim() ? "Edit" : w.fromBuilder ? "It has sold" : "Add the owner"}
+                    {home.name.trim() ? "Edit" : builderSetting ? "It has sold" : "Add the owner"}
                   </button>
                 )}
               </div>
@@ -1404,11 +1357,11 @@ function RangesStep({ draft, patch }: StepProps) {
                     saveBuyer(home.unit);
                   }}
                 >
-                  <Field label={w.fromBuilder ? "Buyer name" : "Owner name"}>
+                  <Field label={builderSetting ? "Buyer name" : "Owner name"}>
                     <input
                       value={buyer.name}
                       onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
-                      placeholder={w.fromBuilder ? "Buyer name" : "Owner name"}
+                      placeholder={builderSetting ? "Buyer name" : "Owner name"}
                       aria-label={`Owner of ${home.unit}`}
                       autoFocus
                       className={input}
@@ -1486,7 +1439,7 @@ function RangesStep({ draft, patch }: StepProps) {
       <p className="flex items-center gap-2 text-footnote text-fg-muted">
         <MapIcon className="size-3.5 shrink-0" />
         {pluralHomes(unitCount(draft))}
-        {w.fromBuilder
+        {builderSetting
           ? sold > 0
             ? `, ${sold} sold`
             : ", none sold yet"
@@ -1505,14 +1458,12 @@ function RangesStep({ draft, patch }: StepProps) {
       <Callout
         tone="info"
         icon={<Users className="size-4" />}
-        title={w.fromBuilder ? "Buyers can wait" : "Owner names can wait"}
+        title={builderSetting ? "Buyers can wait" : "Owner names can wait"}
       >
-        {w.fromBuilder ? (
+        {builderSetting ? (
           <>
-            You do not need names now. Add a buyer as each home closes, or invite them from
-            the roster later. Until then the {w.home} sits against{" "}
-            {draft.builderName?.trim() || "the builder"}, which is who owes the assessment on
-            it.
+            You do not need names now. Add a buyer as each home closes. Until then the{" "}
+            {w.home} is billed to the builder.
           </>
         ) : (
           <>
@@ -1648,6 +1599,106 @@ function DuesByType({ draft, patch }: StepProps) {
   );
 }
 
+/**
+ * Whether the late fee answer is complete.
+ *
+ * No fee is the starting answer and needs nothing. A fee needs an amount and
+ * a number of days the notice can fall on (`policyWithLateFee`).
+ */
+function lateFeeAnswered(draft: CommunityDraft): boolean {
+  const fee = draft.lateFee;
+  if (!fee?.charge) return true;
+  return fee.cents > 0 && Number.isInteger(fee.days) && fee.days >= 2 && fee.days <= 365;
+}
+
+/**
+ * The late fee, asked rather than assumed.
+ *
+ * Starts on "No late fee". Choosing to charge one opens an amount and the
+ * days after the due date, with the usual $25 and 30 days filled in to
+ * change. Whatever is chosen becomes the collections policy at Create.
+ */
+function LateFee({ draft, patch }: StepProps) {
+  const fee = draft.lateFee ?? { charge: false, cents: 0, days: 30 };
+  const set = (next: Partial<NonNullable<CommunityDraft["lateFee"]>>) =>
+    patch({ lateFee: { ...fee, ...next } });
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        {/* A plain label: a <label> around two buttons would press the first. */}
+        <span className="mb-1.5 block text-footnote font-medium text-fg">Late fee</span>
+        <div
+          className="inline-flex w-fit gap-1 rounded-xl bg-surface-2 p-1"
+          role="radiogroup"
+          aria-label="Late fee"
+        >
+          {[
+            { id: false, label: "No late fee" },
+            { id: true, label: "Charge a late fee" },
+          ].map((mode) => (
+            <button
+              key={String(mode.id)}
+              type="button"
+              role="radio"
+              aria-checked={fee.charge === mode.id}
+              onClick={() =>
+                mode.id === fee.charge
+                  ? undefined
+                  : patch({
+                      lateFee: mode.id
+                        ? { charge: true, cents: fee.cents > 0 ? fee.cents : 25_00, days: fee.days }
+                        : { ...fee, charge: false },
+                    })
+              }
+              className={cn(
+                "rounded-lg px-3.5 py-2 text-body font-medium transition-colors",
+                fee.charge === mode.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
+              )}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+        <span className="mt-1 block text-footnote text-fg-subtle">
+          Use what your governing documents say. You can change it later in Finances, Collections.
+        </span>
+      </div>
+      {fee.charge ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Amount">
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
+                $
+              </span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={fee.cents ? fee.cents / 100 : ""}
+                onChange={(e) => set({ cents: Math.round(Number(e.target.value) * 100) })}
+                placeholder="25.00"
+                className={cn(input, "pl-7")}
+              />
+            </div>
+          </Field>
+          <Field label="Days after the due date">
+            <input
+              type="number"
+              min={2}
+              max={365}
+              step={1}
+              value={Number.isFinite(fee.days) ? fee.days : ""}
+              onChange={(e) => set({ days: Number.parseInt(e.target.value, 10) })}
+              placeholder="30"
+              className={input}
+            />
+          </Field>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /** "20 townhomes and 20 condos", under the homes list of a mixed community. */
 function MixLine({ draft }: { draft: CommunityDraft }) {
   const types = homeTypesOf(draft);
@@ -1689,7 +1740,8 @@ function FounderNumber({
   patch,
   w,
   autoFocus,
-}: StepProps & { w: Wording; autoFocus?: boolean }) {
+  required,
+}: StepProps & { w: Wording; autoFocus?: boolean; required?: boolean }) {
   const hint = w.fromBuilder
     ? draft.origin === "builder"
       ? `As it appears on the site plan. The ${w.homes} on the next screen are numbered the same way.`
@@ -1697,8 +1749,8 @@ function FounderNumber({
     : `As it appears on your register. The ${w.homes} on the next screen are numbered the same way.`;
   return (
     <Field
-      label={w.fromBuilder ? `${w.Home} number` : `${w.Home} number, if you use them`}
-      hint={w.fromBuilder ? hint : "Leave it blank if homes go by address. Otherwise, as it appears on your register."}
+      label={required ? `${w.Home} number` : `${w.Home} number, if you use them`}
+      hint={required ? hint : "Leave it blank if homes go by address. Otherwise, as it appears on your register."}
     >
       <input
         value={draft.founder.unit}

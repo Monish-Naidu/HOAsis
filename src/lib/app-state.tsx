@@ -67,7 +67,12 @@ function latest(rc: Community): Community {
   const now = remoteSnapshot().community;
   return now && now.id === rc.id ? now : rc;
 }
-import { buildCommunity, type CommunityDraft, reservableSpaceNames } from "@/lib/data/new-community";
+import {
+  buildCommunity,
+  draftCollectionPolicy,
+  type CommunityDraft,
+  reservableSpaceNames,
+} from "@/lib/data/new-community";
 import {
   isBudgetLines,
   isChargeLedger,
@@ -1262,6 +1267,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
 
     const associationId = data as string;
+
+    // The late fee the founder chose, or none, as the collections policy.
+    // Written here rather than through `updateSettings`, which acts on the
+    // association already open and this one is not yet. The association
+    // exists by now, so a failure is said and not thrown.
+    {
+      const { data: row, error: readError } = await supabase
+        .from("associations")
+        .select("settings")
+        .eq("id", associationId)
+        .single();
+      const stored = (row?.settings as Record<string, unknown> | null) ?? {};
+      const { error: policyError } = readError
+        ? { error: readError }
+        : await supabase
+            .from("associations")
+            .update({ settings: { ...stored, collectionPolicy: draftCollectionPolicy(draft) } })
+            .eq("id", associationId);
+      if (policyError) {
+        reportRemoteError(
+          `Your association is set up, but its late fee setting was not saved (${policyError.message}). No late fee is charged until you set one in Finances, Collections.`,
+        );
+      }
+    }
 
     // The shared spaces named during setup become the amenities owners can
     // reserve. Without this the plan asked for them a second time.

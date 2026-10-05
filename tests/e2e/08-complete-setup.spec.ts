@@ -11,6 +11,14 @@ import { expectHealthy, inspect, waitForHydration } from "./helpers";
  *
  * So this walks every task to done and asserts the plan says so, for detached
  * homes, townhomes and condominiums, because the three get different lists.
+ *
+ * What "complete" means for a look-around copy (decided 2026-10-04): a copy in
+ * the browser cannot take payments, so "Turn on online payments" is listed as
+ * not available here, never counted done, and left out of the counts. The copy
+ * is complete when every step it CAN do is done, and the page then says
+ * "Everything is set up" without ever claiming payments work. The EIN and the
+ * registration, the unsold lots and the first reserves leave no record, so
+ * the board saying "we have this" is the record (the same dismissal button every skippable step has).
  */
 
 async function clearOnce(page: Page) {
@@ -46,6 +54,8 @@ async function found(page: Page, name: string, property: Kind) {
   await page.getByLabel(/City/i).fill("Bothell");
   await page.getByLabel(/State/i).selectOption({ label: "Washington" });
   await next();
+  await page.getByRole("button", { name: /We are building the community/ }).click();
+  await next();
   await page.getByRole("button", { name: new RegExp(property) }).click();
   await next();
   await page.getByLabel(/Each home pays/i).fill("250");
@@ -53,18 +63,11 @@ async function found(page: Page, name: string, property: Kind) {
 
   await page.getByRole("button", { name: /^Pool$/ }).click();
   await next();
-  await page.getByRole("button", { name: /We are building the community/ }).click();
-  await next();
-  await next();
-  // The books: fiscal year and first bill, taken as offered.
-  await next();
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
   await page.getByLabel("Your home address").fill("1 Founder Way");
   await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("1");
-  await next();
-  await page.getByLabel("Builder name").fill("Ridgeline Homes");
   await next();
   await page.getByLabel("Phase 1 first lot").fill("1");
   await page.getByLabel("Phase 1 last lot").fill("3");
@@ -79,11 +82,10 @@ async function found(page: Page, name: string, property: Kind) {
   await page.waitForTimeout(300);
   await next();
 
-  // Connect a bank, so the collect phase can actually finish. Picking an
-  // institution then an account, which is the real two step flow.
-  await page.getByRole("button", { name: /^BECU/ }).click();
-  await page.waitForTimeout(900);
-  await page.getByRole("button", { name: /Skip for now|Create the association/ }).first().click();
+  // When billing starts, taken as offered. The last question; its button
+  // founds the association. The look-around copy takes no payments, so the
+  // plan's payments step is not available in it and is not counted.
+  await page.getByRole("button", { name: "Create the association" }).click();
   await page.waitForTimeout(1200);
 }
 
@@ -102,6 +104,23 @@ async function uploadDoc(page: Page, fileName: string) {
 }
 
 async function completeEverything(page: Page, property: Kind) {
+  // A builder's paperwork leaves no record, so the board says it is done.
+  await page.goto("/start/plan?task=ein");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "We already have an EIN" }).click();
+  await page.waitForTimeout(400);
+  await page.goto("/start/plan?task=register");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "It is registered" }).click();
+  await page.waitForTimeout(400);
+  // And the two things only a builder standing it up has to do.
+  for (const task of ["unsold", "builder-reserves"]) {
+    await page.goto(`/start/plan?task=${task}`);
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await page.waitForTimeout(400);
+  }
+
   // Governing documents, plus the two attached housing tasks that key off a
   // document name.
   await uploadDoc(page, "Declaration and Bylaws.pdf");
@@ -112,15 +131,8 @@ async function completeEverything(page: Page, property: Kind) {
     await uploadDoc(page, "Structural inspection report.pdf");
   }
 
-  // Budget: one expense line, answered inside the plan. The Budget tab of
-  // Finances is switched off for launch, and the plan is where a board adds
-  // its first line anyway.
-  await page.goto("/start/plan?task=budget");
-  await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Add a budget line" }).click();
-  await page.getByLabel("Annual amount").fill("18000");
-  await page.getByRole("button", { name: "Add it" }).click();
-  await page.waitForTimeout(500);
+  // Budget: nothing to do. The Budget page is switched off for launch, so the
+  // plan no longer lists "Budget what you spend" (it returns with the module).
 
   // Reserves: one component.
   await page.goto("/board/reserves");

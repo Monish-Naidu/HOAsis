@@ -285,7 +285,7 @@ function DocumentsScreen() {
                   <Select
                     size="sm"
                     className="shrink-0"
-                    value={d.visibility}
+                    value={d.visibility === "public" ? "members" : d.visibility}
                     onChange={async (e) => {
                       const next = e.target.value as DocumentRecord["visibility"];
                       try {
@@ -300,7 +300,9 @@ function DocumentsScreen() {
                     }}
                     aria-label={`Who can see ${d.name}`}
                   >
-                    <option value="public">Public</option>
+                    {/* No page shows a document to the public, so the choice
+                        is not offered. A file saved as public reads as
+                        Owners, which is who can see it. */}
                     <option value="members">Owners</option>
                     <option value="board">Board only</option>
                   </Select>

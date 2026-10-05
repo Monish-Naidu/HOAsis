@@ -35,12 +35,14 @@ export function SetupReturnBar() {
 }
 
 function ReturnBar() {
-  const { community } = useAppState();
+  const { community, dismissedSetupTasks } = useAppState();
   const pathname = usePathname();
   const params = useSearchParams();
   const router = useRouter();
   const { notify } = useToast();
-  const plan = buildPlan(community, profileFromCommunity(community));
+  // With the steps the board ticked by hand, or the bar counts a different
+  // total from the list it leads back to.
+  const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   const tasks = plan.phases.flatMap((phase) => phase.tasks);
   const doneKeys = tasks.filter((task) => task.complete).map((task) => task.key).join(",");
   const previous = useRef<string | null>(null);

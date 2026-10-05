@@ -39,7 +39,7 @@ import { daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib
  */
 
 export default function BoardDashboard() {
-  const { community, can } = useAppState();
+  const { community, can, dismissedSetupTasks } = useAppState();
   // The plan counts things only the finance and settings holders can see,
   // so anybody else would be told a finished setup was two steps short.
   const seesSetup = mayOpen("/board/setup", can);
@@ -50,7 +50,7 @@ export default function BoardDashboard() {
     community.requests.length > 0 ||
     community.ballots.length > 0 ||
     community.payouts.length > 0;
-  const plan = buildPlan(community, profileFromCommunity(community));
+  const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   const exposure = insuranceExposure(community);
 
   return (

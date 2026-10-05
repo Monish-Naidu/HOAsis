@@ -8,10 +8,12 @@ import {
   founderUnit,
   otherHomes,
   unitCount,
+  draftCollectionPolicy,
   draftDuesTotal,
 } from "@/lib/data/new-community";
 import { countByType, describeMix, duesFor, duesVary, totalDues } from "@/lib/home-types";
 import { wordingFor } from "@/lib/wording";
+import { policyProblems } from "@/lib/collections";
 import { buildPlan, profileFromDraft } from "@/lib/setup-plan";
 import type { CommunityDraft } from "@/lib/data/new-community";
 
@@ -183,5 +185,107 @@ describe("a mix of homes", () => {
     const detached = keys({ ...mixed(), homeTypes: ["single-family"], stateName: "Idaho" });
     expect(detached).not.toContain("structural");
     expect(detached).not.toContain("maintenance-matrix");
+  });
+});
+
+describe("a condo founder who leaves the unit number blank", () => {
+  function condos(): CommunityDraft {
+    return {
+      ...emptyDraft(),
+      name: "Harbor Court",
+      city: "Bothell",
+      state: "WA",
+      stateName: "Washington",
+      duesCents: 30_000,
+      homeTypes: ["condos"],
+      origin: "existing",
+      previously: "fresh",
+      founder: { name: "Pat Founder", email: "pat@example.com", unit: "", address: "1 Harbor Way" },
+      phases: [{ id: "phase-1", label: "Building A", from: 1, to: 12 }],
+      households: Array.from({ length: 12 }, (_, i) => ({ name: "", email: "", unit: String(i + 1) })),
+    };
+  }
+
+  it("keeps twelve units twelve, and bills twelve", () => {
+    const done = finalizeDraft(condos());
+    expect(unitCount(done)).toBe(12);
+    const community = buildCommunity(done, "2026-08-20");
+    expect(community.owners).toHaveLength(12);
+    expect(new Set(community.owners.map((o) => o.unit)).size).toBe(12);
+    expect(draftDuesTotal(done)).toBe(12 * 30_000);
+    // Still the President, in one of the twelve, with the address they gave.
+    const mine = community.owners.find((o) => o.boardRole === "President")!;
+    expect(mine.unit).toBe("1");
+    expect(mine.address).toBe("1 Harbor Way");
+  });
+
+  it("does not move a founder whose number is in the ranges", () => {
+    const done = finalizeDraft({ ...condos(), founder: { ...condos().founder, unit: "7" } });
+    expect(done.founder.unit).toBe("7");
+    expect(unitCount(done)).toBe(12);
+  });
+
+  it("leaves a founder alone when every home already has an owner", () => {
+    const owned = condos();
+    owned.households = owned.households.map((h) => ({ ...h, name: `Owner ${h.unit}` }));
+    expect(unitCount(finalizeDraft(owned))).toBe(13);
+  });
+});
+
+describe("a home with nobody named", () => {
+  const draftFor = (origin: CommunityDraft["origin"]): CommunityDraft => ({
+    ...emptyDraft(),
+    name: "Alder Creek",
+    homeTypes: ["single-family"],
+    origin,
+    founder: { name: "Pat", email: "pat@example.com", unit: "1" },
+    households: [
+      { name: "Marcus Bell", email: "marcus@example.com", unit: "2" },
+      { name: "", email: "", unit: "3" },
+    ],
+  });
+  const empty = (origin: CommunityDraft["origin"]) =>
+    buildCommunity(finalizeDraft(draftFor(origin)), "2026-08-20").owners.find((o) => o.unit === "3")!;
+
+  it("is not sold yet only when the builder is setting the community up", () => {
+    expect(empty("builder").displayName).toBe("Not sold yet");
+  });
+
+  it("is simply without an owner for a turnover board and an established association", () => {
+    expect(empty("handover").displayName).toBe("No owner listed");
+    expect(empty("existing").displayName).toBe("No owner listed");
+  });
+
+  it("is marked a placeholder, so the roster does not call it paid up", () => {
+    expect(empty("builder").placeholder).toBe(true);
+    expect(empty("existing").placeholder).toBe(true);
+    const named = buildCommunity(finalizeDraft(draftFor("existing")), "2026-08-20").owners.find(
+      (o) => o.unit === "2",
+    )!;
+    expect(named.placeholder).toBe(false);
+  });
+});
+
+describe("the late fee a founder chooses", () => {
+  it("is none until one is chosen", () => {
+    expect(draftCollectionPolicy(emptyDraft()).lateFeeCents).toBe(0);
+    expect(draftCollectionPolicy({ ...emptyDraft(), lateFee: { charge: false, cents: 25_00, days: 30 } }).lateFeeCents).toBe(0);
+    const community = buildCommunity(finalizeDraft({ ...emptyDraft(), homeTypes: ["single-family"], founder: { name: "P", email: "p@example.com", unit: "1" } }), "2026-08-20");
+    expect(community.settings.collectionPolicy?.lateFeeCents).toBe(0);
+  });
+
+  it("becomes the policy, with the notice on the day chosen and a ladder that still climbs", () => {
+    const policy = draftCollectionPolicy({ ...emptyDraft(), lateFee: { charge: true, cents: 10_00, days: 20 } });
+    expect(policy.lateFeeCents).toBe(10_00);
+    expect(policy.lateNoticeDay).toBe(20);
+    expect(policyProblems(policy)).toEqual([]);
+    const late = draftCollectionPolicy({ ...emptyDraft(), lateFee: { charge: true, cents: 25_00, days: 60 } });
+    expect(late.lateNoticeDay).toBe(60);
+    expect(policyProblems(late)).toEqual([]);
+  });
+
+  it("is no fee when the amount or the days are missing", () => {
+    expect(draftCollectionPolicy({ ...emptyDraft(), lateFee: { charge: true, cents: 0, days: 30 } }).lateFeeCents).toBe(0);
+    expect(draftCollectionPolicy({ ...emptyDraft(), lateFee: { charge: true, cents: 25_00, days: Number.NaN } }).lateFeeCents).toBe(0);
   });
 });

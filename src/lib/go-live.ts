@@ -17,6 +17,10 @@ import { formatDate } from "@/lib/utils";
  * Each row links to where it gets fixed. Derived only: two screens showing
  * different answers to "can we take a payment" is the failure this product
  * is positioned against.
+ *
+ * No longer rendered as a list of its own (2026-10-04): the setup list holds
+ * what it checked, and reads `billingStatus` from here. The function stays
+ * because it is the one place the seven questions are answered together.
  */
 
 export type GoLiveKey =
@@ -50,7 +54,41 @@ export interface GoLive {
   allDone: boolean;
 }
 
-const OPENING = /brought forward/i;
+/**
+ * Whether the association has a card on file, and where the free days stand.
+ *
+ * Read by the setup list as well, which is why it is a function of its own:
+ * the list shows this one row of what used to be the go-live checklist.
+ */
+export function billingStatus(community: Community, today: ISODate) {
+  const a = community.association;
+  const phase = a.trialEndsOn
+    ? billingPhase(
+        {
+          status: a.subscriptionStatus ?? "trialing",
+          trialEndsOn: a.trialEndsOn,
+          homes: a.unitCount,
+          hasSubscription: Boolean(a.billing?.subscriptionId),
+        },
+        today,
+      )
+    : null;
+  const done = phase?.phase === "active" || Boolean(a.billing?.subscriptionId);
+  const detail = done
+    ? a.billing?.last4
+      ? `${a.billing.brand ?? "Card"} ••${a.billing.last4} on file`
+      : "Subscription active"
+    : phase?.phase === "trialing"
+      ? `Free until ${formatDate(phase.endsOn, "long")}, ${phase.daysLeft} days left`
+      : phase?.phase === "ended"
+        ? `The free days ended ${formatDate(phase.endsOn, "long")}`
+        : "The clock starts when the association is founded";
+  const urgent = !done && (phase?.phase === "ended" || (phase?.phase === "trialing" && phase.closing));
+  return { phase, done, detail, urgent: Boolean(urgent) };
+}
+
+/** The label an opening balance carries on a statement. */
+export const OPENING_LINE = /brought forward/i;
 const DUES = /dues/i;
 
 export function goLiveChecklist(community: Community, today: ISODate): GoLive {
@@ -67,7 +105,7 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
   const stripeDone = Boolean(a.stripeChargesEnabled);
 
   const issued = Object.values(community.ownerCharges).some((lines) =>
-    lines.some((l) => l.kind === "charge" && DUES.test(l.label) && !OPENING.test(l.label)),
+    lines.some((l) => l.kind === "charge" && DUES.test(l.label) && !OPENING_LINE.test(l.label)),
   );
   const next = community.nextChargeDate;
   const scheduled = duesDone && Boolean(next) && next >= today;
@@ -78,18 +116,8 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
   const joined = residents.length > 0;
   const invitesDone = invitesSent || (reachable.length > 0 && reachable.every((o) => residents.some((r) => r.ownerId === o.id)));
 
-  const phase = a.trialEndsOn
-    ? billingPhase(
-        {
-          status: a.subscriptionStatus ?? "trialing",
-          trialEndsOn: a.trialEndsOn,
-          homes: a.unitCount,
-          hasSubscription: Boolean(a.billing?.subscriptionId),
-        },
-        today,
-      )
-    : null;
-  const billingDone = phase?.phase === "active" || Boolean(a.billing?.subscriptionId);
+  const billing = billingStatus(community, today);
+  const billingDone = billing.done;
 
   const items: GoLiveItem[] = [
     {
@@ -123,7 +151,7 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
           ? "Started, not finished. Stripe still needs something from the treasurer"
           : "Residents cannot pay online until the association is verified with Stripe",
       done: stripeDone,
-      href: "/board/settings#payments",
+      href: "/board/settings#money",
       action: a.stripeAccountId ? "Finish with Stripe" : "Connect Stripe",
     },
     {
@@ -165,18 +193,10 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
     {
       key: "billing",
       label: "Card on file before the trial ends",
-      detail: billingDone
-        ? a.billing?.last4
-          ? `${a.billing.brand ?? "Card"} ••${a.billing.last4} on file`
-          : "Subscription active"
-        : phase?.phase === "trialing"
-          ? `Free until ${formatDate(phase.endsOn, "long")}, ${phase.daysLeft} days left`
-          : phase?.phase === "ended"
-            ? `The free days ended ${formatDate(phase.endsOn, "long")}`
-            : "The clock starts when the association is founded",
+      detail: billing.detail,
       done: billingDone,
-      urgent: !billingDone && (phase?.phase === "ended" || (phase?.phase === "trialing" && phase.closing)),
-      href: "/board/settings#billing",
+      urgent: billing.urgent,
+      href: "/board/settings#money",
       action: "Add a card",
     },
   ];

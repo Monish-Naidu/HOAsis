@@ -757,7 +757,6 @@ describe("the setup plan and unsold lots", () => {
       {
         ...emptyDraft(),
         founder: { name: "Pat", email: "pat@example.com", unit: "1" },
-        builderName: "Ridgeline Homes",
         households: [
           { name: "Marcus Bell", email: "marcus@example.com", unit: "2" },
           { name: "", email: "", unit: "3" },

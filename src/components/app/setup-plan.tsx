@@ -11,15 +11,14 @@ import {
   Upload,
 } from "lucide-react";
 import { Button, ButtonLink, Callout, Card, SuccessMark, fieldClass } from "@/components/ui/primitives";
-import { BankConnect } from "@/components/app/bank-connect";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
-import { PortingCard } from "@/components/app/porting-card";
 import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/app/question-flow";
 import { useCoverPhotoUpload } from "@/components/app/community-hero";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
+import { portingPlan } from "@/lib/porting";
 import { useRemote } from "@/lib/data/remote-store";
 import { DOCUMENT_ACCEPT } from "@/lib/documents";
 import {
@@ -28,6 +27,7 @@ import {
   type PlanPhase,
   type PlanTask,
 } from "@/lib/setup-plan";
+import { BUILDER_KEYS, HANDOVER_KEYS, whereIs } from "@/lib/setup";
 import { ADMIN_ROLES, ROLE_LABEL, type AccountRole } from "@/lib/types";
 import { cn, money, pluralize } from "@/lib/utils";
 import { HummingbirdArriving } from "@/components/app/hummingbird";
@@ -55,17 +55,33 @@ import { homeLabel } from "@/lib/wording";
  * the plan has nothing more specific to say about this association.
  */
 const QUESTION: Record<string, { title: string; detail: string }> = {
-  roster: {
-    title: "Is every home on the register?",
-    detail: "Every home, sold or not. A home that is not here has no balance and no vote.",
+  ein: {
+    title: "Does the association have an EIN?",
+    detail: "Free from the IRS. A bank will not open an account in the association's name without it.",
   },
-  bank: {
-    title: "Where should dues land?",
-    detail: "An account in the association's name. Not a board member's personal account.",
+  register: {
+    title: "Is the association registered, with an agent named?",
+    detail: "A nonprofit corporation with your state, and an agent who accepts legal papers for it.",
+  },
+  roster: {
+    title: "Is every home on the register, with its owner?",
+    detail: "Every home, with the owner's name. A home with no owner has no balance and no vote.",
+  },
+  "opening-balances": {
+    title: "What does each home owe today?",
+    detail: "One figure per home, as of the day you switched. Nothing before that has to come across.",
+  },
+  payments: {
+    title: "Can owners pay online yet?",
+    detail: "Connect the association to Stripe. Nothing here says payments are on until Stripe does.",
+  },
+  "first-bill": {
+    title: "Is the first bill right?",
+    detail: "The date it goes out and what each home is billed.",
   },
   invites: {
-    title: "Can every household be reached?",
-    detail: "An email for every household that has somebody in it, so they can see their balance and pay.",
+    title: "Have the owners been invited?",
+    detail: "An email for every owner, then an invitation, so they can see their balance and pay.",
   },
   documents: {
     title: "Do you have the governing documents to hand?",
@@ -77,7 +93,7 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
   },
   insurance: {
     title: "Who insures the association?",
-    detail: "Carrier, policy number, renewal date. You get told before it lapses.",
+    detail: "Carrier, policy number and renewal date, kept where the next board can find them.",
   },
   reserves: {
     title: "What will wear out, and when?",
@@ -97,7 +113,7 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
   },
   vendors: {
     title: "Who do you pay?",
-    detail: "Landscaper, pool service, anyone you write a check to.",
+    detail: "Landscaper, pool service, insurance agent. Anyone the association pays.",
   },
   amenities: {
     title: "What can owners reserve?",
@@ -106,6 +122,10 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
   photo: {
     title: "What does the neighborhood look like?",
     detail: "The picture owners see when they sign in. Any photo of the place does the job.",
+  },
+  billing: {
+    title: "Is there a card on file?",
+    detail: "Add a card before the free days end so nothing stops.",
   },
 };
 
@@ -131,7 +151,9 @@ export function SetupFlow({ welcome = false }: { welcome?: boolean }) {
 function SetupQuestions({ welcome }: { welcome: boolean }) {
   const { community, dismissedSetupTasks, dismissSetupTask } = useAppState();
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
-  const tasks = plan.phases.flatMap((phase) => phase.tasks);
+  // A step this association cannot do where it lives is listed in the
+  // overview and never asked as a question.
+  const tasks = plan.phases.flatMap((phase) => phase.tasks).filter((task) => !task.unavailable);
   const params = useSearchParams();
   const requested = params.get("task");
   const firstOpen = tasks.find((task) => !task.complete)?.key;
@@ -292,7 +314,6 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
   // A mixed community names its kinds, and says so when they pay differently.
   const mix = describeMix(community.owners);
   const varies = duesVary(community.association);
-  const bank = community.bankAccounts.find((a) => a.kind === "operating");
 
   return (
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
@@ -306,9 +327,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
         {pluralize(homes, "home")} on the register
         {isMixed(community.profile) && mix ? ` (${mix})` : ""}
         {dues > 0 && !varies ? `, ${money(dues)} ${cadence} each` : ""}.{" "}
-        {plan.canCollect
-          ? "You can already take payments."
-          : `${pluralize(plan.phases[0].total - plan.phases[0].done, "thing")} before you can take a payment.`}
+        {plan.payments.sentence}
       </p>
 
       {local ? (
@@ -330,22 +349,24 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
             detail={varies ? "Each kind of home at its own amount" : "Billed to every home"}
           />
         ) : null}
-        {bank ? (
-          <Done label={`${bank.institution} ••${bank.mask} connected`} detail="Dues land here" />
+        {plan.canTakePayments ? (
+          <Done label="Online payments are on" detail="Owners can pay dues online" />
         ) : (
           <div className="flex items-start gap-3 px-4 py-3">
             <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-warn" />
             <span className="min-w-0">
-              <span className="block text-body font-medium text-fg">No bank connected yet</span>
+              <span className="block text-body font-medium text-fg">Online payments are not on yet</span>
               <span className="block text-footnote text-fg-muted">
-                Dues have nowhere to land until you add one. It is the first question.
+                {local
+                  ? "A copy in this browser cannot take payments. Set it up for real to turn them on."
+                  : "Owners cannot pay online until Stripe has verified the association."}
               </span>
             </span>
           </div>
         )}
       </Card>
 
-      <PortingCard />
+      <SituationIntro className="mt-8" />
 
       <p className="mt-8 text-body leading-relaxed text-fg-muted">
         {count === 0
@@ -361,6 +382,24 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
           Go to the dashboard
         </ButtonLink>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One paragraph about the board's situation, above the one list. Only where
+ * it says something the list does not: a builder's unsold lots, a turnover,
+ * a manager holding the records. The steps it used to number are list items.
+ */
+function SituationIntro({ className }: { className?: string }) {
+  const { community } = useAppState();
+  const profile = profileFromCommunity(community);
+  const plan = portingPlan(profile.origin, profile.previously);
+  if (!plan?.introduces) return null;
+  return (
+    <div className={className}>
+      <p className="text-headline font-semibold tracking-[-0.015em] text-fg">{plan.title}</p>
+      <p className="mt-1 max-w-[64ch] text-body leading-relaxed text-fg-muted">{plan.lede}</p>
     </div>
   );
 }
@@ -405,13 +444,7 @@ function Finished({
       <p className="mt-3 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
         {plan.allDone
           ? "Nothing outstanding. Getting started stays in the sidebar in case you add something later."
-          : `${plan.done} of ${plan.total} done. ${
-              plan.canCollect
-                ? "You can take payments."
-                : `${pluralize(plan.phases[0].total - plan.phases[0].done, "thing")} still ${
-                    plan.phases[0].total - plan.phases[0].done === 1 ? "stands" : "stand"
-                  } between you and taking a payment.`
-            }`}
+          : `${plan.done} of ${plan.total} done. ${plan.payments.sentence}`}
       </p>
 
       {leftOpen.length ? (
@@ -470,6 +503,7 @@ export function SetupOverview() {
         </p>
         <p className="mx-auto mt-1.5 max-w-md text-body leading-relaxed text-fg-muted">
           Nothing outstanding. This page is here if you add something later.
+          {plan.payments.ready ? "" : ` ${plan.payments.sentence}`}
         </p>
         <ButtonLink variant="primary" size="md" className="mt-4" href="/board">
           Open the dashboard
@@ -485,16 +519,15 @@ export function SetupOverview() {
 
   return (
     <div className="space-y-6">
+      <SituationIntro />
       <Card className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-headline font-semibold tracking-[-0.015em] text-fg">
-              {plan.canCollect
-                ? "You can take payments"
-                : `${plan.phases[0].total - plan.phases[0].done} to go before you can take a payment`}
+              {plan.payments.headline}
             </p>
             <p className="mt-1 text-body leading-relaxed text-fg-muted">
-              {plan.canCollect
+              {plan.payments.ready
                 ? `${pluralize(remaining, "thing")} left. None of it is urgent, and each one takes a minute.`
                 : "Start at the top. Everything below it can wait."}
             </p>
@@ -554,7 +587,9 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
       <p className="mb-3 text-body leading-relaxed text-fg-muted">{phase.outcome}</p>
 
       <Card className="divide-y divide-border">
-        {phase.tasks.map((task) => (
+        {phase.tasks.map((task) => {
+          const situational = HANDOVER_KEYS.includes(task.key) || BUILDER_KEYS.includes(task.key);
+          return (
           <div
             key={task.key}
             className={cn("flex items-start gap-3 px-4 py-3.5", task.complete && "opacity-70")}
@@ -577,13 +612,30 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
               >
                 {task.label}
               </span>
-              <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
-                {task.because ?? task.detail}
-              </span>
+              {situational ? (
+                <>
+                  <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
+                    {task.detail}
+                  </span>
+                  {/* Order is the whole argument at a handover, so the reason a
+                      step sits where it does is stated rather than implied. */}
+                  <span className="mt-1.5 block border-l-2 border-border-2 pl-3 text-footnote leading-relaxed text-fg-muted">
+                    {task.why}
+                  </span>
+                </>
+              ) : (
+                <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
+                  {task.because ?? task.detail}
+                </span>
+              )}
             </span>
-            {task.complete ? (
+            {task.unavailable ? (
+              <span className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle">
+                Not available here
+              </span>
+            ) : task.complete ? (
               <Link
-                href={task.href}
+                href={task.href || `/start/plan?task=${task.key}`}
                 className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle hover:text-fg"
               >
                 Change
@@ -598,7 +650,8 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
               </Link>
             )}
           </div>
-        ))}
+          );
+        })}
       </Card>
     </section>
   );
@@ -612,6 +665,7 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
 function screenName(href: string): string {
   const names: Record<string, string> = {
     "/board/homeowners": "Homeowners",
+    "/board/homeowners/opening-balances": "Opening balances",
     "/board/money": "Finances",
     "/board/documents": "Documents",
     "/board/settings": "Settings",
@@ -619,7 +673,7 @@ function screenName(href: string): string {
     "/board/vendors": "Vendors",
     "/library": "the library",
   };
-  return names[href] ?? "the screen";
+  return names[href.split("#")[0]] ?? "the screen";
 }
 
 /**
@@ -630,7 +684,9 @@ function screenName(href: string): string {
  * through here so the return bar always knows where "back" is.
  */
 export function setupLink(task: PlanTask, href = task.href): string {
-  return `${href}?from=setup&task=${encodeURIComponent(task.key)}`;
+  // A hash goes last, after the query, or the browser reads the query as part of it.
+  const [path, hash] = href.split("#");
+  return `${path}?from=setup&task=${encodeURIComponent(task.key)}${hash ? `#${hash}` : ""}`;
 }
 
 function GoThere({ task, secondary = false }: { task: PlanTask; secondary?: boolean }) {
@@ -651,9 +707,20 @@ function GoThere({ task, secondary = false }: { task: PlanTask; secondary?: bool
  * links out with a way back.
  */
 function TaskAction({ task }: { task: PlanTask }) {
+  // Steps that happen outside the product: read, do, then say it is done.
+  if (HANDOVER_KEYS.includes(task.key) || BUILDER_KEYS.includes(task.key)) {
+    return <PaperworkInline task={task} />;
+  }
   switch (task.key) {
-    case "bank":
-      return <BankInline task={task} />;
+    case "ein":
+    case "register":
+      return <PaperworkInline task={task} />;
+    case "opening-balances":
+    case "first-bill":
+    case "billing":
+      return <GoThere task={task} />;
+    case "payments":
+      return <PaymentsInline task={task} />;
     case "documents":
       return <DocumentInline task={task} />;
     case "maintenance-matrix":
@@ -701,20 +768,52 @@ function TaskAction({ task }: { task: PlanTask }) {
 const field =
   fieldClass;
 
-function BankInline({ task }: { task: PlanTask }) {
-  const { addBankAccount, isRemote } = useAppState();
-  const { notify } = useToast();
+/** Paperwork happens outside the product. The detail says what, the link says where, "Done" says it is. */
+function PaperworkInline({ task }: { task: PlanTask }) {
+  const guide = task.href.startsWith("/library");
   return (
     <div className="space-y-3">
-      <BankConnect
-        linked={!isRemote}
-        onConnect={(account) => {
-          addBankAccount(account);
-          notify(`${account.institution} ••${account.mask} connected`, "ok");
-        }}
-      />
-      <GoThere task={task} secondary />
+      <p className="text-body leading-relaxed text-fg-muted">{task.detail}</p>
+      {task.href ? (
+        guide ? (
+          <ButtonLink href={task.href} variant="ghost" size="md">
+            Read the guide
+            <ArrowRight className="size-3.5" />
+          </ButtonLink>
+        ) : (
+          <GoThere task={task} secondary />
+        )
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * Stripe is connected in Settings, where the whole flow (verification, what
+ * Stripe still needs, charges turned on) already lives. A copy in this
+ * browser has no Stripe and says so.
+ */
+function PaymentsInline({ task }: { task: PlanTask }) {
+  const { community } = useAppState();
+  if (whereIs(community) === "browser-copy") {
+    return (
+      <div className="space-y-3">
+        <p className="text-body leading-relaxed text-fg-muted">
+          A copy in this browser cannot take payments. Set it up for real to turn them on.
+        </p>
+        <ButtonLink href="/signin" variant="primary" size="md">
+          Set it up for real
+          <ArrowRight className="size-3.5" />
+        </ButtonLink>
+      </div>
+    );
+  }
+  const started = Boolean(community.association.stripeAccountId);
+  return (
+    <ButtonLink href={setupLink(task)} variant="primary" size="md">
+      {started ? "Finish with Stripe" : "Connect Stripe"}
+      <ArrowRight className="size-3.5" />
+    </ButtonLink>
   );
 }
 
@@ -948,20 +1047,11 @@ function HouseholdInline({ task }: { task: PlanTask }) {
   );
 }
 
-/** Who cannot be reached yet, and where to fix it. */
+/** Who still has no invitation or no email, and where to fix it. */
 function InvitesInline({ task }: { task: PlanTask }) {
-  const { community } = useAppState();
-  const missing = community.owners.filter((o) => o.members.length > 0 && !o.email.trim());
   return (
     <div className="space-y-3">
-      <p className="text-body leading-relaxed text-fg-muted">
-        {missing.length
-          ? `${pluralize(missing.length, "household")} with nobody we can email: ${missing
-              .slice(0, 4)
-              .map((o) => `${o.displayName} (${o.unit})`)
-              .join(", ")}${missing.length > 4 ? " and more" : ""}.`
-          : "Every household with somebody in it has an email."}
-      </p>
+      <p className="text-body leading-relaxed text-fg-muted">{task.because ?? task.detail}</p>
       <GoThere task={task} />
     </div>
   );
@@ -1118,9 +1208,9 @@ export function SetupPlanSummary() {
   const { community, dismissedSetupTasks } = useAppState();
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   if (plan.allDone) return null;
-  const next = plan.phases.flatMap((phase) => phase.tasks).find((task) => !task.complete);
-  const collect = plan.phases.find((phase) => phase.id === "collect");
-  const toCollect = collect ? collect.total - collect.done : 0;
+  const next = plan
+    .phases.flatMap((phase) => phase.tasks)
+    .find((task) => !task.complete && !task.unavailable);
 
   // Straight into the next question. The overview stays one click away
   // under Getting started in the sidebar for anyone who wants the whole list.
@@ -1136,11 +1226,7 @@ export function SetupPlanSummary() {
         </span>
         <span className="mt-0.5 block truncate text-footnote leading-relaxed text-fg-muted">
           {next ? `Next: ${next.label}.` : ""}{" "}
-          {plan.canCollect
-            ? "You can already take payments."
-            : toCollect > 0
-              ? `${toCollect} ${toCollect === 1 ? "thing" : "things"} before you can take a payment.`
-              : ""}
+          {plan.payments.sentence}
         </span>
       </span>
       <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand-gradient px-3.5 text-footnote font-semibold text-primary-fg shadow-sm sm:inline-flex">

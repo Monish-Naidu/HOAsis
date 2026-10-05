@@ -103,7 +103,9 @@ export function CollectionsLadder() {
                     can be seen to be because it was sent. */}
                 {row.sentOn ? `Sent ${formatDate(row.sentOn)} · ` : ""}
                 {row.actionDue
-                  ? ACTION[row.stage]
+                  ? row.stage === "late-notice" && policy.lateFeeCents <= 0
+                    ? "Send the notice"
+                    : ACTION[row.stage]
                   : row.daysToNext !== undefined
                     ? `${STEP[row.nextStage!]} in ${pluralize(row.daysToNext, "day")}`
                     : "Nothing due"}

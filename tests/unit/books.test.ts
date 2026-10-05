@@ -6,6 +6,7 @@ import {
   householdsNeedingBooks,
   nextDueOnOrAfter,
   withBooks,
+  wallToday,
   withExtras,
 } from "@/app/start/books";
 
@@ -62,5 +63,24 @@ describe("books on the draft", () => {
       ],
     };
     expect(householdsNeedingBooks(draft).map((h) => h.unit)).toEqual(["1", "2"]);
+  });
+});
+
+describe("wallToday", () => {
+  it("is the date on the person's own clock, not the UTC date", () => {
+    // 8:30 pm on the 4th wherever this runs. In a US time zone the UTC date
+    // is already the 5th, which is what the form used to offer.
+    expect(wallToday(new Date(2026, 9, 4, 20, 30))).toBe("2026-10-04");
+    expect(wallToday(new Date(2026, 9, 4, 0, 5))).toBe("2026-10-04");
+    expect(wallToday(new Date(2026, 11, 31, 23, 59))).toBe("2026-12-31");
+  });
+
+  it("pads the month and the day", () => {
+    expect(wallToday(new Date(2026, 0, 3, 12))).toBe("2026-01-03");
+  });
+
+  it("makes a first bill suggestion that is not a day ahead on a US evening", () => {
+    const today = wallToday(new Date(2026, 9, 1, 21, 0));
+    expect(nextDueOnOrAfter(today, 1, "monthly", "01-01")).toBe("2026-10-01");
   });
 });

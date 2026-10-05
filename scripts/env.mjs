@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
  *
  * So the value is unquoted here, once, rather than at each call site.
  */
-export function loadEnv(url = new URL("../.env.local", import.meta.url)) {
+export function loadEnv(url = new URL(process.env.ENV_FILE ?? "../.env.local", import.meta.url)) {
   const out = {};
   for (const line of readFileSync(url, "utf8").split("\n")) {
     const trimmed = line.trim();

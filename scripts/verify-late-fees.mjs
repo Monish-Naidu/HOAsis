@@ -3,13 +3,15 @@
  *
  * Founds a throwaway association, bills a period forty days ago, and runs
  * assess_late_fees the way the cron does. Then pays one home and runs it
- * again. Pure Supabase; cleaned up at the end.
+ * again. A new association has no policy and so no late fee until the board
+ * sets one (0079); the checks that expect a fee set $25 after 30 days first.
+ * Pure Supabase; cleaned up at the end.
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
 const env = Object.fromEntries(
-  readFileSync(new URL("../.env.local", import.meta.url), "utf8")
+  readFileSync(new URL(process.env.ENV_FILE ?? "../.env.local", import.meta.url), "utf8")
     .split("\n").filter((l) => l && !l.startsWith("#"))
     .map((l) => { const i = l.indexOf("="); return [l.slice(0, i), l.slice(i + 1)]; }),
 );
@@ -56,6 +58,15 @@ try {
   // Before the notice day: nothing.
   const { data: early } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(-20) });
   check("no fee before the notice day", early === 0, String(early));
+
+  // An association that has set no policy charges no fee, however late (0079).
+  const { data: unset } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(0) });
+  const { data: unsetFees } = await admin.from("charges").select("id").eq("association_id", associationId).eq("category", "late_fee");
+  check("an association with no policy set posts no fee", unset === 0 && (unsetFees ?? []).length === 0, `${unset}, ${(unsetFees ?? []).length} lines`);
+
+  // The board sets $25 after 30 days, which is what the checks below expect.
+  const { error: setError } = await admin.from("associations").update({ settings: { collectionPolicy: { lateNoticeDay: 30, lateFeeCents: 2500 } } }).eq("id", associationId);
+  check("a fee of $25 after 30 days is set", !setError, setError?.message ?? "");
 
   // Past it: one fee per unpaid home, once.
   const { data: first, error: firstError } = await admin.rpc("assess_late_fees", { p_association_id: associationId, p_today: day(0) });

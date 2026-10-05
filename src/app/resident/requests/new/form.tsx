@@ -13,27 +13,34 @@ import { cn, formatDate, money, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 import { confirmedReference } from "@/lib/request-reference";
 
+/**
+ * What happens next, and nothing more. These lines used to promise a reply
+ * in 2 business days, 30 days and 3 days: times no board had set and
+ * nothing tracked.
+ */
+const SEEN = "The board sees this as soon as you send it.";
+
 const kinds = [
   {
     id: "maintenance",
     label: "Maintenance",
     hint: "Something broken in a common area",
     icon: Hammer,
-    clock: "The board usually replies within 2 business days.",
+    clock: SEEN,
   },
   {
     id: "architectural",
     label: "Home changes",
     hint: "Change to your home's exterior",
     icon: ClipboardList,
-    clock: "The board must answer within 30 days.",
+    clock: SEEN,
   },
   {
     id: "records",
     label: "Records",
     hint: "Inspect association records",
     icon: FileSearch,
-    clock: "The board replies within 10 business days.",
+    clock: SEEN,
     // A statutory records request is not a month-one homeowner action.
     module: "request-records" as const,
   },
@@ -42,7 +49,7 @@ const kinds = [
     label: "Booking",
     hint: "Reserve the clubhouse or a court",
     icon: PartyPopper,
-    clock: "The board confirms or declines within 3 days.",
+    clock: "The board confirms or declines the booking.",
   },
 ] as const;
 
@@ -365,7 +372,21 @@ export function NewRequestForm() {
               className={cn(textareaClass, "resize-none")}
             />
           </label>
-          <label className="flex w-full cursor-pointer items-center gap-2 p-4 text-left text-body font-medium text-fg-muted hover:bg-surface-2">
+          {/* A real association has nowhere to keep the file yet: the board
+              was shown its name and nothing else. The control comes back
+              with the upload. */}
+          {isRemote ? (
+            <p className="p-4 text-footnote text-fg-muted">
+              Photos and files cannot be attached here yet. Describe what you see, and the board
+              will ask if it needs a picture.
+            </p>
+          ) : null}
+          <label
+            className={cn(
+              "flex w-full cursor-pointer items-center gap-2 p-4 text-left text-body font-medium text-fg-muted hover:bg-surface-2",
+              isRemote && "hidden",
+            )}
+          >
             <Paperclip className="size-3.5" />
             {files.length ? "Add another" : "Add photos or documents"}
             <input

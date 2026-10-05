@@ -80,7 +80,8 @@ export function FillForm({ formId }: { formId: string }) {
 
   const missing = form.fields.filter((field) => {
     if (!field.required) return false;
-    if (field.kind === "file") return (files[field.id] ?? []).length === 0;
+    // A real association cannot take the file yet, so it cannot require it.
+    if (field.kind === "file") return !isRemote && (files[field.id] ?? []).length === 0;
     if (field.kind === "checkbox") return answers[field.id] !== "Yes";
     return !(answers[field.id] ?? "").trim();
   });
@@ -260,6 +261,7 @@ export function FillForm({ formId }: { formId: string }) {
             field={field}
             value={answers[field.id] ?? ""}
             files={files[field.id] ?? []}
+            uploads={!isRemote}
             onChange={(value) => setAnswers((a) => ({ ...a, [field.id]: value }))}
             onFiles={(names) => setFiles((f) => ({ ...f, [field.id]: names }))}
           />
@@ -315,12 +317,15 @@ function Field({
   field,
   value,
   files,
+  uploads,
   onChange,
   onFiles,
 }: {
   field: FormField;
   value: string;
   files: string[];
+  /** False where there is nowhere to keep a file yet. */
+  uploads: boolean;
   onChange: (value: string) => void;
   onFiles: (names: string[]) => void;
 }) {
@@ -365,6 +370,11 @@ function Field({
               className="size-4 rounded border-border-2"
             />
             <span className="text-body text-fg-muted">Yes</span>
+          </span>
+        ) : field.kind === "file" && !uploads ? (
+          <span className="mt-1.5 block text-footnote text-fg-muted">
+            Files cannot be attached here yet. Send this to the board separately and say so in
+            your answers.
           </span>
         ) : field.kind === "file" ? (
           <span className="mt-1.5 block">
