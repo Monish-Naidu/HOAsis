@@ -219,6 +219,24 @@ describe("a condo founder who leaves the unit number blank", () => {
     expect(mine.address).toBe("1 Harbor Way");
   });
 
+  it("promises on the homes step what it then creates", () => {
+    // The walk's case: the founder types "1A", the range is 1 to 4. The
+    // preview said 5 homes and $1,000 and the association was made with 4.
+    const typed: CommunityDraft = {
+      ...condos(),
+      duesCents: 20_000,
+      founder: { name: "Pat Founder", email: "pat@example.com", unit: "1A" },
+      phases: [{ id: "phase-1", label: "Building B", from: 1, to: 4 }],
+      households: Array.from({ length: 4 }, (_, i) => ({ name: "", email: "", unit: String(i + 1) })),
+    };
+    const done = finalizeDraft(typed);
+    expect(unitCount(typed)).toBe(4);
+    expect(unitCount(typed)).toBe(unitCount(done));
+    expect(draftDuesTotal(typed)).toBe(4 * 20_000);
+    expect(draftDuesTotal(typed)).toBe(draftDuesTotal(done));
+    expect(buildCommunity(done, "2026-08-20").owners).toHaveLength(4);
+  });
+
   it("does not move a founder whose number is in the ranges", () => {
     const done = finalizeDraft({ ...condos(), founder: { ...condos().founder, unit: "7" } });
     expect(done.founder.unit).toBe("7");

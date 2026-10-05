@@ -12,6 +12,7 @@ import { homeTypesOf, soleType } from "@/lib/home-types";
 import { expandPhases, lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor } from "@/lib/lots";
 import { addDays, nextDueOnOrAfter } from "@/lib/utils";
 import { policyWithLateFee } from "@/lib/collections";
+import { associationNameProblem, duesProblem } from "@/lib/input-checks";
 
 /**
  * Defaults nobody is asked about during setup.
@@ -297,7 +298,8 @@ export function draftOwnDues(draft: CommunityDraft, unit?: string, ownCents?: Ce
 }
 
 /** How many homes in the draft carry an amount of their own. */
-export function draftOwnDuesCount(draft: CommunityDraft): number {
+export function draftOwnDuesCount(entered: CommunityDraft): number {
+  const draft = placeFounder(entered);
   if (!draft.duesByHome) return 0;
   const mine = founderLabel(draft);
   return (
@@ -318,8 +320,16 @@ export function founderHomeType(draft: CommunityDraft): PropertyType | undefined
   return picked && types.includes(picked) ? picked : types[0];
 }
 
-/** Every home's dues in the draft, per period, the founder's included. */
-export function draftDuesTotal(draft: CommunityDraft): Cents {
+/**
+ * Every home's dues in the draft, per period, the founder's included.
+ *
+ * Counted on the draft as it will be created, with the founder placed among
+ * the numbered homes (see placeFounder). Counted on the draft as typed, the
+ * homes step promised "5 homes, $1,000" and the association was made with 4
+ * and $800: the preview added a founder that creation folds into a range.
+ */
+export function draftDuesTotal(entered: CommunityDraft): Cents {
+  const draft = placeFounder(entered);
   const types = homeTypesOf(draft);
   const founderType = founderHomeType(draft);
   return otherHomes(draft).reduce(
@@ -422,6 +432,31 @@ export function homesAnswered(draft: CommunityDraft): boolean {
   return expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0;
 }
 
+/**
+ * Whether any amount a range, row or the founder carries is one the dues
+ * rules refuse: typed as zero, or past the per-period ceiling. Blank is fine,
+ * it means the usual amount. Only checked while billing by home, the one
+ * mode where those amounts are asked.
+ */
+export function draftOwnDuesProblem(draft: CommunityDraft): string | null {
+  if (!draft.duesByHome) return null;
+  const amounts = [
+    draft.founder.duesCents,
+    ...(draft.phases ?? []).map((p) => p.duesCents),
+    ...draft.households.map((h) => h.duesCents),
+  ];
+  for (const cents of amounts) {
+    const problem = duesProblem(cents);
+    if (problem) return problem;
+  }
+  return null;
+}
+
+/** The association name, held to the same length the field allows. */
+export function draftNameProblem(draft: CommunityDraft): string | null {
+  return associationNameProblem(draft.name);
+}
+
 /** The collections policy the draft's late fee answer makes: no fee unless one was chosen. */
 export function draftCollectionPolicy(draft: CommunityDraft) {
   const fee = draft.lateFee;
@@ -438,7 +473,7 @@ export function draftCollectionPolicy(draft: CommunityDraft) {
  * stays what was typed. Addresses and unranged lists are left alone, as is a
  * list with no free home to give.
  */
-function placeFounder(draft: CommunityDraft): CommunityDraft {
+export function placeFounder(draft: CommunityDraft): CommunityDraft {
   const phases = draft.phases ?? [];
   const byNumber = (draft.homeNaming ?? defaultHomeNaming(draft)) === "numbers";
   if (!byNumber || !phases.length) return draft;
@@ -508,8 +543,9 @@ export function finalizeDraft(entered: CommunityDraft): CommunityDraft {
   };
 }
 
+/** How many homes the draft makes, counted the way it will be created. */
 export function unitCount(draft: CommunityDraft): number {
-  return otherHomes(draft).length + 1;
+  return otherHomes(placeFounder(draft)).length + 1;
 }
 
 /**

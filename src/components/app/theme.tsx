@@ -88,6 +88,14 @@ function applyToDocument(mode: Mode) {
 function subscribe(onChange: () => void) {
   listeners.push(onChange);
 
+  // Put the theme back on <html> whenever something starts listening. The
+  // inline script sets it before React loads, but when hydration fails React
+  // renders the document again from scratch and the class it never knew
+  // about is gone: the toggle said dark and the page was light (seen on
+  // /start and the board's setup pages, 2026-10-05). A mount is the first
+  // moment after that, and applying the same theme twice changes nothing.
+  applyToDocument(getSnapshot());
+
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
   const onSystemChange = () => {
     if (getSnapshot() === "system") {
@@ -143,6 +151,16 @@ const options: { value: Mode; icon: typeof Sun; label: string; hint: string }[] 
   { value: "system", icon: Monitor, label: "System", hint: "Follow this device" },
   { value: "dark", icon: Moon, label: "Dark", hint: "Always dark" },
 ];
+
+/**
+ * Keeps <html> in step with the saved theme on every page, including the
+ * ones with no toggle on them. Renders nothing; it is here for the
+ * subscription, which re-applies the theme on mount (see `subscribe`).
+ */
+export function ThemeKeeper() {
+  useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return null;
+}
 
 /**
  * One button, four moods.

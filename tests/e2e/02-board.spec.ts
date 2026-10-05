@@ -187,6 +187,9 @@ test.describe("board actions", () => {
     // Every household behind is listed with the letter its rung calls for,
     // not one template picked for the group.
     const list = page.locator("main ul");
+    // Waited for rather than counted after a fixed pause: on a slow runner
+    // the roster had not rendered half a second in, and zero was counted.
+    await expect(list.getByText(/reminder|notice/i).first(), "nobody was assigned a letter").toBeVisible();
     const badges = await list.getByText(/reminder|notice/i).count();
     expect(badges, "nobody was assigned a letter").toBeGreaterThan(0);
 

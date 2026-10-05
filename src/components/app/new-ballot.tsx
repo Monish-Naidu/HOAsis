@@ -5,6 +5,7 @@ import { Plus, Vote, X } from "lucide-react";
 import { Button, Card, CardHeader, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
+import { closingDateProblem } from "@/lib/input-checks";
 import { cn, addDays, formatDate, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -30,7 +31,10 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
   const field =
     fieldClass;
   const ready =
-    title.trim().length > 2 && choices.filter((c) => c.trim()).length >= 2 && closesOn > today;
+    title.trim().length > 2 &&
+    choices.filter((c) => c.trim()).length >= 2 &&
+    !closingDateProblem(closesOn, today);
+  const dateProblem = closingDateProblem(closesOn, today);
 
   function open() {
     const seq = ballots.length + 1;
@@ -84,6 +88,11 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
             autoFocus
             className={`mt-1.5 ${field}`}
           />
+          {dateProblem ? (
+            <span role="alert" className="mt-1 block text-footnote text-danger">
+              {dateProblem}
+            </span>
+          ) : null}
         </label>
 
         <label className="block">
@@ -148,6 +157,11 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
             aria-label="Voting ends"
             className={`mt-1.5 ${field}`}
           />
+          {dateProblem ? (
+            <span role="alert" className="mt-1 block text-footnote text-danger">
+              {dateProblem}
+            </span>
+          ) : null}
         </label>
 
         <Button type="submit" size="lg" disabled={!ready} onClick={open}>

@@ -11,6 +11,7 @@ import { US_STATES } from "@/lib/data/library";
 import {
   defaultHomeNaming,
   draftDuesTotal,
+  placeFounder,
   draftOwnDuesCount,
   emptyDraft,
   founderHomeType,
@@ -24,6 +25,8 @@ import {
   type DraftHousehold,
   type HomeNaming,
   type PropertyType,
+  draftNameProblem,
+  draftOwnDuesProblem,
 } from "@/lib/data/new-community";
 import {
   expandPhases,
@@ -58,6 +61,18 @@ import {
   restoreDraft,
   savePendingDraft,
 } from "@/lib/pending-draft";
+import {
+  HOME_NUMBER_MESSAGE,
+  MAX_ASSOCIATION_NAME,
+  associationNameProblem,
+  duesProblem,
+  emailProblem,
+  lateFeeAmountProblem,
+  lateFeeDaysProblem,
+  pasteSummary,
+  rangeEndProblem,
+  sortPastedAddresses,
+} from "@/lib/input-checks";
 import { cn, money } from "@/lib/utils";
 import { wordingFor, type Wording } from "@/lib/wording";
 import {
@@ -363,11 +378,12 @@ function WizardQuestions({
         title: "What is your association called?",
         detail: "The name residents see when they sign in, and the one on every notice.",
         enterContinues: true,
-        canContinue: Boolean(draft.name.trim()),
+        canContinue: Boolean(draft.name.trim()) && !draftNameProblem(draft),
         body: (
-          <Field label="Association name">
+          <Field label="Association name" error={associationNameProblem(draft.name)}>
             <input
               value={draft.name}
+              maxLength={MAX_ASSOCIATION_NAME}
               onChange={(e) => patch({ name: e.target.value })}
               placeholder="Oak Ridge Homeowners Association"
               className={cn(input, "h-12 text-headline")}
@@ -424,38 +440,28 @@ function WizardQuestions({
           : "The regular dues. Special assessments and anything else come later.",
         enterContinues: true,
         canContinue:
-          draft.duesCents > 0 &&
-          (!draft.duesByType || homeTypesOf(draft).every((t) => (draft.duesByType?.[t] ?? 0) > 0)) &&
+          duesProblem(draft.duesCents) === null &&
+          (!draft.duesByType || homeTypesOf(draft).every((t) => duesProblem(draft.duesByType?.[t] ?? 0) === null)) &&
+          !draftOwnDuesProblem(draft) &&
           lateFeeAnswered(draft),
         body: (
           <div className="flex flex-col gap-4">
             <DuesMode draft={draft} patch={patch} />
           <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
             {draft.duesByType ? null : (
-            <Field
+            <DollarField
               label={draft.duesByHome ? "Most homes pay" : "Each home pays"}
               hint={
                 draft.duesByHome
                   ? "A range or a home that pays something else is set when you list the homes."
                   : undefined
               }
-            >
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
-                  $
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={draft.duesCents ? draft.duesCents / 100 : ""}
-                  onChange={(e) => patch({ duesCents: Math.round(Number(e.target.value) * 100) })}
-                  placeholder="45.00"
-                  className={cn(input, "pl-7")}
-                  autoFocus
-                />
-              </div>
-            </Field>
+              cents={draft.duesCents}
+              onCents={(cents) => patch({ duesCents: cents ?? 0 })}
+              problem={(cents) => (cents === undefined ? null : duesProblem(cents))}
+              placeholder="45.00"
+              autoFocus
+            />
             )}
             <Field label="How often">
               <select
@@ -538,6 +544,7 @@ function WizardQuestions({
         canContinue: Boolean(
           draft.founder.name.trim() &&
             draft.founder.email.trim() &&
+            emailProblem(draft.founder.email) === null &&
             (byNumber ? draft.founder.unit.trim() : true) &&
             (w.fromBuilder ? true : draft.founder.address?.trim()),
         ),
@@ -552,7 +559,10 @@ function WizardQuestions({
                 className={input}
               />
             </Field>
-            <Field label="Your email">
+            <Field
+              label="Your email"
+              error={draft.founder.email.trim() ? emailProblem(draft.founder.email) : null}
+            >
               <input
                 type="email"
                 value={draft.founder.email}
@@ -898,6 +908,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
   const mixed = types.length > 1;
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState("");
+  const [pasteNote, setPasteNote] = useState<string | null>(null);
   const mine = founderUnit(draft);
   const rows = draft.households;
   // One more column for the amount, only while the board bills by home.
@@ -927,15 +938,17 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
   }
 
   function addPasted() {
-    const lines = pasted
-      .split(/\n+/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-    const known = new Set(rows.map((r) => r.unit.trim().toLowerCase()));
-    const fresh = lines
-      .filter((line) => !known.has(line.toLowerCase()) && line.toLowerCase() !== mine.toLowerCase())
-      .map((address) => ({ name: "", email: "", unit: address, address }));
+    // Compared ignoring case and repeated spaces, against the founder's
+    // number and address too, and against the paste itself. What was left
+    // out is counted and said, so nothing disappears without a word.
+    const sorted = sortPastedAddresses(pasted, [
+      ...rows.map((r) => r.unit),
+      mine,
+      draft.founder.address ?? "",
+    ]);
+    const fresh = sorted.added.map((address) => ({ name: "", email: "", unit: address, address }));
     setRows([...rows.filter((r) => r.unit.trim() !== ""), ...fresh]);
+    setPasteNote(pasteSummary(sorted));
     setPasted("");
     setPasting(false);
   }
@@ -1053,6 +1066,11 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
           Paste a list
         </Button>
       </div>
+      {pasteNote ? (
+        <p role="status" className="text-footnote text-fg-muted">
+          {pasteNote}
+        </p>
+      ) : null}
 
       {pasting ? (
         <div className="flex flex-col gap-2">
@@ -1171,7 +1189,9 @@ function RangesStep({ draft, patch }: StepProps) {
   // "Not sold yet" is the builder's own word. A turnover board's neighbours
   // and an established association's unnamed homes are not the builder's.
   const builderSetting = draft.origin === "builder";
-  const sold = otherHomes(draft).filter((h) => h.name.trim()).length;
+  // Counted as the association will be made: a founder whose number is in no
+  // range takes the first free home rather than adding one.
+  const sold = otherHomes(placeFounder(draft)).filter((h) => h.name.trim()).length;
   // Rows with an owner or a balance that no range covers yet. Said out loud,
   // because they are not homes until one does, and split by whether a range
   // can still bring them back so neither line promises what cannot happen.
@@ -1278,6 +1298,11 @@ function RangesStep({ draft, patch }: StepProps) {
                     <span className="order-2 sm:order-none" />
                   )}
                 </div>
+                {rangeEndProblem(phase) ? (
+                  <p className="px-3.5 pb-2.5 text-footnote leading-relaxed text-fg-muted">
+                    {rangeEndProblem(phase)}
+                  </p>
+                ) : null}
                 {draft.duesByHome ? (
                   <div className="flex flex-wrap items-center gap-2 px-3.5 pb-2.5">
                     <span className="text-footnote text-fg-subtle">Each home in this range pays</span>
@@ -1628,23 +1653,15 @@ function DuesMode({ draft, patch }: StepProps) {
       {mode === "kind" ? (
         <div className="grid gap-3 sm:grid-cols-3">
           {types.map((t, i) => (
-            <Field key={t} label={`${HOME_TYPE_LABEL[t].many} pay`}>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
-                  $
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={draft.duesByType?.[t] ? (draft.duesByType[t] ?? 0) / 100 : ""}
-                  onChange={(e) => setAmount(t, Math.round(Number(e.target.value) * 100))}
-                  placeholder="45.00"
-                  className={cn(input, "pl-7")}
-                  autoFocus={i === 0}
-                />
-              </div>
-            </Field>
+            <DollarField
+              key={t}
+              label={`${HOME_TYPE_LABEL[t].many} pay`}
+              cents={draft.duesByType?.[t]}
+              onCents={(cents) => setAmount(t, cents ?? 0)}
+              problem={(cents) => (cents === undefined ? null : duesProblem(cents))}
+              placeholder="45.00"
+              autoFocus={i === 0}
+            />
           ))}
         </div>
       ) : null}
@@ -1669,25 +1686,103 @@ function OwnAmount({
   onChange: (cents: number | undefined) => void;
   compact?: boolean;
 }) {
+  const [text, setText] = useState(value ? String(value / 100) : "");
+  const shown = shownDollars(text, value);
+  const cents = typedCents(shown);
+  // Blank is "the usual" and says nothing. A zero or a runaway number is
+  // kept as typed and named, and Continue waits (`draftOwnDuesProblem`).
+  const problem = cents === undefined ? null : duesProblem(cents);
   return (
-    <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
-        $
-      </span>
-      <input
-        type="number"
-        min={0}
-        step="0.01"
-        value={value ? value / 100 : ""}
-        onChange={(e) => {
-          const cents = Math.round(Number(e.target.value) * 100);
-          onChange(cents > 0 ? cents : undefined);
-        }}
-        placeholder={fallback > 0 ? String(fallback / 100) : "Usual"}
-        aria-label={label}
-        className={cn(input, "tnum pl-7", compact && "h-9")}
-      />
+    <div>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
+          $
+        </span>
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          value={shown}
+          onChange={(e) => {
+            setText(e.target.value);
+            onChange(typedCents(e.target.value));
+          }}
+          placeholder={fallback > 0 ? String(fallback / 100) : "Usual"}
+          aria-label={label}
+          aria-invalid={problem ? true : undefined}
+          className={cn(input, "tnum pl-7", compact && "h-9")}
+        />
+      </div>
+      {problem ? (
+        <span role="alert" className="mt-1 block text-footnote leading-snug text-danger">
+          {problem}
+        </span>
+      ) : null}
     </div>
+  );
+}
+
+/** What was typed in a dollar field as cents, or undefined while it is blank. */
+function typedCents(text: string): number | undefined {
+  if (!text.trim()) return undefined;
+  const cents = Math.round(Number(text) * 100);
+  return Number.isFinite(cents) ? cents : undefined;
+}
+
+/**
+ * What a dollar field shows: the text as typed while it still means what the
+ * draft holds, so "0" is kept instead of erased, and the draft's own amount
+ * when something else changed it (switching modes, restoring a saved draft).
+ */
+function shownDollars(text: string, cents: number | undefined): string {
+  if ((typedCents(text) ?? 0) === (cents ?? 0)) return text;
+  return cents ? String(cents / 100) : "";
+}
+
+/**
+ * A labelled dollar amount that keeps what was typed and says what is wrong
+ * with it under the field. Blank reaches `onCents` as undefined.
+ */
+function DollarField({
+  label,
+  hint,
+  cents,
+  onCents,
+  problem,
+  placeholder,
+  autoFocus,
+}: {
+  label: string;
+  hint?: string;
+  cents?: number;
+  onCents: (cents: number | undefined) => void;
+  problem: (cents: number | undefined) => string | null;
+  placeholder: string;
+  autoFocus?: boolean;
+}) {
+  const [text, setText] = useState(cents ? String(cents / 100) : "");
+  const shown = shownDollars(text, cents);
+  return (
+    <Field label={label} hint={hint} error={problem(typedCents(shown))}>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
+          $
+        </span>
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          value={shown}
+          onChange={(e) => {
+            setText(e.target.value);
+            onCents(typedCents(e.target.value));
+          }}
+          placeholder={placeholder}
+          className={cn(input, "pl-7")}
+          autoFocus={autoFocus}
+        />
+      </div>
+    </Field>
   );
 }
 
@@ -1707,7 +1802,7 @@ function OwnDuesNote({ draft }: { draft: CommunityDraft }) {
 function lateFeeAnswered(draft: CommunityDraft): boolean {
   const fee = draft.lateFee;
   if (!fee?.charge) return true;
-  return fee.cents > 0 && Number.isInteger(fee.days) && fee.days >= 2 && fee.days <= 365;
+  return lateFeeAmountProblem(fee.cents) === null && lateFeeDaysProblem(fee.days) === null;
 }
 
 /**
@@ -1764,23 +1859,14 @@ function LateFee({ draft, patch }: StepProps) {
       </div>
       {fee.charge ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Amount">
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
-                $
-              </span>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={fee.cents ? fee.cents / 100 : ""}
-                onChange={(e) => set({ cents: Math.round(Number(e.target.value) * 100) })}
-                placeholder="25.00"
-                className={cn(input, "pl-7")}
-              />
-            </div>
-          </Field>
-          <Field label="Days after the due date">
+          <DollarField
+            label="Amount"
+            cents={fee.cents}
+            onCents={(cents) => set({ cents: cents ?? 0 })}
+            problem={lateFeeAmountProblem}
+            placeholder="25.00"
+          />
+          <Field label="Days after the due date" error={lateFeeDaysProblem(fee.days)}>
             <input
               type="number"
               min={2}
@@ -1799,7 +1885,10 @@ function LateFee({ draft, patch }: StepProps) {
 }
 
 /** "20 townhomes and 20 condos", under the homes list of a mixed community. */
-function MixLine({ draft }: { draft: CommunityDraft }) {
+function MixLine({ draft: entered }: { draft: CommunityDraft }) {
+  // The founder placed as creation will place them, so the mix adds up to
+  // the homes typed and their home is the kind its range says it is.
+  const draft = placeFounder(entered);
   const types = homeTypesOf(draft);
   if (types.length < 2) return null;
   const founderType = founderHomeType(draft);
@@ -1841,6 +1930,9 @@ function FounderNumber({
   autoFocus,
   required,
 }: StepProps & { w: Wording; autoFocus?: boolean; required?: boolean }) {
+  // A required field is faulted once it has been left empty, not while the
+  // person is still on their way to it.
+  const [touched, setTouched] = useState(false);
   const hint = w.fromBuilder
     ? draft.origin === "builder"
       ? `As it appears on the site plan. The ${w.homes} on the next screen are numbered the same way.`
@@ -1850,9 +1942,11 @@ function FounderNumber({
     <Field
       label={required ? `${w.Home} number` : `${w.Home} number, if you use them`}
       hint={required ? hint : "Leave it blank if homes go by address. Otherwise, as it appears on your records."}
+      error={required && touched && !draft.founder.unit.trim() ? HOME_NUMBER_MESSAGE : null}
     >
       <input
         value={draft.founder.unit}
+        onBlur={() => setTouched(true)}
         onChange={(e) => patch({ founder: { ...draft.founder, unit: e.target.value } })}
         placeholder="12"
         className={input}
@@ -1892,10 +1986,12 @@ function FounderAddress({
 function Field({
   label,
   hint,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
+  error?: string | null;
   children: React.ReactNode;
 }) {
   // The hint sits outside the label so it never becomes part of the field's
@@ -1907,6 +2003,11 @@ function Field({
         {children}
       </label>
       {hint ? <span className="mt-1 block text-footnote text-fg-subtle">{hint}</span> : null}
+      {error ? (
+        <span role="alert" className="mt-1 block text-footnote leading-snug text-danger">
+          {error}
+        </span>
+      ) : null}
     </div>
   );
 }

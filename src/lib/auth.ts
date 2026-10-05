@@ -185,6 +185,34 @@ export async function setNewPassword(password: string): Promise<AuthResult> {
   return error ? { ok: false, message: readable(error.message) } : { ok: true };
 }
 
+/**
+ * Starts a change of sign-in email.
+ *
+ * Supabase mails a confirmation link to the new address and changes the
+ * account's email only when it is opened, so until then the old address
+ * still signs in. Nothing is copied by the app: sync_auth_email (0090) moves
+ * the new address onto the profile and the owner's seats once it takes effect.
+ */
+export async function requestEmailChange(newEmail: string): Promise<AuthResult> {
+  if (!hasSupabase) {
+    return { ok: false, message: "This is a demo. Sign in to your own association to change your email." };
+  }
+  const client = supabaseBrowser();
+  const { error } = await client.auth.updateUser(
+    { email: newEmail.trim() },
+    { emailRedirectTo: `${window.location.origin}/auth/callback?next=/resident/settings` },
+  );
+  if (error) {
+    const text = error.message.toLowerCase();
+    if (text.includes("already") && text.includes("registered")) {
+      return { ok: false, message: "There is already an account for that email." };
+    }
+    if (text.includes("same")) return { ok: false, message: "That is already your email." };
+    return { ok: false, message: readable(error.message) };
+  }
+  return { ok: true };
+}
+
 export async function signOutOfSupabase(): Promise<void> {
   if (!hasSupabase) return;
   await supabaseBrowser().auth.signOut();

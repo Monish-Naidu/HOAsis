@@ -22,7 +22,8 @@ import { Avatar, Badge, Button, ButtonLink, Callout, Card, EmptyState, KeyValue,
 import { RemindersComposer } from "@/components/app/reminders-composer";
 import { AskedToJoin } from "./asked-to-join";
 import { JoinCodeRow } from "./join-code-row";
-import { ChangeEmailForm, SecondOwnerForm } from "./owner-forms";
+import { ChangeEmailForm, PeopleOnHome, SecondOwnerForm } from "./owner-forms";
+import { removableSeats, removedToast, type OwnerSeat } from "@/lib/co-owners";
 import {
   AddChargeForm,
   AddCreditForm,
@@ -213,6 +214,8 @@ export function HomeownersScreen() {
     messageOwner,
     setHouseholdOwner,
     addSecondOwner,
+    removeCoOwner,
+    account,
     changeOwnerEmail,
     setHomeType,
     setHomeDues,
@@ -366,6 +369,20 @@ export function HomeownersScreen() {
     });
     setSale((s) => ({ ...s, open: false }));
     if (openId === seller.id) setOpenId(null);
+  }
+
+  // Each person's own seat on a home. A real association loads them with the
+  // roster; the demo has an account per person, which is the same thing.
+  function seatsOf(owner: Owner): OwnerSeat[] {
+    if (owner.seats) return owner.seats;
+    return accounts
+      .filter((a) => a.ownerId === owner.id)
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        accountId: a.id,
+        removable: a.role === "resident" && !Object.values(a.capabilities).some(Boolean),
+      }));
   }
 
   function remove(owner: Owner) {
@@ -1034,6 +1051,16 @@ export function HomeownersScreen() {
                               })
                           : undefined
                       }
+                      people={seatsOf(o)}
+                      removableSeats={
+                        mayChangeRoster && !o.placeholder ? removableSeats(seatsOf(o), account?.id ?? null) : []
+                      }
+                      onRemoveSeat={(seat) =>
+                        Promise.resolve(removeCoOwner(o.id, seat.id)).then((ok) => {
+                          if (ok) notify(removedToast(seat.name, homeLabel(community, o.unit)), "ok");
+                          return ok;
+                        })
+                      }
                       onInvite={() => copyInvite(o)}
                       onEmailInvite={isRemote && o.email && mayInvite ? () => void emailInvites([o]) : undefined}
                       signedUp={!isRemote || accounts.some((a) => a.ownerId === o.id)}
@@ -1134,6 +1161,9 @@ function HouseholdDetail({
   onEmailInvite,
   onChangeEmail,
   onAddSecondOwner,
+  people,
+  removableSeats: removable,
+  onRemoveSeat,
   signedUp,
   onRemove,
   duesLine,
@@ -1173,6 +1203,12 @@ function HouseholdDetail({
   onChangeEmail?: (email: string) => Promise<boolean>;
   /** Add another person to this home. Absent when this seat may not change the roster. */
   onAddSecondOwner?: (name: string, email: string) => Promise<boolean>;
+  /** Each person on the home. */
+  people: OwnerSeat[];
+  /** The people this viewer may take off the home. Empty on a home with one owner. */
+  removableSeats: OwnerSeat[];
+  /** Ends one person's seat today. The other owner stays. */
+  onRemoveSeat: (seat: OwnerSeat) => Promise<boolean>;
   signedUp: boolean;
   onRemove: () => void;
   /** What this home is billed, shown when homes pay different amounts. */
@@ -1258,7 +1294,9 @@ function HouseholdDetail({
           {owner.mailingAddress ? (
             <KeyValue label="Mail goes to">{owner.mailingAddress}</KeyValue>
           ) : null}
-          {owner.members.length > 1 ? (
+          {removable.length ? (
+            <PeopleOnHome people={people} removable={removable} homeLabel={homeName} onRemove={onRemoveSeat} />
+          ) : owner.members.length > 1 ? (
             <KeyValue label="On title">{owner.members.join(", ")}</KeyValue>
           ) : null}
           <KeyValue label="Moved in">{formatDate(owner.moveInDate, "long")}</KeyValue>

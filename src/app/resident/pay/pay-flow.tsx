@@ -28,6 +28,7 @@ import {
   NO_PLATFORM_FEE,
 } from "@/lib/payments/instruments";
 import { cn, formatDate, money, ordinal, pluralize, relativeDays, today, todayIsoDate } from "@/lib/utils";
+import { checkPayAmount, overpayNote } from "@/lib/input-checks";
 import { AddMethod } from "./add-method";
 import { InstrumentMenu } from "./instrument-menu";
 import { StripePayPanel } from "./stripe-pay-panel";
@@ -112,11 +113,14 @@ export function PayFlow() {
     selected,
   });
 
+  // The typed amount is judged by one shared rule (`checkPayAmount`), so a
+  // minus sign, zero or a runaway number is refused with a line saying why
+  // and the pay buttons stay off, rather than the amount being quietly fixed.
+  const customCheck = useMemo(() => checkPayAmount(custom, balanceCents), [custom, balanceCents]);
   const amountCents = useMemo(() => {
     if (amountMode === "balance") return balanceCents > 0 ? balanceCents : duesCents;
-    const parsed = Math.round(Number(custom.replace(/[^0-9.]/g, "")) * 100);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-  }, [amountMode, custom, balanceCents, duesCents]);
+    return customCheck.ok ? customCheck.cents : 0;
+  }, [amountMode, customCheck, balanceCents, duesCents]);
 
   // A new plan starts in the month of the association's next charge. A
   // saved one keeps the start it was saved with, which for an older plan is
@@ -285,6 +289,7 @@ export function PayFlow() {
           </button>
         </div>
         {amountMode === "custom" ? (
+          <>
           <label className="mt-3 block">
             <span className="sr-only">Payment amount</span>
             <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
@@ -299,6 +304,24 @@ export function PayFlow() {
               />
             </div>
           </label>
+            {customCheck.ok ? (
+              overpayNote(customCheck.extraCents) ? (
+                <span className="mt-1.5 block text-footnote leading-snug text-warn">
+                  {overpayNote(customCheck.extraCents)}
+                </span>
+              ) : null
+            ) : (
+              <span
+                role={custom.trim() ? "alert" : undefined}
+                className={cn(
+                  "mt-1.5 block text-footnote leading-snug",
+                  custom.trim() ? "text-danger" : "text-fg-muted",
+                )}
+              >
+                {customCheck.message}
+              </span>
+            )}
+          </>
         ) : null}
       </Card>
     </section>
