@@ -17,6 +17,8 @@ const { BalancesScreen, openingFigures } = await import(
 );
 const { AmendScreen } = await import("@/app/board/documents/governing/amend-screen");
 const { RecordPayment } = await import("@/components/app/record-payment");
+const { AddCreditForm, RecordPaymentForm } = await import("@/app/board/homeowners/household-money");
+const { OpeningBalances } = await import("@/app/board/money/opening-balances");
 const { DraftField } = await import("@/app/board/settings/settings-screen");
 const { CollectionsLadder } = await import("@/components/app/collections-ladder");
 const { collectionsLadder, policyFor } = await import("@/lib/collections");
@@ -230,10 +232,85 @@ describe("proposing a change to a governing document, in the demo", () => {
 });
 
 describe("recording a vendor payment, in the demo", () => {
-  it("still offers to queue one for approval, which the demo can show end to end", () => {
+  it("does not offer a route that sends money, and asks what the payment was for", () => {
     wrap(<RecordPayment onClose={() => {}} />);
-    expect(screen.getByText("Send this payment through Your HOAsis")).toBeInTheDocument();
+    expect(screen.queryByText("Send this payment through Your HOAsis")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Category")).toBeInTheDocument();
     expect(screen.getByLabelText("Note on this payment")).toBeInTheDocument();
+  });
+});
+
+describe("a check or cash from an owner", () => {
+  it("saves the amount, the way it was paid, the number and the date, and waits for the result", async () => {
+    const user = userEvent.setup();
+    const saved: unknown[] = [];
+    render(
+      <RecordPaymentForm
+        unit="Unit 7"
+        onSave={async (input) => {
+          saved.push(input);
+          return true;
+        }}
+        onCancel={() => {}}
+      />,
+    );
+    const button = screen.getByRole("button", { name: "Save payment" });
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText("Payment amount"), "60");
+    await user.type(screen.getByLabelText("Payment reference"), "1042");
+    expect(button).toBeEnabled();
+    await user.click(button);
+    expect(saved).toEqual([
+      { amountCents: 6_000, method: "check", reference: "1042", receivedOn: "2026-08-20" },
+    ]);
+  });
+
+  it("refuses a date in the future", () => {
+    render(<RecordPaymentForm unit="Unit 7" onSave={async () => true} onCancel={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "60" } });
+    fireEvent.change(screen.getByLabelText("Date received"), { target: { value: "2026-08-21" } });
+    expect(screen.getByRole("button", { name: "Save payment" })).toBeDisabled();
+  });
+
+  it("adds a credit only with an amount and a reason", async () => {
+    const user = userEvent.setup();
+    const saved: unknown[] = [];
+    render(
+      <AddCreditForm
+        unit="Unit 7"
+        onSave={async (input) => {
+          saved.push(input);
+          return true;
+        }}
+        onCancel={() => {}}
+      />,
+    );
+    await user.type(screen.getByLabelText("Credit amount"), "25");
+    expect(screen.getByRole("button", { name: "Save credit" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Credit reason"), "Late fee waived");
+    await user.click(screen.getByRole("button", { name: "Save credit" }));
+    expect(saved).toEqual([{ amountCents: 2_500, reason: "Late fee waived" }]);
+  });
+});
+
+describe("opening bank balances on Finances", () => {
+  it("offers one row per account without an opening line, and drops the row once it is saved", async () => {
+    const user = userEvent.setup();
+    wrap(<OpeningBalances />);
+    // The President may change finances; nobody is signed in to begin with.
+    act(() => seen.state.signIn("acct-arya"));
+    const accounts = seen.state.community.bankAccounts;
+    expect(accounts.length).toBeGreaterThan(0);
+    const input = screen.getByLabelText(new RegExp(`^Opening balance for ${accounts[0].name}`));
+    await user.type(input, "86000");
+    await user.click(within(input.closest("form")!).getByRole("button", { name: "Save" }));
+
+    const lines = seen.state.ledger.filter(
+      (e) => e.accountId === accounts[0].id && e.category === "Opening balance",
+    );
+    expect(lines).toHaveLength(1);
+    expect(lines[0].amountCents).toBe(86_000_00);
+    expect(screen.queryByLabelText(new RegExp(`^Opening balance for ${accounts[0].name}`))).not.toBeInTheDocument();
   });
 });
 

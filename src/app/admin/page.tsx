@@ -9,6 +9,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { hasSupabase } from "@/lib/supabase/env";
 import { isPlatformOwner } from "@/lib/platform-owner";
 import { loadOpsReport, OPS_WINDOW_DAYS, STUCK_PAYMENT_DAYS, type OpsReport } from "@/lib/ops";
+import { RAIL_LABEL, type PaymentRail } from "@/lib/payments/instruments";
 import { money } from "@/lib/utils";
 
 /**
@@ -371,7 +372,7 @@ function StuckPayments({ report }: { report: OpsReport }) {
             <td className={`${cell} text-fg`}>{report.associationNames[p.association_id] ?? p.association_id.slice(0, 8)}</td>
             <td className={mono}>{p.unit_id.slice(0, 8)}</td>
             <td className={`${cell} text-fg tabular-nums`}>{money(p.amount_cents)}</td>
-            <td className={`${cell} text-fg-muted`}>{p.rail}</td>
+            <td className={`${cell} text-fg-muted`}>{RAIL_LABEL[p.rail as PaymentRail] ?? p.rail}</td>
             <td className={mono}>{p.stripe_payment_intent_id ?? ""}</td>
           </tr>
         ))}

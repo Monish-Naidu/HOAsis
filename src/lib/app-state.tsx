@@ -106,7 +106,7 @@ import type {
   Capabilities,
 } from "@/lib/types";
 import { canRaiseNotice } from "@/lib/violations";
-import type { PaymentInstrument } from "@/lib/payments/instruments";
+import { MANUAL_METHOD_LABEL, manualPaymentLabel, type ManualMethod, type PaymentInstrument } from "@/lib/payments/instruments";
 import { placeLabel } from "@/lib/wording";
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { statusLabel } from "@/lib/request-status";
@@ -386,6 +386,28 @@ interface AppState {
     method: string;
     kind: "ach" | "card" | "apple-pay";
   }) => void;
+  /**
+   * A check or cash the board received from an owner. Resolves true once the
+   * statement, the balance and the books have all taken it.
+   */
+  recordManualPayment: (input: {
+    ownerId: string;
+    amountCents: number;
+    method: ManualMethod;
+    reference: string;
+    receivedOn: string;
+  }) => boolean | Promise<boolean>;
+  /** A credit on one home's statement, such as a waived late fee. Not money in the bank. */
+  addCredit: (input: {
+    ownerId: string;
+    amountCents: number;
+    reason: string;
+  }) => boolean | Promise<boolean>;
+  /** What an account held when the books started here. Replaces an earlier figure. */
+  setOpeningBankBalance: (
+    accountId: string,
+    input: { amountCents: number; asOf: string },
+  ) => boolean | Promise<boolean>;
   /** Builds an association from onboarding and signs its founder in. */
   createCommunity: (draft: CommunityDraft) => Community;
   /** Founds one in Postgres, for a signed in person. */
@@ -1324,17 +1346,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // The bank the founder connected during setup, if they got that far.
-    if (draft.bankAccount) {
+    // The account the books are kept against. The wizard stopped asking for
+    // a bank on 2026-10-04, which left a new association with nowhere for a
+    // recorded check to land and no account to give a starting balance. It
+    // gets a plainly named one; it is a ledger, not a connection, and online
+    // money still goes through Stripe.
+    {
       const { error: bankError } = await supabase.from("bank_accounts").insert({
         association_id: associationId,
         kind: "operating",
-        institution: draft.bankAccount.institution,
-        mask: draft.bankAccount.mask,
+        institution: draft.bankAccount?.institution ?? "Operating account",
+        mask: draft.bankAccount?.mask ?? "",
       });
       if (bankError) {
         reportRemoteError(
-          `Your association is set up, but the bank account was not saved (${bankError.message}). Connect it again from your setup steps.`,
+          `Your association is set up, but its operating account was not created (${bankError.message}). Add it on Finances.`,
         );
       }
     }
@@ -1518,45 +1544,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * Records a payment everywhere it has to appear.
-   *
-   * This is the seam the whole product turns on. A payment is not one fact, it
-   * is four: the household's statement, the household's balance, the
-   * association's books, and the bank balance the board reconciles against.
-   * Writing one and not the others is exactly the drift this product exists to
-   * argue against, so they are written together or not at all.
-   *
-   * Money is applied to the oldest open charge first, which is the convention
-   * every collection policy assumes and the one owners are told about.
+   * The demo's side of a payment: statement line, balance, books, budget and
+   * bank, written together. An online payment and one the board enters by
+   * hand differ only in the words on the line and the date.
    */
-  const recordPayment = useCallback(
+  const applyLocalPayment = useCallback(
     (input: {
       ownerId: string;
       amountCents: number;
-      /** What the processor takes out of the deposit. */
       processorCents: number;
-      /** Our fee, and who carried it. */
       platformCents: number;
       platformPaidBy: "owner" | "association";
+      label: string;
       method: string;
-      kind: "ach" | "card" | "apple-pay";
+      date: string;
     }) => {
-      if (remote.community) {
-        // The database does all four writes in one function, so a payment
-        // cannot land on the statement and miss the books.
-        void remoteWrite("Recording the payment", () =>
-          supabaseBrowser().rpc("record_payment", {
-            p_unit_id: input.ownerId,
-            p_amount_cents: input.amountCents,
-            p_rail: input.kind,
-            p_processor_fee_cents: input.processorCents,
-            p_platform_fee_cents: input.platformCents,
-            p_platform_fee_paid_by: input.platformPaidBy,
-          }),
-        );
-        return;
-      }
-      const date = todayIsoDate();
+      const date = input.date;
       const charges = sliceStore(communityId, "ownerCharges");
       const existing = charges.getSnapshot()[input.ownerId] ?? [];
 
@@ -1594,7 +1597,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           {
             id: `pay-${date}-${input.ownerId}-${existing.length + 1}`,
             date,
-            label: input.kind === "ach" ? "Bank payment" : `Card payment, ${input.method}`,
+            label: input.label,
             kind: "payment" as const,
             amountCents: -input.amountCents,
             balanceAfterCents: balanceAfter,
@@ -1662,9 +1665,211 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
       }
     },
+    [communityId],
+  );
+
+  /**
+   * Records a payment everywhere it has to appear.
+   *
+   * This is the seam the whole product turns on. A payment is not one fact, it
+   * is four: the household's statement, the household's balance, the
+   * association's books, and the bank balance the board reconciles against.
+   * Writing one and not the others is exactly the drift this product exists to
+   * argue against, so they are written together or not at all.
+   *
+   * Money is applied to the oldest open charge first, which is the convention
+   * every collection policy assumes and the one owners are told about.
+   */
+  const recordPayment = useCallback(
+    (input: {
+      ownerId: string;
+      amountCents: number;
+      /** What the processor takes out of the deposit. */
+      processorCents: number;
+      /** Our fee, and who carried it. */
+      platformCents: number;
+      platformPaidBy: "owner" | "association";
+      method: string;
+      kind: "ach" | "card" | "apple-pay";
+    }) => {
+      if (remote.community) {
+        // The database does all four writes in one function, so a payment
+        // cannot land on the statement and miss the books.
+        void remoteWrite("Recording the payment", () =>
+          supabaseBrowser().rpc("record_payment", {
+            p_unit_id: input.ownerId,
+            p_amount_cents: input.amountCents,
+            p_rail: input.kind,
+            p_processor_fee_cents: input.processorCents,
+            p_platform_fee_cents: input.platformCents,
+            p_platform_fee_paid_by: input.platformPaidBy,
+          }),
+        );
+        return;
+      }
+      applyLocalPayment({
+        ...input,
+        label: input.kind === "ach" ? "Bank payment" : `Card payment, ${input.method}`,
+        date: todayIsoDate(),
+      });
+    },
+    [remote.community, applyLocalPayment],
+  );
+
+  /**
+   * A check or cash the board received. Real associations go through
+   * record_manual_payment (0083), which writes the statement line, the
+   * allocations and the deposit together and takes the date the money
+   * arrived. The demo does the same locally. Resolves once the write is
+   * back, so the form can say "recorded" only when it was.
+   */
+  const recordManualPayment = useCallback(
+    (input: {
+      ownerId: string;
+      amountCents: number;
+      method: ManualMethod;
+      reference: string;
+      receivedOn: string;
+    }) => {
+      if (remote.community) {
+        return remoteWrite("Recording the payment", () =>
+          supabaseBrowser().rpc("record_manual_payment", {
+            p_unit_id: input.ownerId,
+            p_amount_cents: input.amountCents,
+            p_method: input.method,
+            p_reference: input.reference.trim(),
+            p_received_on: input.receivedOn,
+          }),
+        );
+      }
+      applyLocalPayment({
+        ownerId: input.ownerId,
+        amountCents: input.amountCents,
+        processorCents: 0,
+        platformCents: 0,
+        platformPaidBy: "association",
+        label: manualPaymentLabel(input.method, input.reference),
+        method: MANUAL_METHOD_LABEL[input.method],
+        date: input.receivedOn,
+      });
+      return true;
+    },
+    [remote.community, applyLocalPayment],
+  );
+
+  /**
+   * A credit on one home's statement, such as a late fee waived. It lowers
+   * what the home owes and is not money in the bank, so the books get no
+   * line. A finance holder may insert a charge directly (charges_write), so
+   * this needs no function of its own.
+   */
+  const addCredit = useCallback(
+    (input: { ownerId: string; amountCents: number; reason: string }) => {
+      const reason = input.reason.trim();
+      if (input.amountCents <= 0 || !reason) return false;
+      const date = todayIsoDate();
+      if (remote.community) {
+        const rc = remote.community;
+        return remoteWrite("Adding the credit", () =>
+          supabaseBrowser().from("charges").insert({
+            association_id: rc.id,
+            unit_id: input.ownerId,
+            kind: "credit",
+            label: reason,
+            amount_cents: -input.amountCents,
+            due_on: date,
+          }),
+        );
+      }
+      const owner = sliceStore(communityId, "owners")
+        .getSnapshot()
+        .find((o) => o.id === input.ownerId);
+      const balanceAfter = (owner?.balanceCents ?? 0) - input.amountCents;
+      sliceStore(communityId, "ownerCharges").update((all) => ({
+        ...all,
+        [input.ownerId]: [
+          {
+            id: `credit-${date}-${input.ownerId}-${(all[input.ownerId] ?? []).length + 1}`,
+            date,
+            label: reason,
+            kind: "credit" as const,
+            amountCents: -input.amountCents,
+            balanceAfterCents: balanceAfter,
+          },
+          ...(all[input.ownerId] ?? []),
+        ],
+      }));
+      sliceStore(communityId, "owners").update((all) =>
+        all.map((o) => (o.id === input.ownerId ? { ...o, balanceCents: balanceAfter } : o)),
+      );
+      return true;
+    },
     [remote.community, communityId],
   );
 
+
+  /**
+   * What one bank account held on the day the books started here. One
+   * confirmed ledger line in the "Opening balance" category, which the
+   * metrics already keep out of income and spending, replacing an earlier
+   * opening line for the same account so correcting it never stacks two.
+   * A finance holder may write ledger lines directly (ledger_write).
+   */
+  const setOpeningBankBalance = useCallback(
+    (accountId: string, input: { amountCents: number; asOf: string }) => {
+      if (input.amountCents < 0) return false;
+      if (remote.community) {
+        const rc = remote.community;
+        if (!isUuid(accountId)) return false;
+        return remoteWrite("Saving the opening balance", async () => {
+          const supabase = supabaseBrowser();
+          const { error: clearError } = await supabase
+            .from("ledger_entries")
+            .delete()
+            .eq("association_id", rc.id)
+            .eq("bank_account_id", accountId)
+            .eq("category", "Opening balance");
+          if (clearError) throw new Error(clearError.message);
+          return supabase.from("ledger_entries").insert({
+            association_id: rc.id,
+            bank_account_id: accountId,
+            occurred_on: input.asOf,
+            description: "Opening balance",
+            counterparty: "",
+            category: "Opening balance",
+            amount_cents: input.amountCents,
+            confirmed_at: new Date().toISOString(),
+          });
+        });
+      }
+      const ledger = sliceStore(communityId, "ledger");
+      const earlier = ledger
+        .getSnapshot()
+        .filter((e) => e.accountId === accountId && e.category === "Opening balance")
+        .reduce((t, e) => t + e.amountCents, 0);
+      ledger.update((all) => [
+        {
+          id: `led-opening-${accountId}`,
+          date: input.asOf,
+          description: "Opening balance",
+          counterparty: "",
+          category: "Opening balance" as const,
+          accountId,
+          amountCents: input.amountCents,
+          status: "cleared" as const,
+          matchedBy: "manual" as const,
+        },
+        ...all.filter((e) => !(e.accountId === accountId && e.category === "Opening balance")),
+      ]);
+      sliceStore(communityId, "bankAccounts").update((all) =>
+        all.map((a) =>
+          a.id === accountId ? { ...a, balanceCents: a.balanceCents - earlier + input.amountCents } : a,
+        ),
+      );
+      return true;
+    },
+    [remote.community, communityId],
+  );
 
   /**
    * Adds a household to the roster, with the account that lets them sign in.
@@ -4276,7 +4481,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               ? `${payout.vendor}, ${payout.invoiceNumber}`
               : payout.vendor,
             counterparty: payout.vendor,
-            category: vendor?.defaultCategory ?? "Vendors",
+            category: payout.category ?? vendor?.defaultCategory ?? "Vendors",
             amount_cents: -payout.amountCents,
             confirmed_at: new Date().toISOString(),
           });
@@ -4892,6 +5097,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     restoreSetupTask,
     addBankAccount,
     recordPayment,
+    recordManualPayment,
+    addCredit,
+    setOpeningBankBalance,
     addPost,
     addAnnouncement,
     removeAnnouncement,

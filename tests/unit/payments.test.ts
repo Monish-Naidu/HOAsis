@@ -12,6 +12,8 @@ import {
   isExpired,
   isValidRoutingNumber,
   linkBankAccount,
+  manualPaymentLabel,
+  RAIL_LABEL,
   ownerCostFor,
   passesLuhn,
   tokenizeCard,
@@ -337,5 +339,20 @@ describe("platform fee", () => {
       const cost = computePaymentCost("card", amount, OWNER_PAYS);
       for (const value of Object.values(cost)) expect(Number.isInteger(value)).toBe(true);
     }
+  });
+});
+
+describe("a payment the board enters by hand", () => {
+  it("reads the way the database writes it: Check payment #1042, Cash payment, Payment", () => {
+    expect(manualPaymentLabel("check", "1042")).toBe("Check payment #1042");
+    expect(manualPaymentLabel("check", " 1042 ")).toBe("Check payment #1042");
+    expect(manualPaymentLabel("cash")).toBe("Cash payment");
+    expect(manualPaymentLabel("cash", "")).toBe("Cash payment");
+    expect(manualPaymentLabel("other", "wire 9")).toBe("Payment #wire 9");
+  });
+
+  it("has a word for every rail", () => {
+    expect(RAIL_LABEL.check).toBe("Check");
+    expect(RAIL_LABEL.cash).toBe("Cash");
   });
 });

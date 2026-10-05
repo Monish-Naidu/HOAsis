@@ -544,9 +544,10 @@ describe("ledger filters", () => {
 describe("vendorDecisions", () => {
   const c = mehrMeadows;
 
-  it("counts bills to approve, bills to pay and payments to sign, and nothing else", () => {
+  it("counts what the Vendors screen still lets a board decide: payments to sign", () => {
     const d = vendorDecisions(c);
-    expect(d.count).toBe(d.toApprove.length + d.toPay.length + d.toSign.length);
+    // Emailed-in bills are off the screen, so they are off the count too.
+    expect(d.count).toBe(d.toSign.length);
     expect(d.toApprove.every((i) => i.status === "new")).toBe(true);
     expect(d.toPay.every((i) => i.status === "approved")).toBe(true);
     expect(d.toSign.every((p) => p.approvals.length < p.approvalsRequired)).toBe(true);

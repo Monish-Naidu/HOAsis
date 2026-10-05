@@ -958,7 +958,12 @@ export function vendorDecisions(c: Community) {
     toApprove,
     toPay,
     toSign,
-    count: toApprove.length + toPay.length + toSign.length,
+    // What a board can act on from the Vendors screen. Bills that arrive by
+    // email, and approving and paying them from here, were taken off the
+    // screen on 2026-10-05 because none of it was real; counting them left
+    // the dashboard and the rail saying "4 waiting on you" over a page with
+    // nothing to decide. A payment short of its signatures is still real.
+    count: toSign.length,
   };
 }
 

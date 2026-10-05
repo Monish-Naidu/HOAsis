@@ -531,17 +531,16 @@ test.describe("vendors", () => {
     expect(health.text, "the recorded payment never appeared").toContain("1042");
   });
 
-  test("routing a payment through us queues it for approval instead", async ({ page }) => {
+  test("there is no route that sends a vendor money, only a payment already made", async ({ page }) => {
     await page.goto("/board/vendors");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Record a payment" }).click();
     await page.waitForTimeout(400);
 
-    await page.getByLabel("Amount paid").fill("500");
-    await page.getByText("Send this payment through Your HOAsis").click();
-    await page.waitForTimeout(300);
-
-    // Money that has already gone needs no approval; money that has not, does.
-    await expect(page.getByRole("button", { name: "Queue the payment" })).toBeVisible();
+    await expect(page.getByText("Send this payment through Your HOAsis")).toHaveCount(0);
+    await expect(page.getByLabel("Category")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Queue the payment" })).toHaveCount(0);
+    await expect(page.getByText(/Vendors email bills to/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Attach an invoice" })).toHaveCount(0);
   });
 });

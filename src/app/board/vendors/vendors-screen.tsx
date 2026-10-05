@@ -83,7 +83,7 @@ export function VendorsScreen() {
     <>
       <PageHeader
         title="Vendors"
-        description="Vendors, their invoices, and payments."
+        description="The people you pay, and what you paid them."
         action={
           // Each form carries its own Cancel, so the header offers the two
           // ways in and gets out of the way once one is open.
@@ -320,7 +320,7 @@ export function VendorsScreen() {
           <CardHeader title="Payments" subtitle="Every payment the association has made" />
           {payouts.length === 0 ? (
             <p className="px-5 py-6 text-body text-fg-muted">
-              No payments yet. Paying an approved bill puts it here.
+              No payments yet. Record one and it shows here.
             </p>
           ) : (
             <>

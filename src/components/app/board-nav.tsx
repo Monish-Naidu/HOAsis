@@ -59,7 +59,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
     communications: { count: unread, tone: "neutral", hint: "unread conversations" },
     homeowners: { count: delinq.past.length, tone: "warn", hint: "homes past due" },
     // The same number as the dashboard and the Vendors page, from one selector.
-    vendors: { count: vendorDecisions(community).count, tone: "warn", hint: "bills waiting on you" },
+    vendors: { count: vendorDecisions(community).count, tone: "warn", hint: "payments waiting on a signature" },
   };
 
   // Three separate questions, asked of every page in a row: may they open

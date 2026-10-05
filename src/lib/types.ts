@@ -152,7 +152,7 @@ export interface PendingPayment {
   id: ID;
   unitId: ID;
   amountCents: Cents;
-  rail: "ach" | "card" | "apple-pay" | "google-pay";
+  rail: "ach" | "card" | "apple-pay" | "google-pay" | "check" | "cash";
   state: "pending" | "failed";
   createdAt: string;
 }
@@ -404,6 +404,8 @@ export interface Payout {
   notes?: string;
   /** The invoice this paid, so the transaction can open the attachment. */
   invoiceId?: ID;
+  /** What the money was spent on, when the board said. Else the vendor's usual category. */
+  category?: LedgerCategory;
 }
 
 export interface Vendor {

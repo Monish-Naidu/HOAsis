@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Landmark, ShieldAlert } from "lucide-react";
 import { Button, Callout, Card, CardHeader, Meter, PageHeader, Segmented } from "@/components/ui/primitives";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { BankConnect } from "@/components/app/bank-connect";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
 import { DeltaChip, SectionLink, StatTile } from "@/components/app/finance-ui";
+import { OpeningBalances } from "./opening-balances";
 import { useToast } from "@/components/app/toast";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import {
@@ -37,7 +37,6 @@ export function OverviewScreen() {
   const { community, confirmLedgerEntry, dismissLedgerEntry, addBankAccount, isRemote } = useAppState();
   const recon = useReconciliation();
   const { notify } = useToast();
-  const router = useRouter();
 
   const accounts = community.bankAccounts;
   const primary = accounts.find((a) => a.kind === "operating") ?? accounts[0];
@@ -86,21 +85,6 @@ export function OverviewScreen() {
       <PageHeader
         title="Finances"
         description="Balances, recent activity, and items to review."
-        action={
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => {
-              if (needsReview.length === 0) {
-                notify("The books are matched. Every report agrees.");
-                return;
-              }
-              router.push("/board/money/transactions?status=needs-review");
-            }}
-          >
-            Match transactions
-          </Button>
-        }
       />
 
       {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
@@ -133,7 +117,7 @@ export function OverviewScreen() {
                 // has been matched to anything; the figure is the books' own.
                 isRemote
                 ? `${primary.institution}${primary.mask ? ` ••${primary.mask}` : ""} · from the books`
-                : `${primary.institution} ••${primary.mask} · matched through ${formatDate(primary.reconciledThroughDate)}`
+                : `${primary.institution} ••${primary.mask} · confirmed through ${formatDate(primary.reconciledThroughDate)}`
               : "No bank account connected yet"
           }
         />
@@ -156,7 +140,7 @@ export function OverviewScreen() {
           label="To confirm"
           value={String(needsReview.length)}
           tone={needsReview.length ? "warn" : undefined}
-          hint={needsReview.length ? "Held out of reports until confirmed" : "Every transaction is confirmed"}
+          hint={needsReview.length ? "Not counted in the totals until confirmed" : "Every transaction is confirmed"}
           href="/board/money/transactions?status=needs-review"
         />
         <StatTile
@@ -167,6 +151,8 @@ export function OverviewScreen() {
           href="/board/money/collections"
         />
       </div>
+
+      <OpeningBalances />
 
       {!primary ? (
         <Card className="mt-6 p-5">
@@ -180,7 +166,7 @@ export function OverviewScreen() {
             </p>
           </div>
           <BankConnect
-            linked={!isRemote}
+            linked={false}
             onConnect={(account) => {
               addBankAccount(account);
               notify(`${account.institution} ••${account.mask} connected`, "ok");

@@ -1224,3 +1224,116 @@ describe("taking a payment", () => {
     ).toBe(before + 10_000 - 35 - 150);
   });
 });
+
+describe("recording an owner's check or cash (demo)", () => {
+  it("puts a check on the statement, the balance, the books and the bank, without a fee", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners.find((o) => o.balanceCents > 6_000)!;
+    const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
+    const ledgerBefore = result.current.ledger.length;
+
+    act(() => {
+      void result.current.recordManualPayment({
+        ownerId: owner.id,
+        amountCents: 6_000,
+        method: "check",
+        reference: "1042",
+        receivedOn: "2026-08-18",
+      });
+    });
+
+    const after = result.current.community;
+    const line = after.ownerCharges[owner.id][0];
+    expect(line).toMatchObject({
+      kind: "payment",
+      label: "Check payment #1042",
+      amountCents: -6_000,
+      date: "2026-08-18",
+      method: "Check",
+    });
+    expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(owner.balanceCents - 6_000);
+    expect(result.current.ledger.length).toBe(ledgerBefore + 1);
+    expect(result.current.ledger[0]).toMatchObject({ amountCents: 6_000, category: "Assessments", date: "2026-08-18" });
+    expect(after.bankAccounts.find((a) => a.id === operating.id)!.balanceCents).toBe(
+      operating.balanceCents + 6_000,
+    );
+  });
+
+  it("reads Cash payment with no number, and applies to the oldest charge first", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners.find(
+      (o) => (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge") && o.balanceCents > 0,
+    )!;
+    act(() => {
+      void result.current.recordManualPayment({
+        ownerId: owner.id,
+        amountCents: 100,
+        method: "cash",
+        reference: "",
+        receivedOn: "2026-08-20",
+      });
+    });
+    const line = result.current.community.ownerCharges[owner.id][0];
+    expect(line.label).toBe("Cash payment");
+    expect(line.appliedTo?.length).toBeGreaterThan(0);
+  });
+});
+
+describe("a credit on a statement (demo)", () => {
+  it("lowers the balance with the reason as its label and leaves the books alone", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners.find((o) => o.balanceCents > 2_500)!;
+    const ledgerBefore = result.current.ledger.length;
+    const bankBefore = result.current.community.bankAccounts.map((a) => a.balanceCents);
+
+    act(() => {
+      void result.current.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: "Late fee waived" });
+    });
+
+    const after = result.current.community;
+    expect(after.ownerCharges[owner.id][0]).toMatchObject({
+      kind: "credit",
+      label: "Late fee waived",
+      amountCents: -2_500,
+    });
+    expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(owner.balanceCents - 2_500);
+    expect(result.current.ledger.length).toBe(ledgerBefore);
+    expect(after.bankAccounts.map((a) => a.balanceCents)).toEqual(bankBefore);
+  });
+
+  it("refuses a credit with no reason or no amount", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const owner = result.current.community.owners[0];
+    let a: unknown;
+    let b: unknown;
+    act(() => {
+      a = result.current.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: "  " });
+      b = result.current.addCredit({ ownerId: owner.id, amountCents: 0, reason: "Waived" });
+    });
+    expect([a, b]).toEqual([false, false]);
+  });
+});
+
+describe("opening bank balances (demo)", () => {
+  it("writes one confirmed Opening balance line and replaces it when corrected", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    const account = result.current.community.bankAccounts[0];
+    const before = account.balanceCents;
+
+    act(() => {
+      void result.current.setOpeningBankBalance(account.id, { amountCents: 86_000_00, asOf: "2026-08-01" });
+    });
+    const lines = () =>
+      result.current.ledger.filter((e) => e.accountId === account.id && e.category === "Opening balance");
+    expect(lines()).toHaveLength(1);
+    expect(lines()[0]).toMatchObject({ amountCents: 86_000_00, status: "cleared", date: "2026-08-01" });
+    expect(result.current.community.bankAccounts[0].balanceCents).toBe(before + 86_000_00);
+
+    act(() => {
+      void result.current.setOpeningBankBalance(account.id, { amountCents: 80_000_00, asOf: "2026-08-01" });
+    });
+    expect(lines()).toHaveLength(1);
+    expect(lines()[0].amountCents).toBe(80_000_00);
+    expect(result.current.community.bankAccounts[0].balanceCents).toBe(before + 80_000_00);
+  });
+});
