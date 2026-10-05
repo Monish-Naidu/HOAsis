@@ -47,6 +47,138 @@ const PAGE = 50;
 const input =
   fieldClass;
 
+/** The invitation route looks up at most this many homes in one call. */
+const INVITE_BATCH = 200;
+/**
+ * How many times one batch is asked for. The route stops before its time
+ * limit and answers with who is left, and two hundred addresses are three
+ * calls or so. The rest is room, not an invitation to ask for ever.
+ */
+const INVITE_CALLS = 8;
+
+/** What an invitation run came to, across every call it took. */
+export interface InviteOutcome {
+  sent: number;
+  /** Invited in the last hour, before this press, and passed over. */
+  already: number;
+  /** Not sent: a bad address, or a home the run never got to. */
+  failed: number;
+  /** Why some were not sent, in the route's own words. */
+  reason?: string;
+  /** The route refused, or could not be reached, before the run was through. */
+  refused?: boolean;
+}
+
+/** A count out of the route's answer, or zero. */
+const counted = (value: unknown) => (typeof value === "number" && value > 0 ? value : 0);
+
+/**
+ * Sends the invitations, two hundred homes at a time.
+ *
+ * Every waiting home used to go in one call. The route reads the first two
+ * hundred and no more, so in a larger association the homes past that were
+ * never invited, never counted, and pressing again sent the same first two
+ * hundred ids. Each batch is asked again while the route says homes remain
+ * and the number is going down; the route passes over whoever it reached.
+ */
+export async function sendInvitations(
+  associationId: string,
+  unitIds: string[],
+): Promise<InviteOutcome> {
+  const batches: string[][] = [];
+  for (let at = 0; at < unitIds.length; at += INVITE_BATCH) {
+    batches.push(unitIds.slice(at, at + INVITE_BATCH));
+  }
+  // The route reads a call for one home as a press for that household and
+  // always sends it, so a last batch of one would be invited again on every
+  // press. It borrows a home from the batch before.
+  const last = batches[batches.length - 1];
+  if (batches.length > 1 && last.length === 1) last.unshift(batches[batches.length - 2].pop()!);
+
+  const outcome: InviteOutcome = { sent: 0, already: 0, failed: 0 };
+  for (let index = 0; index < batches.length; index++) {
+    let sent = 0;
+    let already = 0;
+    let failed = 0;
+    let remaining = batches[index].length;
+    let left = Infinity;
+    let line: string | undefined;
+    let refusal: string | null = null;
+    for (let call = 0; call < INVITE_CALLS; call++) {
+      let ok = false;
+      let answer: {
+        sent?: unknown;
+        failed?: unknown;
+        already?: unknown;
+        remaining?: unknown;
+        errors?: unknown;
+        error?: unknown;
+      } = {};
+      try {
+        const response = await fetch("/api/email/invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ associationId, unitIds: batches[index], kind: "invite" }),
+        });
+        answer = ((await response.json().catch(() => null)) ?? {}) as typeof answer;
+        ok = response.ok;
+      } catch {
+        refusal = "The mail service could not be reached";
+        break;
+      }
+      if (!ok) {
+        refusal =
+          typeof answer.error === "string" && answer.error ? answer.error : "Could not send the invitations";
+        break;
+      }
+      remaining = counted(answer.remaining);
+      // A later call passes over the homes an earlier call of this run
+      // reached and counts them as already invited. Taken off, what is left
+      // is who had the invitation before the button was pressed.
+      already = Math.max(already, counted(answer.already) - sent);
+      sent += counted(answer.sent);
+      // The route counts the homes it did not reach among the failed, and a
+      // bad address is tried again on the next call, so the worst single
+      // call is the count.
+      failed = Math.max(failed, counted(answer.failed) - remaining);
+      line = Array.isArray(answer.errors) && typeof answer.errors[0] === "string" ? answer.errors[0] : undefined;
+      if (remaining === 0 || remaining >= left) break;
+      left = remaining;
+    }
+    outcome.sent += sent;
+    outcome.already += already;
+    outcome.failed += failed + remaining;
+    if (refusal !== null) {
+      // Nothing after this would be let through either. Every home not
+      // reached is counted, this batch's and the ones never started.
+      for (const later of batches.slice(index + 1)) outcome.failed += later.length;
+      outcome.reason = refusal;
+      outcome.refused = true;
+      return outcome;
+    }
+    if (failed + remaining > 0 && line && !outcome.reason) outcome.reason = line;
+  }
+  return outcome;
+}
+
+/** What the board is told when the run is over. `only` names a single household. */
+export function inviteToast(
+  outcome: InviteOutcome,
+  only?: string,
+): { message: string; tone: "ok" | "warn" } {
+  if (outcome.refused && outcome.sent + outcome.already === 0) {
+    return { message: outcome.reason ?? "Could not send the invitations", tone: "warn" };
+  }
+  if (only && outcome.sent === 1 && outcome.failed === 0) {
+    return { message: `Invitation sent to ${only}`, tone: "ok" };
+  }
+  const parts = [`${pluralize(outcome.sent, "invitation")} sent`];
+  if (outcome.already) parts.push(`${outcome.already} already invited in the last hour`);
+  if (outcome.failed) parts.push(`${outcome.failed} failed`);
+  const why = outcome.failed && outcome.reason ? `. ${outcome.reason}` : "";
+  return { message: `${parts.join(", ")}${why}`, tone: outcome.failed ? "warn" : "ok" };
+}
+
 export function HomeownersScreen() {
   const {
     community,
@@ -111,6 +243,12 @@ export function HomeownersScreen() {
   // capability the balances come back empty, and a roster of "Paid up" for
   // every home is a false statement, so the money columns are not drawn.
   const seesMoney = sees("finances");
+  // Seeing the books is not changing them. A look-only seat was offered the
+  // sale and the opening balances, pressed them, and the database refused.
+  const changesMoney = can("finances");
+  // The invitation route takes either capability, so the button asks the same.
+  const mayInvite = can("settings") || can("communications");
+  const [inviting, setInviting] = useState(false);
 
   // Behind first, furthest behind at the top, then by unit.
   const sorted = useMemo(
@@ -235,30 +373,24 @@ export function HomeownersScreen() {
       notify("Nobody here has an email address yet", "warn");
       return;
     }
+    // One send at a time: a second press while the first was still going
+    // out mailed every household twice.
+    if (inviting) return;
+    setInviting(true);
     try {
-      const response = await fetch("/api/email/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          associationId: community.id,
-          unitIds: withEmail.map((o) => o.id),
-          kind: "invite",
-        }),
-      });
-      const result = (await response.json()) as { sent?: number; failed?: number; error?: string };
-      if (!response.ok) {
-        notify(result.error ?? "Could not send the invitations", "warn");
-        return;
-      }
-      const sent = result.sent ?? 0;
-      notify(
-        sent === 1 && withEmail.length === 1
-          ? `Invitation sent to ${withEmail[0].displayName}`
-          : `${pluralize(sent, "invitation")} sent${result.failed ? `, ${result.failed} failed` : ""}`,
-        result.failed ? "warn" : "ok",
+      const outcome = await sendInvitations(
+        community.id,
+        withEmail.map((o) => o.id),
       );
+      const { message, tone } = inviteToast(
+        outcome,
+        withEmail.length === 1 ? withEmail[0].displayName : undefined,
+      );
+      notify(message, tone);
     } catch {
       notify("Could not send the invitations", "warn");
+    } finally {
+      setInviting(false);
     }
   }
 
@@ -326,15 +458,16 @@ export function HomeownersScreen() {
               <Plus className="size-3.5" />
               Add household
             </Button>
-            {notSignedUp.length > 0 ? (
+            {notSignedUp.length > 0 && mayInvite ? (
               <Button
                 variant="primary"
                 size="md"
+                disabled={inviting}
                 onClick={() => void emailInvites(notSignedUp)}
                 aria-label={`Email invitations to the ${notSignedUp.length} households not signed up`}
               >
                 <Send className="size-3.5" />
-                Invite {notSignedUp.length} not signed up
+                {inviting ? "Sending" : `Invite ${notSignedUp.length} not signed up`}
               </Button>
             ) : null}
             {/* Reminders are sent from Finances > Collections, which opens
@@ -396,7 +529,7 @@ export function HomeownersScreen() {
                 className="w-40 min-w-0 bg-transparent text-footnote text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
-            {seesMoney ? (
+            {changesMoney ? (
               <Button variant="ghost" size="sm" onClick={() => startSale(null)}>
                 <ArrowRightLeft className="size-3.5" />
                 Record a sale
@@ -713,7 +846,7 @@ export function HomeownersScreen() {
                           if (ok) notify(`${name} is on ${o.unit}`);
                         })
                       }
-                      onSale={seesMoney ? () => startSale(o) : undefined}
+                      onSale={changesMoney ? () => startSale(o) : undefined}
                       duesLine={
                         duesVary(community.association)
                           ? `${money(ownerDues(community.association, o))} ${community.association.duesCadence}`
@@ -721,16 +854,19 @@ export function HomeownersScreen() {
                       }
                       onSetKind={
                         mixed || o.homeType
-                          ? (next) => {
-                              setHomeType([o.id], next);
-                              notify(
-                                `${homeLabel(community, o.unit)} is a ${HOME_TYPE_LABEL[next].one.toLowerCase()}. It is billed that way from the next bill.`,
-                              );
-                            }
+                          ? (next) =>
+                              // Said once the write is back. A refusal has
+                              // already been said by the write itself.
+                              void Promise.resolve(setHomeType([o.id], next)).then((ok) => {
+                                if (!ok) return;
+                                notify(
+                                  `${homeLabel(community, o.unit)} is a ${HOME_TYPE_LABEL[next].one.toLowerCase()}. It is billed that way from the next bill.`,
+                                );
+                              })
                           : undefined
                       }
                       onInvite={() => copyInvite(o)}
-                      onEmailInvite={isRemote && o.email ? () => void emailInvites([o]) : undefined}
+                      onEmailInvite={isRemote && o.email && mayInvite ? () => void emailInvites([o]) : undefined}
                       signedUp={!isRemote || accounts.some((a) => a.ownerId === o.id)}
                       onRemove={() => remove(o)}
                     />
@@ -762,7 +898,7 @@ export function HomeownersScreen() {
             )}
           </div>
         ) : null}
-        {showOpeningBalances && seesMoney ? (
+        {showOpeningBalances && changesMoney ? (
           <p className="border-t border-border px-5 py-3 text-footnote text-fg-muted">
             Switched from another system?{" "}
             <Link href="/board/homeowners/opening-balances" className="font-medium text-accent hover:underline">

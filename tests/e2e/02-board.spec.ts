@@ -434,7 +434,12 @@ test.describe("money is one place", () => {
     expect(health.crashed).toBe(false);
     // A resident in the board view is sent to their own home screen, with
     // their own balance on it. Figures are only a leak on the board page.
-    if (!new URL(page.url()).pathname.startsWith("/board")) return;
+    const landed = new URL(page.url()).pathname;
+    if (!landed.startsWith("/board")) {
+      // Home is right. Sign in would mean no session, and a pass on nothing.
+      expect(landed, "a resident was sent somewhere other than their own home").toBe("/resident");
+      return;
+    }
     expect(health.text, "reserves leaked to a resident").not.toMatch(/\$[\d,]{3,}/);
   });
 });

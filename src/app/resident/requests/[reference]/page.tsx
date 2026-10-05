@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { certificateMailto, certificateValidThrough } from "@/lib/request-certificate";
 import { statusLabel, statusTone } from "@/lib/request-status";
 import { formatDate, money, relativeDays } from "@/lib/utils";
 
@@ -36,6 +37,8 @@ export default function RequestDetail({
   }
 
   const approved = request.status === "approved";
+  // From the decision on the record, not a date typed into the screen.
+  const validThrough = certificateValidThrough(request);
   const openStates = ["draft", "submitted", "in-review", "info-needed"];
   const isOpen = openStates.includes(request.status);
 
@@ -72,8 +75,7 @@ export default function RequestDetail({
           </div>
           <div className="p-4">
             <p className="text-body leading-relaxed text-fg-muted">
-              Send it to your contractor or the permit office. They can verify it without an
-              account.
+              Send it to your contractor or the permit office.
             </p>
             <dl className="mt-3 space-y-1 rounded-lg bg-surface-2 p-3">
               <div className="flex justify-between text-footnote">
@@ -84,19 +86,37 @@ export default function RequestDetail({
                 <dt className="text-fg-muted">Decided by</dt>
                 <dd className="font-medium text-fg">{request.decidedBy}</dd>
               </div>
-              <div className="flex justify-between text-footnote">
-                <dt className="text-fg-muted">Valid through</dt>
-                <dd className="font-medium text-fg">February 8, 2027</dd>
-              </div>
+              {validThrough ? (
+                <div className="flex justify-between text-footnote">
+                  <dt className="text-fg-muted">Valid through</dt>
+                  <dd className="font-medium text-fg">{formatDate(validThrough, "long")}</dd>
+                </div>
+              ) : null}
             </dl>
             <div className="mt-3 flex gap-2">
-              <Button variant="primary" size="sm" className="flex-1">
+              {/* Opens the owner's own mail with the certificate written
+                  out, for them to address. */}
+              <Button
+                variant="primary"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  window.location.href = certificateMailto(request);
+                }}
+              >
                 <Mail className="size-3.5" />
                 Email certificate
               </Button>
-              <Button variant="secondary" size="sm" className="flex-1">
+              {/* The browser's print sheet, which is where "Save as PDF"
+                  lives. There is no stored file to download. */}
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
+                onClick={() => window.print()}
+              >
                 <Download className="size-3.5" />
-                Download PDF
+                Save as PDF
               </Button>
             </div>
           </div>

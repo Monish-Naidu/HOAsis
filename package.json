@@ -21,7 +21,7 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "db:playground": "node scripts/seed-playground.mjs",
-    "stripe:setup": "node scripts/setup-stripe.mjs"
+    "stripe:setup": "node scripts/setup-stripe.mjs && node scripts/setup-stripe-portal.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^11.0.0",

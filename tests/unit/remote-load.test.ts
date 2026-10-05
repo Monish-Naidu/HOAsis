@@ -98,6 +98,36 @@ describe("loadCommunity", () => {
     expect(community.budget[0]).toMatchObject({ category: "Assessments", ytdActualCents: 28_500 });
   });
 
+  it("shows a saved bank or card only while whoever saved it still holds a seat on the home", async () => {
+    // Saved methods are kept by home and row level security hands a member
+    // every row on theirs, so after a sale the buyer's pay screen showed the
+    // seller's bank by name and last four.
+    const seat = { association_id: "assoc-1", unit_id: "unit-1", role: "resident", capabilities: [], views: [], starts_on: "2024-01-01" };
+    const method = { association_id: "assoc-1", unit_id: "unit-1", kind: "ach", mask: "0000", is_default: false, added_on: "2026-01-01", detail: {} };
+    const community = await loadCommunity(
+      database({}, {
+        units: [{ id: "unit-1", association_id: "assoc-1", label: "12", address: "12 Maple Way", home_type: null, created_at: "2024-01-01T00:00:00Z" }],
+        memberships: [
+          { ...seat, id: "m-seller", profile_id: "seller", full_name: "Sam Seller", ends_on: "2026-09-01" },
+          { ...seat, id: "m-buyer", profile_id: "buyer", full_name: "Bea Buyer", starts_on: "2026-09-01", ends_on: null },
+          { ...seat, id: "m-spouse", profile_id: "spouse", full_name: "Cal Buyer", starts_on: "2026-09-01", ends_on: null },
+        ],
+        payment_instruments: [
+          { ...method, id: "pi-seller", profile_id: "seller", label: "Seller's credit union", mask: "4471" },
+          { ...method, id: "pi-buyer", profile_id: "buyer", label: "Buyer's bank" },
+          // A co-owner's is still shared: the co-owner is still here.
+          { ...method, id: "pi-spouse", profile_id: "spouse", label: "Spouse's card", kind: "card" },
+          // From before savers were recorded. Charged by nobody, shown to nobody.
+          { ...method, id: "pi-nobody", profile_id: null, label: "Old stand-in" },
+        ],
+      }),
+      "assoc-1",
+    );
+
+    expect(community.instruments.map((i) => i.id)).toEqual(["pi-buyer", "pi-spouse"]);
+    expect(JSON.stringify(community.instruments)).not.toContain("4471");
+  });
+
   it.each([
     ["units", "the homes"],
     ["memberships", "the roster"],

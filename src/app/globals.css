@@ -505,17 +505,36 @@
 .icon-tile[data-tint="coral"]  { --tile: var(--tint-coral); }
 .icon-tile[data-tint="violet"] { --tile: var(--tint-violet); }
 .icon-tile[data-tint="neutral"] { --tile: var(--fg-subtle); }
+
+/* Two-tone glyphs. The line stays in the tile's ink and every closed shape
+   in the drawing (a card's body, a clock's face, a house) is washed with the
+   hue, the way current icon sets draw depth. Only shapes that really close
+   are filled: an open stroke such as a tick or an arrow would fill as a
+   wedge, so paths are matched on the closing "z" of their data. One rule
+   here, so every icon in the product changes together and none is redrawn. */
+.icon-tile svg :is(rect, circle, ellipse, polygon, path[d$="z"], path[d$="Z"]),
+.rail-tile svg :is(rect, circle, ellipse, polygon, path[d$="z"], path[d$="Z"]) {
+  fill: var(--tile);
+  fill-opacity: 0.22;
+}
+.icon-tile-solid svg :is(rect, circle, ellipse, polygon, path[d$="z"], path[d$="Z"]),
+.rail-tile[data-active] svg :is(rect, circle, ellipse, polygon, path[d$="z"], path[d$="Z"]) {
+  fill: #fff;
+  fill-opacity: 0.26;
+}
+
+/* The solid tile is one flat colour, barely lit from above. It was a glossy
+   diagonal gradient with a coloured glow under it until 2026-10-04, which is
+   how app icons were drawn a decade ago. */
 .icon-tile-solid {
   background-image: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--tile) 78%, white) 0%,
-    var(--tile) 55%,
-    color-mix(in srgb, var(--tile) 84%, black) 100%
+    180deg,
+    color-mix(in srgb, var(--tile) 90%, white) 0%,
+    var(--tile) 100%
   );
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.35),
-    inset 0 -1px 0 rgb(0 0 0 / 0.12),
-    0 6px 16px -6px color-mix(in srgb, var(--tile) 70%, transparent);
+    inset 0 0 0 1px rgb(255 255 255 / 0.1),
+    0 1px 2px rgb(0 0 0 / 0.12);
 }
 .icon-tile-ring {
   box-shadow:
@@ -524,9 +543,8 @@
 }
 .icon-tile-solid.icon-tile-ring {
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.35),
-    0 0 0 4px color-mix(in srgb, var(--tile) 18%, transparent),
-    0 6px 16px -6px color-mix(in srgb, var(--tile) 70%, transparent);
+    inset 0 0 0 1px rgb(255 255 255 / 0.1),
+    0 0 0 4px color-mix(in srgb, var(--tile) 18%, transparent);
 }
 
 /* ---------------------------------------------------------------------------

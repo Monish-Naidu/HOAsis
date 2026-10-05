@@ -114,6 +114,38 @@ export interface LadderRow {
   daysToNext?: number;
   /** True when the policy says a step is owed now and nothing has gone out. */
   actionDue: boolean;
+  /** The day this rung's letter went out, when one has. */
+  sentOn?: string;
+}
+
+/** The day past due at which each rung is reached. */
+function rungDay(stage: CollectionStage, policy: CollectionPolicy): number | undefined {
+  if (stage === "reminder") return policy.reminderDay;
+  if (stage === "late-notice") return policy.lateNoticeDay;
+  if (stage === "demand") return policy.demandDay;
+  if (stage === "counsel") return policy.counselDay;
+  return undefined;
+}
+
+/**
+ * The day the board last wrote to this home about its dues, on or after
+ * `since`. Undefined when it has not.
+ *
+ * Read from the letters themselves, not from the thread's last activity: an
+ * owner replying to last month's reminder moves the thread's date, and that
+ * reply is not this month's notice having gone out.
+ */
+function billingLetterSince(c: Community, ownerId: string, since: string): string | undefined {
+  let latest: string | undefined;
+  for (const thread of c.threads) {
+    if (thread.ownerId !== ownerId || thread.tag !== "Billing") continue;
+    for (const message of thread.messages ?? []) {
+      if (message.direction !== "outbound") continue;
+      const day = message.at.slice(0, 10);
+      if (day >= since && (!latest || day > latest)) latest = day;
+    }
+  }
+  return latest;
 }
 
 /**
@@ -140,12 +172,25 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
               : nextStage === "counsel"
                 ? policy.counselDay
                 : undefined;
+      // A rung's letter is owed once. Without looking at what went out, the
+      // same homes read as owed a notice the moment after it was sent, and
+      // the next officer to open the page sent it again. A letter counts for
+      // this rung when it is dated on or after the day the home reached it;
+      // an earlier one belongs to the rung before. Only loaded threads are
+      // seen, so a letter outside what was loaded reads as not sent, which
+      // offers it again rather than hiding a notice that is owed.
+      const reached = rungDay(stage, policy);
+      const sentOn =
+        reached === undefined
+          ? undefined
+          : billingLetterSince(c, owner.id, addDays(c.asOf, -(owner.daysPastDue - reached)));
       return {
         owner,
         stage,
         nextStage,
         daysToNext: nextDay === undefined ? undefined : nextDay - owner.daysPastDue,
-        actionDue: stage !== "current",
+        actionDue: stage !== "current" && !sentOn,
+        sentOn,
       };
     })
     .sort((a, b) => STAGE_ORDER.indexOf(b.stage) - STAGE_ORDER.indexOf(a.stage));

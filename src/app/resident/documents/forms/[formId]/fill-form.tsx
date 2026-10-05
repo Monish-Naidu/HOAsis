@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Download, Paperclip, ScrollText } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Paperclip, ScrollText } from "lucide-react";
 import { Badge, Button, Callout, Card, EmptyState, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { SignaturePad } from "@/components/app/signature-pad";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { FormField, FormSubmission, HomeRequest } from "@/lib/types";
 import { cn, addDays, formatDate, todayIsoDate } from "@/lib/utils";
+import { confirmedReference } from "@/lib/request-reference";
 
 /**
  * Filling in a form on the page rather than printing it.
@@ -24,7 +25,7 @@ import { cn, addDays, formatDate, todayIsoDate } from "@/lib/utils";
  * with the statement the signer agreed to, not with a pointer to it.
  */
 export function FillForm({ formId }: { formId: string }) {
-  const { community, requests, addRequest } = useAppState();
+  const { community, requests, addRequest, isRemote } = useAppState();
   const owner = useCurrentOwner();
   const { notify } = useToast();
   const router = useRouter();
@@ -35,6 +36,14 @@ export function FillForm({ formId }: { formId: string }) {
   const [typedName, setTypedName] = useState("");
   const [drawn, setDrawn] = useState<string | undefined>();
   const [submitted, setSubmitted] = useState<HomeRequest | null>(null);
+  // The number to show once it is sent, or null when only the database
+  // knows it (see `confirmedReference`).
+  const [reference, setReference] = useState<string | null>(null);
+  // True while the write is being waited on, so a second press cannot send
+  // the application twice.
+  const [sending, setSending] = useState(false);
+  // The write came back refused. Said on the form, which is still filled in.
+  const [failed, setFailed] = useState(false);
 
   const statement = useMemo(
     () =>
@@ -59,14 +68,11 @@ export function FillForm({ formId }: { formId: string }) {
         <Card className="p-5">
           <p className="text-headline font-semibold text-fg">{form.label}</p>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{form.description}</p>
+          {/* There is no file behind a form, so nothing here offers one. */}
           <Callout tone="info" className="mt-4" title="This one is still a printed form">
-            Download it, fill it in, and attach it to a request. Ask the board to add the
-            questions here and you will be able to complete it on your phone instead.
+            Ask the board for a copy, fill it in, and attach it to a request. Ask them to add
+            the questions here and you will be able to complete it on your phone instead.
           </Callout>
-          <Button variant="secondary" className="mt-4">
-            <Download className="size-4" />
-            {form.fileName}
-          </Button>
         </Card>
       </div>
     );
@@ -80,10 +86,12 @@ export function FillForm({ formId }: { formId: string }) {
   });
   const canSubmit = missing.length === 0 && typedName.trim().length > 1;
 
-  function submit() {
-    if (!owner || !form || !canSubmit) return;
+  async function submit() {
+    if (!owner || !form || !canSubmit || sending) return;
     const seq = 200 + requests.length;
-    const reference = `REQ-${todayIsoDate().slice(0, 4)}-${seq}`;
+    // The form's own number. Right for the demo; a guess for a real
+    // association, where the database numbers the request.
+    const guessed = `REQ-${todayIsoDate().slice(0, 4)}-${seq}`;
 
     const submission: FormSubmission = {
       formId: form.id,
@@ -112,7 +120,7 @@ export function FillForm({ formId }: { formId: string }) {
 
     const request: HomeRequest = {
       id: `req-${seq}`,
-      reference,
+      reference: guessed,
       kind: "architectural",
       title: form.label,
       summary: submission.answers
@@ -155,9 +163,25 @@ export function FillForm({ formId }: { formId: string }) {
       submission,
     };
 
-    addRequest(request);
+    // Same as the new request form: when the state layer answers with a
+    // promise of the stored number (null for a write that failed), wait for
+    // it, and stay on the form on a failure instead of saying it was sent.
+    const answer: unknown = addRequest(request);
+    let stored: unknown;
+    if (answer instanceof Promise) {
+      setSending(true);
+      setFailed(false);
+      stored = await answer;
+      setSending(false);
+      if (stored === null || stored === false) {
+        setFailed(true);
+        return;
+      }
+    }
+    const shown = confirmedReference({ isRemote, guessed, stored });
+    setReference(shown);
     setSubmitted(request);
-    notify(`Submitted as ${reference}`);
+    notify(shown ? `Submitted as ${shown}` : "Submitted");
   }
 
   if (submitted) {
@@ -169,9 +193,14 @@ export function FillForm({ formId }: { formId: string }) {
           </span>
           <p className="mt-3 text-title3 font-semibold text-fg">Sent to the committee</p>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-            Your reference is{" "}
-            <span className="font-semibold text-fg">{submitted.reference}</span>. A copy of
-            what you signed is attached to it.
+            {reference ? (
+              <>
+                Your reference is <span className="font-semibold text-fg">{reference}</span>.
+              </>
+            ) : (
+              "Its number is in your requests."
+            )}{" "}
+            A copy of what you signed is attached to it.
           </p>
           {submitted.dueDate ? (
             <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-footnote leading-relaxed text-fg-muted">
@@ -180,8 +209,11 @@ export function FillForm({ formId }: { formId: string }) {
             </p>
           ) : null}
           <div className="mt-4 flex justify-center gap-2">
+            {/* A real association's request is stored under the database's
+                number, not the form's, so the form's number is no address
+                for it. The list is where it is found. */}
             <Link
-              href={`/resident/requests/${submitted.reference}`}
+              href={isRemote ? "/resident/requests" : `/resident/requests/${submitted.reference}`}
               className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-body font-semibold text-brand-fg"
             >
               Track it
@@ -247,9 +279,19 @@ export function FillForm({ formId }: { formId: string }) {
         </Callout>
       ) : null}
 
-      <Button size="lg" className="w-full" disabled={!canSubmit} onClick={submit}>
+      <Button
+        size="lg"
+        className="w-full"
+        disabled={!canSubmit || sending}
+        onClick={() => void submit()}
+      >
         Sign and submit
       </Button>
+      {failed ? (
+        <p role="alert" className="text-center text-footnote text-danger">
+          That did not send. Nothing was submitted. Try again.
+        </p>
+      ) : null}
       <p className="pb-2 text-center text-footnote text-fg-subtle">
         You will get a reference number and a copy of what you signed.
       </p>

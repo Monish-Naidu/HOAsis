@@ -7,6 +7,7 @@ import { NewBallot } from "@/components/app/new-ballot";
 import { useToast } from "@/components/app/toast";
 import { Button, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { ballotNeedsSealing, ballotPhase } from "@/lib/phases";
 import { cn, formatDate } from "@/lib/utils";
 
 /**
@@ -25,14 +26,17 @@ export default function BoardVoting() {
   const [creating, setCreating] = useState(false);
   const { ballots, closeBallot, settings } = useAppState();
   const { notify } = useToast();
+  // By phase, not stored status: a ballot past its closing date is closed
+  // here the same day the resident's card says so, whether or not anybody
+  // pressed Close now.
   const open = ballots
-    .filter((b) => b.status === "open")
+    .filter((b) => ballotPhase(b) === "open")
     .sort((a, b) => a.closesDate.localeCompare(b.closesDate));
   const scheduled = ballots
-    .filter((b) => b.status === "scheduled")
+    .filter((b) => ballotPhase(b) === "scheduled")
     .sort((a, b) => a.opensDate.localeCompare(b.opensDate));
   const closed = ballots
-    .filter((b) => b.status === "closed" || b.status === "certified")
+    .filter((b) => ["closed", "certified"].includes(ballotPhase(b)))
     .sort((a, b) => b.closesDate.localeCompare(a.closesDate));
 
   return (
@@ -116,9 +120,30 @@ export default function BoardVoting() {
                     <p className="text-body font-medium text-fg">{b.title}</p>
                     <p className="text-footnote text-fg-muted">{resultLine(b)}</p>
                   </div>
-                  <span className="tnum text-footnote text-fg-subtle">
-                    Ended {formatDate(b.closesDate)}
-                  </span>
+                  {ballotNeedsSealing(b) ? (
+                    // Over by its date, with nobody having pressed Close now,
+                    // so the record still says open. One press writes the
+                    // close, the same as Close now would have.
+                    <span className="flex flex-wrap items-center gap-3">
+                      <span className="tnum text-footnote text-fg-subtle">
+                        Ended {formatDate(b.closesDate)}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          closeBallot(b.id);
+                          notify(`Recorded. ${resultLine(b)}.`);
+                        }}
+                      >
+                        Record the result
+                      </Button>
+                    </span>
+                  ) : (
+                    <span className="tnum text-footnote text-fg-subtle">
+                      Ended {formatDate(b.closesDate)}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { portalConfigurationId } from "@/lib/stripe/portal";
 import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
   const session = await stripe().billingPortal.sessions.create({
     customer: row.billing_customer_id,
     return_url: `${request.nextUrl.origin}/board/settings`,
+    // Ours, with cancelling switched on. See src/lib/stripe/portal.ts.
+    configuration: await portalConfigurationId(stripe()),
   });
   return NextResponse.json({ url: session.url });
 }

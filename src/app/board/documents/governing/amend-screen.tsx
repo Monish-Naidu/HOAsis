@@ -36,8 +36,20 @@ const STAGE_LABEL = {
 } as const;
 
 export function AmendScreen() {
-  const { community } = useAppState();
+  const { community, isRemote } = useAppState();
   const { notify } = useToast();
+  /**
+   * Proposing a change is a demo of the idea, not yet a feature.
+   *
+   * A proposal lives in this screen's memory and nowhere else: no row is
+   * written, no ballot opens, no owner is told, and it is gone on the next
+   * visit. For a real association that is worse than nothing, because a
+   * board that believes owners were sent the wording starts counting a
+   * notice period that never began. So a real association can read its
+   * documents here and is told plainly that proposing is coming, and the
+   * demo keeps the composer and says what it did not do.
+   */
+  const canPropose = !isRemote;
   const all = community.governingDocs;
   const present = documentsPresent(all);
 
@@ -144,12 +156,14 @@ export function AmendScreen() {
     };
     setAmendments((list) => [amendment, ...list]);
     reset();
+    // Says what happened and no more. Nothing here leaves the page, so the
+    // toast must not say owners were sent it or that it is on an agenda.
     notify(
       stage !== "open"
-        ? "Saved as a draft. Nobody has been notified."
+        ? "Kept as a draft on this page. Nobody has been notified."
         : boardAdopted
-          ? "On the agenda. The board adopts this at a meeting, with no owner vote."
-          : "Sent to owners. Voting opens once the notice period passes.",
+          ? "Marked for the board agenda. This demo does not save it or tell anybody."
+          : "Marked open for voting. This demo sends nothing to owners.",
     );
   }
 
@@ -182,22 +196,26 @@ export function AmendScreen() {
       <PageHeader
         eyebrow="Documents"
         title="Governing documents"
-        description="What owners see, and how to propose a change."
+        description={
+          canPropose ? "What owners see, and how to propose a change." : "What owners see."
+        }
         action={
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => startDraft("amend")}>
-              <FileText className="size-4" />
-              Amend
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => startDraft("add")}>
-              <FilePlus2 className="size-4" />
-              Add
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => startDraft("remove")}>
-              <Trash2 className="size-4" />
-              Remove
-            </Button>
-          </div>
+          canPropose ? (
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => startDraft("amend")}>
+                <FileText className="size-4" />
+                Amend
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => startDraft("add")}>
+                <FilePlus2 className="size-4" />
+                Add
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => startDraft("remove")}>
+                <Trash2 className="size-4" />
+                Remove
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
@@ -228,13 +246,24 @@ export function AmendScreen() {
       >
         {boardAdopted
           ? "No owner vote is needed, so nothing here stops a rule that goes further than the declaration allows. A rule that contradicts the document above it is void, and the time to catch that is now rather than at a hearing."
-          : `${meta.plain} Owners must receive the marked up wording before voting opens. Drafting it here is what produces that notice, so the vote is on the words rather than on a description of them.`}
+          : `${meta.plain} Owners must receive the marked up wording before voting opens.${
+              canPropose
+                ? " Drafting it here is what produces that notice, so the vote is on the words rather than on a description of them."
+                : ""
+            }`}
       </Callout>
+
+      {canPropose ? null : (
+        <p className="mt-3 text-footnote leading-relaxed text-fg-subtle">
+          Proposing a change from here is coming. Nothing on this page is saved or sent to
+          owners yet.
+        </p>
+      )}
 
       {/* Offered for the rules layer and nowhere else. A board already holds
           the authority to adopt a rule; it does not hold the authority to be
           handed a covenant we wrote and record it against everybody's land. */}
-      {boardAdopted && !drafting ? (
+      {canPropose && boardAdopted && !drafting ? (
         <Card className="mt-5">
           <CardHeader
             icon={<FilePlus2 className="size-4" />}
@@ -280,7 +309,7 @@ export function AmendScreen() {
         </Card>
       ) : null}
 
-      {drafting ? (
+      {canPropose && drafting ? (
         <Card className="mt-5">
           <CardHeader
             icon={<FileText className="size-4" />}

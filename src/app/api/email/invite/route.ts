@@ -6,6 +6,7 @@ import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import { inviteEmail } from "@/lib/email/templates";
 import { signInUrl } from "@/lib/email/sign-in-link";
 import { createInviteLimiter, spendInvites } from "@/lib/email/invite-limit";
+import { createPacer, logAttempt, recentlySent, sentKey, stoppedLine, unrecordedLine } from "@/lib/email/pace";
 import { remoteInviteUrl } from "@/lib/invitations";
 import { communityPath, placeLabel } from "@/lib/community-links";
 
@@ -20,10 +21,20 @@ import { communityPath, placeLabel } from "@/lib/community-links";
  * Who gets which link: somebody with an account gets a magic link straight
  * to their home. Everybody else gets the join page with their address
  * filled in; the seat is claimed when they confirm that address.
+ *
+ * The send is paced and stops before the time limit below
+ * (src/lib/email/pace.ts). A batch that stopped says so in its answer, and
+ * sending it again reaches the rest without inviting anybody twice. Whoever
+ * was passed over for that reason is counted as `already`, apart from
+ * `skipped`, which is a household with no address.
  */
+export const maxDuration = 60;
 
 /** Six hundred messages an hour for one association (src/lib/email/invite-limit.ts). */
 const inviteLimiter = createInviteLimiter();
+
+const OVER_THE_LIMIT =
+  "That is more invitations than one association can send in an hour. Try again later.";
 
 export async function POST(request: NextRequest) {
   const supabase = await supabaseServer();
@@ -80,32 +91,94 @@ export async function POST(request: NextRequest) {
     .in("unit_id", unitIds.slice(0, 200))
     .is("ends_on", null);
 
-  // Counted before the first send, one for each message this call would
-  // put out, so a loop of full batches stops at the ceiling.
-  const addressed = (members ?? []).filter((m) => (m.invited_email ?? "").trim()).length;
-  const within = spendInvites(inviteLimiter, associationId, addressed);
-  if (!within.ok) {
-    log.warn("invite limit reached", { kind, asked: addressed });
-    return NextResponse.json(
-      { error: "That is more invitations than one association can send in an hour. Try again later." },
-      { status: 429, headers: { "Retry-After": String(within.retryAfterSeconds) } },
-    );
-  }
-
   const origin = siteOrigin(request);
   const client = new Resend(key);
-  const result = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
+  const result = { sent: 0, failed: 0, skipped: 0, errors: [] as string[], already: 0, remaining: 0 };
 
-  for (const m of members ?? []) {
+  const pacer = createPacer();
+  // A batch for more than one home that names somebody invited in the last
+  // hour is a batch being sent again, after a stop or a timeout, and that
+  // person is passed over. An invitation to a single home is somebody
+  // pressing the button for that household on purpose, and it always goes.
+  const batch = new Set(unitIds).size > 1;
+  const alreadySent = batch
+    ? await recentlySent(admin, { associationId, category: "invite" })
+    : new Set<string>();
+
+  const list = members ?? [];
+  type Member = (typeof list)[number];
+  const labelOf = (m: Member) => {
+    const units = m.units as unknown as { label: string } | { label: string }[] | null;
+    return (Array.isArray(units) ? units[0]?.label : units?.label) ?? "";
+  };
+  // The subject does not depend on the link, so a repeat is told from the
+  // join page address alone, before a sign-in link is minted for somebody
+  // who will not be sent it.
+  const subjectFor = (m: Member, email: string) =>
+    inviteEmail({
+      kind,
+      associationName: association.name,
+      associationPlace: placeLabel(association.city, association.state),
+      ownerName: m.full_name || "",
+      unitLabel: labelOf(m),
+      url: remoteInviteUrl(association.join_code, email, origin),
+      hasAccount: Boolean(m.profile_id),
+    }).subject;
+  const alreadyInvited = (m: Member) => {
+    const email = (m.invited_email ?? "").trim();
+    return alreadySent.size > 0 && alreadySent.has(sentKey(email, subjectFor(m, email), m.unit_id));
+  };
+
+  for (let index = 0; index < list.length; index++) {
+    const m = list[index];
+    // Out of time. Stop with an answer while there is still time to give one.
+    // Whoever already has the invitation is not waiting for it.
+    if (pacer.outOfTime()) {
+      result.remaining = list
+        .slice(index)
+        .filter((rest) => (rest.invited_email ?? "").trim() && !alreadyInvited(rest)).length;
+      if (result.remaining > 0) {
+        result.failed += result.remaining;
+        result.errors.unshift(stoppedLine(result.remaining, batch));
+      }
+      break;
+    }
     const email = (m.invited_email ?? "").trim();
     if (!email) {
       result.skipped++;
       continue;
     }
-    const units = m.units as unknown as { label: string } | { label: string }[] | null;
-    const unitLabel = (Array.isArray(units) ? units[0]?.label : units?.label) ?? "";
+    const unitLabel = labelOf(m);
     const hasAccount = Boolean(m.profile_id);
     let url = remoteInviteUrl(association.join_code, email, origin);
+    if (alreadyInvited(m)) {
+      result.already++;
+      continue;
+    }
+    // The hourly ceiling, counted one message at a time and only for a
+    // message about to go. It used to be spent for every address in the
+    // batch on every press, sent or not, so a long batch finished over a
+    // few presses ran into the ceiling on its own and was refused with
+    // homes still waiting.
+    const within = spendInvites(inviteLimiter, associationId, 1);
+    if (!within.ok) {
+      const waiting = list
+        .slice(index)
+        .filter((rest) => (rest.invited_email ?? "").trim() && !alreadyInvited(rest)).length;
+      log.warn("invite limit reached", { kind, sent: result.sent, waiting });
+      // Nothing went out in this call: the plain refusal, as before.
+      if (result.sent === 0 && result.failed === 0) {
+        return NextResponse.json(
+          { error: OVER_THE_LIMIT },
+          { status: 429, headers: { "Retry-After": String(within.retryAfterSeconds) } },
+        );
+      }
+      // Some did. Say how many, and why the rest did not. Not counted as
+      // `remaining`: pressing again now would only be refused.
+      result.failed += waiting;
+      result.errors.unshift(OVER_THE_LIMIT);
+      break;
+    }
     if (hasAccount) {
       url = await signInUrl(admin, {
         email,
@@ -126,6 +199,7 @@ export async function POST(request: NextRequest) {
       hasAccount,
     });
 
+    await pacer.turn();
     const { data, error } = await client.emails.send({
       from: emailSender(),
       to: email,
@@ -134,7 +208,7 @@ export async function POST(request: NextRequest) {
       text: built.text,
     });
 
-    await admin.from("email_log").insert({
+    const unrecorded = await logAttempt(admin, {
       association_id: associationId,
       profile_id: m.profile_id,
       unit_id: m.unit_id,
@@ -152,8 +226,22 @@ export async function POST(request: NextRequest) {
     } else {
       result.sent++;
     }
+
+    // The log is the only memory of who has been invited, and the screen
+    // presses again while homes are waiting. Without the row the next press
+    // would invite this home a second time, so the run stops here and says so,
+    // as the dues and notice sends do.
+    if (unrecorded) {
+      const waiting = list
+        .slice(index + 1)
+        .filter((rest) => (rest.invited_email ?? "").trim() && !alreadyInvited(rest)).length;
+      log.error("invite log write failed", { err: unrecorded, waiting });
+      result.failed += waiting;
+      result.errors.unshift(unrecordedLine(waiting));
+      break;
+    }
   }
-  log.info("invites sent", { kind, sent: result.sent, failed: result.failed, skipped: result.skipped });
+  log.info("invites sent", { kind, sent: result.sent, failed: result.failed, skipped: result.skipped, already: result.already, remaining: result.remaining });
 
   return NextResponse.json(result);
 }

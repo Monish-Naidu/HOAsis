@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { ballotPhase } from "@/lib/phases";
 import { daysFromToday } from "@/lib/utils";
 
 export interface ResidentBadge {
@@ -31,7 +32,7 @@ export function useResidentBadges(): Partial<Record<string, ResidentBadge>> {
     }
 
     const toVote = community.ballots.filter(
-      (b) => b.audience === "owners" && b.status === "open" && !b.myVoteOptionId,
+      (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
     ).length;
     if (toVote > 0) badges["/resident/calendar"] = { count: toVote, tone: "warn", hint: toVote === 1 ? "ballot to cast" : "ballots to cast" };
 

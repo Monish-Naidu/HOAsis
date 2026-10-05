@@ -409,7 +409,7 @@ test.describe("forms", () => {
     );
   });
 
-  test("a form with no questions still offers the file", async ({ page }) => {
+  test("a form with no questions says to ask the board for a copy", async ({ page }) => {
     await seedSession(page, { seat: SEATS.resident, view: "resident" });
     await page.goto("/resident/documents/forms/form-landscape");
     await page.waitForLoadState("networkidle");

@@ -96,6 +96,45 @@ try {
     .insert({ association_id: associationId, unit_id: presidentUnit, kind: "card", label: "Visa", mask: "0000" });
   check("payment_instruments: and cannot add one to a neighbour's home", Boolean(forgeInstrument), forgeInstrument?.code ?? "no error");
 
+  // Who saved a method is the database's to say (0074). The routes that
+  // move money read that column to tell a co-owner's bank, which may be
+  // charged, from a seller's, which may not. It used to be whatever the
+  // browser wrote, so a buyer could put their own name on the seller's row.
+  const { data: savedRow } = await admin.from("payment_instruments").select("id, profile_id").eq("unit_id", neighborUnit).single();
+  check("payment_instruments: a saved method is stamped with who saved it", savedRow?.profile_id === neighbor.id, String(savedRow?.profile_id));
+  const cohabitant = await makeUser("cohabitant");
+  await admin.from("memberships").insert({
+    association_id: associationId, unit_id: neighborUnit, profile_id: cohabitant.id,
+    full_name: "Cody", role: "resident", capabilities: [],
+  });
+  const { data: inAnothersName, error: cohabitantSaves } = await cohabitant.client.from("payment_instruments")
+    .insert({ association_id: associationId, unit_id: neighborUnit, profile_id: neighbor.id, kind: "bank", label: "Checking", mask: "6789" })
+    .select("id, profile_id").single();
+  check("payment_instruments: and cannot be saved in a co-owner's name", !cohabitantSaves && inAnothersName?.profile_id === cohabitant.id,
+    cohabitantSaves?.message ?? String(inAnothersName?.profile_id));
+  const { error: takeOver } = await cohabitant.client.from("payment_instruments").update({ profile_id: cohabitant.id }).eq("id", savedRow?.id);
+  const { data: afterTakeOver } = await admin.from("payment_instruments").select("profile_id").eq("id", savedRow?.id).single();
+  check("payment_instruments: a co-owner cannot put their own name on somebody else's",
+    takeOver?.code === "42501" && afterTakeOver?.profile_id === neighbor.id, takeOver?.message ?? String(afterTakeOver?.profile_id));
+  const { error: makeDefault } = await cohabitant.client.from("payment_instruments").update({ is_default: true }).eq("id", savedRow?.id);
+  check("payment_instruments: but can still choose the household's default", !makeDefault, makeDefault?.message ?? "");
+  const { error: serverMoves } = await admin.from("payment_instruments").update({ profile_id: cohabitant.id }).eq("id", savedRow?.id);
+  const { error: serverMovesBack } = await admin.from("payment_instruments").update({ profile_id: neighbor.id }).eq("id", savedRow?.id);
+  check("payment_instruments: and the server is not held to that rule", !serverMoves && !serverMovesBack, (serverMoves ?? serverMovesBack)?.message ?? "");
+
+  // Saved methods leave with the person (0075). The co-owner leaves: their
+  // bank goes, the neighbour's card stays, and so does the Stripe customer
+  // the card hangs from.
+  await admin.from("units").update({ stripe_customer_id: `cus_verify_${stamp}` }).eq("id", neighborUnit);
+  const { error: leaveError } = await cohabitant.client.rpc("leave_association", { p_association_id: associationId });
+  const { data: leftBehind } = await admin.from("payment_instruments").select("profile_id").eq("unit_id", neighborUnit);
+  const { data: keptCustomer } = await admin.from("units").select("stripe_customer_id").eq("id", neighborUnit).single();
+  check("leave_association: the leaver's saved method goes and the co-owner's stays",
+    !leaveError && (leftBehind ?? []).length === 1 && leftBehind[0].profile_id === neighbor.id,
+    leaveError?.message ?? JSON.stringify(leftBehind));
+  check("leave_association: and the home keeps the Stripe customer the co-owner's method is on",
+    keptCustomer?.stripe_customer_id === `cus_verify_${stamp}`, String(keptCustomer?.stripe_customer_id));
+
   // Reports: the reporter's own, the compliance holder's all, the accused home's none.
   const { data: report, error: reportError } = await neighbor.client.from("violation_reports").insert({
     association_id: associationId, reference: "REP-1", reporter_profile_id: neighbor.id,
@@ -108,6 +147,13 @@ try {
     reporter_name: "Dana", reporter_unit: "1", subject_unit: "2", what: "Forged", observed_on: day(-1),
   });
   check("violation_reports: but not in somebody else's name", Boolean(forgedReport), forgedReport?.code ?? "no error");
+  // A report starts as new (0068): the reporter does not get to verify it.
+  const { error: preVerified } = await neighbor.client.from("violation_reports").insert({
+    association_id: associationId, reference: "REP-3", reporter_profile_id: neighbor.id,
+    reporter_name: "Marcus", reporter_unit: "2", subject_unit: "1", what: "Already verified", observed_on: day(-1),
+    status: "verified", verified_by: "Dana", verified_on: day(0),
+  });
+  check("violation_reports: nor one that arrives already verified", Boolean(preVerified), preVerified?.code ?? "no error");
   const { error: verifyError } = await president.client.from("violation_reports")
     .update({ status: "verified", verified_by: "Dana", verified_on: day(0), verification_note: "Seen." }).eq("id", report.id);
   check("violation_reports: the board can verify", !verifyError, verifyError?.message ?? "");
@@ -172,6 +218,14 @@ try {
   // history, and what was owed is settled as a payment line at closing.
   const soldUnit = crypto.randomUUID();
   await president.client.rpc("add_household", { p_association_id: associationId, p_unit_id: soldUnit, p_name: "Seller", p_email: `seller-${stamp}@example.com`, p_unit: "5" });
+  // The seller signs up, which claims the seat by its invited address, and
+  // saves a bank on the home. Neither it nor the home's Stripe customer may
+  // outlive the sale (0075).
+  const sellerUser = await makeUser("seller");
+  await sellerUser.client.rpc("claim_my_seats");
+  const { error: sellerSaves } = await sellerUser.client.from("payment_instruments")
+    .insert({ association_id: associationId, unit_id: soldUnit, kind: "bank", label: "Seller's checking", mask: "1111" });
+  await admin.from("units").update({ stripe_customer_id: `cus_seller_${stamp}` }).eq("id", soldUnit);
   await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "charge", label: "Assessment", amount_cents: 25_000, due_on: day(-30) });
   const { error: closingError } = await president.client.from("charges").insert({ association_id: associationId, unit_id: soldUnit, kind: "payment", label: "Paid at closing", amount_cents: -25_000, due_on: day(0) });
   const { data: newSeat, error: saleError } = await president.client.rpc("transfer_home", { p_unit_id: soldUnit, p_new_name: "Buyer", p_new_email: `buyer-${stamp}@example.com`, p_closing_date: day(0) });
@@ -184,6 +238,11 @@ try {
   check("transfer_home: the seller's seat ended and the buyer's began", (seats ?? []).length === 2 && seller?.ends_on != null && buyer?.ends_on === null, JSON.stringify(seats));
   const { data: soldBalances, error: soldBalanceError } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", soldUnit);
   check("transfer_home: the buyer starts at zero", !soldBalanceError && (soldBalances ?? []).length === 1 && soldBalances[0].balance_cents === 0, soldBalanceError?.message ?? JSON.stringify(soldBalances));
+  const { data: afterSale } = await admin.from("payment_instruments").select("id").eq("unit_id", soldUnit);
+  const { data: soldCustomer } = await admin.from("units").select("stripe_customer_id").eq("id", soldUnit).single();
+  check("transfer_home: the seller's saved bank does not stay on the buyer's home", !sellerSaves && (afterSale ?? []).length === 0,
+    sellerSaves?.message ?? `${(afterSale ?? []).length} left`);
+  check("transfer_home: and the buyer does not inherit the seller's Stripe customer", soldCustomer?.stripe_customer_id === null, String(soldCustomer?.stripe_customer_id));
   const { error: presidentSale } = await president.client.rpc("transfer_home", { p_unit_id: presidentUnit, p_new_name: "Nobody", p_new_email: "", p_closing_date: day(0) });
   check("transfer_home: the President's home cannot be sold out from under the office", Boolean(presidentSale), presidentSale?.message ?? "no error");
 
@@ -208,10 +267,64 @@ try {
   ]).select();
   const { data: receipt, error: voteError } = await neighbor.client.rpc("cast_vote", { p_ballot_id: ballot.id, p_option_id: options[0].id });
   check("cast_vote: still works with the new columns", !voteError && /^VR-/.test(receipt ?? ""), voteError?.message ?? receipt);
+
+  // Board replies are appended in the database (0072). The browser used to
+  // send the whole thread back from its own copy, so a reply written in a
+  // tab that had been open a while erased whatever the owner had said since.
+  const { data: thread } = await admin.from("threads").insert({
+    association_id: associationId, subject: "Pool key", unit_id: neighborUnit, tag: "General", messages: [],
+  }).select().single();
+  await neighbor.client.rpc("reply_as_owner", { p_thread_id: thread.id, p_body: "Any news?" });
+  const { data: sent, error: replyError } = await president.client.rpc("reply_as_board", { p_thread_id: thread.id, p_body: "  Friday.  " });
+  check("reply_as_board: returns the message it wrote",
+    !replyError && sent?.id === `m-${thread.id}-1` && sent?.from === "Dana" && sent?.fromRole === "board"
+      && sent?.direction === "outbound" && sent?.channel === "email" && sent?.body === "Friday." && /^\d{4}-\d{2}-\d{2}$/.test(sent?.at ?? ""),
+    replyError?.message ?? JSON.stringify(sent));
+  const { data: afterReply } = await admin.from("threads").select("messages, unread").eq("id", thread.id).single();
+  check("reply_as_board: the owner's message is still there, and the thread reads as answered",
+    afterReply?.messages?.length === 2 && afterReply.messages[0].body === "Any news?" && afterReply.messages[1].id === sent?.id && afterReply.unread === false,
+    JSON.stringify(afterReply));
+  await Promise.all([
+    president.client.rpc("reply_as_board", { p_thread_id: thread.id, p_body: "One" }),
+    president.client.rpc("reply_as_board", { p_thread_id: thread.id, p_body: "Two" }),
+  ]);
+  const { data: afterBoth } = await admin.from("threads").select("messages").eq("id", thread.id).single();
+  check("reply_as_board: two replies sent at once both land, with ids of their own",
+    afterBoth?.messages?.length === 4 && new Set(afterBoth.messages.map((m) => m.id)).size === 4,
+    JSON.stringify((afterBoth?.messages ?? []).map((m) => m.id)));
+  const { error: emptyReply } = await president.client.rpc("reply_as_board", { p_thread_id: thread.id, p_body: "   " });
+  check("reply_as_board: an empty reply is refused", Boolean(emptyReply), emptyReply?.message ?? "no error");
+  const { error: residentReply } = await neighbor.client.rpc("reply_as_board", { p_thread_id: thread.id, p_body: "As the board" });
+  check("reply_as_board: an owner cannot answer as the board", residentReply?.code === "42501", residentReply?.message ?? "no error");
+  const { error: strangerReply } = await stranger.client.rpc("reply_as_board", { p_thread_id: thread.id, p_body: "Hello" });
+  check("reply_as_board: nor can a stranger", strangerReply?.code === "42501", strangerReply?.message ?? "no error");
+
+  // The same rule as threads_write: finances answers the billing mail and
+  // nothing else.
+  const treasurer = await makeUser("treasurer");
+  await admin.from("memberships").insert({
+    association_id: associationId, unit_id: presidentUnit, profile_id: treasurer.id,
+    full_name: "Tess", role: "treasurer", capabilities: ["finances"],
+  });
+  const { data: billing } = await admin.from("threads").insert({
+    association_id: associationId, subject: "Late fee", unit_id: neighborUnit, tag: "Billing", messages: [],
+  }).select().single();
+  const { data: billingReply, error: billingError } = await treasurer.client.rpc("reply_as_board", { p_thread_id: billing.id, p_body: "Waived this once." });
+  check("reply_as_board: the Treasurer answers a billing thread", !billingError && billingReply?.from === "Tess" && billingReply?.id === `m-${billing.id}-0`,
+    billingError?.message ?? JSON.stringify(billingReply));
+  const { error: generalError } = await treasurer.client.rpc("reply_as_board", { p_thread_id: thread.id, p_body: "Not mine" });
+  check("reply_as_board: and not a general one", generalError?.code === "42501", generalError?.message ?? "no error");
+  const { data: afterAll } = await admin.from("threads").select("messages").eq("id", thread.id).single();
+  check("reply_as_board: a refused reply adds nothing", afterAll?.messages?.length === 4, String(afterAll?.messages?.length));
 } catch (error) {
   check("the run itself", false, error instanceof Error ? error.message : String(error));
 } finally {
-  for (const id of cleanup.associations) await admin.from("associations").delete().eq("id", id);
+  for (const id of cleanup.associations) {
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) check("cleanup removed the association", false, error.message);
+  }
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }
 

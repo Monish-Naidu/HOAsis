@@ -13,7 +13,12 @@ const SECRET = "whsec_test_secret";
 process.env.STRIPE_SECRET_KEY = "sk_test_unit";
 process.env.STRIPE_WEBHOOK_SECRET = SECRET;
 
-const rpc = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
+// record_refund answers with the payment it booked against, or null when no
+// payment carries the intent. The default is a payment that was found.
+const rpc = vi.fn(async (): Promise<{ data?: string | null; error: { message: string } | null }> => ({
+  data: "payment-1",
+  error: null,
+}));
 const upsert = vi.fn(async () => ({ error: null }));
 const secondEq = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
 const firstEq = vi.fn(() => ({ eq: secondEq }));
@@ -46,6 +51,14 @@ vi.mock("@/lib/supabase/server", () => ({
 // and not a write to a table the fake database does not have.
 const recordAppError = vi.fn(async () => "REF");
 vi.mock("@/lib/app-errors", () => ({ recordAppError }));
+
+// The email to the people who hold finances. Mocked: what is tested here is
+// when the webhook asks for it and that a failure never becomes a 500.
+const sendDisputeNotice = vi.fn<(input: object) => Promise<{ sent: number; failed: number }>>(async () => ({
+  sent: 1,
+  failed: 0,
+}));
+vi.mock("@/lib/email/dispute", () => ({ sendDisputeNotice }));
 
 const syncAccountStatus = vi.fn(async () => undefined);
 vi.mock("@/lib/stripe/account-status", () => ({ syncAccountStatus }));
@@ -351,6 +364,44 @@ describe("the webhook route", () => {
     expect(deleteEq).toHaveBeenCalledWith("detail->>setupIntentId", "seti_1");
   });
 
+  it("asks for a succeeded SetupIntent again when the verifying bank could not be read", async () => {
+    // Stripe says the deposits matched once. A 200 here would leave the
+    // bank marked verifying for good.
+    selectEq.mockReturnValueOnce({
+      then: (resolve: (v: unknown) => unknown) =>
+        Promise.resolve({ data: null, error: { message: "fetch failed" } }).then(resolve),
+      maybeSingle,
+    } as never);
+    const response = await POST(
+      signedRequest(objectEvent("setup_intent.succeeded", { object: "setup_intent", id: "seti_1" })) as never,
+    );
+    expect(response.status).toBe(500);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("asks for a succeeded SetupIntent again when the verifying mark could not be cleared", async () => {
+    firstEq.mockReturnValueOnce({ error: { message: "fetch failed" } } as never);
+    const response = await POST(
+      signedRequest(objectEvent("setup_intent.succeeded", { object: "setup_intent", id: "seti_1" })) as never,
+    );
+    expect(response.status).toBe(500);
+    expect(update).toHaveBeenCalledWith({ detail: { token: "pm_1" } });
+  });
+
+  it("asks for a failed SetupIntent again when the bank could not be removed", async () => {
+    deleteEq.mockResolvedValueOnce({ error: { message: "fetch failed" } } as never);
+    const response = await POST(
+      signedRequest(objectEvent("setup_intent.setup_failed", { object: "setup_intent", id: "seti_1" })) as never,
+    );
+    expect(response.status).toBe(500);
+    // A canceled one takes the same path.
+    deleteEq.mockResolvedValueOnce({ error: { message: "fetch failed" } } as never);
+    const canceled = await POST(
+      signedRequest(objectEvent("setup_intent.canceled", { object: "setup_intent", id: "seti_1" })) as never,
+    );
+    expect(canceled.status).toBe(500);
+  });
+
   it("acknowledges event types it does not handle", async () => {
     const response = await POST(
       signedRequest(objectEvent("customer.created", { object: "customer", id: "cus_1" })) as never,
@@ -384,6 +435,59 @@ describe("refunds", () => {
     await POST(signedRequest(objectEvent("charge.refunded", { ...refunded, payment_intent: null })) as never);
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  it("does not look the intent up when the refund was booked", async () => {
+    const retrieve = vi.spyOn(stripe().paymentIntents, "retrieve");
+    const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
+    expect(response.status).toBe(200);
+    expect(retrieve).not.toHaveBeenCalled();
+  });
+
+  describe("when no payment carries the intent yet", () => {
+    const ourIntent = { object: "payment_intent", id: "pi_1", metadata: METADATA };
+
+    it("asks for the refund again when the intent is ours, so it is not lost", async () => {
+      // The refund got here before the payment was recorded. A 200 was the
+      // last Stripe would ever say about it.
+      rpc.mockResolvedValueOnce({ data: null, error: null });
+      const retrieve = vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue(ourIntent as never);
+      const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
+      expect(response.status).toBe(500);
+      // Asked of the account the event came from: these are direct charges.
+      expect(retrieve).toHaveBeenCalledWith("pi_1", {}, { stripeAccount: "acct_test" });
+      expect(selectEq).toHaveBeenCalledWith("id", "unit-1");
+    });
+
+    it("acknowledges a refund on a charge that was never ours", async () => {
+      // No metadata of ours: some other charge on the connected account.
+      rpc.mockResolvedValueOnce({ data: null, error: null });
+      vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue({ ...ourIntent, metadata: {} } as never);
+      const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
+      expect(response.status).toBe(200);
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it("acknowledges one whose unit is not on the account the event came from", async () => {
+      rpc.mockResolvedValueOnce({ data: null, error: null });
+      vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue(ourIntent as never);
+      maybeSingle.mockResolvedValueOnce({ data: { associations: { stripe_account_id: "acct_other" } }, error: null });
+      const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
+      expect(response.status).toBe(200);
+    });
+
+    it("asks again when it cannot tell: the intent or the unit could not be read", async () => {
+      rpc.mockResolvedValueOnce({ data: null, error: null });
+      vi.spyOn(stripe().paymentIntents, "retrieve").mockRejectedValueOnce(new Error("Stripe is down"));
+      const unread = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
+      expect(unread.status).toBe(500);
+
+      rpc.mockResolvedValueOnce({ data: null, error: null });
+      vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue(ourIntent as never);
+      maybeSingle.mockResolvedValueOnce({ data: null, error: { message: "fetch failed" } });
+      const unplaced = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
+      expect(unplaced.status).toBe(500);
+    });
+  });
 });
 
 describe("chargebacks", () => {
@@ -416,6 +520,77 @@ describe("chargebacks", () => {
     expect(recordAppError).toHaveBeenCalledWith(
       expect.objectContaining({ level: "warn", message: "Chargeback closed: lost", associationId: "assoc-1" }),
     );
+  });
+
+  it("emails the people who hold finances the day a chargeback opens, with the evidence deadline", async () => {
+    maybeSingle.mockResolvedValueOnce(payment);
+    const opened = { ...dispute, status: "needs_response", evidence_details: { due_by: Date.UTC(2026, 9, 21, 23, 59, 59) / 1000 } };
+    const response = await POST(signedRequest(objectEvent("charge.dispute.created", opened)) as never);
+    expect(response.status).toBe(200);
+    expect(sendDisputeNotice).toHaveBeenCalledTimes(1);
+    expect(sendDisputeNotice).toHaveBeenCalledWith({
+      associationId: "assoc-1",
+      unitId: "unit-1",
+      kind: "opened",
+      disputeId: "dp_1",
+      amountCents: 6000,
+      reason: "fraudulent",
+      evidenceDueOn: "2026-10-21",
+    });
+    // And /admin says how many were told.
+    expect(recordAppError).toHaveBeenCalledWith(
+      expect.objectContaining({ extra: expect.objectContaining({ emailed: 1, emailFailed: 0 }) }),
+    );
+  });
+
+  it("tells them how it ended when the bank decides", async () => {
+    maybeSingle.mockResolvedValueOnce(payment);
+    await POST(signedRequest(objectEvent("charge.dispute.closed", dispute)) as never);
+    expect(sendDisputeNotice).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "lost", disputeId: "dp_1", evidenceDueOn: null }),
+    );
+
+    maybeSingle.mockResolvedValueOnce(payment);
+    await POST(signedRequest(objectEvent("charge.dispute.closed", { ...dispute, status: "won" })) as never);
+    expect(sendDisputeNotice).toHaveBeenLastCalledWith(expect.objectContaining({ kind: "won" }));
+  });
+
+  it("sends nothing for a closing that is neither won nor lost", async () => {
+    maybeSingle.mockResolvedValueOnce(payment);
+    await POST(signedRequest(objectEvent("charge.dispute.closed", { ...dispute, status: "warning_closed" })) as never);
+    expect(sendDisputeNotice).not.toHaveBeenCalled();
+    expect(recordAppError).toHaveBeenCalledTimes(1);
+  });
+
+  it("still answers 200 and records the chargeback when the email fails", async () => {
+    // A 500 would have Stripe send the event again for a problem that is ours.
+    maybeSingle.mockResolvedValueOnce(payment);
+    sendDisputeNotice.mockRejectedValueOnce(new Error("Resend is down"));
+    const response = await POST(signedRequest(objectEvent("charge.dispute.created", dispute)) as never);
+    expect(response.status).toBe(200);
+    expect(recordAppError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Chargeback opened for $60.00 (fraudulent)",
+        extra: expect.objectContaining({ emailed: 0 }),
+      }),
+    );
+  });
+
+  it("emails nobody when the payment behind the dispute is not ours", async () => {
+    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    const response = await POST(signedRequest(objectEvent("charge.dispute.created", dispute)) as never);
+    expect(response.status).toBe(200);
+    expect(sendDisputeNotice).not.toHaveBeenCalled();
+    expect(recordAppError).toHaveBeenCalledWith(expect.objectContaining({ associationId: null }));
+  });
+
+  it("asks for the event again when the disputed payment could not be read", async () => {
+    // Nothing has been sent or recorded yet, so a retry is safe.
+    maybeSingle.mockResolvedValueOnce({ data: null, error: { message: "fetch failed" } });
+    const response = await POST(signedRequest(objectEvent("charge.dispute.created", dispute)) as never);
+    expect(response.status).toBe(500);
+    expect(sendDisputeNotice).not.toHaveBeenCalled();
+    expect(recordAppError).not.toHaveBeenCalled();
   });
 });
 

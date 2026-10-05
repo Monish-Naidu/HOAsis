@@ -42,6 +42,7 @@ import { ballots, meetings } from "./voting";
 import { boardMembers, currentOwner, owners, CURRENT_OWNER_ID } from "./owners";
 import { requests, violations } from "./requests";
 import { daysFromToday } from "@/lib/utils";
+import { ballotPhase, meetingPhase } from "@/lib/phases";
 import { NotFoundError } from "@/lib/core/errors";
 
 export {
@@ -335,7 +336,7 @@ export function assistantContext() {
     liveMeeting: live ? { title: live.title, attendees: live.attendees.length } : undefined,
     events: events.map((e) => ({ title: e.title, date: e.date, time: e.time, location: e.location })),
     ballots: ballots
-      .filter((b) => b.audience === "owners" && b.status === "open")
+      .filter((b) => b.audience === "owners" && ballotPhase(b) === "open")
       .map((b) => ({
         title: b.title,
         closesDate: b.closesDate,
@@ -388,7 +389,8 @@ export function calendarEntries() {
   }
   for (const b of ballots) {
     if (b.audience !== "owners") continue;
-    if (b.status === "scheduled") {
+    const phase = ballotPhase(b);
+    if (phase === "scheduled") {
       rows.push({
         id: `cal-${b.id}-open`,
         date: b.opensDate,
@@ -398,7 +400,7 @@ export function calendarEntries() {
         href: "/resident/vote",
       });
     }
-    if (b.status === "open" || b.status === "scheduled") {
+    if (phase === "open" || phase === "scheduled") {
       rows.push({
         id: `cal-${b.id}-close`,
         date: b.closesDate,
@@ -439,7 +441,7 @@ export function payoutsAwaitingApproval() {
 /* -------------------------------------------------------------------------- */
 
 export function openBallots() {
-  return ballots.filter((b) => b.status === "open");
+  return ballots.filter((b) => ballotPhase(b) === "open");
 }
 
 export function ballotsForOwners() {
@@ -473,7 +475,7 @@ export function liveMeeting() {
 
 export function upcomingMeetings() {
   return meetings
-    .filter((m) => m.status !== "ended")
+    .filter((m) => meetingPhase(m) !== "ended")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
@@ -484,7 +486,7 @@ export function meetingById(id?: string) {
 /** Ballots this resident can still act on. */
 export function ballotsAwaitingMyVote() {
   return ballots.filter(
-    (b) => b.audience === "owners" && b.status === "open" && !b.myVoteOptionId,
+    (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
   );
 }
 

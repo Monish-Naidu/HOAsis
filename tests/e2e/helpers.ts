@@ -224,8 +224,6 @@ export const RESIDENT_TABS = [
   "Documents",
   "Community",
   "Meetings",
-  "Voting",
-  "Account",
   "Association funds",
 ] as const;
 

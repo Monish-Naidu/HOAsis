@@ -130,15 +130,10 @@ export function preferRemoteAssociation(id: string | null) {
 
 function chooseActive(associations: RemoteCommunitySummary[]): string {
   const byId = requestedId ? associations.find((a) => a.id === requestedId) : undefined;
-  requestedId = null;
-  // A link's slug is asked for once, like the id. Left set, it won every
-  // later load: arrive by /c/maple-ridge, switch to Oak Hills, and the next
-  // full load put Maple Ridge back under whatever was open. A vanity host
-  // still names its association on every load, since the address says so.
-  const asked = requestedSlug;
-  requestedSlug = null;
   if (byId) return byId.id;
-  const slug = asked ?? slugFromHost(window.location.hostname);
+  // A vanity host names its association on every load, since the address
+  // says so. A link's slug is asked for once: see `spendRequests`.
+  const slug = requestedSlug ?? slugFromHost(window.location.hostname);
   const bySlug = slug ? associations.find((a) => a.slug === slug) : undefined;
   if (bySlug) return bySlug.id;
   const preferred = remembered();
@@ -149,6 +144,24 @@ function chooseActive(associations: RemoteCommunitySummary[]): string {
     associations.find((a) => a.isHome)?.id ??
     associations[0].id
   );
+}
+
+/**
+ * Forgets what a link or the wizard asked for, once a load has honoured it.
+ *
+ * Asked for once, because left set it won every later load: arrive by
+ * /c/maple-ridge, switch to Oak Hills, and the next full load put Maple Ridge
+ * back under whatever was open. But only once the load has landed. Forgotten
+ * at the moment of choosing, a load that then failed had nothing left to
+ * retry with, and asking again opened the last remembered association
+ * instead of the one the link named.
+ *
+ * Something asked for while that load was away is a newer request and is
+ * kept for the next one.
+ */
+function spendRequests(asked: { slug: string | null; id: string | null }) {
+  if (requestedSlug === asked.slug) requestedSlug = null;
+  if (requestedId === asked.id) requestedId = null;
 }
 
 /**
@@ -210,6 +223,7 @@ export async function loadRemote(profileId: string | null): Promise<void> {
       return;
     }
 
+    const asked = { slug: requestedSlug, id: requestedId };
     const activeId = chooseActive(associations);
     const refreshesBefore = refreshSeq;
     const [community, dismissals] = await Promise.all([
@@ -217,6 +231,7 @@ export async function loadRemote(profileId: string | null): Promise<void> {
       loadDismissals(supabase, activeId),
     ]);
     if (mine !== loadEpoch) return;
+    spendRequests(asked);
     remember(activeId);
     set({ status: "ready", associations, activeId, community, dismissals, message: undefined });
     // A write that landed while this was reading may not be in what it read.
@@ -247,6 +262,10 @@ export async function retryRemote(): Promise<void> {
 /** Switches association without signing out, since one person can hold several. */
 export async function setRemoteAssociation(id: string): Promise<void> {
   if (!hasSupabase) return;
+  // A deliberate switch outranks a link still waiting on a load it has just
+  // overtaken, or the next full load would drag the member back to it.
+  requestedSlug = null;
+  requestedId = null;
   const mine = ++loadEpoch;
   set({ status: "loading" });
   try {
@@ -326,24 +345,123 @@ export function reportRemoteError(message: string) {
  * and a count of zero is treated here as the refusal it is. A write that did
  * not ask for a count is taken at its word, since some legitimately match
  * nothing.
+ *
+ * Writes run one at a time, in the order they were asked for, and each waits
+ * for the re-read that follows the one before it. Several of them replace a
+ * whole list (a thread's messages, a seat's permissions) with the old list
+ * plus one thing. Run side by side, two quick presses each built on the same
+ * old list and the second erased the first. In a queue, a write that builds
+ * its value inside its callback from `remoteSnapshot()` sees what the write
+ * before it left. A write must not start another from inside its own
+ * callback and wait for it: the second would be queued behind the first.
+ *
+ * A failed write re-reads too. Some writes are more than one statement, and
+ * a later one failing leaves the earlier ones in the database; a retry built
+ * on the copy from before would repeat them.
+ *
+ * Nothing in the queue is waited on for ever. A browser request has no time
+ * limit of its own, so one that never came back (a train going into a
+ * tunnel) held every later write behind it until the tab was reloaded, with
+ * nothing on screen to say so. A write that has not answered in
+ * `WRITE_TIMEOUT_MS` is reported as failed and the queue moves on, and so is
+ * a re-read after `REREAD_TIMEOUT_MS`. The request itself cannot be called
+ * back, so a write given up on may still land; the message says so. When it
+ * does answer, late, the association is read again: the re-read that
+ * followed the timeout ran before the write landed, so without a second one
+ * the screen the message sends the person to look at would still show it
+ * missing, and they would enter it twice.
  */
-export async function remoteWrite(
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+/** How long one write may go unanswered. A write of many rows may ask for longer. */
+export const WRITE_TIMEOUT_MS = 30_000;
+/** How long the re-read after a write may take before the queue stops waiting for it. */
+export const REREAD_TIMEOUT_MS = 20_000;
+
+/** What a counted write that matched no row is told. Row level security hid the row. */
+export const NOTHING_CHANGED = "nothing was changed. You may not have access to change this";
+
+type RemoteWrite = () => PromiseLike<
+  { error: { message: string } | null; count?: number | null } | void
+>;
+
+export function remoteWrite(
   label: string,
   // PromiseLike, because a query builder is a thenable rather than a Promise.
-  write: () => PromiseLike<{ error: { message: string } | null; count?: number | null } | void>,
+  write: RemoteWrite,
+  options?: { timeoutMs?: number },
 ): Promise<boolean> {
+  // `runWrite` never rejects, so one failure cannot stall the queue.
+  const mine = writeQueue.then(() => runWrite(label, write, options?.timeoutMs ?? WRITE_TIMEOUT_MS));
+  writeQueue = mine;
+  return mine;
+}
+
+/**
+ * Settles as `work` does, or rejects with `message` if it has not by then.
+ * `late` is called if the work settles, either way, after it was given up on.
+ */
+function within<T>(
+  work: PromiseLike<T>,
+  ms: number,
+  message: string,
+  late?: () => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let gaveUp = false;
+    const timer = setTimeout(() => {
+      gaveUp = true;
+      reject(new Error(message));
+    }, ms);
+    const settled = () => {
+      clearTimeout(timer);
+      if (gaveUp) late?.();
+    };
+    Promise.resolve(work).then(
+      (value) => {
+        settled();
+        resolve(value);
+      },
+      (reason) => {
+        settled();
+        reject(reason);
+      },
+    );
+  });
+}
+
+/**
+ * The re-read after a write. One that never answers is given up on quietly,
+ * the way a failed one is: the write has already been reported either way,
+ * and the next write's re-read brings the screen up to date.
+ */
+async function reread(): Promise<void> {
   try {
-    const result = await write();
+    await within(refreshRemote(), REREAD_TIMEOUT_MS, "no answer");
+  } catch {
+    // The last good copy stays on screen.
+  }
+}
+
+async function runWrite(label: string, write: RemoteWrite, timeoutMs: number): Promise<boolean> {
+  try {
+    const result = await within(
+      write(),
+      timeoutMs,
+      `no answer after ${Math.round(timeoutMs / 1000)} seconds. Check your connection. It may still have gone through, so look before you try again`,
+      // Outside the queue, which moved on at the timeout. A refresh that
+      // lands out of turn is dropped by `refreshRemote` itself.
+      () => void refreshRemote(),
+    );
     if (result && result.error) throw new Error(result.error.message);
-    if (result && result.count === 0) {
-      throw new Error("nothing was changed. You may not have access to change this");
-    }
-    await refreshRemote();
+    if (result && result.count === 0) throw new Error(NOTHING_CHANGED);
+    await reread();
     return true;
   } catch (error) {
     reportRemoteError(
       `${label}: ${error instanceof Error ? error.message : "the database refused it"}`,
     );
+    await reread();
     return false;
   }
 }

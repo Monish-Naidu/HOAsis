@@ -1,0 +1,342 @@
+import { useEffect, useState } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => "/board",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+const { AppStateProvider, useAppState } = await import("@/lib/app-state");
+const { ToastProvider } = await import("@/components/app/toast");
+const { BalancesScreen, openingFigures } = await import(
+  "@/app/board/homeowners/opening-balances/balances-screen"
+);
+const { AmendScreen } = await import("@/app/board/documents/governing/amend-screen");
+const { RecordPayment } = await import("@/components/app/record-payment");
+const { DraftField } = await import("@/app/board/settings/settings-screen");
+const { CollectionsLadder } = await import("@/components/app/collections-ladder");
+const { collectionsLadder, policyFor } = await import("@/lib/collections");
+
+/**
+ * Board forms that said more than they did, or did more than they said.
+ *
+ * Each of these is the demo side of a fix whose other half is in
+ * app-state-remote.test.tsx: what the form puts in its boxes, what it sends
+ * when the button is pressed, and what it tells the person afterwards.
+ */
+
+/** Reads the live community out of the provider, for asserting on. */
+const seen = { state: null as unknown as ReturnType<typeof useAppState> };
+function Probe() {
+  const state = useAppState();
+  useEffect(() => {
+    seen.state = state;
+  });
+  return null;
+}
+
+function wrap(ui: ReactNode) {
+  return render(
+    <AppStateProvider>
+      <ToastProvider>
+        <Probe />
+        {ui}
+      </ToastProvider>
+    </AppStateProvider>,
+  );
+}
+
+const OPENING = "Balance brought forward";
+const openingLine = (ownerId: string) =>
+  (seen.state.community.ownerCharges[ownerId] ?? []).find((l) => l.label === OPENING);
+const box = (ownerId: string) => {
+  const owner = seen.state.community.owners.find((o) => o.id === ownerId)!;
+  return screen.getByLabelText(`Opening balance for ${owner.displayName}, ${owner.unit}`) as HTMLInputElement;
+};
+
+describe("opening balances", () => {
+  it("starts each box from the home's opening line, never from what it owes today", () => {
+    const figures = openingFigures({
+      owners: [
+        { id: "billed", balanceCents: 75_000 },
+        { id: "carried", balanceCents: 75_000 },
+        { id: "credit", balanceCents: 0 },
+      ] as never,
+      ownerCharges: {
+        // Owes this month's dues and nothing from before the switch.
+        billed: [{ id: "c1", date: "2026-08-01", label: "August assessment", kind: "charge", amountCents: 75_000, balanceAfterCents: 75_000 }],
+        // Came over owing $500, and has been billed $250 since.
+        carried: [
+          { id: "c2", date: "2026-08-01", label: "August assessment", kind: "charge", amountCents: 25_000, balanceAfterCents: 75_000 },
+          { id: "c3", date: "2026-07-01", label: OPENING, kind: "charge", amountCents: 50_000, balanceAfterCents: 50_000 },
+        ],
+        credit: [{ id: "c4", date: "2026-07-01", label: OPENING, kind: "credit", amountCents: -12_050, balanceAfterCents: -12_050 }],
+      } as never,
+    });
+
+    expect(figures).toEqual({ billed: "", carried: "500.00", credit: "-120.50" });
+  });
+
+  it("shows a home that owes money an empty box, with what it owes today beside it", () => {
+    wrap(<BalancesScreen />);
+    const behind = seen.state.community.owners.find((o) => o.balanceCents > 0 && !openingLine(o.id))!;
+
+    expect(box(behind.id).value).toBe("");
+    // The figure is there to read, not to save back.
+    const row = box(behind.id).closest("div")!;
+    expect(within(row).getByText(/^Owes \$[\d,.]+ today$/)).toBeInTheDocument();
+  });
+
+  it("has nothing to save until a box is changed", () => {
+    wrap(<BalancesScreen />);
+    expect(screen.getByRole("button", { name: "Set balances" })).toBeDisabled();
+  });
+
+  it("saves the one home that was changed and leaves every other statement alone", async () => {
+    const user = userEvent.setup();
+    wrap(<BalancesScreen />);
+    const [target, ...others] = seen.state.community.owners;
+    const before = Object.fromEntries(
+      seen.state.community.owners.map((o) => [o.id, { balance: o.balanceCents, lines: seen.state.community.ownerCharges[o.id]?.length ?? 0 }]),
+    );
+
+    await user.type(box(target.id), "1240.50");
+    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+
+    expect(await screen.findByText(/^Opening balances set for 1 home\./)).toBeInTheDocument();
+    expect(openingLine(target.id)?.amountCents).toBe(124_050);
+    // Pressing the button with every box prefilled from today's balance
+    // gave each of these a brought-forward line of its own.
+    for (const owner of others) {
+      const now = seen.state.community.owners.find((o) => o.id === owner.id)!;
+      expect(now.balanceCents, `${owner.unit} had its balance rewritten`).toBe(before[owner.id].balance);
+      expect(
+        seen.state.community.ownerCharges[owner.id]?.length ?? 0,
+        `${owner.unit} was given a line it never had`,
+      ).toBe(before[owner.id].lines);
+    }
+  });
+
+  it("does not offer to save the same figure twice", async () => {
+    const user = userEvent.setup();
+    wrap(<BalancesScreen />);
+    const target = seen.state.community.owners[0];
+
+    await user.type(box(target.id), "300");
+    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+
+    expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
+    // A correction is a change again, and replaces the line rather than adding one.
+    await user.clear(box(target.id));
+    await user.type(box(target.id), "250");
+    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+    await screen.findByRole("button", { name: "Saved" });
+
+    const lines = (seen.state.community.ownerCharges[target.id] ?? []).filter((l) => l.label === OPENING);
+    expect(lines).toHaveLength(1);
+    expect(lines[0].amountCents).toBe(25_000);
+  });
+});
+
+describe("correcting the date on opening balances", () => {
+  const dateBox = () => screen.getByLabelText("Balances as of") as HTMLInputElement;
+  const anySet = /^Set \d+ balances?$/;
+
+  it("moves the date on a line already set, without the amount being typed again", async () => {
+    const user = userEvent.setup();
+    const { unmount } = wrap(<BalancesScreen />);
+    const [target, untouched] = seen.state.community.owners.filter((o) => !openingLine(o.id));
+    const typedOn = dateBox().value;
+
+    await user.type(box(target.id), "410");
+    await user.click(screen.getByRole("button", { name: "Set 1 balance" }));
+    await screen.findByRole("button", { name: "Saved" });
+    expect(openingLine(target.id)?.date).toBe(typedOn);
+
+    // Dated the day it was typed, not the day of the switch. Only the date
+    // is changed: this used to save nothing, so the amount had to be typed
+    // out again to move it.
+    fireEvent.change(dateBox(), { target: { value: "2026-07-01" } });
+    await user.click(screen.getByRole("button", { name: anySet }));
+    await screen.findByRole("button", { name: "Saved" });
+
+    expect(openingLine(target.id)).toMatchObject({ date: "2026-07-01", amountCents: 41_000 });
+    // A home with no opening line has nothing to re-date, and is not given one.
+    expect(openingLine(untouched.id)).toBeUndefined();
+
+    // Opened again, the screen shows the date the statements carry, and
+    // nothing is waiting to be saved.
+    unmount();
+    wrap(<BalancesScreen />);
+    expect(dateBox().value).toBe("2026-07-01");
+    expect(screen.getByRole("button", { name: "Set balances" })).toBeDisabled();
+  });
+
+  it("does not offer to save with the date cleared", async () => {
+    const user = userEvent.setup();
+    wrap(<BalancesScreen />);
+    const target = seen.state.community.owners[0];
+
+    await user.type(box(target.id), "410");
+    fireEvent.change(dateBox(), { target: { value: "" } });
+
+    // The line is cleared before it is written, so an empty date would take
+    // the old line away and then be refused.
+    expect(screen.getByRole("button", { name: anySet })).toBeDisabled();
+  });
+});
+
+describe("the banner, in the demo", () => {
+  it("keeps the detail when only the title is saved", () => {
+    wrap(<div />);
+    act(() => void seen.state.updateSettings({ banner: { detail: "Until Friday" } }));
+    act(() => void seen.state.updateSettings({ banner: { title: "Pool closed" } }));
+
+    expect(seen.state.settings.banner).toMatchObject({ title: "Pool closed", detail: "Until Friday" });
+    expect(seen.state.settings.banner).toHaveProperty("enabled");
+  });
+});
+
+describe("the collections ladder", () => {
+  it("shows the day a step's letter went out", () => {
+    wrap(<CollectionsLadder />);
+    const community = seen.state.community;
+    const owed = collectionsLadder(community, policyFor(community.settings)).rows.find((r) => r.actionDue)!;
+    const row = () => screen.getByText(owed.owner.displayName).closest("div")!;
+    expect(within(row()).queryByText(/· Sent /)).not.toBeInTheDocument();
+
+    act(() => void seen.state.messageOwner(owed.owner.id, "Your dues", "A reminder.", "Billing"));
+
+    expect(within(row()).getByText(/ late · Sent \w+ \d+ · /)).toBeInTheDocument();
+  });
+});
+
+describe("proposing a change to a governing document, in the demo", () => {
+  it("does not say owners were sent anything", async () => {
+    const user = userEvent.setup();
+    wrap(<AmendScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Amend" }));
+    await user.click(screen.getByRole("button", { name: /Send to owners and open voting|Put on the board agenda/ }));
+
+    const said = screen.getByRole("status").textContent ?? "";
+    expect(said).toMatch(/This demo (sends nothing to owners|does not save it)/);
+    expect(said).not.toMatch(/Sent to owners|On the agenda\./);
+  });
+});
+
+describe("recording a vendor payment, in the demo", () => {
+  it("still offers to queue one for approval, which the demo can show end to end", () => {
+    wrap(<RecordPayment onClose={() => {}} />);
+    expect(screen.getByText("Send this payment through Your HOAsis")).toBeInTheDocument();
+    expect(screen.getByLabelText("Note on this payment")).toBeInTheDocument();
+  });
+});
+
+describe("a settings field that saves when it is left", () => {
+  /** Stands in for the store: the saved value comes back as the prop. */
+  function Harness({ onCommit, multiline }: { onCommit: (next: string) => void; multiline?: boolean }) {
+    const [saved, setSaved] = useState("");
+    return (
+      <>
+        <DraftField
+          value={saved}
+          multiline={multiline}
+          aria-label="Insurance carrier"
+          onCommit={(next) => {
+            onCommit(next);
+            setSaved(next);
+          }}
+        />
+        <button onClick={() => setSaved("State Farm")}>somebody else saves</button>
+      </>
+    );
+  }
+
+  it("keeps every letter and saves once, not once per key", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(<Harness onCommit={onCommit} />);
+    const field = screen.getByLabelText("Insurance carrier") as HTMLInputElement;
+
+    await user.type(field, "Farmers Insurance");
+    expect(field.value).toBe("Farmers Insurance");
+    expect(onCommit).not.toHaveBeenCalled();
+
+    await user.tab();
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith("Farmers Insurance");
+  });
+
+  it("keeps what was typed on screen while the save is still on its way", async () => {
+    // A real association's value only moves once the write is read back.
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(<DraftField value="" aria-label="Insurance carrier" onCommit={onCommit} />);
+    const field = screen.getByLabelText("Insurance carrier") as HTMLInputElement;
+
+    await user.type(field, "Farmers");
+    await user.tab();
+
+    expect(onCommit).toHaveBeenCalledWith("Farmers");
+    expect(field.value).toBe("Farmers");
+  });
+
+  it("saves on Enter in a single line, and does not save an unchanged field", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(<Harness onCommit={onCommit} />);
+    const field = screen.getByLabelText("Insurance carrier");
+
+    await user.click(field);
+    await user.tab();
+    expect(onCommit).not.toHaveBeenCalled();
+
+    await user.type(field, "Farmers{Enter}");
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith("Farmers");
+  });
+
+  it("takes a value saved from elsewhere", async () => {
+    const user = userEvent.setup();
+    render(<Harness onCommit={vi.fn()} />);
+    const field = screen.getByLabelText("Insurance carrier") as HTMLInputElement;
+
+    await user.click(screen.getByText("somebody else saves"));
+    expect(field.value).toBe("State Farm");
+  });
+
+  it("does not let a save landing wipe the words typed since", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const { rerender } = render(<DraftField value="" aria-label="Insurance carrier" onCommit={onCommit} />);
+    const field = screen.getByLabelText("Insurance carrier") as HTMLInputElement;
+
+    // Leaves the field, comes straight back and carries on typing; then the
+    // first save is read back while the cursor is still in the box.
+    await user.type(field, "Farmers");
+    await user.tab();
+    await user.type(field, " Insurance");
+    rerender(<DraftField value="Farmers" aria-label="Insurance carrier" onCommit={onCommit} />);
+    expect(field.value).toBe("Farmers Insurance");
+
+    await user.tab();
+    expect(onCommit).toHaveBeenLastCalledWith("Farmers Insurance");
+  });
+
+  it("lets Enter make a new line in the longer field, and saves on leaving", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(<Harness multiline onCommit={onCommit} />);
+    const field = screen.getByLabelText("Insurance carrier");
+
+    await user.type(field, "Pool closes{Enter}on Labor Day");
+    expect(onCommit).not.toHaveBeenCalled();
+    await user.tab();
+    expect(onCommit).toHaveBeenCalledWith("Pool closes\non Labor Day");
+  });
+});

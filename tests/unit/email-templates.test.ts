@@ -5,6 +5,7 @@ import {
   autopayEmail,
   ballotOpenEmail,
   boardMessageEmail,
+  confirmSignupEmail,
   inviteEmail,
   meetingNoticeEmail,
   pastDueEmail,
@@ -277,5 +278,91 @@ describe("requestUpdateEmail", () => {
     expect(built.html).toContain("Gwen, the board updated request REQ-2026-014.");
     expect(built.html).toContain("Use the colour on file.");
     expect(links(built.html)).toEqual([person.url, person.unsubscribeUrl]);
+  });
+});
+
+/**
+ * An owner the board only has an address for has no account, so no
+ * preferences and no unsubscribe link. The footer must not tell them an
+ * optional message "cannot be turned off", and the line under the button
+ * must not promise a sign-in the join page does not do.
+ */
+describe("a notice to somebody with no account yet", () => {
+  const seatless = { ...person, unsubscribeUrl: null, hasAccount: false };
+
+  it("does not call an announcement something that cannot be turned off", () => {
+    const built = announcementEmail({ ...seatless, title: "Pool party Saturday", body: "Bring a towel." });
+    expect(built.html).not.toContain("cannot be turned off");
+    expect(built.html).toContain("the board has this address on its register");
+    expect(built.html).toContain("Create your account to choose which emails you get.");
+    expect(links(built.html)).toEqual([person.url]);
+  });
+
+  it("says the same on a note from the board and on a request update", () => {
+    const note = boardMessageEmail({ ...seatless, subject: "About your fence", body: "Thanks.", senderName: "Arya Mehr", statutory: false });
+    const update = requestUpdateEmail({ ...seatless, reference: "REQ-1", title: "Front door", status: "Approved", note: "Go ahead." });
+    for (const built of [note, update]) {
+      expect(built.html).not.toContain("cannot be turned off");
+      expect(built.html).toContain("Create your account to choose which emails you get.");
+    }
+  });
+
+  it("still says a statutory notice cannot be turned off, with the reason", () => {
+    const built = boardMessageEmail({ ...seatless, subject: "Past due", body: "You owe $285.00.", senderName: "Dana Whitfield", statutory: true });
+    expect(built.html).toContain("This is a notice about your account. It is sent to every owner and cannot be turned off.");
+  });
+
+  it("does not promise a sign-in the join page does not do", () => {
+    const built = announcementEmail({ ...seatless, title: "Pool party Saturday", body: "Bring a towel." });
+    expect(built.html).not.toContain("This link signs you in");
+    // Somebody with an account does get a link that signs them in.
+    const member = announcementEmail({ ...person, title: "Pool party Saturday", body: "Bring a towel." });
+    expect(member.html).toContain("This link signs you in, so there is no password to remember.");
+  });
+});
+
+describe("the line that says the link signs you in", () => {
+  it("is left off the email that confirms a password just chosen", () => {
+    const built = confirmSignupEmail({ name: "Gwen Okafor", confirmUrl: "https://yourhoasis.com/auth/callback?token_hash=x" });
+    expect(built.html).not.toContain("no password to remember");
+  });
+
+  it("is left off an invitation that asks the person to create an account", () => {
+    const invite = { kind: "invite" as const, associationName: "Maple Court HOA", ownerName: "Gwen Okafor", unitLabel: "12", url: person.url };
+    expect(inviteEmail({ ...invite, hasAccount: false }).html).not.toContain("no password to remember");
+    expect(inviteEmail({ ...invite, hasAccount: true }).html).toContain("no password to remember");
+  });
+
+  it("is left off the notices whose link is a plain address", () => {
+    const trial = trialEmail("3-days", {
+      associationName: "Maple Court HOA",
+      presidentName: "Dana Whitfield",
+      trialEndsOn: "2026-11-01",
+      homes: 24,
+      monthlyCents: 4800,
+      billingUrl: "https://yourhoasis.com/board/settings",
+    });
+    const autopay = autopayEmail("charged", {
+      associationName: "Maple Court HOA",
+      ownerName: "Gwen Okafor",
+      amountCents: 28500,
+      method: "BECU checking ••1234",
+      payUrl: "https://yourhoasis.com/resident/account",
+    });
+    expect(trial.html).not.toContain("This link signs you in");
+    expect(autopay.html).not.toContain("This link signs you in");
+  });
+
+  it("stays on a dues notice, whose link does sign the owner in", () => {
+    const built = assessmentDueEmail({
+      associationName: "Maple Court HOA",
+      ownerName: "Gwen Okafor",
+      unitLabel: "12",
+      balanceCents: 28500,
+      dueDate: "2026-11-01",
+      payUrl: person.url,
+      unsubscribeUrl: null,
+    });
+    expect(built.html).toContain("This link signs you in, so there is no password to remember.");
   });
 });

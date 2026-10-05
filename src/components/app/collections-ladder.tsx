@@ -8,7 +8,7 @@ import {
   collectionsLadder,
   type CollectionStage,
 } from "@/lib/collections";
-import { money, pluralize } from "@/lib/utils";
+import { formatDate, money, pluralize } from "@/lib/utils";
 import { useHomeLabel } from "@/components/app/use-home-label";
 
 /** The steps in the board's own words. The policy keeps its legal names. */
@@ -99,6 +99,9 @@ export function CollectionsLadder() {
               </p>
               <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
                 {pluralize(row.owner.daysPastDue, "day")} late ·{" "}
+                {/* The day this step's letter went, so "nothing owed today"
+                    can be seen to be because it was sent. */}
+                {row.sentOn ? `Sent ${formatDate(row.sentOn)} · ` : ""}
                 {row.actionDue
                   ? ACTION[row.stage]
                   : row.daysToNext !== undefined

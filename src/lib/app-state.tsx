@@ -31,6 +31,8 @@ import {
   remoteWrite,
   reportRemoteError,
   remoteSnapshot,
+  NOTHING_CHANGED,
+  WRITE_TIMEOUT_MS,
 } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
@@ -50,12 +52,28 @@ import { signOutOfSupabase } from "@/lib/auth";
 function sessionUserId(): string | null {
   return remoteSnapshot().profileId;
 }
+
+/**
+ * The association as it stands when a write runs, not when it was asked for.
+ *
+ * Writes queue, and each waits for the re-read after the one before it. A
+ * write that replaces a whole list (a thread's messages, a seat's
+ * permissions) calls this inside its callback, so two quick presses build on
+ * each other instead of both building on the copy the screen held at the
+ * first press. Falls back to that copy if the person has since switched
+ * association.
+ */
+function latest(rc: Community): Community {
+  const now = remoteSnapshot().community;
+  return now && now.id === rc.id ? now : rc;
+}
 import { buildCommunity, type CommunityDraft, reservableSpaceNames } from "@/lib/data/new-community";
 import {
   isBudgetLines,
   isChargeLedger,
   isAssociation,
   isCommunitySettings,
+  isRecord,
   isRecordArray,
   isSession,
 } from "@/lib/core/guards";
@@ -87,33 +105,142 @@ import type { PaymentInstrument } from "@/lib/payments/instruments";
 import { placeLabel } from "@/lib/wording";
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { statusLabel } from "@/lib/request-status";
+import { ballotPhase, meetingPhase } from "@/lib/phases";
 
 export type View = "resident" | "board";
+
+type NoticeKind = "announcement" | "meeting" | "ballot" | "letter" | "message" | "request";
+
+/** What a send that fell short is called in its toast. */
+const NOTICE_LABEL: Record<NoticeKind, string> = {
+  announcement: "Emailing the announcement",
+  meeting: "Emailing the meeting notice",
+  ballot: "Emailing the ballot notice",
+  letter: "Emailing the letter",
+  message: "Emailing the message",
+  request: "Emailing the update",
+};
+
+/**
+ * The server sends for under a minute at a time and answers with how many
+ * it did not reach. Asked again it carries on from there, so a long roster
+ * is a few calls. Twelve is far more than any roster needs; it is only there
+ * so a server that keeps answering "more to go" cannot be asked for ever.
+ * It is also only asked again while the number left is going down: a call
+ * that leaves as many as the one before is not carrying on, and asking it
+ * again could only mail the same homes twice.
+ */
+const NOTICE_CALLS = 12;
+
+/** A count out of the server's answer, or zero when it sent none. */
+const tally = (value: unknown) => (typeof value === "number" && value > 0 ? value : 0);
+
+/** `NOTHING_CHANGED` as its own sentence, for a screen that shows it bare. */
+const NOT_CHANGED = `${NOTHING_CHANGED[0].toUpperCase()}${NOTHING_CHANGED.slice(1)}`;
+
+/** Meeting notices being emailed right now, so a second press does not start a second run. */
+const noticesInFlight = new Set<string>();
 
 /**
  * Emails what the board just wrote, after the row is in.
  *
- * Fire and forget on purpose: the record is already right by the time this
- * runs, the server checks the caller's capability and reads the words back
- * from the row, and every attempt lands in email_log whether it went or not.
+ * The record is already right by the time this runs, the server checks the
+ * caller's capability and reads the words back from the row, and every
+ * attempt lands in email_log whether it went or not. Nothing waits on it
+ * except a caller that needs to know: it resolves true when the server ran
+ * the send and reported back, whatever the counts, and false when the server
+ * refused or could not be reached. What fell short is said here, in a toast.
+ *
+ * It used to be fired and forgotten. The server stops a long send before its
+ * time limit, and nobody read the answer, so a statutory notice to a large
+ * roster reached the first part of it and the board was told nothing. Now
+ * the answer is read, the send is asked to carry on while homes remain, and
+ * anything still unsent at the end is said through the same toast a failed
+ * write uses.
+ *
+ * The server passes over anybody who got the same notice in the last hour
+ * and counts them as `already`. They have it, so they are not a failure.
+ * But a send that reached nobody new because everybody already had it (an
+ * announcement posted again under the same title) emailed nobody, and the
+ * board is told that in so many words rather than nothing at all.
+ *
  * Only ever called in remote mode; the demo has nobody to email.
  */
-function emailNotice(
+async function emailNotice(
   associationId: string,
   notice: {
-    kind: "announcement" | "meeting" | "ballot" | "letter" | "message" | "request";
+    kind: NoticeKind;
     id?: string;
     unitIds?: string[];
     subject?: string;
     body?: string;
   },
-) {
-  void fetch("/api/email/notify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ associationId, ...notice }),
-  }).catch(() => undefined);
+): Promise<boolean> {
+  const label = NOTICE_LABEL[notice.kind];
+  let sent = 0;
+  let already = 0;
+  let failed = 0;
+  let remaining = 0;
+  let left = Infinity;
+  try {
+    for (let call = 0; call < NOTICE_CALLS; call++) {
+      const response = await fetch("/api/email/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ associationId, ...notice }),
+      });
+      const answer = ((await response.json().catch(() => null)) ?? {}) as {
+        sent?: unknown;
+        failed?: unknown;
+        already?: unknown;
+        remaining?: unknown;
+        error?: unknown;
+      };
+      if (!response.ok) {
+        const why = typeof answer.error === "string" && answer.error ? answer.error : "it could not be sent";
+        reportRemoteError(`${label}: ${why}. It is saved here, but the email did not go`);
+        return false;
+      }
+      remaining = tally(answer.remaining);
+      // Every call passes over the same people and counts them again, so
+      // it is the most any one call saw, not the sum of them.
+      already = Math.max(already, tally(answer.already));
+      sent += tally(answer.sent);
+      // The server counts the homes it did not reach among the failed. An
+      // address that fails is tried again on the next call, so the worst
+      // single call is the count, not the sum of them.
+      failed = Math.max(failed, Math.max(0, tally(answer.failed) - remaining));
+      if (remaining === 0 || remaining >= left) break;
+      left = remaining;
+    }
+  } catch {
+    reportRemoteError(
+      `${label}: the mail service could not be reached. It is saved here, but the email did not go`,
+    );
+    return false;
+  }
+  const unsent = failed + remaining;
+  if (unsent > 0) {
+    reportRemoteError(
+      `${label}: ${unsent} ${unsent === 1 ? "email was" : "emails were"} not sent. It is saved here`,
+    );
+  }
+  if (sent === 0 && already > 0) {
+    reportRemoteError(
+      `${label}: the same notice already went to ${already} ${already === 1 ? "owner" : "owners"} in the last hour, so it was not emailed again`,
+    );
+  }
+  return true;
 }
+
+/**
+ * Settings to change. The banner may name only the field that changed: it is
+ * two boxes saved one at a time, and a patch carrying the whole banner as one
+ * render saw it wrote an old title back over the one saved a moment before.
+ */
+export type SettingsPatch = Partial<Omit<Community["settings"], "banner">> & {
+  banner?: Partial<Community["settings"]["banner"]>;
+};
 
 /**
  * Everything a screen can read or change.
@@ -169,7 +296,11 @@ interface AppState {
   /** May this seat open the area, to read or to change? Screens and nav ask this. */
   sees: (c: Capability) => boolean;
 
-  updateSettings: (patch: Partial<Community["settings"]>) => void;
+  /**
+   * Resolves true once a real association's settings are written, false when
+   * the write was refused, so a screen can hold its "saved" until it knows.
+   */
+  updateSettings: (patch: SettingsPatch) => boolean | Promise<boolean>;
   setAmenities: (next: Community["amenities"]) => void;
   setForms: (next: Community["forms"]) => void;
   removeForm: (formId: string) => () => void;
@@ -204,15 +335,19 @@ interface AppState {
     reportId: string,
     input: { rule: string; ruleCitation: string; ownerId: string; ownerName: string },
   ) => Violation;
-  /** What each home owed on the day the association switched to us. */
+  /**
+   * What each home owed on the day the association switched to us. Only the
+   * homes passed are touched. Resolves once a real association's lines are
+   * written, so a screen can hold its button until then.
+   */
   setOpeningBalances: (
     asOf: string,
     balances: { ownerId: string; amountCents: number }[],
-  ) => void;
+  ) => boolean | Promise<boolean>;
   /** Names the owner of a home that has none on record yet. */
   setHouseholdOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
   /** Which kind of home these are: detached, townhome or condo. */
-  setHomeType: (ownerIds: string[], homeType: HomeType) => void;
+  setHomeType: (ownerIds: string[], homeType: HomeType) => boolean | Promise<boolean>;
   removeOwner: (ownerId: string) => () => void;
   /**
    * A home changes hands. The seller's seat ends on the closing date, the
@@ -261,8 +396,12 @@ interface AppState {
     email?: "announcement" | "none",
   ) => void;
   removeAnnouncement: (id: string) => void;
-  /** Posts the meeting's notice to every home screen and records the date. */
-  sendMeetingNotice: (meetingId: string) => void;
+  /**
+   * Posts the meeting's notice to every home screen and records the date.
+   * Answers whether notice is now on record. A real association emails the
+   * roster first, which can take most of a minute, so it answers later.
+   */
+  sendMeetingNotice: (meetingId: string) => boolean | Promise<boolean>;
   /** Returns an undo, because publishing broadcasts and rejecting discards. */
   moderatePost: (
     postId: string,
@@ -271,7 +410,12 @@ interface AppState {
   ) => () => void;
   togglePinned: (postId: string) => void;
   removePost: (postId: string) => () => void;
-  addRequest: (request: HomeRequest) => void;
+  /**
+   * Files a request. A real association answers with the number the database
+   * kept, which may not be the one the form made up, or null when the
+   * request was not saved. The demo answers with nothing: its number stands.
+   */
+  addRequest: (request: HomeRequest) => void | Promise<string | null>;
   addInstrument: (instrument: Omit<PaymentInstrument, "id" | "isDefault">) => PaymentInstrument;
   /** Returns an undo where one is possible; a Stripe method, once detached, is gone. */
   removeInstrument: (instrumentId: string) => (() => void) | undefined;
@@ -312,7 +456,7 @@ interface AppState {
     subject: string,
     body: string,
     tag?: Community["threads"][number]["tag"],
-  ) => void;
+  ) => boolean | Promise<boolean>;
   /**
    * Files the board uploads. A demo keeps the name and size; a real
    * association keeps the bytes in Storage and the rest in a row. Resolves
@@ -809,10 +953,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   /* -------------------------------------------------------------- settings */
 
   const updateSettings = useCallback(
-    (patch: Partial<Community["settings"]>) => {
+    (patch: SettingsPatch) => {
       if (!remote.community) {
-        sliceStore(communityId, "settings").update((current) => ({ ...current, ...patch }));
-        return;
+        sliceStore(communityId, "settings").update((current) => ({
+          ...current,
+          ...patch,
+          banner: patch.banner ? { ...current.banner, ...patch.banner } : current.banner,
+        }));
+        return true;
       }
       // Columns where there are columns; the jsonb patch for the rest.
       const rc = remote.community;
@@ -831,18 +979,36 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (COLUMN[key]) columns[COLUMN[key]] = value;
         else extras[key] = value;
       }
-      void remoteWrite("Saving settings", async () => {
+      return remoteWrite("Saving settings", async () => {
         const supabase = supabaseBrowser();
         const next: Record<string, unknown> = { ...columns };
         if (Object.keys(extras).length) {
-          const { data } = await supabase
+          // Read under the queue, so two quick toggles merge instead of the
+          // second writing over the first. A failed read stops here: merging
+          // the patch into nothing would replace every other setting with it.
+          const { data, error } = await supabase
             .from("associations")
             .select("settings")
             .eq("id", rc.id)
             .single();
-          next.settings = { ...((data?.settings as object | null) ?? {}), ...extras };
+          if (error) throw new Error(error.message);
+          const stored = (data?.settings as Record<string, unknown> | null) ?? {};
+          const settings: Record<string, unknown> = { ...stored, ...extras };
+          // The banner is two fields saved one at a time. Merged one level
+          // down onto what is stored, so a patch that names only the title
+          // cannot put an old copy of the detail over the one saved a moment
+          // before it. An association with no banner stored yet starts from
+          // the one on screen, so the row is never left with half of one.
+          if (isRecord(extras.banner)) {
+            settings.banner = {
+              ...latest(rc).settings.banner,
+              ...(isRecord(stored.banner) ? stored.banner : {}),
+              ...extras.banner,
+            };
+          }
+          next.settings = settings;
         }
-        return supabase.from("associations").update(next).eq("id", rc.id);
+        return supabase.from("associations").update(next, { count: "exact" }).eq("id", rc.id);
       });
     },
     [remote.community, communityId],
@@ -857,8 +1023,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const rc = remote.community;
       void remoteWrite("Saving amenities", async () => {
         const supabase = supabaseBrowser();
+        // What is there now, read when the write runs. `next` and `rc` are
+        // the list as the screen drew it, and a row taken away a moment ago
+        // stays on screen until the re-read lands. Updating or deleting it
+        // again matches nothing, which read as a refusal and dropped the
+        // edit made to the row beside it.
+        const there = new Set(latest(rc).amenities.map((a) => a.id));
         const keep = new Set<string>();
         for (const amenity of next) {
+          if (isUuid(amenity.id) && !there.has(amenity.id)) continue;
           const row = {
             association_id: rc.id,
             name: amenity.name,
@@ -872,13 +1045,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           // the real one, and the row is told apart by whether it is a uuid.
           const id = isUuid(amenity.id) ? amenity.id : newId();
           keep.add(id);
-          const { error } = isUuid(amenity.id)
-            ? await supabase.from("amenities").update(row).eq("id", id)
+          // An update is aimed at a row that exists, so it is counted: one
+          // that row level security hid matches nothing and says nothing.
+          const { error, count } = isUuid(amenity.id)
+            ? await supabase.from("amenities").update(row, { count: "exact" }).eq("id", id)
             : await supabase.from("amenities").insert({ id, ...row });
           if (error) throw new Error(error.message);
+          if (count === 0) throw new Error(NOTHING_CHANGED);
         }
-        const gone = rc.amenities.filter((a) => !keep.has(a.id)).map((a) => a.id);
-        if (gone.length) return supabase.from("amenities").delete().in("id", gone);
+        // Only what the screen listed and left out, and only if it is still
+        // there. A row added since the screen drew is not this save's to take.
+        const gone = rc.amenities
+          .filter((a) => !keep.has(a.id) && there.has(a.id))
+          .map((a) => a.id);
+        if (gone.length) {
+          return supabase.from("amenities").delete({ count: "exact" }).in("id", gone);
+        }
       });
     },
     [remote.community, communityId],
@@ -895,9 +1077,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const rc = remote.community;
       void remoteWrite("Saving forms", async () => {
         const supabase = supabaseBrowser();
+        // As in `setAmenities`: a form removed a moment ago is skipped
+        // rather than written to, and is not deleted a second time.
+        const there = new Set(latest(rc).forms.map((f) => f.id));
         const keep = new Set<string>();
         for (const form of next) {
           if (form.source !== "uploaded") continue;
+          if (isUuid(form.id) && !there.has(form.id)) continue;
           const row = {
             association_id: rc.id,
             label: form.label,
@@ -911,15 +1097,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           };
           const id = isUuid(form.id) ? form.id : newId();
           keep.add(id);
-          const { error } = isUuid(form.id)
-            ? await supabase.from("forms").update(row).eq("id", id)
+          const { error, count } = isUuid(form.id)
+            ? await supabase.from("forms").update(row, { count: "exact" }).eq("id", id)
             : await supabase.from("forms").insert({ id, ...row });
           if (error) throw new Error(error.message);
+          if (count === 0) throw new Error(NOTHING_CHANGED);
         }
         const gone = rc.forms
-          .filter((f) => f.source === "uploaded" && !keep.has(f.id))
+          .filter((f) => f.source === "uploaded" && !keep.has(f.id) && there.has(f.id))
           .map((f) => f.id);
-        if (gone.length) return supabase.from("forms").delete().in("id", gone);
+        if (gone.length) return supabase.from("forms").delete({ count: "exact" }).in("id", gone);
       });
     },
     [remote.community, communityId],
@@ -951,7 +1138,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         decision_days: form.decisionDays ?? null,
       };
       void remoteWrite("Removing the form", () =>
-        supabaseBrowser().from("forms").delete().eq("id", formId),
+        supabaseBrowser().from("forms").delete({ count: "exact" }).eq("id", formId),
       );
       return () => {
         void remoteWrite("Restoring the form", () => supabaseBrowser().from("forms").insert(row));
@@ -970,7 +1157,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const rc = remote.community;
       const amenity = rc.amenities.find((a) => a.id === amenityId);
       void remoteWrite("Removing the amenity", () =>
-        supabaseBrowser().from("amenities").delete().eq("id", amenityId),
+        supabaseBrowser().from("amenities").delete({ count: "exact" }).eq("id", amenityId),
       );
       return () => {
         if (!amenity) return;
@@ -1012,20 +1199,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return;
       }
       const rc = remote.community;
-      const account = rc.accounts.find((a) => a.id === id);
-      if (!account || account.role === "president") return;
+      const seat = rc.accounts.find((a) => a.id === id);
+      if (!seat || seat.role === "president") return;
       const held = (set: Capabilities, on: boolean) =>
         Object.entries({ ...set, [capability]: on })
           .filter(([, v]) => v)
           .map(([name]) => name);
-      void remoteWrite("Saving permissions", () =>
-        supabaseBrowser()
+      void remoteWrite("Saving permissions", () => {
+        // The seat as the last write left it. Built from the copy on screen,
+        // the second of two quick presses on the grid dropped the first.
+        const account = latest(rc).accounts.find((a) => a.id === id) ?? seat;
+        return supabaseBrowser()
           .from("memberships")
-          .update({ capabilities: held(account.capabilities, change), views: held(account.views, view) })
+          .update(
+            { capabilities: held(account.capabilities, change), views: held(account.views, view) },
+            { count: "exact" },
+          )
           .eq("association_id", rc.id)
           .eq("profile_id", id)
-          .is("ends_on", null),
-      );
+          .is("ends_on", null);
+      });
     },
     [remote.community, communityId],
   );
@@ -1073,8 +1266,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // The shared spaces named during setup become the amenities owners can
     // reserve. Without this the plan asked for them a second time.
     const spaces = reservableSpaceNames(draft.sharedSpaces, draft.customSpaces);
+    // The association exists by now, so a failure below is said and the
+    // founder still lands in it; throwing would send them back into the
+    // wizard to found the same association a second time.
     if (spaces.length) {
-      await supabase.from("amenities").insert(
+      const { error: spacesError } = await supabase.from("amenities").insert(
         spaces.map((name) => ({
           association_id: associationId,
           name,
@@ -1083,16 +1279,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           status: "open",
         })),
       );
+      if (spacesError) {
+        reportRemoteError(
+          `Your association is set up, but its shared spaces were not saved (${spacesError.message}). Add them from your setup steps.`,
+        );
+      }
     }
 
     // The bank the founder connected during setup, if they got that far.
     if (draft.bankAccount) {
-      await supabase.from("bank_accounts").insert({
+      const { error: bankError } = await supabase.from("bank_accounts").insert({
         association_id: associationId,
         kind: "operating",
         institution: draft.bankAccount.institution,
         mask: draft.bankAccount.mask,
       });
+      if (bankError) {
+        reportRemoteError(
+          `Your association is set up, but the bank account was not saved (${bankError.message}). Connect it again from your setup steps.`,
+        );
+      }
     }
 
     // Land in the one just founded, not in whichever this browser had open.
@@ -1138,11 +1344,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       void remoteWrite("Saving the role", () =>
         supabaseBrowser()
           .from("memberships")
-          .update({
-            role,
-            capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [],
-            views: DEFAULT_ROLE_VIEWS[role] ?? [],
-          })
+          .update(
+            {
+              role,
+              capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [],
+              views: DEFAULT_ROLE_VIEWS[role] ?? [],
+            },
+            { count: "exact" },
+          )
           .eq("association_id", rc.id)
           .eq("profile_id", accountId)
           .is("ends_on", null)
@@ -1173,11 +1382,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       void remoteWrite("Saving the role", () =>
         supabaseBrowser()
           .from("memberships")
-          .update({
-            role,
-            capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [],
-            views: DEFAULT_ROLE_VIEWS[role] ?? [],
-          })
+          .update(
+            {
+              role,
+              capabilities: DEFAULT_ROLE_CAPABILITIES[role] ?? [],
+              views: DEFAULT_ROLE_VIEWS[role] ?? [],
+            },
+            { count: "exact" },
+          )
           .eq("association_id", rc.id)
           .eq("unit_id", ownerId)
           .is("ends_on", null)
@@ -1207,13 +1419,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
         return;
       }
-      void supabaseBrowser()
-        .from("setup_dismissals")
-        .upsert(
-          { association_id: remote.community.id, task_key: key },
-          { onConflict: "association_id,task_key" },
-        )
-        .then(() => refreshRemote());
+      // Through the same door as every other write, so a refusal is said.
+      // Fired straight at the table, a skip the database would not take
+      // looked taken until the next load brought the task back.
+      const rc = remote.community;
+      void remoteWrite("Skipping the step", () =>
+        supabaseBrowser()
+          .from("setup_dismissals")
+          .upsert(
+            { association_id: rc.id, task_key: key },
+            { onConflict: "association_id,task_key" },
+          ),
+      );
     },
     [remote.community, communityId],
   );
@@ -1224,12 +1441,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         dismissStore(communityId).update((all) => all.filter((k) => k !== key));
         return;
       }
-      void supabaseBrowser()
-        .from("setup_dismissals")
-        .delete()
-        .eq("association_id", remote.community.id)
-        .eq("task_key", key)
-        .then(() => refreshRemote());
+      const rc = remote.community;
+      void remoteWrite("Bringing the step back", () =>
+        supabaseBrowser()
+          .from("setup_dismissals")
+          .delete({ count: "exact" })
+          .eq("association_id", rc.id)
+          .eq("task_key", key),
+      );
     },
     [remote.community, communityId],
   );
@@ -1416,8 +1635,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * they are the same fact: the register says who the members are, and every
    * member gets access. Splitting them lets the two drift.
    */
-  const addOwner = useCallback(
-    (input: { name: string; email: string; unit: string; homeType?: HomeType }) => {
+  const addOwnerSaving = useCallback(
+    (input: {
+      name: string;
+      email: string;
+      unit: string;
+      homeType?: HomeType;
+    }): { owner: Owner; saved: Promise<boolean> } => {
       const unit = input.unit.trim();
       const existing = remote.community
         ? remote.community.owners
@@ -1447,7 +1671,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       if (remote.community) {
         const rc = remote.community;
-        void remoteWrite("Adding the household", async () => {
+        const saved = remoteWrite("Adding the household", async () => {
           const added = await supabaseBrowser().rpc("add_household", {
             p_association_id: rc.id,
             p_unit_id: ownerId,
@@ -1462,7 +1686,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             .update({ home_type: input.homeType })
             .eq("id", ownerId);
         });
-        return owner;
+        return { owner, saved };
       }
 
       sliceStore(communityId, "owners").update((all) => [...all, owner]);
@@ -1479,9 +1703,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           views: NO_CAPABILITIES,
         },
       ]);
-      return owner;
+      return { owner, saved: Promise.resolve(true) };
     },
     [remote.community, communityId],
+  );
+
+  /**
+   * The household at once, for a screen that names it before the write
+   * lands. A caller whose next step depends on the write having landed uses
+   * `addOwnerSaving` and waits for `saved`.
+   */
+  const addOwner = useCallback(
+    (input: { name: string; email: string; unit: string; homeType?: HomeType }) =>
+      addOwnerSaving(input).owner,
+    [addOwnerSaving],
   );
 
   /**
@@ -1506,10 +1741,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // The empty membership the founding wizard left on the home takes the
         // name, so the row on the roster becomes theirs rather than a second
         // household on the same lot. Seating waits for them to sign in.
+        //
+        // Counted, because there is no insert behind this: a home with no
+        // empty seat, or one this officer may not write, matched nothing,
+        // saved nothing and was still reported as "Jane Doe is on 12".
         return remoteWrite("Adding the owner", () =>
           supabaseBrowser()
             .from("memberships")
-            .update({ full_name: name, invited_email: email || null })
+            .update({ full_name: name, invited_email: email || null }, { count: "exact" })
             .eq("unit_id", ownerId)
             .is("profile_id", null)
             .is("ends_on", null),
@@ -1536,17 +1775,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    */
   const setHomeType = useCallback(
     (ownerIds: string[], homeType: HomeType) => {
-      if (!ownerIds.length) return;
+      if (!ownerIds.length) return true;
       if (remote.community) {
-        void remoteWrite("Saving the kind of home", () =>
-          supabaseBrowser().from("units").update({ home_type: homeType }).in("id", ownerIds),
+        return remoteWrite("Saving the kind of home", () =>
+          supabaseBrowser()
+            .from("units")
+            .update({ home_type: homeType }, { count: "exact" })
+            .in("id", ownerIds),
         );
-        return;
       }
       const ids = new Set(ownerIds);
       sliceStore(communityId, "owners").update((all) =>
         all.map((o) => (ids.has(o.id) ? { ...o, homeType } : o)),
       );
+      return true;
     },
     [remote.community, communityId],
   );
@@ -1557,7 +1799,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // One dated line per home, replaced rather than stacked when it is
         // corrected. The balance view sums it with everything else.
         const rc = remote.community;
-        void remoteWrite("Saving opening balances", async () => {
+        return remoteWrite("Saving opening balances", async () => {
           const supabase = supabaseBrowser();
           for (const { ownerId, amountCents } of balances) {
             const { error: clearError } = await supabase
@@ -1577,8 +1819,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             });
             if (error) throw new Error(error.message);
           }
-        });
-        return;
+          // Two statements a home, one after the other, so a long roster is
+          // given longer than a single write before it is called stuck.
+        }, { timeoutMs: WRITE_TIMEOUT_MS + balances.length * 1_000 });
       }
       const byOwner = new Map(balances.map((b) => [b.ownerId, b.amountCents]));
 
@@ -1620,6 +1863,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
         return next;
       });
+      // Synchronous, like `transferHome`: the demo settles in one render.
+      return true;
     },
     [remote.community, communityId],
   );
@@ -1705,12 +1950,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void remoteWrite("Saving what you saw", () =>
           supabaseBrowser()
             .from("violation_reports")
-            .update({
-              status: "verified",
-              verified_by: by,
-              verified_on: todayIsoDate(),
-              verification_note: note.trim(),
-            })
+            .update(
+              {
+                status: "verified",
+                verified_by: by,
+                verified_on: todayIsoDate(),
+                verification_note: note.trim(),
+              },
+              { count: "exact" },
+            )
             .eq("id", reportId),
         );
         return;
@@ -1737,7 +1985,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void remoteWrite("Closing the report", () =>
           supabaseBrowser()
             .from("violation_reports")
-            .update({ status: "dismissed", dismissed_reason: reason.trim() })
+            .update({ status: "dismissed", dismissed_reason: reason.trim() }, { count: "exact" })
             .eq("id", reportId),
         );
         return;
@@ -1804,6 +2052,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const rc = remote.community;
         void remoteWrite("Raising the notice", async () => {
           const supabase = supabaseBrowser();
+          // The report is claimed first, and only while no notice stands on
+          // it. This is the write row level security can hide, and it used
+          // to come second: the notice went in, the link matched nothing,
+          // the board was told nothing had changed, and pressing again
+          // raised a second notice on the same report. Refused here, nothing
+          // has been written yet, so pressing again is safe.
+          const claim = await supabase
+            .from("violation_reports")
+            .update({ violation_id: violation.id }, { count: "exact" })
+            .eq("id", reportId)
+            .is("violation_id", null);
+          if (claim.error) throw new Error(claim.error.message);
+          if (claim.count === 0) throw new Error(NOTHING_CHANGED);
           const { error } = await supabase.from("violations").insert({
             id: violation.id,
             association_id: rc.id,
@@ -1821,11 +2082,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             report_id: reportId,
             source: "neighbor",
           });
-          if (error) throw new Error(error.message);
-          return supabase
-            .from("violation_reports")
-            .update({ violation_id: violation.id })
-            .eq("id", reportId);
+          if (error) {
+            // The notice did not go in, so the report is let go of and is
+            // back in the queue to be raised again. Not counted: there is
+            // nothing more to say if this misses too.
+            await supabase
+              .from("violation_reports")
+              .update({ violation_id: null })
+              .eq("id", reportId)
+              .eq("violation_id", violation.id);
+            throw new Error(error.message);
+          }
         });
         return violation;
       }
@@ -1896,7 +2163,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (ballotId: string) => {
       if (remote.community) {
         void remoteWrite("Closing the ballot", () =>
-          supabaseBrowser().from("ballots").update({ status: "closed" }).eq("id", ballotId),
+          supabaseBrowser()
+            .from("ballots")
+            .update({ status: "closed" }, { count: "exact" })
+            .eq("id", ballotId),
         );
         return;
       }
@@ -1919,11 +2189,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void remoteWrite(stage === "cured" ? "Resolving the notice" : "Updating the notice", () =>
           supabaseBrowser()
             .from("violations")
-            .update({
-              stage,
-              next_action_on: nextActionDate,
-              resolved_on: stage === "cured" ? today : null,
-            })
+            .update(
+              {
+                stage,
+                next_action_on: nextActionDate,
+                resolved_on: stage === "cured" ? today : null,
+              },
+              { count: "exact" },
+            )
             .eq("id", violationId),
         );
         return;
@@ -2052,14 +2325,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const email = input.email.trim();
       if (remote.community) {
         const rc = remote.community;
-        const owner = rc.owners.find((o) => o.id === ownerId);
-        const owed = owner?.balanceCents ?? 0;
         return remoteWrite("Recording the sale", async () => {
           const supabase = supabaseBrowser();
-          if (input.settleBalance && owed > 0) {
-            // Paid out of escrow at closing: a payment line, so the statement
-            // shows where the balance went rather than a number vanishing.
-            const { error } = await supabase.from("charges").insert({
+          // What the home owes now, not what it owed when the form opened. A
+          // failed attempt re-reads the association, so a second try does not
+          // settle a balance the first one already settled.
+          const now = latest(rc);
+          const owner = now.owners.find((o) => o.id === ownerId);
+          const owed = owner?.balanceCents ?? 0;
+          const settle = input.settleBalance && owed > 0;
+          const recordSale = () =>
+            supabase.rpc("transfer_home", {
+              p_unit_id: ownerId,
+              p_new_name: name,
+              p_new_email: email,
+              p_closing_date: input.closingDate,
+            });
+          // Paid out of escrow at closing: a payment line, so the statement
+          // shows where the balance went rather than a number vanishing.
+          const recordPayment = () =>
+            supabase.from("charges").insert({
               association_id: rc.id,
               unit_id: ownerId,
               kind: "payment",
@@ -2067,12 +2352,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               amount_cents: -owed,
               due_on: input.closingDate,
             });
-            if (error) throw new Error(error.message);
-            // And the money itself, which the title company wires to the
-            // association. Without this line the owner's balance cleared while
-            // the bank balance and "collected" never saw the payment.
-            const operating = rc.bankAccounts.find((b) => b.kind === "operating");
-            const { error: bookError } = await supabase.from("ledger_entries").insert({
+          // And the money itself, which the title company wires to the
+          // association. Without this line the owner's balance cleared while
+          // the bank balance and "collected" never saw the payment.
+          const recordDeposit = () => {
+            const operating = now.bankAccounts.find((b) => b.kind === "operating");
+            return supabase.from("ledger_entries").insert({
               association_id: rc.id,
               bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
               occurred_on: input.closingDate,
@@ -2082,14 +2367,59 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               amount_cents: owed,
               confirmed_at: new Date().toISOString(),
             });
-            if (bookError) throw new Error(bookError.message);
+          };
+          const depositMissing = (why: string) =>
+            `the sale and the payment at closing are recorded, but the deposit is not in Finances (${why}). Do not record the sale again`;
+
+          // An officer recording the sale of their own home is the one case
+          // where the money goes first. The sale ends their seat, and with it
+          // the right to write the payment and the deposit, so sale first
+          // left the home sold and the balance still owing, refused. Any
+          // other home is sold first, below. A President's home is too: the
+          // database refuses that sale outright, and money written ahead of
+          // a sale that cannot happen is the fault sale first was put in to
+          // stop.
+          const seats = now.accounts.filter((a) => a.ownerId === ownerId);
+          const ownHome =
+            seats.some((a) => a.id === remote.profileId) &&
+            !seats.some((a) => a.role === "president");
+          if (settle && ownHome) {
+            // The one refusal that can be seen coming, checked before any
+            // money is written.
+            if (owner && input.closingDate < owner.moveInDate) {
+              throw new Error("the closing date is before this owner's tenure began. Check the date");
+            }
+            const { error } = await recordPayment();
+            if (error) throw new Error(error.message);
+            const { error: bookError } = await recordDeposit();
+            const { error: saleError } = await recordSale();
+            if (saleError) {
+              // The re-read after this shows the home owing nothing, so the
+              // next try goes straight to the sale.
+              throw new Error(
+                `the balance paid at closing is recorded, but the sale was not (${saleError.message}). Record the sale again: the balance will not be paid twice`,
+              );
+            }
+            if (bookError) throw new Error(depositMissing(bookError.message));
+            return;
           }
-          return supabase.rpc("transfer_home", {
-            p_unit_id: ownerId,
-            p_new_name: name,
-            p_new_email: email,
-            p_closing_date: input.closingDate,
-          });
+
+          // The sale first. The database can refuse it (a closing date before
+          // the tenure began, a home held by the President), and money written
+          // ahead of a refused sale stayed on the books with no sale behind it.
+          const { error: saleError } = await recordSale();
+          if (saleError) throw new Error(saleError.message);
+          if (!settle) return;
+          // The sale is on record by now, so a failure from here says so:
+          // pressing again would seat the buyer a second time.
+          const { error } = await recordPayment();
+          if (error) {
+            throw new Error(
+              `the sale is recorded, but the balance paid at closing was not (${error.message}). Do not record the sale again. The home still shows what it owed`,
+            );
+          }
+          const { error: bookError } = await recordDeposit();
+          if (bookError) throw new Error(depositMissing(bookError.message));
         });
       }
 
@@ -2150,7 +2480,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // promise here would make every test's act() an async one.
       return true;
     },
-    [remote.community, communityId],
+    [remote.community, remote.profileId, communityId],
   );
 
   /**
@@ -2231,7 +2561,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             pinned: a.pinned ?? false,
           }),
         ).then((ok) => {
-          if (ok && email === "announcement") emailNotice(rc.id, { kind: "announcement", id });
+          if (ok && email === "announcement") void emailNotice(rc.id, { kind: "announcement", id });
         });
         return;
       }
@@ -2261,34 +2591,71 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (meetingId: string) => {
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
-      if (!m) return;
+      if (!m) return false;
       const when = `${formatDate(m.date, "long")} at ${m.time}`;
-      addAnnouncement({
-        title: `Notice of meeting: ${m.title}, ${when}`,
-        body: [
-          `${m.title} is on ${when}, ${m.location}.`,
-          `Join by video: ${videoJoinUrl(m, (remote.community?.association ?? associationRow).id)}${m.dialIn ? `, or dial ${m.dialIn}${m.passcode ? ` (passcode ${m.passcode})` : ""}` : ""}.`,
-          m.agenda.length ? `Agenda: ${m.agenda.join("; ")}.` : "",
-        ]
-          .filter(Boolean)
-          .join(" "),
-        category: "Governance",
-      }, "none");
+      const title = `Notice of meeting: ${m.title}, ${when}`;
+      // One run at a time for a meeting. The date that takes the button away
+      // is written only once the email has reported back, which for a long
+      // roster is most of a minute, and a second press in that time would
+      // post the notice and mail everybody again.
+      if (remote.community && noticesInFlight.has(meetingId)) return false;
+      // Posted once. A send that failed is pressed again, and the notice
+      // from the first press is already on every home screen.
+      const posted =
+        remote.community &&
+        latest(remote.community).announcements.some((a) => a.title === title);
+      if (!posted) {
+        addAnnouncement({
+          title,
+          body: [
+            `${m.title} is on ${when}, ${m.location}.`,
+            `Join by video: ${videoJoinUrl(m, (remote.community?.association ?? associationRow).id)}${m.dialIn ? `, or dial ${m.dialIn}${m.passcode ? ` (passcode ${m.passcode})` : ""}` : ""}.`,
+            m.agenda.length ? `Agenda: ${m.agenda.join("; ")}.` : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+          category: "Governance",
+        }, "none");
+      }
       const today = todayIsoDate();
       if (remote.community) {
         const rc = remote.community;
         // Statutory notice, so it goes by email under its own category
         // rather than as an announcement an owner may have turned off.
-        void remoteWrite("Recording the notice", () =>
-          supabaseBrowser().from("meetings").update({ notice_sent_on: today }).eq("id", meetingId),
-        ).then((ok) => {
-          if (ok) emailNotice(rc.id, { kind: "meeting", id: meetingId });
-        });
-        return;
+        //
+        // The date is the record that notice was given, so it is written
+        // after the send reports back. It used to be written first, and a
+        // send the server then refused left a meeting marked as noticed
+        // with nothing to press again.
+        //
+        // It is written whatever the send reported, because the notice is
+        // posted on every home screen by then and the emails that fell
+        // short have been counted out in a toast. Written only when some
+        // email went, a board whose mail could not go at all (a sending
+        // domain not yet verified) kept the button for good, and so did a
+        // second press that found everybody already had it.
+        //
+        // A send the server refused, or that never got there, did not
+        // report back. The date is left unwritten, the button stays, and
+        // pressing it again carries on from whoever was not reached.
+        noticesInFlight.add(meetingId);
+        return emailNotice(rc.id, { kind: "meeting", id: meetingId })
+          .then((reported) =>
+            reported
+              ? remoteWrite("Recording the notice", () =>
+                  supabaseBrowser()
+                    .from("meetings")
+                    .update({ notice_sent_on: today }, { count: "exact" })
+                    .eq("id", meetingId),
+                )
+              : false,
+          )
+          .finally(() => noticesInFlight.delete(meetingId));
       }
       sliceStore(communityId, "meetings").update((all) =>
         all.map((x) => (x.id === meetingId ? { ...x, noticeSentDate: today } : x)),
       );
+      return true;
     },
     [remote.community, meetingList, associationRow, addAnnouncement, communityId],
   );
@@ -2297,7 +2664,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       if (remote.community) {
         void remoteWrite("Removing the announcement", () =>
-          supabaseBrowser().from("announcements").delete().eq("id", id),
+          supabaseBrowser().from("announcements").delete({ count: "exact" }).eq("id", id),
         );
         return;
       }
@@ -2317,12 +2684,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void remoteWrite("Saving the decision", () =>
           supabaseBrowser()
             .from("posts")
-            .update({
-              status: decision,
-              moderated_by: moderator?.name ?? null,
-              moderated_at: new Date().toISOString(),
-              rejection_reason: decision === "rejected" ? (reason ?? null) : null,
-            })
+            .update(
+              {
+                status: decision,
+                moderated_by: moderator?.name ?? null,
+                moderated_at: new Date().toISOString(),
+                rejection_reason: decision === "rejected" ? (reason ?? null) : null,
+              },
+              { count: "exact" },
+            )
             .eq("id", postId),
         );
         return () => {
@@ -2330,11 +2700,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           void remoteWrite("Undoing the decision", () =>
             supabaseBrowser()
               .from("posts")
-              .update({
-                status: post.status,
-                moderated_by: post.moderatedBy ?? null,
-                rejection_reason: post.rejectionReason ?? null,
-              })
+              .update(
+                {
+                  status: post.status,
+                  moderated_by: post.moderatedBy ?? null,
+                  rejection_reason: post.rejectionReason ?? null,
+                },
+                { count: "exact" },
+              )
               .eq("id", postId),
           );
         };
@@ -2364,7 +2737,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (remote.community) {
         const post = remote.community.posts.find((p) => p.id === postId);
         void remoteWrite("Pinning", () =>
-          supabaseBrowser().from("posts").update({ pinned: !post?.pinned }).eq("id", postId),
+          supabaseBrowser()
+            .from("posts")
+            .update({ pinned: !post?.pinned }, { count: "exact" })
+            .eq("id", postId),
         );
         return;
       }
@@ -2384,12 +2760,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // that somebody else wrote.
         const post = remote.community.posts.find((p) => p.id === postId);
         void remoteWrite("Removing the post", () =>
-          supabaseBrowser().from("posts").update({ status: "rejected" }).eq("id", postId),
+          supabaseBrowser()
+            .from("posts")
+            .update({ status: "rejected" }, { count: "exact" })
+            .eq("id", postId),
         );
         return () => {
           if (!post) return;
           void remoteWrite("Restoring the post", () =>
-            supabaseBrowser().from("posts").update({ status: post.status }).eq("id", postId),
+            supabaseBrowser()
+              .from("posts")
+              .update({ status: post.status }, { count: "exact" })
+              .eq("id", postId),
           );
         };
       }
@@ -2590,12 +2972,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           ]
         : request.thread;
       if (remote.community) {
-        void remoteWrite("Saving the work order", () =>
-          supabaseBrowser()
+        const rc = remote.community;
+        void remoteWrite("Saving the work order", () => {
+          // The note goes onto the thread as the last write left it, so a
+          // decision saved a moment ago is not written over by this one.
+          const now = latest(rc).requests.find((r) => r.id === requestId)?.thread ?? request.thread;
+          const event = body ? thread[thread.length - 1] : undefined;
+          return supabaseBrowser()
             .from("requests")
-            .update({ work_order: (workOrder as unknown as Json) ?? null, thread })
-            .eq("id", requestId),
-        );
+            .update(
+              {
+                work_order: (workOrder as unknown as Json) ?? null,
+                thread: event ? [...now, { ...event, id: `rt-${request.id}-${now.length}` }] : now,
+              },
+              { count: "exact" },
+            )
+            .eq("id", requestId);
+        });
         return;
       }
       sliceStore(communityId, "requests").update((all) =>
@@ -2678,7 +3071,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void remoteWrite(done ? "Ticking it off" : "Reopening it", () =>
           supabaseBrowser()
             .from("action_items")
-            .update({ done_on: doneOn ?? null })
+            .update({ done_on: doneOn ?? null }, { count: "exact" })
             .eq("id", itemId),
         );
         return;
@@ -2694,7 +3087,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (itemId: string) => {
       if (remote.community) {
         void remoteWrite("Removing the item", () =>
-          supabaseBrowser().from("action_items").delete().eq("id", itemId),
+          supabaseBrowser().from("action_items").delete({ count: "exact" }).eq("id", itemId),
         );
         return;
       }
@@ -2714,7 +3107,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return remoteWrite(status === "approved" ? "Letting them in" : "Declining", () =>
           supabaseBrowser()
             .from("join_requests")
-            .update({ status, decided_on: today, decided_by: by })
+            .update({ status, decided_on: today, decided_by: by }, { count: "exact" })
             .eq("id", requestId),
         );
       }
@@ -2741,7 +3134,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!request) return false;
       // The roster is the only door. Approving is adding the household with
       // the address they gave, so the same rules apply as to any other add.
-      const owner = addOwner({ name: request.name, email: request.email, unit });
+      const { owner, saved } = addOwnerSaving({ name: request.name, email: request.email, unit });
+      // The household first, and only then the decision. Marked approved
+      // while the add was still in the air, a refused add left a request
+      // that read "approved", a welcome email on its way, and no home.
+      if (!(await saved)) return false;
       const decided = await decideJoin(requestId, "approved");
       // They made an account when they asked, so the note that says "you're
       // in" carries a link that opens it. Fire and forget: the roster is
@@ -2759,7 +3156,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
       return decided;
     },
-    [remote.community, communityId, addOwner, decideJoin],
+    [remote.community, communityId, addOwnerSaving, decideJoin],
   );
 
   const declineJoinRequest = useCallback(
@@ -2833,8 +3230,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (request: HomeRequest) => {
       if (remote.community) {
         const rc = remote.community;
-        void remoteWrite("Sending the request", () =>
-          supabaseBrowser().from("requests").insert({
+        // The number comes back from the row. The form numbers a request
+        // from the ones its owner can see, and the database gives a number
+        // already taken the next free one, so what was sent is a guess. The
+        // filer may read their own row back (requests_read), which is what
+        // lets the insert return it. Resolves null when nothing was saved,
+        // so the form stays put instead of saying "Request submitted".
+        let stored = "";
+        return remoteWrite("Sending the request", async () => {
+          const { data, error } = await supabaseBrowser().from("requests").insert({
             id: newId(),
             association_id: rc.id,
             unit_id: request.ownerId,
@@ -2851,9 +3255,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             thread: request.thread,
             submission: request.submission ?? null,
             certificate_id: request.certificateId ?? null,
-          }),
-        );
-        return;
+          }).select("reference").single();
+          if (error) throw new Error(error.message);
+          stored = data?.reference ?? "";
+        }).then((ok) => (ok ? stored : null));
       }
       sliceStore(communityId, "requests").update((all) => [request, ...all]);
     },
@@ -2876,19 +3281,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const request = rc.requests.find((r) => r.id === requestId);
         if (!request) return;
         const actor = rc.accounts.find((a) => a.id === remote.profileId);
-        void remoteWrite("Saving the decision", () =>
-          supabaseBrowser()
+        void remoteWrite("Saving the decision", () => {
+          // The request as the last write left it, so the note lands after
+          // whatever was just added to the thread instead of replacing it.
+          const now = latest(rc).requests.find((r) => r.id === requestId) ?? request;
+          return supabaseBrowser()
             .from("requests")
-            .update({
-              status,
-              decided_on: decided ? todayIsoDate() : (request.decisionDate ?? null),
-              decided_by: decided ? (actor?.name ?? null) : (request.decidedBy ?? null),
-              decided_note: note ?? null,
-              thread: [...request.thread, event(request, actor?.name ?? "Board")],
-            })
-            .eq("id", requestId),
-        ).then((ok) => {
-          if (ok) emailNotice(rc.id, { kind: "request", id: requestId, body: note });
+            .update(
+              {
+                status,
+                decided_on: decided ? todayIsoDate() : (now.decisionDate ?? null),
+                decided_by: decided ? (actor?.name ?? null) : (now.decidedBy ?? null),
+                decided_note: note ?? null,
+                thread: [...now.thread, event(now, actor?.name ?? "Board")],
+              },
+              { count: "exact" },
+            )
+            .eq("id", requestId);
+        }).then((ok) => {
+          if (ok) void emailNotice(rc.id, { kind: "request", id: requestId, body: note });
         });
         return;
       }
@@ -2996,7 +3407,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             .update({ is_default: false })
             .eq("unit_id", target.ownerId);
           if (error) throw new Error(error.message);
-          return supabase.from("payment_instruments").update({ is_default: true }).eq("id", instrumentId);
+          // The first update clears the others and may match none. This one is
+          // aimed at the method just chosen, so it has to land.
+          return supabase
+            .from("payment_instruments")
+            .update({ is_default: true }, { count: "exact" })
+            .eq("id", instrumentId);
         });
         return;
       }
@@ -3021,10 +3437,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void remoteWrite("Confirming the transaction", () =>
           supabaseBrowser()
             .from("ledger_entries")
-            .update({
-              confirmed_at: new Date().toISOString(),
-              category: category ?? entry?.suggestedCategory ?? entry?.category,
-            })
+            .update(
+              {
+                confirmed_at: new Date().toISOString(),
+                category: category ?? entry?.suggestedCategory ?? entry?.category,
+              },
+              { count: "exact" },
+            )
             .eq("id", entryId),
         );
         return () => {
@@ -3032,7 +3451,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           void remoteWrite("Reopening the transaction", () =>
             supabaseBrowser()
               .from("ledger_entries")
-              .update({ confirmed_at: null, category: entry.category })
+              .update({ confirmed_at: null, category: entry.category }, { count: "exact" })
               .eq("id", entryId),
           );
         };
@@ -3061,7 +3480,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const rc = remote.community;
         const entry = rc.ledger.find((e) => e.id === entryId);
         void remoteWrite("Dismissing the transaction", () =>
-          supabaseBrowser().from("ledger_entries").delete().eq("id", entryId),
+          supabaseBrowser().from("ledger_entries").delete({ count: "exact" }).eq("id", entryId),
         );
         return () => {
           if (!entry) return;
@@ -3152,19 +3571,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (remote.community) {
         const rc = remote.community;
         const approver = rc.accounts.find((a) => a.id === remote.profileId);
-        const payout = rc.payouts.find((p) => p.id === payoutId);
-        if (!approver || !payout) return;
-        if (payout.approvals.some((a) => a.name === approver.name)) return;
-        const approvals = [...payout.approvals, { name: approver.name, at: todayIsoDate() }];
-        void remoteWrite("Approving the payment", () =>
-          supabaseBrowser()
+        const asked = rc.payouts.find((p) => p.id === payoutId);
+        if (!approver || !asked) return;
+        if (asked.approvals.some((a) => a.name === approver.name)) return;
+        void remoteWrite("Approving the payment", () => {
+          // The payment as the last write left it. A second press that
+          // queued behind the first finds its own name there and stops,
+          // instead of signing twice.
+          const payout = latest(rc).payouts.find((p) => p.id === payoutId) ?? asked;
+          if (payout.approvals.some((a) => a.name === approver.name)) {
+            return Promise.resolve({ error: null });
+          }
+          const approvals = [...payout.approvals, { name: approver.name, at: todayIsoDate() }];
+          return supabaseBrowser()
             .from("payouts")
-            .update({
-              approvals,
-              status: approvals.length >= payout.approvalsRequired ? "scheduled" : payout.status,
-            })
-            .eq("id", payoutId),
-        );
+            .update(
+              {
+                approvals,
+                status: approvals.length >= payout.approvalsRequired ? "scheduled" : payout.status,
+              },
+              { count: "exact" },
+            )
+            .eq("id", payoutId);
+        });
         return;
       }
       const approver = sliceStore(communityId, "accounts")
@@ -3191,7 +3620,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (vendorId: string) => {
       if (remote.community) {
         void remoteWrite("Noting the W-9", () =>
-          supabaseBrowser().from("vendors").update({ w9_on_file: true }).eq("id", vendorId),
+          supabaseBrowser()
+            .from("vendors")
+            .update({ w9_on_file: true }, { count: "exact" })
+            .eq("id", vendorId),
         );
         return;
       }
@@ -3231,7 +3663,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const rc = remote.community;
         const vendor = rc.vendors.find((v) => v.id === vendorId);
         void remoteWrite("Removing the vendor", () =>
-          supabaseBrowser().from("vendors").delete().eq("id", vendorId),
+          supabaseBrowser().from("vendors").delete({ count: "exact" }).eq("id", vendorId),
         );
         return () => {
           if (!vendor) return;
@@ -3354,20 +3786,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const rc = remote.community;
         const thread = rc.threads.find((t) => t.id === threadId);
         if (!thread) return;
-        const sender = rc.accounts.find((a) => a.id === remote.profileId);
+        // Appended in the database, to the thread as it is there now
+        // (reply_as_board, migration 0072). The browser used to send the
+        // whole list back, built from the thread as this tab last read it,
+        // so a reply written at 9:10 from a page opened at 9:00 erased what
+        // an owner had sent at 9:05. The function names the sender from
+        // their seat and numbers the message itself.
         void remoteWrite("Sending the reply", () =>
-          supabaseBrowser()
-            .from("threads")
-            .update({
-              unread: false,
-              updated_on: todayIsoDate(),
-              messages: [...thread.messages, message(sender?.name ?? "Board", thread.messages.length)],
-            })
-            .eq("id", threadId),
+          supabaseBrowser().rpc("reply_as_board", { p_thread_id: threadId, p_body: body }),
         ).then((ok) => {
           // The channel on the message says "email", so it is one.
           if (ok && thread.ownerId) {
-            emailNotice(rc.id, {
+            void emailNotice(rc.id, {
               kind: thread.tag === "Billing" ? "letter" : "message",
               unitIds: [thread.ownerId],
               subject: thread.subject,
@@ -3393,7 +3823,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ),
       );
     },
-    [remote.community, remote.profileId, communityId],
+    [remote.community, communityId],
   );
 
   const messageOwner = useCallback(
@@ -3416,10 +3846,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (remote.community) {
         const rc = remote.community;
         const owner = rc.owners.find((o) => o.id === ownerId);
-        if (!owner) return;
+        if (!owner) return false;
         const sender = rc.accounts.find((a) => a.id === remote.profileId);
         const senderName = sender?.name ?? "Board";
-        void remoteWrite("Sending the letter", () =>
+        // Resolves once the letter is on its thread, so a screen sending
+        // several can say how many landed. The email follows on its own.
+        return remoteWrite("Sending the letter", () =>
           supabaseBrowser().from("threads").insert({
             id,
             association_id: rc.id,
@@ -3435,20 +3867,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           // A dues letter is a statutory notice; a note is a message the
           // owner may turn off. The tag is what tells them apart.
           if (ok) {
-            emailNotice(rc.id, {
+            void emailNotice(rc.id, {
               kind: tag === "Billing" ? "letter" : "message",
               unitIds: [ownerId],
               subject,
               body,
             });
           }
+          return ok;
         });
-        return;
       }
       const owner = sliceStore(communityId, "owners")
         .getSnapshot()
         .find((o) => o.id === ownerId);
-      if (!owner) return;
+      if (!owner) return false;
       const sender = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
@@ -3467,6 +3899,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         },
         ...all,
       ]);
+      return true;
     },
     [remote.community, remote.profileId, communityId],
   );
@@ -3610,9 +4043,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         for (const [key, value] of Object.entries(patch)) {
           if (COLUMN[key]) row[COLUMN[key]] = value ?? null;
         }
+        // A cleared date picker hands back "", which a date column refuses.
+        if (row.insurance_expires_on === "") row.insurance_expires_on = null;
         if (!Object.keys(row).length) return;
         void remoteWrite("Saving the association", () =>
-          supabaseBrowser().from("associations").update(row).eq("id", rc.id),
+          supabaseBrowser().from("associations").update(row, { count: "exact" }).eq("id", rc.id),
         );
         return;
       }
@@ -3838,7 +4273,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           // Notice of a vote goes out the moment it opens to owners. The
           // server reads the ballot back and declines a board-only one.
           if (ballot.audience === "owners" && ballot.status === "open") {
-            emailNotice(rc.id, { kind: "ballot", id });
+            void emailNotice(rc.id, { kind: "ballot", id });
           }
         });
         return;
@@ -3951,7 +4386,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (remote.community) {
         // The bills go with it, by cascade.
         void remoteWrite("Removing the shared cost", () =>
-          supabaseBrowser().from("shared_costs").delete().eq("id", costId),
+          supabaseBrowser().from("shared_costs").delete({ count: "exact" }).eq("id", costId),
         );
         return;
       }
@@ -3999,11 +4434,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
         return;
       }
-      const { error } = await supabaseBrowser()
+      const { error, count } = await supabaseBrowser()
         .from("documents")
-        .update({ visibility: toDbVisibility(visibility) })
+        .update({ visibility: toDbVisibility(visibility) }, { count: "exact" })
         .eq("id", documentId);
       if (error) throw new Error(error.message);
+      // Hidden by row level security, the row matches nothing and the
+      // database says nothing. The screen catches this and says it.
+      if (count === 0) throw new Error(NOT_CHANGED);
       await refreshRemote();
     },
     [remote.community, communityId],
@@ -4018,8 +4456,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
       const doc = remote.community.documents.find((d) => d.id === documentId);
       const supabase = supabaseBrowser();
-      const { error } = await supabase.from("documents").delete().eq("id", documentId);
+      const { error, count } = await supabase
+        .from("documents")
+        .delete({ count: "exact" })
+        .eq("id", documentId);
       if (error) throw new Error(error.message);
+      // A delete that matched nothing left the row where it is, and the
+      // bytes must stay with it: taking them left a document on the list
+      // that opened to nothing.
+      if (count === 0) throw new Error(NOT_CHANGED);
       // With the row gone nothing can reach the file, so the bytes go too. If
       // this step fails the result is an unreachable orphan, not a document
       // that appears to have survived.
@@ -4092,7 +4537,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         };
         void remoteWrite("Saving the template", () =>
           isUuid(template.id)
-            ? supabaseBrowser().from("message_templates").update(row).eq("id", template.id)
+            ? supabaseBrowser()
+                .from("message_templates")
+                .update(row, { count: "exact" })
+                .eq("id", template.id)
             : // A stock template, edited: the row replaces it, keyed by its id.
               supabaseBrowser()
                 .from("message_templates")
@@ -4547,7 +4995,9 @@ export function useAssistantContext() {
         feePercent: 0,
       })),
       meetings: community.meetings
-        .filter((m) => m.status !== "ended")
+        // By phase, as every screen reads them: nothing marks a real
+        // association's meeting ended, so its date does.
+        .filter((m) => meetingPhase(m) !== "ended")
         .map((m) => ({
           title: m.title,
           date: m.date,
@@ -4559,7 +5009,8 @@ export function useAssistantContext() {
       liveMeeting: live ? { title: live.title, attendees: live.attendees.length } : undefined,
       events: [] as { title: string; date: string; time: string; location: string }[],
       ballots: community.ballots
-        .filter((b) => b.audience === "owners" && b.status === "open")
+        // A ballot past its closing date is closed, pressed or not.
+        .filter((b) => b.audience === "owners" && ballotPhase(b) === "open")
         .map((b) => ({ title: b.title, closesDate: b.closesDate, voted: Boolean(b.myVoteOptionId) })),
       requests: requests
         .filter((r) => r.ownerId === owner?.id)

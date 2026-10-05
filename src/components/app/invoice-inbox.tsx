@@ -5,7 +5,7 @@ import { Check, Copy, Inbox, Paperclip, Plus, X } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, Segmented, Select, type Tone, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { communitySlug, vendorDecisions } from "@/lib/metrics";
+import { invoiceAddress, vendorDecisions } from "@/lib/metrics";
 import type { InvoiceStatus, Payout, VendorInvoice } from "@/lib/types";
 import { addDays, cn, daysFromToday, formatDate, money, relativeDays, todayIsoDate } from "@/lib/utils";
 
@@ -17,8 +17,10 @@ import { addDays, cn, daysFromToday, formatDate, money, relativeDays, todayIsoDa
  * by hand is the fallback. Either way the board approves it, pays it by ACH
  * from the operating account, and the file stays on the payment it settled.
  *
- * Email-in is not wired yet. The address is real in shape and shown so a board
- * can start giving it out, and the seeded rows show what arrives.
+ * Email-in is not wired yet. The demo shows the address and seeded rows so
+ * the inbox can be seen working. A real association is shown neither: mail
+ * sent to the address is not kept, so giving it out loses a vendor's bill.
+ * What a real board sees here is the payments waiting on a second signature.
  *
  * Since 2026-09-24 this is the one approval queue on Vendors. Payments short
  * of a second signature used to wait in a separate Payments card with their
@@ -70,7 +72,7 @@ export function InvoiceInbox() {
   const [panel, setPanel] = useState<Panel>(null);
   const [attaching, setAttaching] = useState(false);
 
-  const address = `invoices@${communitySlug(community)}.yourhoasis.com`;
+  const address = invoiceAddress(community, isRemote);
   const decisions = vendorDecisions(community);
   const waiting = invoices.filter(isWaiting);
   const paid = invoices.filter((i) => i.status === "paid");
@@ -102,6 +104,7 @@ export function InvoiceInbox() {
   }
 
   async function copyAddress() {
+    if (!address) return;
     try {
       await navigator.clipboard.writeText(address);
       notify(`Copied ${address}`);
@@ -115,6 +118,9 @@ export function InvoiceInbox() {
       <CardHeader
         title="To approve"
         subtitle={
+          !address ? (
+            "Payments waiting on a second signature"
+          ) : (
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>Vendors email bills to</span>
             <code className="rounded-md bg-surface-2 px-1.5 py-0.5 text-footnote text-fg">
@@ -129,6 +135,7 @@ export function InvoiceInbox() {
               <Copy className="size-3.5" />
             </button>
           </span>
+          )
         }
         action={
           isRemote || attaching ? undefined : (
@@ -139,12 +146,6 @@ export function InvoiceInbox() {
           )
         }
       />
-
-      {isRemote ? (
-        <p className="border-b border-border bg-surface-2 px-5 py-2.5 text-footnote text-fg-muted">
-          Email-in and invoice storage are coming. Nothing sent to this address is kept yet.
-        </p>
-      ) : null}
 
       {attaching ? (
         <AttachForm
@@ -189,9 +190,11 @@ export function InvoiceInbox() {
                 : "No invoices yet"
           }
           description={
-            filter === "waiting"
-              ? `Bills vendors send to ${address} land here for approval.`
-              : undefined
+            filter !== "waiting"
+              ? undefined
+              : address
+                ? `Bills vendors send to ${address} land here for approval.`
+                : "A payment that needs a second signature shows here."
           }
         />
       ) : (

@@ -41,8 +41,12 @@ export function ReserveStudyCard() {
         notify(outcome.rejected[0]?.reason ?? "Could not upload that", "warn");
         return;
       }
-      updateSettings({ reserveStudy: { documentId: filed.id, name: filed.name, studyDate } });
-      notify(`${filed.name} is on file. It is under Documents too.`);
+      // Said only once the link is saved. A refusal has been said by the
+      // write itself; the file is under Documents either way.
+      const ok = await updateSettings({
+        reserveStudy: { documentId: filed.id, name: filed.name, studyDate },
+      });
+      if (ok) notify(`${filed.name} is on file. It is under Documents too.`);
     } catch (error) {
       notify(error instanceof Error ? error.message : "Could not upload", "warn");
     } finally {
@@ -141,9 +145,10 @@ export function ReserveStudyCard() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => {
-            updateSettings({ reserveStudy: undefined });
-            notify("Unlinked. The file is still under Documents.", "info");
+          onClick={async () => {
+            // Not said until the write is back, and not at all if it was refused.
+            const ok = await updateSettings({ reserveStudy: undefined });
+            if (ok) notify("Unlinked. The file is still under Documents.", "info");
           }}
         >
           Not the study

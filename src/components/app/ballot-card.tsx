@@ -3,6 +3,7 @@
 import { Check, Clock, Lock, Users } from "lucide-react";
 import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { ballotPhase } from "@/lib/phases";
 import type { Ballot } from "@/lib/types";
 import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
 
@@ -66,8 +67,11 @@ export function BallotCard({
 }) {
   const { settings } = useAppState();
   const t = tally(ballot);
-  const scheduled = ballot.status === "scheduled";
-  const open = ballot.status === "open";
+  // The phase, so a card never says Open, or offers Close now, on a ballot
+  // whose closing date has passed.
+  const phase = ballotPhase(ballot);
+  const scheduled = phase === "scheduled";
+  const open = phase === "open";
   const who = ballot.audience === "board" ? "directors" : "homes";
   // Sealed until close, unless the board turned live results on in Settings.
   const showResults = (!open && !scheduled) || settings.showLiveVoteResults || t.daysLeft < 0;

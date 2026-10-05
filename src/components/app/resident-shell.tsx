@@ -254,7 +254,6 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
           every page: the dashboard's full banner with the home card, and on
           every other tab the same photo at half height with the switcher,
           the home line and the controls on it (Monish, 2026-09-26). */}
-      {onDashboard ? null : <div className="lg:hidden">{topBar}</div>}
       {appHeader}
       {onDashboard ? (
         <CommunityHero

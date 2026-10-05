@@ -88,7 +88,13 @@ const CARD = new Set(["9", "16"]);
 const { data: previous } = await admin.from("associations").select("id, settings").eq("name", NAME);
 for (const a of previous ?? []) {
   if (a.settings && a.settings.playground) {
-    await admin.from("associations").delete().eq("id", a.id);
+    // A delete that failed leaves the old playground in place, and seeding
+    // on would make a second one beside it. Say so and stop.
+    const { error } = await admin.from("associations").delete().eq("id", a.id);
+    if (error) {
+      console.error(`could not remove the previous playground: ${error.message}`);
+      process.exit(1);
+    }
     console.log("removed the previous playground");
   }
 }

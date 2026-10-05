@@ -10,7 +10,14 @@ import { sendDuesEmails, type DuesCategory } from "@/lib/email/send";
  * caller's own session is used to check they actually hold `communications`
  * for the association they named, which means a crafted request from somebody
  * else's console gets a 403 rather than a mail run.
+ *
+ * The run is paced and stops before the time limit below
+ * (src/lib/email/pace.ts). A run that stopped says so in its answer, and
+ * sending again finishes it without mailing anybody twice. Whoever was
+ * passed over for that reason is counted as `already`, apart from
+ * `skipped`, in a preview as well as a real run.
  */
+export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
@@ -70,7 +77,12 @@ export async function POST(request: NextRequest) {
       origin: request.nextUrl.origin,
       dryRun,
     });
-    log.info("dues emails sent", { category, dryRun: Boolean(dryRun), sent: result.sent, failed: result.failed, skipped: result.skipped });
+    if (result.unrecorded) {
+      // email_log could not be written. The run stopped there and its
+      // first line says so on the screen (src/lib/email/send.ts).
+      log.error("dues email record not saved", { category, sent: result.sent, err: result.unrecorded });
+    }
+    log.info("dues emails sent", { category, dryRun: Boolean(dryRun), sent: result.sent, failed: result.failed, skipped: result.skipped, already: result.already, remaining: result.remaining });
     return NextResponse.json(result);
   } catch (error) {
     log.error("dues emails failed", { category, err: error });

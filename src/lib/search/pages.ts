@@ -94,6 +94,8 @@ export function boardPages(community: Community, can: (c: Capability) => boolean
   const hits: SearchHit[] = [];
   for (const route of BOARD_ROUTES) {
     if (!routeOffered(route, can, community)) continue;
+    // Reached from its section's own screen, by whoever may change it.
+    if (route.changes) continue;
     const parent = boardParent(route);
     // A child tab is offered only when its section is, too.
     if (parent && !routeOffered(parent, can, community)) continue;

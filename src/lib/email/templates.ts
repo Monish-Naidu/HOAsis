@@ -55,6 +55,12 @@ function longDate(iso: string): string {
  * here, once, so no template has to remember: all three carry words a board
  * or an owner typed. Callers pass them as plain text, never pre-escaped.
  * `body` and `footer` are HTML the template built, with its own escaping.
+ *
+ * The line under the button, "This link signs you in", is only printed when
+ * it is true. It went out on every message, including the one that confirms
+ * a password somebody had just chosen and the invitation that asks them to
+ * choose one. A template whose link is a plain address passes
+ * `signsIn: false`.
  */
 function layout(options: {
   associationName: string;
@@ -62,7 +68,16 @@ function layout(options: {
   body: string;
   cta: { label: string; url: string };
   footer: string;
+  /** False when the link does not sign the person in. Defaults to true. */
+  signsIn?: boolean;
 }): string {
+  const signsIn =
+    options.signsIn === false
+      ? ""
+      : `
+      <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#6b7789;">
+        This link signs you in, so there is no password to remember.
+      </p>`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -83,10 +98,7 @@ function layout(options: {
          style="display:inline-block;background:#1e3a5f;color:#ffffff;text-decoration:none;
                 padding:14px 28px;border-radius:10px;font-size:16px;font-weight:600;">
         ${escapeHtml(options.cta.label)}
-      </a>
-      <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#6b7789;">
-        This link signs you in, so there is no password to remember.
-      </p>
+      </a>${signsIn}
     </td></tr>
     <tr><td style="padding:18px 28px;border-top:1px solid #eef1f5;">
       <p style="margin:0;font-size:11px;line-height:1.6;color:#8a94a3;">${options.footer}</p>
@@ -233,6 +245,8 @@ export function trialEmail(kind: "14-days" | "3-days" | "ended", input: TrialEma
       body,
       cta: { label: "Add a card", url: input.billingUrl },
       footer,
+      // A plain address on Settings. The President signs in as usual.
+      signsIn: false,
     }),
     text: `${input.presidentName},\n\n${heading}. ${input.associationName} is on Your HOAsis at ${price}. ${detail}\n\nAdd a card: ${input.billingUrl}\n\nYour HOAsis`,
   };
@@ -270,6 +284,9 @@ export function confirmSignupEmail(input: { name: string; confirmUrl: string }) 
       footer:
         "If you did not create an account with Your HOAsis, ignore this message and nothing happens. " +
         "The link expires in 24 hours.",
+      // They chose a password a minute ago. Telling them there is none to
+      // remember is wrong.
+      signsIn: false,
     }),
     text: `Hi ${first}. Confirm your email for Your HOAsis by opening this link: ${input.confirmUrl}\n\nIf you did not create an account, ignore this message.`,
   };
@@ -327,6 +344,8 @@ export function inviteEmail(input: {
       footer:
         "Sent by your association's board through Your HOAsis. If you do not know this " +
         "association, ignore this message and nothing happens.",
+      // Without an account the link is the join page, where a password is chosen.
+      signsIn: input.hasAccount,
     }),
     text: `${line.replace(/<[^>]+>/g, "")}\n\n${cta}: ${input.url}\n\n${input.associationName}`,
   };
@@ -401,8 +420,100 @@ export function autopayEmail(kind: "charged" | "failed", input: AutopayEmailInpu
           ? { label: "View account", url: input.payUrl }
           : { label: `Pay ${amount}`, url: input.payUrl },
       footer: `Sent by ${escapeHtml(input.associationName)} through Your HOAsis because autopay is on for your home. Turn it off any time on the pay screen.`,
+      // A plain address on the pay screen, not a sign-in link.
+      signsIn: false,
     }),
     text: `${input.ownerName},\n\n${heading}. ${detail}\n\n${input.payUrl}\n\nYour HOAsis`,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Disputes                                                                    */
+/* -------------------------------------------------------------------------- */
+
+export interface DisputeEmailInput {
+  associationName: string;
+  /** Whoever holds finances. The greeting uses the first name. */
+  recipientName: string;
+  /** The home the disputed payment was for, as the roster labels it. Empty if unknown. */
+  unitLabel: string;
+  amountCents: number;
+  /** The bank's reason in Stripe's vocabulary, such as "fraudulent". */
+  reason?: string | null;
+  /** The last day evidence can be sent, `YYYY-MM-DD`. Only for an opened dispute. */
+  evidenceDueOn?: string | null;
+  /** The dispute on the association's own Stripe dashboard. */
+  disputeUrl: string;
+}
+
+/**
+ * A payment was disputed with the owner's bank, or the bank has decided.
+ *
+ * It goes to the people who hold finances, the day it happens. A dispute has
+ * a deadline for evidence, and one nobody answers is one the association
+ * loses. The amount is the subject, the deadline is in the first paragraph,
+ * and the one link is the dispute on the association's own Stripe dashboard,
+ * which is where it is answered.
+ *
+ * "lost" says what the books here do not yet do on their own: the money has
+ * left Stripe, and the owner's statement and the ledger still show it.
+ */
+export function disputeEmail(kind: "opened" | "won" | "lost", input: DisputeEmailInput) {
+  const amount = money(input.amountCents);
+  const first = firstName(input.recipientName);
+  const home = input.unitLabel ? placeLabel(input.unitLabel) : "";
+  const reason = input.reason ? input.reason.replace(/_/g, " ") : "";
+
+  const subject =
+    kind === "opened"
+      ? `Payment disputed: ${amount}${home ? ` · ${home}` : ""} · ${input.associationName}`
+      : `Dispute ${kind}: ${amount}${home ? ` · ${home}` : ""} · ${input.associationName}`;
+  const title =
+    kind === "opened"
+      ? `A ${amount} payment was disputed`
+      : kind === "won"
+        ? `The ${amount} dispute was decided for the association`
+        : `The ${amount} dispute was lost`;
+
+  const forHome = home ? ` for ${home}` : "";
+  const lines =
+    kind === "opened"
+      ? [
+          `${first}, the bank behind a ${amount} payment${forHome} has disputed it${
+            reason ? `. The reason given: ${reason}` : ""
+          }.`,
+          `Stripe holds the disputed amount, and usually a dispute fee, out of the association's balance while the bank decides. ${
+            input.evidenceDueOn
+              ? `Send your evidence by ${longDate(input.evidenceDueOn)}. With no answer by then, the bank decides for the cardholder.`
+              : "Send your evidence as soon as you can. With no answer, the bank decides for the cardholder."
+          }`,
+          `The owner's statement has not changed. The payment still shows as paid until the bank decides.`,
+        ]
+      : kind === "won"
+        ? [
+            `${first}, the bank decided the disputed ${amount} payment${forHome} for the association. Stripe returns the money to the association's balance.`,
+            `Nothing changes on the owner's statement.`,
+          ]
+        : [
+            `${first}, the bank decided the disputed ${amount} payment${forHome} for the cardholder. The ${amount} and Stripe's dispute fee stay out of the association's balance.`,
+            `The owner's statement here still shows the payment as paid, and the ledger still shows the deposit, so the books are ahead of the bank by this amount.`,
+          ];
+
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader:
+        kind === "opened" && input.evidenceDueOn
+          ? `Evidence is due ${longDate(input.evidenceDueOn)}.`
+          : title,
+      body: `${heading(title)}${paragraphs(lines.join("\n\n"))}`,
+      cta: { label: kind === "opened" ? "Answer on Stripe" : "See it on Stripe", url: input.disputeUrl },
+      footer: `Sent to the people who hold finances for ${escapeHtml(input.associationName)} by Your HOAsis. This is about money in the association's account, so it cannot be turned off.`,
+      // Stripe's dashboard has its own sign in.
+      signsIn: false,
+    }),
+    text: `${title}\n\n${lines.join("\n\n")}\n\n${input.disputeUrl}\n\nYour HOAsis`,
   };
 }
 
@@ -420,8 +531,14 @@ export interface NoticeEmailInput {
   ownerName: string;
   /** Signs the person in and lands on the screen the notice is about. */
   url: string;
-  /** Null for statutory notices. */
+  /** Null for statutory notices, and for a person with no account to hold a preference. */
   unsubscribeUrl: string | null;
+  /**
+   * False when the board only has an address for this person. Their link is
+   * the join page, which signs nobody in, and they have no account settings
+   * yet, so the footer says how to get some. Defaults to true.
+   */
+  hasAccount?: boolean;
 }
 
 /** Plain text as the board typed it, made safe for HTML and split on blank lines. */
@@ -441,12 +558,23 @@ function heading(text: string): string {
   return `<h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">${escapeHtml(text)}</h1>`;
 }
 
+/**
+ * The footer of a board notice. `why` is the statutory reason, and only a
+ * notice with one may say it cannot be turned off. An announcement to an
+ * owner with no account used to say exactly that, with no reason and no way
+ * out, about a message the privacy page calls optional. That owner has no
+ * preferences to change until there is an account, so the footer says why
+ * the message came and where the choice lives.
+ */
 function noticeFooter(input: NoticeEmailInput, why: string): string {
   const sender = `Sent by ${escapeHtml(input.associationName)} through Your HOAsis.`;
-  if (!input.unsubscribeUrl) {
+  if (input.unsubscribeUrl) {
+    return `${sender} <a href="${input.unsubscribeUrl}" style="color:#8a94a3;">Unsubscribe from these</a>.`;
+  }
+  if (why) {
     return `${sender} ${why} It is sent to every owner and cannot be turned off.`;
   }
-  return `${sender} <a href="${input.unsubscribeUrl}" style="color:#8a94a3;">Unsubscribe from these</a>.`;
+  return `${sender} You are getting this because the board has this address on its register for your home. Create your account to choose which emails you get.`;
 }
 
 function firstName(name: string): string {
@@ -464,6 +592,7 @@ export function announcementEmail(input: NoticeEmailInput & { title: string; bod
       preheader: input.body.split("\n")[0].slice(0, 120),
       body,
       cta: { label: "Open Your HOAsis", url: input.url },
+      signsIn: input.hasAccount !== false,
       footer: noticeFooter(input, ""),
     }),
     text: `${input.title}\n\n${input.body}\n\n${input.url}\n\n${input.associationName}${
@@ -512,6 +641,7 @@ export function meetingNoticeEmail(
       preheader: `${when}, ${input.location}.`,
       body,
       cta: { label: "See the meeting", url: input.url },
+      signsIn: input.hasAccount !== false,
       footer: noticeFooter(input, "This is notice of a meeting of the association."),
     }),
     text: `${input.title}, ${when}\n\n${lines.join("\n")}${
@@ -536,6 +666,7 @@ export function ballotOpenEmail(
       preheader: `Voting is open until ${closes}.`,
       body,
       cta: { label: "Cast my vote", url: input.url },
+      signsIn: input.hasAccount !== false,
       footer: noticeFooter(input, "This is notice of a vote of the association."),
     }),
     text: `${input.title}\n\nVoting is open until ${closes}. One vote per home.\n\n${input.body.join(
@@ -564,6 +695,7 @@ export function boardMessageEmail(
       preheader: input.body.split("\n")[0].slice(0, 120),
       body,
       cta: { label: input.statutory ? "See my account" : "Reply", url: input.url },
+      signsIn: input.hasAccount !== false,
       footer: noticeFooter(
         input,
         input.statutory ? "This is a notice about your account." : "",
@@ -590,6 +722,7 @@ export function requestUpdateEmail(
       preheader: `${input.reference} is ${input.status.toLowerCase()}.`,
       body,
       cta: { label: "See the request", url: input.url },
+      signsIn: input.hasAccount !== false,
       footer: noticeFooter(input, ""),
     }),
     text: `${input.title} is ${input.status.toLowerCase()}.\n\n${input.note}\n\n${input.url}\n\n${input.associationName}${

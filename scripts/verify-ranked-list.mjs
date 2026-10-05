@@ -118,7 +118,12 @@ await admin.from("action_items").delete().eq("id", ai.data?.id);
 } catch (error) {
   ok("the run itself", false, error instanceof Error ? error.message : String(error));
 } finally {
-  for (const id of cleanup.associations) await admin.from("associations").delete().eq("id", id);
+  for (const id of cleanup.associations) {
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) ok("cleanup removed the association", false, error.message);
+  }
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }
 console.log(`\n${pass}/${pass+fail} passed`);

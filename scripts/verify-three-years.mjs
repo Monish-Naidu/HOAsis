@@ -350,7 +350,10 @@ try {
       "This would levy the balance across the six homes over twelve months.",
     ],
     kind: "amendment", status: "open",
-    opens_on: monthsAgo(19), closes_on: monthsAgo(18),
+    // Held with a closing date still ahead while the homes vote: a vote is
+    // refused once the date is more than a day gone (0076). The real date,
+    // eighteen months back, is set once the votes are in.
+    opens_on: monthsAgo(19), closes_on: monthsAgo(-1),
     quorum_required: 4, threshold_label: "Two thirds of votes cast",
   }).select().single();
   check("only an officer with the voting capability can open a ballot", !ballotError,
@@ -368,6 +371,7 @@ try {
   await people["105"].client.rpc("cast_vote", {
     p_ballot_id: roofBallot.id, p_option_id: roofOptions[1].id,
   });
+  await president.client.from("ballots").update({ closes_on: monthsAgo(18) }).eq("id", roofBallot.id);
 
   const { data: roofTally } = await president.client
     .from("ballot_tallies").select("*").eq("ballot_id", roofBallot.id);
@@ -586,7 +590,10 @@ try {
   for (const id of cleanup.associations) {
     await admin.from("memberships").update({ role: "resident" })
       .eq("association_id", id).eq("role", "president");
-    await admin.from("associations").delete().eq("id", id);
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) check("cleanup removed the association", false, error.message);
   }
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }

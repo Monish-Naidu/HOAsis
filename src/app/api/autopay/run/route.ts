@@ -7,6 +7,7 @@ import {
   type PaymentInstrument,
 } from "@/lib/payments/instruments";
 import { costFor, stripe } from "@/lib/stripe/server";
+import { currentMemberIds, savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { AutopayPlan } from "@/lib/types";
 import { duesFor } from "@/lib/home-types";
@@ -212,25 +213,32 @@ export async function GET(request: NextRequest) {
         }
 
         // The method: the one the plan named, else the home's default, and
-        // only if Stripe can charge it without the owner present.
+        // only if Stripe can charge it without the owner present. Only a
+        // method saved by somebody who still holds the home counts: after a
+        // sale the seller's bank is still on the home's list, and falling
+        // back to it would debit a person who moved away. A read that fails
+        // throws, and the home is left for tomorrow.
         const { data: instruments } = await admin
           .from("payment_instruments")
           .select("*")
           .eq("unit_id", member.unit_id)
           .order("is_default", { ascending: false });
-        const candidates = (instruments ?? []).map(
-          (i) =>
-            ({
-              ...((i.detail as object) ?? {}),
-              id: i.id,
-              ownerId: i.unit_id,
-              kind: i.kind,
-              label: i.label,
-              mask: i.mask,
-              isDefault: i.is_default,
-              addedDate: i.added_on,
-            }) as PaymentInstrument,
-        );
+        const holders = await currentMemberIds(admin, member.unit_id);
+        const candidates = (instruments ?? [])
+          .filter((i) => savedByCurrentMember(i.profile_id, holders))
+          .map(
+            (i) =>
+              ({
+                ...((i.detail as object) ?? {}),
+                id: i.id,
+                ownerId: i.unit_id,
+                kind: i.kind,
+                label: i.label,
+                mask: i.mask,
+                isDefault: i.is_default,
+                addedDate: i.added_on,
+              }) as PaymentInstrument,
+          );
         const instrument =
           candidates.find(
             (i) => i.id === plan.instrumentId && isChargeable(i),

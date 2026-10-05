@@ -5,8 +5,9 @@ import { Check, ChevronDown, Clock } from "lucide-react";
 import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
 import { resultLine } from "@/components/app/ballot-card";
 import { useAppState } from "@/lib/app-state";
+import { ballotPhase } from "@/lib/phases";
 import type { Ballot } from "@/lib/types";
-import { cn, daysFromToday, formatDate, relativeDays } from "@/lib/utils";
+import { cn, formatDate, relativeDays } from "@/lib/utils";
 
 /**
  * A question and its choices. Tapping a choice is the vote.
@@ -28,7 +29,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
   // A first vote is one tap. Changing it asks once: on a CC&R amendment a
   // stray tap should not quietly move a home's vote.
   const [switchTo, setSwitchTo] = useState<string | null>(null);
-  const closed = ballot.status !== "open" || daysFromToday(ballot.closesDate) < 0;
+  const closed = ballotPhase(ballot) !== "open";
   const votes = ballot.options.reduce((t, o) => t + o.votes, 0);
   const cast = ballot.homesVoted ?? Math.round(votes / seats);
   const showResults = closed || settings.showLiveVoteResults;

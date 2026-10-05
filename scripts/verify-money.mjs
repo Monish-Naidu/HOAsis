@@ -154,10 +154,31 @@ try {
     p_unit_id: neighborUnit.id, p_amount_cents: 6000, p_rail: "ach",
   });
   check("a finance holder can record a payment for any home", !boardPayError, boardPayError?.message ?? "");
+
+  // Runs that overlap (0069). The cron delivered twice, or a board member
+  // pressing "bill dues now" while it runs: each call used to look for an
+  // existing bill before the other had committed, and every home got two.
+  // Six at once, last in the script so the extra period disturbs nothing
+  // above. Before the lock this failed only when the calls really did
+  // interleave, so a pass on an old database proves little; a failure on a
+  // new one proves a lot.
+  const together = await Promise.all(Array.from({ length: 6 }, () =>
+    admin.rpc("issue_assessment", { p_association_id: associationId, p_label: "August assessment", p_due_on: day(-33) })));
+  const billedTogether = together.reduce((t, r) => t + (r.data ?? 0), 0);
+  const { data: augustLines } = await admin.from("charges").select("unit_id")
+    .eq("association_id", associationId).eq("category", "dues").eq("due_on", day(-33));
+  check("six billing runs at once bill each home once",
+    together.every((r) => !r.error) && billedTogether === 2 && (augustLines ?? []).length === 2,
+    `${billedTogether} reported, ${(augustLines ?? []).length} lines, ${together.find((r) => r.error)?.error?.message ?? "no errors"}`);
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
-  for (const id of cleanup.associations) await admin.from("associations").delete().eq("id", id);
+  for (const id of cleanup.associations) {
+    // A cleanup that fails leaves this association in the live project,
+    // where the dues cron goes on billing it. So it fails the run.
+    const { error } = await admin.from("associations").delete().eq("id", id);
+    if (error) check("cleanup removed the association", false, error.message);
+  }
   for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
 }
 

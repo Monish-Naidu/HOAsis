@@ -29,8 +29,65 @@ interface Outcome {
   sent: number;
   failed: number;
   skipped: number;
+  /**
+   * Passed over because the same notice reached them in the last hour. Its
+   * own count, apart from `skipped`. Absent from an older answer.
+   */
+  already?: number;
   errors: string[];
   dryRun: boolean;
+}
+
+/** "12 already sent in the last hour", or nothing when nobody was. */
+function alreadyPhrase(already: number | undefined): string {
+  return already && already > 0 ? `${already} already sent in the last hour` : "";
+}
+
+/**
+ * The line under the buttons after a preview or a run.
+ *
+ * A preview inside an hour of a real run passes over everybody that run
+ * reached, and it used to read "0 households would receive this" with no
+ * reason given, as if the list were empty. The count of people who already
+ * have the notice is said in words beside it.
+ */
+export function outcomeLine(outcome: Outcome): string {
+  const head = outcome.dryRun
+    ? `${pluralize(outcome.sent, "household")} would receive this`
+    : `${pluralize(outcome.sent, "email")} sent`;
+  return [
+    head,
+    alreadyPhrase(outcome.already),
+    outcome.skipped > 0 ? `${outcome.skipped} skipped` : "",
+    outcome.failed > 0 ? `${outcome.failed} failed` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/**
+ * What the toast says after a real run. A run where every send failed is
+ * not a success, one with nobody to write to is not a failure, and one that
+ * found everybody already written to says so instead of "Nobody to send to".
+ */
+export function sendToast(body: {
+  sent?: number;
+  failed?: number;
+  already?: number;
+}): { message: string; tone: "ok" | "warn" | "info" } {
+  const sent = Number(body.sent ?? 0);
+  const failed = Number(body.failed ?? 0);
+  const already = alreadyPhrase(Number(body.already ?? 0));
+  const also = already ? `, ${already}` : "";
+  if (sent > 0 && failed === 0) return { message: `${pluralize(sent, "email")} sent${also}`, tone: "ok" };
+  if (sent > 0) {
+    return { message: `${pluralize(sent, "email")} sent, ${failed} could not be sent${also}`, tone: "warn" };
+  }
+  if (failed > 0) {
+    return { message: `No emails went out. ${pluralize(failed, "send")} failed.`, tone: "warn" };
+  }
+  if (already) return { message: `Nothing new to send. ${already}.`, tone: "info" };
+  return { message: "Nobody to send to", tone: "info" };
 }
 
 export function DuesMailer() {
@@ -66,13 +123,9 @@ export function DuesMailer() {
       }
       setOutcome({ ...body, dryRun });
       if (!dryRun) {
-        // Say what happened. A run where every send failed is not a success,
-        // and one with nobody to write to is not a failure.
-        const failed = Number(body.failed ?? 0);
-        if (body.sent > 0 && failed === 0) notify(`${pluralize(body.sent, "email")} sent`, "ok");
-        else if (body.sent > 0) notify(`${pluralize(body.sent, "email")} sent, ${failed} could not be sent`, "warn");
-        else if (failed > 0) notify(`No emails went out. ${pluralize(failed, "send")} failed.`, "warn");
-        else notify("Nobody to send to", "info");
+        // Say what happened, in the words `sendToast` picks.
+        const toast = sendToast(body);
+        notify(toast.message, toast.tone);
       }
     } catch {
       notify("Could not reach the mail service", "warn");
@@ -144,13 +197,7 @@ export function DuesMailer() {
 
       {outcome ? (
         <div className="border-t border-border px-5 py-3">
-          <p className="text-body font-medium text-fg">
-            {outcome.dryRun
-              ? `${pluralize(outcome.sent, "household")} would receive this`
-              : `${pluralize(outcome.sent, "email")} sent`}
-            {outcome.skipped > 0 ? `, ${outcome.skipped} skipped` : ""}
-            {outcome.failed > 0 ? `, ${outcome.failed} failed` : ""}
-          </p>
+          <p className="text-body font-medium text-fg">{outcomeLine(outcome)}</p>
           {outcome.errors.length ? (
             <ul className="mt-1.5 space-y-0.5">
               {outcome.errors.slice(0, 4).map((error) => (

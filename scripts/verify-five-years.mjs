@@ -150,7 +150,11 @@ async function deleteAssociation(id) {
     .eq("association_id", id).eq("role", "president");
   const { data: files } = await admin.storage.from("documents").list(id, { limit: 1000 });
   if (files?.length) await admin.storage.from("documents").remove(files.map((f) => `${id}/${f.name}`));
-  await admin.from("associations").delete().eq("id", id);
+  // A cleanup that fails leaves this association in the live project,
+  // where the dues cron goes on billing it. So it fails the run.
+  const { error } = await admin.from("associations").delete().eq("id", id);
+  if (error) check("cleanup removed the association", false, error.message);
+  return error;
 }
 
 async function qaUsers() {
@@ -163,15 +167,29 @@ async function qaUsers() {
 }
 
 if (REMOVE) {
-  const { data: kept } = await admin.from("associations").select("id, name").eq("settings->>qa", QA);
+  const { data: kept, error: keptError } = await admin.from("associations").select("id, name").eq("settings->>qa", QA);
+  // Not knowing what is there is not the same as nothing being there: going
+  // on would delete the users of associations this read did not find.
+  if (keptError) {
+    console.log(`could not list the associations to remove: ${keptError.message}`);
+    process.exit(1);
+  }
   for (const a of kept ?? []) {
-    await deleteAssociation(a.id);
+    // Saying "removed" over a delete that failed is how associations were
+    // left behind in the live project with the dues cron still billing them.
+    // Say so and stop, before its people are deleted and nobody is left
+    // who can open it (scripts/seed-ten-years.mjs does the same).
+    const error = await deleteAssociation(a.id);
+    if (error) {
+      console.error(`could not remove ${a.name} ${a.id}: ${error.message}`);
+      process.exit(1);
+    }
     console.log(`removed ${a.name}`);
   }
   const users = await qaUsers();
   for (const u of users) await admin.auth.admin.deleteUser(u.id).catch(() => {});
   console.log(`removed ${users.length} people`);
-  process.exit(0);
+  process.exit(failures ? 1 : 0);
 }
 
 /* -------------------------------------------------------------- the cast */
@@ -480,9 +498,14 @@ try {
 
   async function runBallot({ title, kind, body, options, opens, closes, voters, favour, meetingId, leaveOpen = false, seats = 1 }) {
     const id = randomUUID();
+    // A vote is refused once the closing date is more than a day gone
+    // (0076), and most of these ballots closed years ago. So each is held
+    // with a closing date still ahead while the homes vote, and given its
+    // real one afterwards.
+    const votingUntil = closes > TODAY ? closes : addDays(TODAY, 7);
     await must(`ballot ${title}`, secretary.client.from("ballots").insert({
       id, association_id: hoa, title, body, kind, audience: "owners", status: "open",
-      opens_on: opens, closes_on: closes, seats, quorum_required: 10,
+      opens_on: opens, closes_on: votingUntil, seats, quorum_required: 10,
       threshold_label: kind === "special-assessment" ? "Two thirds of votes cast" : "Most votes",
       meeting_id: meetingId ?? null, live_results_visible: false,
     }));
@@ -498,8 +521,10 @@ try {
     });
     if (!leaveOpen) {
       await must("certify", secretary.client.from("ballots").update({
-        status: "certified", certified_by: secretary.name, certified_on: addDays(closes, 2),
+        status: "certified", closes_on: closes, certified_by: secretary.name, certified_on: addDays(closes, 2),
       }).eq("id", id));
+    } else if (votingUntil !== closes) {
+      await must("the real closing date", secretary.client.from("ballots").update({ closes_on: closes }).eq("id", id));
     }
     ballotCount++;
     return { id, options: sorted };
@@ -524,6 +549,10 @@ try {
       body: `${title}. Submitted with photos and a sketch.`, status: "submitted", submitted_on: date,
       attachments: [], thread: [], created_at: `${date}T15:00:00Z`,
     }));
+    // The database stamps a request with the day it arrives (0077), so the
+    // day in the past it stands for is set behind the product's back, like
+    // the payments.
+    await must("dating the request", admin.from("requests").update({ submitted_on: date }).eq("id", id));
     const decision = kind === "architectural" ? (random() < 0.78 ? "approved" : "denied") : "closed";
     const decidedOn = addDays(date, 12 + Math.floor(random() * 20));
     await must("decision", president.client.from("requests").update({
@@ -574,10 +603,15 @@ try {
 
   async function post(unit, date, category, title, body, replies) {
     const id = randomUUID();
+    // An owner's post waits for a moderator; one that arrives published is
+    // refused (0068). So it is filed pending and the President approves it,
+    // which is what the forum does.
     await must("post", people[unit].client.from("posts").insert({
       id, association_id: hoa, author_id: people[unit].id, author_name: home(unit).name,
-      unit_label: unit, category, title, body, status: "published", created_at: `${date}T18:00:00Z`,
+      unit_label: unit, category, title, body, status: "pending", created_at: `${date}T18:00:00Z`,
     }));
+    await must("approving the post", president.client.from("posts")
+      .update({ status: "published", moderated_by: president.name }).eq("id", id));
     for (let i = 0; i < replies; i++) {
       const who = pick(accountUnits());
       await people[who].client.from("post_replies").insert({
@@ -927,9 +961,12 @@ try {
   check("suite ran to completion", false, error.stack?.split("\n").slice(0, 3).join(" | ") ?? error.message);
 } finally {
   if (!KEEP) {
-    if (created.association) await deleteAssociation(created.association);
-    else if (GIVEN) await deleteAssociation(GIVEN);
-    for (const id of created.users) await admin.auth.admin.deleteUser(id).catch(() => {});
+    const left = created.association
+      ? await deleteAssociation(created.association)
+      : GIVEN ? await deleteAssociation(GIVEN) : null;
+    // An association that could not be removed keeps its people, so somebody
+    // can still open it. --remove finds both again by their qa mark.
+    if (!left) for (const id of created.users) await admin.auth.admin.deleteUser(id).catch(() => {});
   }
 }
 

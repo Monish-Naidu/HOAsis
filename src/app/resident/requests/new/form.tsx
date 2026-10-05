@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { formatSize } from "@/lib/documents";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Download, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
 import { Button, Callout, Card, SectionTitle, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
@@ -11,6 +11,7 @@ import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { HomeRequest, RequestKind } from "@/lib/types";
 import { cn, formatDate, money, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
+import { confirmedReference } from "@/lib/request-reference";
 
 const kinds = [
   {
@@ -46,9 +47,16 @@ const kinds = [
 ] as const;
 
 export function NewRequestForm() {
-  const { amenities, forms, addRequest, community, requests: allRequests } = useAppState();
+  const { amenities, forms, addRequest, community, isRemote, requests: allRequests } = useAppState();
   const owner = useCurrentOwner();
-  const [reference, setReference] = useState("");
+  // The number to show once it is sent, or null when only the database
+  // knows it (see `confirmedReference`).
+  const [reference, setReference] = useState<string | null>(null);
+  // True while the write is being waited on, so a second press cannot send
+  // the request twice.
+  const [sending, setSending] = useState(false);
+  // The write came back refused. Said on the form, which is still filled in.
+  const [failed, setFailed] = useState(false);
   const [kind, setKind] = useState<(typeof kinds)[number]["id"] | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -98,7 +106,9 @@ export function NewRequestForm() {
             <CheckCircle2 className="size-6" />
           </span>
           <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">Request submitted</h1>
-          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">Reference {reference}</p>
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
+            {reference ? `Reference ${reference}` : "Its number is in your requests."}
+          </p>
           <Link
             href="/resident/requests"
             className="mt-5 flex h-10 items-center justify-center rounded-lg bg-brand text-body font-medium text-brand-fg"
@@ -115,8 +125,8 @@ export function NewRequestForm() {
     );
   }
 
-  function submit() {
-    if (!owner || !kind) return;
+  async function submit() {
+    if (!owner || !kind || sending) return;
     const seq = 200 + allRequests.length;
     const ref = `REQ-${todayIsoDate().slice(0, 4)}-${seq}`;
     const detail =
@@ -172,8 +182,23 @@ export function NewRequestForm() {
         },
       ],
     };
-    addRequest(request);
-    setReference(ref);
+    // When the state layer hands back a promise of the stored number (null
+    // for a write that failed), this waits for it, shows that number, and
+    // stays on the form on a failure. The toast may already have said why,
+    // but a toast goes away, so the form says it too.
+    const answer: unknown = addRequest(request);
+    let stored: unknown;
+    if (answer instanceof Promise) {
+      setSending(true);
+      setFailed(false);
+      stored = await answer;
+      setSending(false);
+      if (stored === null || stored === false) {
+        setFailed(true);
+        return;
+      }
+    }
+    setReference(confirmedReference({ isRemote, guessed: ref, stored }));
     setDone(true);
   }
 
@@ -305,13 +330,6 @@ export function NewRequestForm() {
                       {selectedForm.source === "uploaded" ? " · uploaded by the board" : ""}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-md border border-border-2 px-2 py-1 text-footnote font-medium text-fg hover:bg-surface"
-                  >
-                    <Download className="mr-1 inline size-3" />
-                    Open
-                  </button>
                 </div>
               </div>
             ) : null}
@@ -392,13 +410,18 @@ export function NewRequestForm() {
         variant="primary"
         size="lg"
         className="w-full"
-        disabled={!ready}
-        onClick={submit}
+        disabled={!ready || sending}
+        onClick={() => void submit()}
       >
         {kind === "amenity" ? "Ask to book it" : "Send request"}
       </Button>
       {missing ? (
         <p className="-mt-3 text-center text-footnote text-fg-subtle">{missing} to send it.</p>
+      ) : null}
+      {failed ? (
+        <p role="alert" className="-mt-3 text-center text-footnote text-danger">
+          That did not send. Nothing was submitted. Try again.
+        </p>
       ) : null}
     </form>
   );

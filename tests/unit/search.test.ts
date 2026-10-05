@@ -41,6 +41,25 @@ describe("the search index", () => {
     expect(hit!.href).toBe(`/board/meetings#mtg-${ended.id}`);
   });
 
+  it("reads a meeting and a ballot by their dates, as the screens do", () => {
+    // Nothing writes "ended" for a real association's meeting, and a ballot
+    // stays "open" until somebody presses Close now. Search said scheduled
+    // and open for both while their own pages said ended and closed.
+    const past = {
+      ...mehrMeadows,
+      meetings: [{ ...mehrMeadows.meetings[0], id: "gone", status: "scheduled" as const, date: "2020-01-01" }],
+      ballots: [
+        { ...mehrMeadows.ballots[0], id: "shut", audience: "owners" as const, status: "open" as const, closesDate: "2020-01-01" },
+      ],
+    };
+    for (const hits of [boardIndex(past), residentIndex(past, past.owners[0])]) {
+      expect(hits.find((h) => h.id === "mtg-gone")!.subtitle).toMatch(/· ended$/);
+      const ballot = hits.find((h) => h.id === "bal-shut")!.subtitle;
+      expect(ballot).toContain("closed · closes 2020-01-01");
+      expect(ballot).not.toContain("open");
+    }
+  });
+
   it("sends a transaction to its own year, not this month", () => {
     const oldest = [...mehrMeadows.ledger].sort((a, b) => a.date.localeCompare(b.date))[0];
     const year = oldest.date.slice(0, 4);

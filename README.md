@@ -1,8 +1,8 @@
 # Your HOAsis
 
-Community management for self-managed HOAs. This repo is a **clickable prototype**: real
-screens, real navigation, real derived numbers, backed by fixture data rather than a
-database.
+Community management for self-managed HOAs, live at yourhoasis.com. Signed-in people run on
+Supabase (Postgres with row level security), Stripe and Resend. Signed out, the same screens
+run a demo on fixture data, which is what the sample on the sign-in page opens.
 
 Two experiences share one system of record:
 
@@ -10,8 +10,9 @@ Two experiences share one system of record:
   responsive website with a sidebar (how most owners will sign in) and an app preview inside a
   device frame, switched from the top bar. Below `lg` the two are identical. Rendered inside a device frame on desktop
   because it's designed at phone width and is meant to become the native app.
-- **`/admin`** is the board workspace: reconciliation, reserve yield,
-  delinquencies, vendor ACH, voting and meetings, and a live compliance register.
+- **`/board`** is the board workspace: finances, collections, reserves, homeowners, vendors,
+  requests, voting and meetings. (`/admin` is the operator's page: errors and cron runs
+  across every association.)
 - **`/`**, `/pricing`, `/about`, and `/library` are the public marketing site. No account
   needed, and the library is deliberately free with no email gate.
 - **`/start`** is onboarding. Four steps produce a real association: name and location, what
@@ -24,8 +25,9 @@ Two experiences share one system of record:
   invitation link (`?invite=CODE&email=`) the board already put the household on the register,
   and signing up with that email claims the seat when the address is confirmed. The demo's
   `?c=&o=&k=` link signs a fixture household straight in.
-- **`/signin`** is sign in and create account. There is no real authentication: picking a seat
-  selects one of the seeded accounts so you can see the product from that person's chair.
+- **`/signin`** is sign in and create account, through Supabase Auth. The sample on the same
+  page picks one of the seeded demo accounts so you can see the product from that person's
+  chair without an account.
 
 ## Running it
 
@@ -35,21 +37,26 @@ pnpm dev        # http://localhost:3000
 pnpm test       # vitest, unit and integration
 pnpm build      # production build
 pnpm check      # lint, typecheck, test, build. Run this before pushing.
+pnpm e2e        # Playwright, against a server already running (E2E_BASE to point elsewhere)
+pnpm db:verify  # every database check, against the Supabase project in .env.local
 ```
 
-## There is no backend
+`pnpm check` also runs on every push (`.github/workflows/ci.yml`). `.env.example` lists the
+keys; with none set the app builds and serves the demo only.
 
-Worth saying plainly, because it shapes everything else. Domain data is TypeScript
-fixtures. Anything the app lets you change is written to `localStorage` through the store
-layer below. That means:
+## Two modes, one set of screens
 
-- Admin changes reach the resident side **in the same browser, immediately**.
-- They do **not** reach another person, another device, or another browser profile.
-- Capability checks hide and lock the UI. They do not enforce anything, because there is
-  no server to enforce against.
+- **Signed in.** Data lives in Postgres. Every table is scoped to an association by row level
+  security, and money moves through database functions the browser cannot call on its own
+  say-so (`docs/tenancy.md`, `supabase/migrations`). Payments are Stripe direct charges into
+  the association's own account; email goes through Resend. `src/lib/data/remote.ts` loads an
+  association and `src/lib/app-state.tsx` writes to it.
+- **Signed out (the demo).** Domain data is TypeScript fixtures, and anything the demo lets
+  you change is written to `localStorage` through the store layer below. It reaches the
+  resident side in the same browser and nobody else.
 
-Making this multi-user is a backend, an auth provider, and moving capability checks to the
-server. The repository layer in `src/lib/data/index.ts` is the seam where that lands.
+Capability checks in the UI hide and lock screens. For a signed-in person the database
+enforces the same rules again; the UI is not the guard.
 
 ## What the product is arguing
 
@@ -83,12 +90,12 @@ The President holds `permissions`, the one capability that cannot be granted awa
 own row in the capability matrix is locked. An association that can strip its President of
 access has no way back in.
 
-Capability gating in this prototype is client side: it hides and locks navigation and screens.
-Real enforcement needs a server session.
+A seat has two lists: what it may change and what it may only see. The UI asks both, and for
+a signed-in person Postgres asks again on every read and write.
 
 ## Admin owned settings
 
-`/admin/settings` writes to the shared app state, so a change there shows up on the resident
+`/board/settings` writes to the shared app state, so a change there shows up on the resident
 side immediately. It owns the community name and photo, whether the resident home shows a
 calendar or a single hand written banner, whether residents can see association funds, whether
 ballot tallies are visible before a ballot closes, the last day of the month autopay can be
@@ -148,8 +155,8 @@ src/
 ```
 
 **The repository layer is the seam.** Screens never touch a fixture file directly; they call
-selectors in `src/lib/data/index.ts`. Swapping in Supabase means reimplementing those
-functions, not rewriting screens.
+selectors in `src/lib/data/index.ts`, and the same screens read a real association loaded by
+`src/lib/data/remote.ts`.
 
 **Derived numbers are computed, never stored.** Collection rate, percent funded, budget pace,
 payout speed, and compliance score all derive from the underlying records, so the figure on
@@ -201,12 +208,7 @@ verified, and the screen says so. Do not deepen them without a legal pass.
 
 ## Not built yet
 
-Auth, a server, real payments, and the native app.
-
-Writes are not inert: they persist to `localStorage` through the store layer, survive a reload,
-and cross between the board and resident sides. What they do not do is cross a browser, a
-device, or a person. Invitations generate a real link but nothing sends it, because email needs
-a server and a provider.
+The native app, a bank feed, and a working video call.
 
 The meeting room is a design surface, not a working call: no WebRTC or call provider is wired
 up, so participant tiles show initials and the camera slot says so out loud. Dropping in Daily,

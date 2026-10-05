@@ -23,6 +23,7 @@ import {
   useUnreadThreadCount,
 } from "@/lib/app-state";
 import { noticeKey, readStore, useReadNotices } from "@/lib/notifications-read";
+import { ballotPhase } from "@/lib/phases";
 import { cn, daysFromToday, money, pastDueLabel, pluralize, relativeDays } from "@/lib/utils";
 
 /**
@@ -136,7 +137,7 @@ function useResidentNotices(): Notice[] {
     });
   }
   const toVote = community.ballots.filter(
-    (b) => b.audience === "owners" && b.status === "open" && !b.myVoteOptionId,
+    (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
   );
   if (toVote.length > 0) {
     notices.push({

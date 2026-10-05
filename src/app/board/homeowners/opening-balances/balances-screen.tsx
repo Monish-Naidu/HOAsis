@@ -17,6 +17,47 @@ function toCents(input: string): number | null {
   return Number.isFinite(value) ? Math.round(value * 100) : null;
 }
 
+/** The label the opening line carries on a statement. */
+const OPENING_LABEL = "Balance brought forward";
+
+/**
+ * What goes in each box to begin with: the home's opening line where one is
+ * on its statement, and nothing where there is none.
+ *
+ * Never the home's balance today. That is the opening figure plus everything
+ * billed and paid since, and a screen that showed it and then saved every
+ * row wrote today's balance back as the opening line, so every home that had
+ * been billed once owed its dues twice.
+ */
+export function openingFigures(
+  community: Pick<ReturnType<typeof useAppState>["community"], "owners" | "ownerCharges">,
+) {
+  return Object.fromEntries(
+    community.owners.map((owner) => {
+      const line = (community.ownerCharges[owner.id] ?? []).find((l) => l.label === OPENING_LABEL);
+      return [owner.id, line ? (line.amountCents / 100).toFixed(2) : ""];
+    }),
+  );
+}
+
+/**
+ * The date each home's opening line carries, for the homes that have one.
+ *
+ * The date is half of the line. A board that set its balances and then saw
+ * they were dated the day it typed them, not the day it switched, has to be
+ * able to move the date without typing every amount again.
+ */
+export function openingDates(
+  community: Pick<ReturnType<typeof useAppState>["community"], "owners" | "ownerCharges">,
+): Record<string, string> {
+  const dates: Record<string, string> = {};
+  for (const owner of community.owners) {
+    const line = (community.ownerCharges[owner.id] ?? []).find((l) => l.label === OPENING_LABEL);
+    if (line) dates[owner.id] = line.date;
+  }
+  return dates;
+}
+
 /**
  * What each home owed on the day the association switched to us.
  *
@@ -41,32 +82,76 @@ export function BalancesScreen() {
     [community.owners],
   );
 
-  const [asOf, setAsOf] = useState(community.asOf);
-  const [entered, setEntered] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      community.owners.map((o) => [o.id, o.balanceCents ? (o.balanceCents / 100).toFixed(2) : ""]),
-    ),
+  // What is on file for each home, and what is in each box. A home is saved
+  // only when the two differ, so a correction to one home cannot rewrite the
+  // other eighty seven.
+  const [onFile, setOnFile] = useState<Record<string, string>>(() => openingFigures(community));
+  const [entered, setEntered] = useState<Record<string, string>>(onFile);
+  // The date each line on file carries. The date box starts on the one the
+  // statements already show (the latest, if they differ), and on today for
+  // an association that has set none.
+  const [dateOnFile, setDateOnFile] = useState<Record<string, string>>(() => openingDates(community));
+  const [asOf, setAsOf] = useState(
+    () => Object.values(dateOnFile).sort().at(-1) ?? community.asOf,
   );
+  // Whether the date box has been moved since the last save. Only then is a
+  // different date on a line read as a correction to it: a home whose line
+  // carries another day is not rewritten just because the screen was opened.
+  const [dateMoved, setDateMoved] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const parsed = owners.map((owner) => ({
-    owner,
-    raw: entered[owner.id] ?? "",
-    cents: toCents(entered[owner.id] ?? ""),
-  }));
+  const parsed = owners.map((owner) => {
+    const raw = entered[owner.id] ?? "";
+    const redated =
+      dateMoved && dateOnFile[owner.id] !== undefined && dateOnFile[owner.id] !== asOf;
+    return {
+      owner,
+      raw,
+      cents: toCents(raw),
+      // A new figure, or the same figure under a corrected date. The second
+      // applies only to a home that has a line to re-date.
+      changed: raw.trim() !== (onFile[owner.id] ?? "") || redated,
+    };
+  });
   const bad = parsed.filter((row) => row.cents === null);
   const owing = parsed.filter((row) => (row.cents ?? 0) > 0);
   const totalCents = parsed.reduce((sum, row) => sum + (row.cents ?? 0), 0);
+  const changed = parsed.filter((row) => row.changed);
 
-  function save() {
-    if (bad.length > 0) return;
-    setOpeningBalances(
+  async function save() {
+    // The line is cleared before it is written again, so a date the database
+    // will refuse must not get as far as the clearing.
+    if (bad.length > 0 || changed.length === 0 || saving || !asOf) return;
+    const sending = changed;
+    // Held until the write is back. For a real association it is two
+    // statements per home, and a second press part way through could leave
+    // a home with two opening lines.
+    setSaving(true);
+    const ok = await setOpeningBalances(
       asOf,
-      parsed.map((row) => ({ ownerId: row.owner.id, amountCents: row.cents ?? 0 })),
+      sending.map((row) => ({ ownerId: row.owner.id, amountCents: row.cents ?? 0 })),
     );
+    setSaving(false);
+    // A refusal has already been said by the write itself.
+    if (!ok) return;
+    setOnFile((all) => ({
+      ...all,
+      ...Object.fromEntries(sending.map((row) => [row.owner.id, row.raw.trim()])),
+    }));
+    setDateOnFile((all) => {
+      const next = { ...all };
+      for (const row of sending) {
+        // A home set to nothing has no line left to carry a date.
+        if (row.cents) next[row.owner.id] = asOf;
+        else delete next[row.owner.id];
+      }
+      return next;
+    });
+    setDateMoved(false);
     setSaved(true);
     notify(
-      `Opening balances set for ${pluralize(owners.length, "home")}. Statements show them as of ${asOf}.`,
+      `Opening balances set for ${pluralize(sending.length, "home")}. Statements show them as of ${asOf}.`,
     );
   }
 
@@ -120,7 +205,11 @@ export function BalancesScreen() {
             <input
               type="date"
               value={asOf}
-              onChange={(e) => setAsOf(e.target.value)}
+              onChange={(e) => {
+                setAsOf(e.target.value);
+                setDateMoved(true);
+                setSaved(false);
+              }}
               aria-label="Balances as of"
               className={cn(fieldClass, "w-auto")}
             />
@@ -134,7 +223,7 @@ export function BalancesScreen() {
           subtitle={
             owing.length > 0
               ? `${pluralize(owing.length, "home")} carrying a balance, ${money(totalCents)} in total`
-              : "Leave a home blank or at zero if it owed nothing."
+              : "What each home owed on that day, not what it owes now. Only the homes you change are saved."
           }
         />
         <div className="divide-y divide-border">
@@ -145,6 +234,15 @@ export function BalancesScreen() {
               </span>
               <span className="min-w-0 flex-1 truncate text-body text-fg">
                 {owner.displayName}
+                {/* For reference only. It includes everything billed and paid
+                    here since the switch, so it is not the figure to type. */}
+                {owner.balanceCents !== 0 ? (
+                  <span className="ml-2 text-footnote text-fg-muted">
+                    {owner.balanceCents > 0
+                      ? `Owes ${money(owner.balanceCents)} today`
+                      : `${money(-owner.balanceCents)} in credit today`}
+                  </span>
+                ) : null}
               </span>
               <label className="relative w-36 shrink-0">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
@@ -170,9 +268,18 @@ export function BalancesScreen() {
       </Card>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button onClick={save} disabled={bad.length > 0}>
+        <Button
+          onClick={() => void save()}
+          disabled={bad.length > 0 || changed.length === 0 || saving || !asOf}
+        >
           <Check className="size-4" />
-          {saved ? "Saved" : `Set ${pluralize(owners.length, "balance")}`}
+          {saving
+            ? "Saving"
+            : changed.length > 0
+              ? `Set ${pluralize(changed.length, "balance")}`
+              : saved
+                ? "Saved"
+                : "Set balances"}
         </Button>
         {bad.length > 0 ? (
           <p className="text-footnote text-danger">

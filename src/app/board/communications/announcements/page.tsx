@@ -67,7 +67,7 @@ function AnnouncementsManager({
   composing: boolean;
   setComposing: (open: boolean) => void;
 }) {
-  const { community, addAnnouncement, removeAnnouncement } = useAppState();
+  const { community, addAnnouncement, removeAnnouncement, isRemote } = useAppState();
   const { notify } = useToast();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -90,7 +90,13 @@ function AnnouncementsManager({
     setBody("");
     setPinned(false);
     setComposing(false);
-    notify("Posted. Every resident's home screen carries it now.");
+    // A real association's announcement also goes out by email, and the
+    // screen never said so: one press mailed every owner unannounced.
+    notify(
+      isRemote
+        ? "Posted, and emailed to every owner with an address."
+        : "Posted. Every resident's home screen carries it now.",
+    );
   }
 
   return (
@@ -136,6 +142,11 @@ function AnnouncementsManager({
               </Button>
             </div>
           </div>
+          {isRemote ? (
+            <p className="text-footnote text-fg-muted">
+              Posting also emails it to every owner with an address.
+            </p>
+          ) : null}
         </form>
       ) : null}
 
