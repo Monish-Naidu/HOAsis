@@ -29,7 +29,6 @@ import {
   Vote,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { PriceDial } from "./price-dial";
 import { Avatar, Card, IconTile, type TintName } from "@/components/ui/primitives";
 import {
   articleBySlug,
@@ -1222,36 +1221,44 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* The price, for the visitor's own size. The strip under the hero
-          promises a free trial, and the next question is what comes after
-          it. */}
+      {/* The price, in one line. The strip under the hero promises a free
+          trial, and the next question is what comes after it. The slider
+          that did the sum lives on the pricing page; Monish took it off the
+          front page on 2026-10-06. */}
       <section className="border-b border-border bg-surface-2">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
-          <div>
-            <h2 className="text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-fg sm:text-[44px]">
-              One price. Every feature.
-            </h2>
-            <p className="mt-4 max-w-md text-[18px] leading-relaxed text-fg-muted">
-              {money(PRICE_PER_HOME_CENTS, { cents: false })} per home a month after your {TRIAL_DAYS}{" "}
-              free days. No setup fee, no add-ons, and no fee from us on payments. Cancel whenever.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link
-                href="/start"
-                className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[16px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
-              >
-                Get started
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-              <Link
-                href="/pricing"
-                className="press inline-flex h-12 items-center rounded-xl border border-border-2 bg-surface px-6 text-[16px] font-semibold text-fg hover:border-fg-subtle"
-              >
-                See pricing
-              </Link>
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-8 px-5 py-14 sm:py-16">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="rounded-2xl border border-border bg-surface px-5 py-4 text-center shadow-card">
+              <p className="tnum text-[40px] font-semibold leading-none tracking-[-0.04em] text-fg">
+                {money(PRICE_PER_HOME_CENTS, { cents: false })}
+              </p>
+              <p className="mt-1.5 text-[14px] font-medium text-fg-muted">per home, a month</p>
+            </div>
+            <div>
+              <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-fg sm:text-[34px]">
+                One price. Every feature.
+              </h2>
+              <p className="mt-2 max-w-xl text-[17px] leading-relaxed text-fg-muted">
+                After your {TRIAL_DAYS} free days. No setup fee, no add-ons, no fee from us on
+                payments. Cancel whenever.
+              </p>
             </div>
           </div>
-          <PriceDial />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/start"
+              className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[16px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
+            >
+              Get started
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="/pricing"
+              className="press inline-flex h-12 items-center rounded-xl border border-border-2 bg-surface px-6 text-[16px] font-semibold text-fg hover:border-fg-subtle"
+            >
+              See pricing
+            </Link>
+          </div>
         </div>
         {/* The rails, named. Set as quiet wordmarks rather than borrowed logo
             art, and only rails the product actually runs: the huddle said
