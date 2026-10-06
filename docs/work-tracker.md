@@ -412,13 +412,37 @@ checks. The debt is concentration and duplication, not sloppiness.
 
 | Item | Evidence | Status |
 | --- | --- | --- |
-| Dead code and duplicates | 3 orphan components (423 lines), 35 exports nobody imports, 11 dead selectors in `data/index.ts`, `daysBetween` written 5 times, 7 inline email regexes, 3 `money()` formatters, 2 `ordinal()`; `@anthropic-ai/claude-agent-sdk` and `playwright` unused in package.json | doing 2026-10-06 (round one) |
-| Documentation drift | README's Architecture, Tests and "Not built yet" sections describe the prototype; `docs/tenancy.md` stops at migration 0051 of 0101; `data/index.ts` header is false; 36 files without a header; 105 lib exports without a doc line | doing 2026-10-06 (round one) |
-| Tooling | No coverage config, no `no-restricted-imports` guarding the `@/lib/data` seam, no `noUnusedLocals`; `@types/node` 20 on Node 22 | doing 2026-10-06 (round one, the cheap parts) |
+| Dead code and duplicates | 3 orphan components (423 lines), 35 exports nobody imports, 11 dead selectors in `data/index.ts`, `daysBetween` written 5 times, 7 inline email regexes, 3 `money()` formatters, 2 `ordinal()`; `@anthropic-ai/claude-agent-sdk` and `playwright` unused in package.json | done 2026-10-06 (pull request #15): 3 components, 32 exports, the copies of daysBetween, email checks, money and ordinal gone; two unused packages removed; 1,584 lines deleted, 581 added |
+| Documentation drift | README's Architecture, Tests and "Not built yet" sections describe the prototype; `docs/tenancy.md` stops at migration 0051 of 0101; `data/index.ts` header is false; 36 files without a header; 105 lib exports without a doc line | done 2026-10-06 (pull request #15): README rewritten where stale, tenancy.md to 0101, headers on the 22 files, doc lines on utils and metrics, NEXT.md archived |
+| Tooling | No coverage config, no `no-restricted-imports` guarding the `@/lib/data` seam, no `noUnusedLocals`; `@types/node` 20 on Node 22 | done 2026-10-06 (pull request #15): coverage reporting (lib lines 78.5%), the import seam enforced by lint, noUnusedLocals and noUnusedParameters on, Node types 22 |
 | `src/lib/app-state.tsx` is 6,060 lines, one provider of 4,794 | 106 actions across money, people, enforcement, notices, meetings, requests, documents, vendors | next: split by area into `src/lib/app-state/*.ts`, one context value kept, one area per commit with both app-state suites run after each |
 | Browser tests wait on timers | 113 `waitForTimeout` calls; no shared fake Supabase across 16 test files; 24 verify scripts copy the same scaffolding | next: `expect(locator)` waits, `tests/helpers/fake-supabase.ts`, `scripts/lib/harness.mjs` |
 | Big screens and routes | Settings 1,366 lines, Homeowners 1,617, the wizard 2,037, the landing 1,371; the Stripe webhook and autopay handlers 430 lines each inside route files | next: sections as components; handlers into `src/lib` with a unit test each |
 | The type for a home is called `Owner`, and `ownerId` is a home id | 138 and 370 uses; the copy says "home" | next: one mechanical rename commit, `Home` and `homeId` |
 | Fixtures ship to every client | `app-state.tsx` imports the demo communities, which pull the 5,730-line library text | next: load the demo lazily; move article bodies out of TypeScript |
 | Snake_case rows reach components | `autopay-failures-card.tsx`, `admin/page.tsx`, `ops.ts` | next: map rows in `ops.ts` and the loaders |
+
+## 18. The treasurer's walk, signed in
+
+The second walker of 2026-10-06, signed in as the test treasurer. Every
+board screen, one real action each. Most serious first.
+
+| Where | What happens | Status |
+| --- | --- | --- |
+| Finances, after a reversed payment | The reversal shows as "Other" spending and the original still counts as money in and dues collected | next: a reversal nets against income, not spending; collected follows the payment's state |
+| Dashboard and Finances totals | Billed and "typical month" jump as soon as any activity exists in the current month, while Past due never lists it | next: one rule for whether the current month counts |
+| Meetings, Send notice | The notice posts (residents see it, Activity logs it) but the row still says "Notice not sent yet" and the dashboard still counts it; no confirmation, no toast | next |
+| Replies and notices | Toasts say "sent" while every email fails on the unverified sender; the email log shows the raw provider error | next: say "posted in the app; email did not go out" when it did not, and plain words for the error |
+| Meeting links | The row's "Video call link" is the automatic room while the text shows the link the board typed, labelled "dial" | next: a link the board typed is the video link; the automatic room only when nothing was typed; "dial" only for a phone number |
+| Notice detail | "What needs fixing" shows on the list row and nowhere else, on the board or on the resident side signed in | next: show it on both details |
+| Settings, Activity | Credits, dues changes, email changes, vendors, meetings, notices and replies are missing; "for 1" instead of "Lot 1"; UTC times beside local ones; old area names | next: log the missing writes; home labels; local time; the access grid's names |
+| Vendors | "$0 paid this year" for vendors with payments in Transactions; a scheduled payment "lands 14 days ago"; approving does not move cash; duplicates allowed; a 120-character name accepted | next: the year from the ledger, not only payouts; future dates or "Paid"; a duplicate check; a name cap |
+| Homeowners, Change dues | Setting the amount back to the rate leaves the home "paying its own amount"; "Use the standard rate" was not found | next: an amount equal to the rate clears the override; make the standard-rate button visible |
+| Money fields | Dues accept $10,000,000; a payment accepts $999,999,999 against a $285 balance; 285.555 and 12e3 accepted | next: the same caps as the charge form, and a warning above the balance |
+| Requests | Maintenance requests say "awaiting a decision" but offer only work order, mark fixed and reply; replying leaves "Submitted"; the badge counts notices | next: decide what a maintenance request's states are and say them |
+| The signed-in treasurer | Not on the Homeowners list or the board list, only in the access grid (a second seat on Lot 7 with no owner row) | next: a seat on a home shows on the home |
+| Past due and starting balances | A credit shows as "-$285 / 1 household" under Current; three names for one screen; raw dates; clipped at 390px | next |
+| Dates in messages | "on 2026-10-06", "due 2026-11-01" | next: `formatDate` everywhere a person reads it |
+| Small | "Payments are live" beside "Test mode"; subscription "Cancelled" while payments are on; the Maple Court placeholder; resolved notices with no lot or date; Transactions opens on an empty "This month"; duplicate seeded rows; $1 vs $1.00; the Homeowners badge 23 against 24 homes; two homes with one address in the test data | next |
+| Hydration error on board money pages signed in | The same #418 as section 13, on every load of Finances, Past due, Transactions, Homeowners, Vendors | next: same cause, still unfound |
 

@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * The counts beside the resident navigation rows.
+ *
+ * A count appears only where the page it opens shows the same number in its own
+ * words, so a badge can always be cleared by doing what the page asks.
+ */
+
 import { useMemo } from "react";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
 import type { Community } from "@/lib/data/community";

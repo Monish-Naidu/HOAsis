@@ -142,6 +142,8 @@ export function StripePayPanel({
     return () => {
       cancelled = true;
     };
+    // Keyed on the phase name alone: the setup intent id rides along with it,
+    // and a new identity for the other values must not save the method twice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase.name]);
 

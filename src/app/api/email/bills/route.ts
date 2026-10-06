@@ -6,6 +6,7 @@ import { recordCronRun } from "@/lib/cron-runs";
 import { sendDuesEmails } from "@/lib/email/send";
 import { createPacer } from "@/lib/email/pace";
 import { BROUGHT_FORWARD_LABEL, dueABillEmail } from "@/lib/email/bill-run";
+import { DAY_MS } from "@/lib/utils";
 
 /**
  * The daily bill email.
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
   }
   const dryRun = request.nextUrl.searchParams.get("dry") === "1";
   const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + DAY_MS).toISOString().slice(0, 10);
   const admin = supabaseAdmin();
 
   const plan = cronPlan(request, { budgetMs: CRON_BUDGET_MS });

@@ -1,3 +1,10 @@
+/**
+ * Demo fixture: the adopted budget against actual, line by line.
+ *
+ * Annual and year-to-date figures in cents; every percentage on the budget and
+ * dashboard screens is derived from these lines by a selector, not stored here.
+ */
+
 import type { Cents, LedgerCategory } from "@/lib/types";
 
 export interface BudgetLine {

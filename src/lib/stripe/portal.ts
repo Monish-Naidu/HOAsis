@@ -25,8 +25,3 @@ export function portalConfigurationId(stripe: Stripe): Promise<string | undefine
     });
   return found;
 }
-
-/** For tests: forget what was found. */
-export function forgetPortalConfiguration() {
-  found = null;
-}

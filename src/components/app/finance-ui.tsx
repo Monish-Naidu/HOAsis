@@ -188,45 +188,6 @@ export function SelectField<T extends string>({
   );
 }
 
-/**
- * Which year: a segmented control while there are few enough to sit in a
- * row, a select once there are not. The current year is named as such.
- */
-export function YearControl({
-  years,
-  value,
-  onChange,
-  thisYear,
-  ariaLabel = "Year",
-}: {
-  years: number[];
-  value: number;
-  onChange: (year: number) => void;
-  thisYear: number;
-  ariaLabel?: string;
-}) {
-  const ordered = [...years].sort((a, b) => a - b);
-  const label = (y: number) => (y === thisYear ? "This year" : String(y));
-  if (ordered.length <= 4) {
-    return (
-      <Segmented
-        ariaLabel={ariaLabel}
-        value={String(value)}
-        onChange={(v) => onChange(Number(v))}
-        options={ordered.map((y) => ({ value: String(y), label: label(y) }))}
-      />
-    );
-  }
-  return (
-    <SelectField
-      label={ariaLabel}
-      value={String(value)}
-      onChange={(v) => onChange(Number(v))}
-      options={ordered.map((y) => ({ value: String(y), label: label(y) }))}
-    />
-  );
-}
-
 /* ----------------------------------------------------------------- period */
 
 const PRESETS: PeriodPreset[] = ["this-month", "last-month", "this-year", "last-year", "last-12-months", "custom"];

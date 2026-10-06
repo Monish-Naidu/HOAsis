@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Button, Field, fieldClass } from "@/components/ui/primitives";
 import { firstName, removeConfirmText, type OwnerSeat } from "@/lib/co-owners";
+import { isEmail } from "@/lib/input-checks";
 
-const looksLikeEmail = (value: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
+const looksLikeEmail = (value: string) => isEmail(value.trim());
 
 /**
  * Corrects the address a household's owner will claim their seat with.

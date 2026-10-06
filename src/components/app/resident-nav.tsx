@@ -1,3 +1,10 @@
+/**
+ * The resident navigation, defined once.
+ *
+ * The website rail, the section tabs, the phone tab bar and the More page all read
+ * `residentTabs`, so a place has one name and one order everywhere.
+ */
+
 import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,

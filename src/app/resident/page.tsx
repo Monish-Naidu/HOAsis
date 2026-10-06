@@ -304,8 +304,8 @@ function RecentActivity() {
     amountTone?: string;
   }
 
-  // TODO(ui-spec): requests currently surface only as these activity lines;
-  // Monish is deciding whether they need a clearer signal than this.
+  // Requests surface only as these activity lines. A clearer signal for them
+  // waits on Monish's decision about whether they need more than that.
   const rows: ActivityRow[] = [...charges]
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .slice(0, 4)

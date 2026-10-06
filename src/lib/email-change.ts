@@ -6,9 +6,12 @@
  * and it must fit in an email address (254 characters, the SMTP limit).
  * Supabase does the real verification by mailing a link, so this only
  * saves a round trip on an obvious typo.
+
  */
 
-export const MAX_EMAIL_LENGTH = 254;
+import { MAX_EMAIL_LENGTH, isEmail } from "@/lib/input-checks";
+
+export { MAX_EMAIL_LENGTH };
 
 export type EmailCheck = { ok: true; email: string } | { ok: false; message: string };
 
@@ -18,9 +21,7 @@ export function checkNewEmail(raw: string, current: string): EmailCheck {
   if (email.length > MAX_EMAIL_LENGTH) {
     return { ok: false, message: "That address is too long to be an email." };
   }
-  // Exactly one @, something on both sides, and a dot after it with
-  // something around the dot.
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  if (!isEmail(email)) {
     return { ok: false, message: "That email address does not look right." };
   }
   if (email.toLowerCase() === current.trim().toLowerCase()) {

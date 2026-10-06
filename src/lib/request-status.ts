@@ -1,3 +1,10 @@
+/**
+ * How a request's status and kind are named and toned on screen.
+ *
+ * Kept in one place because the board list, the resident list and the badges all
+ * show the same status, and a status that wears two names reads as two states.
+ */
+
 import type { RequestStatus } from "@/lib/types";
 
 export const statusTone: Record<RequestStatus, "ok" | "danger" | "info" | "warn" | "neutral"> = {

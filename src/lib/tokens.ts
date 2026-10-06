@@ -128,15 +128,6 @@ export const space = [0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64] as const;
 
 export const radius = { sm: 6, md: 10, card: 14, lg: 20, pill: 999 } as const;
 
-export const typeScale = {
-  display: { size: 32, weight: "600", tracking: -0.6 },
-  title: { size: 22, weight: "600", tracking: -0.3 },
-  heading: { size: 16, weight: "600", tracking: -0.1 },
-  body: { size: 14, weight: "400", tracking: 0 },
-  caption: { size: 12, weight: "500", tracking: 0.1 },
-  micro: { size: 11, weight: "600", tracking: 0.4 },
-} as const;
-
 /**
  * Motion. Milliseconds and cubic-bezier control points, mirrored from
  * globals.css. `press` is a button under a finger, `fast` a hover, `base`

@@ -105,7 +105,7 @@ export function phaseProblems(phases: LotPhase[], homeNoun = "Lot"): PhaseProble
       problems.push({
         phaseId: phase.id,
         kind: "too-many",
-        message: `${phase.label} would create ${count.toLocaleString()} homes. Check the numbers.`,
+        message: `${phase.label} would create ${count.toLocaleString("en-US")} homes. Check the numbers.`,
       });
       continue;
     }
@@ -177,31 +177,6 @@ export function phaseFor(phases: LotPhase[], prefix: string, label: string): Lot
     }
     return false;
   });
-}
-
-/**
- * Every lot the phases describe, each with its range's kind of home.
- *
- * Same order and the same de-duplication as `expandPhases`, so the two can
- * be used side by side.
- */
-export function typedLots(
-  phases: LotPhase[],
-  prefix = "",
-): { unit: string; homeType?: HomeType }[] {
-  const problems = new Set(phaseProblems(phases).map((p) => p.phaseId));
-  const seen = new Set<string>();
-  const lots: { unit: string; homeType?: HomeType }[] = [];
-  for (const phase of phases) {
-    if (problems.has(phase.id)) continue;
-    for (let n = phase.from; n <= phase.to; n += 1) {
-      const unit = lotLabel(prefix, n);
-      if (seen.has(unit)) continue;
-      seen.add(unit);
-      lots.push({ unit, homeType: phase.homeType });
-    }
-  }
-  return lots;
 }
 
 /** How many homes the phases add up to, for a count shown while typing. */

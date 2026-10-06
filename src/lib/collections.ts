@@ -1,3 +1,10 @@
+/**
+ * The late-payment ladder: which stage a household is at and what the policy says is next.
+ *
+ * The ladder is derived from days past due and the board's written policy, never
+ * stored per owner, so the same household gets the same step on every screen.
+ */
+
 import type { Community } from "@/lib/data/community";
 import type { CollectionPolicy, CommunitySettings, Owner } from "@/lib/types";
 import { addDays } from "@/lib/utils";
@@ -113,15 +120,6 @@ export const STAGE_LABEL: Record<CollectionStage, string> = {
   "late-notice": "Notice due",
   demand: "Demand due",
   counsel: "Refer to attorney",
-};
-
-/** What the board is meant to do next, in the words of the policy. */
-export const STAGE_ACTION: Record<CollectionStage, string> = {
-  current: "Nothing",
-  reminder: "Send a friendly reminder with the amount and how to pay",
-  "late-notice": "Send the formal notice, with the late fee stated",
-  demand: "Send a demand offering a payment plan, before anything is recorded",
-  counsel: "Hand the file to the attorney, with every notice attached",
 };
 
 export function stageFor(daysPastDue: number, policy: CollectionPolicy): CollectionStage {
@@ -253,26 +251,4 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
         ),
     ),
   };
-}
-
-/** Whether a household is far enough along that a plan should be offered. */
-export function shouldOfferPlan(row: LadderRow): boolean {
-  return row.stage === "demand" || row.stage === "counsel";
-}
-
-/** Days until this owner's next policy step, for a calendar. */
-export function nextStepDate(owner: Owner, policy: CollectionPolicy): number | undefined {
-  const stage = stageFor(owner.daysPastDue, policy);
-  const index = STAGE_ORDER.indexOf(stage);
-  const next = STAGE_ORDER[index + 1];
-  if (!next) return undefined;
-  const day =
-    next === "reminder"
-      ? policy.reminderDay
-      : next === "late-notice"
-        ? policy.lateNoticeDay
-        : next === "demand"
-          ? policy.demandDay
-          : policy.counselDay;
-  return day - owner.daysPastDue;
 }

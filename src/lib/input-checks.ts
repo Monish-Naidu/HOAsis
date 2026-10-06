@@ -1,4 +1,3 @@
-import { checkNewEmail } from "@/lib/email-change";
 import { money } from "@/lib/utils";
 
 /**
@@ -121,9 +120,22 @@ export function lateFeeAmountProblem(cents: number | undefined): string | null {
 
 export const EMAIL_MESSAGE = "Enter an email address, like name@example.com";
 
+/** The most an email address may hold (254 characters, the SMTP limit). */
+export const MAX_EMAIL_LENGTH = 254;
+
+/**
+ * Whether the text has the shape of an email address: exactly one @,
+ * something on both sides, and a dot after it with something around the dot.
+ * Does not trim; callers trim first when they mean to.
+ */
+export function isEmail(value: string): boolean {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
+}
+
 /** The founder's email, with the same shape check the account email change uses. */
 export function emailProblem(raw: string): string | null {
-  return checkNewEmail(raw, "").ok ? null : EMAIL_MESSAGE;
+  const email = raw.trim();
+  return email && email.length <= MAX_EMAIL_LENGTH && isEmail(email) ? null : EMAIL_MESSAGE;
 }
 
 export const MAX_ASSOCIATION_NAME = 80;

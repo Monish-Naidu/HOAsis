@@ -685,25 +685,6 @@ export interface ViolationReport {
 
 export type ComplianceStatus = "compliant" | "due-soon" | "overdue" | "in-progress";
 
-export interface ComplianceItem {
-  id: ID;
-  title: string;
-  citation: string;
-  jurisdiction: string;
-  summary: string;
-  /** What a board must be able to show if asked. */
-  evidence: string;
-  status: ComplianceStatus;
-  dueDate?: ISODate;
-  cadence: string;
-  owner: string;
-  /** Deep-link into the part of Your HOAsis that satisfies this obligation. */
-  actionLabel?: string;
-  actionHref?: string;
-  completedDate?: ISODate;
-  clockDays?: number;
-}
-
 /* -------------------------------------------------------------------------- */
 /* Documents                                                                   */
 /* -------------------------------------------------------------------------- */

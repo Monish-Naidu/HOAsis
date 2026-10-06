@@ -2,7 +2,7 @@ import type { Community } from "@/lib/data/community";
 import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
-import { daysFromToday, money } from "@/lib/utils";
+import { daysBetween, daysFromToday, money } from "@/lib/utils";
 import { totalDues } from "@/lib/home-types";
 import { isDuesLine } from "@/lib/statement";
 
@@ -28,6 +28,7 @@ export function homeCount(c: Pick<Community, "owners" | "association">): number 
   return c.owners.length || c.association.unitCount;
 }
 
+/** Operating and reserve balances, and their total, from the bank accounts. */
 export function cashPosition(c: Community) {
   const operating = c.bankAccounts
     .filter((a) => a.kind === "operating")
@@ -38,6 +39,7 @@ export function cashPosition(c: Community) {
   return { operating, reserve, total: operating + reserve };
 }
 
+/** Who is behind on dues and by how much, from the owners' balances and days past due. */
 export function delinquency(c: Community) {
   const past = c.owners.filter((o) => o.daysPastDue > 0);
   // A home with nobody on record is not a household that is paying on time.
@@ -103,6 +105,7 @@ export function pastDueHint(households: number, feesCents: number): string {
   return feesCents > 0 ? `${who}, ${money(feesCents, { cents: false })} of it late fees` : who;
 }
 
+/** Budget income and expense, annual and year to date, with how the year is pacing. */
 export function budgetSummary(c: Community) {
   const income = c.budget.filter((b) => b.kind === "income");
   const expense = c.budget.filter((b) => b.kind === "expense");
@@ -131,6 +134,7 @@ export function budgetSummary(c: Community) {
   };
 }
 
+/** How much of the reserve components' replacement cost is funded, and which are due soonest. */
 export function reserveSummary(c: Community) {
   const funded = c.reserveComponents.reduce((t, x) => t + x.fundedCents, 0);
   const required = c.reserveComponents.reduce((t, x) => t + x.replacementCostCents, 0);
@@ -342,6 +346,7 @@ export function spendingBetween(c: Community, from: string, to: string) {
 
 const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** The name of a month by its number, 1 to 12, short or long. */
 export function monthName(month: number, style: "short" | "long" = "short") {
   const long = [
     "January", "February", "March", "April", "May", "June",
@@ -394,6 +399,7 @@ export interface Delta {
   percent?: number;
 }
 
+/** The change from one figure to another, with a percent unless the earlier figure is zero. */
 export function delta(from: number, to: number): Delta {
   return { cents: to - from, percent: from ? (to - from) / Math.abs(from) : undefined };
 }
@@ -913,6 +919,7 @@ export function ledgerAttachment(c: Community, entry: Community["ledger"][number
   return { payout, invoice };
 }
 
+/** Interest earned and the blended yield across the reserve accounts. */
 export function interestSummary(c: Community) {
   const reserveAccounts = c.bankAccounts.filter((a) => a.kind !== "operating");
   const balance = reserveAccounts.reduce((t, a) => t + a.balanceCents, 0);
@@ -975,6 +982,7 @@ export function complianceSummary(c: Community) {
   };
 }
 
+/** Average days from issue to funds landing, for ACH and for check. */
 export function payoutSpeed(c: Community) {
   const byMethod = (m: "ach" | "check") => {
     const rows = c.payouts.filter((p) => p.method === m);
@@ -1017,6 +1025,7 @@ export function vendorDecisions(c: Community) {
   };
 }
 
+/** Vendors missing a W-9 or ACH setup, and those whose insurance certificate expires within 60 days. */
 export function vendorGaps(c: Community) {
   return {
     missingW9: c.vendors.filter((v) => !v.w9OnFile),
@@ -1083,52 +1092,6 @@ export function calendarEntries(c: Community) {
     }
   }
   return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
-}
-
-/**
- * Owner correspondence, measured from the threads themselves.
- *
- * Every figure here used to be a literal on the screen, which meant a brand new
- * association with five households and no messages was told it had delivered 88
- * of them. A number nobody can trace is worse than no number.
- */
-export function communicationsSummary(c: Community) {
-  const threads = c.threads;
-  const messages = threads.flatMap((t) => t.messages);
-  const outbound = messages.filter((m) => m.direction === "outbound");
-
-  // Board reply time: for each inbound message, how long until the next
-  // outbound one in the same thread.
-  const gaps: number[] = [];
-  for (const thread of threads) {
-    const ordered = [...thread.messages].sort((a, b) => (a.at < b.at ? -1 : 1));
-    for (let i = 0; i < ordered.length - 1; i++) {
-      if (ordered[i].direction !== "inbound") continue;
-      const reply = ordered.slice(i + 1).find((m) => m.direction === "outbound");
-      if (!reply) continue;
-      gaps.push(daysBetween(ordered[i].at, reply.at));
-      break;
-    }
-  }
-
-  return {
-    threadCount: threads.length,
-    unread: threads.filter((t) => t.unread).length,
-    sent: outbound.length,
-    /** Households we hold an email for, which is who a notice can actually reach. */
-    // Homes with nobody on record have nobody to reach, so they are neither.
-    reachable: c.owners.filter((o) => !o.placeholder && o.email.trim().length > 0).length,
-    households: c.owners.filter((o) => !o.placeholder).length,
-    /** Undefined when nothing has been answered yet, rather than zero. */
-    avgReplyDays: gaps.length
-      ? Math.round((gaps.reduce((t, g) => t + g, 0) / gaps.length) * 10) / 10
-      : undefined,
-  };
-}
-
-function daysBetween(from: string, to: string): number {
-  const ms = new Date(`${to}T12:00:00Z`).getTime() - new Date(`${from}T12:00:00Z`).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
 }
 
 /**
@@ -1214,25 +1177,11 @@ export function sharedCostSummary(c: Community) {
   };
 }
 
-/**
- * Every month of one shared cost, oldest first, for a chart.
- *
- * Returns the figures rather than pixels so the same numbers can be exported to
- * CSV, which is what a treasurer actually wants at budget time.
- */
-export function sharedCostTrend(c: Community, sharedCostId: string) {
-  const cost = c.sharedCosts.find((s) => s.id === sharedCostId);
-  const bills = c.sharedCostBills
-    .filter((b) => b.sharedCostId === sharedCostId)
-    .sort((a, b) => a.periodStart.localeCompare(b.periodStart));
-  const peak = bills.reduce((m, b) => Math.max(m, b.totalCents), 0);
-  return { cost, bills, peakCents: peak };
-}
-
 /* -------------------------------------------------------------------------- */
 /* Special assessments: the ones that end.                                     */
 /* -------------------------------------------------------------------------- */
 
+/** How far each special assessment has been collected, and what is left per home. */
 export function assessmentProgress(c: Community) {
   const rows = c.specialAssessments.map((a) => {
     const collected = Math.min(a.collectedCents, a.totalCents);
@@ -1384,7 +1333,7 @@ export function unsentDuesBill(c: Community): { label: string } | null {
   }
   // A bill posted after today cannot be waiting yet. The older helper clamps
   // at zero, so that case is its own check.
-  if (bill.postedOn > c.asOf || daysBetween(bill.postedOn, c.asOf) > UNSENT_BILL_DAYS) return null;
+  if (bill.postedOn > c.asOf || Math.max(0, daysBetween(bill.postedOn, c.asOf)) > UNSENT_BILL_DAYS) return null;
   const sent = c.emailLog.some(
     (e) => e.category === "assessment" && !e.error && e.sentAt.slice(0, 10) >= bill.postedOn,
   );

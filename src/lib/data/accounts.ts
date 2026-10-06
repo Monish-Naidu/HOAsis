@@ -91,12 +91,6 @@ export const DEFAULT_ROLE_VIEWS: Record<string, Capability[]> = {
   resident: [],
 };
 
-export const LEGACY_ROLE_CAPABILITIES: Record<string, Capability[]> = {
-  "vice-president": ["requests", "documents", "communications", "voting", "forum"],
-  treasurer: ["finances", "vendors", "documents"],
-  secretary: ["documents", "communications", "voting", "compliance", "forum"],
-};
-
 /**
  * Seeded accounts. Everyone here owns a unit, so everyone can use the resident
  * side; the admin role is a wrapper on top of that, not a separate identity.

@@ -1,3 +1,10 @@
+/**
+ * Demo fixtures for what owners ask for and what the board cites them for: requests, violations and violation reports.
+ *
+ * Hand-written so each stage of a request and of a violation has a record to show.
+ * Only the signed-out demo reads this.
+ */
+
 import type { HomeRequest, Violation, ViolationReport } from "@/lib/types";
 
 export const requests: HomeRequest[] = [

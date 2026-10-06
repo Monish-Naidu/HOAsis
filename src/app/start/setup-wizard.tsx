@@ -7,7 +7,7 @@ import { Button, Callout, Card, fieldClass, textareaClass } from "@/components/u
 import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/app/question-flow";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
-import { US_STATES } from "@/lib/data/library";
+import { US_STATES } from "@/lib/data";
 import {
   defaultHomeNaming,
   draftDuesTotal,
@@ -27,7 +27,7 @@ import {
   type PropertyType,
   draftNameProblem,
   draftOwnDuesProblem,
-} from "@/lib/data/new-community";
+} from "@/lib/data";
 import {
   expandPhases,
   firstPhase,
@@ -73,7 +73,7 @@ import {
   rangeEndProblem,
   sortPastedAddresses,
 } from "@/lib/input-checks";
-import { cn, money } from "@/lib/utils";
+import { cn, money, ordinal } from "@/lib/utils";
 import { wordingFor, type Wording } from "@/lib/wording";
 import {
   clearProgress,
@@ -2022,16 +2022,4 @@ function cadenceNoun(draft: CommunityDraft): string {
     : draft.duesCadence === "quarterly"
       ? "quarter"
       : "year";
-}
-
-export function ordinal(n: number): string {
-  const suffix =
-    n % 10 === 1 && n !== 11
-      ? "st"
-      : n % 10 === 2 && n !== 12
-        ? "nd"
-        : n % 10 === 3 && n !== 13
-          ? "rd"
-          : "th";
-  return `${n}${suffix}`;
 }

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isEmail } from "@/lib/input-checks";
 import { logger } from "@/lib/log";
 import { Resend } from "resend";
 import { emailSender } from "@/lib/email/sender";
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
   const password = typeof body.password === "string" ? body.password : "";
   const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!isEmail(email)) {
     return NextResponse.json({ message: "That email address does not look right." }, { status: 400 });
   }
   if (password.length < 8) {
@@ -103,7 +104,12 @@ export async function POST(request: NextRequest) {
 
   if (sendError) {
     // Undo, so the next attempt is not told the address is taken.
-    await admin.auth.admin.deleteUser(data.user.id).catch(() => undefined);
+    await admin.auth.admin.deleteUser(data.user.id).catch((err: unknown) => {
+      log.warn("could not remove the unconfirmed auth user", {
+        userId: data.user.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    });
     log.error("signup email failed", { to: email, err: sendError.message });
     // Resend refuses anything but the account owner's address until the
     // sending domain is verified. That is our setup, not their typo, and

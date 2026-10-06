@@ -56,6 +56,7 @@ function describe(reason: unknown): { message: string; stack: string | null } {
   try {
     return { message: JSON.stringify(reason).slice(0, 300), stack: null };
   } catch {
+    // Circular or otherwise unserialisable: fall back to its string form.
     return { message: String(reason), stack: null };
   }
 }

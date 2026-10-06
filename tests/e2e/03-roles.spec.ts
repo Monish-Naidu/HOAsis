@@ -54,7 +54,7 @@ test.describe("officers", () => {
       // Offering a control that then refuses is worse than not offering it.
       for (const tab of tabs) {
         await openTab(page, "/board", tab);
-        const health = await expectHealthy(page, `${officer.name} on ${tab}`);
+        await expectHealthy(page, `${officer.name} on ${tab}`);
         // The refusal itself, by its marker. This used to look for a
         // sentence the app never prints, so it could not fail.
         expect(

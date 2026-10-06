@@ -107,7 +107,8 @@ export function redactReporter(report: ViolationReport): Omit<
   ViolationReport,
   "reporterId" | "reporterName" | "reporterUnit"
 > {
-  // The discard is the whole function.
+  // The discard is the whole function: the three named fields are dropped on
+  // purpose, and a rest sibling is the way to omit them without a cast.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { reporterId, reporterName, reporterUnit, ...rest } = report;
   return rest;
@@ -197,11 +198,6 @@ export function evidenceIsClean(violation: Violation): boolean {
     violation.photos.length > 0 &&
     unencumberedPhotos(violation.photos).length === violation.photos.length
   );
-}
-
-/** Open matters, which is what a board is actually managing. */
-export function openViolations(violations: Violation[]): Violation[] {
-  return violations.filter((v) => v.stage !== "cured");
 }
 
 /* -------------------------------------------------------------------------- */

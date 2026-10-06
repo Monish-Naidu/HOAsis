@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * A React error boundary, so one broken panel does not blank the page.
+ *
+ * Class based because React offers no hook for it. The reporting hook is injectable
+ * so tests can watch what it receives.
+ */
+
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Button, Card } from "@/components/ui/primitives";

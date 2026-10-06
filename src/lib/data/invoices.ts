@@ -1,3 +1,10 @@
+/**
+ * Demo fixture: invoices vendors have sent the association.
+ *
+ * Written to agree with the payout fixture in `ledger.ts`, so the inbox, the pay
+ * flow and the paid trail show the same bill with the same amount.
+ */
+
 import type { VendorInvoice } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */

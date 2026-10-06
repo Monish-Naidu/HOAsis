@@ -63,11 +63,6 @@ export class NotFoundError extends HoasisError {
   readonly code = "not_found";
 }
 
-/** The signed in account lacks the capability this action requires. */
-export class PermissionError extends HoasisError {
-  readonly code = "permission_denied";
-}
-
 /** True for anything this codebase raised deliberately. */
 export function isHoasisError(value: unknown): value is HoasisError {
   return value instanceof HoasisError;

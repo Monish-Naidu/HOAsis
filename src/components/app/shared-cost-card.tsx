@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * The resident card for costs the association pays on owners' behalf, and for special assessments in progress.
+ *
+ * Figures come from `lib/metrics.ts`; the card renders nothing when an association
+ * has neither.
+ */
+
 import { Term } from "@/components/app/term";
 import { Droplets, Flame, HandCoins, Plug, Trash2, Waves, Wifi } from "lucide-react";
 import { Card, Meter, SectionTitle } from "@/components/ui/primitives";

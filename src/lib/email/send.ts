@@ -1,7 +1,6 @@
 import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { assessmentDueEmail, pastDueEmail } from "./templates";
-import { unsubscribeUrl } from "./tokens";
 import { emailSender } from "./sender";
 import { signInUrl } from "./sign-in-link";
 import { readReplyTo } from "./reply-to";
@@ -243,13 +242,4 @@ export async function sendDuesEmails(input: {
   }
 
   return result;
-}
-
-/** Kept for the optional categories, which do carry an unsubscribe link. */
-export function optionalFooterLink(
-  origin: string,
-  profileId: string,
-  category: string,
-): string {
-  return unsubscribeUrl(origin, profileId, category);
 }
