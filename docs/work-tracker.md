@@ -402,3 +402,23 @@ damaging first.
 | Owner, phone: "Save a card or bank account" opens under the pay form | Two payment forms on screen at once | next: hide the pay form while saving a method |
 | Owner, phone: small things | Autopay card says "on the 1st" while the tooltip says "on the day they are due"; theme buttons have no labels and "Evenings" is unexplained; Ohio placeholders in a Washington association; "Pay" on the phone tab and "Payments" in the sidebar; a request's text shown twice; Association funds opens on an empty "This month" | next |
 
+## 17. Clean code
+
+Monish, 2026-10-06: "I want this to be super clean, concise, and well
+documented code." A read-only walkthrough the same day measured the
+codebase: no `any`, two non-null assertions, one TODO, headers on 257 of
+293 files, 1,249 unit, 247 integration, 119 browser tests and 24 database
+checks. The debt is concentration and duplication, not sloppiness.
+
+| Item | Evidence | Status |
+| --- | --- | --- |
+| Dead code and duplicates | 3 orphan components (423 lines), 35 exports nobody imports, 11 dead selectors in `data/index.ts`, `daysBetween` written 5 times, 7 inline email regexes, 3 `money()` formatters, 2 `ordinal()`; `@anthropic-ai/claude-agent-sdk` and `playwright` unused in package.json | doing 2026-10-06 (round one) |
+| Documentation drift | README's Architecture, Tests and "Not built yet" sections describe the prototype; `docs/tenancy.md` stops at migration 0051 of 0101; `data/index.ts` header is false; 36 files without a header; 105 lib exports without a doc line | doing 2026-10-06 (round one) |
+| Tooling | No coverage config, no `no-restricted-imports` guarding the `@/lib/data` seam, no `noUnusedLocals`; `@types/node` 20 on Node 22 | doing 2026-10-06 (round one, the cheap parts) |
+| `src/lib/app-state.tsx` is 6,060 lines, one provider of 4,794 | 106 actions across money, people, enforcement, notices, meetings, requests, documents, vendors | next: split by area into `src/lib/app-state/*.ts`, one context value kept, one area per commit with both app-state suites run after each |
+| Browser tests wait on timers | 113 `waitForTimeout` calls; no shared fake Supabase across 16 test files; 24 verify scripts copy the same scaffolding | next: `expect(locator)` waits, `tests/helpers/fake-supabase.ts`, `scripts/lib/harness.mjs` |
+| Big screens and routes | Settings 1,366 lines, Homeowners 1,617, the wizard 2,037, the landing 1,371; the Stripe webhook and autopay handlers 430 lines each inside route files | next: sections as components; handlers into `src/lib` with a unit test each |
+| The type for a home is called `Owner`, and `ownerId` is a home id | 138 and 370 uses; the copy says "home" | next: one mechanical rename commit, `Home` and `homeId` |
+| Fixtures ship to every client | `app-state.tsx` imports the demo communities, which pull the 5,730-line library text | next: load the demo lazily; move article bodies out of TypeScript |
+| Snake_case rows reach components | `autopay-failures-card.tsx`, `admin/page.tsx`, `ops.ts` | next: map rows in `ops.ts` and the loaders |
+
