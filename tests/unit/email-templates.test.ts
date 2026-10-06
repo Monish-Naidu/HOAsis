@@ -200,6 +200,12 @@ describe("meetingNoticeEmail", () => {
     agenda: ["Budget", "Elect two directors"],
   };
 
+  it("offers one video link: a typed link is it, with no 'or dial'", () => {
+    const built = meetingNoticeEmail({ ...meeting, dialIn: undefined, videoUrl: "https://zoom.us/j/1" });
+    expect(built.text).toContain("Join by video: https://zoom.us/j/1.");
+    expect(built.text).not.toContain("dial");
+  });
+
   it("puts the date in the subject and the agenda in the body", () => {
     const built = meetingNoticeEmail(meeting);
     expect(built.subject).toBe("Notice of meeting: Annual meeting, October 14, 2026 at 7:00 PM · Maple Court HOA");

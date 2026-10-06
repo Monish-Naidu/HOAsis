@@ -7,7 +7,7 @@ import { EntryRow } from "@/components/app/calendar-view";
 import { kindLabel, kindTone, upcomingFrom } from "@/lib/calendar";
 import { calendarEntries } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
-import { videoJoinUrl } from "@/lib/meetings/video";
+import { meetingJoin } from "@/lib/meetings/video";
 import type { Meeting } from "@/lib/types";
 import { liveMeetingLine } from "@/lib/resident-wording";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
@@ -108,7 +108,7 @@ export function MeetingRsvps() {
 function MeetingJoinDetails({ meeting: m }: { meeting: Meeting }) {
   const { community } = useAppState();
   const { notify } = useToast();
-  const link = videoJoinUrl(m, community.association.id);
+  const { videoUrl: link, dialIn, passcode } = meetingJoin(m, community.association.id);
   return (
     <div className="mt-1 text-footnote leading-snug text-fg-subtle">
       <p className="flex flex-wrap items-center gap-x-2">
@@ -137,11 +137,13 @@ function MeetingJoinDetails({ meeting: m }: { meeting: Meeting }) {
           Copy
         </button>
       </p>
-      {m.dialIn ? (
+      {dialIn ? (
         <p>
-          Dial in: <span className="tnum">{m.dialIn}</span>
-          {m.passcode ? ` · passcode ${m.passcode}` : ""}
+          Dial in: <span className="tnum">{dialIn}</span>
+          {passcode ? ` · passcode ${passcode}` : ""}
         </p>
+      ) : passcode ? (
+        <p>Passcode {passcode}</p>
       ) : null}
       <p className="opacity-70">Opens when the host starts it.</p>
     </div>
@@ -164,7 +166,7 @@ export function LiveMeetingCard() {
         {/* A link to the call, and nothing drawn to look like one. The room
             of initials and camera tiles had no call behind it. */}
         <a
-          href={videoJoinUrl(live, community.association.id)}
+          href={meetingJoin(live, community.association.id).videoUrl}
           target="_blank"
           rel="noreferrer"
           className={buttonClass("secondary", "md")}

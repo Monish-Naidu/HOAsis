@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, CalendarPlus, ChevronDown, Megaphone, Video } from "lucide-react";
 import { Button, Card, CardHeader, EmptyState, PageHeader, buttonClass } from "@/components/ui/primitives";
-import { videoJoinUrl } from "@/lib/meetings/video";
+import { meetingJoin } from "@/lib/meetings/video";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
 import { useAppState } from "@/lib/app-state";
@@ -60,6 +60,9 @@ export default function BoardMeetings() {
   // Meetings whose notice is on its way. A real roster is emailed before the
   // notice goes on record, which can take most of a minute.
   const [sending, setSending] = useState<string[]>([]);
+  // The meeting whose notice is waiting on a yes. It cannot be taken back.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const join = (m: Meeting) => meetingJoin(m, community.association.id);
   // On the day, the call is one press away. Nothing sets a real
   // association's meeting to "live", so the date is what says it is today.
   // A meeting still marked live (the demo's) counts as today too.
@@ -83,10 +86,11 @@ export default function BoardMeetings() {
     // Held until the send is back. This used to say "posted" at once, over a
     // send that was still running and, for some, then failed.
     setSending((ids) => [...ids, m.id]);
-    const ok = await sendMeetingNotice(m.id);
+    setConfirming(null);
+    const said = await sendMeetingNotice(m.id);
     setSending((ids) => ids.filter((id) => id !== m.id));
-    // Anything that fell short has been said by the send itself.
-    if (ok) notify(`Notice of ${m.title} sent to every home`);
+    // The send says what happened: how many were emailed, or why none were.
+    if (said) notify(said, said.startsWith("Notice posted in the app") ? "warn" : "ok");
   }
 
   return (
@@ -114,7 +118,7 @@ export default function BoardMeetings() {
               <p className="text-footnote text-ok opacity-90">Today, {m.time}</p>
             </div>
             <a
-              href={videoJoinUrl(m, community.association.id)}
+              href={meetingJoin(m, community.association.id).videoUrl}
               target="_blank"
               rel="noreferrer"
               className={buttonClass("secondary", "md")}
@@ -158,15 +162,15 @@ export default function BoardMeetings() {
               </p>
               <p className="mt-0.5 text-footnote text-fg-subtle">
                 <a
-                  href={videoJoinUrl(m, community.association.id)}
+                  href={join(m).videoUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="font-medium text-primary underline underline-offset-2"
                 >
                   Video call link
                 </a>
-                {m.dialIn ? ` · dial in ${m.dialIn}` : ""}
-                {m.passcode ? ` · passcode ${m.passcode}` : ""}
+                {join(m).dialIn ? ` · dial in ${join(m).dialIn}` : ""}
+                {join(m).passcode ? ` · passcode ${join(m).passcode}` : ""}
               </p>
               <p className={cn("mt-0.5 text-footnote", m.noticeSentDate ? "text-fg-subtle" : "text-warn")}>
                 {m.noticeSentDate
@@ -178,13 +182,30 @@ export default function BoardMeetings() {
               </p>
               <Rsvps meeting={m} />
             </div>
-            {m.noticeSentDate ? null : (
+            {m.noticeSentDate ? null : confirming === m.id ? (
+              <div className="max-w-xs shrink-0 text-right">
+                <p className="text-footnote text-fg">
+                  Send the notice to every owner now?
+                  <span className="block text-fg-muted">
+                    {m.title}, {formatDate(m.date, "long")}
+                  </span>
+                </p>
+                <div className="mt-2 flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setConfirming(null)}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={() => void sendNotice(m)}>
+                    Send now
+                  </Button>
+                </div>
+              </div>
+            ) : (
               <Button
                 variant="secondary"
                 size="sm"
                 className="shrink-0"
                 disabled={sending.includes(m.id)}
-                onClick={() => void sendNotice(m)}
+                onClick={() => setConfirming(m.id)}
               >
                 <Megaphone className="size-3.5" />
                 {sending.includes(m.id) ? "Sending" : "Send notice"}

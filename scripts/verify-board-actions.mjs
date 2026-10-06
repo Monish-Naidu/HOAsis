@@ -354,6 +354,47 @@ try {
   const { error: neighborApproves } = await neighbor.client.rpc("approve_payout", { p_payout_id: bill.id });
   check("approve_payout: an owner without finances is refused", neighborApproves?.code === "42501", neighborApproves?.message ?? "no error");
 
+  // Every board write that changes money or records leaves an activity row
+  // (0103). Read as the service role: the rows name the person who acted.
+  const said = async (like) => {
+    const { data } = await admin.from("activity").select("summary, actor_name").eq("association_id", associationId).like("summary", like);
+    return data ?? [];
+  };
+  const { data: creditId, error: creditError } = await president.client.rpc("add_credit", { p_unit_id: neighborUnit, p_amount_cents: 2500, p_label: "Late fee waived" });
+  const { data: creditRow } = await admin.from("charges").select("kind, amount_cents, label").eq("id", creditId ?? "00000000-0000-0000-0000-000000000000").maybeSingle();
+  check("add_credit: a negative credit line is written", !creditError && creditRow?.kind === "credit" && creditRow?.amount_cents === -2500 && creditRow?.label === "Late fee waived", creditError?.message ?? JSON.stringify(creditRow));
+  check("add_credit: and logged under the person who added it", (await said("Credit of $25.00 added for %")).some((r) => r.actor_name === "Dana"));
+  const { error: residentCredit } = await neighbor.client.rpc("add_credit", { p_unit_id: neighborUnit, p_amount_cents: 100, p_label: "Nope" });
+  check("add_credit: a resident is refused", residentCredit?.code === "42501", residentCredit?.message ?? "no error");
+  const { error: anonCredit } = await anon().rpc("add_credit", { p_unit_id: neighborUnit, p_amount_cents: 100, p_label: "Nope" });
+  check("add_credit: anon cannot call it", Boolean(anonCredit), anonCredit?.code ?? "no error");
+
+  const { error: duesError } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit, p_dues_cents: 7500 });
+  check("set_home_dues: a change is logged", !duesError && (await said("Dues for % set to $75.00")).length === 1, duesError?.message ?? "");
+  await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit, p_dues_cents: 7500 });
+  check("set_home_dues: the same amount again logs nothing more", (await said("Dues for % set to $75.00")).length === 1);
+
+  await president.client.from("vendors").insert({ association_id: associationId, name: "Activity Paving", service: "Paving" });
+  check("a vendor added is logged", (await said("Vendor Activity Paving added")).length === 1);
+  const { data: meetingRow } = await president.client.from("meetings").insert({ association_id: associationId, title: "Activity meeting", held_on: day(10), held_at: "6:30 PM", location: "Clubhouse" }).select("id").single();
+  check("a meeting scheduled is logged", (await said(`Meeting "Activity meeting" scheduled for ${day(10)}`)).length === 1);
+  await president.client.from("meetings").update({ notice_sent_on: day(0) }).eq("id", meetingRow?.id);
+  check("a meeting's notice sent is logged once", (await said('Notice of meeting "Activity meeting" sent to owners')).length === 1);
+  await president.client.from("meetings").update({ notice_sent_on: day(0) }).eq("id", meetingRow?.id);
+  check("and not again when the date is written again", (await said('Notice of meeting "Activity meeting" sent to owners')).length === 1);
+  await president.client.from("violations").insert({ association_id: associationId, reference: "VIO-ACT-1", unit_id: neighborUnit, unit_label: "2", owner_name: "Marcus", rule: "Trash cans", fix: "Bring them in" });
+  check("a notice about a home is logged", (await said("Notice sent for 2: Trash cans")).length === 1);
+  const { data: replyThread } = await president.client.from("threads").insert({ association_id: associationId, subject: "Activity reply", tag: "General", unit_id: neighborUnit, messages: [] }).select("id").single();
+  const { error: replyActError } = await president.client.rpc("reply_as_board", { p_thread_id: replyThread?.id, p_body: "On it." });
+  // Earlier replies in this script are logged too now, so count this thread's.
+  const { data: replyRows } = await admin.from("activity").select("summary").eq("association_id", associationId).eq("subject_id", replyThread?.id);
+  check("a reply is logged without its words",
+    !replyActError && (replyRows ?? []).length === 1 && replyRows[0].summary === "Reply posted to 2" && (await said("%On it.%")).length === 0,
+    replyActError?.message ?? JSON.stringify(replyRows));
+  const { data: neighborSeat } = await admin.from("memberships").select("id").eq("association_id", associationId).eq("unit_id", neighborUnit).is("ends_on", null).limit(1).maybeSingle();
+  await admin.from("memberships").update({ invited_email: `moved-${stamp}@example.com` }).eq("id", neighborSeat?.id);
+  check("an email change on a seat is logged", (await said("Email for 2 changed from %")).length === 1);
+
   // Support can seat a new President when the old one cannot be reached
   // (0095); a board member cannot.
   const { error: boardReassign } = await treasurer.client.rpc("reassign_presidency", { p_association_id: associationId, p_to_profile: treasurer.id });

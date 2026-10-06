@@ -84,6 +84,20 @@ export function clockTime(value: string): string {
   return `${h % 12 || 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
 }
 
+/**
+ * "Sep 5, 2026 · 14:32" from an ISO timestamp, in the reader's own clock and
+ * date. The email log and the Activity list both read this way. A string
+ * with no zone ("2026-08-20T14:32:00", which the demo writes) is already
+ * local and shows as written.
+ */
+export function localStamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return `${formatDate(day, "medium")} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** A `YYYY-MM-DD` string as a Date at noon UTC, so no timezone shifts it to another day. */
 export function parseDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`);

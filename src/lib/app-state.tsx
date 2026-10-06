@@ -89,6 +89,7 @@ import type {
   DocumentRecord,
   Account,
   ActionItem,
+  Activity,
   Announcement,
   AutopayPlan,
   Capability,
@@ -123,7 +124,9 @@ import { placeLabel } from "@/lib/wording";
 import { pickSeat } from "@/lib/home-choice";
 import { addStatementLine } from "@/lib/statement";
 import { homeCount } from "@/lib/metrics";
-import { videoJoinUrl } from "@/lib/meetings/video";
+import { activityWords } from "@/lib/activity";
+import { meetingJoin } from "@/lib/meetings/video";
+import { noticeToast, replyEmailState, type ReplyEmail, type SendOutcome } from "@/lib/email/plain-error";
 import { statusLabel } from "@/lib/request-status";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
 
@@ -158,6 +161,14 @@ const tally = (value: unknown) => (typeof value === "number" && value > 0 ? valu
 /** `NOTHING_CHANGED` as its own sentence, for a screen that shows it bare. */
 const NOT_CHANGED = `${NOTHING_CHANGED[0].toUpperCase()}${NOTHING_CHANGED.slice(1)}`;
 
+/** The notice's line on how to join: one video link, a number only when the board typed one. */
+function joinLine(m: { id: string; dialIn?: string; passcode?: string }, associationId: string): string {
+  const join = meetingJoin(m, associationId);
+  const phone = join.dialIn ? `, or dial ${join.dialIn}` : "";
+  const code = join.passcode ? ` (passcode ${join.passcode})` : "";
+  return `Join by video: ${join.videoUrl}${phone}${code}.`;
+}
+
 /** Meeting notices being emailed right now, so a second press does not start a second run. */
 const noticesInFlight = new Set<string>();
 
@@ -167,9 +178,10 @@ const noticesInFlight = new Set<string>();
  * The record is already right by the time this runs, the server checks the
  * caller's capability and reads the words back from the row, and every
  * attempt lands in email_log whether it went or not. Nothing waits on it
- * except a caller that needs to know: it resolves true when the server ran
- * the send and reported back, whatever the counts, and false when the server
- * refused or could not be reached. What fell short is said here, in a toast.
+ * except a caller that needs to know: it resolves with what the server
+ * answered (`answered` is false only when it could not be reached). What
+ * fell short is said here, in a toast, unless the caller passes `quiet`
+ * because it tells the board itself.
  *
  * It used to be fired and forgotten. The server stops a long send before its
  * time limit, and nobody read the answer, so a statutory notice to a large
@@ -195,13 +207,20 @@ async function emailNotice(
     subject?: string;
     body?: string;
   },
-): Promise<boolean> {
+  /**
+   * The caller says how it went in its own toast (a meeting notice, a
+   * reply), so the generic error toasts below stay quiet.
+   */
+  quiet = false,
+): Promise<SendOutcome> {
   const label = NOTICE_LABEL[notice.kind];
   let sent = 0;
   let already = 0;
   let failed = 0;
   let remaining = 0;
   let left = Infinity;
+  let reason: string | undefined;
+  const outcome = (answered: boolean): SendOutcome => ({ answered, sent, failed, already, remaining, reason });
   try {
     for (let call = 0; call < NOTICE_CALLS; call++) {
       const response = await fetch("/api/email/notify", {
@@ -215,11 +234,17 @@ async function emailNotice(
         already?: unknown;
         remaining?: unknown;
         error?: unknown;
+        errors?: unknown;
       };
+      if (!reason && Array.isArray(answer.errors) && typeof answer.errors[0] === "string") {
+        reason = answer.errors[0];
+      }
       if (!response.ok) {
         const why = typeof answer.error === "string" && answer.error ? answer.error : "it could not be sent";
-        reportRemoteError(`${label}: ${why}. It is saved here, but the email did not go`);
-        return false;
+        reason ??= why;
+        if (!quiet) reportRemoteError(`${label}: ${why}. It is saved here, but the email did not go`);
+        // The route answered, so the caller knows it ran; nothing went.
+        return outcome(true);
       }
       remaining = tally(answer.remaining);
       // Every call passes over the same people and counts them again, so
@@ -234,11 +259,15 @@ async function emailNotice(
       left = remaining;
     }
   } catch {
-    reportRemoteError(
-      `${label}: the mail service could not be reached. It is saved here, but the email did not go`,
-    );
-    return false;
+    reason = "The mail service could not be reached";
+    if (!quiet) {
+      reportRemoteError(
+        `${label}: the mail service could not be reached. It is saved here, but the email did not go`,
+      );
+    }
+    return outcome(false);
   }
+  if (quiet) return outcome(true);
   const unsent = failed + remaining;
   if (unsent > 0) {
     reportRemoteError(
@@ -250,7 +279,7 @@ async function emailNotice(
       `${label}: the same notice already went to ${already} ${already === 1 ? "owner" : "owners"} in the last hour, so it was not emailed again`,
     );
   }
-  return true;
+  return outcome(true);
 }
 
 /**
@@ -498,7 +527,12 @@ interface AppState {
    * Answers whether notice is now on record. A real association emails the
    * roster first, which can take most of a minute, so it answers later.
    */
-  sendMeetingNotice: (meetingId: string) => boolean | Promise<boolean>;
+  /**
+   * Posts the notice in the app and emails it. Resolves to the sentence to
+   * toast (what was emailed, or why not), or false when nothing was posted
+   * or the date could not be recorded.
+   */
+  sendMeetingNotice: (meetingId: string) => string | false | Promise<string | false>;
   /** Returns an undo, because publishing broadcasts and rejecting discards. */
   moderatePost: (
     postId: string,
@@ -538,7 +572,12 @@ interface AppState {
    */
   markPayoutPaid: (payoutId: string) => boolean | Promise<boolean>;
   markW9Requested: (vendorId: string) => void;
-  replyToThread: (threadId: string, body: string) => void;
+  /**
+   * Posts the board's reply and emails it. Resolves to how the email went
+   * ("none" when none was tried: the demo, or a thread with no household),
+   * or false when the reply itself was not saved.
+   */
+  replyToThread: (threadId: string, body: string) => Promise<ReplyEmail | false>;
   /** An owner starting a conversation with the board. Resolves true when it landed. */
   messageBoard: (
     ownerId: string,
@@ -615,9 +654,10 @@ interface AppState {
   ) => Promise<boolean>;
   /**
    * The board writing to the owner on their request. Appends one line to the
-   * request's conversation and changes nothing else. Resolves true once saved.
+   * request's conversation and changes nothing else. Resolves to how the
+   * email went once saved, or false when it was not.
    */
-  replyToRequest: (requestId: string, body: string) => Promise<boolean>;
+  replyToRequest: (requestId: string, body: string) => Promise<ReplyEmail | false>;
   likePost: (postId: string) => void;
   /**
    * A neighbour answering a post. Returns false when nothing was kept, which
@@ -941,6 +981,46 @@ function dismissStore(communityId: string): PersistedStore<string[]> {
   return store;
 }
 
+/**
+ * The demo's Activity record: what a signed in association gets from the
+ * database, kept here in the browser so the demo's Settings, Activity shows
+ * the same lines for the same writes. Words come from lib/activity.ts.
+ */
+const activityRegistry = new Map<string, PersistedStore<Activity[]>>();
+
+function demoActivityStore(communityId: string): PersistedStore<Activity[]> {
+  const key = `hoasis:${communityId}:v${DEMO_FIXTURE_VERSION}:activity`;
+  const existing = activityRegistry.get(key);
+  if (existing) return existing;
+  const store = new PersistedStore<Activity[]>(key, [], {
+    breaker: storageBreaker,
+    validate: isRecordArray<Activity>() as (v: unknown) => v is Activity[],
+  });
+  activityRegistry.set(key, store);
+  return store;
+}
+
+/** Writes one line to the demo's Activity, in the signed in seat's name. */
+function logDemoActivity(
+  communityId: string,
+  subjectKind: string,
+  summary: string,
+  details: Record<string, unknown> = {},
+) {
+  const actor = sliceStore(communityId, "accounts")
+    .getSnapshot()
+    .find((a) => a.id === sessionStore.getSnapshot().accountId);
+  // The date is the demo's pinned today and the time is the clock's, with no
+  // zone, so it reads back as written. This runs in event handlers only.
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const at = `${todayIsoDate()}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  demoActivityStore(communityId).update((all) => [
+    { id: newId(), at, actorId: actor?.id, actorName: actor?.name ?? "The board", subjectKind, summary, details },
+    ...all,
+  ]);
+}
+
 /** Reads any Store through React, with the three snapshot callbacks bound once. */
 function useStore<T>(store: Store<T>): T {
   return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);
@@ -1018,6 +1098,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const announcementList = useStore(sliceStore(communityId, "announcements"));
   const actionItemList = useStore(sliceStore(communityId, "actionItems"));
   const joinRequestList = useStore(sliceStore(communityId, "joinRequests"));
+  const demoActivity = useStore(demoActivityStore(communityId));
 
   // A seat's account id is the profile id, so a person with two homes holds
   // two accounts with one id. Only seats with their own profile id are theirs,
@@ -2081,8 +2162,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   /**
    * A credit on one home's statement, such as a late fee waived. It lowers
    * what the home owes and is not money in the bank, so the books get no
-   * line. A finance holder may insert a charge directly (charges_write), so
-   * this needs no function of its own.
+   * line. Signed in it goes through add_credit (0103), which writes the
+   * activity row a direct insert into charges could not.
    */
   const addCredit = useCallback(
     (input: { ownerId: string; amountCents: number; reason: string }) => {
@@ -2090,21 +2171,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (input.amountCents <= 0 || !reason) return false;
       const date = todayIsoDate();
       if (remote.community) {
-        const rc = remote.community;
         return remoteWrite("Adding the credit", () =>
-          supabaseBrowser().from("charges").insert({
-            association_id: rc.id,
-            unit_id: input.ownerId,
-            kind: "credit",
-            label: reason,
-            amount_cents: -input.amountCents,
-            due_on: date,
+          supabaseBrowser().rpc("add_credit", {
+            p_unit_id: input.ownerId,
+            p_amount_cents: input.amountCents,
+            p_label: reason,
           }),
         );
       }
       const owner = sliceStore(communityId, "owners")
         .getSnapshot()
         .find((o) => o.id === input.ownerId);
+      logDemoActivity(communityId, "charge", activityWords.credit(input.amountCents, owner?.unit ?? "a home", reason), {
+        unit_id: input.ownerId,
+        home: owner?.unit,
+      });
       const balanceAfter = (owner?.balanceCents ?? 0) - input.amountCents;
       sliceStore(communityId, "ownerCharges").update((all) => ({
         ...all,
@@ -2538,6 +2619,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
       }
       const was = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId)?.email;
+      const home = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId);
+      if (home && was !== next) {
+        logDemoActivity(communityId, "seat", activityWords.email(home.unit, was ?? "no email", next), {
+          unit_id: ownerId,
+          home: home.unit,
+        });
+      }
       sliceStore(communityId, "owners").update((all) =>
         all.map((o) => (o.id === ownerId ? { ...o, email: next } : o)),
       );
@@ -2606,6 +2694,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }, { timeoutMs: WRITE_TIMEOUT_MS + changes.length * 1_000 });
       }
       const byOwner = new Map(changes.map((c) => [c.ownerId, c.cents]));
+      for (const o of sliceStore(communityId, "owners").getSnapshot()) {
+        if (!byOwner.has(o.id)) continue;
+        const next = byOwner.get(o.id) || null;
+        if (next === (o.duesCents ?? null)) continue;
+        logDemoActivity(communityId, "unit", activityWords.dues(o.unit, next), { unit_id: o.id, home: o.unit });
+      }
       sliceStore(communityId, "owners").update((all) =>
         all.map((o) => {
           if (!byOwner.has(o.id)) return o;
@@ -2978,6 +3072,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             unit_label: violation.unit,
             owner_name: violation.ownerName,
             rule: violation.rule,
+            // The words the owner reads under the title (0097). Left out of
+            // this insert, they reached the list row in the session that typed
+            // them and nobody else.
+            fix: violation.fix ?? "",
             rule_citation: violation.ruleCitation,
             stage: violation.stage,
             opened_on: violation.openedDate,
@@ -2990,6 +3088,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
         return violation;
       }
+      logDemoActivity(communityId, "violation", activityWords.notice(violation.unit, violation.rule), {
+        unit_id: violation.ownerId,
+        home: violation.unit,
+        reference: violation.reference,
+      });
       sliceStore(communityId, "violations").update((all) => [violation, ...all]);
       return violation;
     },
@@ -3414,6 +3517,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const author = me
         ? `${me.name}${roleLabel[me.role] ? `, ${roleLabel[me.role]}` : ""}`
         : "The board";
+      logDemoActivity(communityId, "announcement", activityWords.posted(a.title), { category: a.category });
       sliceStore(communityId, "announcements").update((all) => [
         {
           id: newId(),
@@ -3452,7 +3556,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           title,
           body: [
             `${m.title} is on ${when}, ${m.location}.`,
-            `Join by video: ${videoJoinUrl(m, (remote.community?.association ?? associationRow).id)}${m.dialIn ? `, or dial ${m.dialIn}${m.passcode ? ` (passcode ${m.passcode})` : ""}` : ""}.`,
+            joinLine(m, (remote.community?.association ?? associationRow).id),
             m.agenda.length ? `Agenda: ${m.agenda.join("; ")}.` : "",
           ]
             .filter(Boolean)
@@ -3478,27 +3582,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // domain not yet verified) kept the button for good, and so did a
         // second press that found everybody already had it.
         //
-        // A send the server refused, or that never got there, did not
-        // report back. The date is left unwritten, the button stays, and
-        // pressing it again carries on from whoever was not reached.
+        // Only a send that never got there leaves the date unwritten and
+        // the button on, so pressing it again can carry on. A refusal is an
+        // answer: the notice is posted in the app either way (decided
+        // 2026-10-04), and the toast says the email did not go.
         noticesInFlight.add(meetingId);
-        return emailNotice(rc.id, { kind: "meeting", id: meetingId })
-          .then((reported) =>
-            reported
-              ? remoteWrite("Recording the notice", () =>
-                  supabaseBrowser()
-                    .from("meetings")
-                    .update({ notice_sent_on: today }, { count: "exact" })
-                    .eq("id", meetingId),
-                )
-              : false,
-          )
+        return emailNotice(rc.id, { kind: "meeting", id: meetingId }, true)
+          .then(async (outcome) => {
+            // The route answering at all is what dates the notice; only a
+            // send that never got there leaves the button for another try.
+            if (outcome.answered) {
+              const recorded = await remoteWrite("Recording the notice", () =>
+                supabaseBrowser()
+                  .from("meetings")
+                  .update({ notice_sent_on: today }, { count: "exact" })
+                  .eq("id", meetingId),
+              );
+              if (!recorded) return false;
+            }
+            return noticeToast(outcome);
+          })
           .finally(() => noticesInFlight.delete(meetingId));
       }
+      logDemoActivity(communityId, "meeting", activityWords.meetingNotice(m.title), { notice_sent_on: today });
       sliceStore(communityId, "meetings").update((all) =>
         all.map((x) => (x.id === meetingId ? { ...x, noticeSentDate: today } : x)),
       );
-      return true;
+      // The demo has nobody to email, so the notice is only posted.
+      return "Notice posted.";
     },
     [remote.community, meetingList, associationRow, addAnnouncement, communityId],
   );
@@ -4219,7 +4330,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const replyToRequest = useCallback(
-    (requestId: string, body: string): Promise<boolean> => {
+    (requestId: string, body: string): Promise<ReplyEmail | false> => {
       const text = body.trim();
       if (!text) return Promise.resolve(false);
       const event = (request: HomeRequest, actorName: string) => ({
@@ -4243,11 +4354,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             .from("requests")
             .update({ thread: [...now.thread, event(now, actor?.name ?? "Board")] }, { count: "exact" })
             .eq("id", requestId);
-        }).then((ok) => {
+        }).then(async (ok) => {
+          if (!ok) return false;
           // Told only once the reply is on the record. The same email kind
           // as a decision: it says the request was updated and carries the words.
-          if (ok) void emailNotice(rc.id, { kind: "request", id: requestId, body: text });
-          return ok;
+          // The board hears how it went, so the generic toasts stay quiet.
+          return replyEmailState(await emailNotice(rc.id, { kind: "request", id: requestId, body: text }, true));
         });
       }
       const actor = sliceStore(communityId, "accounts")
@@ -4262,7 +4374,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             : request,
         ),
       );
-      return Promise.resolve(true);
+      return Promise.resolve("none");
     },
     [remote.community, remote.profileId, communityId],
   );
@@ -4673,6 +4785,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
         return;
       }
+      logDemoActivity(communityId, "vendor", activityWords.vendor(vendor.name), { service: vendor.service });
       sliceStore(communityId, "vendors").update((all) => [vendor, ...all]);
     },
     [remote.community, communityId],
@@ -4793,7 +4906,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const replyToThread = useCallback(
-    (threadId: string, body: string) => {
+    (threadId: string, body: string): Promise<ReplyEmail | false> => {
       const message = (senderName: string, count: number) => ({
         id: `m-${threadId}-${count}`,
         at: todayIsoDate(),
@@ -4806,31 +4919,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (remote.community) {
         const rc = remote.community;
         const thread = rc.threads.find((t) => t.id === threadId);
-        if (!thread) return;
+        if (!thread) return Promise.resolve(false);
         // Appended in the database, to the thread as it is there now
         // (reply_as_board, migration 0072). The browser used to send the
         // whole list back, built from the thread as this tab last read it,
         // so a reply written at 9:10 from a page opened at 9:00 erased what
         // an owner had sent at 9:05. The function names the sender from
         // their seat and numbers the message itself.
-        void remoteWrite("Sending the reply", () =>
+        return remoteWrite("Sending the reply", () =>
           supabaseBrowser().rpc("reply_as_board", { p_thread_id: threadId, p_body: body }),
-        ).then((ok) => {
+        ).then(async (ok): Promise<ReplyEmail | false> => {
+          if (!ok) return false;
           // The channel on the message says "email", so it is one.
-          if (ok && thread.ownerId) {
-            void emailNotice(rc.id, {
-              kind: thread.tag === "Billing" ? "letter" : "message",
-              unitIds: [thread.ownerId],
-              subject: thread.subject,
-              body,
-            });
-          }
+          if (!thread.ownerId) return "none";
+          return replyEmailState(
+            await emailNotice(
+              rc.id,
+              {
+                kind: thread.tag === "Billing" ? "letter" : "message",
+                unitIds: [thread.ownerId],
+                subject: thread.subject,
+                body,
+              },
+              true,
+            ),
+          );
         });
-        return;
       }
       const sender = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      const replied = sliceStore(communityId, "threads").getSnapshot().find((t) => t.id === threadId);
+      logDemoActivity(communityId, "thread", activityWords.reply(replied?.unit ?? "an owner"), {
+        unit_id: replied?.ownerId,
+        home: replied?.unit,
+        subject: replied?.subject,
+      });
       sliceStore(communityId, "threads").update((all) =>
         all.map((thread) =>
           thread.id === threadId
@@ -4843,6 +4967,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             : thread,
         ),
       );
+      return Promise.resolve("none");
     },
     [remote.community, communityId],
   );
@@ -5381,6 +5506,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         );
         return;
       }
+      logDemoActivity(communityId, "meeting", activityWords.meeting(meeting.title, meeting.date), {
+        held_on: meeting.date,
+      });
       sliceStore(communityId, "meetings").update((all) =>
         [...all, meeting].sort((a, b) => a.date.localeCompare(b.date)),
       );
@@ -5674,6 +5802,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       announcements: announcementList,
       actionItems: actionItemList,
       joinRequests: joinRequestList,
+      activity: demoActivity,
     }),
     [
       community,
@@ -5707,6 +5836,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       announcementList,
       actionItemList,
       joinRequestList,
+      demoActivity,
     ],
   );
 

@@ -4,7 +4,8 @@ import { Inbox } from "lucide-react";
 import { Badge, Card, CardHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import type { EmailDeliveryStatus, EmailLogEntry } from "@/lib/types";
-import { formatDate, pluralize } from "@/lib/utils";
+import { plainEmailError } from "@/lib/email/plain-error";
+import { localStamp, pluralize } from "@/lib/utils";
 
 /**
  * What was sent, and what became of it.
@@ -66,13 +67,7 @@ function statusLabel(entry: EmailLogEntry): string {
   }
 }
 
-/** "Sep 5, 2026 · 14:32" from an ISO timestamp, in the reader's own clock. */
-function when(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${formatDate(iso.slice(0, 10), "medium")} · ${hh}:${mm}`;
-}
+const when = localStamp;
 
 export function EmailDelivery() {
   const { community } = useAppState();
@@ -125,8 +120,9 @@ export function EmailDelivery() {
                   <td className="px-3 py-2.5">
                     <p className="max-w-[20rem] truncate text-fg-muted">{entry.subject}</p>
                     {entry.error ? (
+                      // The plain sentence shows; the provider's own words stay in the title.
                       <p className="max-w-[20rem] truncate text-danger" title={entry.error}>
-                        {entry.error}
+                        {plainEmailError(entry.error)}
                       </p>
                     ) : null}
                   </td>

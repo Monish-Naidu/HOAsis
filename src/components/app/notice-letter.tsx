@@ -113,6 +113,7 @@ export function NoticeLetter({
             On {formatDate(violation.openedDate, "long")} the association observed the following
             at {where}: {violation.rule}
           </p>
+          {violation.fix ? <p>What needs fixing: {violation.fix}</p> : null}
           <p>
             The association relies on {violation.ruleCitation} of its governing documents, which
             every owner agreed to on taking title. A copy is available to you at any time through
