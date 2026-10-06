@@ -373,3 +373,32 @@ the first real associations are on. Nothing here is started.
 | A vote of officers to replace an unreachable President in the app | Support can do it by script today (0095) | 2 days |
 | The hydration error on `/start` | Symptom fixed; cause unfound | a day of digging, no customer impact now |
 
+## 16. Year two, and the signed-in walk
+
+From the second review round on 2026-10-06: a read of the code against
+fifteen year-two situations, and two walkers signed in to the test
+association (a treasurer, an owner on a phone). Most likely and most
+damaging first.
+
+| Situation | What happens today | Status |
+| --- | --- | --- |
+| A board that stops paying us | A failed card shows a banner; a cancelled subscription shows nothing; the daily jobs keep running for them. Only a trial that ran out with no card locks. Owners are never told | next: past due 14 days or cancelled means the board side is read-only, owners see a line, the crons skip them; the lock enforced in the database, not only in React |
+| The ledger can be altered or deleted with no trace | `ledger_write` and `charges_write` are "for all" for any finance holder (0001); "Transaction removed" deletes the row; credits are a direct insert; no activity on update or delete | next: append-only for people, every correction through a function that logs; a waive-this-fee action that records who and why |
+| No complete export, though Terms promises one | Roster, transactions and a resident statement export; nothing for charges across homes, payouts with approvals, ballots, meetings, requests, documents, email log, activity | next: one support script that dumps everything for one association; later a Settings button |
+| An audit or a records request | No per-home statement for the board; charges and ledger load two years; email log capped at 300, activity at 100; no exports per area | next: an "Annual records" screen with CSVs per area and year |
+| A compromised board member | Access ends at once and is logged, but sessions are not revoked and there is no actor filter on Activity | next: a support script that signs a person out everywhere; an actor filter |
+| A time zone that is not UTC | "Today" is the browser's UTC date, so after 7 pm Eastern the app says tomorrow; the jobs run on the right local day for every US zone | next: `associations.time_zone` and a "today" computed from it |
+| Growth to 2,000 associations | The autopay job walks every autopay home every day, not the ones due; serial continuations; the bill email at 160,000 owners would take a day | next: filter autopay to homes due today; fan out per association |
+| A storm: special assessment in instalments, a vendor paid in stages, the reserve drawn down | Charge every home posts one equal amount, no instalments, no late fee on it; vendor payments always leave operating; nothing records spending from reserves | later: instalments, a "paid from" account on payouts, a reverse transfer |
+| Budget season | One current rate; no "effective January 1" date; the budget screen is off | later: `dues_effective_on` applied by the dues job |
+| The election | Candidates are typed by the board; winners are seated by hand in Settings; results are not emailed; the Stripe representative cannot be changed in-app | later: "Seat the winners" on a closed ballot, a results email, a Stripe runbook |
+| The president dies | Support reassigns (0095), but the Stripe login, the subscription email and the support mailbox stay with the old one | next: a runbook; update the Stripe customer email on reassignment |
+| Two associations merging or splitting | Not possible without SQL | later: a service-role `move_units` and a runbook |
+| Accessibility | 277 aria labels, focus outlines, dialogs marked, reduced motion, a text-size setting; no skip link, no accessibility page, no automated check | next: skip link and an axe pass in the browser suite |
+| Owner, phone: a 34-digit phone number saves | Length check missing | next |
+| Owner, phone: the meeting shows two different call links | A "Video call link" to the automatic room and a "Dial in" line that is another room's URL, not a number | next: one link, and dial-in only when it is a phone number |
+| Owner, phone: tapping a meeting opens nothing | No meeting detail page; the calendar opens on a month with no meeting | next: a detail with agenda, and open on the next meeting's month |
+| Owner, phone: "Other amount" | The button reads "Continue to pay $0.00" while the amount is invalid; letters stay in the field | next: hide the amount on the button until it is valid; numeric field |
+| Owner, phone: "Save a card or bank account" opens under the pay form | Two payment forms on screen at once | next: hide the pay form while saving a method |
+| Owner, phone: small things | Autopay card says "on the 1st" while the tooltip says "on the day they are due"; theme buttons have no labels and "Evenings" is unexplained; Ohio placeholders in a Washington association; "Pay" on the phone tab and "Payments" in the sidebar; a request's text shown twice; Association funds opens on an empty "This month" | next |
+
