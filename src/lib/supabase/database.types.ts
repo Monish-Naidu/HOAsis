@@ -2541,6 +2541,7 @@ export type Database = {
           association_id: string
           case_number: string | null
           created_at: string
+          fix: string
           fine_cents: number
           id: string
           next_action_on: string | null
@@ -2564,6 +2565,7 @@ export type Database = {
           association_id: string
           case_number?: string | null
           created_at?: string
+          fix?: string
           fine_cents?: number
           id?: string
           next_action_on?: string | null
@@ -2587,6 +2589,7 @@ export type Database = {
           association_id?: string
           case_number?: string | null
           created_at?: string
+          fix?: string
           fine_cents?: number
           id?: string
           next_action_on?: string | null
@@ -3128,6 +3131,10 @@ export type Database = {
       }
       set_my_autopay: {
         Args: { p_association_id: string; p_autopay: Json }
+        Returns: undefined
+      }
+      set_my_home_autopay: {
+        Args: { p_association_id: string; p_autopay: Json; p_unit_id: string }
         Returns: undefined
       }
       slugify: { Args: { p_text: string }; Returns: string }

@@ -20,7 +20,7 @@ const SUITES = [
   "rls", "isolation", "onboarding", "money", "stripe", "community-life",
   "email", "signin-routing", "safety", "scale", "a-year", "three-years",
   "profile", "board-actions", "ranked-list", "join-flow", "roster-import",
-  "late-fees", "access", "sale-privacy", "owners",
+  "late-fees", "access", "sale-privacy", "owners", "two-homes",
 ];
 
 const only = process.argv.slice(2);

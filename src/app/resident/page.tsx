@@ -28,6 +28,7 @@ import { balanceSplit } from "@/lib/statement";
 import { ownerDues } from "@/lib/home-types";
 import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { Announcements } from "./announcements";
+import { HomesNote } from "@/components/app/home-switcher";
 
 /**
  * The resident home, laid out to the 2026-09-01 dashboard design.
@@ -55,6 +56,7 @@ export default function ResidentHome() {
           Actions run the full width; activity and events share the rest.
           Community left the dashboard on purpose (a five-home association
           would see an empty card); it stays a sidebar tab. */}
+      <HomesNote />
       <AccountSummary />
 
       {/* What expires today, in one card rather than a stack of banners.

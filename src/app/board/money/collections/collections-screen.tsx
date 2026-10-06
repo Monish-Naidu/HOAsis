@@ -5,6 +5,8 @@ import { CollectionsLadder } from "@/components/app/collections-ladder";
 import { CollectionPolicyCard } from "@/components/app/collection-policy";
 import { AgingBar } from "@/components/app/board-charts";
 import { StatTile } from "@/components/app/finance-ui";
+import { AutopayFailuresCard, useAutopayFailures } from "./autopay-failures-card";
+import { failedThisMonth } from "@/lib/payments/autopay-failures";
 import { useAppState } from "@/lib/app-state";
 import { agingBuckets, delinquency, duesCollection, lateFeesOwed, pastDueHint } from "@/lib/metrics";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
@@ -19,6 +21,8 @@ export function CollectionsScreen() {
   const delinq = delinquency(community);
   const aging = agingBuckets(community);
   const dues = duesCollection(community, thisYear);
+  // Signed in only; the demo has no autopay_runs and gets an empty list.
+  const failures = useAutopayFailures();
 
   return (
     <>
@@ -63,7 +67,9 @@ export function CollectionsScreen() {
         <AgingBar buckets={aging.buckets} />
       </Card>
 
-      <CollectionsLadder />
+      <AutopayFailuresCard failures={failures} />
+
+      <CollectionsLadder autopayFailedUnits={failedThisMonth(failures, todayIsoDate())} />
 
       {/* The ladder is the list of who is behind and what is owed them; the
           table of past-due households that sat here said it again. */}

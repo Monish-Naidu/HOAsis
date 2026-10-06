@@ -119,6 +119,7 @@ import {
   type ManualPaymentRow,
 } from "@/lib/payments/manual-payments";
 import { placeLabel } from "@/lib/wording";
+import { pickSeat } from "@/lib/home-choice";
 import { addStatementLine } from "@/lib/statement";
 import { homeCount } from "@/lib/metrics";
 import { videoJoinUrl } from "@/lib/meetings/video";
@@ -287,6 +288,14 @@ interface AppState {
   setCommunity: (communityId: string) => "switched" | "signed-out";
 
   account: Account | null;
+  /**
+   * Every seat this person holds in the association, one per home. One entry
+   * for almost everyone, and always the one account in the demo. The resident
+   * screens show `account`, which is whichever of these they chose.
+   */
+  mySeats: Account[];
+  /** Looks at another of their own homes. A unit they do not hold is ignored. */
+  chooseHome: (unitId: string) => void;
   accounts: Account[];
   view: View;
   ready: boolean;
@@ -672,6 +681,7 @@ interface AppState {
     ownerName: string;
     unit: string;
     rule: string;
+    fix?: string;
     ruleCitation?: string;
   }) => Violation;
   /** Ends voting. The tally as it stands is the result. */
@@ -725,6 +735,17 @@ const storageBreaker = new CircuitBreaker("localStorage", {
 const sessionStore = new PersistedStore<Session>("hoasis-session", NO_SESSION, {
   breaker: storageBreaker,
   validate: isSession,
+});
+
+/**
+ * The home a person with more than one is looking at, as a unit id. Empty
+ * until they choose, and read through the same server snapshot as the other
+ * stores, so prerendering is unchanged. It is not scoped to an association:
+ * an id that is not one of their seats there simply falls back to the first.
+ */
+const homeStore = new PersistedStore<string>("hoasis-home", "", {
+  breaker: storageBreaker,
+  validate: (v): v is string => typeof v === "string",
 });
 
 const communityStore = new PersistedStore<string>(
@@ -933,6 +954,7 @@ function useHydrated() {
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const session = useStore(sessionStore);
+  const chosenHome = useStore(homeStore);
   const ready = useHydrated();
 
   const remote = useRemote();
@@ -989,14 +1011,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const actionItemList = useStore(sliceStore(communityId, "actionItems"));
   const joinRequestList = useStore(sliceStore(communityId, "joinRequests"));
 
-  const account = useMemo(() => {
+  // A seat's account id is the profile id, so a person with two homes holds
+  // two accounts with one id. Only seats with their own profile id are theirs,
+  // which means there is no way to be looking at somebody else's.
+  const mySeats = useMemo(() => {
     if (remote.community) {
-      // Their account id is their profile id, so there is no seat to pick and
-      // no way to be looking at somebody else's.
-      return remote.community.accounts.find((a) => a.id === remote.profileId) ?? null;
+      return remote.community.accounts.filter((a) => a.id === remote.profileId);
     }
-    return accountList.find((candidate) => candidate.id === session.accountId) ?? null;
+    const demo = accountList.find((candidate) => candidate.id === session.accountId);
+    return demo ? [demo] : [];
   }, [remote.community, remote.profileId, accountList, session.accountId]);
+
+  const account = useMemo(() => pickSeat(mySeats, chosenHome), [mySeats, chosenHome]);
+
+  const chooseHome = useCallback(
+    (unitId: string) => {
+      if (mySeats.some((s) => s.ownerId === unitId)) homeStore.set(unitId);
+    },
+    [mySeats],
+  );
 
   /* --------------------------------------------------------------- session */
 
@@ -2837,6 +2870,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             unit_label: violation.unit,
             owner_name: violation.ownerName,
             rule: violation.rule,
+            fix: violation.fix ?? "",
             rule_citation: violation.ruleCitation,
             stage: violation.stage,
             opened_on: violation.openedDate,
@@ -2871,9 +2905,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const addNotice = useCallback(
-    (input: { ownerId: string; ownerName: string; unit: string; rule: string; ruleCitation?: string }) => {
+    (input: {
+      ownerId: string;
+      ownerName: string;
+      unit: string;
+      rule: string;
+      fix?: string;
+      ruleCitation?: string;
+    }) => {
       if (!input.rule.trim() || !input.unit.trim()) {
-        throw new ValidationError("Choose a home and say what was seen", {});
+        throw new ValidationError("Choose a home and name the rule", {});
       }
       const existing = remote.community
         ? remote.community.violations
@@ -2886,6 +2927,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ownerName: input.ownerName.trim(),
         unit: input.unit.trim(),
         rule: input.rule.trim(),
+        fix: (input.fix ?? "").trim() || undefined,
         ruleCitation: (input.ruleCitation ?? "").trim(),
         stage: "courtesy",
         openedDate: todayIsoDate(),
@@ -3651,9 +3693,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (plan: AutopayPlan | null) => {
       if (remote.community) {
         const rc = remote.community;
+        // The home on screen. set_my_autopay writes every seat the person
+        // holds, which would switch autopay on or off for all their homes at
+        // once; this one names the home.
+        const unitId = account?.ownerId;
+        if (!unitId) return Promise.resolve(false);
         return remoteWrite(plan ? "Saving autopay" : "Turning autopay off", () =>
-          supabaseBrowser().rpc("set_my_autopay", {
+          supabaseBrowser().rpc("set_my_home_autopay", {
             p_association_id: rc.id,
+            p_unit_id: unitId,
             p_autopay: plan as unknown as Json,
           }),
         );
@@ -3671,7 +3719,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       );
       return Promise.resolve(true);
     },
-    [remote.community, communityId],
+    [remote.community, communityId, account?.ownerId],
   );
 
   /* ------------------------------------------------------ owner says fixed */
@@ -5537,6 +5585,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       : communityList.map((c) => ({ id: c.id, label: c.label, place: c.association.addressLine, slug: c.id })),
     setCommunity,
     account,
+    mySeats,
+    chooseHome,
     // Every slice is read off the active community rather than off the local
     // stores directly, so remote and demo cannot disagree about which world
     // a screen is in. In demo mode community_ is the local overlay, so this

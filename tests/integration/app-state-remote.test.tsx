@@ -2285,3 +2285,49 @@ describe("sending reminders", () => {
     expect(errors).toEqual(["Sending the letter: threads is down"]);
   });
 });
+
+describe("a person who holds two homes", () => {
+  /** The President's seat, and a second seat of theirs on another home. */
+  function twoSeats() {
+    const first = server().accounts.find((a) => a.id === ME)!;
+    const other = server().owners.find((o) => o.id !== first.ownerId)!;
+    const second = { ...first, ownerId: other.id, unit: other.unit };
+    change({ accounts: [...server().accounts, second] });
+    return { first, second };
+  }
+
+  it("looks at the first home until they choose, then follows the choice", async () => {
+    const { first, second } = twoSeats();
+    await act(async () => {
+      await store.refreshRemote();
+    });
+    const { result } = renderApp();
+
+    expect(result.current.mySeats.map((s) => s.ownerId)).toEqual([first.ownerId, second.ownerId]);
+    expect(result.current.account?.ownerId).toBe(first.ownerId);
+
+    act(() => result.current.chooseHome(second.ownerId));
+    expect(result.current.account?.ownerId).toBe(second.ownerId);
+    expect(window.localStorage.getItem("hoasis-home")).toBe(JSON.stringify(second.ownerId));
+
+    // A home they do not hold is ignored rather than followed.
+    act(() => result.current.chooseHome("somebody-elses"));
+    expect(result.current.account?.ownerId).toBe(second.ownerId);
+
+    // Autopay is written for the home on screen, not for every seat.
+    await act(async () => {
+      await result.current.setAutopay({ day: 3, capCents: 50000 } as never);
+    });
+    const autopay = writes().find((s) => s.target === "rpc:set_my_home_autopay");
+    expect(autopay?.values).toMatchObject({ p_association_id: ASSOCIATION, p_unit_id: second.ownerId });
+
+    act(() => result.current.chooseHome(first.ownerId));
+    expect(result.current.account?.ownerId).toBe(first.ownerId);
+  });
+
+  it("is one seat for most people", () => {
+    const { result } = renderApp();
+    expect(result.current.mySeats).toHaveLength(1);
+    expect(result.current.account?.id).toBe(ME);
+  });
+});

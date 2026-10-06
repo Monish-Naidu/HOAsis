@@ -46,7 +46,12 @@ const TONE: Record<CollectionStage, "neutral" | "warn" | "danger"> = {
  * the legal defence for any of this is that the same ladder was run for
  * everybody and every rung was dated.
  */
-export function CollectionsLadder() {
+export function CollectionsLadder({
+  autopayFailedUnits,
+}: {
+  /** Unit ids whose autopay failed this month, so the row can say why they are behind. */
+  autopayFailedUnits?: ReadonlySet<string>;
+} = {}) {
   const placeLabel = useHomeLabel();
   const { community } = useAppState();
   const policy = policyFor(community.settings);
@@ -115,6 +120,7 @@ export function CollectionsLadder() {
               <span className="tnum text-body font-semibold text-fg">
                 {money(row.owner.balanceCents)}
               </span>
+              {autopayFailedUnits?.has(row.owner.id) ? <Badge tone="warn">Autopay failed</Badge> : null}
               <Badge tone={TONE[row.stage]}>{STEP[row.stage]}</Badge>
             </span>
           </div>

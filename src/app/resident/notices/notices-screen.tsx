@@ -108,6 +108,11 @@ export function NoticesScreen() {
                   <p className="mt-1.5 text-headline font-semibold tracking-[-0.01em] text-fg">
                     {violation.rule}
                   </p>
+                  {/* What the board asked for, in its own words, above what
+                      the stage means in general. */}
+                  {violation.fix ? (
+                    <p className="mt-1 text-body leading-relaxed text-fg">{violation.fix}</p>
+                  ) : null}
                   <p className="mt-1 text-body leading-relaxed text-fg-muted">{stage.what}</p>
 
                   {/* The provision, resolved so it can be read rather than
