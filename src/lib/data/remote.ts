@@ -353,7 +353,8 @@ export async function loadCommunity(
     paymentRows, replyRows, actionRows, joinRows, emailRows, termRows, activityRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
-    supabase.from("units").select("*").eq("association_id", associationId),
+    // A retired home (0099) keeps its records but is off the register.
+    supabase.from("units").select("*").eq("association_id", associationId).is("retired_on", null),
     // Every seat, closed ones included: a closed seat is a previous owner
     // on the home's record. Current holders are picked out below.
     supabase.from("memberships").select("*").eq("association_id", associationId).order("starts_on"),
@@ -667,6 +668,7 @@ export async function loadCommunity(
       duesCadence: a.dues_cadence,
       addressLine: `${a.city}, ${a.state}`,
       managedBy: "self",
+      contactEmail: a.contact_email || undefined,
       insuranceCarrier: a.insurance_carrier ?? undefined,
       insurancePolicyNo: a.insurance_policy_no ?? undefined,
       insuranceExpiresOn: a.insurance_expires_on ?? undefined,

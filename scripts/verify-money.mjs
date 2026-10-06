@@ -374,6 +374,27 @@ try {
   const { data: stripeRow } = await admin.from("payments").select("state, refunded_cents").eq("id", stripeId?.id).single();
   check("and is left as it was", stripeRow?.state === "settled" && stripeRow?.refunded_cents === 0, JSON.stringify(stripeRow));
 
+  // A home that is no longer a home is retired, records kept (0099). Its
+  // balance has to be zero first, and once retired it is billed no more.
+  const { data: spareUnit, error: spareError } = await admin.from("units").insert({
+    association_id: associationId, label: "Spare",
+  }).select("id").single();
+  if (spareError) throw new Error(`spare home: ${spareError.message}`);
+  await admin.from("charges").insert({ association_id: associationId, unit_id: spareUnit.id, kind: "charge", category: "other", label: "Owed", amount_cents: 100, due_on: day(0) });
+  const { error: owedRetire } = await president.client.rpc("retire_home", { p_unit_id: spareUnit.id });
+  check("retire_home: a home that owes money cannot be retired", Boolean(owedRetire), owedRetire?.message ?? "allowed");
+  await admin.from("charges").insert({ association_id: associationId, unit_id: spareUnit.id, kind: "credit", category: "other", label: "Written off", amount_cents: -100, due_on: day(0) });
+  const { error: residentRetire } = await resident.client.rpc("retire_home", { p_unit_id: spareUnit.id });
+  check("retire_home: a resident is refused", residentRetire?.code === "42501", residentRetire?.message ?? "no error");
+  const { error: retired } = await president.client.rpc("retire_home", { p_unit_id: spareUnit.id });
+  const { data: spareRow } = await admin.from("units").select("retired_on").eq("id", spareUnit.id).single();
+  check("retire_home: a settled home is retired and its records stay", !retired && spareRow?.retired_on != null, retired?.message ?? JSON.stringify(spareRow));
+  const billedBefore = (await admin.from("charges").select("id").eq("unit_id", spareUnit.id)).data?.length ?? 0;
+  await admin.rpc("issue_assessment", { p_association_id: associationId, p_label: "After retiring", p_due_on: day(0) });
+  await president.client.rpc("add_charge_to_all", { p_association_id: associationId, p_amount_cents: 500, p_label: "Everyone", p_due_on: day(0) });
+  const billedAfter = (await admin.from("charges").select("id").eq("unit_id", spareUnit.id)).data?.length ?? 0;
+  check("retire_home: a retired home is billed no more", billedAfter === billedBefore, `${billedBefore} then ${billedAfter}`);
+
   // Runs that overlap (0069). The cron delivered twice, or a board member
   // pressing "bill dues now" while it runs: each call used to look for an
   // existing bill before the other had committed, and every home got two.

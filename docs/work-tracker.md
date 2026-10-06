@@ -10,7 +10,14 @@ review (257 findings, seven walkers). Both are summarised here; the full
 findings were session files and are not in the repo, so anything worth
 keeping is written into a row below.
 
-**Where it stands (end of 2026-10-05):** pull requests #7, #8 and #9 are
+**Where it stands (2026-10-06, early):** pull requests #10 and #11 merged
+and live (owners with several homes, autopay failures on Past due, notices
+name their rule, support can reassign the presidency); migrations through
+0099 applied. Pull request #12: board contact address, retiring a home, the
+daily digest email (section 14), the Azure plan (docs/azure-migration-plan.md).
+Monish's overnight list of 2026-10-05 is section 14. Earlier note follows.
+
+**Where it stood (end of 2026-10-05):** pull requests #7, #8 and #9 are
 merged and live; migrations through 0094 are applied. Every row marked
 done in sections 9 to 13 is on production. Next: the open rows of section
 12 (owners with several homes, an unreachable president, autopay failures
@@ -90,7 +97,7 @@ The worst kind: a board acts on them. Each is small.
 | The board is never told somebody is waiting; the join code is buried in Settings | done 2026-10-05 (pull request #4) for the code (shown on Homeowners with copy buttons). Emailing the board when somebody asks is still open |
 | A second owner of the same home with their own sign-in | done 2026-10-05 (pull request #4): the board adds one from the household card or from a join request; a sale ends every seat on the home (migration 0081). A second owner added from a join request gets no welcome email yet |
 | Printable letter or flyer with the join code | later |
-| Emails say "reply to this email" with no reply address set | next: a board contact address in Settings; emails say "reply" only once it is set (approved) |
+| Emails say "reply to this email" with no reply address set | done 2026-10-06 (pull request #12, migration 0098 applied): "Board contact email" in Settings; owner emails carry it as reply-to; the past-due email says "reply" only when it is set |
 | Confirmation link has no resend | done 2026-10-05 (pull request #4) on the join page. The sign-in page's create-account notice and the wizard do not have it yet |
 | Sign-in links in emails last one hour | done 2026-10-04: 24 hours, set on the live project and in `supabase/config.toml` |
 | Renters, and a board seat with no office | later |
@@ -275,7 +282,7 @@ annual dues, month ends, the dues job running twice, view-only seats).
 | Two officers approve the same vendor payment at once | One approval can be lost (the whole list is written from the browser) | done 2026-10-05 (pull request #9, migration 0094 applied): added under a row lock, once per account |
 | A home that should not be billed (builder lots) | No exempt flag; zero means "not set" | later, with vacant lots |
 | A home added mid-period | Waits for the next bill; no proration | later: say so on the add-home form |
-| A home removed or two lots merged after the first bill | Refused; it keeps being billed | next: allow when the balance is zero |
+| A home removed or two lots merged after the first bill | Refused; it keeps being billed | done 2026-10-06 (pull request #12, migration 0099 applied): "Remove" retires a home with a statement once its balance is zero; records stay, billing and counting stop |
 | Deleting the association | Members lose sight of it at once, nothing is purged, Stripe is untouched; the screen promises a 30 day window | done 2026-10-05 for the wording (branch first-year): the screen says nobody can sign in once it is deleted and that support restores it for thirty days. Later: a restore button, a purge job, what happens to Stripe |
 | Votes | No quorum field, no "dues must be current", no paper or proxy votes entered by the board | later |
 | Year end | Owner statement CSV and board transactions CSV only; no printable statement, no all-homes statement run | later |
@@ -311,4 +318,17 @@ confirmed and survived a reload, 390px on about forty pages.
 | Settings | Access grid and toggles save without a word; first click removes access | done 2026-10-05 (pull request #9) |
 | Resident add card | Copy for developers ("Use the test number 4242...") | done 2026-10-05 (pull request #9) |
 | Small | `/about` linked from nowhere; 404's main button is "Back to sign in"; pinned announcement under a newer one; "Change dues" field empty; notice title shows the fix, not the rule; no maximum on the association name; weekday names wrong in demo copy; "An admin can turn it back on" | done 2026-10-05 (pull request #9), except the notice title: the form has no title field, so the fix text is the title. Done 2026-10-06 (pull request #11, migration 0097 applied): the form asks for the rule in a few words and what needs fixing; both show to the owner |
+
+## 14. Monish's overnight list, 2026-10-05
+
+"Keep going until usage is maxed out. Prioritize step 2 next."
+
+| Ask | Status |
+| --- | --- |
+| 2. Usability and design: website, app, whole flow; colour and accents; better icons, verbiage, buttons; a cool startup look | doing 2026-10-06: goes to its own pull request with a preview, not merged unseen (a restyle he had not seen was rolled back on 2026-09-24) |
+| 3. Make sure authentication works | next: run the sign-in checks against the live project and a scripted sign-up, magic link, password reset and email change; report what delivers and what cannot until Resend is verified |
+| 5. Telemetry and logging: "no way of knowing when things go wrong" | done 2026-10-06 for the digest (pull request #12): `/api/ops/digest` runs daily at 15:00 UTC after the money jobs and emails the platform owners when anything failed (errors, a failed job, stuck payments, autopay or email failures), and "all quiet" on Mondays. Waiting on Monish: the Sentry DSN (steps in docs/observability.md), an uptime check on `/api/health` |
+| 4. A migration plan to Azure | done 2026-10-06: docs/azure-migration-plan.md. Recommends preparing a container build now and moving the app only when there is a reason; keep Supabase for the database and sign-in |
+| 6. What else needs wiring | next: a list in docs/go-live-monish.md, refreshed |
+| 1b. Future work into the tracker | next |
 

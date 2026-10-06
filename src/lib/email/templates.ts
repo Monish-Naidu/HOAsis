@@ -26,6 +26,12 @@ export interface DuesEmailInput {
   unsubscribeUrl: string | null;
   /** Days past due, when this is a reminder rather than a first notice. */
   daysPastDue?: number;
+  /**
+   * True only when the association has set a contact address, which is what a
+   * reply goes to. Without one a reply lands nowhere, so the email must not
+   * invite it. Left out means false.
+   */
+  canReply?: boolean;
 }
 
 function money(cents: number): string {
@@ -150,8 +156,11 @@ export function pastDueEmail(input: DuesEmailInput) {
       }.
     </p>
     <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
-      If you have already paid, or if something is wrong with this figure, reply to this
-      email and the board will look into it.
+      ${
+        input.canReply
+          ? "If you have already paid, or if something is wrong with this figure, reply to this email and the board will look into it."
+          : "If you have already paid, or if something is wrong with this figure, write to the board from Messages in the app."
+      }
     </p>`;
 
   return {
@@ -165,7 +174,11 @@ export function pastDueEmail(input: DuesEmailInput) {
     }),
     text: `${input.ownerName},\n\n${placeLabel(input.unitLabel)} carries a balance of ${amount}${
       days > 0 ? `, ${days} days past due` : ""
-    }.\n\nPay: ${input.payUrl}\n\nIf you have already paid, reply and the board will look into it.\n\n${input.associationName}`,
+    }.\n\nPay: ${input.payUrl}\n\n${
+      input.canReply
+        ? "If you have already paid, reply and the board will look into it."
+        : "If you have already paid, write to the board from Messages in the app."
+    }\n\n${input.associationName}`,
   };
 }
 

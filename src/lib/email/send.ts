@@ -4,6 +4,7 @@ import { assessmentDueEmail, pastDueEmail } from "./templates";
 import { unsubscribeUrl } from "./tokens";
 import { emailSender } from "./sender";
 import { signInUrl } from "./sign-in-link";
+import { readReplyTo } from "./reply-to";
 import { createPacer, logAttempt, recentlySent, sentKey, stoppedLine, unrecordedLine, type Pacer } from "./pace";
 
 /**
@@ -114,6 +115,10 @@ export async function sendDuesEmails(input: {
     category: input.category,
   });
 
+  // Read once for the whole run. Replies go to the board's address when it
+  // has one, and the past due email only says "reply" when that is true.
+  const replyTo = await readReplyTo(input.associationId);
+
   const people = recipients ?? [];
   // Nobody without an address is written to, and nobody is chased for money
   // they do not owe.
@@ -131,6 +136,7 @@ export async function sendDuesEmails(input: {
     payUrl: `${input.origin}/resident/pay`,
     // Statutory. There is no opt out to offer, and the footer says why.
     unsubscribeUrl: null as string | null,
+    canReply: Boolean(replyTo),
   });
   const build = (m: ReturnType<typeof messageFor>) =>
     input.category === "delinquency" ? pastDueEmail(m) : assessmentDueEmail(m);
@@ -186,6 +192,7 @@ export async function sendDuesEmails(input: {
       const { data, error: refused } = await client.emails.send({
         from: sender(),
         to: person.email,
+        replyTo,
         subject: built.subject,
         html: built.html,
         text: built.text,

@@ -1485,7 +1485,7 @@ describe("saving settings", () => {
 
   it("sends a cleared renewal date as no date", async () => {
     const { result } = renderApp();
-    act(() => result.current.updateAssociation({ insuranceExpiresOn: "" }));
+    act(() => void result.current.updateAssociation({ insuranceExpiresOn: "" }));
     await settled();
 
     expect(writes()[0].values).toEqual({ insurance_expires_on: null });

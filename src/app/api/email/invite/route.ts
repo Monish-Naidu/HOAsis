@@ -5,6 +5,7 @@ import { emailSender } from "@/lib/email/sender";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import { inviteEmail } from "@/lib/email/templates";
 import { signInUrl } from "@/lib/email/sign-in-link";
+import { replyToFor } from "@/lib/email/reply-to";
 import { createInviteLimiter, spendInvites } from "@/lib/email/invite-limit";
 import { createPacer, logAttempt, recentlySent, sentKey, stoppedLine, unrecordedLine } from "@/lib/email/pace";
 import { remoteInviteUrl } from "@/lib/invitations";
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
   const admin = supabaseAdmin();
   const { data: association } = await admin
     .from("associations")
-    .select("name, join_code, slug, city, state")
+    .select("name, join_code, slug, city, state, contact_email")
     .eq("id", associationId)
     .single();
   if (!association) {
@@ -203,6 +204,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await client.emails.send({
       from: emailSender(),
       to: email,
+      replyTo: replyToFor(association.contact_email),
       subject: built.subject,
       html: built.html,
       text: built.text,

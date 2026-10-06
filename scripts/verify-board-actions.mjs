@@ -179,6 +179,19 @@ try {
   check("associations.settings: a resident's write changes nothing", !residentSettings || true, "");
   check("associations.settings: what the board saved is what is stored", afterResident?.settings?.forumEnabled === false, JSON.stringify(afterResident?.settings));
 
+  // The contact address owners' replies go to (0098). A settings holder sets
+  // it like the name; a resident's update matches no row, so it is read back
+  // from the table rather than trusted to raise an error.
+  const { error: contactError } = await president.client.from("associations")
+    .update({ contact_email: "board@example.com" }).eq("id", associationId);
+  const { data: contactStored } = await admin.from("associations").select("contact_email").eq("id", associationId).single();
+  check("associations.contact_email: a settings holder sets it", !contactError && contactStored?.contact_email === "board@example.com",
+    contactError?.message ?? String(contactStored?.contact_email));
+  await neighbor.client.from("associations").update({ contact_email: "resident@example.com" }).eq("id", associationId);
+  const { data: contactAfterResident } = await admin.from("associations").select("contact_email").eq("id", associationId).single();
+  check("associations.contact_email: a resident is refused", contactAfterResident?.contact_email === "board@example.com",
+    String(contactAfterResident?.contact_email));
+
   // Requests carry their thread now.
   const { data: request, error: requestError } = await neighbor.client.from("requests").insert({
     association_id: associationId, unit_id: neighborUnit, filed_by: neighbor.id,

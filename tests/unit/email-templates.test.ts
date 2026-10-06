@@ -366,3 +366,41 @@ describe("the line that says the link signs you in", () => {
     expect(built.html).toContain("This link signs you in, so there is no password to remember.");
   });
 });
+
+/**
+ * "Reply" is only said when a reply goes somewhere. Every email to an owner
+ * comes from one shared address, so until the board sets a contact address
+ * the past due notice points to Messages in the app instead.
+ */
+describe("pastDueEmail wording", () => {
+  const dues = {
+    associationName: "Maple Court HOA",
+    ownerName: "Gwen Okafor",
+    unitLabel: "12B",
+    balanceCents: 28500,
+    dueDate: "2026-10-01",
+    payUrl: "https://yourhoasis.com/resident/pay",
+    unsubscribeUrl: null,
+    daysPastDue: 12,
+  };
+
+  it("invites a reply when the association has a contact address", () => {
+    const built = pastDueEmail({ ...dues, canReply: true });
+    expect(built.html).toContain("reply to this email");
+    expect(built.text).toContain("reply and the board will look into it");
+    expect(built.html).not.toContain("Messages in the app");
+  });
+
+  it("points to Messages in the app when it does not", () => {
+    for (const built of [pastDueEmail(dues), pastDueEmail({ ...dues, canReply: false })]) {
+      expect(built.html.toLowerCase()).not.toContain("reply");
+      expect(built.text.toLowerCase()).not.toContain("reply");
+      expect(built.html).toContain("write to the board from Messages in the app");
+      expect(built.text).toContain("write to the board from Messages in the app");
+    }
+  });
+
+  it("never tells an owner to reply in the first notice", () => {
+    expect(assessmentDueEmail({ ...dues, canReply: true }).html.toLowerCase()).not.toContain("reply");
+  });
+});
