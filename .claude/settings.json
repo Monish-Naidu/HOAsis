@@ -31,6 +31,15 @@
             "command": "CCE_PORT_FILE=/Users/monishnaidu/.cce/projects/HOAsis-9a89d8/serve.port /Users/monishnaidu/.cce/hooks/cce_hook.sh PostToolUse"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.ts|*.tsx) cd /Users/monishnaidu/Developer/HOAsis && npx eslint --no-warn-ignored \"$f\" 2>&1 | tail -20;; esac"
+          }
+        ]
       }
     ],
     "Stop": [
