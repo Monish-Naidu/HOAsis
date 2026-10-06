@@ -1033,6 +1033,7 @@ export async function loadCommunity(
       updatedDate: t.updated_on,
       unread: t.unread,
       tag: t.tag,
+      toRole: (t.to_role ?? "board") as Community["threads"][number]["toRole"],
       messages: (t.messages ?? []) as Community["threads"][number]["messages"],
     })),
     announcements: (announcementRows.data ?? []).map((a) => ({

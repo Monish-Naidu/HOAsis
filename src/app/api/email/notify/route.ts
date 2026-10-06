@@ -102,10 +102,10 @@ export async function POST(request: NextRequest) {
     ? body.unitIds.filter((u): u is string => typeof u === "string").slice(0, 500)
     : undefined;
 
-  // The sign-off on a message is the caller's own name, not one they typed.
+  // The sign-off on a message is the caller's own name and office, not ones they typed.
   const { data: me } = await supabase
     .from("memberships")
-    .select("full_name")
+    .select("full_name, role")
     .eq("association_id", associationId)
     .eq("profile_id", auth.user.id)
     .is("ends_on", null)
@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
       subject: body.subject,
       body: body.body,
       senderName: me?.full_name ?? undefined,
+      senderOffice: me?.role ?? undefined,
       origin: siteOrigin(request),
       dryRun: body.dryRun,
     });

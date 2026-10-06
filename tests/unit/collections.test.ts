@@ -99,6 +99,7 @@ describe("a notice that has already gone out", () => {
       updatedDate: addDays(asOf, -Math.min(...messages.map(([d]) => d))),
       unread: false,
       tag,
+      toRole: "board",
       messages: messages.map(([daysAgo, direction], index) => ({
         id: `m-${index}`,
         at: addDays(asOf, -daysAgo),

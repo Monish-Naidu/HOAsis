@@ -731,12 +731,22 @@ export function ballotOpenEmail(
  * and says so; anything else may be turned off.
  */
 export function boardMessageEmail(
-  input: NoticeEmailInput & { subject: string; body: string; senderName: string; statutory: boolean },
+  input: NoticeEmailInput & {
+    subject: string;
+    body: string;
+    senderName: string;
+    /** "Treasurer", when the sender holds an office. Signs as "Name, Treasurer, for the board". */
+    senderOffice?: string;
+    statutory: boolean;
+  },
 ) {
   const subject = `${input.subject} · ${input.associationName}`;
+  const signature = input.senderOffice
+    ? `${input.senderName}, ${input.senderOffice}, for the board`
+    : `${input.senderName}, for the board`;
   const body = `${heading(input.subject)}${paragraphs(input.body)}<p style="margin:6px 0 0;font-size:15px;line-height:1.6;color:#3d4a5e;">${escapeHtml(
-    input.senderName,
-  )}, for the board</p>`;
+    signature,
+  )}</p>`;
   return {
     subject,
     html: layout({
@@ -750,9 +760,47 @@ export function boardMessageEmail(
         input.statutory ? "This is a notice about your account." : "",
       ),
     }),
-    text: `${input.subject}\n\n${input.body}\n\n${input.senderName}, for the board\n\n${input.url}\n\n${input.associationName}${
+    text: `${input.subject}\n\n${input.body}\n\n${signature}\n\n${input.url}\n\n${input.associationName}${
       input.unsubscribeUrl ? `\n\nUnsubscribe: ${input.unsubscribeUrl}` : ""
     }`,
+  };
+}
+
+/**
+ * An owner wrote to the board, and this goes to the officer it was addressed
+ * to (or to the communications holders when it was addressed to the board, or
+ * nobody holds the office). The link opens the thread in Messages; it does
+ * not sign anybody in, because an officer has an account already. Replying to
+ * this email reaches the association's contact address, so the button is how
+ * to answer the owner.
+ */
+export function officeMessageEmail(input: {
+  associationName: string;
+  recipientName: string;
+  /** "Treasurer" or "the board". */
+  addressedTo: string;
+  fromName: string;
+  /** Home label as the board reads it, or empty. */
+  home: string;
+  subject: string;
+  body: string;
+  url: string;
+}) {
+  const first = firstName(input.recipientName);
+  const who = input.home ? `${input.fromName}, ${input.home}` : input.fromName;
+  const subject = `New message for ${input.addressedTo}: ${input.subject} · ${input.associationName}`;
+  const intro = `${first}, ${who} wrote to ${input.addressedTo}.`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: input.body.split("\n")[0].slice(0, 120),
+      body: `${heading(input.subject)}${paragraphs(intro)}${paragraphs(input.body)}`,
+      cta: { label: "Read and reply", url: input.url },
+      signsIn: false,
+      footer: `Sent by ${escapeHtml(input.associationName)} through Your HOAsis. The whole board can read this message in Messages.`,
+    }),
+    text: `${input.subject}\n\n${intro}\n\n${input.body}\n\nRead and reply: ${input.url}\n\n${input.associationName}`,
   };
 }
 

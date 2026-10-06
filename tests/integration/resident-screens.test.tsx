@@ -202,7 +202,7 @@ describe("More", () => {
       .getAllByRole("link")
       .map((a) => a.getAttribute("href"))
       .filter(Boolean);
-    expect(rows).toEqual(["/resident/forum", "/resident/finances", "/resident/settings"]);
+    expect(rows).toEqual(["/resident/forum", "/resident/finances", "/resident/settings", "/resident/messages#your-board"]);
     expect(screen.getByText("Association funds")).toBeInTheDocument();
     expect(screen.queryByText("Funds")).not.toBeInTheDocument();
   });
@@ -246,5 +246,35 @@ describe("association funds", () => {
       .map((h) => h.textContent)
       .filter((t) => ["Where your dues go", "What reserves are saved for", "Transactions"].includes(t ?? ""));
     expect(headings).toEqual(["Where your dues go", "What reserves are saved for", "Transactions"]);
+  });
+});
+
+describe("writing to an office", () => {
+  it("offers the board and each office with its holder, and disables one nobody holds", async () => {
+    const user = userEvent.setup();
+    const { MessagesScreen } = await import("@/app/resident/messages/messages-screen");
+    const { ToastProvider } = await import("@/components/app/toast");
+    wrap(
+      <ToastProvider>
+        <Controls />
+        <MessagesScreen />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByText("sign in as owner"));
+    // The card names each office, who holds it and what it handles.
+    const card = screen.getByRole("region", { name: "Your board" });
+    expect(within(card).getByText("Arya Mehr")).toBeInTheDocument();
+    expect(within(card).getByText("Dues, payments and the budget.")).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "Write to the Treasurer" }));
+    const to = screen.getByLabelText("Who it is for") as HTMLSelectElement;
+    expect(to.value).toBe("treasurer");
+    const options = within(to).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([
+      "The board",
+      "President, Arya Mehr",
+      "Vice President, Ellis Wright",
+      "Treasurer, Dana Whitcomb",
+      "Secretary, Sofia Bergman",
+    ]);
   });
 });

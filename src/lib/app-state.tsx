@@ -35,6 +35,7 @@ import {
   NOTHING_CHANGED,
   WRITE_TIMEOUT_MS,
 } from "@/lib/data/remote-store";
+import { officeOf } from "@/lib/board-offices";
 import { ownerDues } from "@/lib/home-types";
 import { setHomeDues as writeHomeDues } from "@/lib/roster/apply";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -99,6 +100,8 @@ import type {
   ForumReply,
   HomeRequest,
   MessageThread,
+  Office,
+  ThreadAddress,
   Owner,
   HomeType,
   BankAccount,
@@ -584,6 +587,8 @@ interface AppState {
     subject: string,
     body: string,
     tag?: MessageThread["tag"],
+    /** The office to write to, or the board as a whole. Defaults to the board. */
+    toRole?: ThreadAddress,
   ) => Promise<boolean>;
   /** An owner answering one of their home's conversations. */
   replyAsOwner: (threadId: string, ownerId: string, body: string) => Promise<boolean>;
@@ -4823,19 +4828,40 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   const messageBoard = useCallback(
-    async (ownerId: string, subject: string, body: string, tag: MessageThread["tag"] = "General") => {
+    async (
+      ownerId: string,
+      subject: string,
+      body: string,
+      tag: MessageThread["tag"] = "General",
+      toRole: ThreadAddress = "board",
+    ) => {
       if (!subject.trim() || !body.trim()) {
         throw new ValidationError("Add a subject and a message", {});
       }
       if (remote.community) {
-        return remoteWrite("Sending your message", () =>
-          supabaseBrowser().rpc("start_owner_thread", {
+        let threadId: string | null = null;
+        const ok = await remoteWrite("Sending your message", async () => {
+          const result = await supabaseBrowser().rpc("start_owner_thread", {
             p_unit_id: ownerId,
             p_subject: subject.trim(),
             p_body: body.trim(),
             p_tag: tag,
-          }),
-        );
+            p_to_role: toRole,
+          });
+          threadId = typeof result.data === "string" ? result.data : null;
+          return result;
+        });
+        // The officer who holds the office is told. The message is already
+        // saved and the board reads it in Messages either way, so a failure
+        // here is the board's to see in the email log, not the owner's.
+        if (ok && threadId) {
+          void fetch("/api/email/office-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ threadId }),
+          }).catch(() => undefined);
+        }
+        return ok;
       }
       const owner = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId);
       const from = owner?.members[0] ?? owner?.displayName ?? "Owner";
@@ -4849,6 +4875,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           updatedDate: todayIsoDate(),
           unread: true,
           tag,
+          toRole,
           messages: [
             {
               id: `m-${newId()}`,
@@ -4962,7 +4989,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 ...thread,
                 unread: false,
                 updatedDate: todayIsoDate(),
-                messages: [...thread.messages, message(sender?.name ?? "Board", thread.messages.length)],
+                messages: [
+                  ...thread.messages,
+                  {
+                    ...message(sender?.name ?? "Board", thread.messages.length),
+                    ...(officeOf(sender?.role) ? { fromOffice: officeOf(sender?.role) as Office } : {}),
+                  },
+                ],
               }
             : thread,
         ),
@@ -5041,6 +5074,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           updatedDate: todayIsoDate(),
           unread: false,
           tag,
+          toRole: "board",
           messages: [message(senderName)],
         },
         ...all,

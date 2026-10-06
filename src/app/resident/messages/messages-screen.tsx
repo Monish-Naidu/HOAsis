@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, MessagesSquare, Plus, Send } from "lucide-react";
+import { addressLabel, boardOffices, boardSignature, officeChoiceLabel, OFFICES, toLabel } from "@/lib/board-offices";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useToast } from "@/components/app/toast";
 import { Badge, Button, Card, EmptyState, SectionTitle, Select, fieldClass } from "@/components/ui/primitives";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
-import type { MessageThread } from "@/lib/types";
+import type { MessageEvent, MessageThread, ThreadAddress } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
 
 const TOPICS: { value: MessageThread["tag"]; label: string }[] = [
@@ -36,13 +37,19 @@ export function MessagesScreen() {
   // question about a request opens ready to type.
   const params = useSearchParams();
   const asked = params.get("subject") ?? "";
-  const [composing, setComposing] = useState(Boolean(asked));
+  // A link can open the form already addressed, as the Write buttons do.
+  const askedOffice = params.get("to");
+  const [composing, setComposing] = useState(Boolean(asked || askedOffice));
+  const [to, setTo] = useState<ThreadAddress>(
+    OFFICES.some((o) => o === askedOffice) ? (askedOffice as ThreadAddress) : "board",
+  );
   const [subject, setSubject] = useState(asked);
   const [topic, setTopic] = useState<MessageThread["tag"]>("General");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
   if (!owner) return null;
+  const offices = boardOffices(community.accounts);
   const threads = community.threads
     .filter((t) => t.ownerId === owner.id)
     .sort((a, b) => (a.updatedDate < b.updatedDate ? 1 : -1));
@@ -51,12 +58,13 @@ export function MessagesScreen() {
     if (!owner) return;
     setSending(true);
     try {
-      const ok = await messageBoard(owner.id, subject, body, topic);
+      const ok = await messageBoard(owner.id, subject, body, topic, to);
       if (ok) {
-        notify("Sent to the board");
+        notify(to === "board" ? "Sent to the board" : `Sent to the ${addressLabel(to)}`);
         setSubject("");
         setBody("");
         setTopic("General");
+        setTo("board");
         setComposing(false);
       }
     } catch (error) {
@@ -83,8 +91,56 @@ export function MessagesScreen() {
         }
       />
 
+      {composing ? null : (
+        <section id="your-board" aria-label="Your board">
+          <SectionTitle>Your board</SectionTitle>
+          <Card className="divide-y divide-border">
+            {offices.map((o) => (
+              <div key={o.office} className="flex items-center gap-3 px-4 py-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-body font-semibold text-fg">{o.label}</span>
+                  <span className="block text-footnote text-fg">{o.holder ?? "Nobody holds this office yet"}</span>
+                  <span className="block text-footnote text-fg-muted">{o.handles}</span>
+                </span>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  disabled={!o.holder}
+                  aria-label={`Write to the ${o.label}`}
+                  onClick={() => {
+                    setTo(o.office);
+                    setComposing(true);
+                  }}
+                >
+                  Write
+                </Button>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
       {composing ? (
         <Card className="space-y-3 p-4">
+          <label className="block">
+            <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">To</span>
+            <Select
+              value={to}
+              onChange={(e) => setTo(e.target.value as ThreadAddress)}
+              aria-label="Who it is for"
+              className="w-full [&>select]:h-11 [&>select]:w-full"
+            >
+              <option value="board">The board</option>
+              {offices.map((o) => (
+                <option key={o.office} value={o.office} disabled={!o.holder}>
+                  {officeChoiceLabel(o)}
+                </option>
+              ))}
+            </Select>
+            <span className="mt-1.5 block text-footnote text-fg-muted">
+              The whole board can read it. An office is told by email.
+            </span>
+          </label>
           <label className="block">
             <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">About</span>
             <Select
@@ -162,6 +218,11 @@ export function MessagesScreen() {
   );
 }
 
+/** A reply from an officer reads "Dana Whitcomb, Treasurer, for the board". */
+function senderName(m: MessageEvent): string {
+  return m.fromOffice ? boardSignature(m.from, m.fromOffice) : m.from;
+}
+
 function ThreadRow({
   thread,
   onReply,
@@ -179,6 +240,7 @@ function ThreadRow({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="truncate text-body font-medium text-fg">{thread.subject}</span>
+            {thread.toRole !== "board" ? <Badge tone="neutral">{toLabel(thread.toRole)}</Badge> : null}
             {waitingOnBoard ? (
               <Badge tone="neutral">Waiting on the board</Badge>
             ) : (
@@ -186,7 +248,7 @@ function ThreadRow({
             )}
           </span>
           <span className="mt-0.5 line-clamp-1 block text-footnote text-fg-muted">
-            {last ? `${last.fromRole === "resident" ? "You" : last.from}: ${last.body}` : ""}
+            {last ? `${last.fromRole === "resident" ? "You" : senderName(last)}: ${last.body}` : ""}
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-2 text-footnote text-fg-subtle">
@@ -198,7 +260,7 @@ function ThreadRow({
         {thread.messages.map((m) => (
           <div key={m.id}>
             <p className="text-footnote">
-              <span className="font-semibold text-fg">{m.fromRole === "resident" ? "You" : m.from}</span>{" "}
+              <span className="font-semibold text-fg">{m.fromRole === "resident" ? "You" : senderName(m)}</span>{" "}
               <span className="text-fg-subtle">{formatDate(m.at, "medium")}</span>
             </p>
             <p className="mt-0.5 whitespace-pre-line text-body leading-relaxed text-fg">{m.body}</p>

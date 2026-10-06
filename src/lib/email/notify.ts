@@ -4,7 +4,8 @@ import type { Database } from "@/lib/supabase/database.types";
 import { remoteInviteUrl } from "@/lib/invitations";
 import { clockTime } from "@/lib/utils";
 import { statusLabel } from "@/lib/request-status";
-import type { RequestStatus } from "@/lib/types";
+import { OFFICES } from "@/lib/board-offices";
+import { ROLE_LABEL, type Office, type RequestStatus } from "@/lib/types";
 import {
   announcementEmail,
   ballotOpenEmail,
@@ -63,6 +64,8 @@ export interface NotifyInput {
   body?: string;
   /** Who pressed send, for the sign-off on a message. */
   senderName?: string;
+  /** The office the sender holds ("treasurer"), for the signature. Unknown values are ignored. */
+  senderOffice?: string;
   origin: string;
   /** Build and log nothing, send nothing. */
   dryRun?: boolean;
@@ -362,10 +365,14 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
       const unitIds = (input.unitIds ?? []).filter(Boolean);
       if (!subject || !body || unitIds.length === 0) return null;
       const senderName = (input.senderName ?? "").trim() || "The board";
+      // Only a real office signs; "resident" or anything else is the board.
+      const senderOffice = (OFFICES as readonly string[]).includes(input.senderOffice ?? "")
+        ? ROLE_LABEL[input.senderOffice as Office]
+        : undefined;
       return {
         unitIds,
         build: (p) =>
-          boardMessageEmail({ ...p, subject, body, senderName, statutory: input.kind === "letter" }),
+          boardMessageEmail({ ...p, subject, body, senderName, senderOffice, statutory: input.kind === "letter" }),
       };
     }
     case "request": {
