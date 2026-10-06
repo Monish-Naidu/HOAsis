@@ -19,6 +19,7 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
 import { duesFor } from "@/lib/home-types";
+import { withReversals } from "@/lib/ledger-corrections";
 import { compareStatement } from "@/lib/statement";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { addDays, clockTime, daysBetween, nextDueOnOrAfter } from "@/lib/utils";
@@ -294,6 +295,7 @@ type LedgerRow = {
   bank_account_id: string | null;
   amount_cents: number;
   confirmed_at: string | null;
+  reversed_entry_id?: string | null;
 };
 
 function ledgerLine(e: LedgerRow): LedgerEntry {
@@ -306,6 +308,7 @@ function ledgerLine(e: LedgerRow): LedgerEntry {
     accountId: e.bank_account_id ?? "unassigned",
     amountCents: e.amount_cents,
     status: e.confirmed_at ? "cleared" : "needs-review",
+    ...(e.reversed_entry_id ? { reversedEntryId: e.reversed_entry_id } : {}),
   };
 }
 
@@ -326,7 +329,7 @@ export async function loadLedgerBefore(
       .range(from, to),
   );
   if (error) throw new Error(`Could not load earlier transactions: ${error.message}`);
-  return (data ?? []).map(ledgerLine);
+  return withReversals((data ?? []).map(ledgerLine));
 }
 
 /** One home's whole statement, every line, for a screen that asked to see earlier. */
@@ -693,6 +696,7 @@ export async function loadCommunity(
         | "canceled"
         | "ended",
       trialEndsOn: (a.trial_ends_at ?? "").slice(0, 10) || undefined,
+      pastDueSince: (a.past_due_since ?? "").slice(0, 10) || undefined,
       billing: a.billing_subscription_id
         ? {
             subscriptionId: a.billing_subscription_id,
@@ -818,7 +822,7 @@ export async function loadCommunity(
           amountCents: e.amount_cents,
           status: "cleared" as const,
         }))
-      : (ledger.data ?? []).map(ledgerLine),
+      : withReversals((ledger.data ?? []).map(ledgerLine)),
 
     budget: (budgetRows.data ?? []).length
       ? (budgetRows.data ?? []).map((line) => ({

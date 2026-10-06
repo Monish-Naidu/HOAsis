@@ -29,6 +29,7 @@ import { ownerDues } from "@/lib/home-types";
 import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { Announcements } from "./announcements";
 import { HomesNote } from "@/components/app/home-switcher";
+import { BoardPausedNote } from "@/components/app/board-paused-note";
 
 /**
  * The resident home, laid out to the 2026-09-01 dashboard design.
@@ -57,6 +58,7 @@ export default function ResidentHome() {
           Community left the dashboard on purpose (a five-home association
           would see an empty card); it stays a sidebar tab. */}
       <HomesNote />
+      <BoardPausedNote />
       <AccountSummary />
 
       {/* What expires today, in one card rather than a stack of banners.

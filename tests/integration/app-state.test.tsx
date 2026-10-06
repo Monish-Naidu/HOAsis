@@ -405,13 +405,69 @@ describe("admin actions change real records", () => {
     expect(after.suggestedCategory).toBeUndefined();
   });
 
-  it("removing a duplicate takes it out of the ledger entirely", () => {
+  it("reversing a duplicate writes the opposite line and keeps the original", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
     const duplicate = result.current.state.ledger.find((e) => e.duplicateOfId)!;
 
-    act(() => result.current.state.dismissLedgerEntry(duplicate.id));
-    expect(result.current.state.ledger.some((e) => e.id === duplicate.id)).toBe(false);
+    act(() => {
+      result.current.state.reverseLedgerEntry(duplicate.id, "Entered twice");
+    });
+    const ledger = result.current.state.ledger;
+    const original = ledger.find((e) => e.id === duplicate.id)!;
+    const reversal = ledger.find((e) => e.reversedEntryId === duplicate.id)!;
+    // Nothing is deleted: the line stays, marked, beside its opposite.
+    expect(original.reversedById).toBe(reversal.id);
+    expect(reversal.amountCents).toBe(-duplicate.amountCents);
+    expect(reversal.description).toBe(`Reversal: ${duplicate.description}`);
+    expect(reversal.status).toBe("cleared");
+    // A reversed line is settled, so it leaves the review queue.
+    expect(original.status).toBe("cleared");
+  });
+
+  it("refuses a second reversal of the same line, a reversal of a reversal, and no reason", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const target = result.current.state.ledger.find((e) => e.status === "needs-review")!;
+    const before = result.current.state.ledger.length;
+
+    act(() => {
+      expect(result.current.state.reverseLedgerEntry(target.id, "")).toBe(false);
+    });
+    expect(result.current.state.ledger.length).toBe(before);
+
+    act(() => {
+      result.current.state.reverseLedgerEntry(target.id, "Entered twice");
+    });
+    expect(result.current.state.ledger.length).toBe(before + 1);
+    const reversal = result.current.state.ledger.find((e) => e.reversedEntryId === target.id)!;
+
+    act(() => {
+      expect(result.current.state.reverseLedgerEntry(target.id, "Again")).toBe(false);
+      expect(result.current.state.reverseLedgerEntry(reversal.id, "Undo it")).toBe(false);
+    });
+    expect(result.current.state.ledger.length).toBe(before + 1);
+  });
+
+  it("the undo of a reversal puts the line back as a new line, not a delete", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const target = result.current.state.ledger.find((e) => e.status === "needs-review")!;
+    const before = result.current.state.ledger.length;
+
+    let undo = () => {};
+    act(() => {
+      const outcome = result.current.state.reverseLedgerEntry(target.id, "Entered twice");
+      if (outcome && "undo" in outcome) undo = outcome.undo;
+    });
+    act(() => undo());
+    const ledger = result.current.state.ledger;
+    expect(ledger.length).toBe(before + 2);
+    expect(ledger.some((e) => e.id === target.id)).toBe(true);
+    const net = ledger
+      .filter((e) => e.description === target.description || e.description === `Reversal: ${target.description}`)
+      .reduce((sum, e) => sum + e.amountCents, 0);
+    expect(net).toBe(target.amountCents);
   });
 
   it("a second signature releases a payout, and nobody can sign twice", () => {
@@ -973,20 +1029,6 @@ describe("the community handed to screens", () => {
 });
 
 describe("undo on board decisions", () => {
-  it("puts a confirmed transaction back", () => {
-    const { result } = renderHook(() => useAppState(), { wrapper });
-    const entry = result.current.ledger.find((e) => e.status === "needs-review")!;
-
-    let undo = () => {};
-    act(() => {
-      undo = result.current.confirmLedgerEntry(entry.id);
-    });
-    expect(result.current.ledger.find((e) => e.id === entry.id)!.status).toBe("cleared");
-
-    act(() => undo());
-    expect(result.current.ledger.find((e) => e.id === entry.id)!.status).toBe("needs-review");
-  });
-
   it("puts a published post back to pending", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     const pending = result.current.posts.find((p) => p.status === "pending")!;

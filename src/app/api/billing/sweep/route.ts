@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { trialNoticeDue } from "@/lib/billing";
+import { rowLocked, trialNoticeDue } from "@/lib/billing";
 import { sendTrialNotice } from "@/lib/email/trial";
 import { PRICE_PER_HOME_CENTS } from "@/lib/pricing";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -32,6 +32,10 @@ import { recordCronRun } from "@/lib/cron-runs";
  * (src/lib/stripe/subscription-quantity.ts). It shares the same time budget
  * and continues itself with ?walk=quantity&after=<id>, so its cursor is never
  * mistaken for the trial pass's.
+ *
+ * A third pass emails the President once when the board side goes read-only
+ * (a card failing for two weeks, or a cancel), marked 'locked' in
+ * billing_notices.
  */
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -60,7 +64,7 @@ export async function GET(request: NextRequest) {
   const quantityOnly = request.nextUrl.searchParams.get("walk") === "quantity";
   const report = {
     checked: 0, sent: [] as string[], ended: [] as string[], errors: [] as string[],
-    subscriptions: 0, quantities: [] as string[],
+    subscriptions: 0, quantities: [] as string[], locked: [] as string[],
     complete: true, next: null as string | null, walk: quantityOnly ? "quantity" : "trials",
   };
 
@@ -195,9 +199,72 @@ export async function GET(request: NextRequest) {
           },
         );
 
+  // The third pass: a board whose card failed two weeks ago, or whose
+  // subscription was cancelled, is read-only now (0105). The President hears
+  // once; 'locked' in billing_notices is the mark. A small list by nature
+  // (only associations that stopped paying), so one capped query, and a
+  // remainder waits for tomorrow. Skipped on a continuation, which belongs
+  // to the quantity pass.
+  if (!quantityOnly && !walk.error) {
+    const { data: lapsed, error: lapsedError } = await admin
+      .from("associations")
+      .select("id, name, slug, trial_ends_at, subscription_status, past_due_since, billing_subscription_id, billing_notices, billing_email")
+      .is("deleted_at", null)
+      .in("subscription_status", ["past_due", "canceled"])
+      .not("billing_notices", "cs", "{locked}")
+      .order("id")
+      .limit(100);
+    if (lapsedError) report.errors.push(`lock notices: ${lapsedError.message}`);
+    for (const row of lapsed ?? []) {
+      if (!rowLocked(row, today)) continue;
+      const { data: president } = await admin
+        .from("memberships")
+        .select("full_name, profile_id")
+        .eq("association_id", row.id)
+        .eq("role", "president")
+        .is("ends_on", null)
+        .maybeSingle();
+      const { data: profile } = president?.profile_id
+        ? await admin.from("profiles").select("email").eq("id", president.profile_id).maybeSingle()
+        : { data: null };
+      const to = profile?.email ?? row.billing_email;
+      if (!to) {
+        report.errors.push(`${row.name}: no President email`);
+        continue;
+      }
+      const result = await sendTrialNotice({
+        associationId: row.id,
+        kind: "locked",
+        to,
+        profileId: president?.profile_id ?? null,
+        dryRun,
+        message: {
+          associationName: row.name,
+          presidentName: president?.full_name || "President",
+          trialEndsOn: row.trial_ends_at.slice(0, 10),
+          homes: 0,
+          monthlyCents: 0,
+          billingUrl: `${origin}${communityPath(row.slug, "/board/settings")}`,
+        },
+      });
+      if (!result.ok) {
+        log.error("lock notice failed", { associationId: row.id, err: result.error });
+        report.errors.push(`${row.name}: ${result.error}`);
+        continue;
+      }
+      report.locked.push(row.name);
+      if (!dryRun) {
+        await admin
+          .from("associations")
+          .update({ billing_notices: Array.from(new Set([...(row.billing_notices ?? []), "locked"])) })
+          .eq("id", row.id);
+      }
+    }
+  }
+
   const failure = walk.error ?? quantityWalk?.error;
   const summary = {
-    checked: report.checked, sent: report.sent.length, ended: report.ended.length,
+    checked: report.checked, sent: report.sent.length, locked: report.locked.length, ended: report.ended.length,
     subscriptions: report.subscriptions, quantities: report.quantities.length,
     errors: report.errors.length, complete: walk.complete && Boolean(quantityWalk?.complete),
     walk: report.walk, after: plan.after, dryRun,

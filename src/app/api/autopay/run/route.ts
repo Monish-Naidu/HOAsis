@@ -14,6 +14,7 @@ import {
 } from "@/lib/payments/instruments";
 import { costFor, stripe } from "@/lib/stripe/server";
 import { currentMemberIds, savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
+import { LOCKED_REASON, rowLocked } from "@/lib/billing";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { AutopayPlan } from "@/lib/types";
 import { duesFor } from "@/lib/home-types";
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
           admin
             .from("associations")
             .select(
-              "id, name, slug, stripe_account_id, stripe_charges_enabled, dues_cents, dues_by_type, deleted_at",
+              "id, name, slug, stripe_account_id, stripe_charges_enabled, dues_cents, dues_by_type, deleted_at, subscription_status, past_due_since, trial_ends_at, billing_subscription_id",
             )
             .eq("id", member.association_id)
             .single(),
@@ -173,6 +174,12 @@ export async function GET(request: NextRequest) {
           !association.stripe_account_id
         ) {
           report.waiting.push(`${tag}: no online payments`);
+          return;
+        }
+        // The board stopped paying us: nothing is charged, and no row is
+        // written, so the home is asked again once the subscription is paid.
+        if (rowLocked(association, today)) {
+          report.waiting.push(`${tag}: ${LOCKED_REASON}`);
           return;
         }
         // Stripe has the association's account paused or not yet approved.

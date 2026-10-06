@@ -28,6 +28,7 @@ export function usePhase(): BillingPhase | null {
       trialEndsOn: a.trialEndsOn,
       homes: homeCount(community),
       hasSubscription: Boolean(a.billing?.subscriptionId),
+      pastDueSince: a.pastDueSince ?? null,
     },
     community.asOf,
   );
@@ -97,24 +98,43 @@ export function TrialBanner() {
   }
 
   if (phase.phase === "past_due") {
+    const failed = phase.since ? `Your card failed on ${formatDate(phase.since, "long")}. ` : "Your card failed. ";
     return (
       <Callout
         tone="danger"
         className="mb-5"
         icon={<CreditCard className="size-4" />}
-        title="The last payment for Your HOAsis did not go through"
+        title={phase.locked ? "Read-only until the subscription is paid." : "The last payment for Your HOAsis did not go through"}
         action={
-          <ButtonLink
-            href="/board/settings#billing"
-            variant="secondary"
-            size="sm"
-          >
+          <ButtonLink href="/board/settings#billing" variant="secondary" size="sm">
             Update the card
             <ArrowRight className="size-3.5" />
           </ButtonLink>
         }
       >
-        Stripe will try the card again. Update the card on file to fix it sooner.
+        {phase.locked
+          ? `${failed}Residents can still see and pay their statements.`
+          : `${failed}Update it within ${phase.daysLeft} ${phase.daysLeft === 1 ? "day" : "days"} or the board side becomes read-only.`}
+      </Callout>
+    );
+  }
+
+  if (phase.phase === "canceled") {
+    return (
+      <Callout
+        tone="danger"
+        className="mb-5"
+        icon={<CreditCard className="size-4" />}
+        title="The subscription was cancelled"
+        action={
+          <ButtonLink href="/board/settings#billing" variant="secondary" size="sm">
+            Restart it
+            <ArrowRight className="size-3.5" />
+          </ButtonLink>
+        }
+      >
+        The subscription was cancelled. Owners can still see their statements; the board side is
+        read-only until it is restarted.
       </Callout>
     );
   }

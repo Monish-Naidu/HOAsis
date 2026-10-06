@@ -24,6 +24,15 @@ export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled"
  */
 export const GRACE_DAYS = 14;
 
+/**
+ * Days a board keeps working after a card fails, counted from the day Stripe
+ * first said so (`past_due_since`). Stripe retries for about that long, so a
+ * lock earlier than this would shut out a board whose card was about to
+ * clear. The database says the same thing in `association_writable`
+ * (0105); change both together.
+ */
+export const PAST_DUE_LOCK_DAYS = 14;
+
 /** Trial notices, most distant first. Keys are stored in `billing_notices`. */
 export const TRIAL_NOTICES = [
   { key: "14-days", daysBefore: 14 },
@@ -41,13 +50,15 @@ export interface BillingFacts {
   homes: number;
   /** A Stripe subscription exists, which means a card is on file. */
   hasSubscription: boolean;
+  /** The day the card first failed, `YYYY-MM-DD`. Only read while past due. */
+  pastDueSince?: ISODate | null;
 }
 
 export type BillingPhase =
   | { phase: "trialing"; daysLeft: number; endsOn: ISODate; closing: boolean }
   | { phase: "ended"; daysOver: number; endsOn: ISODate; locked: boolean }
   | { phase: "active" }
-  | { phase: "past_due" }
+  | { phase: "past_due"; since: ISODate | null; daysLeft: number; locked: boolean }
   | { phase: "canceled" };
 
 /** Ninety days after founding. */
@@ -65,7 +76,18 @@ export function trialEndsOn(foundedOn: ISODate): ISODate {
  */
 export function billingPhase(facts: BillingFacts, today: ISODate): BillingPhase {
   if (facts.status === "canceled") return { phase: "canceled" };
-  if (facts.status === "past_due") return { phase: "past_due" };
+  if (facts.status === "past_due") {
+    // No date on file counts as today: the webhook writes it with the status,
+    // so a missing one is a row in between, not a board that has run out.
+    const since = facts.pastDueSince ?? null;
+    const daysIn = since ? Math.max(0, daysBetween(since, today)) : 0;
+    return {
+      phase: "past_due",
+      since,
+      daysLeft: Math.max(0, PAST_DUE_LOCK_DAYS - daysIn),
+      locked: daysIn >= PAST_DUE_LOCK_DAYS,
+    };
+  }
   if (facts.status === "active" || facts.hasSubscription) return { phase: "active" };
 
   const daysLeft = daysBetween(today, facts.trialEndsOn);
@@ -76,10 +98,54 @@ export function billingPhase(facts: BillingFacts, today: ISODate): BillingPhase 
   return { phase: "ended", daysOver, endsOn: facts.trialEndsOn, locked: daysOver > GRACE_DAYS };
 }
 
-/** Whether board screens are shut behind the billing wall. */
+/**
+ * Whether the board side is read-only: a trial that ran out with no card,
+ * a card that has been failing for two weeks, or a cancelled subscription.
+ * Owners are never locked. The same rule runs in the database as
+ * `association_writable` (0105).
+ */
 export function boardLocked(phase: BillingPhase): boolean {
-  return phase.phase === "ended" && phase.locked;
+  switch (phase.phase) {
+    case "ended":
+    case "past_due":
+      return phase.locked;
+    case "canceled":
+      return true;
+    default:
+      return false;
+  }
 }
+
+/** The four columns of an associations row that decide the lock. */
+export interface BillingRow {
+  subscription_status: string | null;
+  past_due_since: string | null;
+  trial_ends_at: string | null;
+  billing_subscription_id: string | null;
+}
+
+/**
+ * The lock for a row as the jobs read it, so a cron and the banner cannot
+ * disagree. A row with no trial date (nothing to count from) is not locked.
+ */
+export function rowLocked(row: BillingRow, today: ISODate): boolean {
+  const trialEndsOn = row.trial_ends_at?.slice(0, 10);
+  if (!trialEndsOn) return row.subscription_status === "canceled";
+  const phase = billingPhase(
+    {
+      status: (row.subscription_status ?? "trialing") as SubscriptionStatus,
+      trialEndsOn,
+      homes: 0,
+      hasSubscription: Boolean(row.billing_subscription_id),
+      pastDueSince: row.past_due_since?.slice(0, 10) ?? null,
+    },
+    today,
+  );
+  return boardLocked(phase);
+}
+
+/** Why a job passed over a locked association. */
+export const LOCKED_REASON = "the association's subscription is not paid";
 
 /**
  * The one trial notice to send today, if any.

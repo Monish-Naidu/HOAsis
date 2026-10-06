@@ -11,6 +11,7 @@ import {
   type RemoteCommunitySummary,
 } from "./remote";
 import { slugFromHost } from "@/lib/community-links";
+import { withReversals } from "@/lib/ledger-corrections";
 import type { Community } from "./community";
 
 /**
@@ -488,7 +489,7 @@ export async function loadEarlierLedger(): Promise<boolean> {
     set({
       community: {
         ...current,
-        ledger: [...current.ledger, ...earlier],
+        ledger: withReversals([...current.ledger, ...earlier]),
         history: { ...current.history, ledgerLoaded: true },
       },
     });
