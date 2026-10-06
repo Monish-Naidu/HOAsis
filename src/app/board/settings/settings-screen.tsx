@@ -1069,7 +1069,7 @@ export function BillsByEmailRow({
   return (
     <SettingRow
       title="Email each owner their bill the day it posts"
-      description="Owners on autopay get a receipt instead. Turn this off if you send bills another way."
+      description="Owners on autopay get it too; autopay pays it on their day. Turn this off if you send bills another way."
     >
       <Toggle
         checked={value}

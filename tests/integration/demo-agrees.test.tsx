@@ -87,7 +87,7 @@ describe("a dues change and a new home in the demo", () => {
 });
 
 describe("a bank payment in the demo", () => {
-  it("is the full amount on the statement and the net deposit in the books, worded as the database words it", () => {
+  it("is the full amount on the statement and in the books, with the fee as its own line, worded as the database words it", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     const owner = result.current.community.owners.find((o) => o.daysPastDue > 0)!;
     act(() => {
@@ -98,10 +98,14 @@ describe("a bank payment in the demo", () => {
     });
     const line = result.current.community.ownerCharges[owner.id].find((l) => l.kind === "payment" && l.id.startsWith("pay-"))!;
     expect(line).toMatchObject({ label: "Bank payment", amountCents: -28_500, feeCents: 228 });
-    expect(result.current.ledger[0]).toMatchObject({
+    // The whole payment in and the fee out as its own line, as record_payment
+    // books it since 0101; the two net to what the bank received.
+    const [fee, deposit] = result.current.ledger;
+    expect(fee).toMatchObject({ description: `Processing fee, unit ${owner.unit}`, category: "Processing fees", amountCents: -228 });
+    expect(deposit).toMatchObject({
       description: `Assessment payment, unit ${owner.unit}`,
       category: "Assessments",
-      amountCents: 28_500 - 228,
+      amountCents: 28_500,
     });
   });
 });

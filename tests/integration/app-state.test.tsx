@@ -1163,9 +1163,11 @@ describe("taking a payment", () => {
     expect(lastPayment(statement).amountCents).toBe(-owner.balanceCents);
     // Their balance.
     expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(0);
-    // The association's books, net of what the processor takes.
-    expect(result.current.ledger.length).toBe(ledgerBefore + 1);
-    expect(result.current.ledger[0].amountCents).toBe(owner.balanceCents - 35);
+    // The association's books: the payment whole and the processor's cut as
+    // its own line (0101), netting to what the bank received.
+    expect(result.current.ledger.length).toBe(ledgerBefore + 2);
+    expect(result.current.ledger[0].amountCents).toBe(-35);
+    expect(result.current.ledger[1].amountCents).toBe(owner.balanceCents);
     // Budget performance.
     const incomeAfter = after.budget
       .filter((b) => b.kind === "income")

@@ -371,6 +371,8 @@ export type LedgerCategory =
   | "Reserve transfer"
   | "Legal & professional"
   | "Interest income"
+  /** Stripe's cut of an online payment, its own line since 0101. */
+  | "Processing fees"
   /** What an account held on the day the association started its books here. */
   | "Opening balance";
 

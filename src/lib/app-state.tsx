@@ -1765,17 +1765,33 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         .find((a) => a.kind === "operating");
 
       sliceStore(communityId, "ledger").update((all) => [
+        // Worded and booked as record_payment does it (0101): the whole
+        // payment in, and the processor's fee out as its own line, so the
+        // board can see where the difference went.
+        ...(absorbed > 0
+          ? [
+              {
+                id: `led-${date}-${input.ownerId}-fee-${all.length + 1}`,
+                date,
+                description: `Processing fee, unit ${owner?.unit ?? "?"}`,
+                counterparty: "Stripe",
+                category: "Processing fees" as const,
+                accountId: operating?.id ?? "unassigned",
+                amountCents: -absorbed,
+                status: "cleared" as const,
+                matchedBy: "auto" as const,
+                ownerId: input.ownerId,
+              },
+            ]
+          : []),
         {
           id: `led-${date}-${input.ownerId}-${all.length + 1}`,
           date,
-          // Worded as record_payment words it ("Assessment payment, unit 42"),
-          // and booked as it books it: one deposit, net of the processor's
-          // fee, with the gross payment on the home's statement.
           description: `Assessment payment, unit ${owner?.unit ?? "?"}`,
           counterparty: owner?.displayName ?? "Owner",
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
-          amountCents: input.amountCents - absorbed,
+          amountCents: input.amountCents,
           status: "cleared" as const,
           matchedBy: "auto" as const,
           ownerId: input.ownerId,
