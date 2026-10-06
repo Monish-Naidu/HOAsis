@@ -139,7 +139,7 @@ describe("the meetings page", () => {
     attendees: [],
     ballotIds: [],
   };
-  const open = (sendMeetingNotice: () => boolean | Promise<boolean>) => {
+  const open = (sendMeetingNotice: () => string | false | Promise<string | false>) => {
     state.current = {
       community: { meetings: [meeting], association: { id: "assoc-1" } },
       sendMeetingNotice,
@@ -147,38 +147,56 @@ describe("the meetings page", () => {
     render(<BoardMeetings />, { wrapper: inToasts });
   };
 
-  it("holds Send notice while the notice is going out, and says posted when it is back", async () => {
-    const send = held();
-    const sendMeetingNotice = vi.fn(() => send.promise);
+  it("asks first, with the meeting's title and date, and sends nothing until told to", async () => {
+    const sendMeetingNotice = vi.fn(() => "Notice posted.");
     open(sendMeetingNotice);
 
     await userEvent.click(screen.getByRole("button", { name: "Send notice" }));
+    expect(screen.getByText("Send the notice to every owner now?")).toBeInTheDocument();
+    expect(screen.getByText(/Annual meeting, /)).toBeInTheDocument();
+    expect(sendMeetingNotice).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(sendMeetingNotice).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Send notice" })).toBeEnabled();
+  });
+
+  it("holds Send notice while the notice is going out, and toasts what the send said", async () => {
+    let answer!: (said: string) => void;
+    const sent = new Promise<string>((resolve) => (answer = resolve));
+    const sendMeetingNotice = vi.fn(() => sent);
+    open(sendMeetingNotice);
+
+    await userEvent.click(screen.getByRole("button", { name: "Send notice" }));
+    await userEvent.click(screen.getByRole("button", { name: "Send now" }));
     const button = screen.getByRole("button", { name: "Sending" });
     expect(button).toBeDisabled();
-    expect(screen.queryByText(/sent to every home/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Emailed/)).not.toBeInTheDocument();
     // A press while it is held starts nothing.
     await userEvent.click(button);
     expect(sendMeetingNotice).toHaveBeenCalledTimes(1);
 
-    await act(async () => send.answer(true));
-    expect(screen.getByText("Notice of Annual meeting sent to every home")).toBeInTheDocument();
+    await act(async () => answer("Notice posted. Emailed 12 owners."));
+    expect(screen.getByText("Notice posted. Emailed 12 owners.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send notice" })).toBeEnabled();
   });
 
-  it("does not say posted when the notice did not go on record", async () => {
-    open(vi.fn(async () => false));
+  it("toasts nothing when the notice did not go on record", async () => {
+    open(vi.fn(async () => false as const));
 
     await userEvent.click(screen.getByRole("button", { name: "Send notice" }));
+    await userEvent.click(screen.getByRole("button", { name: "Send now" }));
     await act(async () => {});
-    expect(screen.queryByText(/sent to every home/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Notice posted/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send notice" })).toBeEnabled();
   });
 
-  it("says posted straight away in the demo, where it is", async () => {
-    open(vi.fn(() => true));
+  it("says what happened straight away in the demo", async () => {
+    open(vi.fn(() => "Notice posted."));
 
     await userEvent.click(screen.getByRole("button", { name: "Send notice" }));
-    expect(await screen.findByText("Notice of Annual meeting sent to every home")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Send now" }));
+    expect(await screen.findByText("Notice posted.")).toBeInTheDocument();
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { roomHash, roomSlug, videoJoinUrl, videoRoomName } from "@/lib/meetings/video";
+import { meetingJoin, roomHash, roomSlug, videoJoinUrl, videoRoomName } from "@/lib/meetings/video";
 
 describe("roomSlug", () => {
   it("keeps only lowercase letters, digits and single dashes", () => {
@@ -59,5 +59,33 @@ describe("videoJoinUrl", () => {
     expect(videoJoinUrl({ id: "mtg-1" }, "assoc-a")).toBe(
       `https://meet.jit.si/${videoRoomName({ id: "mtg-1" }, "assoc-a")}`,
     );
+  });
+});
+
+describe("meetingJoin", () => {
+  const meeting = { id: "mtg-1" };
+
+  it("uses the automatic room when the board typed nothing", () => {
+    expect(meetingJoin(meeting, "assoc-a")).toEqual({
+      videoUrl: videoJoinUrl(meeting, "assoc-a"),
+      dialIn: "",
+      passcode: "",
+    });
+  });
+
+  it("treats a typed link as the video link, and keeps the passcode with it", () => {
+    expect(meetingJoin({ ...meeting, dialIn: " https://zoom.us/j/123 ", passcode: "4321" }, "assoc-a")).toEqual({
+      videoUrl: "https://zoom.us/j/123",
+      dialIn: "",
+      passcode: "4321",
+    });
+  });
+
+  it("keeps a phone number as the dial in, beside the automatic room", () => {
+    expect(meetingJoin({ ...meeting, dialIn: "(425) 555-0110", passcode: "99" }, "assoc-a")).toEqual({
+      videoUrl: videoJoinUrl(meeting, "assoc-a"),
+      dialIn: "(425) 555-0110",
+      passcode: "99",
+    });
   });
 });

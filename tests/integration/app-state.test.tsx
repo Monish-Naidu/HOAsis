@@ -470,7 +470,7 @@ describe("admin actions change real records", () => {
     act(() => result.current.state.signIn(ARYA));
     const unread = result.current.state.threads.find((t) => t.unread)!;
 
-    act(() => result.current.state.replyToThread(unread.id, "On it, thanks."));
+    act(() => void result.current.state.replyToThread(unread.id, "On it, thanks."));
     const replied = result.current.state.threads.find((t) => t.id === unread.id)!;
     expect(replied.unread).toBe(false);
     expect(replied.messages.at(-1)?.body).toBe("On it, thanks.");
@@ -1350,5 +1350,41 @@ describe("opening bank balances (demo)", () => {
     expect(lines()).toHaveLength(1);
     expect(lines()[0].amountCents).toBe(80_000_00);
     expect(result.current.community.bankAccounts[0].balanceCents).toBe(before + 80_000_00);
+  });
+});
+
+describe("the demo's Activity", () => {
+  it("records a credit, a dues change, an email change, a vendor, a meeting and a reply, as the database words them", () => {
+    const { result } = renderApp();
+    act(() => result.current.state.signIn(ARYA));
+    const owner = result.current.state.community.owners.find((o) => o.balanceCents > 2_500)!;
+    const thread = result.current.state.threads[0];
+
+    act(() => {
+      void result.current.state.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: "Late fee waived" });
+      void result.current.state.setHomeDues([{ ownerId: owner.id, cents: 31_000 }]);
+      void result.current.state.changeOwnerEmail(owner.id, "new.address@example.com");
+      result.current.state.addVendor({
+        id: "v-new",
+        name: "Acme Paving",
+        service: "Paving",
+        achEnabled: false,
+        w9OnFile: false,
+        defaultCategory: "Repairs & maintenance",
+      } as never);
+      void result.current.state.replyToThread(thread.id, "On it.");
+    });
+
+    const lines = (result.current.state.community.activity ?? []).map((a) => a.summary);
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        `Credit of $25.00 added for ${owner.unit}: Late fee waived`,
+        `Dues for ${owner.unit} set to $310.00`,
+        `Email for ${owner.unit} changed from ${owner.email} to new.address@example.com`,
+        "Vendor Acme Paving added",
+      ]),
+    );
+    expect(lines.some((l) => l.startsWith("Reply posted to "))).toBe(true);
+    expect((result.current.state.community.activity ?? [])[0].actorName).toBe("Arya Mehr");
   });
 });

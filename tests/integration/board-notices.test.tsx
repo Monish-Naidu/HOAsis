@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
@@ -13,6 +13,7 @@ vi.mock("next/navigation", () => ({
 const { AppStateProvider, useAppState } = await import("@/lib/app-state");
 const { ToastProvider } = await import("@/components/app/toast");
 const { NoticesBoard } = await import("@/components/app/notices-board");
+const { NoticeLetter } = await import("@/components/app/notice-letter");
 
 const seen = { state: null as unknown as ReturnType<typeof useAppState> };
 function Probe() {
@@ -50,5 +51,40 @@ describe("an opened notice", () => {
     }
     expect(screen.queryByText(/Photograph \d+ of \d+/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Next photograph")).not.toBeInTheDocument();
+  });
+});
+
+describe("what needs fixing", () => {
+  it("shows on the opened notice, labelled, as the owner reads it", async () => {
+    const user = userEvent.setup();
+    wrap(<NoticesBoard />);
+    act(() => seen.state.signIn("acct-arya"));
+    act(() => {
+      seen.state.addNotice({
+        ownerId: "own-042",
+        ownerName: "Monish Naidu",
+        unit: "42",
+        rule: "Fence needs paint",
+        fix: "Two coats of white by the 30th",
+      });
+    });
+    const row = document.querySelector(`#vio-${seen.state.community.violations[0].id}`) as HTMLElement;
+    await user.click(row.querySelector("button")!);
+    expect(within(row).getByText("What needs fixing")).toBeInTheDocument();
+    expect(within(row).getAllByText(/Two coats of white by the 30th/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("the printed letter", () => {
+  it("carries what needs fixing", () => {
+    wrap(<NoticesBoard />);
+    act(() => seen.state.signIn("acct-arya"));
+    const violation = { ...seen.state.community.violations[0], fix: "Two coats of white by the 30th" };
+    render(
+      <AppStateProvider>
+        <NoticeLetter violation={violation} onClose={() => {}} />
+      </AppStateProvider>,
+    );
+    expect(screen.getByText("What needs fixing: Two coats of white by the 30th")).toBeInTheDocument();
   });
 });

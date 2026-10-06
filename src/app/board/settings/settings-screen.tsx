@@ -45,7 +45,9 @@ import {
   type ArchitecturalForm,
   type CommunityAmenity,
 } from "@/lib/types";
-import { clockTime, cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
+import { activityText } from "@/lib/activity";
+import { useHomeLabel } from "@/components/app/use-home-label";
+import { cn, daysFromToday, formatDate, localStamp, relativeDays, todayIsoDate } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { moduleOn } from "@/lib/modules";
 import { NEXT_ACCESS } from "@/lib/access";
@@ -1366,6 +1368,9 @@ const ACTIVITY_PAGE = 20;
 
 function ActivityList({ rows }: { rows: Activity[] }) {
   const [shown, setShown] = useState(ACTIVITY_PAGE);
+  const placeLabel = useHomeLabel();
+  const { community } = useAppState();
+  const unitLabelById = (id: string) => community.owners.find((o) => o.id === id)?.unit;
   if (rows.length === 0) {
     return (
       <p className="px-5 py-6 text-center text-callout text-fg-muted">
@@ -1379,12 +1384,13 @@ function ActivityList({ rows }: { rows: Activity[] }) {
       <ul className="divide-y divide-border">
         {rows.slice(0, shown).map((r) => (
           <li key={r.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-5 py-3">
-            <span className="min-w-[14rem] flex-1 text-body text-fg">{r.summary}</span>
+            <span className="min-w-[14rem] flex-1 text-body text-fg">
+              {activityText(r, placeLabel, unitLabelById)}
+            </span>
             <span className="text-footnote text-fg-muted">
               {r.actorName}
               <span className="text-fg-subtle"> · </span>
-              <span className="tnum">{formatDate(r.at.slice(0, 10), "medium")}</span>
-              <span className="tnum text-fg-subtle"> {clockTime(r.at.slice(11, 16))}</span>
+              <span className="tnum">{localStamp(r.at)}</span>
             </span>
           </li>
         ))}

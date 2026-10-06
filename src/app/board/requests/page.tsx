@@ -15,6 +15,7 @@ import {
   fieldClass,
 } from "@/components/ui/primitives";
 import { bucketRequests, useAppState } from "@/lib/app-state";
+import { replyToast } from "@/lib/email/plain-error";
 import { useToast } from "@/components/app/toast";
 import { WorkOrderPanel } from "@/components/app/work-order";
 import { cn, daysFromToday, formatDate, pluralize } from "@/lib/utils";
@@ -69,9 +70,9 @@ export default function BoardRequests() {
   }
 
   async function reply(requestId: string, body: string) {
-    const ok = await replyToRequest(requestId, body);
-    if (ok) notify("Reply sent");
-    return ok;
+    const email = await replyToRequest(requestId, body);
+    if (email) notify(replyToast(email), email === "failed" ? "warn" : "ok");
+    return email !== false;
   }
 
   return (

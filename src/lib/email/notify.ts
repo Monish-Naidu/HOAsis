@@ -12,7 +12,7 @@ import {
   meetingNoticeEmail,
   requestUpdateEmail,
 } from "./templates";
-import { videoJoinUrl } from "@/lib/meetings/video";
+import { meetingJoin } from "@/lib/meetings/video";
 import { emailSender, resendKey } from "./sender";
 import { unsubscribeUrl } from "./tokens";
 import { replyToFor } from "./reply-to";
@@ -323,6 +323,8 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
         .eq("association_id", input.associationId)
         .maybeSingle();
       if (!data) return null;
+      // A link the board typed is the video link; see meetingJoin.
+      const join = meetingJoin({ id: meetingId, dialIn: data.dial_in, passcode: data.passcode }, input.associationId);
       return {
         build: (p) =>
           meetingNoticeEmail({
@@ -331,9 +333,9 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
             date: data.held_on,
             time: clockTime(data.held_at ?? ""),
             location: data.location,
-            dialIn: data.dial_in ?? undefined,
-            passcode: data.passcode ?? undefined,
-            videoUrl: videoJoinUrl({ id: meetingId }, input.associationId),
+            dialIn: join.dialIn || undefined,
+            passcode: join.passcode || undefined,
+            videoUrl: join.videoUrl,
             agenda: Array.isArray(data.agenda) ? (data.agenda as string[]) : [],
           }),
       };

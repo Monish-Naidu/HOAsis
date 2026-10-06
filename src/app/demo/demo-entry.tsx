@@ -23,15 +23,21 @@ export function DemoEntry() {
 
   useEffect(() => {
     if (waiting) return;
-    const asOwner = new URLSearchParams(window.location.search).get("as") === "owner";
-    if (!signedIn) {
-      const seat = asOwner
+    // `?as=` names a role (president, vice-president, treasurer, secretary,
+    // owner) or a demo account id, so a tester can be any of the board and
+    // not only the President. Anything unknown opens the board as before.
+    const as = new URLSearchParams(window.location.search).get("as") ?? "";
+    const asOwner = as === "owner" || as === "resident";
+    const byId = accounts.find((a) => a.id === as);
+    const seat =
+      byId ??
+      (asOwner
         ? accounts.find((a) => a.role === "resident")
-        : (accounts.find((a) => a.role === "president") ??
-          accounts.find((a) => a.role !== "resident"));
-      if (seat) signIn(seat.id);
-    }
-    router.replace(asOwner ? "/resident" : "/board");
+        : (accounts.find((a) => a.role === as) ??
+          accounts.find((a) => a.role === "president") ??
+          accounts.find((a) => a.role !== "resident")));
+    if (!signedIn && seat) signIn(seat.id);
+    router.replace(seat?.role === "resident" ? "/resident" : "/board");
   }, [waiting, signedIn, accounts, signIn, router]);
 
   return (

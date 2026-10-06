@@ -1325,7 +1325,7 @@ describe("two presses in quick succession", () => {
     const request = server().requests[0];
     const before = request.thread.length;
     const { result } = renderApp();
-    let saved: boolean[] = [];
+    let saved: unknown[] = [];
     await act(async () => {
       // Both presses are made from the same render, before either write is back.
       saved = await Promise.all([
@@ -1335,7 +1335,7 @@ describe("two presses in quick succession", () => {
     });
     await settled();
 
-    expect(saved).toEqual([true, true]);
+    expect(saved.every((v) => v !== false)).toBe(true);
     const thread = server().requests.find((r) => r.id === request.id)!.thread;
     expect(thread.slice(before).map((e) => e.body), "the second reply erased the first").toEqual([
       "Can you send a photo?",
@@ -1375,8 +1375,8 @@ describe("two presses in quick succession", () => {
     const thread = server().threads[0];
     const { result } = renderApp();
     act(() => {
-      result.current.replyToThread(thread.id, "On it.");
-      result.current.replyToThread(thread.id, "Done, thanks.");
+      void result.current.replyToThread(thread.id, "On it.");
+      void result.current.replyToThread(thread.id, "Done, thanks.");
     });
     await settled();
 
@@ -1617,7 +1617,7 @@ describe("recording an owner's check or cash", () => {
 });
 
 describe("a credit on a statement", () => {
-  it("inserts one negative credit charge with the reason as its label, and no ledger line", async () => {
+  it("goes through add_credit, which logs the activity row, with the reason trimmed and no ledger line", async () => {
     const owner = server().owners[0];
     const { result } = renderApp();
     let ok: boolean | undefined;
@@ -1625,12 +1625,11 @@ describe("a credit on a statement", () => {
       ok = await result.current.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: " Late fee waived " });
     });
     expect(ok).toBe(true);
-    expect(targets()).toEqual(["insert charges"]);
-    expect(writes()[0].values).toMatchObject({
-      unit_id: owner.id,
-      kind: "credit",
-      label: "Late fee waived",
-      amount_cents: -2_500,
+    expect(targets()).toEqual(["rpc:add_credit"]);
+    expect(writes()[0].values).toEqual({
+      p_unit_id: owner.id,
+      p_amount_cents: 2_500,
+      p_label: "Late fee waived",
     });
   });
 });
@@ -1707,7 +1706,7 @@ describe("a board reply", () => {
   it("is appended by the database, and then emailed", async () => {
     const thread = server().threads.find((t) => t.ownerId)!;
     const { result } = renderApp();
-    act(() => result.current.replyToThread(thread.id, "On it."));
+    act(() => void result.current.replyToThread(thread.id, "On it."));
     await settled();
     await waitFor(() => expect(fetched).toHaveLength(1));
 
@@ -1721,6 +1720,24 @@ describe("a board reply", () => {
     });
   });
 
+  it("says the email did not go when the route sent none, and sent when it did", async () => {
+    const thread = server().threads.find((t) => t.ownerId)!;
+    const { result } = renderApp();
+    route = () => ({ body: { sent: 0, failed: 1, already: 0, remaining: 0, errors: ["a@b.com: Invalid `to` field"] } });
+    let email: unknown;
+    await act(async () => {
+      email = await result.current.replyToThread(thread.id, "On it.");
+    });
+    expect(email).toBe("failed");
+    expect(errors, "the board hears it in the reply toast, not a second one").toEqual([]);
+
+    route = () => ({ body: { sent: 1, failed: 0, already: 0, remaining: 0 } });
+    await act(async () => {
+      email = await result.current.replyToThread(thread.id, "Again.");
+    });
+    expect(email).toBe("sent");
+  });
+
   it("says what the database said when it refuses, and emails nobody", async () => {
     db.answer = (s) =>
       s.target === "rpc:reply_as_board"
@@ -1728,11 +1745,31 @@ describe("a board reply", () => {
         : undefined;
     const thread = server().threads.find((t) => t.ownerId)!;
     const { result } = renderApp();
-    act(() => result.current.replyToThread(thread.id, "On it."));
+    act(() => void result.current.replyToThread(thread.id, "On it."));
     await settled();
 
     expect(errors).toEqual(["Sending the reply: That conversation is not yours to answer"]);
     expect(fetched).toEqual([]);
+  });
+});
+
+describe("a notice about a home", () => {
+  it("stores what needs fixing, so the owner and the letter read the same words", async () => {
+    const owner = server().owners[0];
+    const { result } = renderApp();
+    act(() => {
+      result.current.addNotice({
+        ownerId: owner.id,
+        ownerName: owner.displayName,
+        unit: owner.unit,
+        rule: "Trash cans",
+        fix: " Bring them in by Tuesday ",
+      });
+    });
+    await settled();
+
+    expect(targets()).toEqual(["insert violations"]);
+    expect(writes()[0].values).toMatchObject({ rule: "Trash cans", fix: "Bring them in by Tuesday" });
   });
 });
 
@@ -1899,59 +1936,96 @@ describe("sending a meeting's notice", () => {
     expect(dated()[0].counted).toBe(true);
   });
 
-  it("does not record notice as given when the server would not send", async () => {
+  it("records the date when the server refused, because the notice is posted here", async () => {
+    // The route answered, so the notice counts as sent in the app (decided
+    // 2026-10-04). The toast says the email did not go.
     route = () => ({ ok: false, body: { error: "Could not send" } });
     const { result } = renderApp();
-    let recorded: boolean | undefined;
+    let said: string | false | undefined;
     await act(async () => {
-      recorded = await result.current.sendMeetingNotice(meeting().id);
+      said = await result.current.sendMeetingNotice(meeting().id);
     });
     await settled();
 
-    expect(recorded).toBe(false);
-    expect(dated()).toEqual([]);
-    expect(errors[0]).toContain("Emailing the meeting notice: Could not send");
-  });
-
-  it("records it when every email failed, because the notice is posted here", async () => {
-    // A sending domain that is not verified yet fails every address. The
-    // date was never written and Send notice stayed on the meeting for good.
-    route = () => ({ body: { sent: 0, failed: 40, already: 0, remaining: 0 } });
-    const { result } = renderApp();
-    let recorded: boolean | undefined;
-    await act(async () => {
-      recorded = await result.current.sendMeetingNotice(meeting().id);
-    });
-    await settled();
-
-    expect(recorded).toBe(true);
     expect(dated()).toHaveLength(1);
     expect(dated()[0].values).toHaveProperty("notice_sent_on");
-    expect(errors).toEqual(["Emailing the meeting notice: 40 emails were not sent. It is saved here"]);
+    expect(said).toBe("Notice posted in the app. Email did not go out: the email service could not send it.");
+    expect(errors, "the toast tells it, not a second red toast").toEqual([]);
   });
 
-  it("records it when a second press finds everybody already has it, one bad address or not", async () => {
-    route = () => ({ body: { sent: 0, failed: 1, already: 39, remaining: 0 } });
+  it("leaves the date unwritten when the route could not be reached at all", async () => {
+    route = () => {
+      throw new Error("offline");
+    };
     const { result } = renderApp();
-    let recorded: boolean | undefined;
+    let said: string | false | undefined;
     await act(async () => {
-      recorded = await result.current.sendMeetingNotice(meeting().id);
+      said = await result.current.sendMeetingNotice(meeting().id);
     });
     await settled();
 
-    expect(recorded).toBe(true);
+    expect(dated()).toEqual([]);
+    expect(said).toBe("Notice posted in the app. Email did not go out: the mail service could not be reached.");
+  });
+
+  it("records it and says how many were emailed", async () => {
+    route = () => ({ body: { sent: 38, failed: 0, already: 0, remaining: 0 } });
+    const { result } = renderApp();
+    let said: string | false | undefined;
+    await act(async () => {
+      said = await result.current.sendMeetingNotice(meeting().id);
+    });
+    await settled();
+
     expect(dated()).toHaveLength(1);
-    expect(errors).toEqual([
-      "Emailing the meeting notice: 1 email was not sent. It is saved here",
-      "Emailing the meeting notice: the same notice already went to 39 owners in the last hour, so it was not emailed again",
-    ]);
+    expect(said).toBe("Notice posted. Emailed 38 owners.");
+  });
+
+  it("records it when every email failed, and says why in plain words", async () => {
+    // A sending domain that is not verified yet fails every address. The
+    // date was never written and Send notice stayed on the meeting for good.
+    route = () => ({
+      body: {
+        sent: 0,
+        failed: 40,
+        already: 0,
+        remaining: 0,
+        errors: ["a@example.com: You can only send testing emails to your own email address (x@y.com)."],
+      },
+    });
+    const { result } = renderApp();
+    let said: string | false | undefined;
+    await act(async () => {
+      said = await result.current.sendMeetingNotice(meeting().id);
+    });
+    await settled();
+
+    expect(dated()).toHaveLength(1);
+    expect(dated()[0].values).toHaveProperty("notice_sent_on");
+    expect(said).toBe(
+      "Notice posted in the app. Email did not go out: email is not set up to send to owners yet (the sending domain is not verified).",
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it("records it when a second press finds everybody already has it", async () => {
+    route = () => ({ body: { sent: 0, failed: 0, already: 39, remaining: 0 } });
+    const { result } = renderApp();
+    let said: string | false | undefined;
+    await act(async () => {
+      said = await result.current.sendMeetingNotice(meeting().id);
+    });
+    await settled();
+
+    expect(dated()).toHaveLength(1);
+    expect(said).toBe("Notice posted. Every owner already had it by email in the last hour.");
   });
 
   it("answers false when the date itself could not be written", async () => {
     db.answer = (s) => (s.target === "meetings" ? { count: 0 } : undefined);
     route = () => ({ body: { sent: 40, failed: 0, remaining: 0 } });
     const { result } = renderApp();
-    let recorded: boolean | undefined;
+    let recorded: string | false | undefined;
     await act(async () => {
       recorded = await result.current.sendMeetingNotice(meeting().id);
     });
@@ -1962,8 +2036,11 @@ describe("sending a meeting's notice", () => {
     ]);
   });
 
-  it("does not post the notice twice when it is pressed again after a failed send", async () => {
-    route = (_url, call) => (call === 1 ? { ok: false, body: { error: "Could not send" } } : { body: { sent: 40 } });
+  it("does not post the notice twice when it is pressed again after the route could not be reached", async () => {
+    route = (_url, call) => {
+      if (call === 1) throw new Error("offline");
+      return { body: { sent: 40 } };
+    };
     db.answer = (s) => {
       // The database keeps the announcement, so the re-read shows it.
       if (s.target === "announcements" && s.op === "insert") {
@@ -1980,7 +2057,7 @@ describe("sending a meeting's notice", () => {
     const { result } = renderApp();
     act(() => void result.current.sendMeetingNotice(meeting().id));
     await settled();
-    await waitFor(() => expect(errors).toHaveLength(1));
+    await waitFor(() => expect(fetched).toHaveLength(1));
     await settled();
 
     act(() => void result.current.sendMeetingNotice(meeting().id));

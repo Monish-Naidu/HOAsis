@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
 import { DeliveryPanel } from "@/components/app/delivery-panel";
+import { replyToast } from "@/lib/email/plain-error";
 import { useToast } from "@/components/app/toast";
 import { cn, formatDate, pluralize } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
@@ -48,11 +49,14 @@ function CommunicationsScreen() {
   // Every board seat is copied on a reply, so the count is the roster's.
   const boardSeats = community.accounts.filter((a) => a.role !== "resident").length;
 
-  function send() {
+  async function send() {
     if (!draft.trim() || !active) return;
-    replyToThread(active.id, draft.trim());
+    const text = draft.trim();
     setDraft("");
-    notify(`Reply sent to ${active.participants[0]}`);
+    const email = await replyToThread(active.id, text);
+    // Said once the email has answered: "sent" over a send that then failed
+    // is what the log contradicted.
+    if (email) notify(replyToast(email, active.participants[0]), email === "failed" ? "warn" : "ok");
   }
 
   return (

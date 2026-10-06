@@ -32,6 +32,7 @@ import {
   RecordPaymentForm,
   type HandPaymentsState,
 } from "./household-money";
+import { replyToast } from "@/lib/email/plain-error";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
@@ -451,8 +452,13 @@ export function HomeownersScreen() {
   function send(owner: Owner, body: string, subject?: string) {
     const thread = threadFor(threads, owner);
     if (subject) messageOwner(owner.id, subject, body, "Billing");
-    else if (thread) replyToThread(thread.id, body);
-    else messageOwner(owner.id, `A note from the ${community.settings.displayName} board`, body);
+    else if (thread) {
+      // Said once the email has answered, so a failed send is not "Sent".
+      void replyToThread(thread.id, body).then((email) => {
+        if (email) notify(replyToast(email, owner.displayName), email === "failed" ? "warn" : "ok");
+      });
+      return;
+    } else messageOwner(owner.id, `A note from the ${community.settings.displayName} board`, body);
     notify(`Sent to ${owner.displayName}`, "ok");
   }
 

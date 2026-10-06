@@ -229,6 +229,14 @@ function NoticeRow({
             </div>
           ) : null}
 
+          {/* The words the owner reads on their side and on the letter. */}
+          {violation.fix ? (
+            <div>
+              <p className="text-footnote font-semibold text-fg-muted">What needs fixing</p>
+              <p className="mt-0.5 text-body leading-relaxed text-fg">{violation.fix}</p>
+            </div>
+          ) : null}
+
           {violation.ruleCitation ? (
             <p className="text-footnote text-fg-subtle">Rule: {violation.ruleCitation}</p>
           ) : null}

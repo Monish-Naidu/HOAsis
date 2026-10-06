@@ -53,3 +53,27 @@ export function videoRoomName(meeting: Pick<Meeting, "id" | "videoRoom">, scope:
 export function videoJoinUrl(meeting: Pick<Meeting, "id" | "videoRoom">, scope: string): string {
   return `https://${VIDEO_DOMAIN}/${videoRoomName(meeting, scope)}`;
 }
+
+/**
+ * How to join, in one place, so the row, the resident calendar, the notice
+ * and the email cannot disagree. A link the board typed (anything starting
+ * with http) IS the video link; the automatic room is only for a board that
+ * typed nothing. What was typed and is not a URL is a phone number to dial.
+ * The passcode goes with whichever of the two applies.
+ */
+export interface MeetingJoin {
+  videoUrl: string;
+  /** A phone number or other text to dial. Empty when the board typed a link or nothing. */
+  dialIn: string;
+  passcode: string;
+}
+
+export function meetingJoin(
+  meeting: Pick<Meeting, "id" | "videoRoom"> & { dialIn?: string | null; passcode?: string | null },
+  associationId: string,
+): MeetingJoin {
+  const typed = (meeting.dialIn ?? "").trim();
+  const passcode = (meeting.passcode ?? "").trim();
+  if (/^https?:\/\//i.test(typed)) return { videoUrl: typed, dialIn: "", passcode };
+  return { videoUrl: videoJoinUrl(meeting, associationId), dialIn: typed, passcode };
+}
