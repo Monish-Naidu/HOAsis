@@ -253,7 +253,7 @@ get people to sign up. Deck headlines, hero art and the aerial photo stay.
 | The demo says it is one and links to setup | done 2026-10-05 (pull request #7) |
 | Price slider in place of the flat price band; price in the hero | done 2026-10-05, then the slider came off the front page at Monish's word on 2026-10-06 (it stays on Pricing); the price line and the hero price stay |
 | Three setup steps; six questions boards ask | done 2026-10-05 (pull request #7) |
-| `src/app/robots.ts` tells every search engine to stay away from the whole site | waiting: Monish says when the site should be findable; then allow `/`, `/pricing`, `/about`, `/library` and add a sitemap |
+| `src/app/robots.ts` tells every search engine to stay away from the whole site | decided 2026-10-06: stays blocked while the app is still growing; revisit when Monish says |
 | No proof from real associations (quotes, a count) | later: nothing to show until there are customers; do not invent any |
 | A short screen recording of setup in the hero or the steps row | later |
 
