@@ -446,3 +446,15 @@ board screen, one real action each. Most serious first.
 | Small | "Payments are live" beside "Test mode"; subscription "Cancelled" while payments are on; the Maple Court placeholder; resolved notices with no lot or date; Transactions opens on an empty "This month"; duplicate seeded rows; $1 vs $1.00; the Homeowners badge 23 against 24 homes; two homes with one address in the test data | next |
 | Hydration error on board money pages signed in | The same #418 as section 13, on every load of Finances, Past due, Transactions, Homeowners, Vendors | next: same cause, still unfound |
 
+## 19. Owners write to an office
+
+Monish, 2026-10-06: "the ability to send a message from a resident to the
+president or vice president and etc." Built the same day (pull request
+#18, migration 0104 applied, board actions 107/107): an owner picks "To"
+(the board, or an office with its holder's name); every thread stays
+readable by the board; the inbox has a Mine filter and a per-office
+"waiting on a reply" line; the office holder is emailed; replies are signed
+"{Name}, {Office}, for the board". A "Your board" card on Messages (and a
+row on More) lists each office and what it handles. Left: a Mine badge on
+the nav, and a real Resend send once the domain is verified.
+

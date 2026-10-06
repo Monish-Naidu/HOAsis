@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, ChevronRight, LayoutDashboard, LogOut } from "lucide-react";
+import { Building2, ChevronRight, LayoutDashboard, LogOut, Users } from "lucide-react";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { Card, IconTile } from "@/components/ui/primitives";
 import { residentMoreRows, visibleResidentTabs } from "@/components/app/resident-nav";
@@ -46,6 +46,20 @@ export default function ResidentMore() {
             <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
           </Link>
         ))}
+      </Card>
+
+      <Card>
+        <Link
+          href="/resident/messages#your-board"
+          className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+        >
+          <IconTile icon={Users} tint="neutral" size="sm" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-body font-semibold text-fg">Your board</span>
+            <span className="block text-footnote text-fg-muted">Who holds each office, and how to write to them</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+        </Link>
       </Card>
 
       {officer || others.length ? (

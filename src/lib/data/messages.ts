@@ -14,6 +14,7 @@ export const threads: MessageThread[] = [
     updatedDate: "2026-08-19",
     unread: true,
     tag: "Maintenance",
+    toRole: "board",
     messages: [
       {
         id: "m-1",
@@ -44,6 +45,7 @@ export const threads: MessageThread[] = [
     updatedDate: "2026-08-18",
     unread: true,
     tag: "Billing",
+    toRole: "treasurer",
     messages: [
       {
         id: "m-3",
@@ -72,6 +74,7 @@ export const threads: MessageThread[] = [
     updatedDate: "2026-08-15",
     unread: false,
     tag: "Governance",
+    toRole: "board",
     messages: [
       {
         id: "m-5",
@@ -102,6 +105,7 @@ export const threads: MessageThread[] = [
     updatedDate: "2026-08-14",
     unread: false,
     tag: "Maintenance",
+    toRole: "board",
     messages: [
       {
         id: "m-7",
@@ -132,6 +136,7 @@ export const threads: MessageThread[] = [
     updatedDate: "2026-08-11",
     unread: false,
     tag: "Governance",
+    toRole: "board",
     messages: [
       {
         id: "m-9",

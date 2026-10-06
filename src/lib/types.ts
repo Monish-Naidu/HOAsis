@@ -730,7 +730,20 @@ export interface MessageEvent {
   direction: "inbound" | "outbound";
   channel: "email" | "sms" | "portal";
   body: string;
+  /**
+   * The office the board member held when they sent this, for the signature
+   * "{Name}, {Office}, for the board". Stamped when the reply is written, so
+   * it does not change at the next election. Absent on an owner's message
+   * and on a reply from a seat with no office.
+   */
+  fromOffice?: Office;
 }
+
+/** The offices an owner can write to. */
+export type Office = "president" | "vice-president" | "treasurer" | "secretary";
+
+/** Who a thread is addressed to: one office, or the board as a whole. */
+export type ThreadAddress = "board" | Office;
 
 export interface MessageThread {
   id: ID;
@@ -741,6 +754,8 @@ export interface MessageThread {
   updatedDate: ISODate;
   unread: boolean;
   tag: "Billing" | "Maintenance" | "Governance" | "Architectural" | "General";
+  /** The office this thread is addressed to. Every thread stays readable by the whole board. */
+  toRole: ThreadAddress;
   messages: MessageEvent[];
 }
 

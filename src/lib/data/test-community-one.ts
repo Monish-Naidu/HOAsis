@@ -621,6 +621,7 @@ export const testCommunityOne: Community = {
       updatedDate: "2027-01-09",
       unread: false,
       tag: "Billing",
+      toRole: "board",
       messages: [
         {
           id: "tc1-m-1",

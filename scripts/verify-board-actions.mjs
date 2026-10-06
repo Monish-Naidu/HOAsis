@@ -286,6 +286,24 @@ try {
   const { data: receipt, error: voteError } = await neighbor.client.rpc("cast_vote", { p_ballot_id: ballot.id, p_option_id: options[0].id });
   check("cast_vote: still works with the new columns", !voteError && /^VR-/.test(receipt ?? ""), voteError?.message ?? receipt);
 
+  // Writing to an office (0104). The thread carries the office it is
+  // addressed to, an unknown office is refused, and leaving it out still
+  // means the whole board, so a caller that predates offices keeps working.
+  const { data: toTreasurer, error: officeError } = await neighbor.client.rpc("start_owner_thread", {
+    p_unit_id: neighborUnit, p_subject: "Budget question", p_body: "Where did the surplus go?", p_tag: "Billing", p_to_role: "treasurer",
+  });
+  const { data: officeRow } = await admin.from("threads").select("to_role").eq("id", toTreasurer ?? "").maybeSingle();
+  check("start_owner_thread: a thread to the treasurer carries to_role", !officeError && officeRow?.to_role === "treasurer", officeError?.message ?? String(officeRow?.to_role));
+  const { error: badOffice } = await neighbor.client.rpc("start_owner_thread", {
+    p_unit_id: neighborUnit, p_subject: "Hello", p_body: "Anyone?", p_to_role: "janitor",
+  });
+  check("start_owner_thread: an unknown office is refused", Boolean(badOffice), badOffice?.message ?? "no error");
+  const { data: toBoard, error: defaultError } = await neighbor.client.rpc("start_owner_thread", {
+    p_unit_id: neighborUnit, p_subject: "Hello again", p_body: "Anyone there?",
+  });
+  const { data: boardRow } = await admin.from("threads").select("to_role").eq("id", toBoard ?? "").maybeSingle();
+  check("start_owner_thread: left out, the thread is addressed to the board", !defaultError && boardRow?.to_role === "board", defaultError?.message ?? String(boardRow?.to_role));
+
   // Board replies are appended in the database (0072). The browser used to
   // send the whole thread back from its own copy, so a reply written in a
   // tab that had been open a while erased whatever the owner had said since.

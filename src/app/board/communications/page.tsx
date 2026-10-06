@@ -5,6 +5,9 @@ import { Avatar, Badge, Button, Callout, Card, CardHeader, EmptyState, PageHeade
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
+import { addressLabel, boardSignature, isMine, officeOf, unansweredByAddress, toLabel } from "@/lib/board-offices";
+import { OFFICES } from "@/lib/board-offices";
+import type { MessageEvent } from "@/lib/types";
 import { DeliveryPanel } from "@/components/app/delivery-panel";
 import { replyToast } from "@/lib/email/plain-error";
 import { useToast } from "@/components/app/toast";
@@ -36,16 +39,23 @@ export default function BoardCommunications() {
 
 function CommunicationsScreen() {
   const placeLabel = useHomeLabel();
-  const { community, threads, replyToThread } = useAppState();
+  const { community, threads: allThreads, replyToThread, account } = useAppState();
   const unread = useUnreadThreadCount();
   const { notify } = useToast();
   const params = useSearchParams();
-  const [activeId, setActiveId] = useState(params.get("thread") ?? threads[0]?.id);
+  // Every thread is readable by the board; "Mine" is only the ones addressed
+  // to the office this seat holds, plus the ones for the board as a whole.
+  const [filter, setFilter] = useState<"all" | "mine">("all");
+  const myOffice = officeOf(account?.role);
+  const threads = filter === "mine" ? allThreads.filter((t) => isMine(t, account?.role)) : allThreads;
+  const waiting = unansweredByAddress(allThreads);
+  const [activeId, setActiveId] = useState(params.get("thread") ?? allThreads[0]?.id);
   const [draft, setDraft] = useState("");
   // Ten years of collection letters is a hundred conversations. The list
   // opens on the newest and unfolds on request; the open one always shows.
   const [showAll, setShowAll] = useState(false);
   const active = threads.find((t) => t.id === activeId) ?? threads[0];
+  const senderName = (m: MessageEvent) => (m.fromOffice ? boardSignature(m.from, m.fromOffice) : m.from);
   // Every board seat is copied on a reply, so the count is the roster's.
   const boardSeats = community.accounts.filter((a) => a.role !== "resident").length;
 
@@ -79,7 +89,7 @@ function CommunicationsScreen() {
         </div>
       ) : null}
 
-      {!active ? (
+      {!active && allThreads.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Inbox className="size-5" />}
@@ -95,9 +105,45 @@ function CommunicationsScreen() {
         {/* Thread list */}
         <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Inbox" subtitle={pluralize(threads.length, "conversation")} />
+          {/* Who a thread is addressed to is a filter, not a wall: "All" is
+              what the board has always seen. */}
+          <div className="border-b border-border px-5 py-3">
+            <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
+              {(["all", "mine"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  aria-pressed={filter === f}
+                  onClick={() => setFilter(f)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-footnote font-medium transition-colors",
+                    filter === f
+                      ? "border-brand bg-primary-soft text-fg"
+                      : "border-border text-fg-muted hover:bg-surface-2",
+                  )}
+                >
+                  {f === "all" ? "All" : "Mine"}
+                </button>
+              ))}
+            </div>
+            {filter === "mine" ? (
+              <p className="mt-2 text-footnote text-fg-muted">
+                {myOffice ? `Written to the ${addressLabel(myOffice)} and to the board.` : "Written to the board."}
+              </p>
+            ) : null}
+            <p className="mt-2 text-footnote text-fg-muted">
+              Waiting on a reply:{" "}
+              {(["board", ...OFFICES] as const)
+                .map((a) => `${addressLabel(a)} ${waiting[a]}`)
+                .join(", ")}
+            </p>
+          </div>
+          {threads.length === 0 ? (
+            <p className="px-5 py-6 text-body text-fg-muted">Nothing addressed to you yet.</p>
+          ) : null}
           {(showAll
             ? threads
-            : threads.filter((t, i) => i < RECENT_THREADS || t.id === active.id)
+            : threads.filter((t, i) => i < RECENT_THREADS || t.id === active?.id)
           ).map((t) => (
             <button
               key={t.id}
@@ -105,7 +151,7 @@ function CommunicationsScreen() {
               onClick={() => setActiveId(t.id)}
               className={cn(
                 "flex w-full items-start gap-3 border-b border-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface-2",
-                t.id === active.id && "bg-primary-soft/50",
+                t.id === active?.id && "bg-primary-soft/50",
               )}
             >
               <Avatar name={t.participants[0]} tone={t.unread ? "brand" : "neutral"} />
@@ -126,6 +172,7 @@ function CommunicationsScreen() {
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <Badge tone="neutral">{t.tag}</Badge>
+                  <Badge tone={t.toRole === "board" ? "neutral" : "info"}>{toLabel(t.toRole)}</Badge>
                   <span className="text-footnote text-fg-subtle">{formatDate(t.updatedDate)}</span>
                 </div>
               </div>
@@ -141,12 +188,18 @@ function CommunicationsScreen() {
         </Card>
 
         {/* Reading pane, as tall as the inbox beside it */}
+        {active ? (
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
           <Card className="flex flex-1 flex-col">
             <CardHeader
               title={active.subject}
               subtitle={`${active.participants.join(", ")}${active.unit ? ` · ${placeLabel(active.unit)}` : ""}`}
-              action={<Badge tone="neutral">{active.tag}</Badge>}
+              action={
+                <span className="flex items-center gap-2">
+                  <Badge tone="neutral">{active.tag}</Badge>
+                  <Badge tone={active.toRole === "board" ? "neutral" : "info"}>{toLabel(active.toRole)}</Badge>
+                </span>
+              }
             />
             <div className="flex-1 space-y-4 px-5 py-4">
               {active.messages.map((m) => (
@@ -166,7 +219,7 @@ function CommunicationsScreen() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-body font-semibold text-fg">{m.from}</span>
+                      <span className="text-body font-semibold text-fg">{senderName(m)}</span>
                       <span className="text-footnote text-fg-subtle">
                         {formatDate(m.at, "long")} · {m.channel === "portal" ? "in the app" : m.channel}
                       </span>
@@ -213,6 +266,7 @@ function CommunicationsScreen() {
             </Callout>
           ) : null}
         </div>
+        ) : null}
       </div>
       )}
     </>

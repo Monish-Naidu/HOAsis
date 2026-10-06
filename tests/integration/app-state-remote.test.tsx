@@ -2253,6 +2253,7 @@ describe("sending reminders", () => {
               updatedDate: server().asOf,
               unread: false,
               tag: "Billing",
+              toRole: "board",
               messages: row.messages,
             },
             ...server().threads,
@@ -2280,6 +2281,7 @@ describe("sending reminders", () => {
           updatedDate: server().asOf,
           unread: false,
           tag: "Billing",
+          toRole: "board",
           messages: [
             { id: "m-1", at: server().asOf, from: "Pat", fromRole: "board", direction: "outbound", channel: "email", body: "Reminder." },
           ],

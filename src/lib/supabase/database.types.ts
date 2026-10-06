@@ -2304,6 +2304,7 @@ export type Database = {
           participants: Json
           subject: string
           tag: string
+          to_role: string
           unit_id: string | null
           unread: boolean
           updated_on: string
@@ -2316,6 +2317,7 @@ export type Database = {
           participants?: Json
           subject: string
           tag?: string
+          to_role?: string
           unit_id?: string | null
           unread?: boolean
           updated_on?: string
@@ -2328,6 +2330,7 @@ export type Database = {
           participants?: Json
           subject?: string
           tag?: string
+          to_role?: string
           unit_id?: string | null
           unread?: boolean
           updated_on?: string
@@ -3153,6 +3156,7 @@ export type Database = {
           p_body: string
           p_subject: string
           p_tag?: string
+          p_to_role?: string
           p_unit_id: string
         }
         Returns: string
