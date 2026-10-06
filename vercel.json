@@ -5,6 +5,10 @@
       "schedule": "0 13 * * *"
     },
     {
+      "path": "/api/email/bills",
+      "schedule": "30 13 * * *"
+    },
+    {
       "path": "/api/billing/sweep",
       "schedule": "0 14 * * *"
     },

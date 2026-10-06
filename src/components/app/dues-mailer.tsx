@@ -112,7 +112,10 @@ export function DuesMailer() {
         body: JSON.stringify({
           associationId: community.id,
           category,
-          dueDate: community.nextChargeDate,
+          // The bill already posted, when there is one, so this and the
+          // morning's automatic send carry the same subject and the one hour
+          // repeat guard keeps owners from getting it twice.
+          dueDate: community.recentDuesBill?.dueOn ?? community.nextChargeDate,
           dryRun,
         }),
       });

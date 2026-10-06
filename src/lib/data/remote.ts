@@ -22,6 +22,7 @@ import { duesFor } from "@/lib/home-types";
 import { compareStatement } from "@/lib/statement";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { addDays, clockTime, nextDueOnOrAfter } from "@/lib/utils";
+import { isPostedDuesBill } from "@/lib/email/bill-run";
 
 /**
  * Loading a real association out of Postgres.
@@ -241,6 +242,23 @@ type ChargeRow = {
   /** "dues", "late_fee" and so on. Tables written before it existed leave it out. */
   category?: string | null;
 };
+
+/**
+ * The latest dues bill the daily run posted: the day its rows were created
+ * and the date they fell due. A balance brought forward is a carried number
+ * and not a bill, so it is left out (src/lib/email/bill-run.ts).
+ */
+function latestDuesBill(rows: ChargeRow[]): { postedOn: string; dueOn: string } | undefined {
+  let best: { postedOn: string; dueOn: string } | undefined;
+  for (const row of rows) {
+    if (!isPostedDuesBill(row)) continue;
+    const postedOn = row.created_at.slice(0, 10);
+    if (!best || postedOn > best.postedOn || (postedOn === best.postedOn && row.due_on > best.dueOn)) {
+      best = { postedOn, dueOn: row.due_on };
+    }
+  }
+  return best;
+}
 
 /**
  * A home's statement lines, newest first, each carrying the balance after it.
@@ -669,6 +687,7 @@ export async function loadCommunity(
       addressLine: `${a.city}, ${a.state}`,
       managedBy: "self",
       contactEmail: a.contact_email || undefined,
+      billsByEmail: a.bills_by_email,
       insuranceCarrier: a.insurance_carrier ?? undefined,
       insurancePolicyNo: a.insurance_policy_no ?? undefined,
       insuranceExpiresOn: a.insurance_expires_on ?? undefined,
@@ -895,6 +914,7 @@ export async function loadCommunity(
       doneOn: i.done_on ?? undefined,
       createdOn: i.created_at.slice(0, 10),
     })),
+    recentDuesBill: latestDuesBill(chargeRows),
     emailLog: (emailRows.data ?? []).map((e) => ({
       id: e.id,
       to: e.to_email,

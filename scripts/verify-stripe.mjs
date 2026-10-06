@@ -80,6 +80,12 @@ try {
   check("one intent is one statement line", (chargeLines ?? []).length === 1, String((chargeLines ?? []).length));
 
   const { data: ledgerA } = await admin.from("ledger_entries").select("id").eq("association_id", associationId).eq("category", "Assessments");
+  // The whole payment comes in and the fee leaves as its own line (0101);
+  // the two net to what the bank receives.
+  const { data: feeLines } = await admin.from("ledger_entries").select("amount_cents, category").eq("payment_id", firstId);
+  const gross = (feeLines ?? []).filter((l) => l.category === "Assessments").reduce((t, l) => t + l.amount_cents, 0);
+  const fee = (feeLines ?? []).filter((l) => l.category === "Processing fees").reduce((t, l) => t + l.amount_cents, 0);
+  check("the ledger shows the payment whole and the processing fee as its own line", gross > 0 && fee === -48, `gross ${gross}, fee ${fee}`);
   check("one intent is one ledger entry", (ledgerA ?? []).length === 1, String((ledgerA ?? []).length));
 
   // 2. A pending row (the `processing` event) settles in place.
@@ -125,7 +131,8 @@ try {
   check("a redelivered refund is one refund", again === firstId, String(again));
   const { data: refunded } = await admin.from("payments").select("state").eq("id", firstId).single();
   const { data: refundLines } = await admin.from("charges").select("amount_cents").eq("unit_id", unit).ilike("label", "Refund%");
-  const { data: refundLedger } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", firstId).lt("amount_cents", 0);
+  // Refund lines only: the processing fee is its own negative line since 0101.
+  const { data: refundLedger } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", firstId).lt("amount_cents", 0).neq("category", "Processing fees");
   check("a refund flips the payment, adds one statement line and one ledger line",
     refunded?.state === "refunded" && (refundLines ?? []).length === 1 && refundLines[0].amount_cents === 6000 && (refundLedger ?? []).length === 1 && refundLedger[0].amount_cents === -6000,
     `${refunded?.state}, ${(refundLines ?? []).length} lines, ${(refundLedger ?? []).length} ledger`);
@@ -141,7 +148,7 @@ try {
   // owner paid on top, as older payments were.
   const refundsOf = async () => {
     const { data: lines } = await admin.from("charges").select("amount_cents, category").eq("unit_id", unit).ilike("label", "Refund%");
-    const { data: books } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", pendingRow.id).lt("amount_cents", 0);
+    const { data: books } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", pendingRow.id).lt("amount_cents", 0).neq("category", "Processing fees");
     const { data: row } = await admin.from("payments").select("state, refunded_cents").eq("id", pendingRow.id).single();
     return {
       // Section 4 left one $60.00 line on this home's statement.
@@ -211,7 +218,8 @@ try {
   const booksOf = async () => {
     const { data: lines } = await admin.from("charges").select("amount_cents").eq("unit_id", unit).ilike("label", "Refund%");
     const { data: credits } = await admin.from("charges").select("amount_cents").eq("unit_id", unit).eq("kind", "payment");
-    const { data: books } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", waitingRow.id);
+    // The fee line (0101) is neither a deposit nor a refund debit.
+    const { data: books } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", waitingRow.id).neq("category", "Processing fees");
     const { data: row } = await admin.from("payments").select("state, refunded_cents").eq("id", waitingRow.id).single();
     return {
       refundLines: (lines ?? []).length,

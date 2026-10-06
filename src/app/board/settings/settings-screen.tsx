@@ -297,6 +297,10 @@ export function SettingsScreen() {
             value={community.association.contactEmail ?? ""}
             save={(contactEmail) => updateAssociation({ contactEmail })}
           />
+          <BillsByEmailRow
+            value={community.association.billsByEmail !== false}
+            save={(billsByEmail) => updateAssociation({ billsByEmail })}
+          />
           <div className="border-b border-border px-5 py-4">
             <p className="text-body font-medium text-fg">Community photo</p>
             <p className="mt-0.5 text-footnote text-fg-muted">
@@ -1045,6 +1049,37 @@ export function ContactEmailRow({
           {problem}
         </p>
       ) : null}
+    </SettingRow>
+  );
+}
+
+/**
+ * Whether each owner is emailed their bill the day it posts. On unless the
+ * board turns it off. "Saved" is said once the write comes back true, so a
+ * seat the database refuses is not told it worked.
+ */
+export function BillsByEmailRow({
+  value,
+  save,
+}: {
+  value: boolean;
+  save: (next: boolean) => boolean | Promise<boolean>;
+}) {
+  const { notify } = useToast();
+  return (
+    <SettingRow
+      title="Email each owner their bill the day it posts"
+      description="Owners on autopay get it too; autopay pays it on their day. Turn this off if you send bills another way."
+    >
+      <Toggle
+        checked={value}
+        onChange={(next) => {
+          void Promise.resolve(save(next)).then((ok) => {
+            if (ok) notify(next ? "Saved. Owners are emailed their bill the day it posts." : "Saved. Bills will not be emailed automatically.", "ok");
+          });
+        }}
+        label="Email each owner their bill the day it posts"
+      />
     </SettingRow>
   );
 }

@@ -105,8 +105,11 @@ try {
 
   // The board's books, net of what the processor took.
   const { data: ledger } = await president.client.from("ledger_entries").select("amount_cents, category, confirmed_at").eq("association_id", associationId);
-  check("the books show the deposit net of the processor's cut",
-    (ledger ?? []).some((e) => e.amount_cents === 6000 - 35 && e.category === "Assessments"),
+  // The whole payment in and the processor's cut out as its own line
+  // (0101), netting to what the bank received.
+  check("the books show the payment whole and the processor's cut as its own line",
+    (ledger ?? []).some((e) => e.amount_cents === 6000 && e.category === "Assessments")
+      && (ledger ?? []).some((e) => e.amount_cents === -35 && e.category === "Processing fees"),
     JSON.stringify((ledger ?? []).map((e) => e.amount_cents)));
   check("money we moved ourselves needs no human confirmation",
     (ledger ?? [])[0]?.confirmed_at !== null, String((ledger ?? [])[0]?.confirmed_at));
