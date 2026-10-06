@@ -57,6 +57,7 @@ test.describe("notices", () => {
     await expect(send, "an empty notice could be sent").toBeDisabled();
 
     await page.getByLabel("Which home").selectOption({ index: 1 });
+    await page.getByLabel("The rule").fill("Trash bins");
     await page.getByLabel("What needs fixing").fill(
       "Trash cans are out front on non-collection days. Please keep them behind the fence.",
     );

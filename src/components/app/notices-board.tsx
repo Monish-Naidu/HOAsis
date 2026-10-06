@@ -194,6 +194,7 @@ function NoticeRow({
           </div>
           <p className={cn("mt-0.5 text-body text-fg-muted", !open && "line-clamp-1")}>
             {violation.rule}
+            {violation.fix ? ` · ${violation.fix}` : ""}
           </p>
           <p className="mt-0.5 text-footnote text-fg-subtle">
             {resolved
@@ -269,15 +270,17 @@ function NewNotice({
     ownerName: string;
     unit: string;
     rule: string;
+    fix?: string;
     ruleCitation?: string;
   }) => void;
 }) {
   const placeLabel = useHomeLabel();
   const [ownerId, setOwnerId] = useState("");
+  const [rule, setRule] = useState("");
   const [what, setWhat] = useState("");
   const [citation, setCitation] = useState("");
   const owner = owners.find((o) => o.id === ownerId);
-  const ready = Boolean(owner) && what.trim().length > 3;
+  const ready = Boolean(owner) && rule.trim().length > 1 && what.trim().length > 3;
   const sorted = [...owners].sort((a, b) =>
     a.unit.localeCompare(b.unit, undefined, { numeric: true }),
   );
@@ -315,7 +318,18 @@ function NewNotice({
           </Select>
         </label>
         <label className="block">
-          <span className={LABEL}>Which rule, if you want to name it</span>
+          <span className={LABEL}>The rule, in a few words</span>
+          <input
+            value={rule}
+            onChange={(e) => setRule(e.target.value)}
+            aria-label="The rule"
+            placeholder="Trash bins"
+            maxLength={80}
+            className={INPUT}
+          />
+        </label>
+        <label className="block">
+          <span className={LABEL}>Which section, if you want to name it</span>
           <input
             value={citation}
             onChange={(e) => setCitation(e.target.value)}
@@ -348,7 +362,8 @@ function NewNotice({
               ownerId: owner.id,
               ownerName: owner.displayName,
               unit: owner.unit,
-              rule: what,
+              rule,
+              fix: what,
               ruleCitation: citation,
             })
           }

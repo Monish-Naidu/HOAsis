@@ -971,6 +971,7 @@ export async function loadCommunity(
       ownerName: v.owner_name,
       unit: v.unit_label,
       rule: v.rule,
+      fix: v.fix || undefined,
       ruleCitation: v.rule_citation,
       stage: v.stage,
       openedDate: v.opened_on,
@@ -1127,7 +1128,9 @@ export async function loadCommunity(
               (tallies.data ?? []).find((t) => t.option_id === o.id)?.votes ?? 0,
           })),
         myVoteOptionId: mine?.option_id ?? undefined,
-        myVoteOptionIds: marks.length ? marks.map((v) => v.option_id) : undefined,
+        // A person with two homes has a row per home for the same pick, so the
+        // options are listed once.
+        myVoteOptionIds: marks.length ? [...new Set(marks.map((v) => v.option_id))] : undefined,
         homesVoted: (turnout.data ?? []).find((t) => t.ballot_id === b.id)?.homes_voted ?? 0,
         myVoteReceipt: mine?.receipt ?? undefined,
         meetingId: b.meeting_id ?? undefined,

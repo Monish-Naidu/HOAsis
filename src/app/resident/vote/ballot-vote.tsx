@@ -5,6 +5,7 @@ import { Check, ChevronDown, Clock } from "lucide-react";
 import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
 import { resultLine } from "@/components/app/ballot-card";
 import { useAppState } from "@/lib/app-state";
+import { voteCountLine } from "@/lib/home-choice";
 import { ballotPhase } from "@/lib/phases";
 import type { Ballot } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
@@ -19,7 +20,7 @@ import { cn, formatDate, relativeDays } from "@/lib/utils";
  * record for anyone who asks; they are no longer the first thing shown.
  */
 export function BallotVote({ ballot }: { ballot: Ballot }) {
-  const { settings, castVote } = useAppState();
+  const { settings, castVote, mySeats } = useAppState();
   const [expanded, setExpanded] = useState(false);
   const seats = Math.max(1, ballot.seats ?? 1);
   const marked = ballot.myVoteOptionIds ?? (ballot.myVoteOptionId ? [ballot.myVoteOptionId] : []);
@@ -175,6 +176,11 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                 : "Tap a choice to vote. One vote per home."}
             </p>
           )}
+          {/* The database casts the choice for every home the person holds, so
+              the card says so rather than letting one tap look like one vote. */}
+          {mySeats.length > 1 ? (
+            <p className="text-footnote text-fg-muted">{voteCountLine(mySeats.length)}</p>
+          ) : null}
         </div>
       ) : null}
 

@@ -169,7 +169,7 @@ export function CommunityHero({
   overlay,
   toolbar,
 }: {
-  subtitle?: string;
+  subtitle?: ReactNode;
   className?: string;
   compact?: boolean;
   /**
@@ -501,7 +501,7 @@ export function PhotoStrip({
   className,
   quietBelowLg,
 }: {
-  subtitle?: string;
+  subtitle?: ReactNode;
   className?: string;
   /** Photo only under lg, where the shell's own header already says the name. */
   quietBelowLg?: boolean;

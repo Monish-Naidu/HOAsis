@@ -578,7 +578,10 @@ export interface Violation {
   ownerId: ID;
   ownerName: string;
   unit: string;
+  /** The rule, in a few words. The title of the notice everywhere. */
   rule: string;
+  /** What the owner is asked to do about it. Empty on notices from before 0097. */
+  fix?: string;
   ruleCitation: string;
   stage: "courtesy" | "first-notice" | "hearing" | "fined" | "cured";
   openedDate: ISODate;

@@ -3133,6 +3133,10 @@ export type Database = {
         Args: { p_association_id: string; p_autopay: Json }
         Returns: undefined
       }
+      set_my_home_autopay: {
+        Args: { p_association_id: string; p_autopay: Json; p_unit_id: string }
+        Returns: undefined
+      }
       slugify: { Args: { p_text: string }; Returns: string }
       start_owner_thread: {
         Args: {

@@ -27,6 +27,7 @@ import { moduleOn } from "@/lib/modules";
 import { TabPill } from "@/components/app/tab-pill";
 import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { CommunityHero, CommunityName, PhotoStrip } from "@/components/app/community-hero";
+import { HomeSwitcher } from "@/components/app/home-switcher";
 import { HomeBadge } from "@/components/app/home-badge";
 import { DemoBanner } from "@/components/app/local-copy-banner";
 import { useAppState, useCurrentOwner } from "@/lib/app-state";
@@ -144,7 +145,9 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
                   height of the board's. */}
               <CommunityName />
               <span className="h-5 w-px shrink-0 bg-border" aria-hidden />
-              <p className="truncate text-footnote text-fg-muted">{homeLine}</p>
+              <p className="min-w-0 truncate text-footnote text-fg-muted">
+                <HomeSwitcher>{homeLine}</HomeSwitcher>
+              </p>
             </div>
           )}
         </div>
@@ -161,7 +164,9 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <p className="truncate text-headline font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-footnote text-fg-muted">{homeLine}</p>
+        <p className="truncate text-footnote text-fg-muted">
+          <HomeSwitcher>{homeLine}</HomeSwitcher>
+        </p>
       </div>
       <div className="flex items-center gap-1.5">
         <SearchButton compact />
@@ -274,7 +279,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <>
           <CommunityHero
             short
-            subtitle={homeLine}
+            subtitle={<HomeSwitcher onPhoto>{homeLine}</HomeSwitcher>}
             nameControl={<CommunityName onPhoto />}
             className="max-lg:hidden"
             toolbar={
@@ -321,7 +326,9 @@ function PhoneHeader({
         <p className="truncate text-headline font-semibold tracking-[-0.015em] text-fg">
           {associationName}
         </p>
-        <p className="truncate text-footnote text-fg-muted">{homeLine}</p>
+        <p className="truncate text-footnote text-fg-muted">
+          <HomeSwitcher>{homeLine}</HomeSwitcher>
+        </p>
       </div>
       <div className="flex items-center gap-1.5">
         <SearchButton compact />
