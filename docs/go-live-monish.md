@@ -45,6 +45,47 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
    policies. Stripe review asks for the entity; customers ask for the
    insurance.
 
+## Added 2026-10-06, after the overnight list
+
+Monish asked "is there anything else I need to wire up?" Beyond the nine
+above, in the order they matter:
+
+10. **Supabase auth emails through your own domain.** Sign-up confirmations,
+    magic links, password resets and the new email-change links are sent by
+    Supabase's own mailer today, limited to a few an hour and from a
+    Supabase address. Once Resend's domain is verified (item 1):
+    supabase.com → project → Authentication → SMTP Settings → enable custom
+    SMTP with Resend's host (`smtp.resend.com`, port 465), username
+    `resend`, password a Resend API key, sender `Your HOAsis
+    <hello@yourhoasis.com>`. Then Authentication → URL Configuration: Site
+    URL `https://yourhoasis.com`, and add `https://yourhoasis.com/auth/callback`
+    and `https://*.vercel.app/auth/callback` to the redirect list, so a link
+    opened from a preview still signs in.
+11. **Sentry DSN** (item 7) and **one uptime check**: betterstack.com or
+    uptimerobot.com, free, pointed at `https://yourhoasis.com/api/health`
+    every five minutes, email you on failure. The daily digest
+    (`/api/ops/digest`, since 2026-10-06) tells you what failed; the uptime
+    check tells you when the site is down and cannot send it.
+12. **Search engines.** `src/app/robots.ts` still blocks every crawler, from
+    the prototype days. When you want to be found: allow `/`, `/pricing`,
+    `/about`, `/library`, keep `/board`, `/resident`, `/admin`, `/api`
+    blocked, add a sitemap, then Google Search Console → add
+    `yourhoasis.com` (DNS record in Cloudflare). Nobody finds the site until
+    this is done.
+13. **Staging database.** Accept the Supabase terms once in Vercel
+    (https://vercel.com/monish-naidus-projects/~/integrations/accept-terms/supabase?source=cli),
+    then `pnpm staging:setup` does the rest. Until then every database check
+    runs against the live project with throwaway associations it deletes.
+14. **Stripe live-mode billing portal.** `pnpm stripe:setup` (item 3) also
+    creates the portal configuration in live mode; it exists in test mode
+    only today.
+15. **Vercel crons are four now** (`vercel.json`): dues, billing sweep,
+    autopay, digest. Vercel → project → Settings → Crons shows whether each
+    fired. `CRON_SECRET` is set.
+16. **Backups you can restore.** Supabase Pro (item 6) gives daily backups;
+    Point-in-Time Recovery is the add-on that makes "undo the last hour"
+    possible. Until then, `pg_dump` by hand before anything risky.
+
 ## Deploy, then check
 
 10. Push `main` and let Vercel deploy. Then:
