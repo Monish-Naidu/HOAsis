@@ -1402,6 +1402,7 @@ function HouseholdDetail({
           unit={owner.unit}
           homeName={homeName}
           existing={hand.status === "ready" ? hand.rows : undefined}
+          balanceCents={owner.balanceCents}
           onSave={(input) => onRecordPayment(input).then((ok) => ok && loadHandPayments().then(() => ok))}
           onCancel={() => setEditing(null)}
         />

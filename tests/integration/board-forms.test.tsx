@@ -250,6 +250,7 @@ describe("a check or cash from an owner", () => {
     render(
       <RecordPaymentForm
         unit="Unit 7"
+        balanceCents={28_500}
         onSave={async (input) => {
           saved.push(input);
           return true;
@@ -269,10 +270,30 @@ describe("a check or cash from an owner", () => {
   });
 
   it("refuses a date in the future", () => {
-    render(<RecordPaymentForm unit="Unit 7" onSave={async () => true} onCancel={() => {}} />);
+    render(<RecordPaymentForm unit="Unit 7" balanceCents={28_500} onSave={async () => true} onCancel={() => {}} />);
     fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "60" } });
     fireEvent.change(screen.getByLabelText("Date received"), { target: { value: "2026-08-21" } });
     expect(screen.getByRole("button", { name: "Save payment" })).toBeDisabled();
+  });
+
+  it("caps a payment at the balance plus $10,000 and says when it passes the balance", () => {
+    render(<RecordPaymentForm unit="Unit 7" balanceCents={28_500} onSave={async () => true} onCancel={() => {}} />);
+    const button = screen.getByRole("button", { name: "Save payment" });
+    fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "300" } });
+    expect(screen.getByText("That is $15.00 more than the home owes. The extra stays as credit.")).toBeInTheDocument();
+    expect(button).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "999999999" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("The most you can record for this home is $10,285.00.");
+    expect(button).toBeDisabled();
+  });
+
+  it("refuses a third decimal and exponent notation", () => {
+    render(<RecordPaymentForm unit="Unit 7" balanceCents={28_500} onSave={async () => true} onCancel={() => {}} />);
+    const button = screen.getByRole("button", { name: "Save payment" });
+    for (const bad of ["285.555", "12e3"]) {
+      fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: bad } });
+      expect(button).toBeDisabled();
+    }
   });
 
   it("adds a credit only with an amount and a reason", async () => {
@@ -498,6 +519,46 @@ describe("a home's own dues in the browser copy", () => {
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
     expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("dues for a home and the association's rate refuse more than $100,000, a third decimal and 12e3", () => {
+    const onSave = vi.fn(async () => true);
+    render(
+      <ChangeDuesForm
+        unit="12"
+        period="month"
+        nowCents={28_500}
+        sourceLabel="the association's rate"
+        hasOwn={false}
+        standardCents={28_500}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+    const save = screen.getByRole("button", { name: "Save dues" });
+    for (const [typed, message] of [
+      ["10000000", "That looks too high. Dues are per home, per period."],
+      ["285.555", "Enter dollars and cents, like 285.00"],
+      ["12e3", "Enter dollars and cents, like 285.00"],
+    ]) {
+      fireEvent.change(screen.getByLabelText("Dues for this home"), { target: { value: typed } });
+      expect(save).toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent(message);
+    }
+    fireEvent.change(screen.getByLabelText("Dues for this home"), { target: { value: "100000" } });
+    expect(save).toBeEnabled();
+  });
+
+  it("the association rate field refuses what the home form refuses", () => {
+    wrap(<DuesSettings />);
+    const field = screen.getByLabelText(/^Each home, per month/);
+    const save = screen.getByRole("button", { name: "Save dues" });
+    for (const typed of ["99999999", "285.555", "12e3"]) {
+      fireEvent.change(field, { target: { value: typed } });
+      expect(save).toBeDisabled();
+    }
+    fireEvent.change(field, { target: { value: "290" } });
+    expect(save).toBeEnabled();
   });
 
   it("the dues settings card says how many homes pay their own amount, with a link", async () => {

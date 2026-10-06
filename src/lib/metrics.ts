@@ -4,7 +4,7 @@ import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
 import { daysBetween, daysFromToday, money } from "@/lib/utils";
 import { totalDues } from "@/lib/home-types";
-import { isDuesLine } from "@/lib/statement";
+import { isDuesLine, isPaymentReversal } from "@/lib/statement";
 
 /**
  * Derived figures, as pure functions of one community.
@@ -155,7 +155,7 @@ export function reserveSummary(c: Community) {
  * The status rides along on a real line; a month the server summed has none.
  */
 export type LedgerFlow = Pick<LedgerEntry, "date" | "category" | "amountCents"> &
-  Partial<Pick<LedgerEntry, "status">>;
+  Partial<Pick<LedgerEntry, "status" | "description">>;
 
 const flowCache = new WeakMap<
   Community["ledger"],
@@ -200,6 +200,20 @@ export function ledgerFlows(c: Community): LedgerFlow[] {
   }
   flowCache.set(c.ledger, { history: h, lines });
   return lines;
+}
+
+/**
+ * A negative line in Assessments worded "Payment reversed" (0088) or
+ * "Refund" (0070). Money an owner paid that the association gave back, so it nets
+ * against money in and collected and is never a spending category.
+ */
+function isPaymentReturn(e: { category: string; amountCents: number; description?: string }) {
+  if (e.category !== "Assessments" || e.amountCents >= 0) return false;
+  // The demo's older months carry a card fee pass-through here, which is a
+  // cost, so the wording decides. A month the server summed has no
+  // description and stays as it was; the server's sums do not split these
+  // out, which is only a gap for a reversal older than the loaded months.
+  return e.description !== undefined && /^(payment reversed|refund)\b/i.test(e.description);
 }
 
 /** The calendar years the ledger touches, newest first, for the chart filter. */
@@ -254,7 +268,9 @@ export function monthlyFlowsBetween(c: Community, from: string, to: string) {
     if (e.date < from || e.date > to) continue;
     const row = months[index.get(e.date.slice(0, 7)) ?? -1];
     if (!row) continue;
-    if (e.amountCents >= 0) row.inCents += e.amountCents;
+    // A reversed or refunded payment comes back out of money in, in the month
+    // it happens. It is not spending.
+    if (e.amountCents >= 0 || isPaymentReturn(e)) row.inCents += e.amountCents;
     else row.outCents += -e.amountCents;
   }
   return months;
@@ -268,8 +284,16 @@ export function monthlyFlowsBetween(c: Community, from: string, to: string) {
  * problem. Reserve transfers are left out: they are savings, not bills.
  */
 export function operatingRunway(c: Community, asOf: string) {
-  const from = shiftMonths(asOf, -11).slice(0, 7) + "-01";
-  const rows = monthlyFlowsBetween(c, from, asOf).filter((r) => r.inCents > 0 || r.outCents > 0);
+  // The month in progress is left out: a payment on the 2nd and nothing else
+  // yet is not a typical month, and it moved the average the moment one
+  // landed. Twelve complete months before it; only when there are none does
+  // the current month stand in, so a new association still reads something.
+  const asOfMonth = asOf.slice(0, 7);
+  const from = shiftMonths(asOf, -12).slice(0, 7) + "-01";
+  const active = (r: { inCents: number; outCents: number }) => r.inCents !== 0 || r.outCents !== 0;
+  const all = monthlyFlowsBetween(c, from, asOf).filter(active);
+  const complete = all.filter((r) => r.month < asOfMonth);
+  const rows = complete.length ? complete : all.filter((r) => r.month === asOfMonth);
   const months = rows.length;
   const avgInCents = months ? Math.round(rows.reduce((t, r) => t + r.inCents, 0) / months) : 0;
   const avgOutCents = months ? Math.round(rows.reduce((t, r) => t + r.outCents, 0) / months) : 0;
@@ -314,7 +338,7 @@ export function spendingBetween(c: Community, from: string, to: string) {
   const totals = new Map<string, number>();
   let reserveCents = 0;
   for (const e of ledgerFlows(c)) {
-    if (e.amountCents >= 0) continue;
+    if (e.amountCents >= 0 || isPaymentReturn(e)) continue;
     if (e.date < from || e.date > to) continue;
     // Moving money between the association's own accounts, and a starting
     // balance, are neither spending: the same two lines the money in and out
@@ -408,7 +432,7 @@ export function delta(from: number, to: number): Delta {
 function spendAllCategories(c: Community, year: number, throughMonth: number) {
   const totals = new Map<string, number>();
   for (const e of ledgerFlows(c)) {
-    if (e.amountCents >= 0) continue;
+    if (e.amountCents >= 0 || isPaymentReturn(e)) continue;
     if (yearOf(e.date) !== year || monthOf(e.date) > throughMonth) continue;
     // The same two lines spendingBetween leaves out: moving money to the
     // reserve account is not spending, and the year comparison used to show
@@ -512,11 +536,24 @@ export function categoryTrend(c: Community, category: string) {
  * 100% collected in March with a quarter of the homes unpaid, since three
  * months' share of the bill was all it was held against.
  *
- * Collected is the positive side of the Assessments category; the card fee
- * pass-through sits in that category as a negative and is left out, since
- * it is a cost and not a shortfall. For monthly dues only months with any
- * transaction at all are rated, so a future month does not read as zero
- * collected. A quarterly or annual bill counts once its month has arrived
+ * Collected is the Assessments category net of what was given back: a
+ * reversed check or a refund (a negative line there, 0070 and 0088) comes off
+ * collected in the month it happens, so recording a payment and reversing it
+ * leaves collected where it was. The processor's fee is its own category
+ * ("Processing fees") and is not in it. When the statements are on hand
+ * collected is read from them instead, the same way: payments in, the
+ * "Payment reversed" and "Refund of" lines out.
+ *
+ * What counts as billed is one rule: a month is billed only when a dues line
+ * exists for it and it has arrived (the as-of month or before). A month with
+ * no dues line is not billed, and a payment that lands in it is not
+ * collected against anything yet, so one October payment before October's
+ * bill posts no longer swaps the year's 96% of $61,560 for 87% of $68,400.
+ * That month's expected figure is returned apart as `thisMonth` ("this
+ * month's bill, not yet posted"). The rate stands in only where nothing
+ * better is known: a community with no dues lines at all, and months before
+ * the statements on hand begin. For monthly dues, such a month with no line
+ * is rated only if the ledger has activity in it, as before. A quarterly or annual bill counts once its month has arrived
  * (`asOf`, the association's own clock unless told otherwise) and only from
  * the first month the association has anything on its books, so a bill
  * that fell due before it existed is not held against it.
@@ -547,7 +584,24 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     return { cents, seen };
   };
   const billedThisYear = billedIn(year);
-  const expectedFor = (b: typeof billedThisYear, i: number) => (b.seen[i] ? b.cents[i] : expectedCents);
+  // Any dues line at all, on hand. Without one, nothing says what was billed.
+  const hasDuesLines = Object.values(c.ownerCharges ?? {}).some((lines) =>
+    lines.some((l) => isDuesLine(l) && l.date >= statementsFrom),
+  );
+  // Months before the statements on hand were summed by the server, which
+  // says a charge was posted but not whether it was dues.
+  const chargedByServer = new Set(
+    (c.history?.statementMonths ?? []).filter((m) => m.kind === "charge" && m.count > 0).map((m) => m.month),
+  );
+  // What a month was billed, or null for a month with no bill. The rate
+  // fills in only where the statements cannot speak: none at all, or a month
+  // before the ones on hand in which the server counted a charge.
+  const expectedFor = (b: typeof billedThisYear, y: number, i: number): number | null => {
+    if (b.seen[i]) return b.cents[i];
+    const ym = `${y}-${String(i + 1).padStart(2, "0")}`;
+    if (!hasDuesLines) return expectedCents;
+    return ym < statementsFrom.slice(0, 7) && chargedByServer.has(ym) ? expectedCents : null;
+  };
   // Collected means what owners paid, before the processor's cut. The ledger
   // books each deposit net of the fee, so a month in which every home paid
   // read 96% against a gross bill (found in the five year run, 2026-09-24).
@@ -566,23 +620,35 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   const tally = (y: number) => {
     const deposited = Array.from({ length: 12 }, () => 0);
     const paid = Array.from({ length: 12 }, () => 0);
+    const covered = Array.from({ length: 12 }, () => false);
     const active = Array.from({ length: 12 }, () => false);
     for (const e of ledgerFlows(c)) {
       if (yearOf(e.date) !== y) continue;
       active[monthOf(e.date) - 1] = true;
-      if (e.category === "Assessments" && e.amountCents > 0) deposited[monthOf(e.date) - 1] += e.amountCents;
+      // Net: a reversal or refund (negative) comes off what was deposited.
+      if (e.category === "Assessments") deposited[monthOf(e.date) - 1] += e.amountCents;
     }
     for (const lines of Object.values(c.ownerCharges ?? {})) {
       for (const line of lines) {
-        if (line.kind !== "payment" || yearOf(line.date) !== y || line.date < linesFrom) continue;
-        paid[monthOf(line.date) - 1] += -line.amountCents;
+        if (yearOf(line.date) !== y || line.date < linesFrom) continue;
+        const m = monthOf(line.date) - 1;
+        if (line.kind === "payment") {
+          paid[m] += -line.amountCents;
+          covered[m] = true;
+        } else if (isPaymentReversal(line)) {
+          // The home owes it again: the payment it undoes stays on the
+          // statement, so this line is what takes it back out of collected.
+          paid[m] -= line.amountCents;
+          covered[m] = true;
+        }
       }
     }
     for (const m of c.history?.statementMonths ?? []) {
       if (m.kind !== "payment" || Number(m.month.slice(0, 4)) !== y) continue;
       paid[Number(m.month.slice(5, 7)) - 1] += -m.cents;
+      covered[Number(m.month.slice(5, 7)) - 1] = true;
     }
-    return { collected: deposited.map((net, i) => (paid[i] > 0 ? paid[i] : net)), active };
+    return { collected: deposited.map((net, i) => (covered[i] ? paid[i] : net)), active };
   };
   const { collected, active } = tally(year);
 
@@ -594,16 +660,22 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   const fyMonth = Number((fiscalYearStart ?? "").slice(0, 2)) || 1;
   const onCadence = (i: number) => (((i + 1 - fyMonth) % step) + step) % step === 0;
   const asOfMonth = asOf.slice(0, 7);
-  const billed = (i: number) => {
-    if (monthly) return active[i];
-    const ym = `${year}-${String(i + 1).padStart(2, "0")}`;
-    return onCadence(i) && firstActive !== "" && ym >= firstActive && ym <= asOfMonth;
+  // The bill a month carries, or null when it is not one of the rows: no
+  // bill posted for it, not yet arrived, or before the books begin.
+  const billOf = (y: number, b: ReturnType<typeof billedIn>, i: number): number | null => {
+    const ym = `${y}-${String(i + 1).padStart(2, "0")}`;
+    const cents = expectedFor(b, y, i);
+    if (cents === null || firstActive === "" || ym < firstActive || ym > asOfMonth) return null;
+    // Monthly with no dues line (the rate stands in): only a month the
+    // ledger has anything in.
+    if (monthly && !b.seen[i] && !(y === year && active[i])) return null;
+    return monthly || onCadence(i) ? cents : null;
   };
 
   const months: { month: number; label: string; expectedCents: number; collectedCents: number; rate: number }[] = [];
   for (let i = 0; i < 12; i += 1) {
-    if (!billed(i)) continue;
-    const billedCents = expectedFor(billedThisYear, i);
+    const billedCents = billOf(year, billedThisYear, i);
+    if (billedCents === null) continue;
     let collectedCents = collected[i];
     // Money that arrives between two bills is paying the earlier one.
     if (!monthly) {
@@ -614,7 +686,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
       label: SHORT_MONTHS[i],
       expectedCents: billedCents,
       collectedCents,
-      rate: billedCents ? Math.min(1, collectedCents / billedCents) : 0,
+      rate: billedCents ? Math.max(0, Math.min(1, collectedCents / billedCents)) : 0,
     });
   }
   // A bill from last year that this year is still paying. When the cadence
@@ -629,9 +701,9 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     let last = 11;
     while (last > 0 && !onCadence(last)) last -= 1;
     const ym = `${year - 1}-${String(last + 1).padStart(2, "0")}`;
-    if (first > 0 && first < 12 && firstActive !== "" && ym >= firstActive && ym <= asOfMonth) {
+    const billedBefore = expectedFor(billedIn(year - 1), year - 1, last);
+    if (billedBefore !== null && first > 0 && first < 12 && firstActive !== "" && ym >= firstActive && ym <= asOfMonth) {
       const before = tally(year - 1).collected;
-      const billedBefore = expectedFor(billedIn(year - 1), last);
       let collectedCents = 0;
       for (let j = last; j < 12; j += 1) collectedCents += before[j];
       for (let j = 0; j < first; j += 1) collectedCents += collected[j];
@@ -640,10 +712,17 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
         label: `${SHORT_MONTHS[last]} ${year - 1}`,
         expectedCents: billedBefore,
         collectedCents,
-        rate: billedBefore ? Math.min(1, collectedCents / billedBefore) : 0,
+        rate: billedBefore ? Math.max(0, Math.min(1, collectedCents / billedBefore)) : 0,
       });
     }
   }
+  // The as-of month's own bill, when it has not posted: shown apart, never
+  // inside the year's totals.
+  const nowI = monthOf(asOf) - 1;
+  const thisMonth =
+    yearOf(asOf) === year && hasDuesLines && !billedThisYear.seen[nowI] && (monthly || onCadence(nowI))
+      ? { month: nowI + 1, label: SHORT_MONTHS[nowI], expectedCents, collectedCents: collected[nowI] }
+      : undefined;
   const collectedYtd = months.reduce((t, m) => t + m.collectedCents, 0);
   const expectedYtd = months.reduce((t, m) => t + m.expectedCents, 0);
   return {
@@ -651,6 +730,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     expectedCents,
     collectedYtd,
     expectedYtd,
+    thisMonth,
     rate: expectedYtd ? Math.min(1, collectedYtd / expectedYtd) : 0,
     /** False when there are no dues to measure against, or nothing collected yet. */
     measurable: expectedCents > 0 && months.length > 0,
@@ -856,8 +936,10 @@ export function ledgerTotals(rows: Community["ledger"]) {
   const flows = counted.filter(
     (e) => e.category !== "Reserve transfer" && e.category !== "Opening balance",
   );
-  const inCents = flows.reduce((t, e) => t + (e.amountCents > 0 ? e.amountCents : 0), 0);
-  const outCents = flows.reduce((t, e) => t + (e.amountCents < 0 ? -e.amountCents : 0), 0);
+  // A reversed or refunded payment nets against money in, as monthlyFlows has
+  // it, so this page and the overview read one figure.
+  const inCents = flows.reduce((t, e) => t + (e.amountCents > 0 || isPaymentReturn(e) ? e.amountCents : 0), 0);
+  const outCents = flows.reduce((t, e) => t + (e.amountCents < 0 && !isPaymentReturn(e) ? -e.amountCents : 0), 0);
   const running = new Map<string, number>();
   let sum = 0;
   for (let i = rows.length - 1; i >= 0; i--) {
@@ -1023,6 +1105,30 @@ export function vendorDecisions(c: Community) {
     // nothing to decide. A payment short of its signatures is still real.
     count: toSign.length,
   };
+}
+
+/**
+ * What was paid to a vendor in the calendar year of `asOf`: the ledger lines
+ * that went out to them, which is what Transactions lists, so the two screens
+ * cannot disagree. A line is theirs by its `payoutId` when it has one (a
+ * payout of this vendor), else by the counterparty's name. A payment the
+ * board recorded straight onto the ledger has no payout row at all, which is
+ * why the old sum over payouts read $0 beside a Transactions list of
+ * payments. Calendar year, not fiscal: the $600 line for a 1099 is measured
+ * on the calendar. Lines waiting on review are held out, as everywhere.
+ */
+export function vendorPaidThisYear(c: Community, vendor: Pick<Community["vendors"][number], "id" | "name">, asOf: string = c.asOf) {
+  const year = asOf.slice(0, 4);
+  const name = vendor.name.trim().toLowerCase();
+  const payoutIds = new Set(c.payouts.filter((p) => p.vendorId === vendor.id).map((p) => p.id));
+  let paid = 0;
+  for (const e of c.ledger) {
+    if (e.amountCents >= 0 || e.status === "needs-review") continue;
+    if (e.category === "Reserve transfer" || e.date.slice(0, 4) !== year || e.date > asOf) continue;
+    const theirs = e.payoutId ? payoutIds.has(e.payoutId) : e.counterparty.trim().toLowerCase() === name;
+    if (theirs) paid -= e.amountCents;
+  }
+  return paid;
 }
 
 /** Vendors missing a W-9 or ACH setup, and those whose insurance certificate expires within 60 days. */

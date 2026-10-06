@@ -1,4 +1,5 @@
 import type { Cents } from "@/lib/types";
+import { dollarsToCents } from "@/lib/input-checks";
 import { daysBetween, money, pluralize } from "@/lib/utils";
 
 /**
@@ -11,10 +12,14 @@ export const MAX_CHARGE_LABEL = 80;
 /** How far from today a due date may be, either way. */
 export const MAX_CHARGE_DAYS = 366;
 
-/** Dollars as typed to whole cents, or 0 when it is not a positive amount. */
+/**
+ * Dollars as typed to whole cents, or 0 when it is not a positive amount.
+ * A third decimal and exponent notation read as 0, so the form says "Enter an
+ * amount" and nothing is saved that was not typed.
+ */
 export function chargeCents(text: string): Cents {
-  const n = Number(text);
-  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0;
+  const cents = dollarsToCents(text);
+  return Number.isFinite(cents) && cents > 0 ? cents : 0;
 }
 
 /**

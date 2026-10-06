@@ -11,7 +11,10 @@ import {
   addressKey,
   associationNameProblem,
   checkMeetingTime,
+  checkManualPayment,
   checkPayAmount,
+  dollarsToCents,
+  homeOverpayNote,
   checkPhone,
   closingDateProblem,
   duesProblem,
@@ -198,5 +201,50 @@ describe("ballot closing date", () => {
     expect(closingDateProblem("2026-08-01", "2026-08-20")).toBe(CLOSING_DATE_MESSAGE);
     expect(closingDateProblem("", "2026-08-20")).toBe(CLOSING_DATE_MESSAGE);
     expect(closingDateProblem("2026-08-21", "2026-08-20")).toBeNull();
+  });
+});
+
+describe("money typed as dollars", () => {
+  it("is whole cents: a third decimal and exponent notation are refused, not rounded", () => {
+    expect(dollarsToCents("285")).toBe(28_500);
+    expect(dollarsToCents("$1,285.5")).toBe(128_550);
+    expect(dollarsToCents(".5")).toBe(50);
+    expect(dollarsToCents("285.555")).toBeNaN();
+    expect(dollarsToCents("12e3")).toBeNaN();
+    expect(dollarsToCents("1e2")).toBeNaN();
+    expect(dollarsToCents("abc")).toBeNaN();
+  });
+
+  it("names the format problem for a dues field instead of calling it zero", () => {
+    expect(duesTextProblem("285.555")).toBe("Enter dollars and cents, like 285.00");
+    expect(duesTextProblem("12e3")).toBe("Enter dollars and cents, like 285.00");
+    expect(duesTextProblem("100000")).toBeNull();
+    expect(duesTextProblem("100000.01")).toBe(DUES_HIGH_MESSAGE);
+  });
+});
+
+describe("a payment recorded by hand", () => {
+  const balance = 28_500;
+  it("may exceed the balance by $10,000 and no more, the owner's own ceiling", () => {
+    expect(checkManualPayment("285", balance)).toEqual({ ok: true, cents: 28_500, extraCents: 0 });
+    expect(checkManualPayment("10285", balance)).toEqual({ ok: true, cents: 1_028_500, extraCents: 1_000_000 });
+    const over = checkManualPayment("10285.01", balance);
+    expect(over).toEqual({ ok: false, message: "The most you can record for this home is $10,285.00." });
+    expect(checkManualPayment("999999999", balance).ok).toBe(false);
+  });
+
+  it("counts a credit balance as owing nothing", () => {
+    expect(checkManualPayment("10000", -5_000)).toEqual({ ok: true, cents: 1_000_000, extraCents: 1_000_000 });
+    expect(checkManualPayment("10000.01", -5_000).ok).toBe(false);
+  });
+
+  it("says how far past the balance it is, and refuses odd formats", () => {
+    const ok = checkManualPayment("300", balance);
+    expect(ok.ok && homeOverpayNote(ok.extraCents)).toBe("That is $15.00 more than the home owes. The extra stays as credit.");
+    expect(homeOverpayNote(0)).toBeNull();
+    expect(checkManualPayment("285.555", balance).ok).toBe(false);
+    expect(checkManualPayment("12e3", balance).ok).toBe(false);
+    expect(checkManualPayment("0", balance).ok).toBe(false);
+    expect(checkManualPayment("", balance).ok).toBe(false);
   });
 });

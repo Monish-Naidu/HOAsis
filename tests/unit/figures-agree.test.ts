@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { mehrMeadows } from "@/lib/data/communities";
 import type { Community } from "@/lib/data/community";
-import { duesCollection, homeCount, monthlyFlowsBetween, spendingBetween } from "@/lib/metrics";
+import {
+  duesCollection,
+  homeCount,
+  ledgerTotals,
+  monthlyFlowsBetween,
+  operatingRunway,
+  spendingBetween,
+  vendorPaidThisYear,
+  yearSummary,
+} from "@/lib/metrics";
 import { addStatementLine, balanceSplit, compareStatement, isDuesLine, orderStatement } from "@/lib/statement";
 import { statementLines } from "@/lib/data/remote";
-import type { ChargeLine, Owner } from "@/lib/types";
+import type { ChargeLine, LedgerEntry, Owner } from "@/lib/types";
 
 const c = mehrMeadows;
 const AUG_20 = "2026-08-20";
@@ -178,5 +187,168 @@ describe("spending", () => {
     const flows = monthlyFlowsBetween(c, from, AUG_20);
     const out = flows.reduce((t, m) => t + m.outCents, 0);
     expect(spendingBetween(c, from, AUG_20).totalCents).toBe(out);
+  });
+});
+
+/** The two lines a hand-recorded check writes, and the two a reversal adds, as the database and the demo write them (0083, 0088). */
+function checkAndReversal(ownerId: string, paidOn: string, reversedOn: string, cents: number) {
+  const ledger = (id: string, date: string, description: string, amountCents: number): LedgerEntry => ({
+    id, date, description, counterparty: "Owner", category: "Assessments", accountId: "acct-operating",
+    amountCents, status: "cleared", ownerId,
+  });
+  return {
+    payment: { id: "chk", date: paidOn, label: "Check payment #1", kind: "payment", amountCents: -cents, balanceAfterCents: 0 } as ChargeLine,
+    reversal: { id: "rev", date: reversedOn, label: "Payment reversed: entered twice", kind: "charge", amountCents: cents, balanceAfterCents: 0, category: "other" } as ChargeLine,
+    deposit: ledger("led-chk", paidOn, "Assessment payment, unit 42", cents),
+    takenBack: ledger("led-rev", reversedOn, "Payment reversed, unit 42", -cents),
+  };
+}
+
+describe("a payment recorded and then reversed", () => {
+  const owner = c.owners[0];
+  const ownerCharges = (extra: ChargeLine[]) => ({ ...c.ownerCharges, [owner.id]: [...extra, ...(c.ownerCharges[owner.id] ?? [])] });
+  const figures = (x: Community) => ({
+    collected: duesCollection(x, 2026),
+    flows: monthlyFlowsBetween(x, "2026-01-01", AUG_20),
+    spending: spendingBetween(x, "2026-01-01", "2026-12-31"),
+    year: yearSummary(x, 2026),
+    totals: ledgerTotals(x.ledger),
+  });
+  const before = figures(c);
+  const { payment, reversal, deposit, takenBack } = checkAndReversal(owner.id, "2026-08-10", "2026-08-12", 100);
+
+  it("leaves collected, money in and spending exactly where they were", () => {
+    const after = figures({
+      ...c,
+      ownerCharges: ownerCharges([reversal, payment]),
+      ledger: [takenBack, deposit, ...c.ledger],
+    });
+    expect(after.collected.collectedYtd).toBe(before.collected.collectedYtd);
+    expect(after.collected.rate).toBe(before.collected.rate);
+    expect(after.flows).toEqual(before.flows);
+    expect(after.spending).toEqual(before.spending);
+    expect(after.year.incomeCents).toBe(before.year.incomeCents);
+    expect(after.year.spendCents).toBe(before.year.spendCents);
+    expect(after.totals.inCents).toBe(before.totals.inCents);
+    expect(after.totals.outCents).toBe(before.totals.outCents);
+  });
+
+  it("is not spending, and not a category, while the payment alone is money in", () => {
+    const only = figures({ ...c, ledger: [takenBack, ...c.ledger] });
+    expect(only.spending).toEqual(before.spending);
+    const paid = figures({ ...c, ownerCharges: ownerCharges([payment]), ledger: [deposit, ...c.ledger] });
+    expect(paid.collected.collectedYtd).toBe(before.collected.collectedYtd + 100);
+    expect(paid.year.incomeCents).toBe(before.year.incomeCents + 100);
+  });
+
+  it("takes a reversal off in the month it happens, not the month of the payment", () => {
+    // Paid in July, taken back in August: July keeps the dollar, August loses it.
+    const lines = checkAndReversal(owner.id, "2026-07-10", "2026-08-12", 100);
+    const x: Community = { ...c, ownerCharges: ownerCharges([lines.reversal, lines.payment]), ledger: [lines.takenBack, lines.deposit, ...c.ledger] };
+    const flows = monthlyFlowsBetween(x, "2026-07-01", AUG_20);
+    const base = monthlyFlowsBetween(c, "2026-07-01", AUG_20);
+    expect(flows[0].inCents).toBe(base[0].inCents + 100);
+    expect(flows[1].inCents).toBe(base[1].inCents - 100);
+    expect(flows[1].outCents).toBe(base[1].outCents);
+    const months = duesCollection(x, 2026).months;
+    const baseMonths = duesCollection(c, 2026).months;
+    expect(months.find((m) => m.label === "Jul")!.collectedCents).toBe(baseMonths.find((m) => m.label === "Jul")!.collectedCents + 100);
+    expect(months.find((m) => m.label === "Aug")!.collectedCents).toBe(baseMonths.find((m) => m.label === "Aug")!.collectedCents - 100);
+  });
+
+  it("does not take a card fee pass-through for a reversal", () => {
+    const fee: LedgerEntry = { ...takenBack, id: "fee", description: "Card fee pass-through, August", amountCents: -4_120 };
+    expect(spendingBetween({ ...c, ledger: [fee, ...c.ledger] }, "2026-08-01", AUG_20).totalCents)
+      .toBe(spendingBetween(c, "2026-08-01", AUG_20).totalCents + 4_120);
+  });
+});
+
+describe("the current month does not flip the year", () => {
+  const OCT_6 = "2026-10-06";
+  const owner = c.owners[0];
+  const at = (x: Community): Community => ({ ...x, asOf: OCT_6 });
+  const base = at(c);
+  const paid: Community = at({
+    ...c,
+    ownerCharges: {
+      ...c.ownerCharges,
+      [owner.id]: [
+        { id: "oct", date: OCT_6, label: "Check payment", kind: "payment", amountCents: -100, balanceAfterCents: 0 },
+        ...(c.ownerCharges[owner.id] ?? []),
+      ],
+    },
+    ledger: [
+      { id: "oct-led", date: OCT_6, description: "Assessment payment, unit 1", counterparty: "Owner", category: "Assessments", accountId: "acct-operating", amountCents: 100, status: "cleared" },
+      ...c.ledger,
+    ],
+  });
+
+  it("keeps the year's rate and totals when a payment lands before the month's bill posts", () => {
+    const a = duesCollection(base, 2026, OCT_6);
+    const b = duesCollection(paid, 2026, OCT_6);
+    expect(b.months).toEqual(a.months);
+    expect(b.expectedYtd).toBe(a.expectedYtd);
+    expect(b.collectedYtd).toBe(a.collectedYtd);
+    expect(b.rate).toBe(a.rate);
+    expect(b.months.map((m) => m.label)).not.toContain("Oct");
+  });
+
+  it("shows the month's own bill apart, as not yet posted", () => {
+    const b = duesCollection(paid, 2026, OCT_6);
+    expect(b.thisMonth).toEqual({ month: 10, label: "Oct", expectedCents: b.expectedCents, collectedCents: 100 });
+    // A month whose dues line exists is a billed month, not "this month's".
+    expect(duesCollection(c, 2026).thisMonth).toBeUndefined();
+  });
+
+  it("counts a month once its dues line exists, and rates a past month nobody paid at zero", () => {
+    const x = duesCollection(base, 2026, OCT_6);
+    // September's bill is posted and unpaid on October 6: billed, nothing in.
+    const sep = x.months.find((m) => m.label === "Sep")!;
+    const posted = Object.values(c.ownerCharges).flat().filter((l) => isDuesLine(l) && l.date === "2026-09-01");
+    expect(sep.expectedCents).toBe(posted.reduce((t, l) => t + l.amountCents, 0));
+    expect(sep.collectedCents).toBe(0);
+  });
+
+  it("leaves the typical month alone while the month is still going", () => {
+    const a = operatingRunway(base, OCT_6);
+    const b = operatingRunway(paid, OCT_6);
+    expect(b).toEqual(a);
+  });
+});
+
+describe("what a vendor was paid this year is what Transactions lists", () => {
+  const vendor = { id: "v-walk", name: "Walk Test Plumbing" };
+  const line = (id: string, date: string, amountCents: number, patch: Partial<LedgerEntry> = {}): LedgerEntry => ({
+    id, date, description: "Plumbing", counterparty: vendor.name, category: "Repairs & maintenance",
+    accountId: "acct-operating", amountCents, status: "cleared", ...patch,
+  });
+  const x = (ledger: LedgerEntry[], payouts: Community["payouts"] = []): Community => ({ ...c, ledger, payouts, vendors: [] });
+
+  it("sums ledger lines by counterparty when there is no payout row", () => {
+    const ledger = [line("a", "2026-08-01", -100), line("b", "2026-03-02", -2_500)];
+    expect(vendorPaidThisYear(x(ledger), vendor, AUG_20)).toBe(2_600);
+  });
+
+  it("matches by payout when the line carries one, whatever the counterparty says", () => {
+    const payouts = [{ id: "po-1", vendorId: vendor.id } as Community["payouts"][number]];
+    const ledger = [line("a", "2026-08-01", -700, { counterparty: "Walk Plumbing LLC", payoutId: "po-1" })];
+    expect(vendorPaidThisYear(x(ledger, payouts), vendor, AUG_20)).toBe(700);
+  });
+
+  it("leaves out other years, money in, lines held for review and other vendors", () => {
+    const ledger = [
+      line("old", "2025-12-30", -9_000),
+      line("refund", "2026-05-01", 400),
+      line("held", "2026-06-01", -300, { status: "needs-review" }),
+      line("other", "2026-06-02", -500, { counterparty: "Someone Else" }),
+      line("ok", "2026-06-03", -100),
+    ];
+    expect(vendorPaidThisYear(x(ledger), vendor, AUG_20)).toBe(100);
+  });
+
+  it("is the sum Transactions shows for that vendor in the year", () => {
+    const some = c.vendors[0];
+    const listed = ledgerTotals(c.ledger.filter((e) => e.counterparty === some.name && e.date.startsWith("2026"))).outCents;
+    expect(vendorPaidThisYear(c, some, AUG_20)).toBe(listed);
   });
 });

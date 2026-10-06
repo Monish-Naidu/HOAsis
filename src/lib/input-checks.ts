@@ -9,11 +9,45 @@ import { money } from "@/lib/utils";
  * screen calls them while rendering and the unit test calls them directly.
  */
 
-/** Dollars in the text a person typed, as integer cents. NaN when it is not a plain amount. */
+/**
+ * Dollars in the text a person typed, as integer cents. NaN when it is not a
+ * plain amount: a third decimal ("285.555") and exponent notation ("12e3",
+ * which a number input accepts) are refused, not rounded, so what is saved is
+ * what was typed.
+ */
 export function dollarsToCents(raw: string): number {
   const text = raw.trim().replace(/^\$/, "").replace(/,/g, "").trim();
-  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(text)) return Number.NaN;
+  if (!/^-?(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(text)) return Number.NaN;
   return Math.round(Number(text) * 100);
+}
+
+export const WHOLE_CENTS_MESSAGE = "Enter dollars and cents, like 285.00";
+
+/**
+ * A payment the board records by hand: above zero, in whole cents, and no
+ * more than the home owes plus what an owner may overpay online
+ * (`MAX_EXTRA_PAYMENT_CENTS`), so a slipped key cannot book nine figures.
+ * `extraCents` is how far past the balance it goes, which stays as credit.
+ * record_manual_payment (0102) refuses the same ceiling.
+ */
+export function checkManualPayment(raw: string, balanceCents: number): PayAmountCheck {
+  if (!raw.trim()) return { ok: false, message: "Enter an amount above $0" };
+  const cents = dollarsToCents(raw);
+  if (!Number.isFinite(cents)) return { ok: false, message: WHOLE_CENTS_MESSAGE };
+  if (cents <= 0) return { ok: false, message: "Enter an amount above $0" };
+  const owed = Math.max(balanceCents, 0);
+  const ceiling = owed + MAX_EXTRA_PAYMENT_CENTS;
+  if (cents > ceiling) {
+    return { ok: false, message: `The most you can record for this home is ${money(ceiling)}.` };
+  }
+  return { ok: true, cents, extraCents: Math.max(cents - owed, 0) };
+}
+
+/** The line shown beside a hand payment that is more than the home owes, or null. */
+export function homeOverpayNote(extraCents: number): string | null {
+  return extraCents > 0
+    ? `That is ${money(extraCents)} more than the home owes. The extra stays as credit.`
+    : null;
 }
 
 /* Resident payment */
@@ -93,7 +127,8 @@ export function duesProblem(cents: number | undefined): string | null {
 export function duesTextProblem(raw: string): string | null {
   if (!raw.trim()) return null;
   const cents = dollarsToCents(raw);
-  return Number.isFinite(cents) ? duesProblem(cents) : DUES_ZERO_MESSAGE;
+  // "abc", a third decimal and "12e3" are a format problem, said as one.
+  return Number.isFinite(cents) ? duesProblem(cents) : WHOLE_CENTS_MESSAGE;
 }
 
 export const LATE_FEE_MIN_DAYS = 2;

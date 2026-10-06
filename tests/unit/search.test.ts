@@ -55,7 +55,7 @@ describe("the search index", () => {
     for (const hits of [boardIndex(past), residentIndex(past, past.owners[0])]) {
       expect(hits.find((h) => h.id === "mtg-gone")!.subtitle).toMatch(/· ended$/);
       const ballot = hits.find((h) => h.id === "bal-shut")!.subtitle;
-      expect(ballot).toContain("closed · closes 2020-01-01");
+      expect(ballot).toContain("closed · closes Jan 1, 2020");
       expect(ballot).not.toContain("open");
     }
   });

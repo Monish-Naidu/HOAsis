@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Scale } from "lucide-react";
 import { Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
-import { cn, money, pluralize } from "@/lib/utils";
+import { cn, formatDate, money, pluralize } from "@/lib/utils";
 
 /** Reads a typed amount into cents, tolerating "1,240.50" and "$1240". */
 function toCents(input: string): number | null {
@@ -151,7 +151,7 @@ export function BalancesScreen() {
     setDateMoved(false);
     setSaved(true);
     notify(
-      `Opening balances saved for ${pluralize(sending.length, "home")}. Statements show them as of ${asOf}.`,
+      `Opening balances saved for ${pluralize(sending.length, "home")}. Statements show them as of ${formatDate(asOf, "medium")}.`,
     );
   }
 

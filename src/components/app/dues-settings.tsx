@@ -7,6 +7,7 @@ import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { AddChargeForm } from "@/app/board/homeowners/household-money";
 import { chargeAllLine } from "@/lib/payments/charges";
+import { dollarsToCents, duesTextProblem } from "@/lib/input-checks";
 import {
   HOME_TYPE_LABEL,
   countByType,
@@ -47,21 +48,29 @@ export function DuesSettings() {
       HomeType,
       number
     >;
-  const [base, setBase] = useState(association.duesCents / 100);
-  const [byKind, setByKind] = useState(initial);
+  // Kept as the text typed: a number state read "12e3" as 12,000 and
+  // rounded a third decimal away.
+  const [base, setBase] = useState(String(association.duesCents / 100));
+  const [byKind, setByKind] = useState(() =>
+    Object.fromEntries(Object.entries(initial()).map(([k, v]) => [k, String(v)])) as Record<HomeType, string>,
+  );
   const [charging, setCharging] = useState(false);
   const homes = community.owners.length;
   const [split, setSplit] = useState(
     mixed && kinds.some((k) => duesFor(association, k) !== association.duesCents),
   );
 
-  const nextBase = Math.round((split ? byKind[kinds[0]] : base) * 100);
+  const centsOf = (text: string | undefined) => dollarsToCents(text ?? "");
+  const nextBase = centsOf(split ? byKind[kinds[0]] : base);
   const nextByType = split
-    ? (Object.fromEntries(kinds.map((k) => [k, Math.round((byKind[k] ?? 0) * 100)])) as Partial<
+    ? (Object.fromEntries(kinds.map((k) => [k, centsOf(byKind[k])])) as Partial<
         Record<HomeType, number>
       >)
     : {};
-  const valid = split ? kinds.every((k) => (byKind[k] ?? 0) > 0) : base > 0;
+  // The setup wizard's limits (duesTextProblem), and the database's: whole
+  // cents, above $0, at most $100,000 a period.
+  const problemOf = (text: string | undefined) => (text?.trim() ? duesTextProblem(text) : "Enter dues above $0");
+  const valid = split ? kinds.every((k) => problemOf(byKind[k]) === null) : problemOf(base) === null;
   const changed =
     nextBase !== association.duesCents ||
     JSON.stringify(nextByType) !==
@@ -122,7 +131,8 @@ export function DuesSettings() {
                 key={k}
                 label={`${HOME_TYPE_LABEL[k].many}, per ${cadence}`}
                 hint={countLine(present.find((p) => p.type === k)?.count ?? 0)}
-                value={byKind[k] ?? 0}
+                value={byKind[k] ?? ""}
+                problem={byKind[k]?.trim() ? duesTextProblem(byKind[k]) : null}
                 onChange={(v) => setByKind({ ...byKind, [k]: v })}
               />
             ))
@@ -131,6 +141,7 @@ export function DuesSettings() {
               label={ownCount ? `Standard rate, per ${cadence}` : `Each home, per ${cadence}`}
               hint={countLine(community.owners.length - ownCount)}
               value={base}
+              problem={base.trim() ? duesTextProblem(base) : null}
               onChange={setBase}
             />
           )}
@@ -192,12 +203,14 @@ function Amount({
   label,
   hint,
   value,
+  problem,
   onChange,
 }: {
   label: string;
   hint: string;
-  value: number;
-  onChange: (next: number) => void;
+  value: string;
+  problem: string | null;
+  onChange: (next: string) => void;
 }) {
   return (
     <label className="block">
@@ -210,12 +223,18 @@ function Amount({
           type="number"
           min={0}
           step="0.01"
-          value={value || ""}
-          onChange={(e) => onChange(Number(e.target.value))}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
           aria-label={label}
+          aria-invalid={problem ? true : undefined}
           className={cn(fieldClass, "tnum pl-7 pr-3")}
         />
       </div>
+      {problem ? (
+        <span role="alert" className="mt-1 block text-caption font-medium text-danger">
+          {problem}
+        </span>
+      ) : null}
       <span className="mt-1 block text-caption text-fg-subtle">{hint}</span>
     </label>
   );
