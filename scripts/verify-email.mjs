@@ -137,6 +137,20 @@ try {
   });
   check("but a dues letter still reaches them",
     (letterRun ?? []).length === 1, `${(letterRun ?? []).length} recipients`);
+
+  // The switch for the daily bill email (0100). A settings holder writes it;
+  // a resident has no write policy on the row, so the update changes nothing.
+  const { data: billsDefault } = await admin.from("associations").select("bills_by_email").eq("id", associationId).single();
+  check("bills_by_email is on for a new association", billsDefault?.bills_by_email === true, String(billsDefault?.bills_by_email));
+  const { error: billsError } = await president.client.from("associations")
+    .update({ bills_by_email: false }).eq("id", associationId);
+  const { data: billsOff } = await admin.from("associations").select("bills_by_email").eq("id", associationId).single();
+  check("bills_by_email: a settings holder can turn it off", !billsError && billsOff?.bills_by_email === false,
+    billsError?.message ?? String(billsOff?.bills_by_email));
+  await behindUser.client.from("associations").update({ bills_by_email: true }).eq("id", associationId);
+  const { data: billsAfterResident } = await admin.from("associations").select("bills_by_email").eq("id", associationId).single();
+  check("bills_by_email: a resident is refused", billsAfterResident?.bills_by_email === false,
+    String(billsAfterResident?.bills_by_email));
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {

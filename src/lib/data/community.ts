@@ -144,6 +144,12 @@ export interface Community {
   actionItems: ActionItem[];
   /** What was emailed and what became of it. Empty for a demo association. */
   emailLog: EmailLogEntry[];
+  /**
+   * The most recent dues bill the daily run posted, not counting a balance
+   * brought forward: the day it posted and the date it fell due. Set for a
+   * signed in association with one on the books; the demo has none.
+   */
+  recentDuesBill?: { postedOn: string; dueOn: string };
   /** The legacy display list on the resident home. */
   amenityStatus: Amenity[];
   forms: ArchitecturalForm[];

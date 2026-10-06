@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/app/theme";
 import { supabaseServer } from "@/lib/supabase/server";
 import { hasSupabase } from "@/lib/supabase/env";
 import { isPlatformOwner } from "@/lib/platform-owner";
-import { loadOpsReport, OPS_WINDOW_DAYS, STUCK_PAYMENT_DAYS, type OpsReport } from "@/lib/ops";
+import { CRON_JOBS, loadOpsReport, OPS_WINDOW_DAYS, STUCK_PAYMENT_DAYS, type OpsReport } from "@/lib/ops";
 import { RAIL_LABEL, type PaymentRail } from "@/lib/payments/instruments";
 import { money } from "@/lib/utils";
 
@@ -154,7 +154,7 @@ function Health({ report }: { report: OpsReport }) {
 }
 
 function CronRuns({ report }: { report: OpsReport }) {
-  const missing = ["assessments", "billing-sweep", "autopay"].filter(
+  const missing = CRON_JOBS.filter(
     (job) => !report.cronRuns.some((r) => r.job === job),
   );
   return (

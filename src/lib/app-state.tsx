@@ -4936,6 +4936,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           insuranceCarrier: "insurance_carrier",
           // Not null in the table, so a cleared field is a blank string, below.
           contactEmail: "contact_email",
+          billsByEmail: "bills_by_email",
           insurancePolicyNo: "insurance_policy_no",
           insuranceExpiresOn: "insurance_expires_on",
           ein: "ein",

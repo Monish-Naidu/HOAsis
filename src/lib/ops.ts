@@ -104,7 +104,7 @@ export interface OpsReport {
   problems: string[];
 }
 
-export const CRON_JOBS: CronJob[] = ["assessments", "billing-sweep", "autopay"];
+export const CRON_JOBS: CronJob[] = ["assessments", "billing-sweep", "autopay", "email-bills"];
 
 /** The rows with the same message, most frequent first. */
 export function groupErrors(rows: AppErrorRow[]): ErrorGroup[] {

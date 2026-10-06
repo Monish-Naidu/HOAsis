@@ -1355,3 +1355,39 @@ export function recordsGaps(c: Community) {
     complete: missing.length === 0,
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* A bill the board still has to send                                          */
+/* -------------------------------------------------------------------------- */
+
+/** How long after a bill posts the dashboard keeps asking the board to send it. */
+export const UNSENT_BILL_DAYS = 7;
+
+/**
+ * "October dues posted" for a board that turned the automatic bill email
+ * off, until the bill has gone out some other way: a bill posted in the last
+ * seven days, with no assessment email logged on or after the day it posted.
+ * Null when the email is on (the daily job sends it), when no bill posted
+ * recently, or when one has been sent.
+ *
+ * The month is the one the bill falls due in. The demo has no email log and
+ * no posted bill, so there the row appears whenever the switch is off, for
+ * the month of the next charge, which is what a visitor needs to see it.
+ */
+export function unsentDuesBill(c: Community): { label: string } | null {
+  if (c.association.billsByEmail !== false) return null;
+  const bill = c.recentDuesBill;
+  if (!bill) {
+    // A signed in association without a bill on the books has nothing to send.
+    if (c.history) return null;
+    return { label: `${monthName(monthOf(c.nextChargeDate), "long")} dues posted` };
+  }
+  // A bill posted after today cannot be waiting yet. The older helper clamps
+  // at zero, so that case is its own check.
+  if (bill.postedOn > c.asOf || daysBetween(bill.postedOn, c.asOf) > UNSENT_BILL_DAYS) return null;
+  const sent = c.emailLog.some(
+    (e) => e.category === "assessment" && !e.error && e.sentAt.slice(0, 10) >= bill.postedOn,
+  );
+  if (sent) return null;
+  return { label: `${monthName(monthOf(bill.dueOn), "long")} dues posted` };
+}

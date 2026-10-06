@@ -50,6 +50,11 @@ export interface SendResult {
    * `remaining`: sending again would write to the same people.
    */
   unrecorded?: string;
+  /**
+   * Who a preview would have mailed, by address and home. Set on a dry run
+   * only, so the daily bill job's dry run can say who it would write to.
+   */
+  would?: { email: string; unit: string }[];
 }
 
 function resend(): Resend {
@@ -177,6 +182,7 @@ export async function sendDuesEmails(input: {
 
     if (input.dryRun || !client) {
       result.sent++;
+      if (input.dryRun) (result.would ??= []).push({ email: person.email, unit: person.unit_label });
       continue;
     }
 

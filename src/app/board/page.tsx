@@ -18,7 +18,7 @@ import {
 import { Callout, Card, CardHeader, IconTile, Stat, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
-import { cashPosition, delinquency, duesCollection, insuranceExposure, lateFeesOwed, vendorDecisions } from "@/lib/metrics";
+import { cashPosition, delinquency, duesCollection, insuranceExposure, lateFeesOwed, unsentDuesBill, vendorDecisions } from "@/lib/metrics";
 import { SectionLink } from "@/components/app/finance-ui";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
@@ -143,14 +143,25 @@ function NeedsYou() {
       daysFromToday(m.date) >= 0 &&
       daysFromToday(m.date) <= 60,
   );
+  const unsentBill = unsentDuesBill(community);
   const overdueItems = community.actionItems.filter(
     (a) => !a.doneOn && a.dueOn && a.dueOn < community.asOf,
   );
 
   // Each row wears the tint of the tab it opens, so the eye learns "teal is
   // money, blue is requests" here and finds the same colour on the tab.
-  type NeedRow = { count: number; label: string; href: string; icon: typeof Landmark; tint: TintName };
+  type NeedRow = { count: number; label: string; href: string; icon: typeof Landmark; tint: TintName; whole?: boolean };
   const all: NeedRow[] = [
+    {
+      // Only for a board that turned the automatic bill email off. The label
+      // is the whole sentence, so it is not counted like the rows below.
+      count: unsentBill ? 1 : 0,
+      label: unsentBill ? `${unsentBill.label}. Send the bill to owners` : "",
+      href: "/board/communications/announcements",
+      icon: Receipt,
+      tint: "teal",
+      whole: true,
+    },
     {
       count: recon.needsReview.length,
       label: pluralize(recon.needsReview.length, "transaction") + " to confirm",
@@ -235,8 +246,14 @@ function NeedsYou() {
               >
                 <IconTile icon={row.icon} tint={row.tint} size="sm" />
                 <span className="min-w-0 flex-1 truncate">
-                  <span className="tnum font-semibold">{row.count}</span>{" "}
-                  {row.label.replace(/^\d+\s/, "")}
+                  {row.whole ? (
+                    row.label
+                  ) : (
+                    <>
+                      <span className="tnum font-semibold">{row.count}</span>{" "}
+                      {row.label.replace(/^\d+\s/, "")}
+                    </>
+                  )}
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-fg-subtle transition-transform group-hover:translate-x-0.5" />
               </Link>

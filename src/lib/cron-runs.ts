@@ -11,7 +11,7 @@ import { scrubFields, type LogFields } from "@/lib/log";
  *
  * Never throws: a bookkeeping failure must not fail the run it describes.
  */
-export type CronJob = "assessments" | "billing-sweep" | "autopay";
+export type CronJob = "assessments" | "billing-sweep" | "autopay" | "email-bills";
 
 export async function recordCronRun(input: {
   job: CronJob;

@@ -51,3 +51,18 @@ describe("ContactEmailRow", () => {
     expect(screen.queryByText(/^Saved/)).toBeNull();
   });
 });
+
+describe("BillsByEmailRow", () => {
+  it("says saved only once the write resolved true, and not when it is refused", async () => {
+    const { BillsByEmailRow } = await import("@/app/board/settings/settings-screen");
+    let answer!: (ok: boolean) => void;
+    const save = vi.fn(() => new Promise<boolean>((resolve) => (answer = resolve)));
+    render(<BillsByEmailRow value={true} save={save} />, { wrapper: inToasts });
+    await userEvent.click(screen.getByRole("switch"));
+    expect(save).toHaveBeenCalledWith(false);
+    expect(screen.queryByText(/^Saved/)).toBeNull();
+    answer(false);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByText(/^Saved/)).toBeNull();
+  });
+});

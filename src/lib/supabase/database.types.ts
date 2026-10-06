@@ -303,6 +303,7 @@ export type Database = {
           fiscal_year_start: string
           home_types: Database["public"]["Enums"]["property_type"][]
           id: string
+          bills_by_email: boolean
           contact_email: string
           insurance_carrier: string | null
           insurance_expires_on: string | null
@@ -355,6 +356,7 @@ export type Database = {
           fiscal_year_start?: string
           home_types?: Database["public"]["Enums"]["property_type"][]
           id?: string
+          bills_by_email?: boolean
           contact_email?: string
           insurance_carrier?: string | null
           insurance_expires_on?: string | null
@@ -407,6 +409,7 @@ export type Database = {
           fiscal_year_start?: string
           home_types?: Database["public"]["Enums"]["property_type"][]
           id?: string
+          bills_by_email?: boolean
           contact_email?: string
           insurance_carrier?: string | null
           insurance_expires_on?: string | null

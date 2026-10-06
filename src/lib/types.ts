@@ -52,6 +52,11 @@ export interface Association {
    * the board sets it, and emails only invite a reply once it is set.
    */
   contactEmail?: string;
+  /**
+   * Whether each owner is emailed their bill the day it posts (the daily job
+   * at /api/email/bills). Unset counts as on, the way the column defaults.
+   */
+  billsByEmail?: boolean;
   insuranceCarrier?: string;
   insurancePolicyNo?: string;
   insuranceExpiresOn?: ISODate;
