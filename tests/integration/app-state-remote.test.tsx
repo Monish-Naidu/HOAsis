@@ -291,8 +291,6 @@ describe("a write aimed at one row", () => {
     ["Removing the item", "delete action_items", (s) => s.removeActionItem("item-1")],
     ["Declining", "update join_requests", (s) => s.declineJoinRequest("join-1")],
     ["Saving the decision on a request", "update requests", (s, c) => s.updateRequestStatus(c.requests[0].id, "approved")],
-    ["Confirming the transaction", "update ledger_entries", (s, c) => s.confirmLedgerEntry(c.ledger[0].id)],
-    ["Dismissing the transaction", "delete ledger_entries", (s, c) => s.dismissLedgerEntry(c.ledger[0].id)],
     ["Noting the W-9", "update vendors", (s, c) => s.markW9Requested(c.vendors[0].id)],
     ["Removing the vendor", "delete vendors", (s, c) => s.removeVendor(c.vendors[0].id)],
     ["Adding the owner", "update memberships", (s, c) => s.setHouseholdOwner(c.owners[0].id, { name: "Jane Doe", email: "" })],
@@ -601,18 +599,17 @@ describe("raising a notice from a report", () => {
 });
 
 describe("a write that may rightly match nothing", () => {
-  it("does not ask for a count, so it is not mistaken for a refusal", async () => {
+  it("a first opening balance has nothing to update or delete", async () => {
     const { result } = renderApp();
     const home = server().owners[0];
     await act(async () => {
-      // The first opening balance for a home has no earlier line to clear.
+      // The first opening balance for a home has no earlier line, and since
+      // money lines are never updated or deleted (0106) it writes one insert.
       await result.current.setOpeningBalances("2026-07-01", [{ ownerId: home.id, amountCents: 50_000 }]);
     });
     await settled();
 
-    const uncounted = writes().filter((s) => s.op === "update" || s.op === "delete");
-    expect(uncounted.map((s) => `${s.op} ${s.target}`)).toEqual(["delete charges"]);
-    expect(uncounted.some((s) => s.counted)).toBe(false);
+    expect(writes().filter((s) => s.op === "update" || s.op === "delete")).toEqual([]);
     expect(errors).toEqual([]);
   });
 
@@ -1494,6 +1491,8 @@ describe("saving settings", () => {
 });
 
 describe("opening balances", () => {
+  const OPENING = "Balance brought forward";
+
   it("writes only the homes it was given, and resolves when they are written", async () => {
     const [first, second] = server().owners;
     const { result } = renderApp();
@@ -1506,15 +1505,107 @@ describe("opening balances", () => {
     });
 
     expect(ok).toBe(true);
-    // By the time it resolves the lines are in: one cleared and replaced,
-    // one cleared and left clear.
-    expect(targets()).toEqual(["delete charges", "insert charges", "delete charges"]);
-    expect(writes()[1].values).toMatchObject({
+    // By the time it resolves the line is in. Nothing is deleted: a home with
+    // nothing on file and nothing to add writes nothing at all.
+    expect(targets()).toEqual(["insert charges"]);
+    expect(writes()[0].values).toMatchObject({
       unit_id: first.id,
-      label: "Balance brought forward",
+      label: OPENING,
       amount_cents: 50_000,
       due_on: "2026-07-01",
     });
+  });
+
+  it("corrects a figure with a second line for the difference, never an update or a delete", async () => {
+    const [first, second] = server().owners;
+    db.answer = (s) =>
+      s.op === "select" && s.target === "charges"
+        ? {
+            data: [
+              { unit_id: first.id, amount_cents: 30_000, due_on: "2026-07-01" },
+              { unit_id: second.id, amount_cents: 10_000, due_on: "2026-07-01" },
+            ],
+          }
+        : undefined;
+    const { result } = renderApp();
+    await act(async () => {
+      await result.current.setOpeningBalances("2026-07-01", [
+        { ownerId: first.id, amountCents: 50_000 },
+        { ownerId: second.id, amountCents: 4_000 },
+      ]);
+    });
+
+    expect(targets()).toEqual(["insert charges", "insert charges"]);
+    expect(writes()[0].values).toMatchObject({ unit_id: first.id, kind: "charge", amount_cents: 20_000, label: OPENING });
+    expect(writes()[1].values).toMatchObject({ unit_id: second.id, kind: "credit", amount_cents: -6_000, label: OPENING });
+  });
+
+  it("will not move the date of a line that is already on the books", async () => {
+    const [first] = server().owners;
+    db.answer = (s) =>
+      s.op === "select" && s.target === "charges"
+        ? { data: [{ unit_id: first.id, amount_cents: 30_000, due_on: "2026-07-01" }] }
+        : undefined;
+    const { result } = renderApp();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setOpeningBalances("2026-08-01", [{ ownerId: first.id, amountCents: 30_000 }]);
+    });
+
+    expect(ok).toBe(false);
+    expect(targets()).toEqual([]);
+    expect(errors[0]).toContain("keeps its date");
+  });
+});
+
+describe("the transactions a board corrects", () => {
+  const entry = () => server().ledger.find((e) => e.status === "needs-review")!;
+
+  it("confirms through confirm_ledger_entry, not an update", async () => {
+    const e = entry();
+    const { result } = renderApp();
+    act(() => result.current.confirmLedgerEntry(e.id, "Utilities"));
+    await settled();
+
+    expect(targets()).toEqual(["rpc:confirm_ledger_entry"]);
+    expect(writes()[0].values).toEqual({ p_entry_id: e.id, p_category: "Utilities" });
+    expect(errors).toEqual([]);
+  });
+
+  it("reverses through reverse_ledger_entry with the reason, and undoes by inserting a new line", async () => {
+    const e = entry();
+    const { result } = renderApp();
+    let outcome: Awaited<ReturnType<typeof result.current.reverseLedgerEntry>> = false;
+    await act(async () => {
+      outcome = await result.current.reverseLedgerEntry(e.id, "  Entered twice ");
+    });
+
+    expect(targets()).toEqual(["rpc:reverse_ledger_entry"]);
+    expect(writes()[0].values).toEqual({ p_entry_id: e.id, p_reason: "Entered twice" });
+    expect(outcome).not.toBe(false);
+
+    await act(async () => {
+      if (outcome) outcome.undo();
+      await settled();
+    });
+    expect(targets()).toEqual(["rpc:reverse_ledger_entry", "insert ledger_entries"]);
+    expect(writes()[1].values).toMatchObject({
+      description: e.description,
+      amount_cents: e.amountCents,
+      confirmed_at: null,
+    });
+    expect((writes()[1].values as { id?: string }).id).toBeUndefined();
+  });
+
+  it("sends nothing without a reason", async () => {
+    const e = entry();
+    const { result } = renderApp();
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.reverseLedgerEntry(e.id, " ");
+    });
+    expect(outcome).toBe(false);
+    expect(targets()).toEqual([]);
   });
 });
 
@@ -1637,35 +1728,49 @@ describe("a credit on a statement", () => {
 describe("an opening bank balance", () => {
   const ACCOUNT = "0b9d6c1e-6f0a-4c56-9d53-3f1f0a8d2c31";
 
-  it("clears an earlier opening line for the account, then writes one confirmed line", async () => {
+  it("writes one confirmed line when the account has none", async () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 8_600_000, asOf: "2026-09-01" });
     });
     expect(ok).toBe(true);
-    expect(targets()).toEqual(["delete ledger_entries", "insert ledger_entries"]);
-    expect(writes()[0].filters).toEqual(
-      expect.arrayContaining([["eq", "bank_account_id", ACCOUNT], ["eq", "category", "Opening balance"]]),
-    );
-    expect(writes()[1].values).toMatchObject({
+    expect(targets()).toEqual(["insert ledger_entries"]);
+    expect(writes()[0].values).toMatchObject({
       bank_account_id: ACCOUNT,
       category: "Opening balance",
+      description: "Opening balance",
       amount_cents: 8_600_000,
       occurred_on: "2026-09-01",
     });
-    expect((writes()[1].values as { confirmed_at: string | null }).confirmed_at).toBeTruthy();
+    expect((writes()[0].values as { confirmed_at: string | null }).confirmed_at).toBeTruthy();
   });
 
-  it("writes nothing if the delete was refused", async () => {
-    db.answer = (s) => (s.op === "delete" ? { error: { message: "denied" } } : undefined);
+  it("corrects an earlier figure with a line for the difference, and deletes nothing", async () => {
+    db.answer = (s) =>
+      s.op === "select" && s.target === "ledger_entries" ? { data: [{ amount_cents: 8_000_000 }] } : undefined;
+    const { result } = renderApp();
+    await act(async () => {
+      await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 8_600_000, asOf: "2026-09-01" });
+    });
+    expect(targets()).toEqual(["insert ledger_entries"]);
+    expect(writes()[0].values).toMatchObject({
+      category: "Opening balance",
+      description: "Opening balance (corrected)",
+      amount_cents: 600_000,
+    });
+  });
+
+  it("writes nothing when the figure is already what is on the books", async () => {
+    db.answer = (s) =>
+      s.op === "select" && s.target === "ledger_entries" ? { data: [{ amount_cents: 8_600_000 }] } : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 1, asOf: "2026-09-01" });
+      ok = await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 8_600_000, asOf: "2026-09-01" });
     });
-    expect(ok).toBe(false);
-    expect(targets()).toEqual(["delete ledger_entries"]);
+    expect(ok).toBe(true);
+    expect(targets()).toEqual([]);
   });
 });
 
@@ -1676,7 +1781,7 @@ describe("the opening balances screen, for a real association", () => {
     const held = new Promise<undefined>((resolve) => {
       release = () => resolve(undefined);
     });
-    db.answer = (s) => (s.target === "charges" && s.op === "delete" ? held : undefined);
+    db.answer = (s) => (s.target === "charges" && s.op === "insert" ? held : undefined);
     renderScreen(<screens.BalancesScreen />);
     const home = server().owners[0];
 
@@ -1686,8 +1791,8 @@ describe("the opening balances screen, for a real association", () => {
     );
     await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
 
-    // Two statements per home, one after the other. A second press part way
-    // through used to start a second pass over the same homes.
+    // A second press part way through used to start a second pass over the
+    // same homes.
     const waiting = await screen.findByRole("button", { name: "Saving" });
     expect(waiting).toBeDisabled();
     await user.click(waiting);
@@ -1697,7 +1802,7 @@ describe("the opening balances screen, for a real association", () => {
       await store.remoteWrite("Waiting", async () => undefined);
     });
     expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
-    expect(targets()).toEqual(["delete charges", "insert charges"]);
+    expect(targets()).toEqual(["insert charges"]);
     expect(writes().every((s) => (s.filters[0]?.[2] ?? (s.values as { unit_id: string }).unit_id) === home.id)).toBe(true);
   });
 });

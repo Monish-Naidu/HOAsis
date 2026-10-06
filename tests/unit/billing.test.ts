@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   GRACE_DAYS,
+  LOCKED_REASON,
+  PAST_DUE_LOCK_DAYS,
   billingPhase,
   boardLocked,
   checkoutTrialEnd,
+  rowLocked,
   statusFromStripe,
   subscriptionLine,
   trialEndsOn,
@@ -61,16 +64,15 @@ describe("billingPhase", () => {
   });
 
   it("lets Stripe's word win over the calendar", () => {
-    expect(billingPhase(facts({ status: "past_due", hasSubscription: true }), "2026-10-01")).toEqual({
+    expect(billingPhase(facts({ status: "past_due", hasSubscription: true }), "2026-10-01")).toMatchObject({
       phase: "past_due",
     });
     expect(billingPhase(facts({ status: "canceled" }), "2026-10-01")).toEqual({ phase: "canceled" });
   });
 
-  it("never locks a paying, past due or canceled association", () => {
-    for (const status of ["active", "past_due", "canceled"] as const) {
-      expect(boardLocked(billingPhase(facts({ status }), "2028-01-01"))).toBe(false);
-    }
+  it("never locks a paying association, however late the date", () => {
+    expect(boardLocked(billingPhase(facts({ status: "active" }), "2028-01-01"))).toBe(false);
+    expect(boardLocked(billingPhase(facts({ hasSubscription: true }), "2028-01-01"))).toBe(false);
   });
 });
 
@@ -140,5 +142,62 @@ describe("statusFromStripe", () => {
     expect(statusFromStripe("unpaid")).toBe("past_due");
     expect(statusFromStripe("canceled")).toBe("canceled");
     expect(statusFromStripe("incomplete_expired")).toBe("canceled");
+  });
+});
+
+describe("the lock, state by state", () => {
+  const pastDue = (since: string | null, today: string) =>
+    billingPhase(facts({ status: "past_due", hasSubscription: true, pastDueSince: since }), today);
+
+  it("locks after fourteen days past due, not before", () => {
+    expect(PAST_DUE_LOCK_DAYS).toBe(14);
+    const day13 = pastDue("2026-10-01", "2026-10-14");
+    expect(day13).toEqual({ phase: "past_due", since: "2026-10-01", daysLeft: 1, locked: false });
+    expect(boardLocked(day13)).toBe(false);
+    const day14 = pastDue("2026-10-01", "2026-10-15");
+    expect(day14).toMatchObject({ daysLeft: 0, locked: true });
+    expect(boardLocked(day14)).toBe(true);
+    expect(boardLocked(pastDue("2026-10-01", "2027-01-01"))).toBe(true);
+  });
+
+  it("counts a fresh failure as fourteen days left, and a missing date as today", () => {
+    expect(pastDue("2026-10-01", "2026-10-01")).toMatchObject({ daysLeft: 14, locked: false });
+    expect(pastDue(null, "2026-10-01")).toEqual({ phase: "past_due", since: null, daysLeft: 14, locked: false });
+  });
+
+  it("locks a cancelled subscription at once", () => {
+    expect(boardLocked(billingPhase(facts({ status: "canceled" }), "2026-10-01"))).toBe(true);
+  });
+
+  it("keeps locking a trial that ran out with no card, and nothing else", () => {
+    expect(boardLocked(billingPhase(facts(), "2026-12-16"))).toBe(true);
+    expect(boardLocked(billingPhase(facts(), "2026-12-15"))).toBe(false);
+    expect(boardLocked(billingPhase(facts(), "2026-11-01"))).toBe(false);
+    expect(boardLocked({ phase: "active" })).toBe(false);
+  });
+});
+
+describe("rowLocked, the rule the jobs read", () => {
+  const row = (over: Partial<Parameters<typeof rowLocked>[0]> = {}) => ({
+    subscription_status: "active",
+    past_due_since: null,
+    trial_ends_at: "2026-12-01T00:00:00+00:00",
+    billing_subscription_id: "sub_1",
+    ...over,
+  });
+
+  it("agrees with boardLocked for every state", () => {
+    expect(rowLocked(row(), "2028-01-01")).toBe(false);
+    expect(rowLocked(row({ subscription_status: "canceled" }), "2026-10-01")).toBe(true);
+    expect(rowLocked(row({ subscription_status: "past_due", past_due_since: "2026-10-01T09:00:00+00:00" }), "2026-10-14")).toBe(false);
+    expect(rowLocked(row({ subscription_status: "past_due", past_due_since: "2026-10-01T09:00:00+00:00" }), "2026-10-15")).toBe(true);
+    const noCard = { subscription_status: "ended", billing_subscription_id: null };
+    expect(rowLocked(row(noCard), "2026-12-15")).toBe(false);
+    expect(rowLocked(row(noCard), "2026-12-16")).toBe(true);
+    expect(rowLocked(row({ subscription_status: "trialing", billing_subscription_id: null }), "2026-11-01")).toBe(false);
+  });
+
+  it("gives jobs a reason to print", () => {
+    expect(LOCKED_REASON).toBe("the association's subscription is not paid");
   });
 });

@@ -12,7 +12,7 @@ import { trialEmail, type TrialEmailInput } from "./templates";
  */
 export async function sendTrialNotice(input: {
   associationId: string;
-  kind: "14-days" | "3-days" | "ended";
+  kind: "14-days" | "3-days" | "ended" | "locked";
   to: string;
   profileId: string | null;
   message: TrialEmailInput;

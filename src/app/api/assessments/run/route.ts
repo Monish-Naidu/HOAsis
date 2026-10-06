@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { duesToIssue, type DuesCadence } from "@/lib/payments/assessments";
+import { LOCKED_REASON, rowLocked } from "@/lib/billing";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { CRON_BUDGET_MS, cronPlan, scheduleContinuation, walkPages } from "@/lib/cron";
 import { logger } from "@/lib/log";
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     (after, limit) => {
       let query = admin
         .from("associations")
-        .select("id, name, dues_cents, dues_cadence, due_day, fiscal_year_start, created_at, billing_starts_on")
+        .select("id, name, dues_cents, dues_cadence, due_day, fiscal_year_start, created_at, billing_starts_on, subscription_status, past_due_since, trial_ends_at, billing_subscription_id")
         .is("deleted_at", null)
         .order("id")
         .limit(limit);
@@ -58,6 +59,12 @@ export async function GET(request: NextRequest) {
     },
     async (a) => {
       report.checked++;
+      // A board that is not paying us does not get dues billed or late fees
+      // added in its name: nobody on the board can see or correct them.
+      if (rowLocked(a, today)) {
+        report.quiet.push(`${a.name}: skipped, ${LOCKED_REASON}`);
+        return;
+      }
       // Late fees first, on yesterday's books: a dues line past the
       // policy's notice day and still unpaid gets its one fee, whether or
       // not anything new is billed today. Skipped on a dry run.

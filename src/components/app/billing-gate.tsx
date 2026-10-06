@@ -24,12 +24,15 @@ export function BillingGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const phase = usePhase();
 
-  if (!phase || !boardLocked(phase) || pathname.startsWith("/board/settings")) {
+  // Only a trial that ran out walls the screens. A card that failed or a
+  // cancelled subscription leaves the board able to read; the database
+  // refuses its writes (0105) and the banner says why.
+  if (!phase || phase.phase !== "ended" || !boardLocked(phase) || pathname.startsWith("/board/settings")) {
     return <>{children}</>;
   }
 
   const homes = homeCount(community);
-  const endsOn = phase.phase === "ended" ? phase.endsOn : community.asOf;
+  const endsOn = phase.endsOn;
 
   return (
     <Card className="mx-auto max-w-xl">

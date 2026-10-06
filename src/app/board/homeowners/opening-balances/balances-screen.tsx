@@ -34,8 +34,11 @@ export function openingFigures(
 ) {
   return Object.fromEntries(
     community.owners.map((owner) => {
-      const line = (community.ownerCharges[owner.id] ?? []).find((l) => l.label === OPENING_LABEL);
-      return [owner.id, line ? (line.amountCents / 100).toFixed(2) : ""];
+      // A correction is a second line for the difference (0106), so the
+      // figure is what the lines add up to.
+      const lines = (community.ownerCharges[owner.id] ?? []).filter((l) => l.label === OPENING_LABEL);
+      const total = lines.reduce((sum, l) => sum + l.amountCents, 0);
+      return [owner.id, lines.length ? (total / 100).toFixed(2) : ""];
     }),
   );
 }

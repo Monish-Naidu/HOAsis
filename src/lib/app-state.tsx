@@ -19,7 +19,7 @@ import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
 import { caps, DEFAULT_ROLE_CAPABILITIES, DEFAULT_ROLE_VIEWS, NO_CAPABILITIES, sees as seesArea } from "@/lib/data/accounts";
 import { DUES_HIGH_MESSAGE, MAX_DUES_CENTS, isEmail } from "@/lib/input-checks";
-import { addDays, daysFromToday, formatDate, setToday, todayIsoDate } from "@/lib/utils";
+import { addDays, daysFromToday, formatDate, money, setToday, todayIsoDate } from "@/lib/utils";
 import { isUuid, newId } from "@/lib/core/ids";
 import { PersistedStore, type Store } from "@/lib/core/store";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
@@ -113,6 +113,7 @@ import type {
   Capabilities,
 } from "@/lib/types";
 import { canRaiseNotice } from "@/lib/violations";
+import { canReverse, correctionCents, reversalLine, withReversals } from "@/lib/ledger-corrections";
 import { chargeProblem } from "@/lib/payments/charges";
 import { MANUAL_METHOD_LABEL, manualPaymentLabel, type ManualMethod, type PaymentInstrument } from "@/lib/payments/instruments";
 import {
@@ -307,6 +308,9 @@ export interface UploadOutcome {
   /** The records made, so a caller can point at one of them afterwards. */
   filed: { id: string; name: string }[];
 }
+
+/** What a reversal hands back: how to put the line back as a new line, or false when refused. */
+export type LedgerReversal = { undo: () => void } | false;
 
 interface AppState {
   /** Which association is being viewed, and what else is available. */
@@ -554,12 +558,23 @@ interface AppState {
   /** Returns an undo where one is possible; a Stripe method, once detached, is gone. */
   removeInstrument: (instrumentId: string) => (() => void) | undefined;
   setDefaultInstrument: (instrumentId: string) => void;
-  /** Returns an undo: confirming moves a transaction into every report. */
+  /**
+   * Confirming moves a transaction into every report. There is no undo: a
+   * confirmed money line is not edited back (0106). To take one back, reverse it.
+   */
   confirmLedgerEntry: (
     entryId: string,
     category?: Community["ledger"][number]["category"],
-  ) => () => void;
-  dismissLedgerEntry: (entryId: string) => () => void;
+  ) => void;
+  /**
+   * Takes a line back by writing its opposite, with a reason, and leaves the
+   * line itself on the books. Resolves to an undo once it is written, or false
+   * when it was refused. The undo is a fresh copy of the line, not a delete.
+   */
+  reverseLedgerEntry: (
+    entryId: string,
+    reason: string,
+  ) => LedgerReversal | Promise<LedgerReversal>;
   /**
    * Money moved from operating into reserves: two lines, one per account, so
    * both balances move. A transfer booked on the operating side alone read
@@ -2299,8 +2314,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * What one bank account held on the day the books started here. One
    * confirmed ledger line in the "Opening balance" category, which the
    * metrics already keep out of income and spending, replacing an earlier
-   * opening line for the same account so correcting it never stacks two.
-   * A finance holder may write ledger lines directly (ledger_write).
+   * opening line for the same account. In a real association a correction is
+   * a second line for the difference, since a ledger line is never deleted.
    */
   const setOpeningBankBalance = useCallback(
     (accountId: string, input: { amountCents: number; asOf: string }) => {
@@ -2310,21 +2325,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (!isUuid(accountId)) return false;
         return remoteWrite("Saving the opening balance", async () => {
           const supabase = supabaseBrowser();
-          const { error: clearError } = await supabase
+          // Nothing is deleted (0106). What the account already holds as an
+          // opening line stays, and the difference goes on top as a line of
+          // its own, so the books show both and the sum is the new figure.
+          const { data: earlier, error: readError } = await supabase
             .from("ledger_entries")
-            .delete()
+            .select("amount_cents")
             .eq("association_id", rc.id)
             .eq("bank_account_id", accountId)
             .eq("category", "Opening balance");
-          if (clearError) throw new Error(clearError.message);
+          if (readError) throw new Error(readError.message);
+          const held = (earlier ?? []) as { amount_cents: number }[];
+          const delta = correctionCents(
+            held.map((row) => row.amount_cents),
+            input.amountCents,
+          );
+          if (delta === 0) return;
           return supabase.from("ledger_entries").insert({
             association_id: rc.id,
             bank_account_id: accountId,
             occurred_on: input.asOf,
-            description: "Opening balance",
+            description: held.length ? "Opening balance (corrected)" : "Opening balance",
             counterparty: "",
             category: "Opening balance",
-            amount_cents: input.amountCents,
+            amount_cents: delta,
             confirmed_at: new Date().toISOString(),
           });
         });
@@ -2723,31 +2747,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const setOpeningBalances = useCallback(
     (asOf: string, balances: { ownerId: string; amountCents: number }[]) => {
       if (remote.community) {
-        // One dated line per home, replaced rather than stacked when it is
-        // corrected. The balance view sums it with everything else.
+        // One line per home. A correction is a second line for the
+        // difference rather than a delete and a rewrite (0106), so the
+        // statement shows both and the balance view sums them.
         const rc = remote.community;
         return remoteWrite("Saving opening balances", async () => {
           const supabase = supabaseBrowser();
+          const { data, error: readError } = await supabase
+            .from("charges")
+            .select("unit_id, amount_cents, due_on")
+            .eq("association_id", rc.id)
+            .eq("label", "Balance brought forward");
+          if (readError) throw new Error(readError.message);
+          const held = (data ?? []) as { unit_id: string; amount_cents: number; due_on: string }[];
           for (const { ownerId, amountCents } of balances) {
-            const { error: clearError } = await supabase
-              .from("charges")
-              .delete()
-              .eq("unit_id", ownerId)
-              .eq("label", "Balance brought forward");
-            if (clearError) throw new Error(clearError.message);
-            if (amountCents === 0) continue;
+            const mine = held.filter((row) => row.unit_id === ownerId);
+            const delta = correctionCents(
+              mine.map((row) => row.amount_cents),
+              amountCents,
+            );
+            if (delta === 0) {
+              // The same figure under a new date would be an edit to the old line.
+              if (mine.some((row) => row.due_on !== asOf)) {
+                throw new Error("an opening balance keeps its date. Change the amount to correct it");
+              }
+              continue;
+            }
             const { error } = await supabase.from("charges").insert({
               association_id: rc.id,
               unit_id: ownerId,
-              kind: amountCents > 0 ? "charge" : "credit",
+              kind: delta > 0 ? "charge" : "credit",
               label: "Balance brought forward",
-              amount_cents: amountCents,
+              amount_cents: delta,
               due_on: asOf,
             });
             if (error) throw new Error(error.message);
           }
-          // Two statements a home, one after the other, so a long roster is
-          // given longer than a single write before it is called stuck.
         }, { timeoutMs: WRITE_TIMEOUT_MS + balances.length * 1_000 });
       }
       const byOwner = new Map(balances.map((b) => [b.ownerId, b.amountCents]));
@@ -4495,29 +4530,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (entryId: string, category?: Community["ledger"][number]["category"]) => {
       if (remote.community) {
         const entry = remote.community.ledger.find((e) => e.id === entryId);
+        // Through a function, which says who confirmed it. A line is not
+        // edited back to unconfirmed, so there is no undo (0106).
         void remoteWrite("Confirming the transaction", () =>
-          supabaseBrowser()
-            .from("ledger_entries")
-            .update(
-              {
-                confirmed_at: new Date().toISOString(),
-                category: category ?? entry?.suggestedCategory ?? entry?.category,
-              },
-              { count: "exact" },
-            )
-            .eq("id", entryId),
+          supabaseBrowser().rpc("confirm_ledger_entry", {
+            p_entry_id: entryId,
+            p_category: category ?? entry?.suggestedCategory ?? entry?.category ?? null,
+          }),
         );
-        return () => {
-          if (!entry) return;
-          void remoteWrite("Reopening the transaction", () =>
-            supabaseBrowser()
-              .from("ledger_entries")
-              .update({ confirmed_at: null, category: entry.category }, { count: "exact" })
-              .eq("id", entryId),
-          );
-        };
+        return;
       }
-      return destructive(sliceStore(communityId, "ledger"), (all) =>
+      sliceStore(communityId, "ledger").update((all) =>
         all.map((entry) =>
           entry.id === entryId
             ? {
@@ -4535,36 +4558,66 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, communityId],
   );
 
-  const dismissLedgerEntry = useCallback(
-    (entryId: string) => {
+  /**
+   * A line is not deleted. Reversing writes its opposite, dated today, and
+   * both stay on the books. The undo puts the line back as a new line, which
+   * is a second correction, not a delete of the first.
+   */
+  const reverseLedgerEntry = useCallback(
+    (entryId: string, reason: string): LedgerReversal | Promise<LedgerReversal> => {
+      const why = reason.trim();
+      if (!can("finances")) return false;
+      if (reversalReasonProblem(why)) return false;
       if (remote.community) {
         const rc = remote.community;
         const entry = rc.ledger.find((e) => e.id === entryId);
-        void remoteWrite("Dismissing the transaction", () =>
-          supabaseBrowser().from("ledger_entries").delete({ count: "exact" }).eq("id", entryId),
-        );
-        return () => {
-          if (!entry) return;
-          void remoteWrite("Restoring the transaction", () =>
-            supabaseBrowser().from("ledger_entries").insert({
-              id: entry.id,
-              association_id: rc.id,
-              bank_account_id: isUuid(entry.accountId) ? entry.accountId : null,
-              occurred_on: entry.date,
-              description: entry.description,
-              counterparty: entry.counterparty,
-              category: entry.category,
-              amount_cents: entry.amountCents,
-              confirmed_at: entry.status === "cleared" ? new Date().toISOString() : null,
-            }),
-          );
-        };
+        if (!entry || !canReverse(entry)) return false;
+        return remoteWrite("Reversing the transaction", () =>
+          supabaseBrowser().rpc("reverse_ledger_entry", { p_entry_id: entryId, p_reason: why }),
+        ).then((ok): LedgerReversal => {
+          if (!ok) return false;
+          return {
+            undo: () => {
+              void remoteWrite("Putting the transaction back", () =>
+                supabaseBrowser().from("ledger_entries").insert({
+                  association_id: rc.id,
+                  bank_account_id: isUuid(entry.accountId) ? entry.accountId : null,
+                  occurred_on: entry.date,
+                  description: entry.description,
+                  counterparty: entry.counterparty,
+                  category: entry.category,
+                  amount_cents: entry.amountCents,
+                  confirmed_at: null,
+                }),
+              );
+            },
+          };
+        });
       }
-      return destructive(sliceStore(communityId, "ledger"), (all) =>
-        all.filter((e) => e.id !== entryId),
+      const ledger = sliceStore(communityId, "ledger");
+      const entry = ledger.getSnapshot().find((e) => e.id === entryId);
+      if (!entry || !canReverse(entry)) return false;
+      const reversal = reversalLine(entry, newId(), todayIsoDate());
+      logDemoActivity(
+        communityId,
+        "ledger",
+        `Transaction reversed: ${entry.description} (${money(Math.abs(entry.amountCents))}): ${why}`,
+        { reversed_entry_id: entry.id, reason: why },
       );
+      ledger.update((all) =>
+        withReversals([reversal, ...all]).sort((a, b) => b.date.localeCompare(a.date)),
+      );
+      return {
+        undo: () => {
+          ledger.update((all) =>
+            [{ ...entry, id: newId(), reversedById: undefined }, ...all].sort((a, b) =>
+              b.date.localeCompare(a.date),
+            ),
+          );
+        },
+      };
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const recordReserveTransfer = useCallback(
@@ -5970,7 +6023,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setDefaultInstrument,
     confirmLedgerEntry,
     recordReserveTransfer,
-    dismissLedgerEntry,
+    reverseLedgerEntry,
     approvePayout,
     markPayoutPaid,
     markW9Requested,

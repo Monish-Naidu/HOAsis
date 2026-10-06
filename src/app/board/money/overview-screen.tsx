@@ -8,6 +8,7 @@ import { BankConnect } from "@/components/app/bank-connect";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
 import { DeltaChip, SectionLink, StatTile } from "@/components/app/finance-ui";
 import { OpeningBalances } from "./opening-balances";
+import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import {
@@ -34,7 +35,7 @@ import { moduleOn } from "@/lib/modules";
  * card links to the tab that has the rest.
  */
 export function OverviewScreen() {
-  const { community, confirmLedgerEntry, dismissLedgerEntry, addBankAccount, isRemote } = useAppState();
+  const { community, confirmLedgerEntry, addBankAccount, isRemote } = useAppState();
   const recon = useReconciliation();
   const { notify } = useToast();
 
@@ -181,7 +182,7 @@ export function OverviewScreen() {
         <Card className="mt-6">
           <CardHeader
             title={`${pluralize(needsReview.length, "transaction")} ${needsReview.length === 1 ? "needs" : "need"} a decision`}
-            subtitle="Confirm each transaction, or remove it."
+            subtitle="Confirm each transaction, or reverse it."
             action={<SectionLink href="/board/money/transactions?status=needs-review">Open in Transactions</SectionLink>}
           />
           <ul className="divide-y divide-border">
@@ -206,23 +207,13 @@ export function OverviewScreen() {
                     variant="secondary"
                     size="sm"
                     onClick={() => {
-                      const undo = confirmLedgerEntry(e.id);
-                      notify(`Confirmed ${e.description}`, "ok", { label: "Undo", onClick: undo });
+                      confirmLedgerEntry(e.id);
+                      notify(`Confirmed ${e.description}`, "ok");
                     }}
                   >
                     Confirm
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-danger hover:bg-danger-soft hover:text-danger"
-                    onClick={() => {
-                      const undo = dismissLedgerEntry(e.id);
-                      notify("Transaction removed", "warn", { label: "Undo", onClick: undo });
-                    }}
-                  >
-                    Remove
-                  </Button>
+                  <ReverseLedgerLine entry={e} />
                 </span>
               </li>
             ))}

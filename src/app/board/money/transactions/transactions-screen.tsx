@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ChevronDown, Copy, Download, FileText, History, Paperclip, Search } from "lucide-react";
 import { Badge, Button, Callout, Card, EmptyState, PageHeader, Segmented, fieldClass } from "@/components/ui/primitives";
 import { InlineBar, PeriodPicker, SelectField } from "@/components/app/finance-ui";
+import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import { loadEarlierLedger } from "@/lib/data/remote-store";
@@ -35,11 +36,11 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 /**
  * The ledger, as a table a treasurer can actually work in: a period, a few
  * filters, the totals of what is left, and the file behind any line that
- * paid a vendor. Confirming and removing lines lives here too, because this
+ * paid a vendor. Confirming and reversing lines lives here too, because this
  * is where the line is.
  */
 export function TransactionsScreen() {
-  const { community, ledger, confirmLedgerEntry, dismissLedgerEntry } = useAppState();
+  const { community, ledger, confirmLedgerEntry } = useAppState();
   const { notify } = useToast();
   const params = useSearchParams();
   const asOf = todayIsoDate();
@@ -114,13 +115,8 @@ export function TransactionsScreen() {
   };
 
   function confirm(e: (typeof rows)[number]) {
-    const undo = confirmLedgerEntry(e.id);
-    notify(`Confirmed ${e.description}`, "ok", { label: "Undo", onClick: undo });
-  }
-
-  function remove(e: (typeof rows)[number]) {
-    const undo = dismissLedgerEntry(e.id);
-    notify("Transaction removed", "warn", { label: "Undo", onClick: undo });
+    confirmLedgerEntry(e.id);
+    notify(`Confirmed ${e.description}`, "ok");
   }
 
   function exportRows() {
@@ -322,13 +318,9 @@ export function TransactionsScreen() {
                           ? `${e.suggestedCategory}?`
                           : e.category}
                       </p>
-                      {e.status !== "cleared" || e.duplicateOfId || attachment ? (
+                      {e.status !== "cleared" || e.duplicateOfId || e.reversedById || e.reversedEntryId || attachment ? (
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                          <StatusCell
-                            entry={e}
-                            onConfirm={() => confirm(e)}
-                            onRemove={() => remove(e)}
-                          />
+                          <StatusCell entry={e} onConfirm={() => confirm(e)} />
                           {attachment ? (
                             <AttachmentToggle expanded={expanded} onToggle={() => setOpen(expanded ? null : e.id)} />
                           ) : null}
@@ -407,9 +399,9 @@ export function TransactionsScreen() {
                           </td>
                           <td className="px-5 py-2.5 text-right">
                             {/* One line: wrapped, Confirm sat under the badge and
-                                Remove under that, three rows for one decision. */}
+                                Reverse under that, three rows for one decision. */}
                             <span className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                              <StatusCell entry={e} onConfirm={() => confirm(e)} onRemove={() => remove(e)} />
+                              <StatusCell entry={e} onConfirm={() => confirm(e)} />
                             </span>
                           </td>
                         </tr>
@@ -456,17 +448,11 @@ type Entry = ReturnType<typeof useAppState>["ledger"][number];
  * lines was the column's whole content and told nobody anything; a pending
  * line, a duplicate, or a line waiting on a decision is what it is for.
  */
-function StatusCell({
-  entry: e,
-  onConfirm,
-  onRemove,
-}: {
-  entry: Entry;
-  onConfirm: () => void;
-  onRemove: () => void;
-}) {
+function StatusCell({ entry: e, onConfirm }: { entry: Entry; onConfirm: () => void }) {
   return (
     <>
+      {e.reversedById ? <Badge tone="neutral">Reversed</Badge> : null}
+      {e.reversedEntryId ? <Badge tone="neutral">Reversal</Badge> : null}
       {e.duplicateOfId ? (
         <Badge tone="danger" dot={false}>
           <Copy className="size-2.5" />
@@ -478,14 +464,7 @@ function StatusCell({
           <Button variant="secondary" size="sm" onClick={onConfirm}>
             Confirm
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-danger hover:bg-danger-soft hover:text-danger"
-            onClick={onRemove}
-          >
-            Remove
-          </Button>
+          <ReverseLedgerLine entry={e} />
         </>
       ) : e.status === "pending" ? (
         <Badge tone="warn">Pending</Badge>

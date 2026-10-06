@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { LOCKED_REASON, rowLocked } from "@/lib/billing";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { CRON_BUDGET_MS, cronPlan, scheduleContinuation, walkPages } from "@/lib/cron";
 import { logger } from "@/lib/log";
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
     (after, limit) => {
       let query = admin
         .from("associations")
-        .select("id, name, bills_by_email")
+        .select("id, name, bills_by_email, subscription_status, past_due_since, trial_ends_at, billing_subscription_id")
         .is("deleted_at", null)
         .order("id")
         .limit(limit);
@@ -79,6 +80,10 @@ export async function GET(request: NextRequest) {
       // when its own clock reads a few milliseconds behind the pacer's.
       if (unfinished) return;
       report.checked++;
+      if (rowLocked(a, today)) {
+        report.quiet.push(`${a.name}: skipped, ${LOCKED_REASON}`);
+        return;
+      }
       const visitedAfter = previousId;
       previousId = a.id;
       // Only dues bills posted today. The brought forward line is a carried

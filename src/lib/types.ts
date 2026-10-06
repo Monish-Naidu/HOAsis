@@ -68,6 +68,8 @@ export interface Association {
   subscriptionStatus?: "trialing" | "active" | "past_due" | "canceled" | "ended";
   /** The day the free period ends. Absent for the demo, which has no clock. */
   trialEndsOn?: ISODate;
+  /** The day the card first failed; set only while the status is past due. */
+  pastDueSince?: ISODate;
   /** The platform subscription, once a card is on file. */
   billing?: {
     subscriptionId?: string;
@@ -394,6 +396,10 @@ export interface LedgerEntry {
   duplicateOfId?: ID;
   /** The vendor payment this line is, when it is one. Opens the invoice. */
   payoutId?: ID;
+  /** Set on a reversal: the line it took back. */
+  reversedEntryId?: ID;
+  /** Set on a line that was reversed: the reversal that took it back. */
+  reversedById?: ID;
 }
 
 /** One owner's line-item history: what was charged, what a payment paid off. */

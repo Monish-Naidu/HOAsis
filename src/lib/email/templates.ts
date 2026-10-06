@@ -211,7 +211,8 @@ export interface TrialEmailInput {
  * ends. Same shape as the dues notices on purpose. The subject carries the
  * date, the body says the price in one line, and there is one link.
  */
-export function trialEmail(kind: "14-days" | "3-days" | "ended", input: TrialEmailInput) {
+export function trialEmail(kind: "14-days" | "3-days" | "ended" | "locked", input: TrialEmailInput) {
+  if (kind === "locked") return lockedEmail(input);
   const price = `${money(input.monthlyCents)} a month for ${input.homes} ${
     input.homes === 1 ? "home" : "homes"
   }`;
@@ -256,6 +257,36 @@ export function trialEmail(kind: "14-days" | "3-days" | "ended", input: TrialEma
       signsIn: false,
     }),
     text: `${input.presidentName},\n\n${heading}. ${input.associationName} is on Your HOAsis at ${price}. ${detail}\n\nAdd a card: ${input.billingUrl}\n\nYour HOAsis`,
+  };
+}
+
+/**
+ * The board side went read-only: a card failed two weeks ago, or the
+ * subscription was cancelled. Sent once (the sweep marks it). Says what still
+ * works, because the fear is that owners lost something.
+ */
+function lockedEmail(input: TrialEmailInput) {
+  const subject = `The board side is read-only · ${input.associationName}`;
+  const detail = `Owners can still see their statements and pay. The board can read everything, but cannot add or change anything until the subscription is paid.`;
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
+      The board side is read-only
+    </h1>
+    <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
+      ${escapeHtml(input.presidentName)}, the subscription for ${escapeHtml(input.associationName)} is not paid. ${detail}
+    </p>`;
+  const footer = `Sent to the President of ${escapeHtml(input.associationName)} by Your HOAsis. This is about the association's subscription, so it goes to whoever runs the board and cannot be turned off.`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: "Update the card or restart the subscription to reopen it.",
+      body,
+      cta: { label: "Open billing", url: input.billingUrl },
+      footer,
+      signsIn: false,
+    }),
+    text: `${input.presidentName},\n\nThe board side is read-only. The subscription for ${input.associationName} is not paid. ${detail}\n\nOpen billing: ${input.billingUrl}\n\nYour HOAsis`,
   };
 }
 
