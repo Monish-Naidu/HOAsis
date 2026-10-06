@@ -251,7 +251,7 @@ get people to sign up. Deck headlines, hero art and the aerial photo stay.
 | --- | --- |
 | "Try the demo" opens the sample association in one click (`/demo`, `/demo?as=owner`) | done 2026-10-05 (pull request #7) |
 | The demo says it is one and links to setup | done 2026-10-05 (pull request #7) |
-| Price slider in place of the flat price band; price in the hero | done 2026-10-05 (pull request #7) |
+| Price slider in place of the flat price band; price in the hero | done 2026-10-05, then the slider came off the front page at Monish's word on 2026-10-06 (it stays on Pricing); the price line and the hero price stay |
 | Three setup steps; six questions boards ask | done 2026-10-05 (pull request #7) |
 | `src/app/robots.ts` tells every search engine to stay away from the whole site | waiting: Monish says when the site should be findable; then allow `/`, `/pricing`, `/about`, `/library` and add a sitemap |
 | No proof from real associations (quotes, a count) | later: nothing to show until there are customers; do not invent any |
@@ -325,7 +325,7 @@ confirmed and survived a reload, 390px on about forty pages.
 
 | Ask | Status |
 | --- | --- |
-| 2. Usability and design: website, app, whole flow; colour and accents; better icons, verbiage, buttons; a cool startup look | doing 2026-10-06: goes to its own pull request with a preview, not merged unseen (a restyle he had not seen was rolled back on 2026-09-24) |
+| 2. Usability and design: website, app, whole flow; colour and accents; better icons, verbiage, buttons; a cool startup look | first batch done 2026-10-06 (pull request #13, seen on localhost and approved): sign-in page, landing copy, buttons, access grid. Next: the same treatment on the app screens |
 | 3. Make sure authentication works | checked 2026-10-06: password sign-in, routing to the board or the resident side, a wrong password refused with a plain message, sign-out, the join flow, seat claiming and the email-change trigger all pass (`verify-signin-routing` 8/8, `verify-owners` 22/22, `verify-join-flow` 48/48, a browser walk with a test login). Not yet true: sign-up confirmations, magic links, password resets and email-change links go out through Supabase's own mailer, a few an hour, from a Supabase address, until Resend's domain is verified and set as Supabase's SMTP (go-live item 10). The one page error seen signed in is the known hydration error from section 13 |
 | 5. Telemetry and logging: "no way of knowing when things go wrong" | done 2026-10-06 for the digest (pull request #12): `/api/ops/digest` runs daily at 15:00 UTC after the money jobs and emails the platform owners when anything failed (errors, a failed job, stuck payments, autopay or email failures), and "all quiet" on Mondays. Waiting on Monish: the Sentry DSN (steps in docs/observability.md), an uptime check on `/api/health` |
 | 4. A migration plan to Azure | done 2026-10-06: docs/azure-migration-plan.md. Recommends preparing a container build now and moving the app only when there is a reason; keep Supabase for the database and sign-in |

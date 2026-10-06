@@ -29,7 +29,6 @@ import {
   Vote,
 } from "lucide-react";
 import { MarketingFooter, MarketingHeader, Reveal } from "@/components/app/marketing-chrome";
-import { PriceDial } from "./price-dial";
 import { Avatar, Card, IconTile, type TintName } from "@/components/ui/primitives";
 import {
   articleBySlug,
@@ -53,7 +52,7 @@ export const metadata = {
   // a title that already ends in it.
   title: { absolute: "Your community. Your HOAsis." },
   description:
-    "Everything your HOA needs to get things done quickly, all in one place. Set up in minutes, no card to start, and the first 90 days are free.",
+    "Collect dues, answer requests, run meetings and keep every record, without a management company. Set up in minutes, no card to start, and the first 90 days are free.",
 };
 
 /*
@@ -888,7 +887,8 @@ export default function MarketingHome() {
               {/* Full ink and a halo of the field colour behind it: muted gray
                   at this size sank into the picture's fade on both themes. */}
               <p className="mt-6 max-w-md text-[20px] font-medium leading-relaxed text-fg [text-shadow:0_0_24px_var(--hero-field),0_0_8px_var(--hero-field)]">
-                Everything your HOA needs to get things done quickly, all in one place.
+                Collect dues, answer requests, run meetings and keep every record. No management
+                company needed.
               </p>
             </Reveal>
             <Reveal delay={170}>
@@ -898,7 +898,7 @@ export default function MarketingHome() {
                   className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[17px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
                 >
                   Get started
-                  <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 {/* The demo, not the sign-in: somebody who already has an
                     account uses the header, and somebody who does not would
@@ -1055,8 +1055,7 @@ export default function MarketingHome() {
                 Built for the way HOA boards actually work.
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-[18px] leading-relaxed text-fg-muted">
-                Powerful tools for the things that matter most, so your community runs smoothly
-                today and is prepared for tomorrow.
+                The things a board does every month, done in minutes instead of evenings.
               </p>
             </div>
           </div>
@@ -1134,8 +1133,7 @@ export default function MarketingHome() {
                 In your pocket.
               </h2>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                Your HOAsis keeps you informed, connected, and in control from any phone.
-                Anytime, anywhere.
+                Owners pay, vote, ask and read from their phone. The board answers from theirs.
               </p>
             </div>
             <div>
@@ -1223,36 +1221,44 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* The price, for the visitor's own size. The strip under the hero
-          promises a free trial, and the next question is what comes after
-          it. */}
+      {/* The price, in one line. The strip under the hero promises a free
+          trial, and the next question is what comes after it. The slider
+          that did the sum lives on the pricing page; Monish took it off the
+          front page on 2026-10-06. */}
       <section className="border-b border-border bg-surface-2">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:py-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
-          <div>
-            <h2 className="text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-fg sm:text-[44px]">
-              One price. Every feature.
-            </h2>
-            <p className="mt-4 max-w-md text-[18px] leading-relaxed text-fg-muted">
-              {money(PRICE_PER_HOME_CENTS, { cents: false })} per home a month after your {TRIAL_DAYS}{" "}
-              free days. No setup fee, no add-ons, and no fee from us on payments. Cancel whenever.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link
-                href="/start"
-                className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[16px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
-              >
-                Get started
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-              <Link
-                href="/pricing"
-                className="press inline-flex h-12 items-center rounded-xl border border-border-2 bg-surface px-6 text-[16px] font-semibold text-fg hover:border-fg-subtle"
-              >
-                See pricing
-              </Link>
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-8 px-5 py-14 sm:py-16">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="rounded-2xl border border-border bg-surface px-5 py-4 text-center shadow-card">
+              <p className="tnum text-[40px] font-semibold leading-none tracking-[-0.04em] text-fg">
+                {money(PRICE_PER_HOME_CENTS, { cents: false })}
+              </p>
+              <p className="mt-1.5 text-[14px] font-medium text-fg-muted">per home, a month</p>
+            </div>
+            <div>
+              <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-fg sm:text-[34px]">
+                One price. Every feature.
+              </h2>
+              <p className="mt-2 max-w-xl text-[17px] leading-relaxed text-fg-muted">
+                After your {TRIAL_DAYS} free days. No setup fee, no add-ons, no fee from us on
+                payments. Cancel whenever.
+              </p>
             </div>
           </div>
-          <PriceDial />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/start"
+              className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[16px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
+            >
+              Get started
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="/pricing"
+              className="press inline-flex h-12 items-center rounded-xl border border-border-2 bg-surface px-6 text-[16px] font-semibold text-fg hover:border-fg-subtle"
+            >
+              See pricing
+            </Link>
+          </div>
         </div>
         {/* The rails, named. Set as quiet wordmarks rather than borrowed logo
             art, and only rails the product actually runs: the huddle said
