@@ -330,5 +330,46 @@ confirmed and survived a reload, 390px on about forty pages.
 | 5. Telemetry and logging: "no way of knowing when things go wrong" | done 2026-10-06 for the digest (pull request #12): `/api/ops/digest` runs daily at 15:00 UTC after the money jobs and emails the platform owners when anything failed (errors, a failed job, stuck payments, autopay or email failures), and "all quiet" on Mondays. Waiting on Monish: the Sentry DSN (steps in docs/observability.md), an uptime check on `/api/health` |
 | 4. A migration plan to Azure | done 2026-10-06: docs/azure-migration-plan.md. Recommends preparing a container build now and moving the app only when there is a reason; keep Supabase for the database and sign-in |
 | 6. What else needs wiring | done 2026-10-06: docs/go-live-monish.md items 10 to 16 (auth email through your domain, Sentry and an uptime check, search engines, staging, live-mode portal, the four crons, backups) |
-| 1b. Future work into the tracker | next |
+| 1b. Future work into the tracker | done 2026-10-06: section 15 |
+
+## 15. Future work
+
+Everything marked "later" above, gathered in one place with the roadmap
+items that were only in conversation, in the order I would build them once
+the first real associations are on. Nothing here is started.
+
+**Before the first paying association** (weeks, not months)
+| Item | Why | Size |
+| --- | --- | --- |
+| Dues bill by email the day it posts | Owners not on autopay hear nothing today unless the board presses the mailer; decision waiting on Monish | a fourth money job, paced like the mailer: 2 days |
+| Real file upload on requests and notices | Photos of the problem are the request, for most owners | Supabase storage bucket, size and type limits, 2 to 3 days |
+| Meetings: change the date, cancel, minutes, who attended | A board holds one a month; today a meeting cannot be edited once sent | 2 to 3 days |
+| Printable owner statement (PDF) and a year-end statement run for every home | Asked for at tax time and at every sale | 2 days |
+| A reply address and a support inbox that reach somebody | Items 1, 2 and 10 in the go-live list; nothing to build, all his | hours |
+
+**First year with customers**
+| Item | Why | Size |
+| --- | --- | --- |
+| Fines that post to the balance, with the notice stages | Notices say "no fine" today because nothing can charge one; add_charge is the piece | 2 days on top of charges |
+| Paper and proxy votes entered by the board; quorum on a ballot; "dues must be current" to vote | Every annual meeting | 3 days |
+| Home exempt from dues (builder lots, association-owned) and proration for a home added mid-period | Builders and growing communities | 2 days, one migration |
+| Document versions, with the old one kept | Rules get amended; owners must find the current one | 2 days |
+| Resale and estoppel certificates, and the records-request flow (modules off today) | Every sale needs one; title companies pay for them | 1 week |
+| Vendor 1099 list in January (module off today) | Any association paying a landscaper over $600 | 2 days |
+| Budget versus actual and trends (modules off today) | The treasurer's year-end report | already built, needs a pass before switching on |
+| Renters, and a board seat with no home (a hired manager) | Condos with investors; associations with a manager | 1 week, touches seats and policies |
+| Processing fee as its own ledger line | The board cannot see where $2.28 went; decision waiting | 1 day, one migration |
+| A restore button for a deleted association, and the thirty-day purge job | The screen promises both | 2 days |
+
+**Later, or if customers ask**
+| Item | Why | Size |
+| --- | --- | --- |
+| Text messages (opt-in, statutory notices by paper) | Owners without email; the delivery panel already describes it and was corrected to say it does not exist | 1 week plus a carrier |
+| Bank feed and reconciliation (Plaid was ruled out 2026-09-02; Stripe Financial Connections is the candidate) | Treasurers reconcile monthly by hand today | 2 weeks |
+| QuickBooks export | Associations with an accountant | 3 days |
+| Second language (Spanish first) | Depends on the market | 1 week of strings, then upkeep |
+| Native iPhone and Android apps | The landing page says "next"; the web app already works on phones | months, or a wrapper in a week |
+| In-product AI (owner assistant, drafting notices) | Parked: no API spend outside Max (memory note of 2026-10-04) | needs an API key and a spend cap first |
+| A vote of officers to replace an unreachable President in the app | Support can do it by script today (0095) | 2 days |
+| The hydration error on `/start` | Symptom fixed; cause unfound | a day of digging, no customer impact now |
 
