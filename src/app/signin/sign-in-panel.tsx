@@ -4,8 +4,8 @@ import { sameOriginPath } from "@/app/auth/callback/next-path";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Building2, User } from "lucide-react";
-import { Button, ButtonLink, Card, IconTile } from "@/components/ui/primitives";
+import { ArrowRight } from "lucide-react";
+import { Button, ButtonLink, Card } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -63,8 +63,7 @@ async function destinationAfterSignIn(next: string | null): Promise<string> {
 
 export function SignInPanel() {
   const router = useRouter();
-  const { signIn, signOut, account, accounts, communities, community, setCommunity } =
-    useAppState();
+  const { signIn, signOut, account, accounts, community } = useAppState();
   const remote = useRemote();
   // Already in. A bookmark or the switcher used to land a signed in member on
   // this form as if they were a stranger; say who they are and offer the door.
@@ -79,12 +78,6 @@ export function SignInPanel() {
     role: ROLE_LABEL[a.role],
     isAdmin: a.role !== "resident",
   }));
-  // Board seats, then two residents: enough to see both sides without a
-  // fourteen-row list under the form.
-  const sampleSeats = [
-    ...seats.filter((s) => s.isAdmin),
-    ...seats.filter((s) => !s.isAdmin).slice(0, 2),
-  ];
   const [mode, setMode] = useState<"sign-in" | "create">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -348,60 +341,29 @@ export function SignInPanel() {
         </Card>
       ) : null}
 
-      <Card id="sample" className="scroll-mt-6 overflow-hidden">
-        <div className="p-4">
-          <p className="text-caption font-semibold uppercase tracking-wide text-fg-subtle">Try the demo</p>
-          <p className="mt-1 text-body font-semibold text-fg">
-            A made-up association with sample data. Your own association is behind Sign in.
-          </p>
-          <p className="mt-1 text-footnote leading-snug text-fg-muted">
-            {community.settings.displayName} is built into this browser with{" "}
-            {community.association.unitCount} homes and a year of history. Pick a person to try it
-            as. Nothing you do here is saved anywhere else.
-          </p>
-          {communities.length > 1 ? (
-            <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Sample community">
-              {communities.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={option.id === community.id}
-                  onClick={() => setCommunity(option.id)}
-                  className={cn(
-                    "press rounded-lg border px-3 py-1.5 text-footnote font-medium",
-                    option.id === community.id
-                      ? "border-primary bg-primary-soft text-primary"
-                      : "border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
+      {/* The demo, in one line. It used to be a list of six people to pick
+          from under the form, which is what the front page's "Try the demo"
+          now does in one click through /demo. Somebody who lands here by
+          the header's Log in and is only looking gets the same door. */}
+      <Card id="sample" className="scroll-mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 p-4">
+          <div className="min-w-0">
+            <p className="text-body font-semibold text-fg">Just looking?</p>
+            <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
+              {community.settings.displayName} is a made-up association with{" "}
+              {community.association.unitCount} homes and a year of history. Nothing you do there is
+              saved.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <ButtonLink href="/demo" variant="secondary" size="sm">
+              Open the demo
+            </ButtonLink>
+            <ButtonLink href="/demo?as=owner" variant="ghost" size="sm">
+              As an owner
+            </ButtonLink>
+          </div>
         </div>
-        {sampleSeats.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => enter(s.id)}
-            className="flex w-full items-center gap-3 border-t border-border px-4 py-2.5 text-left transition-colors hover:bg-surface-2"
-          >
-            <IconTile
-              icon={s.isAdmin ? Building2 : User}
-              tint={s.isAdmin ? "blue" : "neutral"}
-              size="sm"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-body font-medium text-fg">{s.name}</span>
-              <span className="block text-footnote text-fg-muted">
-                {s.role} · Unit {s.unit}
-              </span>
-            </span>
-            <ArrowRight className="size-3.5 shrink-0 text-fg-subtle" />
-          </button>
-        ))}
         {hasSupabase ? (
           <div className="border-t border-border p-3">
             <ButtonLink href="/start" variant="ghost" size="sm" className="w-full">

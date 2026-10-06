@@ -53,7 +53,7 @@ export const metadata = {
   // a title that already ends in it.
   title: { absolute: "Your community. Your HOAsis." },
   description:
-    "Everything your HOA needs to get things done quickly, all in one place. Set up in minutes, no card to start, and the first 90 days are free.",
+    "Collect dues, answer requests, run meetings and keep every record, without a management company. Set up in minutes, no card to start, and the first 90 days are free.",
 };
 
 /*
@@ -888,7 +888,8 @@ export default function MarketingHome() {
               {/* Full ink and a halo of the field colour behind it: muted gray
                   at this size sank into the picture's fade on both themes. */}
               <p className="mt-6 max-w-md text-[20px] font-medium leading-relaxed text-fg [text-shadow:0_0_24px_var(--hero-field),0_0_8px_var(--hero-field)]">
-                Everything your HOA needs to get things done quickly, all in one place.
+                Collect dues, answer requests, run meetings and keep every record. No management
+                company needed.
               </p>
             </Reveal>
             <Reveal delay={170}>
@@ -898,7 +899,7 @@ export default function MarketingHome() {
                   className="press shimmer group inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gradient px-6 text-[17px] font-semibold text-primary-fg shadow-raised hover:-translate-y-0.5 hover:shadow-glow"
                 >
                   Get started
-                  <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 {/* The demo, not the sign-in: somebody who already has an
                     account uses the header, and somebody who does not would
@@ -1055,8 +1056,7 @@ export default function MarketingHome() {
                 Built for the way HOA boards actually work.
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-[18px] leading-relaxed text-fg-muted">
-                Powerful tools for the things that matter most, so your community runs smoothly
-                today and is prepared for tomorrow.
+                The things a board does every month, done in minutes instead of evenings.
               </p>
             </div>
           </div>
@@ -1134,8 +1134,7 @@ export default function MarketingHome() {
                 In your pocket.
               </h2>
               <p className="mt-5 max-w-md text-[18px] leading-relaxed text-fg-muted">
-                Your HOAsis keeps you informed, connected, and in control from any phone.
-                Anytime, anywhere.
+                Owners pay, vote, ask and read from their phone. The board answers from theirs.
               </p>
             </div>
             <div>

@@ -40,16 +40,13 @@ function AdminControls() {
 }
 
 describe("sign in", () => {
-  it("sends an admin to the admin view and a resident to the resident view", async () => {
-    const user = userEvent.setup();
+  it("offers the demo as one door, for the board and for an owner", () => {
+    // The six-person picker that lived here moved behind /demo, which seats
+    // the visitor itself (2026-10-06). The page keeps one row with two links.
     wrap(<SignInPanel />);
-
-    await user.click(screen.getByRole("button", { name: /Arya Mehr/ }));
-    expect(push).toHaveBeenCalledWith("/board");
-
-    push.mockClear();
-    await user.click(screen.getByRole("button", { name: /Monish Naidu/ }));
-    expect(push).toHaveBeenCalledWith("/resident");
+    expect(screen.getByRole("link", { name: "Open the demo" })).toHaveAttribute("href", "/demo");
+    expect(screen.getByRole("link", { name: "As an owner" })).toHaveAttribute("href", "/demo?as=owner");
+    expect(screen.queryByRole("button", { name: /Arya Mehr/ })).not.toBeInTheDocument();
   });
 
   it("does not let somebody choose their own unit at signup", async () => {

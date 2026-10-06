@@ -182,8 +182,8 @@ export function MarketingFooter() {
         <div>
           <Wordmark size={34} />
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-fg-muted">
-            Moving your community forward. Everything your community needs to get
-            things done quickly, all in one place.
+            Dues, requests, meetings and records for self-managed associations. Set up in an
+            afternoon.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">

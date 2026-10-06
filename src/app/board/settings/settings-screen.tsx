@@ -753,10 +753,12 @@ export function SettingsScreen() {
             </div>
           ) : null}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left">
+            <table className="w-full min-w-[880px] text-left">
               <thead>
                 <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
-                  <th className="px-5 py-2.5 font-semibold">Board member</th>
+                  {/* Wide enough for a name and a title on one line each; the
+                      capability columns share what is left. */}
+                  <th className="w-[13rem] min-w-[13rem] px-5 py-2.5 font-semibold">Board member</th>
                   {GRID_AREAS.map((c) => (
                     <th key={c} className="px-2 py-2.5 text-center font-semibold">
                       {CAPABILITY_LABEL[c]}

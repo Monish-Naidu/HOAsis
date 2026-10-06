@@ -13,7 +13,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 const DESCRIPTION =
-  "Everything your HOA needs to get things done quickly, all in one place.";
+  "Collect dues, answer requests, run meetings and keep every record. Everything a self-managed HOA does, without the management company.";
 
 export const metadata: Metadata = {
   // What a relative image or link in the metadata resolves against.
