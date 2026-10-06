@@ -19,7 +19,7 @@ describe("one resident navigation", () => {
   it("names and orders the website rail", () => {
     expect(residentRailRows(tabs).map((t) => t.label)).toEqual([
       "Home",
-      "Payments",
+      "Pay",
       "Requests",
       "Documents",
       "Meetings",

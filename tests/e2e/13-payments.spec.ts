@@ -71,7 +71,7 @@ test.describe.serial("Stripe, test mode", () => {
     test.setTimeout(120_000);
     await page.goto(await signInLink(baseURL!, `/c/${SLUG}/resident/pay`));
     await page.waitForLoadState("networkidle");
-    await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Pay", exact: true })).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole("button", { name: /New card/ }).click();
     await page.getByRole("button", { name: /Continue to pay/ }).click();
@@ -88,7 +88,7 @@ test.describe.serial("Stripe, test mode", () => {
     test.setTimeout(120_000);
     await page.goto(await signInLink(baseURL!, `/c/${SLUG}/resident/pay`));
     await page.waitForLoadState("networkidle");
-    await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Pay", exact: true })).toBeVisible({ timeout: 20_000 });
 
     if (!(await page.getByRole("button", { name: /Visa/ }).count())) {
       await page.getByRole("button", { name: /Save a card or bank account/ }).click();

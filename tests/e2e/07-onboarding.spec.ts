@@ -442,7 +442,7 @@ test.describe("the first weeks of a community still being built", () => {
     ).toBeLessThan(health.text.indexOf("Get paid"));
     // A turnover has balances on the day control passes, so the list asks.
     expect(health.text, "a turnover is not asked what each home owes").toContain(
-      "Enter what each home owes today",
+      "Enter starting balances",
     );
     // And it is not given the builder's group.
     expect(health.text).not.toContain("Before the bank will open an account");
@@ -512,7 +512,7 @@ test.describe("the first weeks of a community still being built", () => {
       "the bank paperwork should come before Get paid",
     ).toBeLessThan(health.text.indexOf("Get paid"));
     // Nothing to carry in for a builder, and no handover steps.
-    expect(health.text).not.toContain("Enter what each home owes today");
+    expect(health.text).not.toContain("Enter starting balances");
     expect(health.text).not.toContain("Before you sign the handover");
   });
 
@@ -551,7 +551,7 @@ test.describe("an association that already runs itself", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for an established association");
     expect(health.text, "the opening balances step is missing").toContain(
-      "Enter what each home owes today",
+      "Enter starting balances",
     );
     expect(health.text, "an established association was given the builder's paperwork").not.toContain(
       "Before the bank will open an account",
@@ -580,7 +580,7 @@ test.describe("an association that already runs itself", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a fresh association");
     expect(health.text).toContain("Get an EIN");
-    expect(health.text).toContain("Enter what each home owes today");
+    expect(health.text).toContain("Enter starting balances");
   });
 
   test("can actually set those balances, and they reach the statement", async ({ page }) => {
@@ -601,7 +601,7 @@ test.describe("an association that already runs itself", () => {
 
     // Home 2, which the founder does not hold. Detached homes of an
     // established association go by address.
-    const box = page.getByLabel(/^Opening balance for .*, 2 Founder Way$/);
+    const box = page.getByLabel(/^Starting balance for .*, 2 Founder Way$/);
     await box.fill("1240.50");
     await page.waitForTimeout(300);
     await page.getByRole("button", { name: /^Save \d+ balances?$/ }).click();

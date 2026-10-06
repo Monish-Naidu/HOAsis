@@ -79,7 +79,7 @@ interface ResidentTab {
  */
 export const residentTabs: ResidentTab[] = [
   { href: "/resident", label: "Home", icon: Home, tint: "blue", bar: true },
-  { href: "/resident/pay", label: "Payments", tab: "Pay", tabLabel: "Pay", icon: CreditCard, tint: "teal", bar: true },
+  { href: "/resident/pay", label: "Pay", tab: "Pay", tabLabel: "Pay", icon: CreditCard, tint: "teal", bar: true },
   // Under Payments: the balance and the history are two views of the same
   // money. Violet, the records tint: neutral grey made its title tile look
   // switched off.

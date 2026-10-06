@@ -230,7 +230,7 @@ describe("the one list, in order", () => {
     ]);
     expect(collect.tasks.map((t) => t.label)).toEqual([
       "Add every home and its owner",
-      "Enter what each home owes today",
+      "Enter starting balances",
       "Turn on online payments",
       "Check the first bill",
       "Invite the owners",

@@ -132,8 +132,8 @@ describe("a request opened by the board", () => {
     expect(thread.slice(2).map((e) => e.body)).toEqual(["Which colour?", "And the height."]);
     expect(new Set(thread.map((e) => e.id)).size).toBe(thread.length);
     expect(thread.at(-1)).toMatchObject({ kind: "note", actorRole: "board" });
-    // No decision came with it.
-    expect(seen.state.requests.find((r) => r.id === "req-open-1")!.status).toBe("submitted");
+    // No decision came with it, but the review has started.
+    expect(seen.state.requests.find((r) => r.id === "req-open-1")!.status).toBe("in-review");
   });
 
   it("sends the box's words through Reply to the owner and clears it once saved", async () => {
@@ -209,5 +209,58 @@ describe("a request opened by the board", () => {
     expect(within(row).queryByRole("button", { name: "Deny" })).not.toBeInTheDocument();
     expect(within(row).queryByLabelText("Reply to the owner")).not.toBeInTheDocument();
     expect(within(row).queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a maintenance request Sent after a reply and says it was replied to", async () => {
+    wrap(<BoardRequests />);
+    act(() => {
+      seen.state.signIn("acct-arya");
+      seen.state.addRequest(request({ id: "req-fix-1", reference: "REQ-2026-902", kind: "maintenance", title: "Streetlight out", summary: "Dark since Monday.", thread: [] }));
+    });
+    await act(async () => {
+      await seen.state.replyToRequest("req-fix-1", "We have asked the electrician.");
+    });
+    expect(seen.state.requests.find((r) => r.id === "req-fix-1")!.status).toBe("submitted");
+    const row = document.getElementById("req-req-fix-1")!;
+    expect(within(row).getByText("Sent")).toBeInTheDocument();
+    expect(within(row).getByText(/^Replied /)).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: /work order/i })).not.toBeInTheDocument();
+  });
+
+  it("groups by what the board does next", () => {
+    wrap(<BoardRequests />);
+    act(() => {
+      seen.state.signIn("acct-arya");
+      seen.state.addRequest(request());
+      seen.state.addRequest(request({ id: "req-fix-2", reference: "REQ-2026-903", kind: "maintenance", title: "Gate sticks", thread: [] }));
+    });
+    expect(screen.getAllByText("Needs a decision").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Needs scheduling").length).toBeGreaterThan(0);
+  });
+
+  it("schedules a maintenance request with an optional date, then marks it fixed with a note to the owner", async () => {
+    const user = userEvent.setup();
+    wrap(<BoardRequests />);
+    act(() => {
+      seen.state.signIn("acct-arya");
+      seen.state.addRequest(request({ id: "req-fix-3", reference: "REQ-2026-904", kind: "maintenance", title: "Gate sticks", thread: [] }));
+    });
+    const row = () => document.getElementById("req-req-fix-3")!;
+    await user.click(within(row()).getByRole("button", { name: "Schedule it" }));
+    await user.click(within(row()).getAllByRole("button", { name: "Schedule it" }).at(-1)!);
+    let saved = seen.state.requests.find((r) => r.id === "req-fix-3")!;
+    expect(saved.status).toBe("in-review");
+    expect(saved.thread.at(-1)?.body).toBe("Scheduled.");
+    expect(screen.getAllByText("In progress").length).toBeGreaterThan(0);
+
+    await user.click(within(row()).getByRole("button", { name: "Mark fixed" }));
+    // Nothing closes until it is confirmed.
+    expect(seen.state.requests.find((r) => r.id === "req-fix-3")!.status).toBe("in-review");
+    await user.type(within(row()).getByLabelText(/Note to the owner/), "New latch fitted.");
+    await user.click(within(row()).getByRole("button", { name: "Mark fixed and tell the owner" }));
+    saved = seen.state.requests.find((r) => r.id === "req-fix-3")!;
+    expect(saved.status).toBe("closed");
+    expect(saved.thread.at(-1)?.body).toMatch(/^Fixed on .*\. New latch fitted\.$/);
   });
 });

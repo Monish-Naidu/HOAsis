@@ -183,7 +183,7 @@ export function PayFlow() {
       if (!next.on) notify("Autopay is off. Nothing will be taken.", "info");
       else if (next.skipMonth) notify(`${monthLabel(next.skipMonth)} will be skipped.`);
       else if (next.skipMonth === null) notify("Nothing is skipped now.");
-      else notify(`Autopay takes your balance on the ${ordinal(day)}.`);
+      else notify(`Autopay takes your balance on the ${ordinal(autopayDay)} each month.`);
     });
   }
 
@@ -233,7 +233,7 @@ export function PayFlow() {
   /* ---------------------------------------------------------------- form */
   const heading = (
     <ResidentTitle
-      title="Payments"
+      title="Pay"
       subtitle={
         // What is owed now, before when the next bill lands. "Dues due
         // October 1" above a past-due September balance read as all clear.
@@ -423,7 +423,7 @@ export function PayFlow() {
                       </span>
                       <span className="block text-footnote leading-snug text-fg-muted">
                         If you owe more than this, from a special assessment or a fine, you pay the
-                        extra yourself. Regular dues still go out on the {ordinal(autopayDay)}.
+                        extra yourself. Regular dues still go out on your autopay day.
                       </span>
                     </span>
                   </label>
@@ -545,16 +545,22 @@ export function PayFlow() {
         ) : null}
         {stripeAccountId && stripeReady && publishableKey ? (
           <>
-            <TestModeGuide audience="resident" />
-            <StripePayPanel
-              associationId={community.association.id}
-              unitId={owner.id}
-              amountCents={amountCents}
-              publishableKey={publishableKey}
-              instruments={instruments}
-              selection={stripeSelection}
-              onSelect={setStripeSelection}
-            />
+            {/* One thing at a time: while a method is being saved, the pay
+                form steps aside rather than offering two ways to continue. */}
+            {adding ? null : (
+              <>
+                <TestModeGuide audience="resident" />
+                <StripePayPanel
+                  associationId={community.association.id}
+                  unitId={owner.id}
+                  amountCents={amountCents}
+                  publishableKey={publishableKey}
+                  instruments={instruments}
+                  selection={stripeSelection}
+                  onSelect={setStripeSelection}
+                />
+              </>
+            )}
             {adding ? (
               <div className="space-y-2">
                 <AddMethod onDone={() => setAdding(false)} />
@@ -788,7 +794,7 @@ export function PayFlow() {
               setPaid({ amountCents: cost.residentPaysCents, instrument: selected });
             }}
           >
-            Pay {money(cost.residentPaysCents)}
+            {amountCents > 0 ? `Pay ${money(cost.residentPaysCents)}` : "Continue"}
           </Button>
         </Card>
       ) : null}

@@ -219,11 +219,11 @@ export const BOARD_SECTION_TABS: Record<string, { row: string; tabs: string[] }>
 
 /**
  * The resident rail, in order. One list for the rail, the phone bar and More
- * (`resident-nav.tsx`); the bar shortens Payments to Pay and Documents to Docs.
+ * (`resident-nav.tsx`); the bar shortens Documents to Docs.
  */
 export const RESIDENT_TABS = [
   "Home",
-  "Payments",
+  "Pay",
   "Requests",
   "Documents",
   "Meetings",

@@ -176,7 +176,7 @@ test.describe("search", () => {
 
     await dialog(page).getByRole("textbox").fill("dues");
     await page.waitForTimeout(200);
-    await expect(dialog(page).getByRole("option").first()).toContainText("Payments");
+    await expect(dialog(page).getByRole("option").first()).toContainText("Pay");
     await dialog(page).getByRole("textbox").fill("homeowners");
     await page.waitForTimeout(200);
     expect(await dialog(page).innerText()).not.toContain("Go to");

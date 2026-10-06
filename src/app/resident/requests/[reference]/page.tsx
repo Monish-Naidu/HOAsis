@@ -15,7 +15,7 @@ import {
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { certificateMailto, certificateValidThrough } from "@/lib/request-certificate";
-import { statusLabel, statusTone } from "@/lib/request-status";
+import { requestStatusLabel, requestStatusTone } from "@/lib/request-status";
 import { formatDate, money, relativeDays } from "@/lib/utils";
 
 export default function RequestDetail({
@@ -39,6 +39,11 @@ export default function RequestDetail({
   const approved = request.status === "approved";
   // From the decision on the record, not a date typed into the screen.
   const validThrough = certificateValidThrough(request);
+  // The description is shown once, above. Filing a request also writes it as
+  // the first entry of the thread; that copy is not repeated in Activity.
+  const activity = request.thread.filter(
+    (e, i) => !(i === 0 && e.actorRole === "resident" && e.body.trim() === request.summary.trim()),
+  );
   const openStates = ["draft", "submitted", "in-review", "info-needed"];
   const isOpen = openStates.includes(request.status);
   // What the board wrote with the denial, without the word that opens it.
@@ -59,7 +64,7 @@ export default function RequestDetail({
 
       <div>
         <div className="mb-2 flex items-center gap-2">
-          <Badge tone={statusTone[request.status]}>{statusLabel[request.status]}</Badge>
+          <Badge tone={requestStatusTone(request)}>{requestStatusLabel(request)}</Badge>
           <span className="text-footnote text-fg-subtle">{request.reference}</span>
         </div>
         <h1 className="text-title3 font-semibold leading-snug tracking-[-0.02em] text-fg">
@@ -105,9 +110,10 @@ export default function RequestDetail({
                 variant="primary"
                 size="sm"
                 className="flex-1"
-                onClick={() => {
-                  window.location.href = certificateMailto(request);
-                }}
+                // A mailto opens the person's mail app; an anchor does it
+                // without assigning to location, which the hooks lint
+                // reads as a mutation during render.
+                onClick={() => window.open(certificateMailto(request), "_self")}
               >
                 <Mail className="size-3.5" />
                 Email certificate
@@ -247,7 +253,7 @@ export default function RequestDetail({
       <section>
         <SectionTitle>Activity</SectionTitle>
         <ol className="space-y-3">
-          {request.thread.map((e) => (
+          {activity.map((e) => (
             <li key={e.id} className="flex gap-3">
               <div className="flex flex-col items-center pt-1">
                 <span

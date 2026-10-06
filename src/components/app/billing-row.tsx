@@ -84,8 +84,15 @@ export function BillingRow() {
       </Button>
     );
   } else if (phase.phase === "canceled") {
-    description = `Cancelled. Nothing is billed and nothing is deleted; resume below to start again at ${price}.`;
-    status = <Badge tone="neutral">Cancelled</Badge>;
+    // The phase's own word is "ended". Owners can still pay while it is, so
+    // the card says what stopped (the board's access) and not a bare "Cancelled".
+    description = `The subscription ended. Owners can still pay; the board is read-only. Nothing is billed and nothing is deleted. Start again at ${price} on Stripe's billing page.`;
+    status = <Badge tone="neutral">Subscription ended</Badge>;
+    button = (
+      <Button variant="secondary" size="sm" onClick={() => open("portal")} disabled={busy}>
+        {busy ? "Opening…" : "Manage billing"}
+      </Button>
+    );
   } else {
     const card = a.billing?.last4
       ? `${a.billing.brand ? a.billing.brand[0].toUpperCase() + a.billing.brand.slice(1) : "Card"} ending ${a.billing.last4}`

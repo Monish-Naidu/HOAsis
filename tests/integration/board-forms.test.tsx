@@ -60,7 +60,7 @@ const openingLine = (ownerId: string) =>
   (seen.state.community.ownerCharges[ownerId] ?? []).find((l) => l.label === OPENING);
 const box = (ownerId: string) => {
   const owner = seen.state.community.owners.find((o) => o.id === ownerId)!;
-  return screen.getByLabelText(`Opening balance for ${owner.displayName}, ${owner.unit}`) as HTMLInputElement;
+  return screen.getByLabelText(`Starting balance for ${owner.displayName}, ${owner.unit}`) as HTMLInputElement;
 };
 
 describe("opening balances", () => {
@@ -93,7 +93,7 @@ describe("opening balances", () => {
     expect(box(behind.id).value).toBe("");
     // The figure is there to read, not to save back.
     const row = box(behind.id).closest("div")!;
-    expect(within(row).getByText(/^Owes \$[\d,.]+ today$/)).toBeInTheDocument();
+    expect(within(row).getByText(/Owes \$[\d,.]+ today$/)).toBeInTheDocument();
   });
 
   it("has nothing to save until a box is changed", () => {
@@ -112,7 +112,7 @@ describe("opening balances", () => {
     await user.type(box(target.id), "1240.50");
     await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
 
-    expect(await screen.findByText(/^Opening balances saved for 1 home\./)).toBeInTheDocument();
+    expect(await screen.findByText(/^Starting balances saved for 1 home\./)).toBeInTheDocument();
     expect(openingLine(target.id)?.amountCents).toBe(124_050);
     // Pressing the button with every box prefilled from today's balance
     // gave each of these a brought-forward line of its own.

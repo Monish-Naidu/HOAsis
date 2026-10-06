@@ -2,7 +2,8 @@ import type { Community } from "@/lib/data/community";
 import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
-import { daysBetween, daysFromToday, money } from "@/lib/utils";
+import { addDays, daysBetween, daysFromToday, money, ordinal, pluralize } from "@/lib/utils";
+import { policyFor } from "@/lib/collections";
 import { totalDues } from "@/lib/home-types";
 import { isDuesLine, isPaymentReversal } from "@/lib/statement";
 
@@ -837,6 +838,7 @@ export function budgetVariance(c: Community) {
 /* -------------------------------------------------------------------------- */
 
 export type PeriodPreset =
+  | "last-30-days"
   | "this-month"
   | "last-month"
   | "this-year"
@@ -845,6 +847,7 @@ export type PeriodPreset =
   | "custom";
 
 export const PERIOD_LABEL: Record<PeriodPreset, string> = {
+  "last-30-days": "Last 30 days",
   "this-month": "This month",
   "last-month": "Last month",
   "this-year": "This year",
@@ -860,6 +863,10 @@ export function periodRange(preset: PeriodPreset, asOf: string): { from: string;
   const pad = (n: number) => String(n).padStart(2, "0");
   const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
   switch (preset) {
+    case "last-30-days":
+      // Thirty days counting today, so the first of the month never opens on
+      // an empty screen the way "This month" does.
+      return { from: addDays(asOf, -29), to: asOf };
     case "this-month":
       return { from: `${year}-${pad(month)}-01`, to: `${year}-${pad(month)}-${pad(lastDay(year, month))}` };
     case "last-month": {
@@ -877,6 +884,35 @@ export function periodRange(preset: PeriodPreset, asOf: string): { from: string;
       return { from: shiftMonths(asOf, -11).slice(0, 7) + "-01", to: asOf };
     case "custom":
       return { from: `${year}-01-01`, to: asOf };
+  }
+}
+
+/** A period as it reads in a sentence: "Nothing in the last 30 days". */
+export const PERIOD_PHRASE: Record<PeriodPreset, string> = {
+  "last-30-days": "the last 30 days",
+  "this-month": "this month",
+  "last-month": "last month",
+  "this-year": "this year",
+  "last-year": "last year",
+  "last-12-months": "the last 12 months",
+  custom: "these dates",
+};
+
+/**
+ * The next period out to try when one is empty, or null when there is none
+ * wider to offer. A year does not widen to twelve months because in January
+ * it would not be wider.
+ */
+export function widerPeriod(preset: PeriodPreset): PeriodPreset | null {
+  switch (preset) {
+    case "this-month":
+      return "this-year";
+    case "last-30-days":
+    case "last-month":
+    case "this-year":
+      return "last-12-months";
+    default:
+      return null;
   }
 }
 
@@ -1445,4 +1481,185 @@ export function unsentDuesBill(c: Community): { label: string } | null {
   );
   if (sent) return null;
   return { label: `${monthName(monthOf(bill.dueOn), "long")} dues posted` };
+}
+
+/* -------------------------------------------------------------------------- */
+/* The board dashboard: the line under each number                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * "2.6 months of running costs": how long the operating account lasts at the
+ * pace of the last twelve months. Null when there is no spending to measure
+ * against, because "infinite months" is not a thing to tell a treasurer.
+ */
+export function runwayLine(c: Community, asOf: string = c.asOf): string | null {
+  const months = operatingRunway(c, asOf).coversMonths;
+  if (months === null || !Number.isFinite(months)) return null;
+  // One decimal while it is a small number worth the precision, whole after.
+  const shown = months < 10 ? Math.round(months * 10) / 10 : Math.round(months);
+  return `${shown} ${shown === 1 ? "month" : "months"} of running costs`;
+}
+
+/**
+ * "Reserves $171,479 · 41% funded". The percent is left off when no reserve
+ * study is on file: it would read 0% funded, which says the opposite of what
+ * is known. Null when there is neither a balance nor a study.
+ */
+export function reserveLine(c: Community): string | null {
+  const { reserve } = cashPosition(c);
+  const study = reserveSummary(c);
+  if (reserve === 0 && !study.hasStudy) return null;
+  const pct = study.hasStudy && study.required > 0 ? ` \u00b7 ${Math.round(study.percentFunded * 100)}% funded` : "";
+  return `Reserves ${money(reserve, { cents: false })}${pct}`;
+}
+
+/** The longest any home has been behind, in days. Zero when nobody is. */
+export function oldestPastDueDays(c: Community): number {
+  return c.owners.reduce((max, o) => Math.max(max, o.daysPastDue), 0);
+}
+
+/**
+ * "5 homes \u00b7 $5,458 \u00b7 oldest 214 days". There is no record of last
+ * month's past due list to measure a change against (balances are not
+ * snapshotted), so the oldest balance is the context that is true.
+ */
+export function pastDueLine(c: Community): string {
+  const d = delinquency(c);
+  if (d.past.length === 0) return "Everyone is current";
+  return `${pluralize(d.past.length, "home")} \u00b7 ${money(d.totalCents, { cents: false })} \u00b7 oldest ${pluralize(oldestPastDueDays(c), "day")}`;
+}
+
+/** A year's dues are on pace when owners have paid this much of what was billed so far. */
+export const DUES_PACE_TARGET = 0.95;
+
+/**
+ * Whether dues are coming in at the pace the bills call for.
+ *
+ * The rate is collected over billed to date, so it already measures the share
+ * paid against the share billed for the months elapsed; a year a third gone
+ * with a third billed and a third paid reads 100%. Null when nothing is
+ * billed, because there is nothing to be on pace for.
+ */
+export function duesPace(dues: Pick<ReturnType<typeof duesCollection>, "measurable" | "rate">): "on" | "behind" | null {
+  if (!dues.measurable) return null;
+  return dues.rate >= DUES_PACE_TARGET ? "on" : "behind";
+}
+
+/**
+ * The two short lines under "Dues collected": the pace, then, when this
+ * month's bill has not posted, when it will.
+ */
+export function duesPaceLines(c: Community, year: number, asOf: string = c.asOf): string[] {
+  const dues = duesCollection(c, year, asOf);
+  const lines: string[] = [];
+  const pace = duesPace(dues);
+  if (pace) lines.push(pace === "on" ? "On pace" : "Behind pace");
+  if (dues.thisMonth) {
+    lines.push(`${monthName(dues.thisMonth.month, "long")} bill posts on the ${ordinal(billDay(c))}`);
+  }
+  return lines;
+}
+
+/** The day of the month bills post and fall due: the posted bill's, else the next charge's. */
+function billDay(c: Community): number {
+  return Number((c.recentDuesBill?.dueOn ?? c.nextChargeDate).slice(8, 10)) || 1;
+}
+
+/** The meeting the dashboard calls next: the one under way, else the soonest still to come. */
+export function nextMeeting(c: Community) {
+  const live = c.meetings.find((m) => m.status === "live");
+  if (live) return live;
+  return [...c.meetings]
+    .filter((m) => m.status === "scheduled" && daysFromToday(m.date) >= 0)
+    .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
+}
+
+/** "12 coming \u00b7 notice sent", or the two facts as data for a screen that wants an action. */
+export function meetingStatus(m: Pick<Community["meetings"][number], "rsvps" | "noticeSentDate">) {
+  const coming = (m.rsvps ?? []).filter((r) => r.response === "yes").length;
+  const noticeSent = Boolean(m.noticeSentDate);
+  return {
+    coming,
+    noticeSent,
+    line: `${coming === 0 ? "No RSVPs yet" : `${coming} coming`} \u00b7 ${noticeSent ? "notice sent" : "Notice not sent"}`,
+  };
+}
+
+/**
+ * One sentence about the month in progress, every figure from the records:
+ * "October: billed $25,080 on the 1st, $19,260 collected so far (77%),
+ * autopay covers 34 homes, reminders go out on the 15th."
+ *
+ * Null for an association with no homes, where there is nothing to say yet.
+ * A month with no bill (a quarterly or annual association between bills)
+ * leaves the billed clause out rather than saying zero.
+ */
+export function thisMonthLine(c: Community, asOf: string = c.asOf): string | null {
+  const homes = c.owners.filter((o) => !o.placeholder);
+  if (homes.length === 0) return null;
+  const month = monthOf(asOf);
+  const dues = duesCollection(c, yearOf(asOf), asOf);
+  const day = billDay(c);
+  const row = dues.months.find((m) => m.month === month);
+  const parts: string[] = [];
+  if (row) {
+    parts.push(`billed ${money(row.expectedCents, { cents: false })} on the ${ordinal(day)}`);
+    parts.push(`${money(row.collectedCents, { cents: false })} collected so far (${Math.round(row.rate * 100)}%)`);
+  } else if (dues.thisMonth) {
+    parts.push(`the bill of ${money(dues.thisMonth.expectedCents, { cents: false })} posts on the ${ordinal(day)}`);
+  } else {
+    parts.push("no dues bill this month");
+  }
+  const onAutopay = homes.filter((o) => o.autopay).length;
+  if (onAutopay > 0) parts.push(`autopay covers ${pluralize(onAutopay, "home")}`);
+  // The reminder rung is counted in days after the due date, so the date it
+  // falls on is the bill's day plus those days, said only when it is still
+  // inside this month.
+  const reminderDay = policyFor(c.settings).reminderDay;
+  const first = `${asOf.slice(0, 7)}-${String(day).padStart(2, "0")}`;
+  const remindOn = addDays(first, reminderDay);
+  parts.push(
+    remindOn.slice(0, 7) === asOf.slice(0, 7)
+      ? `reminders go out on the ${ordinal(Number(remindOn.slice(8, 10)))}`
+      : `reminders go out ${pluralize(reminderDay, "day")} after the due date`,
+  );
+  return `${monthName(month, "long")}: ${parts.join(", ")}.`;
+}
+
+/**
+ * What each dashboard card says while an association has nothing to show.
+ * Each is the first thing to do, or null once there is something to read.
+ */
+export function dashboardFirstSteps(c: Community) {
+  const homes = c.owners.filter((o) => !o.placeholder).length;
+  return {
+    cash: c.bankAccounts.length === 0 ? "Add your bank account to see your balance" : null,
+    owed: homes === 0 ? "Add your homes to see what is owed" : null,
+    dues:
+      c.association.duesCents <= 0 && !c.owners.some((o) => (o.duesCents ?? 0) > 0)
+        ? "Set the dues amount to see how collection is going"
+        : homes === 0
+          ? "Add your homes to see how collection is going"
+          : null,
+  };
+}
+
+/**
+ * The number beside each status and category option on Transactions.
+ *
+ * Each count answers "how many would I see if I picked this", so a status
+ * count honours the period, category, search and the rest but not the status
+ * already chosen, and a category count the same without the category.
+ */
+export function ledgerFilterCounts(ledger: Community["ledger"], filter: LedgerFilter) {
+  const status = { any: 0, cleared: 0, pending: 0, "needs-review": 0 };
+  for (const e of filterLedger(ledger, { ...filter, status: undefined })) {
+    status.any += 1;
+    status[e.status] += 1;
+  }
+  const category: Record<string, number> = {};
+  for (const e of filterLedger(ledger, { ...filter, category: undefined })) {
+    category[e.category] = (category[e.category] ?? 0) + 1;
+  }
+  return { status, category, categoryAll: Object.values(category).reduce((t, n) => t + n, 0) };
 }

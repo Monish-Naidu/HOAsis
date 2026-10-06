@@ -38,8 +38,16 @@ import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { inviteUrl, remoteInviteUrl } from "@/lib/invitations";
-import { communitySlug, delinquency } from "@/lib/metrics";
+import { communitySlug } from "@/lib/metrics";
 import { policyFor } from "@/lib/collections";
+import { useUrlFilter } from "@/lib/url-filter";
+import {
+  HOME_FILTERS,
+  HOME_FILTER_LABEL,
+  homeFilterCounts,
+  matchesHomeFilter,
+  type HomeFilter,
+} from "@/lib/roster-filters";
 import { dueLetter, renderLetter } from "@/lib/letters";
 import type { HomeType, MessageThread, Owner } from "@/lib/types";
 import type { ManualMethod } from "@/lib/payments/instruments";
@@ -63,9 +71,15 @@ import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
  * when a name comes up, and lets them write to that person from the same row.
  */
 
-type Filter = "all" | "paid" | "behind";
-
 const PAGE = 50;
+
+/** What an empty chip says, in the chip's own terms. */
+const EMPTY_FILTER: Record<Exclude<HomeFilter, "all">, string> = {
+  "paid-up": "Nobody is paid up yet",
+  "past-due": "Nobody is past due",
+  autopay: "Nobody is on autopay yet",
+  "no-email": "Every household has an email on file",
+};
 
 const input =
   fieldClass;
@@ -233,21 +247,19 @@ export function HomeownersScreen() {
   const { notify } = useToast();
 
   const owners = community.owners;
-  const delinq = delinquency(community);
-  // Homes with nobody on record are neither paid up nor behind.
-  const paidUp = delinq.current;
   // Opening balances are for an association that switched here mid-life. A
   // new build starts every home at zero, so for it the screen is noise.
   const showOpeningBalances =
     community.profile?.origin !== "builder" && community.profile?.origin !== "handover";
 
-  const [filter, setFilter] = useState<Filter>("all");
+  // The chip and the search text live in the URL, so a view can be shared.
+  const [filter, setFilter] = useUrlFilter<HomeFilter>("filter", HOME_FILTERS, "all");
   // A mixed community can narrow the roster to one kind of home.
   const kinds = countByType(owners);
   const mixed = kinds.length > 1;
   const [kind, setKind] = useState<HomeType | "all">("all");
   // Search from the top bar lands here with the household's name filled in.
-  const [query, setQuery] = useState(params.get("q") ?? "");
+  const [query, setQuery] = useUrlFilter<string>("q", null, "");
   // Search's "Open home" shortcut lands with one household expanded.
   const [openId, setOpenId] = useState<string | null>(params.get("open"));
   const [focusComposer, setFocusComposer] = useState(false);
@@ -299,8 +311,7 @@ export function HomeownersScreen() {
   const matching = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return sorted.filter((o) => {
-      if (filter === "paid" && (o.daysPastDue > 0 || o.placeholder)) return false;
-      if (filter === "behind" && o.daysPastDue === 0) return false;
+      if (!matchesHomeFilter(o, filter)) return false;
       if (kind !== "all" && o.homeType !== kind) return false;
       if (!needle) return true;
       return (
@@ -314,11 +325,12 @@ export function HomeownersScreen() {
   }, [sorted, filter, query, kind]);
   const visible = matching.slice(0, shown);
 
-  const segments: { key: Filter; label: string; count: number }[] = [
-    { key: "all", label: "All", count: owners.length },
-    { key: "paid", label: "Paid up", count: paidUp },
-    { key: "behind", label: "Past due", count: delinq.past.length },
-  ];
+  // The two money chips need the books; the other three are facts about the
+  // register, so a seat that cannot see balances still gets them.
+  const counts = homeFilterCounts(owners);
+  const segments = HOME_FILTERS.filter((key) => seesMoney || (key !== "paid-up" && key !== "past-due")).map(
+    (key) => ({ key, label: HOME_FILTER_LABEL[key], count: counts[key] }),
+  );
 
   function toggle(owner: Owner, withComposer = false) {
     const opening = openId !== owner.id || withComposer;
@@ -556,7 +568,7 @@ export function HomeownersScreen() {
       <Card className="mt-6">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
-          {seesMoney ? (
+          {maySeeRoster ? (
             <Segmented
               label="Show households"
               value={filter}
@@ -826,8 +838,14 @@ export function HomeownersScreen() {
         {/* Roster */}
         {visible.length === 0 ? (
           <EmptyState
-            title={query.trim() ? "Nobody matches" : filter === "behind" ? "Nobody is past due" : "No households yet"}
-            description={query.trim() ? "Try a name, unit, address or email." : undefined}
+            title={query.trim() ? "Nobody matches" : filter === "all" ? "No households yet" : EMPTY_FILTER[filter]}
+            description={
+              query.trim()
+                ? "Try a name, unit, address or email."
+                : filter === "all"
+                  ? undefined
+                  : "Choose All to see every household."
+            }
           />
         ) : (
           <ul>

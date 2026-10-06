@@ -1786,7 +1786,7 @@ describe("the opening balances screen, for a real association", () => {
     const home = server().owners[0];
 
     await user.type(
-      screen.getByLabelText(`Opening balance for ${home.displayName}, ${home.unit}`),
+      screen.getByLabelText(`Starting balance for ${home.displayName}, ${home.unit}`),
       "500",
     );
     await user.click(screen.getByRole("button", { name: "Save 1 balance" }));

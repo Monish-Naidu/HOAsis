@@ -252,3 +252,30 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
     ),
   };
 }
+
+/**
+ * The chips over the past due list: all of it, one rung of the ladder, or the
+ * homes whose autopay failed. One predicate serves the list and its counts,
+ * so a chip never promises more homes than it opens.
+ */
+export const LADDER_FILTERS = ["all", "current", "reminder", "late-notice", "demand", "counsel", "autopay-failed"] as const;
+export type LadderFilter = (typeof LADDER_FILTERS)[number];
+
+export function matchesLadderFilter(
+  row: Pick<LadderRow, "stage"> & { owner: Pick<Owner, "id"> },
+  filter: LadderFilter,
+  autopayFailed: ReadonlySet<string> = new Set(),
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "autopay-failed") return autopayFailed.has(row.owner.id);
+  return row.stage === filter;
+}
+
+export function ladderFilterCounts(
+  rows: readonly (Pick<LadderRow, "stage"> & { owner: Pick<Owner, "id"> })[],
+  autopayFailed: ReadonlySet<string> = new Set(),
+): Record<LadderFilter, number> {
+  const counts = {} as Record<LadderFilter, number>;
+  for (const f of LADDER_FILTERS) counts[f] = rows.filter((r) => matchesLadderFilter(r, f, autopayFailed)).length;
+  return counts;
+}

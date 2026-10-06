@@ -395,7 +395,7 @@ export function StripePayPanel({
         disabled={busy || amountCents <= 0 || !savedUsable}
         onClick={begin}
       >
-        {busy ? "One moment…" : `Continue to pay ${money(amountCents)}`}
+        {busy ? "One moment…" : amountCents > 0 ? `Continue to pay ${money(amountCents)}` : "Continue"}
       </Button>
       <p className="mt-2.5 flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
         <Info className="mt-px size-3 shrink-0" />

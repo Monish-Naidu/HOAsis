@@ -154,7 +154,7 @@ export function BalancesScreen() {
     setDateMoved(false);
     setSaved(true);
     notify(
-      `Opening balances saved for ${pluralize(sending.length, "home")}. Statements show them as of ${formatDate(asOf, "medium")}.`,
+      `Starting balances saved for ${pluralize(sending.length, "home")}. Statements show them as of ${formatDate(asOf, "medium")}.`,
     );
   }
 
@@ -163,7 +163,7 @@ export function BalancesScreen() {
       <>
         <PageHeader
           eyebrow="Homeowners"
-          title="Opening balances"
+          title="Starting balances"
           description="What each home owed on the day you switched."
         />
         <Card>
@@ -190,7 +190,7 @@ export function BalancesScreen() {
     <>
       <PageHeader
         eyebrow="Homeowners"
-        title="Opening balances"
+        title="Starting balances"
         description="What each home owed on the day you switched. One amount per home."
       />
 
@@ -232,22 +232,22 @@ export function BalancesScreen() {
         <div className="divide-y divide-border">
           {parsed.map(({ owner, raw, cents }) => (
             <div key={owner.id} className="flex items-center gap-3 px-5 py-2.5">
-              <span className="w-20 shrink-0 truncate text-footnote font-medium text-fg-subtle">
-                {owner.unit}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-body text-fg">
-                {owner.displayName}
+              {/* Two lines, like the Homeowners list: the name, then the home
+                  and what it owes today, so neither is clipped at phone width. */}
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-body font-medium text-fg">{owner.displayName}</span>
                 {/* For reference only. It includes everything billed and paid
                     here since the switch, so it is not the figure to type. */}
-                {owner.balanceCents !== 0 ? (
-                  <span className="ml-2 text-footnote text-fg-muted">
-                    {owner.balanceCents > 0
-                      ? `Owes ${money(owner.balanceCents)} today`
-                      : `${money(-owner.balanceCents)} in credit today`}
-                  </span>
-                ) : null}
-              </span>
-              <label className="relative w-36 shrink-0">
+                <span className="block text-footnote text-fg-muted">
+                  {owner.unit}
+                  {owner.balanceCents > 0
+                    ? ` · Owes ${money(owner.balanceCents)} today`
+                    : owner.balanceCents < 0
+                      ? ` · ${money(-owner.balanceCents)} in credit today`
+                      : ""}
+                </span>
+              </div>
+              <label className="relative w-32 shrink-0 sm:w-36">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
                   $
                 </span>
@@ -258,8 +258,8 @@ export function BalancesScreen() {
                     setEntered((all) => ({ ...all, [owner.id]: e.target.value }));
                     setSaved(false);
                   }}
-                  placeholder="0.00"
-                  aria-label={`Opening balance for ${owner.displayName}, ${owner.unit}`}
+                  placeholder="Not set"
+                  aria-label={`Starting balance for ${owner.displayName}, ${owner.unit}`}
                   className={`tnum h-9 w-full rounded-lg border bg-surface pl-6 pr-3 text-right text-body text-fg outline-none focus:border-brand ${
                     cents === null ? "border-danger" : "border-border-2"
                   }`}
@@ -291,7 +291,7 @@ export function BalancesScreen() {
         ) : (
           <p className="text-footnote text-fg-subtle">
             Each one appears on that owner&apos;s statement as &ldquo;Balance brought
-            forward&rdquo;, dated {asOf}. Nothing is sent to anybody.
+            forward&rdquo;, dated {formatDate(asOf, "medium")}. Nothing is sent to anybody.
           </p>
         )}
       </div>

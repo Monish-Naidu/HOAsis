@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, Copy, Download, FileText, History, Paperclip, Search } from "lucide-react";
-import { Badge, Button, Callout, Card, EmptyState, PageHeader, Segmented, fieldClass } from "@/components/ui/primitives";
+import { Badge, Button, ButtonLink, Callout, Card, EmptyState, PageHeader, Segmented, fieldClass } from "@/components/ui/primitives";
 import { InlineBar, PeriodPicker, SelectField } from "@/components/app/finance-ui";
 import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
@@ -16,22 +17,39 @@ import {
   filterLedger,
   ledgerAttachment,
   ledgerCategories,
+  ledgerFilterCounts,
   ledgerTotals,
   totalsByCategory,
   periodRange,
+  PERIOD_LABEL,
+  PERIOD_PHRASE,
+  widerPeriod,
   type LedgerFilter,
   type PeriodPreset,
 } from "@/lib/metrics";
+import { useUrlClear, useUrlFilter, withFilter } from "@/lib/url-filter";
 import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 type StatusFilter = "any" | "cleared" | "pending" | "needs-review";
 
-const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "any", label: "Any status" },
-  { value: "cleared", label: "Cleared" },
-  { value: "pending", label: "Pending" },
-  { value: "needs-review", label: "Needs review" },
-];
+const STATUSES: readonly StatusFilter[] = ["any", "cleared", "pending", "needs-review"];
+
+// "To confirm" is what the dashboard and Finances call these lines, so it is
+// what the filter is called too.
+const STATUS_LABEL: Record<StatusFilter, string> = {
+  any: "Any status",
+  cleared: "Cleared",
+  pending: "Pending",
+  "needs-review": "To confirm",
+};
+
+/**
+ * The periods on offer. The default is the last 30 days, not "This month":
+ * on the first of the month that was an empty screen, and the lines a
+ * treasurer is reconciling are usually the last few weeks' anyway.
+ */
+const PERIODS: readonly PeriodPreset[] = ["last-30-days", "this-month", "last-month", "this-year", "last-year", "last-12-months", "custom"];
+const DEFAULT_PERIOD: PeriodPreset = "last-30-days";
 
 /**
  * The ledger, as a table a treasurer can actually work in: a period, a few
@@ -45,28 +63,35 @@ export function TransactionsScreen() {
   const params = useSearchParams();
   const asOf = todayIsoDate();
 
-  // A link that asks for the review queue opens on the whole year, since the
-  // oldest unreviewed line is rarely this month's.
-  const fromLink = params.get("status") === "needs-review";
-  // Search from the top bar lands on one line: its words in the box and its
-  // year as the period, so a 2024 entry is not hidden behind "this month".
-  const fromSearch = params.get("q");
-  // A link that names its own dates (search, or a year on the trends page)
-  // opens on them.
-  const fromDates = Boolean(params.get("from") && params.get("to"));
-  const [preset, setPreset] = useState<PeriodPreset>(
-    fromSearch || fromDates ? "custom" : fromLink ? "this-year" : "this-month",
-  );
-  const [custom, setCustom] = useState(() => {
-    const from = params.get("from");
-    const to = params.get("to");
-    return from && to ? { from, to } : periodRange("custom", asOf);
-  });
+  // Period, dates, status, category and the search text are in the URL, so a
+  // view can be bookmarked or sent to another officer. Account and direction
+  // are quick narrowing and stay on the page.
+  const pathname = usePathname();
+  const clearUrl = useUrlClear();
+  const customDefault = periodRange("custom", asOf);
+  const [urlPreset, setPreset] = useUrlFilter<PeriodPreset>("period", PERIODS, DEFAULT_PERIOD);
+  const [from, setFrom] = useUrlFilter<string>("from", null, customDefault.from);
+  const [to, setTo] = useUrlFilter<string>("to", null, customDefault.to);
+  const [status, setStatus] = useUrlFilter<StatusFilter>("status", STATUSES, "any");
+  const [categoryRaw, setCategory] = useUrlFilter<string>("category", null, "all");
+  const [search, setSearch] = useUrlFilter<string>("q", null, "");
+  // Older links (the top bar's search, a year on the trends page) name their
+  // dates and no period; they open on those dates.
+  const legacyDates = Boolean(params.get("from") && params.get("to") && params.get("period") === null);
+  const [legacyHeld, setLegacyHeld] = useState(legacyDates);
+  const preset: PeriodPreset = legacyHeld ? "custom" : urlPreset;
+  const custom = { from, to };
+  function choosePreset(next: PeriodPreset) {
+    setLegacyHeld(false);
+    setPreset(next);
+  }
+  function chooseRange(r: { from: string; to: string }) {
+    setLegacyHeld(false);
+    if (r.from !== from) setFrom(r.from);
+    else if (r.to !== to) setTo(r.to);
+  }
   const [accountId, setAccountId] = useState("all");
-  const [category, setCategory] = useState("all");
-  const [status, setStatus] = useState<StatusFilter>(fromLink ? "needs-review" : "any");
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
-  const [search, setSearch] = useState(fromSearch ?? "");
   const [open, setOpen] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
 
@@ -92,8 +117,10 @@ export function TransactionsScreen() {
       {loadingEarlier ? "Loading" : "Load earlier transactions"}
     </Button>
   );
-  const rows = useMemo(() => {
-    const filter: LedgerFilter = {
+  const categories = ledgerCategories(ledger);
+  const category = categories.includes(categoryRaw as (typeof categories)[number]) ? categoryRaw : "all";
+  const baseFilter = useMemo<LedgerFilter>(
+    () => ({
       from: range.from,
       to: range.to,
       accountId: accountId === "all" ? undefined : accountId,
@@ -101,13 +128,19 @@ export function TransactionsScreen() {
       status: status === "any" ? undefined : status,
       direction: direction === "all" ? undefined : direction,
       search,
-    };
-    return filterLedger(ledger, filter);
-  }, [ledger, range.from, range.to, accountId, category, status, direction, search]);
+    }),
+    [range.from, range.to, accountId, category, status, direction, search],
+  );
+  const counts = useMemo(() => ledgerFilterCounts(ledger, baseFilter), [ledger, baseFilter]);
+  const rows = useMemo(() => filterLedger(ledger, baseFilter), [ledger, baseFilter]);
+  // Whether something besides the period is cutting the list down, which
+  // decides if the empty state offers a wider period or clearing the filters.
+  const narrowed = status !== "any" || category !== "all" || accountId !== "all" || direction !== "all" || search.trim() !== "";
+  const wider = widerPeriod(preset);
+  const widerHref = wider ? `${pathname}?${withFilter(params.toString(), "period", wider, DEFAULT_PERIOD)}` : pathname;
   const totals = ledgerTotals(rows);
   const byCategory = totalsByCategory(rows);
   const byCategoryMax = Math.max(1, ...byCategory.map((r) => Math.abs(r.inCents - r.outCents)));
-  const categories = ledgerCategories(ledger);
   const accounts = community.bankAccounts;
   const accountName = (id: string) => {
     const a = accounts.find((x) => x.id === id);
@@ -149,7 +182,7 @@ export function TransactionsScreen() {
       <Card>
         {/* The toolbar: period first, then the narrowing, then search. */}
         <div className="flex flex-col gap-3 border-b border-border px-5 py-3">
-          <PeriodPicker preset={preset} onPreset={setPreset} range={custom} onRange={setCustom} />
+          <PeriodPicker preset={preset} onPreset={choosePreset} range={custom} onRange={chooseRange} presets={PERIODS} />
           <div className="flex flex-wrap items-center gap-2">
             {accounts.length > 1 ? (
               <SelectField
@@ -166,9 +199,17 @@ export function TransactionsScreen() {
               label="Category"
               value={category}
               onChange={setCategory}
-              options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
+              options={[
+                { value: "all", label: `All categories (${counts.categoryAll})` },
+                ...categories.map((c) => ({ value: c, label: `${c} (${counts.category[c] ?? 0})` })),
+              ]}
             />
-            <SelectField label="Status" value={status} onChange={setStatus} options={STATUS_OPTIONS} />
+            <SelectField
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={STATUSES.map((value) => ({ value, label: `${STATUS_LABEL[value]} (${counts.status[value]})` }))}
+            />
             <Segmented
               label="Direction"
               value={direction}
@@ -268,25 +309,30 @@ export function TransactionsScreen() {
             description={
               needsEarlier
                 ? "Load the earlier transactions to see this period."
-                : "No transactions in this period with these filters."
+                : narrowed
+                  ? `Nothing in ${PERIOD_PHRASE[preset]} with these filters.`
+                  : `Nothing in ${PERIOD_PHRASE[preset]}.${wider ? ` Try ${PERIOD_LABEL[wider].toLowerCase()}.` : ""}`
             }
             action={
-              needsEarlier ? earlierButton : (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setPreset("this-year");
-                  setStatus("any");
-                  setCategory("all");
-                  setAccountId("all");
-                  setDirection("all");
-                  setSearch("");
-                }}
-              >
-                Show this year
-              </Button>
-              )
+              needsEarlier ? (
+                earlierButton
+              ) : narrowed ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    clearUrl(["status", "category", "q"]);
+                    setAccountId("all");
+                    setDirection("all");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : wider ? (
+                <ButtonLink href={widerHref} variant="secondary" size="sm">
+                  Show {PERIOD_LABEL[wider].toLowerCase()}
+                </ButtonLink>
+              ) : undefined
             }
           />
         ) : (

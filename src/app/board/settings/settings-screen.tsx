@@ -30,7 +30,7 @@ import { SameNameNote } from "@/components/app/same-name-note";
 import { BillingRow } from "@/components/app/billing-row";
 import { DisplaySettings } from "@/components/app/display-settings";
 import { DuesSettings } from "@/components/app/dues-settings";
-import { TestModeGuide } from "@/components/app/test-mode-guide";
+import { STRIPE_TEST_MODE, TestModeGuide } from "@/components/app/test-mode-guide";
 import { useAppState } from "@/lib/app-state";
 import { AmenityRules } from "@/components/app/amenity-rules";
 import { useCoverPhotoUpload } from "@/components/app/community-hero";
@@ -1262,7 +1262,9 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
 
   const description =
     status.name === "live"
-      ? status.payout
+      ? STRIPE_TEST_MODE
+        ? "Test mode: payments are simulated. No real money moves."
+        : status.payout
         ? `Payments are live. Dues pay out to ${status.payout.bank} ••${status.payout.last4}.`
         : "Payments are live. Dues settle to the association's own bank account."
       : status.name === "needs"
@@ -1278,7 +1280,9 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
       {status.name === "loading" ? (
         <span className="text-footnote text-fg-subtle">Checking…</span>
       ) : status.name === "live" ? (
-        <Badge tone="ok">Payments are live</Badge>
+        <Badge tone={STRIPE_TEST_MODE ? "warn" : "ok"}>
+          {STRIPE_TEST_MODE ? "Test mode: payments are simulated" : "Payments are live"}
+        </Badge>
       ) : status.name === "checking" ? (
         <span className="inline-flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
           <Hourglass className="size-3.5" aria-hidden />

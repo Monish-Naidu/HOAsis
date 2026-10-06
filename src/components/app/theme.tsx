@@ -147,7 +147,7 @@ function setMode(mode: Mode) {
 
 const options: { value: Mode; icon: typeof Sun; label: string; hint: string }[] = [
   { value: "light", icon: Sun, label: "Light", hint: "Always light" },
-  { value: "auto", icon: SunMoon, label: "Evenings", hint: "Dark from 8pm to 7am" },
+  { value: "auto", icon: SunMoon, label: "Evenings", hint: "Dark from 8 pm to 7 am" },
   { value: "system", icon: Monitor, label: "System", hint: "Follow this device" },
   { value: "dark", icon: Moon, label: "Dark", hint: "Always dark" },
 ];
@@ -202,11 +202,9 @@ export function ThemeToggle({
   }
 
   return (
+    <div className={className}>
     <div
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5",
-        className,
-      )}
+      className="inline-flex max-w-full items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5"
       role="radiogroup"
       aria-label="Color theme"
     >
@@ -224,11 +222,15 @@ export function ThemeToggle({
             mode === value ? "bg-surface-3 text-fg" : "text-fg-muted hover:text-fg",
           )}
         >
-          <Icon className="size-4" strokeWidth={2} />
-          {/* Words, not only glyphs: a moon and a monitor mean little on their own. */}
-          <span className="hidden min-[400px]:inline">{label}</span>
+          <Icon className="hidden size-4 min-[400px]:block" strokeWidth={2} />
+          {/* Words always, glyphs when there is room: a moon and a monitor mean little on their own. */}
+          <span>{label}</span>
         </button>
       ))}
+    </div>
+    <p className="mt-1.5 text-footnote text-fg-muted">
+      Evenings: {options.find((o) => o.value === "auto")!.hint.replace(/^D/, "d")}
+    </p>
     </div>
   );
 }

@@ -201,7 +201,10 @@ export function PeriodPicker({
   onPreset,
   range,
   onRange,
+  presets = PRESETS,
 }: {
+  /** The presets to offer, for a screen with one the others do not need. */
+  presets?: readonly PeriodPreset[];
   preset: PeriodPreset;
   onPreset: (preset: PeriodPreset) => void;
   range: { from: string; to: string };
@@ -215,7 +218,7 @@ export function PeriodPicker({
         ariaLabel="Period"
         value={preset}
         onChange={onPreset}
-        options={PRESETS.map((p) => ({ value: p, label: PERIOD_LABEL[p] }))}
+        options={presets.map((p) => ({ value: p, label: PERIOD_LABEL[p] }))}
       />
       {preset === "custom" ? (
         <span className="inline-flex items-center gap-1.5">

@@ -244,7 +244,7 @@ export const BOARD_ROUTES: BoardRoute[] = [
   // and nothing more.
   {
     href: "/board/homeowners/opening-balances",
-    label: "Opening balances",
+    label: "Starting balances",
     icon: Users,
     key: "opening-balances",
     module: "homeowners",

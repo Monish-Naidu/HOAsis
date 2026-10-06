@@ -458,3 +458,22 @@ readable by the board; the inbox has a Mine filter and a per-office
 row on More) lists each office and what it handles. Left: a Mine badge on
 the nav, and a real Resend send once the domain is verified.
 
+## 20. The dashboard, filters, and the board's verbs
+
+Monish, 2026-10-06: "super intuitive to users onboarding to a HOA self-managed
+system; the whole dashboard should be smart and easy to use; metrics and
+dashboards that make sense, are actually helpful, and empower users to have
+smart filtering." Built the same day (pull request #20).
+
+| Item | Status |
+| --- | --- |
+| Dashboard cards answer four questions with context and an action: cash (months of cover, reserves), past due (homes, dollars, oldest; Send reminders), dues collected (on pace or behind; the unposted month), next meeting (RSVPs, notice state; Send notice) | done |
+| "This month" in one sentence from the records; empty states that tell a new board what to do first | done |
+| Needs you today in the order a board acts, with verbs ("vendor payment to approve", "board to-do overdue"); no duplicates of a card's action; nothing switched off | done |
+| Filters in the URL with counts: Homeowners (plus Autopay on, No email), Past due (rungs, autopay failed), Transactions (last 30 days by default, "try the wider period"), Requests (by what to do next, by type) | done |
+| Requests: two kinds with their own states and verbs; grouped by what the board has to do next; Mark fixed tells the owner; the badge counts open requests only | done |
+| Vendors: duplicates refused, name cap, honest placeholder, category as label | done |
+| One name, "Starting balances"; dates readable; rows that fit a phone | done |
+| Theme buttons labelled; Washington placeholders; "Test mode: payments are simulated"; the subscription card says its phase; "Pay" everywhere; "Continue" until the amount is valid; one form at a time on Pay; resolved notices with dates | done |
+| Left: a past-due change against last month (no history selector yet); the autopay day picker stays and the copy follows it | later |
+

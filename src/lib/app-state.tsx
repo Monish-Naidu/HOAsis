@@ -131,7 +131,8 @@ import { homeCount } from "@/lib/metrics";
 import { activityWords } from "@/lib/activity";
 import { meetingJoin } from "@/lib/meetings/video";
 import { noticeToast, replyEmailState, type ReplyEmail, type SendOutcome } from "@/lib/email/plain-error";
-import { statusLabel } from "@/lib/request-status";
+import { vendorNameProblem } from "@/lib/vendor-name";
+import { statusAfterReply, statusLabel } from "@/lib/request-status";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
 
 export type View = "resident" | "board";
@@ -4392,7 +4393,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           const now = latest(rc).requests.find((r) => r.id === requestId) ?? request;
           return supabaseBrowser()
             .from("requests")
-            .update({ thread: [...now.thread, event(now, actor?.name ?? "Board")] }, { count: "exact" })
+            .update(
+              {
+                thread: [...now.thread, event(now, actor?.name ?? "Board")],
+                // A reply to a decision request is the start of the review.
+                status: statusAfterReply(now),
+              },
+              { count: "exact" },
+            )
             .eq("id", requestId);
         }).then(async (ok) => {
           if (!ok) return false;
@@ -4410,7 +4418,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       sliceStore(communityId, "requests").update((all) =>
         all.map((request) =>
           request.id === requestId
-            ? { ...request, thread: [...request.thread, event(request, actor?.name ?? "Board")] }
+            ? {
+                ...request,
+                status: statusAfterReply(request),
+                thread: [...request.thread, event(request, actor?.name ?? "Board")],
+              }
             : request,
         ),
       );
@@ -4827,6 +4839,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const addVendor = useCallback(
     (vendor: Community["vendors"][number]) => {
+      // The same rule the form shows, held here too: a second call cannot
+      // add "cascade grounds co." beside "Cascade Grounds Co.".
+      const known = remote.community ? remote.community.vendors : sliceStore(communityId, "vendors").getSnapshot();
+      if (vendorNameProblem(vendor.name, known)) return;
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the vendor", () =>
