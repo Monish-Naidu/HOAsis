@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * The corner assistant.
+ *
+ * It answers from a snapshot of the association's own figures
+ * (`lib/assistant.ts`), so it cannot state a number that is not in the data.
+ */
+
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUp, MessageCircle, Sparkles, X } from "lucide-react";

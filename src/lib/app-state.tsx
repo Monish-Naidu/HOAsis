@@ -18,6 +18,7 @@ import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
 import { caps, DEFAULT_ROLE_CAPABILITIES, DEFAULT_ROLE_VIEWS, NO_CAPABILITIES, sees as seesArea } from "@/lib/data/accounts";
+import { isEmail } from "@/lib/input-checks";
 import { addDays, daysFromToday, formatDate, setToday, todayIsoDate } from "@/lib/utils";
 import { isUuid, newId } from "@/lib/core/ids";
 import { PersistedStore, type Store } from "@/lib/core/store";
@@ -3986,7 +3987,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             unitIds: [owner.id],
             kind: "welcome",
           }),
-        }).catch(() => undefined);
+        }).catch(() => undefined); // The roster is right already; the server logs a failed email.
       }
       return decided;
     },
@@ -4028,7 +4029,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               unitIds: [ownerId],
               kind: "welcome",
             }),
-          }).catch(() => undefined);
+          }).catch(() => undefined); // The roster is right already; the server logs a failed email.
         }
         return decided;
       }
@@ -4049,7 +4050,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const name = input.name.trim();
       const email = input.email.trim();
       if (!code) return { ok: false as const, error: "Enter the join code from your board." };
-      if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      if (!name || !isEmail(email)) {
         return { ok: false as const, error: "Enter your name and a working email address." };
       }
       // A demo association answers from the browser, so the flow can be

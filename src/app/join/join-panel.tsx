@@ -13,6 +13,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { joinReturnPath, openInvitedHome } from "./invited";
 import { resendConfirmation } from "./resend";
 import { ownerDues } from "@/lib/home-types";
+import { isEmail } from "@/lib/input-checks";
 import { cn, money } from "@/lib/utils";
 
 /**
@@ -318,7 +319,7 @@ function JoinForm({
   const effectiveEmail = signedIn ? signedInEmail : email;
   const ready =
     (signedIn || name.trim().length > 0) &&
-    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(effectiveEmail) &&
+    isEmail(effectiveEmail) &&
     (!needsAccount || password.length >= 8);
 
   async function submit() {

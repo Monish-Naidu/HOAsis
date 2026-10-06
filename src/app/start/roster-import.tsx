@@ -10,7 +10,7 @@ import {
   founderUnit,
   type CommunityDraft,
   type DraftHousehold,
-} from "@/lib/data/new-community";
+} from "@/lib/data";
 import { homeTypesOf } from "@/lib/home-types";
 import { lotNumberOf, rebuildLotHomes } from "@/lib/lots";
 import type { RosterRow } from "@/lib/roster/csv";

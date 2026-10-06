@@ -94,7 +94,7 @@ export function CostTrend({
             {money(active.totalCents)} across {active.homes} homes
             {" · "}
             {money(active.averageShareCents)} a home
-            {active.usageAmount ? ` · ${active.usageAmount.toLocaleString()} units` : ""}
+            {active.usageAmount ? ` · ${active.usageAmount.toLocaleString("en-US")} units` : ""}
           </>
         ) : (
           <>

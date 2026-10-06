@@ -1,3 +1,11 @@
+/**
+ * Demo fixtures for the money: ledger entries, owner charges, payment methods, vendors and payouts.
+ *
+ * The recent months are written by hand because screens and tests lean on their
+ * review queue, duplicate and pending check; the older history is generated from a
+ * template so year comparisons are honest. Only the signed-out demo reads this.
+ */
+
 import type { ChargeLine, LedgerEntry, PaymentMethod, Payout, Vendor } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */

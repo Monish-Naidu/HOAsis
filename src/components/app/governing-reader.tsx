@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * The reader for the declaration, bylaws and rules.
+ *
+ * Plain-language summaries first, the binding text one click away, each article
+ * tagged with who it applies to, and one search across all three documents.
+ */
+
 import { Term } from "@/components/app/term";
 import { useMemo, useState } from "react";
 import { BookOpen, Filter, Landmark, Search, Sparkles } from "lucide-react";

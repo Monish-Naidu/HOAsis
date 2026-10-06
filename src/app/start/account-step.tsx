@@ -6,7 +6,7 @@ import { ArrowRight, Check, Mail } from "lucide-react";
 import { Button, Callout, fieldClass } from "@/components/ui/primitives";
 import { signUp } from "@/lib/auth";
 import { hasSupabase } from "@/lib/supabase/env";
-import { unitCount, type CommunityDraft } from "@/lib/data/new-community";
+import { unitCount, type CommunityDraft } from "@/lib/data";
 
 /**
  * The account, asked for first, with the email confirmed last.

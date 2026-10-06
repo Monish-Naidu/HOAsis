@@ -14,11 +14,6 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Lifts a guard for one item into a guard for an array of them. */
-export function isArrayOf<T>(guard: (value: unknown) => value is T) {
-  return (value: unknown): value is T[] => Array.isArray(value) && value.every(guard);
-}
-
 /** Almost every domain record is identified by a string id. */
 export function hasId(value: unknown): value is { id: string } {
   return isRecord(value) && typeof value.id === "string";

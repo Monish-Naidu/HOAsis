@@ -1,9 +1,11 @@
 /**
  * Repository layer.
  *
- * Screens import from here and nowhere else. Every function is async and
- * returns plain serializable data, so the day this moves to Supabase the
- * change is confined to this file.
+ * Screens import from here and nowhere else (an ESLint rule enforces it). Every
+ * function is synchronous and returns plain serializable data: the selectors
+ * below read the demo fixtures, and the same screens read a signed-in
+ * association through `remote.ts` and `remote-store.ts`, so a screen never
+ * knows which one it has.
  */
 
 import { budget, YEAR_ELAPSED, type BudgetLine } from "./budget";
@@ -37,13 +39,14 @@ import {
   LIBRARY_REDIRECTS,
   LIBRARY_TOPICS,
   STATES,
+  US_STATES,
 } from "./library";
+import { policyTemplates } from "./policy-templates";
 import { ballots, meetings } from "./voting";
 import { boardMembers, currentOwner, owners, CURRENT_OWNER_ID } from "./owners";
 import { requests, violations } from "./requests";
 import { daysFromToday } from "@/lib/utils";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
-import { NotFoundError } from "@/lib/core/errors";
 
 export {
   accounts,
@@ -97,6 +100,29 @@ export {
   violations as allViolations,
   YEAR_ELAPSED,
 };
+export {
+  defaultHomeNaming,
+  draftDuesTotal,
+  draftNameProblem,
+  draftOwnDuesCount,
+  draftOwnDuesProblem,
+  emptyDraft,
+  finalizeDraft,
+  founderHomeType,
+  founderLabel,
+  founderUnit,
+  homesAnswered,
+  otherHomes,
+  placeFounder,
+  unitCount,
+} from "./new-community";
+export { policyTemplates, US_STATES };
+export type {
+  CommunityDraft,
+  DraftHousehold,
+  HomeNaming,
+  PropertyType,
+} from "./new-community";
 export type { BudgetLine };
 
 /* -------------------------------------------------------------------------- */
@@ -134,24 +160,6 @@ export function cashPosition() {
     .filter((a) => a.kind !== "operating")
     .reduce((sum, a) => sum + a.balanceCents, 0);
   return { operating, reserve, total: operating + reserve };
-}
-
-export function reconciliation() {
-  const needsReview = ledgerEntries.filter((e) => e.status === "needs-review");
-  const pending = ledgerEntries.filter((e) => e.status === "pending");
-  const cleared = ledgerEntries.filter((e) => e.status === "cleared");
-  const duplicates = ledgerEntries.filter((e) => e.duplicateOfId);
-  const staleFeeds = bankAccounts.filter((a) => a.status !== "live");
-  return {
-    needsReview,
-    pending,
-    cleared,
-    duplicates,
-    staleFeeds,
-    /** The whole product promise: does every report draw from the same set? */
-    tiesOut: needsReview.length === 0,
-    lastSyncMinutes: Math.min(...bankAccounts.map((a) => a.syncedMinutesAgo)),
-  };
 }
 
 export function delinquency() {
@@ -251,18 +259,6 @@ export function requestsForOwner(ownerId: string) {
   return requests
     .filter((r) => r.ownerId === ownerId)
     .sort((a, b) => (a.submittedDate < b.submittedDate ? 1 : -1));
-}
-
-export function requestByReference(reference: string) {
-  return requestsByReference.get(reference);
-}
-
-/** Requests with a statutory or bylaw clock, soonest first. */
-export function requestsOnClock() {
-  return requests
-    .filter((r) => r.dueDate && !["approved", "denied", "closed"].includes(r.status))
-    .map((r) => ({ ...r, daysLeft: daysFromToday(r.dueDate!) }))
-    .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
 export function ownerBalanceDue() {
@@ -414,14 +410,6 @@ export function calendarEntries() {
   return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
-export function publicDocuments() {
-  return documents.filter((d) => d.visibility === "public");
-}
-
-export function unreadThreadCount() {
-  return threads.filter((t) => t.unread).length;
-}
-
 export function vendorGaps() {
   return {
     missingW9: vendors.filter((v) => !v.w9OnFile),
@@ -432,42 +420,9 @@ export function vendorGaps() {
   };
 }
 
-export function payoutsAwaitingApproval() {
-  return payouts.filter((p) => p.approvals.length < p.approvalsRequired);
-}
-
 /* -------------------------------------------------------------------------- */
 /* Voting + meetings                                                           */
 /* -------------------------------------------------------------------------- */
-
-export function openBallots() {
-  return ballots.filter((b) => ballotPhase(b) === "open");
-}
-
-export function ballotsForOwners() {
-  return ballots.filter((b) => b.audience === "owners");
-}
-
-/** Turnout and approval, derived from the option tallies. */
-export function ballotTally(ballotId: string) {
-  const ballot = ballotsById.get(ballotId);
-  if (!ballot) throw new NotFoundError("no such ballot", { ballotId });
-  const cast = ballot.options.reduce((t, o) => t + o.votes, 0);
-  const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
-  return {
-    ballot,
-    cast,
-    turnout: ballot.eligible ? cast / ballot.eligible : 0,
-    quorumMet: cast >= ballot.quorumRequired,
-    quorumProgress: ballot.quorumRequired ? Math.min(1, cast / ballot.quorumRequired) : 1,
-    leading,
-    share: (optionVotes: number) => (cast ? optionVotes / cast : 0),
-    /** Amendments need a share of ALL interests, not just those who voted. */
-    shareOfEligible: (optionVotes: number) =>
-      ballot.eligible ? optionVotes / ballot.eligible : 0,
-    daysLeft: daysFromToday(ballot.closesDate),
-  };
-}
 
 export function liveMeeting() {
   return meetings.find((m) => m.status === "live");
@@ -477,29 +432,4 @@ export function upcomingMeetings() {
   return meetings
     .filter((m) => meetingPhase(m) !== "ended")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
-}
-
-export function meetingById(id?: string) {
-  return id ? meetings.find((m) => m.id === id) : undefined;
-}
-
-/** Ballots this resident can still act on. */
-export function ballotsAwaitingMyVote() {
-  return ballots.filter(
-    (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
-  );
-}
-
-/** Average days from invoice to funds landing, by rail. The vendor ACH pitch. */
-export function payoutSpeed() {
-  const byMethod = (m: "ach" | "check") => {
-    const rows = payouts.filter((p) => p.method === m);
-    if (!rows.length) return 0;
-    const total = rows.reduce(
-      (t, p) => t + (daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)),
-      0,
-    );
-    return total / rows.length;
-  };
-  return { ach: byMethod("ach"), check: byMethod("check") };
 }

@@ -125,34 +125,70 @@ store then behaves like a `MemoryStore` until the cooldown elapses.
 
 ## Tests
 
-`pnpm test`. Unit tests cover the breaker state machine, both stores including the failure
-paths, money and date formatting, the calendar grid, every derived financial figure, and the
-assistant. Integration tests cover sign in, view switching, the capability matrix including
-the President being unstrippable, every admin setting reaching the resident side, request
-persistence across a remount, and the error boundary containing a failure to its own region.
+Four layers, each with its own command:
 
-The stores are module singletons, which is right for the app and hostile to tests, so
-`tests/setup.ts` calls `resetAllStores()` between tests.
+- **Unit** (`tests/unit`, 98 files, 1,298 tests): pure logic. The breaker and the stores
+  including their failure paths, money and date formatting, the calendar grid, every derived
+  financial figure, the email templates, the data mapping in `remote.ts`, and the checks the
+  forms share.
+- **Integration** (`tests/integration`, 10 files, 290 tests): screens rendered against a fake
+  server. Sign in, view switching, the capability matrix including the President being
+  unstrippable, admin settings reaching the resident side, and the error boundary containing a
+  failure to its own region. `pnpm test` runs these two layers.
+- **Browser** (`tests/e2e`, 13 specs, about 115 tests): Playwright against the signed-out demo,
+  with `pnpm e2e` pointed at a server that is already running. CI runs it on every push.
+- **Database** (`scripts/verify-*.mjs`, 23 suites): run against the real Supabase project
+  in `.env.local` with `pnpm db:verify`. They prove row level security, the money functions,
+  onboarding, joining, email and the rest, and every migration is expected to come with one.
+
+`pnpm coverage` reports line coverage for `src/lib` (about 78% when it was added, with no
+threshold). The stores are module singletons, which is right for the app and hostile to tests,
+so `tests/setup.ts` calls `resetAllStores()` between tests.
 
 ## Architecture
 
+The directories under `src/` (two levels deep):
+
 ```
-src/
-  app/
-    page.tsx              landing / role picker
-    resident/             phone-first shell + tab bar
-    board/                sidebar workspace
-  components/
-    ui/primitives.tsx     Card, Button, Badge, Stat, Meter, Callout, …
-    app/                  shells, nav, theme toggle, logo
-  lib/
-    app-state.tsx         session, view switching, admin owned settings
-    types.ts              domain model, the contract between UI and data
-    tokens.ts             platform-agnostic design tokens (for the RN app)
-    utils.ts              money/date formatting, `cn`
-    data/                 fixtures + repository layer
-      index.ts            every screen imports from here and nowhere else
+src
+src/app
+src/app/about
+src/app/admin
+src/app/api
+src/app/auth
+src/app/board
+src/app/c
+src/app/demo
+src/app/dev
+src/app/join
+src/app/library
+src/app/pricing
+src/app/privacy
+src/app/resident
+src/app/signin
+src/app/start
+src/app/terms
+src/app/unsubscribe
+src/components
+src/components/app
+src/components/ui
+src/lib
+src/lib/core
+src/lib/data
+src/lib/email
+src/lib/meetings
+src/lib/payments
+src/lib/roster
+src/lib/search
+src/lib/stripe
+src/lib/supabase
 ```
+
+`CLAUDE.md` has a "Where things go" table that says what belongs in each of them and the
+rule for it. A few files carry the weight: `src/lib/types.ts` is the domain model,
+`src/lib/data/index.ts` is what screens import, `src/lib/app-state.tsx` is every mutation,
+`src/lib/utils.ts` is money, date and `cn`, and `src/components/ui/primitives.tsx` is the
+shared UI.
 
 **The repository layer is the seam.** Screens never touch a fixture file directly; they call
 selectors in `src/lib/data/index.ts`, and the same screens read a real association loaded by
@@ -183,9 +219,14 @@ pre-paint by an inline script so there's no flash on reload.
 
 ## Associations
 
-Three can exist at once, and the switcher in the board header moves between them. Switching
-signs you out on purpose: an account belongs to one association, so carrying a session across
-would leave the President of one holding capabilities in another.
+Which associations exist depends on who is looking. Signed in, a person belongs to the
+associations their account was seated in, and what they see is that association's rows from
+Postgres; nothing else is reachable. Signed out, the demo has three, and the switcher in the
+board header moves between them. Switching signs you out on purpose: an account belongs to
+one association, so carrying a session across would leave the President of one holding
+capabilities in another.
+
+Demo associations:
 
 - **Mehr Meadows**, 88 units, the rich demo described below.
 - **Test Community #1**, five homes, quarterly meetings, no amenities, no reserve study. It
@@ -208,11 +249,13 @@ verified, and the screen says so. Do not deepen them without a legal pass.
 
 ## Not built yet
 
-The native app, a bank feed, and a working video call.
+The native app, a bank feed, and a video call of our own.
 
-The meeting room is a design surface, not a working call: no WebRTC or call provider is wired
-up, so participant tiles show initials and the camera slot says so out loud. Dropping in Daily,
-LiveKit, or Twilio later would replace `src/components/app/meeting-room.tsx` and nothing else.
+Video meetings are real but borrowed. `src/lib/meetings/video.ts` derives one room name per
+meeting that everyone computes the same way, and `src/lib/meetings/jitsi.ts` loads Jitsi
+Meet's public IFrame API from `meet.jit.si`, so there is no account, key or cost, and the
+call itself is theirs. What is not built is a call of our own. Swapping to Daily, LiveKit or Twilio later means
+replacing those two files.
 
 **On a board app.** Worth doing, but not as a shrunken version of this workspace. The board
 work that is genuinely phone-shaped is approvals, votes, a balance check, and answering an

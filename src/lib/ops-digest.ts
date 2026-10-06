@@ -1,4 +1,5 @@
 import type { OpsReport } from "@/lib/ops";
+import { DAY_MS, money } from "@/lib/utils";
 
 /**
  * The daily "something went wrong" email, built from the ops report.
@@ -22,18 +23,12 @@ export interface Digest {
   html: string;
 }
 
-const DAY_MS = 86_400_000;
-
 function since(now: string, hours: number): string {
   return new Date(new Date(now).getTime() - hours * (DAY_MS / 24)).toISOString();
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function money(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
 }
 
 export function buildDigest(report: OpsReport, now: string, adminUrl: string): Digest {

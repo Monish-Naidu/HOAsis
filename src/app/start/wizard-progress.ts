@@ -1,4 +1,4 @@
-import { emptyDraft, type CommunityDraft } from "@/lib/data/new-community";
+import { emptyDraft, type CommunityDraft } from "@/lib/data";
 
 /**
  * The wizard's answers so far, held across a reload.

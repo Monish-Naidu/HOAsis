@@ -11,7 +11,7 @@
  * saying "this product is cluttered". Capturing near the display width keeps
  * the type close to its native size.
  */
-import { chromium } from "playwright";
+import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 
 const BASE = process.env.SHOT_BASE ?? "http://localhost:3000";

@@ -1,4 +1,13 @@
+/**
+ * Which dues period an association should be billed for today.
+ *
+ * Pure date arithmetic with the date passed in, so the daily bill run's judgement
+ * (which bill, whether it is due, whether a missed day can still be caught up) is
+ * unit tested without a clock.
+ */
+
 import type { Cents } from "@/lib/types";
+import { daysBetween } from "@/lib/utils";
 
 export type DuesCadence = "monthly" | "quarterly" | "annually";
 
@@ -31,10 +40,6 @@ function daysIn(year: number, month: number): number {
 function iso(year: number, month: number, day: number): string {
   const d = Math.min(day, daysIn(year, month));
   return `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-function daysBetween(a: string, b: string): number {
-  return Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
 }
 
 /** The most recent period whose due date is on or before today. */

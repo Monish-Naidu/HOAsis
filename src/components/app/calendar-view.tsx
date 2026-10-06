@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * A month calendar of meetings, events, ballots and deadlines, with the next few coming up beneath it.
+ *
+ * Shared by the board and resident calendars; the grid itself comes from
+ * `lib/calendar.ts`, and it opens on the community's own "today".
+ */
+
 import { useState } from "react";
 import Link from "next/link";
 import { CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";

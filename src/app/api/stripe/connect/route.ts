@@ -28,7 +28,7 @@ import { logger } from "@/lib/log";
  * Authorization matches the email route: the caller's own session answers
  * has_capability, so a crafted request from someone else's console gets a 403.
  */
-async function authorize(request: NextRequest, associationId: string | null) {
+async function authorize(_request: NextRequest, associationId: string | null) {
   if (!associationId) {
     return { error: NextResponse.json({ error: "associationId is required" }, { status: 400 }) };
   }

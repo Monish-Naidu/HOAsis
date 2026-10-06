@@ -103,7 +103,7 @@ describe("sendInvitations", () => {
   });
 
   it("says why when the hourly ceiling stopped it partway, and counts every home not reached", async () => {
-    answer = (unitIds, call) =>
+    answer = (_unitIds, call) =>
       call === 1
         ? { body: { sent: 150, failed: 50, already: 0, remaining: 0, errors: [OVER] } }
         : { status: 429, body: { error: OVER } };

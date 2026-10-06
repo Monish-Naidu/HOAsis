@@ -1,5 +1,5 @@
 import type { Cents } from "@/lib/types";
-import { money, pluralize } from "@/lib/utils";
+import { daysBetween, money, pluralize } from "@/lib/utils";
 
 /**
  * A one-off charge: a special assessment, a key fob fee, a repair billed to
@@ -10,10 +10,6 @@ export const MAX_CHARGE_CENTS: Cents = 10_000_000;
 export const MAX_CHARGE_LABEL = 80;
 /** How far from today a due date may be, either way. */
 export const MAX_CHARGE_DAYS = 366;
-
-function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
-}
 
 /** Dollars as typed to whole cents, or 0 when it is not a positive amount. */
 export function chargeCents(text: string): Cents {

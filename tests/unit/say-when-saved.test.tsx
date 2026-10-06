@@ -25,7 +25,6 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 // The rest of the Meetings page reads far more of the association than this needs.
-vi.mock("@/components/app/meeting-room", () => ({ MeetingRoom: () => null }));
 vi.mock("@/components/app/schedule-meeting", () => ({ ScheduleMeeting: () => null }));
 vi.mock("@/components/app/action-items", () => ({ ActionItems: () => null }));
 

@@ -1,3 +1,4 @@
+import { isEmail } from "@/lib/input-checks";
 import type { Cents } from "@/lib/types";
 
 /**
@@ -177,8 +178,6 @@ export function moneyToCents(input: string): Cents | null | undefined {
   return negative ? -value : value;
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 /**
  * The file, read into rows the product can seat.
  *
@@ -256,7 +255,7 @@ export function parseRosterCsv(text: string): RosterParse {
         seen.set(key, line);
       }
     }
-    if (email && !EMAIL.test(email)) {
+    if (email && !isEmail(email)) {
       row.problems.push(`"${email}" does not look like an email address.`);
     }
     if (balance === null) {
@@ -295,10 +294,4 @@ export function rosterSummary(rows: RosterRow[], existingUnits: string[] = []) {
     owedCents,
     problems: rows.filter((r) => r.problems.length > 0),
   };
-}
-
-/** Whether a unit from the file is already on the register. */
-export function isExistingUnit(unit: string, existingUnits: string[]): boolean {
-  const key = unit.trim().toLowerCase();
-  return existingUnits.some((u) => u.trim().toLowerCase() === key);
 }

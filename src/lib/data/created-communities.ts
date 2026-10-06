@@ -47,10 +47,6 @@ export function saveCreatedCommunity(community: Community): void {
   ]);
 }
 
-export function deleteCreatedCommunity(id: string): void {
-  createdCommunitiesStore.update((all) => all.filter((existing) => existing.id !== id));
-}
-
 export function createdCommunities(): Community[] {
   return createdCommunitiesStore.getSnapshot();
 }

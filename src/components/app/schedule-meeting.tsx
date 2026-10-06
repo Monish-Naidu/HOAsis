@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * The form for putting a meeting on the calendar.
+ *
+ * It asks for what a notice needs (when, where, how to dial in, the agenda) and
+ * checks the time before it is saved.
+ */
+
 import { useState } from "react";
 import { CalendarPlus, X } from "lucide-react";
 import { Button, Card, CardHeader, Select, fieldClass, textareaClass } from "@/components/ui/primitives";

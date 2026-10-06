@@ -21,7 +21,7 @@ import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/document
 import { duesFor } from "@/lib/home-types";
 import { compareStatement } from "@/lib/statement";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
-import { addDays, clockTime, nextDueOnOrAfter } from "@/lib/utils";
+import { addDays, clockTime, daysBetween, nextDueOnOrAfter } from "@/lib/utils";
 import { isPostedDuesBill } from "@/lib/email/bill-run";
 
 /**
@@ -178,11 +178,6 @@ interface FundsSummary {
 function fundsActual(funds: FundsSummary, category: string, kind: "income" | "expense"): number {
   const row = funds.by_category.find((c) => c.category === category);
   return row ? Number(kind === "income" ? row.in_cents : row.out_cents) : 0;
-}
-
-function daysBetween(from: string, to: string): number {
-  const ms = new Date(`${to}T12:00:00Z`).getTime() - new Date(`${from}T12:00:00Z`).getTime();
-  return Math.round(ms / 86_400_000);
 }
 
 /** Standing derived from how long money has been owed, not stored separately. */

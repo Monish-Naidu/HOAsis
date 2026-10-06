@@ -15,7 +15,7 @@ import {
   articlesIn,
   documentsPresent,
 } from "@/lib/governing";
-import { policyTemplates } from "@/lib/data/policy-templates";
+import { policyTemplates } from "@/lib/data";
 import type { PolicyTemplate } from "@/lib/data/policy-templates";
 import { cn, formatDate } from "@/lib/utils";
 

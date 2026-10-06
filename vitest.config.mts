@@ -13,5 +13,11 @@ export default defineConfig({
     include: ["tests/**/*.test.{ts,tsx}"],
     restoreMocks: true,
     clearMocks: true,
+    // Library code only, and no threshold yet: this is to see where we are.
+    coverage: {
+      provider: "v8",
+      include: ["src/lib/**"],
+      reporter: ["text-summary", "text"],
+    },
   },
 });

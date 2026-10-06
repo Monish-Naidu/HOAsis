@@ -1,6 +1,6 @@
-import { PRICE_PER_HOME_CENTS, TRIAL_DAYS, monthlyFor } from "@/lib/pricing";
-import type { Cents, ISODate } from "@/lib/types";
-import { addDays, parseDate } from "@/lib/utils";
+import { PRICE_PER_HOME_CENTS, TRIAL_DAYS } from "@/lib/pricing";
+import type { ISODate } from "@/lib/types";
+import { DAY_MS, addDays, daysBetween } from "@/lib/utils";
 
 /**
  * The free period and what follows it, as arithmetic.
@@ -50,18 +50,9 @@ export type BillingPhase =
   | { phase: "past_due" }
   | { phase: "canceled" };
 
-function daysBetween(from: ISODate, to: ISODate): number {
-  return Math.round((parseDate(to).getTime() - parseDate(from).getTime()) / 86_400_000);
-}
-
 /** Ninety days after founding. */
 export function trialEndsOn(foundedOn: ISODate): ISODate {
   return addDays(foundedOn, TRIAL_DAYS);
-}
-
-/** The software bill this association will see each month. */
-export function monthlyBillFor(homes: number): Cents {
-  return monthlyFor(homes);
 }
 
 /**
@@ -112,6 +103,9 @@ export function trialNoticeDue(
   return { send, markSent: due.map((n) => n.key) };
 }
 
+/** Stripe refuses a trial shorter than this. */
+const MIN_STRIPE_TRIAL_MS = 2 * DAY_MS;
+
 /**
  * The `trial_end` to hand Stripe Checkout, as unix seconds.
  *
@@ -122,8 +116,7 @@ export function trialNoticeDue(
  */
 export function checkoutTrialEnd(endsOn: ISODate, now: Date): number | null {
   const end = new Date(`${endsOn}T12:00:00Z`).getTime();
-  const twoDays = 2 * 86_400_000;
-  if (end - now.getTime() < twoDays) return null;
+  if (end - now.getTime() < MIN_STRIPE_TRIAL_MS) return null;
   return Math.floor(end / 1000);
 }
 

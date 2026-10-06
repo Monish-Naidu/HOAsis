@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { DAY_MS } from "@/lib/utils";
 import { hasSupabase } from "@/lib/supabase/env";
 import { runHealthChecks, type HealthReport } from "@/lib/health";
 import type { CronJob } from "@/lib/cron-runs";
@@ -141,8 +142,8 @@ export function latestPerJob(rows: CronRunRow[]): CronRunRow[] {
 }
 
 export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
-  const since = new Date(now.getTime() - OPS_WINDOW_DAYS * 86_400_000).toISOString();
-  const stuckBefore = new Date(now.getTime() - STUCK_PAYMENT_DAYS * 86_400_000).toISOString();
+  const since = new Date(now.getTime() - OPS_WINDOW_DAYS * DAY_MS).toISOString();
+  const stuckBefore = new Date(now.getTime() - STUCK_PAYMENT_DAYS * DAY_MS).toISOString();
   const problems: string[] = [];
   const health = await runHealthChecks();
 

@@ -1,9 +1,16 @@
 "use client";
 
+/**
+ * The eight disclosure questions a buyer is owed, answered from the governing documents.
+ *
+ * Findings come from `lib/governing.ts`; this file only draws them, and never turns
+ * a keyword match into an answer.
+ */
+
 import { useState } from "react";
 import { AlertTriangle, Check, ChevronDown, HelpCircle } from "lucide-react";
 import { Badge, Card } from "@/components/ui/primitives";
-import { DISCLOSURE_TOPICS, disclosureFindings } from "@/lib/governing";
+import { disclosureFindings } from "@/lib/governing";
 import type { DisclosureTopic, GoverningArticle } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -182,16 +189,5 @@ export function DisclosureSummary({
         );
       })}
     </div>
-  );
-}
-
-/** How many of the eight this association can actually answer. */
-export function DisclosureCoverageLine({ articles }: { articles: GoverningArticle[] }) {
-  const findings = disclosureFindings(articles);
-  const answered = findings.filter((f) => f.status === "answered").length;
-  return (
-    <p className="tnum text-body font-semibold text-fg">
-      {answered} / {DISCLOSURE_TOPICS.length}
-    </p>
   );
 }

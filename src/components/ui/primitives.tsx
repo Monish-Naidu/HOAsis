@@ -1,3 +1,10 @@
+/**
+ * The shared UI pieces: Card, Button, Badge, Stat, Meter, Callout, form fields and the rest.
+ *
+ * Colours are semantic tokens so every piece reads in light and dark. A pattern
+ * used a third time belongs here rather than re-styled inline.
+ */
+
 import { cloneElement, useId, type ComponentProps, type FormEventHandler, type ReactElement, type ReactNode } from "react";
 import Link from "next/link";
 import { UserRound, type LucideIcon } from "lucide-react";

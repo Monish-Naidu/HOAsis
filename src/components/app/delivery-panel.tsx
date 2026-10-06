@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * Shows how a kind of notice actually reaches people before it is written.
+ *
+ * Whether email counts as notice or paper still has to go is a legal question that
+ * `lib/delivery.ts` answers; this panel puts that answer and the reachable counts
+ * in front of the board.
+ */
+
 import { useState } from "react";
 import { AlertTriangle, Mail, MessageSquare, Monitor, Send, Smartphone } from "lucide-react";
 import { Badge, Card, CardHeader } from "@/components/ui/primitives";

@@ -1,4 +1,12 @@
-import { parseDate } from "@/lib/utils";
+/**
+ * The month grid and the upcoming list behind the calendar screens.
+ *
+ * Pure date arithmetic on `YYYY-MM-DD` strings, with no clock of its own: the
+ * caller says what today is, so the demo's pinned date and each association's
+ * `asOf` read the same way here as everywhere else.
+ */
+
+import { DAY_MS, parseDate } from "@/lib/utils";
 
 export type CalendarKind = "meeting" | "event" | "ballot-opens" | "ballot-closes" | "deadline";
 
@@ -35,8 +43,6 @@ export interface MonthCell {
   entries: CalendarEntry[];
 }
 
-const MS_DAY = 86_400_000;
-
 function iso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
@@ -49,7 +55,7 @@ export function monthGrid(
   todayIso: string,
 ): MonthCell[] {
   const first = new Date(Date.UTC(year, month, 1));
-  const start = new Date(first.getTime() - first.getUTCDay() * MS_DAY);
+  const start = new Date(first.getTime() - first.getUTCDay() * DAY_MS);
   const byDate = new Map<string, CalendarEntry[]>();
   for (const e of entries) {
     const list = byDate.get(e.date) ?? [];
@@ -57,7 +63,7 @@ export function monthGrid(
     byDate.set(e.date, list);
   }
   return Array.from({ length: 42 }, (_, i) => {
-    const d = new Date(start.getTime() + i * MS_DAY);
+    const d = new Date(start.getTime() + i * DAY_MS);
     const key = iso(d);
     return {
       date: key,

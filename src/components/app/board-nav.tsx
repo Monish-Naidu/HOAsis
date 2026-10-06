@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * The board's section navigation, as a sidebar rail or a horizontal bar under `lg`.
+ *
+ * One definition (`BOARD_ROUTES`) feeds both shapes, and the badge counts are
+ * computed here from live state so they move as the board works.
+ */
+
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

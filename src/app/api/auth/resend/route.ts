@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isEmail } from "@/lib/input-checks";
 import { Resend } from "resend";
 import { logger } from "@/lib/log";
 import { emailSender } from "@/lib/email/sender";
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Something went wrong. Please try again." }, { status: 400 });
   }
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!isEmail(email)) {
     return NextResponse.json({ message: "That email address does not look right." }, { status: 400 });
   }
 

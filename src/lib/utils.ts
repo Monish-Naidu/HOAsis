@@ -11,6 +11,7 @@ const twMerge = extendTailwindMerge({
   },
 });
 
+/** Joins class names, letting a later Tailwind class win over an earlier one that sets the same thing. */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -29,6 +30,7 @@ export function money(cents: number, opts: { sign?: boolean; cents?: boolean } =
   return sign ? `+${formatted}` : formatted;
 }
 
+/** Cents as a compact figure for tight places: $1.2k, $45k, $1.5M. */
 export function shortMoney(cents: number) {
   const v = cents / 100;
   if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -37,7 +39,8 @@ export function shortMoney(cents: number) {
   return money(cents, { cents: false });
 }
 
-const DAY = 86_400_000;
+/** Milliseconds in a day. */
+export const DAY_MS = 86_400_000;
 
 /**
  * The prototype runs on a pinned clock rather than the wall clock, so relative
@@ -53,6 +56,7 @@ const DAY = 86_400_000;
 const DEFAULT_TODAY = "2026-08-20";
 let todayIso = DEFAULT_TODAY;
 
+/** Pins "today" to the given date for the active association. */
 export function setToday(iso: string): void {
   todayIso = iso;
 }
@@ -80,10 +84,12 @@ export function clockTime(value: string): string {
   return `${h % 12 || 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
 }
 
+/** A `YYYY-MM-DD` string as a Date at noon UTC, so no timezone shifts it to another day. */
 export function parseDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`);
 }
 
+/** A date string for display: `short` is 8/20, `medium` the default, `long` August 20, 2026. */
 export function formatDate(iso: string, style: "short" | "medium" | "long" = "medium") {
   const d = parseDate(iso);
   if (style === "short") {
@@ -149,8 +155,14 @@ export function nextDueOnOrAfter(
   return addDays(from, 30);
 }
 
+/** Whole days from one date to another; negative when `to` is before `from`. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((parseDate(to).getTime() - parseDate(from).getTime()) / DAY_MS);
+}
+
+/** Whole days from the pinned today to the date; negative for a date in the past. */
 export function daysFromToday(iso: string) {
-  return Math.round((parseDate(iso).getTime() - today().getTime()) / DAY);
+  return Math.round((parseDate(iso).getTime() - today().getTime()) / DAY_MS);
 }
 
 /** The same calendar day, some years on. A study dated Feb 29 comes due Mar 1. */
@@ -160,6 +172,7 @@ export function addYears(iso: string, years: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** A date in words relative to today: "today", "tomorrow", "in 5 days", "3 days ago". */
 export function relativeDays(iso: string) {
   const d = daysFromToday(iso);
   if (d === 0) return "today";
@@ -169,6 +182,7 @@ export function relativeDays(iso: string) {
   return `${Math.abs(d)} days ago`;
 }
 
+/** Up to two capital letters from the first two words of a name. */
 export function initials(name: string) {
   return name
     .split(/\s+/)
@@ -185,6 +199,7 @@ export function ordinal(n: number): string {
   return `${n}${suffixes[(remainder - 20) % 10] ?? suffixes[remainder] ?? suffixes[0]}`;
 }
 
+/** The count with its noun, singular for exactly one: "1 home", "3 homes". */
 export function pluralize(n: number, one: string, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }

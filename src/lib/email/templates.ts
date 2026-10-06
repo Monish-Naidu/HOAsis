@@ -1,4 +1,5 @@
 import { placeLabel } from "@/lib/wording";
+import { money } from "@/lib/utils";
 /**
  * The emails themselves.
  *
@@ -32,13 +33,6 @@ export interface DuesEmailInput {
    * invite it. Left out means false.
    */
   canReply?: boolean;
-}
-
-function money(cents: number): string {
-  return `$${(cents / 100).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 function longDate(iso: string): string {

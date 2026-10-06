@@ -113,8 +113,3 @@ export function allCommunities(): Community[] {
 export function communityById(id: string): Community {
   return allCommunities().find((c) => c.id === id) ?? mehrMeadows;
 }
-
-/** True when this association was built through onboarding, not shipped. */
-export function isCreatedCommunity(id: string): boolean {
-  return !seededCommunities.some((c) => c.id === id);
-}

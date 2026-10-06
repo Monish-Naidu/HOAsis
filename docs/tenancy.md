@@ -160,3 +160,59 @@ switches without signing out.
 - `src/components/app/community-hero.tsx` (town on twins)
 - `src/app/api/email/invite/route.ts`, `src/lib/email/templates.ts`
   (`associationPlace`)
+
+## Since 0051
+
+Migrations 0052 to 0101, one line each, from each file's own header comment. Numbers 0037
+to 0039 and 0046 never existed; the sequence skips them.
+
+- 0052 `app_errors` and `cron_runs`: what went wrong and when the crons last ran, read by `/admin`.
+- 0053 `association_overview`: the figures a screen needs, summed in the database instead of in the browser.
+- 0054 `board_terms`: who held which office and when, written by a trigger on memberships.
+- 0055 `association_overview` scoped once, as security definer, instead of once per row.
+- 0056 Roster import: many homes at once with their balances, and a date the books start here.
+- 0057 `import_households` with the charge kind cast, fixing 0056's first real import.
+- 0058 Late fees that actually get charged, from the collection policy, once per dues line.
+- 0059 Viewer seats (`views`) alongside `capabilities`, and an append-only `activity` record.
+- 0060 Activity wording says what a seat was granted and mentions see-only areas only when there are any.
+- 0061 Fixes three settings changes that failed since 0059 (a text[] append read as an array).
+- 0062 The money functions answer only to the right callers; late fees read the statement.
+- 0063 Activity triggers no longer block deleting an association with a bank account or document.
+- 0064 A seat that may view Finances sees the real numbers, and two overview figures agree with the screens.
+- 0065 A settings holder can no longer rewrite the columns that say who is paid and whether the association pays.
+- 0066 A person cannot change the email on their own profile, which seating matches on.
+- 0067 Votes are written only through `cast_votes`, not straight into the table.
+- 0068 Insert policies on requests, posts and violation reports require a new row to start at the beginning.
+- 0069 One dues run at a time: a lock per association so overlapping runs cannot double-bill.
+- 0070 Refunds are booked for the difference, once, and never as a bill for a fee.
+- 0071 Cancelling a subscription goes through Stripe when one is on file.
+- 0072 `reply_as_board` appends a board reply in the database instead of from a browser's copy of the thread.
+- 0073 Deleting and restoring an association keeps the bill honest and stops a card still being charged.
+- 0074 A trigger keeps the person who saved a payment method honest.
+- 0075 Saved methods leave the home with the owner who saved them.
+- 0076 Votes stop on the closing date, with one day of slack for UTC.
+- 0077 A new request or post can claim only what its writer is allowed to (thread, date, name).
+- 0078 A refund waits for its payment when Stripe delivers events out of order.
+- 0079 No late fee until the board sets one; the fallback is zero.
+- 0080 Seat a person on a home already on the register, add a second owner, and correct an owner's email.
+- 0081 A sale ends every owner's seat on the home, not only the newest.
+- 0082 `check` and `cash` added to the payment rails.
+- 0083 `record_manual_payment`: a board can put an owner's check or cash on the books.
+- 0084 Dues that differ home by home, with one order of precedence (`unit_dues_cents`).
+- 0085 Autopay tries a failed month again once the owner has fixed what failed.
+- 0086 `add_charge`: a one-off charge billed to a home.
+- 0087 No late fee on a balance brought forward.
+- 0088 A board can reverse a check or cash payment it recorded by mistake.
+- 0089 A buyer does not read what the seller did while they owned the home.
+- 0090 `remove_owner` ends one owner's seat on a two-owner home, and a changed sign-in email stays in step on the register.
+- 0091 A reversed or refunded payment leaves the dues unpaid and late.
+- 0092 A sale cannot be recorded before its closing date.
+- 0093 `record_dispute_loss`: a lost card dispute is booked like a refund.
+- 0094 `approve_payout` adds an approval under a row lock, so two officers cannot lose one.
+- 0095 `reassign_presidency`: support can reassign the presidency when the President cannot be reached.
+- 0096 A person who owns two homes in one association votes once for each.
+- 0097 A rule notice has a title and its own "what needs fixing" text.
+- 0098 A board contact address that emails carry as their reply-to.
+- 0099 `retire_home`: a home that is no longer a home is retired and its records kept.
+- 0100 A switch for the bill that goes out by email the day it posts.
+- 0101 The processing fee is its own line on the ledger.

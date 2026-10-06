@@ -1,3 +1,10 @@
+/**
+ * Demo fixtures for the association itself: profile, bank accounts, announcements, events, amenities and reserve components.
+ *
+ * Only the signed-out demo reads this. A signed-in association is loaded from
+ * Postgres by `remote.ts`, and one built through `/start` starts empty.
+ */
+
 import type {
   Amenity,
   Announcement,

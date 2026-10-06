@@ -1,3 +1,10 @@
+/**
+ * The browser side of "send the confirmation email again".
+ *
+ * Kept apart from the join panel so the sign-in and join screens share one call
+ * and one set of failure words.
+ */
+
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export type ResendResult = { ok: true } | { ok: false; message: string };
