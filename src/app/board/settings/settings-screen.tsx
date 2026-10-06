@@ -24,6 +24,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { Badge, Button, Callout, Card, CardHeader, PageHeader, SectionTitle, Select, SettingRow, Toggle, fieldClass, textareaClass } from "@/components/ui/primitives";
+import { checkNewEmail } from "@/lib/email-change";
 import { DangerZone } from "@/components/app/danger-zone";
 import { SameNameNote } from "@/components/app/same-name-note";
 import { BillingRow } from "@/components/app/billing-row";
@@ -292,6 +293,10 @@ export function SettingsScreen() {
               />
             ) : null}
           </SettingRow>
+          <ContactEmailRow
+            value={community.association.contactEmail ?? ""}
+            save={(contactEmail) => updateAssociation({ contactEmail })}
+          />
           <div className="border-b border-border px-5 py-4">
             <p className="text-body font-medium text-fg">Community photo</p>
             <p className="mt-0.5 text-footnote text-fg-muted">
@@ -991,6 +996,56 @@ type OnboardingStatus =
   | { name: "needs"; needs: string[] }
   | { name: "checking" }
   | { name: "live"; payout: { bank: string; last4: string } | null };
+
+/**
+ * The address owners reach when they reply to an email from the association.
+ *
+ * Blank is allowed and means emails tell owners not to reply. A typo is
+ * refused here, with a reason, because a reply to a bad address is lost with
+ * no one told. "Saved" is said only once the write resolved true, so a seat
+ * the database refused is not told it worked.
+ */
+export function ContactEmailRow({
+  value,
+  save,
+}: {
+  value: string;
+  save: (next: string) => boolean | Promise<boolean>;
+}) {
+  const { notify } = useToast();
+  const [problem, setProblem] = useState<string | null>(null);
+  return (
+    <SettingRow
+      title="Board contact email"
+      description="Owners who reply to an email from the association reach this address. Leave it blank and emails say not to reply."
+    >
+      <DraftField
+        value={value}
+        onCommit={(next) => {
+          if (next) {
+            const checked = checkNewEmail(next, "");
+            if (!checked.ok) {
+              setProblem(checked.message);
+              return;
+            }
+          }
+          setProblem(null);
+          void Promise.resolve(save(next)).then((ok) => {
+            if (ok) notify(next ? "Saved. Replies go to that address." : "Saved. Emails now say not to reply.", "ok");
+          });
+        }}
+        placeholder="board@maplecourt.org"
+        aria-label="Board contact email"
+        className={cn(fieldClass, "w-64 max-w-full")}
+      />
+      {problem ? (
+        <p role="alert" className="mt-1.5 text-footnote text-danger">
+          {problem}
+        </p>
+      ) : null}
+    </SettingRow>
+  );
+}
 
 /**
  * A text field that keeps what is being typed to itself and saves once, when

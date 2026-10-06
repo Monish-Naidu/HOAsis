@@ -15,6 +15,7 @@ import {
 import { videoJoinUrl } from "@/lib/meetings/video";
 import { emailSender, resendKey } from "./sender";
 import { unsubscribeUrl } from "./tokens";
+import { replyToFor } from "./reply-to";
 import { signInUrl } from "./sign-in-link";
 import {
   createPacer,
@@ -134,7 +135,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
 
   const { data: association } = await admin
     .from("associations")
-    .select("name, join_code")
+    .select("name, join_code, contact_email")
     .eq("id", input.associationId)
     .single();
   if (!association) throw new Error("No such association");
@@ -232,6 +233,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
         const sent = await client.emails.send({
           from: emailSender(),
           to: person.email,
+          replyTo: replyToFor(association.contact_email),
           subject: built.subject,
           html: built.html,
           text: built.text,

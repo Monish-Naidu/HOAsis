@@ -303,6 +303,7 @@ export type Database = {
           fiscal_year_start: string
           home_types: Database["public"]["Enums"]["property_type"][]
           id: string
+          contact_email: string
           insurance_carrier: string | null
           insurance_expires_on: string | null
           insurance_policy_no: string | null
@@ -354,6 +355,7 @@ export type Database = {
           fiscal_year_start?: string
           home_types?: Database["public"]["Enums"]["property_type"][]
           id?: string
+          contact_email?: string
           insurance_carrier?: string | null
           insurance_expires_on?: string | null
           insurance_policy_no?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           fiscal_year_start?: string
           home_types?: Database["public"]["Enums"]["property_type"][]
           id?: string
+          contact_email?: string
           insurance_carrier?: string | null
           insurance_expires_on?: string | null
           insurance_policy_no?: string | null
@@ -2015,6 +2018,7 @@ export type Database = {
           },
         ]
       }
+      retire_home: { Args: { p_unit_id: string }; Returns: undefined }
       setup_dismissals: {
         Row: {
           association_id: string
@@ -2361,6 +2365,7 @@ export type Database = {
           label: string
           occupants: number | null
           square_feet: number | null
+          retired_on: string | null
           stripe_customer_id: string | null
         }
         Insert: {
@@ -2374,6 +2379,7 @@ export type Database = {
           label: string
           occupants?: number | null
           square_feet?: number | null
+          retired_on?: string | null
           stripe_customer_id?: string | null
         }
         Update: {
@@ -2387,6 +2393,7 @@ export type Database = {
           label?: string
           occupants?: number | null
           square_feet?: number | null
+          retired_on?: string | null
           stripe_customer_id?: string | null
         }
         Relationships: [

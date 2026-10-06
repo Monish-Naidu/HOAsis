@@ -47,6 +47,11 @@ export interface Association {
    */
   ein?: string;
   /** Disclosed on the annual budget report in most states. */
+  /**
+   * Where an owner's reply to an email from the association lands. Blank until
+   * the board sets it, and emails only invite a reply once it is set.
+   */
+  contactEmail?: string;
   insuranceCarrier?: string;
   insurancePolicyNo?: string;
   insuranceExpiresOn?: ISODate;

@@ -572,7 +572,7 @@ interface AppState {
    * be the exact drift this product argues against.
    */
   /** Association level facts a board edits: insurance, name, dues. */
-  updateAssociation: (patch: Partial<Community["association"]>) => void;
+  updateAssociation: (patch: Partial<Community["association"]>) => boolean | Promise<boolean>;
   /**
    * Records a payment to a vendor.
    *
@@ -3099,15 +3099,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           undoAccounts();
         };
       }
-      // The database refuses to remove a home with a statement, and says so
-      // through the toast; a sale goes through the transfer instead.
+      // A home with no statement is deleted outright. One with a statement
+      // is retired instead (0099): its records stay, it is billed and
+      // counted no more. The database decides which, and refuses a home
+      // that still owes money, saying so through the toast. The undo below
+      // only fits the deleted case; a retired home is brought back by hand.
       const rc = remote.community;
       const owner = rc.owners.find((o) => o.id === ownerId);
-      void remoteWrite("Removing the household", () =>
-        supabaseBrowser().rpc("remove_household", { p_unit_id: ownerId }),
+      const hasStatement = (rc.ownerCharges[ownerId] ?? []).length > 0;
+      void remoteWrite(hasStatement ? "Retiring the home" : "Removing the household", () =>
+        hasStatement
+          ? supabaseBrowser().rpc("retire_home", { p_unit_id: ownerId })
+          : supabaseBrowser().rpc("remove_household", { p_unit_id: ownerId }),
       );
       return () => {
-        if (!owner) return;
+        if (!owner || hasStatement) return;
         void remoteWrite("Restoring the household", () =>
           supabaseBrowser().rpc("add_household", {
             p_association_id: rc.id,
@@ -4928,6 +4934,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           duesCadence: "dues_cadence",
           fiscalYearStart: "fiscal_year_start",
           insuranceCarrier: "insurance_carrier",
+          // Not null in the table, so a cleared field is a blank string, below.
+          contactEmail: "contact_email",
           insurancePolicyNo: "insurance_policy_no",
           insuranceExpiresOn: "insurance_expires_on",
           ein: "ein",
@@ -4939,13 +4947,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
         // A cleared date picker hands back "", which a date column refuses.
         if (row.insurance_expires_on === "") row.insurance_expires_on = null;
-        if (!Object.keys(row).length) return;
-        void remoteWrite("Saving the association", () =>
+        if ("contact_email" in row) row.contact_email = row.contact_email ?? "";
+        if (!Object.keys(row).length) return true;
+        return remoteWrite("Saving the association", () =>
           supabaseBrowser().from("associations").update(row, { count: "exact" }).eq("id", rc.id),
         );
-        return;
       }
       sliceStore(communityId, "association").update((current) => ({ ...current, ...patch }));
+      return true;
     },
     [remote.community, communityId],
   );

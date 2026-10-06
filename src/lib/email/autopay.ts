@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { emailSender } from "@/lib/email/sender";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { readReplyTo } from "./reply-to";
 import { autopayEmail, type AutopayEmailInput } from "./templates";
 
 /**
@@ -31,6 +32,7 @@ export async function sendAutopayNotice(input: {
       const sent = await new Resend(key).emails.send({
         from: emailSender(),
         to: input.to,
+        replyTo: await readReplyTo(input.associationId),
         subject: built.subject,
         html: built.html,
         text: built.text,
