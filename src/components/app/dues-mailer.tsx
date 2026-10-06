@@ -7,7 +7,7 @@ import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { EmailDelivery } from "@/components/app/email-delivery";
 import { delinquency } from "@/lib/metrics";
-import { cn, money, pluralize } from "@/lib/utils";
+import { cn, formatDate, money, pluralize } from "@/lib/utils";
 import { duesVary } from "@/lib/home-types";
 
 /**
@@ -163,8 +163,8 @@ export function DuesMailer() {
           title="Dues coming due"
           detail={
             duesVary(community.association, community.owners)
-              ? `Everyone, each at their own amount. Due ${community.nextChargeDate}.`
-              : `Everyone. ${money(community.association.duesCents)} due ${community.nextChargeDate}.`
+              ? `Everyone, each at their own amount. Due ${formatDate(community.nextChargeDate, "medium")}.`
+              : `Everyone. ${money(community.association.duesCents)} due ${formatDate(community.nextChargeDate, "medium")}.`
           }
           count={withEmail}
           countLabel="households"

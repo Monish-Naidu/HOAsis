@@ -12,10 +12,72 @@ vi.mock("next/navigation", () => ({
 const { AppStateProvider, useAppState, useOwnerCharges } = await import("@/lib/app-state");
 const { default: ResidentHome } = await import("@/app/resident/page");
 const { default: ResidentAccount } = await import("@/app/resident/account/page");
-const { cashPosition, duesCollection, homeCount, monthlyFlowsBetween } = await import("@/lib/metrics");
+const { cashPosition, duesCollection, homeCount, monthlyFlowsBetween, spendingBetween, vendorPaidThisYear } = await import("@/lib/metrics");
 
 const wrapper = ({ children }: { children: ReactNode }) => <AppStateProvider>{children}</AppStateProvider>;
 const TODAY = "2026-08-20";
+
+describe("a check recorded and reversed in the demo", () => {
+  it("leaves collected, money in, spending and the bank exactly where they were", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    // A finance holder: reversing a payment is theirs to do.
+    act(() => result.current.signIn("acct-arya"));
+    const owner = result.current.community.owners[0];
+    const figures = () => {
+      const x = result.current.community;
+      return {
+        dues: duesCollection(x, 2026),
+        flows: monthlyFlowsBetween(x, "2026-01-01", TODAY),
+        spending: spendingBetween(x, "2026-01-01", "2026-12-31"),
+        cash: cashPosition(x).operating,
+      };
+    };
+    const before = figures();
+    act(() => {
+      result.current.recordManualPayment({ ownerId: owner.id, amountCents: 100, method: "check", reference: "1", receivedOn: TODAY });
+    });
+    const during = figures();
+    expect(during.dues.collectedYtd).toBe(before.dues.collectedYtd + 100);
+    const line = result.current.community.ownerCharges[owner.id].find((l) => l.kind === "payment" && l.label.includes("Check"))!;
+    act(() => {
+      result.current.reverseManualPayment(line.id, "Entered twice");
+    });
+    const after = figures();
+    expect(after.dues.collectedYtd).toBe(before.dues.collectedYtd);
+    expect(after.dues.rate).toBe(before.dues.rate);
+    expect(after.flows).toEqual(before.flows);
+    expect(after.spending).toEqual(before.spending);
+    expect(after.cash).toBe(before.cash);
+    // The line the database writes: a charge, not dues.
+    expect(result.current.community.ownerCharges[owner.id].find((l) => l.label.startsWith("Payment reversed"))).toMatchObject({ kind: "charge", category: "other", amountCents: 100 });
+  });
+});
+
+describe("marking a scheduled vendor payment paid", () => {
+  it("moves cash and the vendor's year only then, and only once", () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    act(() => result.current.signIn("acct-arya"));
+    const vendor = result.current.vendors[0];
+    act(() => {
+      result.current.addPayout({
+        id: "po-sched", vendorId: vendor.id, vendor: vendor.name, invoiceNumber: "INV-9", amountCents: 20_000,
+        method: "ach", status: "scheduled", issuedDate: TODAY, expectedDate: "2026-08-01", approvals: [], approvalsRequired: 0,
+      });
+    });
+    const cash = cashPosition(result.current.community).operating;
+    const year = vendorPaidThisYear(result.current.community, vendor);
+    act(() => {
+      expect(result.current.markPayoutPaid("po-sched")).toBe(true);
+    });
+    expect(result.current.payouts.find((p) => p.id === "po-sched")!.status).toBe("paid");
+    expect(cashPosition(result.current.community).operating).toBe(cash - 20_000);
+    expect(vendorPaidThisYear(result.current.community, vendor)).toBe(year + 20_000);
+    act(() => {
+      expect(result.current.markPayoutPaid("po-sched")).toBe(false);
+    });
+    expect(cashPosition(result.current.community).operating).toBe(cash - 20_000);
+  });
+});
 
 describe("a vendor payment in the demo", () => {
   it("moves cash, the vendor's year and Transactions, as the signed in path writes them", () => {

@@ -26,6 +26,18 @@ export function isDuesLine(line: Pick<ChargeLine, "kind" | "label" | "category">
 }
 
 /**
+ * True for the line that undoes a payment: "Payment reversed: why" from a
+ * board taking back a check (0088) and "Refund of card payment" (0070). Both
+ * are charges that put the money back on the home's statement, and neither is
+ * dues. The payment itself stays on the statement, so collected has to take
+ * this line off in the month it was written.
+ */
+export function isPaymentReversal(line: Pick<ChargeLine, "kind" | "label" | "category">): boolean {
+  if (line.kind !== "charge" || isDuesLine(line)) return false;
+  return /^(payment reversed|refund of)\b/i.test(line.label);
+}
+
+/**
  * Oldest first: by date, and on one date charges before payments, so a
  * running balance never dips below zero before the bill the payment settles.
  * Stable, so two lines of one kind keep the order they were written in.

@@ -6,7 +6,7 @@ import { Button, Card, CardHeader, Select, fieldClass, textareaClass } from "@/c
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { LedgerCategory, Vendor } from "@/lib/types";
-import { cn, money, todayIsoDate } from "@/lib/utils";
+import { cn, formatDate, money, todayIsoDate } from "@/lib/utils";
 
 /**
  * What a vendor payment can have been for: the spending categories the books
@@ -210,7 +210,7 @@ export function RecordPayment({
               notes: note.trim() || undefined,
               category: category || undefined,
             });
-            notify(`Recorded ${money(cents)} to ${vendor.name} on ${paidOn}.`);
+            notify(`Recorded ${money(cents)} to ${vendor.name} on ${formatDate(paidOn, "medium")}.`);
             onClose();
           }}
         >

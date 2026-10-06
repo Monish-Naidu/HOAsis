@@ -442,6 +442,11 @@ export interface Vendor {
   achEnabled: boolean;
   w9OnFile: boolean;
   coiExpires?: ISODate;
+  /**
+   * Not read by any screen: what a vendor was paid is `vendorPaidThisYear`,
+   * from the ledger, so the Vendors page and Transactions agree. Kept so
+   * saved demo state and the fixtures still load.
+   */
   ytdPaidCents: Cents;
   defaultCategory: LedgerCategory;
 }

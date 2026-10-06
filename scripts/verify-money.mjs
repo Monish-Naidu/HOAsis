@@ -207,6 +207,14 @@ try {
     p_unit_id: neighborUnit.id, p_amount_cents: 100, p_method: "bitcoin", p_reference: "", p_received_on: day(0),
   });
   check("a method that is not check, cash or other is refused", Boolean(badMethod), badMethod?.message?.slice(0, 60) ?? "no error");
+  // 0102: no more than what the home owes plus $10,000.
+  const { error: hugeCheck } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: neighborUnit.id, p_amount_cents: 99_999_999_9, p_method: "check", p_reference: "3", p_received_on: day(0),
+  });
+  check("a check far past what the home owes plus $10,000 is refused", Boolean(hugeCheck) && hugeCheck.code === "22000", hugeCheck?.message?.slice(0, 70) ?? "no error");
+  const { count: hugeRows } = await admin.from("payments").select("id", { count: "exact", head: true })
+    .eq("unit_id", neighborUnit.id).eq("amount_cents", 99_999_999_9);
+  check("the refused check left no payment behind", hugeRows === 0, String(hugeRows));
   const { data: cashId, error: cashError } = await president.client.rpc("record_manual_payment", {
     p_unit_id: neighborUnit.id, p_amount_cents: 500, p_method: "cash", p_reference: "", p_received_on: day(0),
   });
@@ -237,6 +245,11 @@ try {
 
   const { error: negativeDues } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: -1 });
   check("a negative amount is refused", Boolean(negativeDues), negativeDues?.message?.slice(0, 60) ?? "no error");
+  const { error: highDues } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: 10_000_001 });
+  check("one home's dues over $100,000 a period are refused", Boolean(highDues) && highDues.code === "22000", highDues?.message?.slice(0, 60) ?? "no error");
+  // The association's rate is a plain row update, held by a check constraint (0102).
+  const { error: highRate } = await admin.from("associations").update({ dues_cents: 10_000_001 }).eq("id", associationId);
+  check("the association's rate over $100,000 is refused by the table", Boolean(highRate) && highRate.code === "23514", highRate?.message?.slice(0, 60) ?? "no error");
   const { error: residentDues } = await resident.client.rpc("set_home_dues", { p_unit_id: myUnit, p_dues_cents: 100 });
   check("a resident cannot set a home's amount", residentDues?.code === "42501", residentDues?.message?.slice(0, 60) ?? "no error");
   const { error: anonDues } = await nobody.rpc("set_home_dues", { p_unit_id: myUnit, p_dues_cents: 100 });

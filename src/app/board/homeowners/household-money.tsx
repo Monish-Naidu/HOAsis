@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge, Button, Field, Select, fieldClass } from "@/components/ui/primitives";
 import { chargeCents, chargeProblem, MAX_CHARGE_LABEL } from "@/lib/payments/charges";
+import { checkManualPayment, duesTextProblem, homeOverpayNote } from "@/lib/input-checks";
 import { MANUAL_METHOD_LABEL, type ManualMethod } from "@/lib/payments/instruments";
 import {
   duplicatePaymentWarning,
@@ -13,11 +14,8 @@ import {
 } from "@/lib/payments/manual-payments";
 import { formatDate, money, todayIsoDate } from "@/lib/utils";
 
-/** Dollars as typed to whole cents, or 0 when it is not a positive amount. */
-function toCents(text: string): number {
-  const n = Number(text);
-  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0;
-}
+/** Dollars as typed to whole cents, or 0 when it is not a positive amount in dollars and cents. */
+const toCents = chargeCents;
 
 /**
  * A check or cash the treasurer received. The statement gets a payment line,
@@ -28,12 +26,15 @@ export function RecordPaymentForm({
   unit,
   homeName,
   existing,
+  balanceCents,
   onSave,
   onCancel,
 }: {
   unit: string;
   /** How the board names this home, for the repeat warning. Falls back to the unit. */
   homeName?: string;
+  /** What the home owes now. A payment may exceed it by $10,000 at most. */
+  balanceCents: number;
   /** This home's checks and cash already entered, once they have loaded. */
   existing?: readonly ManualPaymentRow[];
   onSave: (input: {
@@ -51,9 +52,13 @@ export function RecordPaymentForm({
   const [reference, setReference] = useState("");
   const [receivedOn, setReceivedOn] = useState(today);
   const [busy, setBusy] = useState(false);
-  const cents = toCents(amount);
+  const check = checkManualPayment(amount, balanceCents);
+  const cents = check.ok ? check.cents : 0;
   // The date input's max stops the picker; this stops a typed date.
-  const ready = cents > 0 && Boolean(receivedOn) && receivedOn <= today;
+  const ready = check.ok && Boolean(receivedOn) && receivedOn <= today;
+  // Said once something is typed; an empty field is not an error yet.
+  const amountProblem = amount.trim() && !check.ok ? check.message : null;
+  const overpay = check.ok ? homeOverpayNote(check.extraCents) : null;
   // Said before saving, and saving is still allowed: two checks of the same
   // amount on one day happen, but a double entry is the likelier cause.
   const repeat = existing ? findDuplicatePayment(existing, { amountCents: cents, receivedOn }) : null;
@@ -81,6 +86,7 @@ export function RecordPaymentForm({
             onChange={(e) => setAmount(e.target.value)}
             placeholder="285.00"
             aria-label="Payment amount"
+            aria-invalid={amountProblem ? true : undefined}
             className={fieldClass}
             autoFocus
           />
@@ -119,6 +125,12 @@ export function RecordPaymentForm({
           />
         </Field>
       </div>
+      {amountProblem ? (
+        <p role="alert" className="text-footnote font-medium text-danger">
+          {amountProblem}
+        </p>
+      ) : null}
+      {overpay ? <p className="text-footnote text-fg-muted">{overpay}</p> : null}
       {repeat ? (
         <p role="alert" className="rounded-md bg-warn-soft px-3 py-2 text-footnote font-medium text-warn">
           {duplicatePaymentWarning(homeName ?? unit, repeat)}
@@ -340,7 +352,9 @@ export function ChangeDuesForm({
   const [amount, setAmount] = useState(String(nowCents / 100));
   const [busy, setBusy] = useState(false);
   const cents = toCents(amount);
-  const ready = cents > 0 && cents !== nowCents;
+  // The same limits as the setup wizard and the database (set_home_dues).
+  const amountProblem = duesTextProblem(amount);
+  const ready = !amountProblem && cents > 0 && cents !== nowCents;
   function save(next: number | null) {
     if (busy) return;
     setBusy(true);
@@ -372,11 +386,17 @@ export function ChangeDuesForm({
             onChange={(e) => setAmount(e.target.value)}
             placeholder={String(standardCents / 100)}
             aria-label="Dues for this home"
+            aria-invalid={amountProblem ? true : undefined}
             className={fieldClass}
             autoFocus
           />
         </Field>
       </div>
+      {amountProblem ? (
+        <p role="alert" className="text-footnote font-medium text-danger">
+          {amountProblem}
+        </p>
+      ) : null}
       <div className="flex flex-wrap justify-end gap-2">
         {hasOwn ? (
           <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => save(null)}>

@@ -18,7 +18,7 @@ import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { ValidationError } from "@/lib/core/errors";
 import { caps, DEFAULT_ROLE_CAPABILITIES, DEFAULT_ROLE_VIEWS, NO_CAPABILITIES, sees as seesArea } from "@/lib/data/accounts";
-import { isEmail } from "@/lib/input-checks";
+import { DUES_HIGH_MESSAGE, MAX_DUES_CENTS, isEmail } from "@/lib/input-checks";
 import { addDays, daysFromToday, formatDate, setToday, todayIsoDate } from "@/lib/utils";
 import { isUuid, newId } from "@/lib/core/ids";
 import { PersistedStore, type Store } from "@/lib/core/store";
@@ -530,6 +530,13 @@ interface AppState {
    */
   recordReserveTransfer: (amountCents: number, date: string) => void;
   approvePayout: (payoutId: string) => void;
+  /**
+   * Says a signed or scheduled vendor payment has gone out. Cash moves only
+   * here (or when a payment is recorded as already paid): approving the last
+   * signature only schedules it. Writes the ledger line, so the bank balance,
+   * Transactions and the vendor's year all move together.
+   */
+  markPayoutPaid: (payoutId: string) => boolean | Promise<boolean>;
   markW9Requested: (vendorId: string) => void;
   replyToThread: (threadId: string, body: string) => void;
   /** An owner starting a conversation with the board. Resolves true when it landed. */
@@ -1956,6 +1963,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             date,
             label: `Payment reversed: ${why}`,
             kind: "charge" as const,
+            // As reverse_manual_payment writes it (0088): not dues, so no
+            // bill, skip or late fee logic reads the line as one.
+            category: "other",
             amountCents,
             balanceAfterCents: balanceAfter,
           },
@@ -2577,6 +2587,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!changes.length) return true;
       if (changes.some((c) => c.cents !== null && (!Number.isInteger(c.cents) || c.cents < 0))) {
         reportRemoteError("Dues cannot be negative");
+        return false;
+      }
+      if (changes.some((c) => c.cents !== null && c.cents > MAX_DUES_CENTS)) {
+        reportRemoteError(DUES_HIGH_MESSAGE);
         return false;
       }
       if (remote.community) {
@@ -3787,7 +3801,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       else if (!previous) body = `Work order opened${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
       else if (workOrder.completedOn && !previous.completedOn) body = "The work is done.";
       else if (workOrder.scheduledOn && workOrder.scheduledOn !== previous.scheduledOn)
-        body = `Scheduled for ${workOrder.scheduledOn}${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
+        body = `Scheduled for ${formatDate(workOrder.scheduledOn, "medium")}${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
       const actorName = remote.community
         ? (remote.community.accounts.find((a) => a.id === remote.profileId)?.name ?? "Board")
         : (sliceStore(communityId, "accounts")
@@ -4533,6 +4547,96 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [remote.community, remote.profileId, communityId],
   );
 
+  const markPayoutPaid = useCallback(
+    (payoutId: string) => {
+      if (!can("finances")) return false;
+      const today = todayIsoDate();
+      if (remote.community) {
+        const rc = remote.community;
+        const payout = rc.payouts.find((p) => p.id === payoutId);
+        if (!payout || (payout.status !== "scheduled" && payout.status !== "in-transit")) return false;
+        return remoteWrite("Marking the payment paid", async () => {
+          const supabase = supabaseBrowser();
+          // Only a payment still waiting to go out: a second press, or another
+          // officer's, finds it paid and writes no second ledger line.
+          const moved = await supabase
+            .from("payouts")
+            .update({ status: "paid" }, { count: "exact" })
+            .eq("id", payoutId)
+            .in("status", ["scheduled", "in-transit"]);
+          if (moved.error) throw new Error(moved.error.message);
+          if (!moved.count) throw new Error("That payment was already marked paid");
+          const vendor = rc.vendors.find((v) => v.id === payout.vendorId);
+          const operating = rc.bankAccounts.find((b) => b.kind === "operating");
+          return supabase.from("ledger_entries").insert({
+            association_id: rc.id,
+            bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
+            occurred_on: today,
+            description: payout.invoiceNumber ? `${payout.vendor}, ${payout.invoiceNumber}` : payout.vendor,
+            counterparty: payout.vendor,
+            category: vendor?.defaultCategory ?? "Vendors",
+            amount_cents: -payout.amountCents,
+            confirmed_at: new Date().toISOString(),
+          });
+        });
+      }
+      const payout = sliceStore(communityId, "payouts").getSnapshot().find((p) => p.id === payoutId);
+      if (!payout || (payout.status !== "scheduled" && payout.status !== "in-transit")) return false;
+      const vendor = sliceStore(communityId, "vendors").getSnapshot().find((v) => v.id === payout.vendorId);
+      const operating = sliceStore(communityId, "bankAccounts")
+        .getSnapshot()
+        .find((a) => a.kind === "operating");
+      const category = vendor?.defaultCategory ?? "Repairs & maintenance";
+      sliceStore(communityId, "payouts").update((all) =>
+        all.map((p) => (p.id === payoutId ? { ...p, status: "paid" as const } : p)),
+      );
+      // A bill paid from the invoice inbox already has its line, booked
+      // pending; the money leaves the bank now, so it clears. Otherwise the
+      // line is written here, as addPayout writes one for a payment recorded
+      // as paid.
+      const ledger = sliceStore(communityId, "ledger");
+      if (ledger.getSnapshot().some((e) => e.payoutId === payoutId)) {
+        ledger.update((all) =>
+          all.map((e) =>
+            e.payoutId === payoutId ? { ...e, status: "cleared" as const, date: today } : e,
+          ),
+        );
+      } else {
+        ledger.update((all) => [
+          {
+            id: `le-${payoutId}`,
+            date: today,
+            description: payout.invoiceNumber ? `${payout.vendor}, ${payout.invoiceNumber}` : payout.vendor,
+            counterparty: payout.vendor,
+            category,
+            accountId: operating?.id ?? "unassigned",
+            amountCents: -payout.amountCents,
+            status: "cleared" as const,
+            matchedBy: "manual" as const,
+            payoutId,
+          },
+          ...all,
+        ]);
+      }
+      if (operating) {
+        sliceStore(communityId, "bankAccounts").update((all) =>
+          all.map((a) =>
+            a.id === operating.id ? { ...a, balanceCents: a.balanceCents - payout.amountCents } : a,
+          ),
+        );
+      }
+      sliceStore(communityId, "budget").update((all) =>
+        all.map((line) =>
+          line.kind === "expense" && line.category === category
+            ? { ...line, ytdActualCents: line.ytdActualCents + payout.amountCents }
+            : line,
+        ),
+      );
+      return true;
+    },
+    [can, remote.community, communityId],
+  );
+
   const markW9Requested = useCallback(
     (vendorId: string) => {
       if (remote.community) {
@@ -4942,6 +5046,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const updateAssociation = useCallback(
     (patch: Partial<Community["association"]>) => {
+      // The same ceiling the database holds (0102), for the demo too.
+      const rates = [patch.duesCents, ...Object.values(patch.duesByType ?? {})];
+      if (rates.some((c) => c !== undefined && c > MAX_DUES_CENTS)) {
+        reportRemoteError(DUES_HIGH_MESSAGE);
+        return false;
+      }
       if (remote.community) {
         const rc = remote.community;
         const COLUMN: Record<string, string> = {
@@ -5698,6 +5808,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     recordReserveTransfer,
     dismissLedgerEntry,
     approvePayout,
+    markPayoutPaid,
     markW9Requested,
     replyToThread,
     messageBoard,

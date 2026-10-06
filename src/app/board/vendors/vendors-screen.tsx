@@ -22,7 +22,7 @@ import { useToast } from "@/components/app/toast";
 import type { LedgerCategory, Payout } from "@/lib/types";
 import { cn, daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
-import { vendorDecisions } from "@/lib/metrics";
+import { vendorDecisions, vendorPaidThisYear } from "@/lib/metrics";
 
 const PAYOUT_STATUS = {
   paid: { label: "Paid", tone: "ok" },
@@ -222,8 +222,12 @@ export function VendorsScreen() {
             </Button>
           }
         >
-          Paid {money(gaps.missingW9[0].ytdPaidCents)} this year, past the $600 line for a
-          1099-NEC. Without the W-9 you cannot file it correctly.
+          {(() => {
+            const paid = vendorPaidThisYear(community, gaps.missingW9[0]);
+            return paid >= 60_000
+              ? `Paid ${money(paid)} this year, past the $600 line for a 1099-NEC. Without the W-9 you cannot file it correctly.`
+              : `Paid ${money(paid)} this year. At $600 it needs a 1099-NEC, and you cannot file it correctly without the W-9.`;
+          })()}
         </Callout>
       ) : null}
 
@@ -271,7 +275,7 @@ export function VendorsScreen() {
                       <div className="flex items-baseline justify-between gap-3">
                         <p className="min-w-0 truncate text-body font-medium text-fg">{v.name}</p>
                         <p className="tnum shrink-0 text-body font-semibold text-fg">
-                          {money(v.ytdPaidCents, { cents: false })}
+                          {money(vendorPaidThisYear(community, v))}
                         </p>
                       </div>
                       <p className="truncate text-footnote text-fg-muted">{v.service}</p>
@@ -313,7 +317,7 @@ export function VendorsScreen() {
                         <td className="px-5 py-3">
                           <span className="flex items-center justify-end gap-2">
                             <span className="tnum font-semibold text-fg">
-                              {money(v.ytdPaidCents, { cents: false })}
+                              {money(vendorPaidThisYear(community, v))}
                             </span>
                             <RemoveVendor
                               name={v.name}
@@ -412,7 +416,7 @@ function RemoveVendor({ name, onRemove }: { name: string; onRemove: () => void }
 /* -------------------------------------------------------------------------- */
 
 function PayoutRow({ payout: p }: { payout: Payout }) {
-  const { invoices, isRemote, setPayoutNotes } = useAppState();
+  const { invoices, isRemote, setPayoutNotes, markPayoutPaid, can } = useAppState();
   const { notify } = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(p.notes ?? "");
@@ -437,7 +441,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
         </div>
         <div className="shrink-0 text-right">
           <p className="tnum text-body font-semibold text-fg">
-            {money(p.amountCents, { cents: false })}
+            {money(p.amountCents)}
           </p>
           <Badge tone={PAYOUT_STATUS[p.status].tone} className="mt-0.5">
             {PAYOUT_STATUS[p.status].label}
@@ -448,10 +452,13 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-footnote text-fg-subtle">
         <span className="font-medium uppercase">{p.method}</span>
         <span>
-          {p.status === "paid" ? "landed" : "lands"}{" "}
-          {daysFromToday(p.expectedDate) >= -60
-            ? relativeDays(p.expectedDate)
-            : formatDate(p.expectedDate)}
+          {p.status === "paid"
+            ? // Booked paid: the date it went out, as the ledger line says.
+              `Paid ${formatDate(p.expectedDate)}`
+            : daysFromToday(p.expectedDate) < 0
+              ? // Past its date and nobody has said it left: not "landed".
+                `Expected ${formatDate(p.expectedDate)}, not yet confirmed paid`
+              : `Expected ${formatDate(p.expectedDate)}`}
         </span>
         <span className="inline-flex items-center gap-1">
           {approved ? (
@@ -473,6 +480,24 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
           )}
         </span>
       </div>
+
+      {/* Cash moves when the payment goes out, not when the last signature
+          lands, so a scheduled payment has somewhere to say it did. */}
+      {(p.status === "scheduled" || p.status === "in-transit") && can("finances") ? (
+        <div className="mt-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              void Promise.resolve(markPayoutPaid(p.id)).then((ok) => {
+                if (ok) notify(`Marked paid: ${money(p.amountCents)} to ${p.vendor}`, "ok");
+              })
+            }
+          >
+            Mark paid
+          </Button>
+        </div>
+      ) : null}
 
       {p.method === "check" ? (
         <p className="mt-2 rounded-md bg-warn-soft px-2 py-1 text-footnote leading-snug text-warn">

@@ -429,20 +429,20 @@ board screen, one real action each. Most serious first.
 
 | Where | What happens | Status |
 | --- | --- | --- |
-| Finances, after a reversed payment | The reversal shows as "Other" spending and the original still counts as money in and dues collected | next: a reversal nets against income, not spending; collected follows the payment's state |
-| Dashboard and Finances totals | Billed and "typical month" jump as soon as any activity exists in the current month, while Past due never lists it | next: one rule for whether the current month counts |
+| Finances, after a reversed payment | The reversal shows as "Other" spending and the original still counts as money in and dues collected | done 2026-10-06 (pull request #16): a reversal or refund nets against money in and collected in its month and is never spending |
+| Dashboard and Finances totals | Billed and "typical month" jump as soon as any activity exists in the current month, while Past due never lists it | done 2026-10-06 (pull request #16): a month is billed only when its dues line exists and the month has arrived; the typical month uses the twelve complete months before this one |
 | Meetings, Send notice | The notice posts (residents see it, Activity logs it) but the row still says "Notice not sent yet" and the dashboard still counts it; no confirmation, no toast | next |
 | Replies and notices | Toasts say "sent" while every email fails on the unverified sender; the email log shows the raw provider error | next: say "posted in the app; email did not go out" when it did not, and plain words for the error |
 | Meeting links | The row's "Video call link" is the automatic room while the text shows the link the board typed, labelled "dial" | next: a link the board typed is the video link; the automatic room only when nothing was typed; "dial" only for a phone number |
 | Notice detail | "What needs fixing" shows on the list row and nowhere else, on the board or on the resident side signed in | next: show it on both details |
 | Settings, Activity | Credits, dues changes, email changes, vendors, meetings, notices and replies are missing; "for 1" instead of "Lot 1"; UTC times beside local ones; old area names | next: log the missing writes; home labels; local time; the access grid's names |
-| Vendors | "$0 paid this year" for vendors with payments in Transactions; a scheduled payment "lands 14 days ago"; approving does not move cash; duplicates allowed; a 120-character name accepted | next: the year from the ledger, not only payouts; future dates or "Paid"; a duplicate check; a name cap |
+| Vendors | "$0 paid this year" for vendors with payments in Transactions; a scheduled payment "lands 14 days ago"; approving does not move cash; duplicates allowed; a 120-character name accepted | done 2026-10-06 for the year total (from the ledger), the wording ("Expected {date}, not yet confirmed paid") and a "Mark paid" that moves the cash (pull request #16). Next: a duplicate check and a name cap |
 | Homeowners, Change dues | Setting the amount back to the rate leaves the home "paying its own amount"; "Use the standard rate" was not found | next: an amount equal to the rate clears the override; make the standard-rate button visible |
-| Money fields | Dues accept $10,000,000; a payment accepts $999,999,999 against a $285 balance; 285.555 and 12e3 accepted | next: the same caps as the charge form, and a warning above the balance |
+| Money fields | Dues accept $10,000,000; a payment accepts $999,999,999 against a $285 balance; 285.555 and 12e3 accepted | done 2026-10-06 (pull request #16, migration 0102 applied): $100,000 on dues, balance plus $10,000 on a hand payment with a credit line above the balance, whole cents only; the same caps in the database |
 | Requests | Maintenance requests say "awaiting a decision" but offer only work order, mark fixed and reply; replying leaves "Submitted"; the badge counts notices | next: decide what a maintenance request's states are and say them |
 | The signed-in treasurer | Not on the Homeowners list or the board list, only in the access grid (a second seat on Lot 7 with no owner row) | next: a seat on a home shows on the home |
 | Past due and starting balances | A credit shows as "-$285 / 1 household" under Current; three names for one screen; raw dates; clipped at 390px | next |
-| Dates in messages | "on 2026-10-06", "due 2026-11-01" | next: `formatDate` everywhere a person reads it |
+| Dates in messages | "on 2026-10-06", "due 2026-11-01" | done 2026-10-06 (pull request #16) |
 | Small | "Payments are live" beside "Test mode"; subscription "Cancelled" while payments are on; the Maple Court placeholder; resolved notices with no lot or date; Transactions opens on an empty "This month"; duplicate seeded rows; $1 vs $1.00; the Homeowners badge 23 against 24 homes; two homes with one address in the test data | next |
 | Hydration error on board money pages signed in | The same #418 as section 13, on every load of Finances, Past due, Transactions, Homeowners, Vendors | next: same cause, still unfound |
 
