@@ -2541,6 +2541,7 @@ export type Database = {
           association_id: string
           case_number: string | null
           created_at: string
+          fix: string
           fine_cents: number
           id: string
           next_action_on: string | null
@@ -2564,6 +2565,7 @@ export type Database = {
           association_id: string
           case_number?: string | null
           created_at?: string
+          fix?: string
           fine_cents?: number
           id?: string
           next_action_on?: string | null
@@ -2587,6 +2589,7 @@ export type Database = {
           association_id?: string
           case_number?: string | null
           created_at?: string
+          fix?: string
           fine_cents?: number
           id?: string
           next_action_on?: string | null
