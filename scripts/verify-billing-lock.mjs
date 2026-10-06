@@ -85,6 +85,9 @@ try {
     check(`${label}: the president can still read`, (vendors ?? []).length >= 1, String((vendors ?? []).length));
     const { error: serviceError } = await admin.from("vendors").insert({ association_id: associationId, name: `Service ${++n}` });
     check(`${label}: the service role can still insert`, !serviceError, serviceError?.message ?? "");
+    // The functions a board acts through ask the same question (0107).
+    const { error: fnRefused } = await president.client.rpc("add_charge", { p_unit_id: unit2, p_amount_cents: 100, p_label: "Locked", p_due_on: day(0) });
+    check(`${label}: the president's add_charge is refused too`, fnRefused?.code === "42501", `${fnRefused?.code} ${fnRefused?.message ?? "no error"}`);
 
     const { data: threadId, error: threadError } = await resident.client.rpc("start_owner_thread", {
       p_unit_id: unit2, p_subject: `Question ${++owner} (${label})`, p_body: "Is anyone there?", p_tag: "General",

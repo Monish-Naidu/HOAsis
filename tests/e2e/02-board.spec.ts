@@ -97,7 +97,7 @@ test.describe("board actions", () => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
-  test("confirming a transaction moves it and can be undone", async ({ page }) => {
+  test("confirming a transaction moves it, and stays confirmed", async ({ page }) => {
     await page.goto("/board/money");
     await page.waitForLoadState("networkidle");
 
@@ -108,14 +108,12 @@ test.describe("board actions", () => {
     await page.getByRole("button", { name: "Confirm" }).first().click();
     await page.waitForTimeout(700);
 
-    const undo = page.getByRole("button", { name: /^Undo$/ }).last();
-    await expect(undo, "confirming offered no way back").toBeVisible();
-    await undo.click();
-    await page.waitForTimeout(700);
-
+    // Money records are append-only since 0106: a confirmation is a record,
+    // not a draft, so there is no Undo on it. A wrong line is reversed.
+    await expect(page.getByRole("button", { name: /^Undo$/ })).toHaveCount(0);
     const after = (await inspect(page)).text;
-    const restored = Number(after.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0");
-    expect(restored, "undo did not restore the transaction").toBe(needsReview);
+    const left = Number(after.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0");
+    expect(left, "confirming did not move the transaction").toBe(needsReview - 1);
   });
 
   test("adding and removing a household both work, and removal is reversible", async ({
