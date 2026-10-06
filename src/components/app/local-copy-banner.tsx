@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, MonitorSmartphone } from "lucide-react";
 import { ButtonLink, Callout } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
+import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -49,8 +51,15 @@ export function LocalCopyBanner() {
  * like the dashboard.
  */
 export function DemoBanner({ className }: { className?: string }) {
-  const { community, isRemote } = useAppState();
+  const { community, isRemote, accounts, account } = useAppState();
+  const router = useRouter();
   if (isRemote || community.profile) return null;
+  // The board seats and two owners, so a tester can be any of them from
+  // here rather than going back to the sign-in page.
+  const people = [
+    ...accounts.filter((a) => a.role !== "resident"),
+    ...accounts.filter((a) => a.role === "resident").slice(0, 2),
+  ];
   return (
     <p
       data-testid="demo-banner"
@@ -65,13 +74,32 @@ export function DemoBanner({ className }: { className?: string }) {
           {community.settings.displayName} is made up. Nothing you change is saved.
         </span>
       </span>
-      <Link
-        href="/start"
-        className="press group inline-flex items-center gap-1.5 font-semibold text-accent hover:underline"
-      >
-        Set up your association
-        <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-      </Link>
+      <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <label className="inline-flex items-center gap-1.5 text-footnote text-fg-muted">
+          Try as
+          <select
+            value={account?.id ?? ""}
+            onChange={(e) => {
+              if (e.target.value) router.push(`/demo?as=${encodeURIComponent(e.target.value)}`);
+            }}
+            aria-label="Try the demo as"
+            className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-footnote text-fg"
+          >
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}, {ROLE_LABEL[p.role]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Link
+          href="/start"
+          className="press group inline-flex items-center gap-1.5 font-semibold text-accent hover:underline"
+        >
+          Set up your association
+          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </span>
     </p>
   );
 }

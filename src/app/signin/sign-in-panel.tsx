@@ -78,6 +78,12 @@ export function SignInPanel() {
     role: ROLE_LABEL[a.role],
     isAdmin: a.role !== "resident",
   }));
+  // Board seats, then two residents: enough to see both sides without a
+  // fourteen-row list under the form.
+  const sampleSeats = [
+    ...seats.filter((s) => s.isAdmin),
+    ...seats.filter((s) => !s.isAdmin).slice(0, 2),
+  ];
   const [mode, setMode] = useState<"sign-in" | "create">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -364,6 +370,28 @@ export function SignInPanel() {
             </ButtonLink>
           </div>
         </div>
+        {/* Every seat, folded away: the board and two owners, for somebody
+            testing what each office sees. */}
+        <details className="border-t border-border">
+          <summary className="cursor-pointer px-4 py-2.5 text-footnote font-medium text-fg-muted hover:text-fg">
+            Or pick a person to try it as
+          </summary>
+          {sampleSeats.map((s) => (
+            <Link
+              key={s.id}
+              href={`/demo?as=${encodeURIComponent(s.id)}`}
+              className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-left transition-colors hover:bg-surface-2"
+            >
+              <span className="min-w-0">
+                <span className="block text-body font-medium text-fg">{s.name}</span>
+                <span className="block text-footnote text-fg-muted">
+                  {s.role} · Unit {s.unit}
+                </span>
+              </span>
+              <ArrowRight className="size-3.5 shrink-0 text-fg-subtle" />
+            </Link>
+          ))}
+        </details>
         {hasSupabase ? (
           <div className="border-t border-border p-3">
             <ButtonLink href="/start" variant="ghost" size="sm" className="w-full">
