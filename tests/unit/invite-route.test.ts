@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 import { createLimiter, type Limiter } from "@/lib/rate-limit";
 
 /**
@@ -50,33 +51,27 @@ type Member = { unit_id: string; full_name: string; invited_email: string | null
 let members: Member[] = [];
 let logged: { to_email: string; subject: string; unit_id: string | null }[] = [];
 
-function table(name: string) {
-  const chain: Record<string, unknown> = {};
-  for (const step of ["select", "eq", "in", "gte", "order"]) chain[step] = () => chain;
-  // memberships ends on .is("ends_on", null); email_log carries on to
-  // .gte() and is read a page at a time.
-  chain.is = () => ({
-    ...chain,
-    then: (resolve: (v: unknown) => unknown) => Promise.resolve({ data: members, error: null }).then(resolve),
-  });
-  chain.range = async (from: number, to: number) => ({ data: logged.slice(from, to + 1), error: null });
-  chain.single = async () => ({
-    data: name === "associations" ? { name: "Maple Court HOA", join_code: "MAPLE1", slug: "maple-court", city: "Bothell", state: "WA" } : null,
-  });
+const fake = createFakeSupabase({
+  "auth.getUser": { data: { user: { id: "profile-board" } } },
+  rpc: { data: true },
+  memberships: () => ({ data: members, error: null }),
+  associations: { data: { name: "Maple Court HOA", join_code: "MAPLE1", slug: "maple-court", city: "Bothell", state: "WA" } },
+  // email_log is read a page at a time by the repeat guard.
+  "email_log.select": (call) => {
+    const [from, to] = call.argsOf("range") as [number, number];
+    return { data: logged.slice(from, to + 1), error: null };
+  },
   // A send that went is what the next press's repeat guard reads back.
-  chain.insert = async (row: { to_email: string; subject: string; unit_id: string | null; error: string | null }) => {
+  "email_log.insert": (call) => {
+    const row = call.argsOf("insert")![0] as { to_email: string; subject: string; unit_id: string | null; error: string | null };
     if (!row.error) logged.push({ to_email: row.to_email, subject: row.subject, unit_id: row.unit_id });
     return { error: null };
-  };
-  return chain;
-}
+  },
+});
 
 vi.mock("@/lib/supabase/server", () => ({
-  supabaseServer: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: "profile-board" } } }) },
-    rpc: async () => ({ data: true }),
-  }),
-  supabaseAdmin: () => ({ from: (name: string) => table(name) }),
+  supabaseServer: async () => fake.client,
+  supabaseAdmin: () => fake.client,
 }));
 
 const { POST } = await import("@/app/api/email/invite/route");
@@ -98,6 +93,7 @@ const subjectFor = (n: number) => `Your home at ${n} is ready on Your HOAsis`;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fake.reset();
   turnsAllowed = Infinity;
   members = [household(1), household(2), household(3)];
   logged = [];

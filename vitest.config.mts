@@ -13,11 +13,14 @@ export default defineConfig({
     include: ["tests/**/*.test.{ts,tsx}"],
     restoreMocks: true,
     clearMocks: true,
-    // Library code only, and no threshold yet: this is to see where we are.
+    // Library code only. Measured 78.5% lines on 2026-10-06; the floor sits a
+    // little under that so a refactor has room but the figure cannot slide.
+    // Enforced by `pnpm coverage`, which `pnpm check` deliberately skips.
     coverage: {
       provider: "v8",
       include: ["src/lib/**"],
       reporter: ["text-summary", "text"],
+      thresholds: { lines: 75 },
     },
   },
 });

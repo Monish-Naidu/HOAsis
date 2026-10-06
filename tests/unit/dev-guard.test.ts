@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 import {
   environmentBlocks,
   liveDataBlocks,
@@ -22,11 +23,8 @@ const OPEN = {
 
 /** An admin client that answers the one question the guard asks. */
 function adminWith(answer: { data: { name: string }[] | null; error: { message: string } | null }) {
-  const limit = vi.fn(async () => answer);
-  const or = vi.fn(() => ({ limit }));
-  const select = vi.fn(() => ({ or }));
-  const from = vi.fn(() => ({ select }));
-  return { admin: { from } as never, from, or };
+  const fake = createFakeSupabase({ associations: answer });
+  return { admin: fake.client as never, asked: () => fake.callsTo("associations") };
 }
 
 const nothingLive = { data: [], error: null };
@@ -75,10 +73,10 @@ describe("environmentBlocks", () => {
 
 describe("liveDataBlocks", () => {
   it("passes a project with nothing live in it", async () => {
-    const { admin, from, or } = adminWith(nothingLive);
+    const { admin, asked } = adminWith(nothingLive);
     expect(await liveDataBlocks(admin)).toBeNull();
-    expect(from).toHaveBeenCalledWith("associations");
-    expect(or).toHaveBeenCalledWith("billing_subscription_id.not.is.null,stripe_charges_enabled.eq.true");
+    expect(asked()).toHaveLength(1);
+    expect(asked()[0].argsOf("or")).toEqual(["billing_subscription_id.not.is.null,stripe_charges_enabled.eq.true"]);
   });
 
   it("refuses next to an association with a subscription or payments on, and names it", async () => {
@@ -113,21 +111,18 @@ describe("testToolsBlocked", () => {
  * The admin client is a stand-in; what matters is that nothing is deleted
  * and nothing is listed while any lock is shut.
  */
-const deleteEq = vi.fn(async () => ({ error: null }));
-const del = vi.fn(() => ({ eq: deleteEq }));
 const liveAnswer = { current: nothingLive as { data: { name: string }[] | null; error: { message: string } | null } };
-const routeFrom = vi.fn(() => ({
-  delete: del,
-  select: () => ({
-    or: () => ({ limit: async () => liveAnswer.current }),
-    order: async () => ({ data: [] }),
-  }),
-}));
-const listUsers = vi.fn(async () => ({ data: { users: [] } }));
+const fake = createFakeSupabase({
+  // The guard reads with .or(); the list page reads the same table without it.
+  "associations.select": (call) => (call.has("or") ? liveAnswer.current : { data: [] }),
+  "associations.delete": { error: null },
+  "auth.admin.listUsers": { data: { users: [] } },
+});
+const deleted = () => fake.writes();
 
-vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: () => ({ from: routeFrom, auth: { admin: { listUsers } } }),
-}));
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
+
+beforeEach(() => fake.reset());
 
 const associations = await import("@/app/api/dev/associations/route");
 const reset = await import("@/app/api/dev/reset/route");
@@ -155,12 +150,12 @@ describe("the dev routes", () => {
     liveAnswer.current = nothingLive;
     expect((await deleteOne()).status).toBe(403);
     expect((await deleteAll()).status).toBe(403);
-    expect(del).not.toHaveBeenCalled();
+    expect(deleted()).toHaveLength(0);
     // The list answers 200 with the reason, which the test tools page shows.
     const listed = await associations.GET();
     expect(listed.status).toBe(200);
     expect(await listed.json()).toMatchObject({ enabled: false, reason: expect.stringMatching(/production/) });
-    expect(routeFrom).not.toHaveBeenCalled();
+    expect(fake.calls).toHaveLength(0);
     vi.unstubAllEnvs();
   });
 
@@ -170,7 +165,7 @@ describe("the dev routes", () => {
     liveAnswer.current = nothingLive;
     expect((await deleteOne()).status).toBe(403);
     expect((await deleteAll()).status).toBe(403);
-    expect(del).not.toHaveBeenCalled();
+    expect(deleted()).toHaveLength(0);
     vi.unstubAllEnvs();
   });
 
@@ -181,8 +176,8 @@ describe("the dev routes", () => {
     expect(refused.status).toBe(403);
     expect(await refused.json()).toMatchObject({ error: expect.stringMatching(/Maple Court HOA/) });
     expect((await deleteAll()).status).toBe(403);
-    expect(del).not.toHaveBeenCalled();
-    expect(listUsers).not.toHaveBeenCalled();
+    expect(deleted()).toHaveLength(0);
+    expect(fake.callsTo("auth.admin.listUsers")).toHaveLength(0);
     vi.unstubAllEnvs();
   });
 
@@ -191,7 +186,7 @@ describe("the dev routes", () => {
     liveAnswer.current = nothingLive;
     const done = await deleteOne();
     expect(done.status).toBe(200);
-    expect(deleteEq).toHaveBeenCalledWith("id", "assoc-1");
+    expect(deleted()[0].argsOf("eq")).toEqual(["id", "assoc-1"]);
     vi.unstubAllEnvs();
   });
 });

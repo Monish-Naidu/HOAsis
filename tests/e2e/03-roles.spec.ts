@@ -200,7 +200,7 @@ test.describe("resident experience", () => {
     test.skip(!before, "no tab bar at this width");
 
     await page.evaluate(() => window.scrollTo(0, 600));
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => window.scrollY > 0);
     const after = await bar.boundingBox();
 
     expect(
@@ -217,9 +217,8 @@ test.describe("booking an amenity", () => {
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: /Booking|Reserve/i }).first().click();
-    await page.waitForTimeout(400);
     await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
-    await page.waitForTimeout(500);
+    await expect(page.locator("main").getByText(/\d+ (AM|PM)/).first()).toBeVisible();
 
     const health = await inspect(page);
     expect(health.crashed, "the slot picker crashed").toBe(false);
@@ -235,9 +234,8 @@ test.describe("booking an amenity", () => {
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: /Booking|Reserve/i }).first().click();
-    await page.waitForTimeout(400);
     await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
-    await page.waitForTimeout(500);
+    await expect(page.locator("main").getByText(/\d+ (AM|PM)/).first()).toBeVisible();
 
     // Every offered time is a button; a taken one is disabled rather than
     // absent, so the resident can see it exists and pick another day.
@@ -260,7 +258,7 @@ test.describe("the board sets the rules", () => {
     );
 
     await page.getByRole("button", { name: "Booking rules" }).first().click();
-    await page.waitForTimeout(400);
+    await expect(page.getByText("How long is one booking")).toBeVisible();
     const opened = await inspect(page);
     expect(opened.text, "the controls never appeared").toContain("How long is one booking");
     expect(opened.text, "the per home cap is missing").toContain("Bookings per home, per day");

@@ -14,36 +14,16 @@
  * Runs against the real project. It creates data and deletes it after.
  */
 
-import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { createHarness } from "./lib/harness.mjs";
 
-const env = Object.fromEntries(
-  readFileSync(new URL(process.env.ENV_FILE ?? "../.env.local", import.meta.url), "utf8")
-    .split("\n")
-    .filter((line) => line && !line.startsWith("#"))
-    .map((line) => {
-      const at = line.indexOf("=");
-      return [line.slice(0, at), line.slice(at + 1).replace(/^"|"$/g, "")];
-    }),
-);
-
-const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
+const {
+  admin, anon, stamp, check, cleanup, makeUser, cleanupAll, report,
+} = createHarness({
+  passwordPrefix: "isolate-",
+  emailTag: "isolate",
+  swallowUserDeleteErrors: false,
 });
-const anon = () =>
-  createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
-
-const stamp = Date.now();
-const PASSWORD = "isolate-" + Math.random().toString(36).slice(2) + "A1";
-const results = [];
-let failures = 0;
-const check = (name, passed, detail = "") => {
-  results.push({ name, passed, detail });
-  if (!passed) failures++;
-};
-const cleanup = { users: [], associations: [] };
 
 /* ------------------------------------------------------- what to look at */
 
@@ -66,22 +46,6 @@ function scopedRelations() {
 }
 
 /* ----------------------------------------------------------------- setup */
-
-async function makeUser(who) {
-  const email = `${who}-isolate-${stamp}@example.com`;
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password: PASSWORD,
-    email_confirm: true,
-    user_metadata: { full_name: who },
-  });
-  if (error) throw new Error(`${who}: ${error.message}`);
-  cleanup.users.push(data.user.id);
-  const client = anon();
-  const { error: e2 } = await client.auth.signInWithPassword({ email, password: PASSWORD });
-  if (e2) throw new Error(`sign in ${who}: ${e2.message}`);
-  return { client, id: data.user.id, email };
-}
 
 async function found(president, name) {
   const { data, error } = await president.client.rpc("create_association", {
@@ -213,20 +177,13 @@ try {
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
-  for (const id of cleanup.associations) {
-    // A cleanup that fails leaves this association in the live project,
-    // where the dues cron goes on billing it. So it fails the run.
-    const { error } = await admin.from("associations").delete().eq("id", id);
-    if (error) check("cleanup removed the association", false, error.message);
-  }
-  for (const id of cleanup.users) await admin.auth.admin.deleteUser(id);
+  await cleanupAll();
 }
 
 /* ---------------------------------------------------------------- report */
 
-for (const r of results) {
-  if (!r.passed) console.log(`  ✗ ${r.name}${r.detail ? `  (${r.detail})` : ""}`);
-}
-const passed = results.length - failures;
-console.log(`\nisolation: ${passed}/${results.length} checks passed${failures ? `, ${failures} FAILED` : ""}`);
-process.exit(failures ? 1 : 0);
+report({
+  line: (r) => (r.passed ? null : `  ✗ ${r.name}${r.detail ? `  (${r.detail})` : ""}`),
+  summary: ({ passed, total, failures }) =>
+    `\nisolation: ${passed}/${total} checks passed${failures ? `, ${failures} FAILED` : ""}`,
+});

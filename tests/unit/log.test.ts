@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 import {
   errorBody,
   isRequestId,
@@ -22,12 +23,13 @@ import { isPlatformOwner, platformOwnerEmails } from "@/lib/platform-owner";
  */
 
 // shapeAppError is pure; the module also exports the writer, which needs a
-// database this suite does not have.
-vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: () => {
-    throw new Error("no database in unit tests");
-  },
-}));
+// database this suite does not have. The client is only read inside the
+// factory's function, so the static imports above can load before `fake`
+// exists, and a suite that reaches for the database shows up in its calls.
+const fake = createFakeSupabase();
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
+
+afterAll(() => expect(fake.calls).toEqual([]));
 
 afterEach(() => setLogSink(null));
 

@@ -246,7 +246,10 @@ export async function openTab(page: Page, prefix: string, label: string) {
     .filter({ hasText: new RegExp(`^${label}`) })
     .locator("visible=true")
     .first();
+  const href = await link.getAttribute("href");
   await link.click();
+  // The URL is the signal the navigation landed; networkidle then covers the
+  // data the new screen fetches.
+  if (href) await page.waitForURL((url) => url.pathname + url.search === href || url.pathname === href);
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(250);
 }

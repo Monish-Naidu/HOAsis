@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 
 /**
  * The board notice route, with the sender faked. What is tested is the
@@ -19,18 +20,12 @@ vi.mock("@/lib/app-errors", () => ({ recordAppError }));
 let holds: string[] = [];
 let signedIn = true;
 
-vi.mock("@/lib/supabase/server", () => ({
-  supabaseServer: async () => ({
-    auth: { getUser: async () => ({ data: { user: signedIn ? { id: "profile-board" } : null } }) },
-    rpc: async (_name: string, args: { needed: string }) => ({ data: holds.includes(args.needed) }),
-    from: () => {
-      const chain: Record<string, unknown> = {};
-      for (const step of ["select", "eq", "is", "limit"]) chain[step] = () => chain;
-      chain.maybeSingle = async () => ({ data: { full_name: "Dana Whitfield" } });
-      return chain;
-    },
-  }),
-}));
+const fake = createFakeSupabase({
+  "auth.getUser": () => ({ data: { user: signedIn ? { id: "profile-board" } : null } }),
+  rpc: (call) => ({ data: holds.includes((call.args[1] as { needed: string }).needed) }),
+  memberships: { data: { full_name: "Dana Whitfield" } },
+});
+vi.mock("@/lib/supabase/server", () => ({ supabaseServer: async () => fake.client }));
 
 const { POST } = await import("@/app/api/email/notify/route");
 
@@ -46,6 +41,7 @@ const NOTHING = { sent: 0, failed: 0, skipped: 0, already: 0, remaining: 0 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fake.reset();
   holds = ["communications"];
   signedIn = true;
 });

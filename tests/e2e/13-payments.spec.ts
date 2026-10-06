@@ -48,13 +48,24 @@ async function signInLink(baseURL: string, next: string): Promise<string> {
 }
 
 async function frameWith(page: Page, selector: string, tries = 20): Promise<Frame> {
-  for (let i = 0; i < tries; i++) {
-    for (const f of page.frames()) {
-      if (await f.locator(selector).count().catch(() => 0)) return f;
-    }
-    await page.waitForTimeout(1000);
-  }
-  throw new Error(`No frame holds ${selector}`);
+  // Stripe mounts its fields in an iframe a beat after the page, so poll for
+  // the frame rather than sleeping between looks.
+  let found: Frame | undefined;
+  await expect
+    .poll(
+      async () => {
+        for (const f of page.frames()) {
+          if (await f.locator(selector).count().catch(() => 0)) {
+            found = f;
+            return true;
+          }
+        }
+        return false;
+      },
+      { message: `No frame holds ${selector}`, timeout: tries * 1000, intervals: [250, 500, 1000] },
+    )
+    .toBe(true);
+  return found as Frame;
 }
 
 async function fillCard(page: Page) {

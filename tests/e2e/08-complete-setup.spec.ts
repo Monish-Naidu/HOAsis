@@ -42,11 +42,15 @@ async function found(page: Page, name: string, property: Kind) {
   // because that is a Supabase row per run; looking around is the labelled
   // way past it and ends in a browser only copy.
   await page.getByRole("button", { name: "Look around first" }).click();
-  await page.waitForTimeout(300);
+  await expect(page.getByText(/^Step 2 of \d+/)).toBeVisible();
 
   const next = async () => {
+    // The question slides out before the next mounts, with no DOM signal of its
+    // own, so wait for the "Step N of M" counter to change.
+    const counter = page.getByText(/^Step \d+ of \d+/);
+    const before = await counter.textContent();
     await page.getByRole("button", { name: /^Continue/ }).click();
-    await page.waitForTimeout(400);
+    await expect(counter).not.toHaveText(before ?? "");
   };
 
   await page.getByLabel(/Association name/i).fill(name);
@@ -71,7 +75,6 @@ async function found(page: Page, name: string, property: Kind) {
   await next();
   await page.getByLabel("Phase 1 first lot").fill("1");
   await page.getByLabel("Phase 1 last lot").fill("3");
-  await page.waitForTimeout(400);
 
   // One lot has sold. The other two are the builder's, which is the ordinary
   // state of a community that is still being built.
@@ -79,14 +82,14 @@ async function found(page: Page, name: string, property: Kind) {
   await page.getByLabel(/^(Buyer for|Owner of) /).fill("Marcus Bell");
   await page.getByLabel(/^Email for /).fill("marcus@example.com");
   await page.getByRole("button", { name: "Save" }).click();
-  await page.waitForTimeout(300);
+  await expect(page.getByLabel(/^Email for /)).toBeHidden();
   await next();
 
   // When billing starts, taken as offered. The last question; its button
   // founds the association. The look-around copy takes no payments, so the
   // plan's payments step is not available in it and is not counted.
   await page.getByRole("button", { name: "Create the association" }).click();
-  await page.waitForTimeout(1200);
+  await page.waitForURL("**/start/plan");
 }
 
 /** Uploads a document with the given name, which several tasks key off. */
@@ -100,7 +103,7 @@ async function uploadDoc(page: Page, fileName: string) {
     mimeType: "application/pdf",
     buffer: Buffer.from("pdf"),
   });
-  await page.waitForTimeout(600);
+  await expect(page.getByText(fileName).first()).toBeVisible();
 }
 
 async function completeEverything(page: Page, property: Kind) {
@@ -108,17 +111,17 @@ async function completeEverything(page: Page, property: Kind) {
   await page.goto("/start/plan?task=ein");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "We already have an EIN" }).click();
-  await page.waitForTimeout(400);
+  await expect(page.getByRole("button", { name: "We already have an EIN" })).toBeHidden();
   await page.goto("/start/plan?task=register");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "It is registered" }).click();
-  await page.waitForTimeout(400);
+  await expect(page.getByRole("button", { name: "It is registered" })).toBeHidden();
   // And the two things only a builder standing it up has to do.
   for (const task of ["unsold", "builder-reserves"]) {
     await page.goto(`/start/plan?task=${task}`);
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.waitForTimeout(400);
+    await expect(page.getByRole("button", { name: "Done", exact: true })).toBeHidden();
   }
 
   // Governing documents, plus the two attached housing tasks that key off a
@@ -141,7 +144,7 @@ async function completeEverything(page: Page, property: Kind) {
   await page.getByLabel("Component name").fill("Clubhouse roof");
   await page.getByLabel("Replacement cost").fill("42000");
   await page.getByRole("button", { name: "Add component" }).click();
-  await page.waitForTimeout(500);
+  await expect(page.getByText("Clubhouse roof").first()).toBeVisible();
 
   // Settings: insurance, an officer, an amenity, a photograph.
   await page.goto("/board/settings");
@@ -154,36 +157,40 @@ async function completeEverything(page: Page, property: Kind) {
   await which.selectOption(marcus ?? "");
   await page.getByLabel("Role").selectOption("treasurer");
   await page.locator("form", { has: which }).getByRole("button", { name: /^Add$/ }).click();
-  await page.waitForTimeout(400);
+  await expect(which).toBeHidden();
 
   await page.getByPlaceholder("Add an amenity").fill("Clubhouse");
   await page.getByRole("button", { name: /^Add$/ }).click();
-  await page.waitForTimeout(400);
+  await expect(page.getByText("Clubhouse", { exact: true }).first()).toBeVisible();
 
   await page.locator('input[accept*="image"]').first().setInputFiles({
     name: "cover.jpg",
     mimeType: "image/jpeg",
     buffer: Buffer.from("jpg"),
   });
-  await page.waitForTimeout(500);
+  await expect(page.getByRole("img", { name: "Current community photo" })).toBeVisible();
 
   // Insurance last, so nothing else on this page re-renders over it.
   await page.goto("/board/settings");
   await page.waitForLoadState("networkidle");
   await page.getByLabel("Insurance carrier").fill("Farmers Insurance");
   await page.getByLabel("Insurance carrier").blur();
-  await page.waitForTimeout(600);
+  // Nothing on the page confirms a commit, and the next step reloads, so wait
+  // for the value to reach the saved copy.
+  await page.waitForFunction(() =>
+    Object.keys(localStorage).some((k) => localStorage.getItem(k)?.includes("Farmers Insurance")),
+  );
 
   // Vendors.
   await page.goto("/board/vendors");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Add vendor" }).click();
-  await page.waitForTimeout(300);
   await page.getByPlaceholder("Company or person you pay").fill("Bellevue Lawn");
   await page.getByPlaceholder("Grounds and irrigation").fill("Grounds");
   await page.getByLabel("What they do for you").selectOption("Landscaping");
   await page.getByRole("button", { name: "Save vendor" }).click();
-  await page.waitForTimeout(600);
+  // One copy of the row is hidden by CSS at this width, so ask for a visible one.
+  await expect(page.getByText("Bellevue Lawn").locator("visible=true").first()).toBeVisible();
 }
 
 for (const property of ["Detached homes", "Townhomes", "Condominiums"] as const) {

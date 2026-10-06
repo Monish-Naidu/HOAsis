@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 import type { Pacer } from "@/lib/email/pace";
 
 /**
@@ -35,30 +36,27 @@ let announcement: { title: string; body: string } | null = null;
 /** Why email_log refuses a write, when it does. `throws` is the network giving out instead. */
 let logFails: { message: string; throws?: boolean } | null = null;
 
-function table(name: string) {
-  const chain: Record<string, unknown> = {};
-  for (const step of ["select", "eq", "is", "gte", "order"]) chain[step] = () => chain;
+const fake = createFakeSupabase({
+  rpc: () => ({ data: recipients, error: null }),
+  associations: { data: { name: "Maple Court HOA", join_code: "MAPLE1" } },
+  announcements: () => ({ data: announcement }),
   // The repeat guard reads email_log a page at a time.
-  chain.range = async (from: number, to: number) => ({ data: logged.slice(from, to + 1), error: null });
-  chain.single = async () => ({ data: name === "associations" ? { name: "Maple Court HOA", join_code: "MAPLE1" } : null });
-  chain.maybeSingle = async () => ({ data: name === "announcements" ? announcement : null });
-  chain.insert = async (row: (typeof inserted)[number]) => {
+  "email_log.select": (call) => {
+    const [from, to] = call.argsOf("range") as [number, number];
+    return { data: logged.slice(from, to + 1), error: null };
+  },
+  "email_log.insert": (call) => {
+    const row = call.argsOf("insert")![0] as (typeof inserted)[number];
     if (logFails?.throws) throw new Error(logFails.message);
     if (logFails) return { error: { message: logFails.message } };
     inserted.push(row);
     // A send that went is what the next call's repeat guard reads back.
     if (!row.error) logged.push({ to_email: row.to_email, subject: row.subject, unit_id: row.unit_id });
     return { error: null };
-  };
-  return chain;
-}
+  },
+});
 
-vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: () => ({
-    rpc: async () => ({ data: recipients, error: null }),
-    from: (name: string) => table(name),
-  }),
-}));
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
 
 const { sendDuesEmails } = await import("@/lib/email/send");
 const { sendNotification } = await import("@/lib/email/notify");
@@ -98,6 +96,7 @@ const run = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fake.reset();
   recipients = owners(5);
   logged = [];
   inserted.length = 0;

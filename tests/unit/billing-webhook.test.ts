@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 import Stripe from "stripe";
 
 /**
@@ -12,28 +13,14 @@ const SECRET = "whsec_billing_test";
 process.env.STRIPE_SECRET_KEY = "sk_test_unit";
 process.env.STRIPE_BILLING_WEBHOOK_SECRET = SECRET;
 
-const writes: { table: string; values: Record<string, unknown>; filters: unknown[][] }[] = [];
+// The lookup by customer is the only read; every update answers success.
+const fake = createFakeSupabase({ "associations.select": { data: { id: "assoc-by-customer" } } });
 
-function chain(table: string, values: Record<string, unknown>) {
-  const entry = { table, values, filters: [] as unknown[][] };
-  writes.push(entry);
-  const self: Record<string, unknown> = {};
-  for (const op of ["eq", "is", "not", "in"]) {
-    self[op] = (...args: unknown[]) => {
-      entry.filters.push([op, ...args]);
-      return self;
-    };
-  }
-  self.then = (resolve: (v: unknown) => void) => resolve({ error: null });
-  return self;
-}
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
 
-const from = vi.fn((table: string) => ({
-  update: (values: Record<string, unknown>) => chain(table, values),
-  select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: "assoc-by-customer" } }) }) }),
-}));
-
-vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => ({ from }) }));
+/** Each update as the table, the values set and the filters that picked the row. */
+const writes = () =>
+  fake.writes().map((call) => ({ table: call.target, values: call.argsOf("update")![0] as Record<string, unknown>, filters: call.chain }));
 
 const { POST } = await import("@/app/api/billing/webhook/route");
 const signer = new Stripe("sk_test_unit");
@@ -61,7 +48,7 @@ function subscription(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  writes.length = 0;
+  fake.reset();
 });
 
 describe("billing webhook", () => {
@@ -74,7 +61,7 @@ describe("billing webhook", () => {
       }) as never,
     );
     expect(response.status).toBe(400);
-    expect(writes).toHaveLength(0);
+    expect(writes()).toHaveLength(0);
   });
 
   it("records a new trialing subscription against the association in its metadata", async () => {
@@ -82,60 +69,60 @@ describe("billing webhook", () => {
       signed({ id: "evt_1", type: "customer.subscription.created", data: { object: subscription() } }) as never,
     );
     expect(response.status).toBe(200);
-    expect(writes).toHaveLength(1);
-    expect(writes[0].table).toBe("associations");
-    expect(writes[0].values).toMatchObject({
+    expect(writes()).toHaveLength(1);
+    expect(writes()[0].table).toBe("associations");
+    expect(writes()[0].values).toMatchObject({
       billing_subscription_id: "sub_1",
       billing_customer_id: "cus_1",
       subscription_status: "trialing",
       past_due_since: null,
     });
-    expect(writes[0].filters).toContainEqual(["eq", "id", "assoc-1"]);
+    expect(writes()[0].filters).toContainEqual(["eq", "id", "assoc-1"]);
   });
 
   it("moves to active when Stripe does", async () => {
     await POST(
       signed({ id: "evt_2", type: "customer.subscription.updated", data: { object: subscription({ status: "active" }) } }) as never,
     );
-    expect(writes[0].values).toMatchObject({ subscription_status: "active", billing_subscription_id: "sub_1" });
+    expect(writes()[0].values).toMatchObject({ subscription_status: "active", billing_subscription_id: "sub_1" });
   });
 
   it("clears the card and marks canceled when the subscription is deleted", async () => {
     await POST(
       signed({ id: "evt_3", type: "customer.subscription.deleted", data: { object: subscription({ status: "canceled" }) } }) as never,
     );
-    expect(writes[0].values).toMatchObject({
+    expect(writes()[0].values).toMatchObject({
       subscription_status: "canceled",
       billing_subscription_id: null,
       billing_brand: null,
       billing_last4: null,
     });
-    expect(writes[0].values.canceled_at).toBeTruthy();
+    expect(writes()[0].values.canceled_at).toBeTruthy();
   });
 
   it("finds the association by customer when metadata is missing", async () => {
     await POST(
       signed({ id: "evt_4", type: "customer.subscription.updated", data: { object: subscription({ metadata: {} }) } }) as never,
     );
-    expect(writes[0].filters).toContainEqual(["eq", "id", "assoc-by-customer"]);
+    expect(writes()[0].filters).toContainEqual(["eq", "id", "assoc-by-customer"]);
   });
 
   it("marks past due on a failed invoice, keyed by customer, only once", async () => {
     await POST(
       signed({ id: "evt_5", type: "invoice.payment_failed", data: { object: { id: "in_1", object: "invoice", customer: "cus_1" } } }) as never,
     );
-    expect(writes[0].values).toMatchObject({ subscription_status: "past_due" });
-    expect(writes[0].values.past_due_since).toBeTruthy();
-    expect(writes[0].filters).toContainEqual(["eq", "billing_customer_id", "cus_1"]);
-    expect(writes[0].filters).toContainEqual(["is", "past_due_since", null]);
+    expect(writes()[0].values).toMatchObject({ subscription_status: "past_due" });
+    expect(writes()[0].values.past_due_since).toBeTruthy();
+    expect(writes()[0].filters).toContainEqual(["eq", "billing_customer_id", "cus_1"]);
+    expect(writes()[0].filters).toContainEqual(["is", "past_due_since", null]);
   });
 
   it("returns to active on a paid invoice, but only for a row with a subscription", async () => {
     await POST(
       signed({ id: "evt_6", type: "invoice.paid", data: { object: { id: "in_2", object: "invoice", customer: "cus_1" } } }) as never,
     );
-    expect(writes[0].values).toEqual({ subscription_status: "active", past_due_since: null });
-    expect(writes[0].filters).toContainEqual(["not", "billing_subscription_id", "is", null]);
+    expect(writes()[0].values).toEqual({ subscription_status: "active", past_due_since: null });
+    expect(writes()[0].filters).toContainEqual(["not", "billing_subscription_id", "is", null]);
   });
 
   it("ignores events it does not handle", async () => {
@@ -143,6 +130,6 @@ describe("billing webhook", () => {
       signed({ id: "evt_7", type: "customer.created", data: { object: { id: "cus_9", object: "customer" } } }) as never,
     );
     expect(response.status).toBe(200);
-    expect(writes).toHaveLength(0);
+    expect(writes()).toHaveLength(0);
   });
 });

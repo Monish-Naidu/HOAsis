@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 
 /**
  * A board that stopped paying is passed over by the daily jobs (0105). The
@@ -12,27 +13,15 @@ vi.mock("next/server", async () => {
 });
 vi.mock("@/lib/cron-runs", () => ({ recordCronRun: vi.fn() }));
 
-const rpc = vi.fn(async () => ({ data: 0, error: null }));
-const writes: string[] = [];
-let tables: Record<string, unknown> = {};
-
-function chain(table: string) {
-  const answer = () => tables[table];
-  const result = (single: boolean) => {
-    const data = answer();
-    return { data: single && Array.isArray(data) ? data[0] ?? null : data, error: null };
-  };
-  const q: Record<string, unknown> = {};
-  for (const m of ["select", "eq", "neq", "is", "not", "in", "gt", "gte", "lte", "lt", "order", "limit"]) q[m] = () => q;
-  for (const m of ["insert", "update", "upsert", "delete"]) q[m] = () => { writes.push(`${table}.${m}`); return q; };
-  q.single = async () => result(true);
-  q.maybeSingle = async () => result(true);
-  q.then = (resolve: (v: unknown) => unknown) => resolve(result(false));
-  return q;
+const fake = createFakeSupabase({ rpc: { data: 0, error: null } });
+/** Answers each table with the rows a test names, the way the old map did. */
+function tables(rows: Record<string, unknown>) {
+  for (const [table, data] of Object.entries(rows)) fake.on(table, { data, error: null });
 }
-vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: () => ({ from: (t: string) => chain(t), rpc }),
-}));
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
+
+const rpcCalls = () => fake.calls.filter((call) => call.target.startsWith("rpc:"));
+const inserted = (table: string) => fake.callsTo(table).some((call) => call.has("insert"));
 
 const billing = (status: string) => ({
   subscription_status: status,
@@ -47,8 +36,7 @@ const request = (path: string) => {
 
 beforeEach(() => {
   process.env.CRON_SECRET = "secret";
-  rpc.mockClear();
-  writes.length = 0;
+  fake.reset();
 });
 
 describe("assessments run", () => {
@@ -58,27 +46,27 @@ describe("assessments run", () => {
   });
 
   it("bills nothing and adds no late fees for a cancelled association, and says why", async () => {
-    tables = { associations: [association("canceled")] };
+    tables({ associations: [association("canceled")] });
     const { GET } = await import("@/app/api/assessments/run/route");
     const body = await (await GET(request("/api/assessments/run"))).json();
-    expect(rpc).not.toHaveBeenCalled();
+    expect(rpcCalls()).toHaveLength(0);
     expect(body.quiet).toEqual(["Cedar HOA: skipped, the association's subscription is not paid"]);
   });
 
   it("still runs late fees for a paid association", async () => {
-    tables = { associations: [association("active")] };
+    tables({ associations: [association("active")] });
     const { GET } = await import("@/app/api/assessments/run/route");
     await GET(request("/api/assessments/run"));
-    expect(rpc).toHaveBeenCalledWith("assess_late_fees", expect.anything());
+    expect(fake.callsTo("rpc:assess_late_fees")[0].args).toEqual(["assess_late_fees", expect.anything()]);
   });
 });
 
 describe("bill emails", () => {
   it("sends nothing for a cancelled association, and says why", async () => {
-    tables = {
+    tables({
       associations: [{ id: "a1", name: "Cedar HOA", bills_by_email: true, ...billing("canceled") }],
       charges: [],
-    };
+    });
     const { GET } = await import("@/app/api/email/bills/route");
     const body = await (await GET(request("/api/email/bills"))).json();
     expect(body.mailed).toEqual([]);
@@ -94,11 +82,11 @@ describe("autopay run", () => {
   });
 
   it("charges nobody whose board is locked, and says why", async () => {
-    tables = { memberships: [member], associations: [association("canceled")], units: [{ label: "2" }], charges: [], autopay_runs: null, payments: [] };
+    tables({ memberships: [member], associations: [association("canceled")], units: [{ label: "2" }], charges: [], autopay_runs: null, payments: [] });
     const { GET } = await import("@/app/api/autopay/run/route");
     const body = await (await GET(request("/api/autopay/run"))).json();
     expect(body.charged).toEqual([]);
     expect(body.waiting).toEqual([expect.stringContaining("the association's subscription is not paid")]);
-    expect(writes).not.toContain("autopay_runs.insert");
+    expect(inserted("autopay_runs")).toBe(false);
   });
 });
