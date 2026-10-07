@@ -1,13 +1,18 @@
 "use client";
 
 import { AlertTriangle, Mail } from "lucide-react";
-import { Badge, ButtonLink, Card, CardHeader } from "@/components/ui/primitives";
+import { Badge, ButtonLink, Card, CardHeader, Segmented } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import {
   policyFor,
   collectionsLadder,
+  ladderFilterCounts,
+  LADDER_FILTERS,
+  matchesLadderFilter,
   type CollectionStage,
+  type LadderFilter,
 } from "@/lib/collections";
+import { useUrlFilter } from "@/lib/url-filter";
 import { formatDate, money, pluralize } from "@/lib/utils";
 import { useHomeLabel } from "@/components/app/use-home-label";
 
@@ -38,6 +43,13 @@ const TONE: Record<CollectionStage, "neutral" | "warn" | "danger"> = {
   counsel: "danger",
 };
 
+/** The chips' words: the rungs as the rows name them, then the autopay one. */
+const FILTER_LABEL: Record<LadderFilter, string> = {
+  all: "All",
+  ...STEP,
+  "autopay-failed": "Autopay failed",
+};
+
 /**
  * Who is behind, and what the policy says to do about each of them today.
  *
@@ -56,6 +68,12 @@ export function CollectionsLadder({
   const { community } = useAppState();
   const policy = policyFor(community.settings);
   const ladder = collectionsLadder(community, policy);
+  const [stage, setStage] = useUrlFilter<LadderFilter>("stage", LADDER_FILTERS, "all");
+  const counts = ladderFilterCounts(ladder.rows, autopayFailedUnits);
+  // A rung nobody is on is not a chip, except one a shared link asked for,
+  // which would otherwise land on a list with no way to read why it is empty.
+  const chips = LADDER_FILTERS.filter((f) => f === "all" || f === stage || counts[f] > 0);
+  const shown = ladder.rows.filter((r) => matchesLadderFilter(r, stage, autopayFailedUnits));
 
   if (ladder.rows.length === 0) {
     return (
@@ -89,8 +107,24 @@ export function CollectionsLadder({
         }
       />
 
+      {chips.length > 2 ? (
+        <div className="border-b border-border px-5 py-3">
+          <Segmented
+            label="Show homes at"
+            value={stage}
+            onChange={setStage}
+            options={chips.map((f) => ({ value: f, label: FILTER_LABEL[f], count: counts[f] }))}
+          />
+        </div>
+      ) : null}
+
       <div className="divide-y divide-border">
-        {ladder.rows.map((row) => (
+        {shown.length === 0 ? (
+          <p className="px-5 py-4 text-body text-fg-muted">
+            Nobody is at this step. Choose All to see every home that is past due.
+          </p>
+        ) : null}
+        {shown.map((row) => (
           <div key={row.owner.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3">
             {/* At least 12rem for the name and the step, so on a phone the
                 amount and the badge wrap under them rather than squeezing

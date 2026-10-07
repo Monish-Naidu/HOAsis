@@ -142,7 +142,7 @@ export function OverviewScreen() {
           value={String(needsReview.length)}
           tone={needsReview.length ? "warn" : undefined}
           hint={needsReview.length ? "Not counted in the totals until confirmed" : "Every transaction is confirmed"}
-          href="/board/money/transactions?status=needs-review"
+          href="/board/money/transactions?status=needs-review&period=this-year"
         />
         <StatTile
           label="Past due"
@@ -183,7 +183,7 @@ export function OverviewScreen() {
           <CardHeader
             title={`${pluralize(needsReview.length, "transaction")} ${needsReview.length === 1 ? "needs" : "need"} a decision`}
             subtitle="Confirm each transaction, or reverse it."
-            action={<SectionLink href="/board/money/transactions?status=needs-review">Open in Transactions</SectionLink>}
+            action={<SectionLink href="/board/money/transactions?status=needs-review&period=this-year">Open in Transactions</SectionLink>}
           />
           <ul className="divide-y divide-border">
             {needsReview.map((e) => (

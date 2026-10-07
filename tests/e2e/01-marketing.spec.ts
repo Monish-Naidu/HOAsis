@@ -68,10 +68,11 @@ test.describe("public site", () => {
     await expect(select).toBeVisible();
     const before = (await inspect(page)).text.length;
     await select.selectOption({ index: 2 });
-    await page.waitForTimeout(400);
-    expect((await inspect(page)).text.length, "the state filter changed nothing").not.toBe(
-      before,
-    );
+    await expect
+      .poll(async () => (await inspect(page)).text.length, {
+        message: "the state filter changed nothing",
+      })
+      .not.toBe(before);
 
     await select.selectOption({ index: 0 });
     await waitForHydration(page);
@@ -103,7 +104,7 @@ test.describe("public site", () => {
         localStorage.setItem("hoasis-theme", t);
       }, theme);
       await page.goto("/");
-      await page.waitForTimeout(300);
+      await page.waitForLoadState("networkidle");
 
       // A transparent body borrows the host's ground and can render one
       // theme's text on the other theme's background.

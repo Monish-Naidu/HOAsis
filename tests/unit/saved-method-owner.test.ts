@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 
 /**
@@ -32,29 +33,18 @@ describe("whose saved method it is", () => {
 
 process.env.STRIPE_SECRET_KEY = "sk_test_unit";
 
-const rows: Record<string, unknown> = {};
-/** Who holds the home today, as the service role would read it. */
-let holders: { data: { profile_id: string | null }[] | null; error: { message: string } | null };
-
-/** A query on one table: every filter chains, and the end answers the row. */
-function query(table: string) {
-  const chain: Record<string, unknown> = {};
-  for (const step of ["select", "eq", "is", "order"]) chain[step] = () => chain;
-  chain.single = async () => ({ data: rows[table] ?? null });
-  chain.maybeSingle = async () => ({ data: rows[table] ?? null });
-  return chain;
-}
+// The caller's own reads go through the user's client, and the membership
+// list through the service role, so each gets its own fake.
+const user = createFakeSupabase({
+  "auth.getUser": { data: { user: { id: "buyer", email: "buyer@example.com" } } },
+  rpc: { data: false },
+});
+const admin = createFakeSupabase();
 
 vi.mock("@/lib/supabase/server", () => ({
-  supabaseServer: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: "buyer", email: "buyer@example.com" } } }) },
-    rpc: async () => ({ data: false }),
-    from: (table: string) => query(table),
-  }),
+  supabaseServer: async () => user.client,
   // Only the membership list is read with the service role here.
-  supabaseAdmin: () => ({
-    from: () => ({ select: () => ({ eq: () => ({ is: async () => holders }) }) }),
-  }),
+  supabaseAdmin: () => admin.client,
 }));
 
 const payment = await import("@/app/api/stripe/payment-intent/route");
@@ -72,16 +62,16 @@ describe("paying with a saved method", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    rows.memberships = { id: "m-buyer" };
-    rows.associations = { stripe_account_id: "acct_a", dues_cents: 32500 };
-    rows.units = { association_id: "assoc-a", stripe_customer_id: "cus_7" };
-    rows.payment_instruments = {
-      unit_id: "unit-7",
-      profile_id: "seller",
-      kind: "ach",
-      detail: { token: "pm_seller_bank" },
-    };
-    holders = { data: [{ profile_id: "buyer" }], error: null };
+    user.reset();
+    admin.reset();
+    user.on("memberships", { data: { id: "m-buyer" } });
+    user.on("associations", { data: { stripe_account_id: "acct_a", dues_cents: 32500 } });
+    user.on("units", { data: { association_id: "assoc-a", stripe_customer_id: "cus_7" } });
+    user.on("payment_instruments", {
+      data: { unit_id: "unit-7", profile_id: "seller", kind: "ach", detail: { token: "pm_seller_bank" } },
+    });
+    // Who holds the home today, as the service role would read it.
+    admin.on("memberships", { data: [{ profile_id: "buyer" }], error: null });
   });
 
   it("refuses the seller's bank once the home has changed hands, before Stripe is asked", async () => {
@@ -93,7 +83,7 @@ describe("paying with a saved method", () => {
   });
 
   it("charges a method saved by somebody who still holds the home", async () => {
-    holders = { data: [{ profile_id: "buyer" }, { profile_id: "seller" }], error: null };
+    admin.on("memberships", { data: [{ profile_id: "buyer" }, { profile_id: "seller" }], error: null });
     const create = vi
       .spyOn(stripe().paymentIntents, "create")
       .mockResolvedValue({ id: "pi_1", client_secret: "secret" } as never);
@@ -106,7 +96,7 @@ describe("paying with a saved method", () => {
   });
 
   it("does not charge, or call the method a stranger's, when the members cannot be read", async () => {
-    holders = { data: null, error: { message: "fetch failed" } };
+    admin.on("memberships", { data: null, error: { message: "fetch failed" } });
     const create = vi.spyOn(stripe().paymentIntents, "create");
     const response = await payment.POST(pay(body));
     expect(response.status).toBe(500);

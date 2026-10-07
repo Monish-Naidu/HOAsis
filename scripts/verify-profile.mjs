@@ -5,24 +5,14 @@
  * board got the generic plan. That is the one outcome the questions exist to
  * prevent, and it only happened for signed in users, which is everybody real.
  */
-import { createClient } from "@supabase/supabase-js";
-import { loadEnv } from "./env.mjs";
+import { createHarness } from "./lib/harness.mjs";
 
-const env = loadEnv();
-const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
+const {
+  admin, anon, stamp, PASSWORD, check, cleanup, cleanupAll, report,
+} = createHarness({
+  passwordPrefix: "profile-",
+  demotePresident: true,
 });
-const anon = () =>
-  createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
-
-const stamp = Date.now();
-const PASSWORD = "profile-" + Math.random().toString(36).slice(2) + "A1";
-const results = [];
-let failures = 0;
-const check = (n, p, d = "") => { results.push({ n, p, d }); if (!p) failures++; };
-const cleanup = { users: [], associations: [] };
 
 try {
   const email = `founder-${stamp}@example.com`;
@@ -80,17 +70,7 @@ try {
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
-  for (const id of cleanup.associations) {
-    await admin.from("memberships").update({ role: "resident" })
-      .eq("association_id", id).eq("role", "president");
-    // A cleanup that fails leaves this association in the live project,
-    // where the dues cron goes on billing it. So it fails the run.
-    const { error } = await admin.from("associations").delete().eq("id", id);
-    if (error) check("cleanup removed the association", false, error.message);
-  }
-  for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
+  await cleanupAll();
 }
 
-for (const r of results) console.log(`${r.p ? "  ok  " : "FAIL  "}${r.n}${r.d ? `  (${r.d})` : ""}`);
-console.log(`\n${results.length - failures}/${results.length} passed`);
-process.exit(failures ? 1 : 0);
+report();

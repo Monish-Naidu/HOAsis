@@ -666,7 +666,7 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
 function screenName(href: string): string {
   const names: Record<string, string> = {
     "/board/homeowners": "Homeowners",
-    "/board/homeowners/opening-balances": "Opening balances",
+    "/board/homeowners/opening-balances": "Starting balances",
     "/board/money": "Finances",
     "/board/documents": "Documents",
     "/board/settings": "Settings",
@@ -916,7 +916,7 @@ function VendorInline({ task }: { task: PlanTask }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Cascade Grounds Co."
+          placeholder="Company or person you pay"
           aria-label="Vendor name"
           onKeyDown={(e) => e.key === "Enter" && save()}
           className={field}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronRight, Gavel, Plus } from "lucide-react";
 import { Badge, ButtonLink, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
 import { bucketRequests, useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
-import { kindLabel, statusLabel, statusTone } from "@/lib/request-status";
+import { kindLabel, requestStatusLabel, requestStatusTone } from "@/lib/request-status";
 import { formatDate, pluralize, relativeDays } from "@/lib/utils";
 import { openNoticesForHome } from "@/lib/resident-wording";
 
@@ -145,7 +145,7 @@ function RequestRow({
           {request.reference} · {formatDate(request.submittedDate)}
         </p>
       </div>
-      <Badge tone={statusTone[request.status]}>{statusLabel[request.status]}</Badge>
+      <Badge tone={requestStatusTone(request)}>{requestStatusLabel(request)}</Badge>
       <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
     </Link>
   );

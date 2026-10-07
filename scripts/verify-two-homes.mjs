@@ -9,34 +9,15 @@
  * Autopay is set for one home and must leave the other alone. Pure Supabase;
  * cleaned up at the end.
  */
-import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { createHarness, day } from "./lib/harness.mjs";
 
-const env = Object.fromEntries(
-  readFileSync(new URL(process.env.ENV_FILE ?? "../.env.local", import.meta.url), "utf8")
-    .split("\n").filter((l) => l && !l.startsWith("#"))
-    .map((l) => { const i = l.indexOf("="); return [l.slice(0, i), l.slice(i + 1)]; }),
-);
-const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const anon = () => createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
-
-const stamp = Date.now();
-const PASSWORD = "twohomes-" + Math.random().toString(36).slice(2) + "A1";
-const results = []; let failures = 0;
-const check = (n, p, d = "") => { results.push({ n, p, d }); if (!p) failures++; };
-const cleanup = { users: [], associations: [] };
-const day = (o) => { const d = new Date(); d.setUTCDate(d.getUTCDate() + o); return d.toISOString().slice(0, 10); };
-
-async function makeUser(who, email = `${who}-twohomes-${stamp}@example.com`) {
-  const { data, error } = await admin.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: who } });
-  if (error) throw new Error(`${who}: ${error.message}`);
-  cleanup.users.push(data.user.id);
-  const client = anon();
-  const { error: e2 } = await client.auth.signInWithPassword({ email, password: PASSWORD });
-  if (e2) throw new Error(`sign in ${who}: ${e2.message}`);
-  const { data: claimed } = await client.rpc("claim_my_seats");
-  return { client, id: data.user.id, email, claimed };
-}
+const {
+  admin, stamp, check, makeUser, cleanup, cleanupAll, report,
+} = createHarness({
+  passwordPrefix: "twohomes-",
+  emailTag: "twohomes",
+  claimSeats: true,
+});
 
 try {
   const ownerEmail = `owner-twohomes-${stamp}@example.com`;
@@ -133,15 +114,7 @@ try {
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
-  for (const id of cleanup.associations) {
-    // A cleanup that fails leaves this association in the live project,
-    // where the dues cron goes on billing it. So it fails the run.
-    const { error } = await admin.from("associations").delete().eq("id", id);
-    if (error) check("cleanup removed the association", false, error.message);
-  }
-  for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
+  await cleanupAll();
 }
 
-for (const r of results) console.log(`${r.p ? "  ok  " : "FAIL  "}${r.n}${r.d ? `  (${r.d})` : ""}`);
-console.log(`\n${results.length - failures}/${results.length} passed`);
-process.exit(failures ? 1 : 0);
+report();

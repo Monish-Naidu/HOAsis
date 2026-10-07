@@ -18,16 +18,37 @@ import {
 import { Callout, Card, CardHeader, IconTile, Stat, type TintName } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
-import { cashPosition, delinquency, duesCollection, insuranceExposure, lateFeesOwed, unsentDuesBill, vendorDecisions } from "@/lib/metrics";
+import {
+  cashPosition,
+  dashboardFirstSteps,
+  delinquency,
+  duesCollection,
+  duesPace,
+  duesPaceLines,
+  insuranceExposure,
+  meetingStatus,
+  nextMeeting as nextMeetingOf,
+  pastDueLine,
+  reserveLine,
+  runwayLine,
+  thisMonthLine,
+  unsentDuesBill,
+  vendorDecisions,
+} from "@/lib/metrics";
+import { collectionsLadder, policyFor } from "@/lib/collections";
 import { SectionLink } from "@/components/app/finance-ui";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
-import { buildPlan, profileFromCommunity } from "@/lib/setup-plan";
-import { mayOpen } from "@/lib/board-routes";
-import { daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { boardModuleFor, mayOpen } from "@/lib/board-routes";
+import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
- * The board dashboard: four numbers, then what is waiting on a decision.
+ * The board dashboard: four questions, then what is waiting on a decision.
+ *
+ * Is the money OK, who owes, are dues coming in, what is coming up. Each card
+ * answers in one number, says what that number means in a line, and names the
+ * page that has the rest. 2026-10-06: written for somebody who has never run
+ * an HOA, so a card says "2.6 months of running costs" and not just a balance.
  *
  * It started as the 2026-09-01 design almost exactly
  * (docs/design/dash-2026-09-01), and the 2026-09-24 board pass took three
@@ -39,7 +60,7 @@ import { daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib
  */
 
 export default function BoardDashboard() {
-  const { community, can, dismissedSetupTasks } = useAppState();
+  const { community, can } = useAppState();
   // The plan counts things only the finance and settings holders can see,
   // so anybody else would be told a finished setup was two steps short.
   const seesSetup = mayOpen("/board/setup", can);
@@ -50,7 +71,6 @@ export default function BoardDashboard() {
     community.requests.length > 0 ||
     community.ballots.length > 0 ||
     community.payouts.length > 0;
-  const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   const exposure = insuranceExposure(community);
 
   return (
@@ -60,58 +80,74 @@ export default function BoardDashboard() {
           rail row says "Dashboard"; a heading that repeated all three was
           the same redundancy as the white bar that came off on 2026-09-21. */}
 
-      {/* An association with no transactions, no requests and no ballots has
-          nothing to run, so a dashboard of zeroes and empty cards tells them
-          nothing and looks broken. The setup plan is the page for them. */}
-      {!running ? (
-        <>
-          {seesSetup ? <SetupPlanSummary /> : null}
-          <Card className="p-6">
-            <p className="text-headline font-semibold tracking-[-0.015em] text-fg">
-              Nothing to run yet
-            </p>
-            <p className="mt-1.5 max-w-[60ch] text-body leading-relaxed text-fg-muted">
-              Once dues are billed, a payment lands, or an owner asks for something, it shows up
-              here.{plan.allDone ? "" : " The list above is the way to get there."}
-            </p>
-          </Card>
-        </>
-      ) : (
-        <>
-          <StatTiles />
+      {/* An association with nothing to run yet leads with the setup list,
+          the page for them. The cards below still show, each saying what to
+          do first, so the dashboard is never a wall of zeroes that looks
+          broken and never an empty page. */}
+      {!running && seesSetup ? <SetupPlanSummary /> : null}
 
-          {/* The one finding on Finances that a president should not have
-              to click through to see. Money above the insured limit is a
-              decision, not a report. */}
-          {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
-            <Callout
-              tone="warn"
-              className="mt-6"
-              icon={<ShieldAlert className="size-4" />}
-              title={`${money(exposure.totalUninsured, { cents: false })} is over the insured limit`}
-              action={<SectionLink href="/board/money">See where</SectionLink>}
-            >
-              {exposure.rows
-                .filter((row) => row.uninsured > 0)
-                .map((row) => `${row.institution} holds ${money(row.balance, { cents: false })} against a ${money(row.limit, { cents: false })} limit.`)
-                .join(" ")}
-            </Callout>
-          ) : null}
+      <div className={running || !seesSetup ? undefined : "mt-6"}>
+        <StatTiles />
+      </div>
 
-          <NeedsYou />
+      <ThisMonth />
 
-          {/* One line while setup is unfinished, pointing at the list, which
-              lives on its own page. Below the work, because once dues are
-              moving the work is what a director opens this for. */}
-          {seesSetup ? (
-            <div className="mt-6">
-              <SetupPlanSummary />
-            </div>
-          ) : null}
-        </>
-      )}
+      {/* The one finding on Finances that a president should not have
+          to click through to see. Money above the insured limit is a
+          decision, not a report. */}
+      {moduleOn("deposit-insurance") && exposure.totalUninsured > 0 ? (
+        <Callout
+          tone="warn"
+          className="mt-6"
+          icon={<ShieldAlert className="size-4" />}
+          title={`${money(exposure.totalUninsured, { cents: false })} is over the insured limit`}
+          action={<SectionLink href="/board/money">See where</SectionLink>}
+        >
+          {exposure.rows
+            .filter((row) => row.uninsured > 0)
+            .map((row) => `${row.institution} holds ${money(row.balance, { cents: false })} against a ${money(row.limit, { cents: false })} limit.`)
+            .join(" ")}
+        </Callout>
+      ) : null}
+
+      <NeedsYou />
+
+      {/* One line while setup is unfinished, pointing at the list, which
+          lives on its own page. Below the work, because once dues are
+          moving the work is what a director opens this for. */}
+      {running && seesSetup ? (
+        <div className="mt-6">
+          <SetupPlanSummary />
+        </div>
+      ) : null}
     </>
   );
+}
+
+/**
+ * Whether a link on this page goes somewhere this seat may open and the
+ * launch scope has switched on. A tile that leads to "not switched on yet"
+ * is worse than a tile with no link.
+ */
+function useCanLink() {
+  const { sees } = useAppState();
+  return (href: string) => mayOpen(href, sees) && moduleOn(boardModuleFor(href.split(/[?#]/)[0]));
+}
+
+/* -------------------------------------------------------------- this month */
+
+/**
+ * One sentence about the month in progress, built from the books by
+ * `thisMonthLine`: what was billed, what is in, how many homes pay by
+ * themselves and when the reminders start. Money, so only for those who can
+ * read the books.
+ */
+function ThisMonth() {
+  const { community, sees } = useAppState();
+  if (!mayOpen("/board/money", sees)) return null;
+  const line = thisMonthLine(community);
+  if (!line) return null;
+  return <p className="mt-4 max-w-[80ch] text-body leading-relaxed text-fg-muted">{line}</p>;
 }
 
 /* --------------------------------------------------------------- needs you */
@@ -126,7 +162,7 @@ export default function BoardDashboard() {
  * six zeroes.
  */
 function NeedsYou() {
-  const { community, requests, sees } = useAppState();
+  const { community, requests } = useAppState();
   const recon = useReconciliation();
   const vendors = vendorDecisions(community);
   const openRequests = requests.filter(
@@ -136,9 +172,13 @@ function NeedsYou() {
   const saysFixed = community.violations.filter(
     (v) => v.stage !== "cured" && Boolean(v.ownerFixedDate),
   );
+  // The next meeting's missing notice is a button on its own card, so it is
+  // not a row here as well; any other meeting soon without one still is.
+  const upcoming = nextMeetingOf(community);
   const unnoticed = community.meetings.filter(
     (m) =>
       m.status === "scheduled" &&
+      m.id !== upcoming?.id &&
       !m.noticeSentDate &&
       daysFromToday(m.date) >= 0 &&
       daysFromToday(m.date) <= 60,
@@ -151,6 +191,8 @@ function NeedsYou() {
   // Each row wears the tint of the tab it opens, so the eye learns "teal is
   // money, blue is requests" here and finds the same colour on the tab.
   type NeedRow = { count: number; label: string; href: string; icon: typeof Landmark; tint: TintName; whole?: boolean };
+  // In the order a board acts: money, then people, then requests, then the
+  // board's own loose ends. Each says what to do, not what is the matter.
   const all: NeedRow[] = [
     {
       // Only for a board that turned the automatic bill email off. The label
@@ -165,20 +207,15 @@ function NeedsYou() {
     {
       count: recon.needsReview.length,
       label: pluralize(recon.needsReview.length, "transaction") + " to confirm",
-      href: "/board/money/transactions?status=needs-review",
+      // The oldest line waiting is rarely this month's, so the link asks for
+      // the whole year.
+      href: "/board/money/transactions?status=needs-review&period=this-year",
       icon: Landmark,
       tint: "teal",
     },
     {
-      count: openRequests.length,
-      label: pluralize(openRequests.length, "request") + " waiting on an answer",
-      href: "/board/requests",
-      icon: ClipboardCheck,
-      tint: "blue",
-    },
-    {
       count: vendors.count,
-      label: pluralize(vendors.count, "vendor payment") + " waiting on a signature",
+      label: pluralize(vendors.count, "vendor payment") + " to approve",
       href: "/board/vendors",
       icon: Receipt,
       tint: "amber",
@@ -191,8 +228,15 @@ function NeedsYou() {
       tint: "violet",
     },
     {
+      count: openRequests.length,
+      label: pluralize(openRequests.length, "request") + " to answer",
+      href: "/board/requests",
+      icon: ClipboardCheck,
+      tint: "blue",
+    },
+    {
       count: saysFixed.length,
-      label: pluralize(saysFixed.length, "notice") + " the owner says is fixed",
+      label: pluralize(saysFixed.length, "notice") + " to recheck, the owner says fixed",
       href: "/board/violations",
       icon: ShieldAlert,
       tint: "coral",
@@ -202,21 +246,22 @@ function NeedsYou() {
       // is set by statute. Quiet grey text on the Meetings page was the only
       // place it was said.
       count: unnoticed.length,
-      label: pluralize(unnoticed.length, "meeting") + " without notice to owners",
+      label: pluralize(unnoticed.length, "meeting") + " to send notice for",
       href: "/board/meetings",
       icon: Megaphone,
       tint: "amber",
     },
     {
       count: overdueItems.length,
-      label: pluralize(overdueItems.length, "action item") + " overdue",
+      label: pluralize(overdueItems.length, "board to-do", "board to-dos") + " overdue",
       href: "/board/meetings#action-items",
       icon: ListChecks,
       tint: "coral",
     },
   ];
   // Only what this seat can act on, so the count here is work they can do.
-  const rows = all.filter((row) => row.count > 0 && mayOpen(row.href, sees));
+  const canLink = useCanLink();
+  const rows = all.filter((row) => row.count > 0 && canLink(row.href));
 
   return (
     <Card className="mt-6">
@@ -267,13 +312,55 @@ function NeedsYou() {
 
 /* ------------------------------------------------------------------- tiles */
 
+type CardLink = { href: string; label: string };
+
 /**
- * Four numbers that are not already a row in Needs you: what is in the bank,
- * who is behind, how the year is collecting, and when the board next sits.
- * Each tile is the way into the page that has the rest.
+ * The line under a card's number and the way into the page behind it.
+ *
+ * The whole card is one link (the primary action, stretched over it by its
+ * own pseudo element), and a second action sits above that layer so it can
+ * be pressed on its own. Two anchors cannot nest, so `Stat` is not given an
+ * href here.
+ */
+function cardHint(lines: (string | null | undefined)[], primary: CardLink | null, secondary?: CardLink | null) {
+  return (
+    <>
+      {lines.filter(Boolean).map((line) => (
+        <span key={line} className="block">
+          {line}
+        </span>
+      ))}
+      {primary || secondary ? (
+        <span className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+          {primary ? (
+            <Link
+              href={primary.href}
+              className="font-semibold text-primary hover:underline after:absolute after:inset-0 after:content-['']"
+            >
+              {primary.label}
+            </Link>
+          ) : null}
+          {secondary ? (
+            <Link href={secondary.href} className="relative z-10 font-semibold text-primary hover:underline">
+              {secondary.label}
+            </Link>
+          ) : null}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+const LINKED = "press transition-colors hover:border-border-2 hover:bg-surface-2";
+
+/**
+ * Four questions a board asks on arrival: is the money OK, who owes, are
+ * dues coming in, and what is coming up. Each tile gives the number, what it
+ * means, and the page that has the rest. Needs you holds everything else.
  */
 function StatTiles() {
   const { community, sees } = useAppState();
+  const canLink = useCanLink();
   const seesMoney = mayOpen("/board/money", sees);
   const households = community.owners.filter((o) => !o.placeholder).length;
   const signedUp = community.owners.filter(
@@ -283,12 +370,14 @@ function StatTiles() {
   const delinq = delinquency(community);
   const thisYear = Number(todayIsoDate().slice(0, 4));
   const dues = duesCollection(community, thisYear);
-  const liveMeeting = community.meetings.find((m) => m.status === "live");
-  const nextMeeting =
-    liveMeeting ??
-    [...community.meetings]
-      .filter((m) => m.status === "scheduled" && daysFromToday(m.date) >= 0)
-      .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
+  const pace = duesPace(dues);
+  const first = dashboardFirstSteps(community);
+  const ladder = collectionsLadder(community, policyFor(community.settings));
+  const meeting = nextMeetingOf(community);
+  const live = meeting?.status === "live";
+  const status = meeting ? meetingStatus(meeting) : null;
+  const setup = canLink("/board/setup") ? { href: "/board/setup", label: "Open the setup list" } : null;
+  const to = (href: string, label: string): CardLink | null => (canLink(href) ? { href, label } : null);
 
   // Money tiles only for those who can read the books. Without the finances
   // capability the ledger comes back empty, and "$0, everyone is current"
@@ -300,67 +389,93 @@ function StatTiles() {
     <div className={`stagger grid gap-3 sm:gap-4 ${columns}`}>
       {seesMoney ? (
         <>
-      <Stat
-        icon={<Landmark className="size-4" />}
-        label="Cash on hand"
-        value={<CountUp cents={cash.operating} />}
-        hint="Operating account"
-        href="/board/money"
-      />
-      <Stat
-        icon={<Home className="size-4" />}
-        accent={delinq.past.length > 0 ? "amber" : undefined}
-        label="Past due"
-        value={<CountUp kind="number" value={delinq.past.length} />}
-        tone={delinq.past.length > 0 ? "warn" : "neutral"}
-        hint={
-          delinq.past.length > 0
-            ? `${delinq.past.length === 1 ? "Household" : "Households"}, ${money(delinq.totalCents, { cents: false })} owed${lateFeesOwed(community) ? `, ${money(lateFeesOwed(community), { cents: false })} of it fees` : ""}`
-            : "Everyone is current"
-        }
-        href="/board/money/collections"
-      />
-      <Stat
-        icon={<Percent className="size-4" />}
-        accent={dues.measurable && dues.rate < 0.9 ? "amber" : undefined}
-        label={`Dues collected, ${thisYear}`}
-        value={dues.measurable ? <CountUp kind="percent" value={Math.round(dues.rate * 100)} /> : "Not yet"}
-        tone={dues.measurable && dues.rate < 0.9 ? "warn" : "neutral"}
-        hint={
-          dues.measurable
-            ? `${money(dues.collectedYtd, { cents: false })} of ${money(dues.expectedYtd, { cents: false })}`
-            : "Nothing billed yet"
-        }
-        href="/board/money/collections"
-      />
+          <Stat
+            className={LINKED}
+            icon={<Landmark className="size-4" />}
+            label="Cash on hand"
+            value={<CountUp cents={cash.operating} />}
+            hint={
+              first.cash
+                ? cardHint([first.cash], setup)
+                : cardHint([runwayLine(community) ?? "Operating account", reserveLine(community)], to("/board/money", "Open Finances"))
+            }
+          />
+          <Stat
+            className={LINKED}
+            icon={<Home className="size-4" />}
+            accent={delinq.past.length > 0 ? "amber" : undefined}
+            label="Past due"
+            value={<CountUp kind="number" value={delinq.past.length} />}
+            tone={delinq.past.length > 0 ? "warn" : "neutral"}
+            hint={
+              first.owed
+                ? cardHint([first.owed], setup)
+                : cardHint(
+                    [pastDueLine(community)],
+                    to("/board/money/collections", "Open Past due"),
+                    // Only when the policy says a letter is owed and has not
+                    // gone out, the same test as the button on Past due.
+                    ladder.dueNow.length > 0 ? to("/board/homeowners?remind=1", "Send reminders") : null,
+                  )
+            }
+          />
+          <Stat
+            className={LINKED}
+            icon={<Percent className="size-4" />}
+            accent={pace === "behind" ? "amber" : undefined}
+            label={`Dues collected, ${thisYear}`}
+            value={dues.measurable ? <CountUp kind="percent" value={Math.round(dues.rate * 100)} /> : "Not yet"}
+            tone={pace === "behind" ? "warn" : "neutral"}
+            hint={
+              first.dues
+                ? cardHint([first.dues], setup)
+                : cardHint(
+                    [
+                      dues.measurable
+                        ? `${money(dues.collectedYtd, { cents: false })} of ${money(dues.expectedYtd, { cents: false })}`
+                        : "Nothing billed yet",
+                      ...duesPaceLines(community, thisYear),
+                    ],
+                    to("/board/money", "Open Finances"),
+                  )
+            }
+          />
         </>
       ) : (
         // In place of the money: who is here yet. The officers who keep
         // owners informed are the ones who chase the sign-ups.
         <Stat
+          className={cn(canLink("/board/homeowners") && LINKED)}
           icon={<Users className="size-4" />}
           label="Homes signed up"
           value={<CountUp kind="number" value={signedUp} />}
-          hint={`of ${pluralize(households, "home")}`}
-          href={mayOpen("/board/homeowners", sees) ? "/board/homeowners" : undefined}
+          hint={cardHint([`of ${pluralize(households, "home")}`], to("/board/homeowners", "Open Homeowners"))}
         />
       )}
       <Stat
+        className={LINKED}
         icon={<CalendarDays className="size-4" />}
-        accent={liveMeeting ? "teal" : undefined}
+        accent={live ? "teal" : undefined}
         label="Next meeting"
         value={
-          liveMeeting
+          live
             ? "Live now"
-            : nextMeeting
-              ? daysFromToday(nextMeeting.date) === 0
+            : meeting
+              ? daysFromToday(meeting.date) === 0
                 ? "Tonight"
-                : formatDate(nextMeeting.date)
-              : "None set"
+                : formatDate(meeting.date)
+              : "Not set"
         }
-        tone={liveMeeting ? "ok" : "neutral"}
-        hint={nextMeeting ? `${nextMeeting.title} · ${nextMeeting.time}` : "Schedule one from Meetings"}
-        href={mayOpen("/board/meetings", sees) ? "/board/meetings" : undefined}
+        tone={live ? "ok" : "neutral"}
+        hint={
+          meeting && status
+            ? cardHint(
+                [`${meeting.title} \u00b7 ${meeting.time}`, status.line],
+                // An unsent notice is the thing to do; otherwise the page.
+                status.noticeSent || live ? to("/board/meetings", "Open Meetings") : to("/board/meetings", "Send notice"),
+              )
+            : cardHint(["No meeting scheduled"], to("/board/meetings", "Schedule one"))
+        }
       />
     </div>
   );

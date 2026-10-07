@@ -16,11 +16,11 @@ import { SEATS, expectHealthy, inspect, seedSession } from "./helpers";
 
 async function openTab(page: import("@playwright/test").Page, name: "Open" | "Resolved") {
   // A segmented control since 2026-09-24: pressed buttons, not tabs.
-  await page
+  const segment = page
     .getByRole("group", { name: "Which notices" })
-    .getByRole("button", { name: new RegExp(`^${name}`) })
-    .click();
-  await page.waitForTimeout(300);
+    .getByRole("button", { name: new RegExp(`^${name}`) });
+  await segment.click();
+  await expect(segment).toHaveAttribute("aria-pressed", "true");
 }
 
 test.describe("notices", () => {
@@ -36,7 +36,7 @@ test.describe("notices", () => {
       .getByRole("button", { name: /Commercial vehicle parked overnight/ })
       .first()
       .click();
-    await page.waitForTimeout(700);
+    await expect(page.getByRole("button", { name: "Mark resolved" }).first()).toBeVisible();
 
     // The demo's notices list photographs with no file behind them. They
     // were drawn as grey frames captioned "Photograph 1 of 3"; a frame with
@@ -52,7 +52,6 @@ test.describe("notices", () => {
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "New notice" }).click();
-    await page.waitForTimeout(300);
     const send = page.getByRole("button", { name: "Send notice" });
     await expect(send, "an empty notice could be sent").toBeDisabled();
 
@@ -63,7 +62,7 @@ test.describe("notices", () => {
     );
     await expect(send).toBeEnabled();
     await send.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByText(/Trash cans are out front/).first()).toBeVisible();
 
     const after = await expectHealthy(page, "after sending a notice");
     expect(after.text).toContain("Trash cans are out front");
@@ -78,9 +77,8 @@ test.describe("notices", () => {
 
     const row = page.getByRole("button", { name: /Commercial vehicle parked overnight/ }).first();
     await row.click();
-    await page.waitForTimeout(300);
     await page.getByRole("button", { name: "Mark resolved" }).first().click();
-    await page.waitForTimeout(500);
+    await expect(row).toHaveCount(0);
 
     await openTab(page, "Resolved");
     const resolved = await inspect(page);
@@ -145,7 +143,7 @@ test.describe("how a notice reaches people", () => {
     await page
       .getByRole("button", { name: "Lien or preforeclosure warning", exact: true })
       .click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("the letter is the notice");
 
     const health = await inspect(page);
     expect(health.text, "the board is not told paper is the notice").toContain(

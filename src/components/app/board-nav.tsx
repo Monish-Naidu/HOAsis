@@ -7,6 +7,7 @@
  * computed here from live state so they move as the board works.
  */
 
+import { openRequestCount } from "@/lib/request-status";
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -52,13 +53,10 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
     // much further, and the row disappears entirely at zero.
     setup: { count: setupCounts(plan).left, tone: "neutral", hint: "setup steps left" },
     money: { count: recon.needsReview.length, tone: "warn", hint: "transactions to confirm" },
-    // The section, not only its first tab: an owner saying a notice is fixed
-    // is the board's move as much as a request is.
+    // Open requests only, from the one selector the Requests page groups by.
+    // Notices have their own tab and do not count here.
     requests: {
-      count:
-        requests.filter((r) => !["approved", "denied", "closed"].includes(r.status)).length +
-        community.violations.filter((v) => v.stage !== "cured" && Boolean(v.ownerFixedDate))
-          .length,
+      count: openRequestCount(requests),
       tone: "neutral",
       hint: "requests waiting on the board",
     },

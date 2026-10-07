@@ -9,42 +9,18 @@
  * Run against a development project. It creates data and deletes it after.
  */
 
-import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { createHarness } from "./lib/harness.mjs";
 
 /* ------------------------------------------------------------------ setup */
 
-const env = Object.fromEntries(
-  readFileSync(new URL(process.env.ENV_FILE ?? "../.env.local", import.meta.url), "utf8")
-    .split("\n")
-    .filter((line) => line && !line.startsWith("#"))
-    .map((line) => {
-      const at = line.indexOf("=");
-      return [line.slice(0, at), line.slice(at + 1)];
-    }),
-);
-
-const URL_ = env.NEXT_PUBLIC_SUPABASE_URL;
-const ANON = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const SERVICE = env.SUPABASE_SERVICE_ROLE_KEY;
-
-const admin = createClient(URL_, SERVICE, { auth: { persistSession: false } });
-
-const PASSWORD = "verify-rls-" + Math.random().toString(36).slice(2);
-const stamp = Date.now();
+const {
+  admin, anon, stamp, PASSWORD, check, cleanup, cleanupAll, report,
+} = createHarness({ passwordPrefix: "verify-rls-" });
 const email = (who) => `rls-${who}-${stamp}@example.com`;
-
-let failures = 0;
-const results = [];
-
-function check(name, passed, detail = "") {
-  results.push({ name, passed, detail });
-  if (!passed) failures++;
-}
 
 /** A client acting as a signed in person, subject to every policy. */
 async function clientFor(address) {
-  const client = createClient(URL_, ANON, { auth: { persistSession: false } });
+  const client = anon();
   const { error } = await client.auth.signInWithPassword({
     email: address,
     password: PASSWORD,
@@ -69,8 +45,6 @@ async function makeUser(who) {
   return { id: data.user.id, email: address };
 }
 
-const created = { users: [], associations: [] };
-
 async function seed() {
   // Two associations, so cross-tenant leakage has somewhere to leak to.
   const [alpha, beta] = await Promise.all(
@@ -81,7 +55,7 @@ async function seed() {
         .select()
         .single();
       if (error) throw new Error(`association ${name}: ${error.message}`);
-      created.associations.push(data.id);
+      cleanup.associations.push(data.id);
       return data;
     }),
   );
@@ -107,7 +81,7 @@ async function seed() {
     makeUser("outsider"),
     makeUser("chair"),
   ]);
-  created.users.push(resident.id, neighbor.id, treasurer.id, outsider.id, chair.id);
+  cleanup.users.push(resident.id, neighbor.id, treasurer.id, outsider.id, chair.id);
 
   const member = async (associationId, unitId, profile, role, capabilities) => {
     const { error } = await admin.from("memberships").insert({
@@ -374,28 +348,12 @@ async function run() {
   }
 }
 
-async function cleanup() {
-  for (const id of created.associations) {
-    // A cleanup that fails leaves this association in the live project,
-    // where the dues cron goes on billing it. So it fails the run.
-    const { error } = await admin.from("associations").delete().eq("id", id);
-    if (error) check("cleanup removed the association", false, error.message);
-  }
-  for (const id of created.users) {
-    await admin.auth.admin.deleteUser(id).catch(() => {});
-  }
-}
-
 try {
   await run();
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
-  await cleanup();
+  await cleanupAll();
 }
 
-for (const r of results) {
-  console.log(`${r.passed ? "  ok  " : "FAIL  "}${r.name}${r.detail ? `  (${r.detail})` : ""}`);
-}
-console.log(`\n${results.length - failures}/${results.length} passed`);
-process.exit(failures ? 1 : 0);
+report();

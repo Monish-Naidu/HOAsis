@@ -202,7 +202,7 @@ export const SETUP_TASKS: SetupTask[] = [
   },
   {
     key: "opening-balances",
-    label: "Enter what each home owes today",
+    label: "Enter starting balances",
     detail: "What each home owed on the day you switched, as one figure.",
     why: "An association that already ran itself has balances on the day it switches, and nothing before that day has to come across. One figure per home makes the books correct from here. Set them before the first bill goes out: a bill sent against the wrong balance is the one that costs a board its credibility in week one.",
     href: "/board/homeowners/opening-balances",

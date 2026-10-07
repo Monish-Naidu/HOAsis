@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 
 /**
  * "Send it again" on the Check your email screen: the route that sends the
@@ -7,20 +8,16 @@ import { NextRequest } from "next/server";
  * No Supabase and no Resend: both are stand-ins whose answers a test picks.
  */
 
-const generateLink = vi.fn(async (): Promise<{ data: unknown; error: { message: string } | null }> => ({
-  data: { properties: { hashed_token: "hash_9" } },
-  error: null,
-}));
-const getUserById = vi.fn();
-const profile = vi.fn();
+const fake = createFakeSupabase({
+  profiles: { data: { id: "u1" } },
+  "auth.admin.generateLink": { data: { properties: { hashed_token: "hash_9" } }, error: null },
+  "auth.admin.getUserById": {
+    data: { user: { id: "u1", email_confirmed_at: null, user_metadata: { full_name: "Pat Lee" } } },
+  },
+});
 const send = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: () => ({
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: profile }) }) }),
-    auth: { admin: { generateLink, getUserById } },
-  }),
-}));
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
 vi.mock("resend", () => ({ Resend: class { emails = { send }; } }));
 vi.mock("@/lib/email/sender", () => ({ emailSender: () => "Your HOAsis <hello@example.com>" }));
 vi.mock("@/lib/log", () => ({ logger: () => ({ info() {}, warn() {}, error() {} }) }));
@@ -42,11 +39,8 @@ function ask(email: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fake.reset();
   process.env.RESEND_API_KEY = "re_test";
-  profile.mockResolvedValue({ data: { id: "u1" } });
-  getUserById.mockResolvedValue({
-    data: { user: { id: "u1", email_confirmed_at: null, user_metadata: { full_name: "Pat Lee" } } },
-  });
 });
 
 describe("the resend route", () => {
@@ -54,7 +48,7 @@ describe("the resend route", () => {
     const response = await ask("pat-a@example.com");
 
     expect(response.status).toBe(200);
-    expect(generateLink).toHaveBeenCalledWith({ type: "magiclink", email: "pat-a@example.com" });
+    expect(fake.callsTo("auth.admin.generateLink")[0].args).toEqual([{ type: "magiclink", email: "pat-a@example.com" }]);
     expect(send).toHaveBeenCalledTimes(1);
     const mail = send.mock.calls[0] as unknown as [{ to: string; text: string }];
     expect(mail[0].to).toBe("pat-a@example.com");
@@ -62,14 +56,14 @@ describe("the resend route", () => {
   });
 
   it("sends nothing, and answers the same, for an unknown or already confirmed address", async () => {
-    profile.mockResolvedValueOnce({ data: null });
+    fake.once("profiles", { data: null });
     expect((await ask("nobody@example.com")).status).toBe(200);
 
-    getUserById.mockResolvedValueOnce({ data: { user: { id: "u1", email_confirmed_at: "2026-08-01", user_metadata: {} } } });
+    fake.once("auth.admin.getUserById", { data: { user: { id: "u1", email_confirmed_at: "2026-08-01", user_metadata: {} } } });
     expect((await ask("done@example.com")).status).toBe(200);
 
     // Asking Auth for a link to an unknown address would create the account.
-    expect(generateLink).not.toHaveBeenCalled();
+    expect(fake.callsTo("auth.admin.generateLink")).toHaveLength(0);
     expect(send).not.toHaveBeenCalled();
   });
 

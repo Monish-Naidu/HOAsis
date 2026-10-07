@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 import { sameOriginPath } from "@/app/auth/callback/next-path";
 
 /**
@@ -46,15 +47,9 @@ describe("sameOriginPath", () => {
   });
 });
 
-const verifyOtp = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
-const exchangeCodeForSession = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
-const rpc = vi.fn(async (name: string): Promise<{ data: unknown }> =>
-  name === "my_associations" ? { data: [{ role: "resident" }] } : { data: null },
-);
+const fake = createFakeSupabase({ "rpc:my_associations": { data: [{ role: "resident" }] } });
 
-vi.mock("@/lib/supabase/server", () => ({
-  supabaseServer: async () => ({ auth: { verifyOtp, exchangeCodeForSession }, rpc }),
-}));
+vi.mock("@/lib/supabase/server", () => ({ supabaseServer: async () => fake.client }));
 
 const { GET } = await import("@/app/auth/callback/route");
 
@@ -63,14 +58,14 @@ function callback(query: string) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  fake.reset();
 });
 
 describe("the callback route", () => {
   it("verifies an emailed token and lands on the screen the notice was about", async () => {
     const response = await callback("token_hash=hash_123&type=magiclink&next=%2Fresident%2Fpay");
-    expect(verifyOtp).toHaveBeenCalledWith({ token_hash: "hash_123", type: "magiclink" });
-    expect(rpc).toHaveBeenCalledWith("claim_my_seats");
+    expect(fake.callsTo("auth.verifyOtp")[0].args).toEqual([{ token_hash: "hash_123", type: "magiclink" }]);
+    expect(fake.callsTo("rpc:claim_my_seats")).toHaveLength(1);
     expect(response.headers.get("location")).toBe(`${ORIGIN}/resident/pay`);
   });
 
@@ -85,18 +80,18 @@ describe("the callback route", () => {
   });
 
   it("sends a link that did not verify to sign in, still bound for the same screen", async () => {
-    verifyOtp.mockResolvedValueOnce({ error: { message: "Email link is invalid or has expired" } });
+    fake.once("auth.verifyOtp", { error: { message: "Email link is invalid or has expired" } });
     const response = await callback("token_hash=spent&type=magiclink&next=%2Fc%2Fmaple-court%2Fresident%2Fpay");
     const location = new URL(response.headers.get("location")!);
     expect(location.origin).toBe(ORIGIN);
     expect(location.pathname).toBe("/signin");
     expect(location.searchParams.get("error")).toBe("Email link is invalid or has expired");
     expect(location.searchParams.get("next")).toBe("/c/maple-court/resident/pay");
-    expect(rpc).not.toHaveBeenCalled();
+    expect(fake.calls.map((call) => call.target)).toEqual(["auth.verifyOtp"]);
   });
 
   it("does not carry a foreign destination through a failed link either", async () => {
-    verifyOtp.mockResolvedValueOnce({ error: { message: "expired" } });
+    fake.once("auth.verifyOtp", { error: { message: "expired" } });
     const response = await callback("token_hash=spent&type=magiclink&next=/%5Cevil.com");
     const location = new URL(response.headers.get("location")!);
     expect(location.pathname).toBe("/signin");
@@ -108,14 +103,10 @@ describe("the callback route", () => {
     // still waiting: the resident side tells them apart and offers each the
     // right door. Setup is the fork's second choice.
     for (const asked of [[], [{ status: "pending" }], [{ status: "declined" }]]) {
-      rpc.mockImplementation(async (name: string) =>
-        name === "my_associations" ? { data: [] } : name === "my_join_requests" ? { data: asked } : { data: null },
-      );
+      fake.on("rpc:my_associations", { data: [] });
+      fake.on("rpc:my_join_requests", { data: asked });
       const response = await callback("token_hash=hash_123&type=signup");
       expect(new URL(response.headers.get("location")!).pathname).toBe("/resident");
     }
-    rpc.mockImplementation(async (name: string) =>
-      name === "my_associations" ? { data: [{ role: "resident" }] } : { data: null },
-    );
   });
 });

@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
   usePathname: () => "/board/money/transactions",
   // The review queue link opens on the whole year, where the demo's waiting lines are.
-  useSearchParams: () => new URLSearchParams("status=needs-review"),
+  useSearchParams: () => new URLSearchParams("status=needs-review&period=this-year"),
 }));
 
 const { AppStateProvider, useAppState } = await import("@/lib/app-state");

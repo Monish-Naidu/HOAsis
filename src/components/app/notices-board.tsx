@@ -190,15 +190,16 @@ function NoticeRow({
                 Owner says fixed
               </Badge>
             ) : null}
-            {resolved ? <Badge tone="neutral">Resolved</Badge> : null}
-          </div>
+                      </div>
           <p className={cn("mt-0.5 text-body text-fg-muted", !open && "line-clamp-1")}>
             {violation.rule}
             {violation.fix ? ` · ${violation.fix}` : ""}
           </p>
           <p className="mt-0.5 text-footnote text-fg-subtle">
             {resolved
-              ? `Resolved ${formatDate(violation.resolvedDate ?? violation.nextActionDate)}`
+              ? // Same line as an open row, with the day it closed added: when
+                // it was sent and when it was resolved, both as dates.
+                `Sent ${formatDate(violation.openedDate)} · Resolved ${formatDate(violation.resolvedDate ?? violation.nextActionDate)}`
               : // A relative age only while it is recent. "1688 days ago" is a
                 // number to decode; the date, with its year, is not.
                 daysFromToday(violation.openedDate) >= -60

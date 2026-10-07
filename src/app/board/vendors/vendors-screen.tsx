@@ -1,5 +1,6 @@
 "use client";
 
+import { VENDOR_NAME_MAX, vendorNameProblem, vendorService } from "@/lib/vendor-name";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -64,12 +65,15 @@ export function VendorsScreen() {
   // so Add vendor steps down to secondary.
   const decisions = vendorDecisions(community).count;
 
+  // Live, so the board sees the refusal before pressing Save.
+  const nameProblem = vendorNameProblem(draft.name, vendors);
+
   function saveVendor() {
-    if (!draft.name.trim() || !draft.category) return;
+    if (!draft.name.trim() || !draft.category || nameProblem) return;
     addVendor({
       id: `v-${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      name: draft.name.trim(),
-      service: draft.service.trim() || "Services",
+      name: draft.name.trim().replace(/\s+/g, " "),
+      service: draft.service.trim() || draft.category,
       achEnabled: draft.achEnabled,
       w9OnFile: draft.w9OnFile,
       ytdPaidCents: 0,
@@ -134,9 +138,16 @@ export function VendorsScreen() {
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                placeholder="Cascade Grounds Co."
+                placeholder="Company or person you pay"
+                maxLength={VENDOR_NAME_MAX}
+                aria-invalid={nameProblem ? true : undefined}
                 className={field}
               />
+              {nameProblem ? (
+                <span role="alert" className="mt-1 block text-footnote text-danger">
+                  {nameProblem}
+                </span>
+              ) : null}
             </label>
             <label className="block">
               <span className="mb-1.5 block text-footnote font-medium text-fg">Service</span>
@@ -187,7 +198,7 @@ export function VendorsScreen() {
               <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={!draft.name.trim() || !draft.category} onClick={saveVendor}>
+              <Button type="submit" variant="primary" size="sm" disabled={!draft.name.trim() || !draft.category || Boolean(nameProblem)} onClick={saveVendor}>
                 Save vendor
               </Button>
             </div>
@@ -278,7 +289,7 @@ export function VendorsScreen() {
                           {money(vendorPaidThisYear(community, v))}
                         </p>
                       </div>
-                      <p className="truncate text-footnote text-fg-muted">{v.service}</p>
+                      <p className="truncate text-footnote text-fg-muted">{vendorService(v)}</p>
                       <VendorBadges vendor={v} className="mt-1.5" />
                     </div>
                     <RemoveVendor
@@ -309,7 +320,7 @@ export function VendorsScreen() {
                       >
                         <td className="px-5 py-3">
                           <p className="font-medium text-fg">{v.name}</p>
-                          <p className="text-footnote text-fg-muted">{v.service}</p>
+                          <p className="text-footnote text-fg-muted">{vendorService(v)}</p>
                         </td>
                         <td className="px-3 py-3">
                           <VendorBadges vendor={v} />

@@ -884,7 +884,7 @@ function BooksStep({ draft, patch }: StepProps) {
         ) : null}
       </div>
       {existing ? (
-        <Callout tone="info" title="Opening balances">
+        <Callout tone="info" title="Starting balances">
           {hasBalances
             ? "Balances came in with your spreadsheet"
             : "You can enter what each home owes after setup, under Homeowners."}

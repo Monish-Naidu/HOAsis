@@ -25,7 +25,6 @@ test.describe("search", () => {
     await expect(box, "⌘K did not open the search").toBeVisible();
 
     await box.fill("marchetti");
-    await page.waitForTimeout(200);
     await expect(dialog(page).getByText("Marchetti Resurfacing").first()).toBeVisible();
 
     await page.keyboard.press("Enter");
@@ -41,13 +40,11 @@ test.describe("search", () => {
     const box = dialog(page).getByRole("textbox");
 
     await box.fill("callo");
-    await page.waitForTimeout(200);
     const first = dialog(page).getByRole("option").first();
     await expect(first).toContainText("Rhea Calloway");
     await expect(first.locator("mark").first()).toHaveText(/callo/i);
 
     await box.fill("CALOWAY");
-    await page.waitForTimeout(200);
     await expect(dialog(page).getByRole("option").first()).toContainText("Rhea Calloway");
   });
 
@@ -58,7 +55,6 @@ test.describe("search", () => {
     await page.keyboard.press("ControlOrMeta+k");
     const box = dialog(page).getByRole("textbox");
     await box.fill("money");
-    await page.waitForTimeout(200);
     await expect(dialog(page).getByText("Go to", { exact: true })).toBeVisible();
     await expect(dialog(page).getByRole("option").first()).toContainText("Finances");
     await page.keyboard.press("Enter");
@@ -76,7 +72,6 @@ test.describe("search", () => {
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("ControlOrMeta+k");
     await dialog(page).getByRole("textbox").fill("$285.00");
-    await page.waitForTimeout(200);
     await expect(dialog(page).getByText("Shortcuts")).toBeVisible();
     await dialog(page).getByRole("button", { name: /Record a payment of \$285\.00/ }).click();
     await page.waitForURL(/\/board\/vendors\?record=1/);
@@ -90,7 +85,6 @@ test.describe("search", () => {
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("ControlOrMeta+k");
     await dialog(page).getByRole("textbox").fill("unit 55");
-    await page.waitForTimeout(200);
     const open = dialog(page).getByRole("button", { name: /^Open Unit 55/ });
     await expect(open).toContainText("Rhea Calloway");
     await open.click();
@@ -104,7 +98,7 @@ test.describe("search", () => {
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("ControlOrMeta+k");
     await dialog(page).getByRole("textbox").fill("marchetti");
-    await page.waitForTimeout(200);
+    await expect(dialog(page).getByRole("option").first()).toContainText("Marchetti");
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("ArrowUp");
     await page.keyboard.press("Enter");
@@ -127,7 +121,7 @@ test.describe("search", () => {
     await page.getByRole("button", { name: "Search" }).first().click();
     const box = dialog(page).getByRole("textbox");
     await box.fill("2024");
-    await page.waitForTimeout(200);
+    await expect(dialog(page).getByText(/2024/).first()).toBeVisible();
     const first = dialog(page).locator("li button").first();
     await first.click();
     await page.waitForLoadState("networkidle");
@@ -141,7 +135,7 @@ test.describe("search", () => {
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Search" }).first().click();
     await dialog(page).getByRole("textbox").fill("commercial vehicle");
-    await page.waitForTimeout(200);
+    await expect(dialog(page).getByRole("option").first()).toContainText(/commercial vehicle/i);
     await page.keyboard.press("Enter");
     await page.waitForURL(/\/board\/violations\?open=/);
     await page.waitForLoadState("networkidle");
@@ -157,7 +151,6 @@ test.describe("search", () => {
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("ControlOrMeta+k");
     await dialog(page).getByRole("textbox").fill("zzqx");
-    await page.waitForTimeout(200);
     await expect(dialog(page).getByText(/Nothing matches/)).toBeVisible();
     await expect(dialog(page).getByText(/You can search/)).toBeVisible();
   });
@@ -168,17 +161,16 @@ test.describe("search", () => {
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Search" }).first().click();
     await dialog(page).getByRole("textbox").fill("request");
-    await page.waitForTimeout(200);
+    await expect(dialog(page).getByRole("option").first()).toBeVisible();
     const text = await dialog(page).innerText();
     // Households and money never appear on the resident side.
     expect(text).not.toContain("HOMEOWNERS");
     expect(text).not.toContain("TRANSACTIONS");
 
     await dialog(page).getByRole("textbox").fill("dues");
-    await page.waitForTimeout(200);
-    await expect(dialog(page).getByRole("option").first()).toContainText("Payments");
+    await expect(dialog(page).getByRole("option").first()).toContainText("Pay");
     await dialog(page).getByRole("textbox").fill("homeowners");
-    await page.waitForTimeout(200);
+    await expect(dialog(page).getByText(/Nothing matches/)).toBeVisible();
     expect(await dialog(page).innerText()).not.toContain("Go to");
   });
 });

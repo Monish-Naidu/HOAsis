@@ -17,7 +17,7 @@ test.describe("governing documents", () => {
     // "fence" appears in the text of an article and in no document title, so a
     // name-only search returns nothing. That is the case worth testing.
     await page.getByLabel("Search documents and governing documents").fill("fence");
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("In your governing documents");
 
     const health = await inspect(page);
     expect(health.text, "searching the document text found nothing").toContain(
@@ -36,13 +36,13 @@ test.describe("governing documents", () => {
     // A trash can is in the board-adopted rules, a lien is in the recorded
     // declaration, and a quorum is in the bylaws. Nobody moving in knows that.
     await page.getByLabel("Search the governing documents").fill("refuse");
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("Refuse containers");
     expect((await inspect(page)).text, "the rules were not searched").toContain(
       "Refuse containers",
     );
 
     await page.getByLabel("Search the governing documents").fill("foreclose");
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("What happens if assessments go unpaid");
     expect((await inspect(page)).text, "the declaration was not searched").toContain(
       "What happens if assessments go unpaid",
     );
@@ -83,7 +83,7 @@ test.describe("governing documents", () => {
     // Every answer names the provision it came from. An answer with no
     // citation is this product asserting a reading of somebody's documents.
     await page.getByRole("button", { name: /fall behind on dues/ }).click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("CC&Rs Article V");
     const opened = (await inspect(page)).text;
     expect(opened, "the answer does not cite a provision").toContain("CC&Rs Article V");
     expect(opened, "the exact wording is not reachable").toContain("The exact wording");
@@ -103,7 +103,7 @@ test.describe("governing documents", () => {
     );
 
     await page.getByRole("button", { name: /Read the exact wording/ }).first().click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("As written in the");
 
     const after = (await inspect(page)).text;
     expect(after, "the governing text never appeared").toContain("As written in the");
@@ -118,7 +118,7 @@ test.describe("governing documents", () => {
     expect(health.text, "no open amendment is surfaced").toContain("Open for your vote");
 
     await page.getByText("See exactly what changes").first().click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("shall not deny an application for a solar energy system");
 
     const opened = (await inspect(page)).text;
     // The added paragraph, not a description of it.
@@ -133,7 +133,7 @@ test.describe("governing documents", () => {
     await expectHealthy(page, "bylaws");
 
     await page.getByRole("button", { name: "Amend", exact: true }).click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("What owners will see");
 
     const health = await inspect(page);
     expect(health.text, "the board cannot see what owners would see").toContain(
@@ -153,7 +153,7 @@ test.describe("governing documents", () => {
 
     // Seventy-five percent and a trip to the county recorder.
     await page.getByRole("button", { name: "Declaration, the CC&Rs" }).click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("seventy-five percent of all homes");
     const declaration = (await inspect(page)).text;
     expect(declaration, "the declaration threshold is not stated").toContain(
       "seventy-five percent of all homes",
@@ -163,7 +163,7 @@ test.describe("governing documents", () => {
     // A board adopts a rule on its own, which is why that layer is the risky
     // one. A screen that presented the two identically would be the bug.
     await page.getByRole("button", { name: "Rules and regulations" }).click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("goes further than the declaration allows");
     const rules = (await inspect(page)).text;
     expect(rules, "a rule change is presented as needing an owner vote").not.toContain(
       "seventy-five percent of all homes",
@@ -189,7 +189,7 @@ test.describe("governing documents", () => {
     );
 
     await page.getByRole("button", { name: "Rules and regulations" }).click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("Policies most associations are expected to have");
     const rules = (await inspect(page)).text;
     expect(rules, "no starter policy is offered at the rules layer").toContain(
       "Policies most associations are expected to have",
@@ -197,7 +197,7 @@ test.describe("governing documents", () => {
     expect(rules, "the obligation behind the policy is not named").toContain("RCW 64.90.495");
 
     await page.getByRole("button", { name: "Start from this" }).first().click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("What owners will see");
     const drafting = (await inspect(page)).text;
     // It lands as a draft in the same form a board would have typed into, and
     // the preview shows the words themselves. The recorded vote at the end is
@@ -241,7 +241,7 @@ test.describe("importing a document", () => {
     await page.getByLabel("The text of the document").fill(
       "DECLARATION OF COVENANTS\n\nARTICLE VII. Architectural control\n\nNo exterior alteration shall be made without approval.\n",
     );
-    await page.waitForTimeout(600);
+    await expect(page.locator("main")).toContainText("already exists in the CC&Rs");
 
     const health = await inspect(page);
     expect(health.text, "the collision was not reported").toContain(
@@ -276,7 +276,7 @@ test.describe("importing a document", () => {
         "Holiday lighting may be displayed from November 15 to January 15.",
       ].join("\n"),
     );
-    await page.waitForTimeout(600);
+    await expect(page.locator("main")).toContainText("Section 7.1");
 
     const parsed = await inspect(page);
     expect(parsed.crashed, "the extractor crashed the page").toBe(false);
@@ -294,16 +294,15 @@ test.describe("importing a document", () => {
     // The board picks the document. The guess is only ever a suggestion, and a
     // test that leans on it is testing the guess rather than the import.
     await page.getByRole("button", { name: /^Rules and regulations/ }).click();
-    await page.waitForTimeout(300);
     await page.getByRole("button", { name: /^Add \d+ article/ }).click();
-    await page.waitForTimeout(600);
+    await expect(page.getByRole("button", { name: "Added" })).toBeVisible();
 
     // Only the one read cleanly starts ticked, so a board clicking straight
     // through imports the confident half and looks at the rest.
     await page.goto("/board/documents/governing");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Rules and regulations" }).click();
-    await page.waitForTimeout(400);
+    await expect(page.locator("main")).toContainText("Quiet hours");
     const reader = (await inspect(page)).text;
     expect(reader, "the confirmed article never reached the reader").toContain("Quiet hours");
     expect(reader, "an unconfirmed article was imported anyway").not.toContain(
@@ -319,9 +318,8 @@ test.describe("importing a document", () => {
     await page.getByLabel("The text of the document").fill(
       "ARTICLE XX. Pets\n\nNo more than two domestic animals shall be kept upon a Lot.\n",
     );
-    await page.waitForTimeout(600);
     await page.getByRole("button", { name: /^Add \d+ article/ }).click();
-    await page.waitForTimeout(600);
+    await expect(page.getByRole("button", { name: "Added" })).toBeVisible();
 
     // A summary of a covenant is an interpretation, and this product does not
     // put its interpretation into somebody's legal record. The gap is shown.
@@ -360,15 +358,14 @@ test.describe("forms", () => {
       mimeType: "application/pdf",
       buffer: Buffer.from("plot plan"),
     });
-    await page.waitForTimeout(300);
+    await expect(page.getByText("plot-plan.pdf")).toBeVisible();
 
     await expect(submit, "signing was not required").toBeDisabled();
     await page.getByLabel("Type your full legal name").fill("Monish Naidu");
-    await page.waitForTimeout(300);
     await expect(submit, "a complete, signed form could not be submitted").toBeEnabled();
 
     await submit.click();
-    await page.waitForTimeout(700);
+    await expect(page.locator("main")).toContainText("Sent to the committee");
 
     const health = await inspect(page);
     expect(health.text, "no confirmation").toContain("Sent to the committee");
@@ -392,9 +389,8 @@ test.describe("forms", () => {
       buffer: Buffer.from("photo"),
     });
     await page.getByLabel("Type your full legal name").fill("Monish Naidu");
-    await page.waitForTimeout(300);
     await page.getByRole("button", { name: "Sign and send" }).click();
-    await page.waitForTimeout(700);
+    await expect(page.locator("main")).toContainText(/REQ-\d{4}-\d+/);
 
     const reference = (await inspect(page)).text.match(/REQ-\d{4}-\d+/)?.[0];
     expect(reference, "no reference was issued").toBeTruthy();

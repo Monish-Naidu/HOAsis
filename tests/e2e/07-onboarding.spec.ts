@@ -31,7 +31,9 @@ async function lookAround(page: import("@playwright/test").Page) {
   await clearOnce(page);
   await waitForHydration(page);
   await page.getByRole("button", { name: "Look around first" }).click();
-  await page.waitForTimeout(300);
+  // The account step is question one, so landing on the homes step's own
+  // counter is the signal the wizard moved on.
+  await expect(page.getByText(/^Step 2 of \d+/)).toBeVisible();
 }
 
 /**
@@ -63,8 +65,12 @@ type Answers = {
 
 /** The next question. */
 async function step(page: import("@playwright/test").Page) {
+  // The question slides out for LEAVE_MS before the next one mounts, with no
+  // DOM signal of its own, so wait for the "Step N of M" counter to change.
+  const counter = page.getByText(/^Step \d+ of \d+/);
+  const before = await counter.textContent();
   await page.getByRole("button", { name: /^Continue/ }).click();
-  await page.waitForTimeout(400);
+  await expect(counter).not.toHaveText(before ?? "");
 }
 
 /**
@@ -124,13 +130,12 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
       await page.getByLabel(/^Address of home \d+$/).last().fill(`${n} Founder Way`);
     }
   }
-  await page.waitForTimeout(300);
   await step(page);
 
   // When billing starts, taken as offered. It is the last question and
   // its button founds the association.
   await page.getByRole("button", { name: "Create the association" }).click();
-  await page.waitForTimeout(1200);
+  await page.waitForURL("**/start/plan");
 }
 
 test.describe("the three questions", () => {
@@ -189,7 +194,7 @@ test.describe("the three questions", () => {
     // Picking one says what it will actually do, so the choice is made on
     // consequences rather than on which description sounds closest.
     await page.getByRole("button", { name: /We already run our association/ }).click();
-    await page.waitForTimeout(300);
+    await expect(page.locator("main")).toContainText("What that changes");
     const picked = await inspect(page);
     expect(picked.text, "picking an option explains nothing").toContain("What that changes");
     expect(picked.text, "the established path still implies an export").toContain(
@@ -207,7 +212,7 @@ test.describe("the three questions", () => {
 
     // The builder is told the handover happens inside the product.
     await page.getByRole("button", { name: /We are building the community/ }).click();
-    await page.waitForTimeout(300);
+    await expect(page.locator("main")).toContainText("hand them the presidency");
     expect((await inspect(page)).text, "the builder is not told how the handover works").toContain(
       "hand them the presidency",
     );
@@ -362,7 +367,7 @@ test.describe("the plan is its own screen", () => {
     // abandon, so both exits are asserted: the header, and the welcome's own.
     await expect(page.getByRole("link", { name: "Skip for now" })).toBeVisible();
     await page.getByRole("link", { name: /Open the dashboard/ }).first().click();
-    await page.waitForTimeout(900);
+    await page.waitForURL("**/board**");
 
     expect(page.url(), "the dashboard link did not leave the plan").toContain("/board");
     const health = await expectHealthy(page, "dashboard after leaving the plan");
@@ -442,7 +447,7 @@ test.describe("the first weeks of a community still being built", () => {
     ).toBeLessThan(health.text.indexOf("Get paid"));
     // A turnover has balances on the day control passes, so the list asks.
     expect(health.text, "a turnover is not asked what each home owes").toContain(
-      "Enter what each home owes today",
+      "Enter starting balances",
     );
     // And it is not given the builder's group.
     expect(health.text).not.toContain("Before the bank will open an account");
@@ -512,7 +517,7 @@ test.describe("the first weeks of a community still being built", () => {
       "the bank paperwork should come before Get paid",
     ).toBeLessThan(health.text.indexOf("Get paid"));
     // Nothing to carry in for a builder, and no handover steps.
-    expect(health.text).not.toContain("Enter what each home owes today");
+    expect(health.text).not.toContain("Enter starting balances");
     expect(health.text).not.toContain("Before you sign the handover");
   });
 
@@ -551,7 +556,7 @@ test.describe("an association that already runs itself", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for an established association");
     expect(health.text, "the opening balances step is missing").toContain(
-      "Enter what each home owes today",
+      "Enter starting balances",
     );
     expect(health.text, "an established association was given the builder's paperwork").not.toContain(
       "Before the bank will open an account",
@@ -580,7 +585,7 @@ test.describe("an association that already runs itself", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a fresh association");
     expect(health.text).toContain("Get an EIN");
-    expect(health.text).toContain("Enter what each home owes today");
+    expect(health.text).toContain("Enter starting balances");
   });
 
   test("can actually set those balances, and they reach the statement", async ({ page }) => {
@@ -601,11 +606,10 @@ test.describe("an association that already runs itself", () => {
 
     // Home 2, which the founder does not hold. Detached homes of an
     // established association go by address.
-    const box = page.getByLabel(/^Opening balance for .*, 2 Founder Way$/);
+    const box = page.getByLabel(/^Starting balance for .*, 2 Founder Way$/);
     await box.fill("1240.50");
-    await page.waitForTimeout(300);
     await page.getByRole("button", { name: /^Save \d+ balances?$/ }).click();
-    await page.waitForTimeout(600);
+    await expect(page.getByRole("button", { name: /^Saved/ })).toBeVisible();
 
     await page.goto("/board/homeowners");
     const roster = await expectHealthy(page, "roster after opening balances");
@@ -731,7 +735,7 @@ test.describe("a community with more than one kind of home", () => {
     expect(summary.text).toContain("$14,400 per month");
     await step(page);
     await page.getByRole("button", { name: "Create the association" }).click();
-    await page.waitForTimeout(1200);
+    await page.waitForURL("**/start/plan");
 
     await page.goto("/board/homeowners");
     await waitForHydration(page);
@@ -786,7 +790,7 @@ test.describe("get started and signing up are the same flow", () => {
     // and email typed here still carry to the homes step, so nobody enters
     // them twice. Read from the field, since a value is not part of innerText.
     await page.getByRole("button", { name: "Look around first" }).click();
-    await page.waitForTimeout(300);
+    await expect(page.getByText(/^Step 2 of \d+/)).toBeVisible();
     expect((await inspect(page)).text, "looking around lost the step count").toMatch(
       /Step 2 of \d+/,
     );

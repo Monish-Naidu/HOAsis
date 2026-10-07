@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { createFakeSupabase } from "../helpers/fake-supabase";
 
 /**
  * A payment is created on the association's Stripe account and names a home.
@@ -11,25 +12,21 @@ import { NextRequest } from "next/server";
 
 process.env.STRIPE_SECRET_KEY = "sk_test_unit";
 
-const rows: Record<string, unknown> = {};
-
-/** A query on one table: every filter chains, and the end answers the row. */
-function query(table: string) {
-  const chain: Record<string, unknown> = {};
-  for (const step of ["select", "eq", "is", "order"]) chain[step] = () => chain;
-  chain.single = async () => ({ data: rows[table] ?? null });
-  chain.maybeSingle = async () => ({ data: rows[table] ?? null });
-  return chain;
-}
+const fake = createFakeSupabase();
 
 vi.mock("@/lib/supabase/server", () => ({
-  supabaseServer: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: "profile-1", email: "gwen@example.com" } } }) },
-    rpc: async () => ({ data: false }),
-    from: (table: string) => query(table),
-  }),
-  supabaseAdmin: () => ({ from: (table: string) => query(table) }),
+  supabaseServer: async () => fake.client,
+  supabaseAdmin: () => fake.client,
 }));
+
+const ASSOCIATION = {
+  stripe_account_id: "acct_a",
+  dues_cents: 28500,
+  payment_fee_cents: 0,
+  payment_fee_paid_by: "owner",
+  payment_fee_waived_on_ach: false,
+};
+const UNIT = { association_id: "assoc-a", stripe_customer_id: "cus_1", label: "12B" };
 
 const payment = await import("@/app/api/stripe/payment-intent/route");
 const setup = await import("@/app/api/stripe/setup-intent/route");
@@ -40,22 +37,19 @@ function post(path: string, body: object) {
 }
 
 beforeEach(() => {
-  rows.memberships = { id: "m-1", full_name: "Gwen Okafor" };
-  rows.associations = {
-    stripe_account_id: "acct_a",
-    dues_cents: 28500,
-    payment_fee_cents: 0,
-    payment_fee_paid_by: "owner",
-    payment_fee_waived_on_ach: false,
-  };
-  rows.units = { association_id: "assoc-a", stripe_customer_id: "cus_1", label: "12B" };
+  fake.reset();
+  fake.on("auth.getUser", { data: { user: { id: "profile-1", email: "gwen@example.com" } } });
+  fake.on("rpc", { data: false });
+  fake.on("memberships", { data: { id: "m-1", full_name: "Gwen Okafor" } });
+  fake.on("associations", { data: ASSOCIATION });
+  fake.on("units", { data: UNIT });
 });
 
 describe("creating a payment intent", () => {
   const body = { associationId: "assoc-a", unitId: "unit-1", amountCents: 28500, rail: "card" };
 
   it("refuses a home that belongs to a different association, before Stripe is asked", async () => {
-    rows.units = { association_id: "assoc-b", stripe_customer_id: "cus_1", label: "12B" };
+    fake.on("units", { data: { ...UNIT, association_id: "assoc-b" } });
     const create = vi.spyOn(stripe().paymentIntents, "create");
     const response = await payment.POST(post("/api/stripe/payment-intent", body));
     expect(response.status).toBe(400);
@@ -64,7 +58,7 @@ describe("creating a payment intent", () => {
   });
 
   it("refuses a home it cannot see at all", async () => {
-    rows.units = null;
+    fake.on("units", { data: null });
     const create = vi.spyOn(stripe().paymentIntents, "create");
     const response = await payment.POST(post("/api/stripe/payment-intent", body));
     expect(response.status).toBe(400);
@@ -91,15 +85,13 @@ describe("the largest amount a home may pay at once", () => {
 
   it("is measured against two years of the home's own dues when they are larger", async () => {
     // $10,000 is over two years of $285 and under two years of $500.
-    rows.associations = { ...(rows.associations as object), dues_cents: 28500 };
-    rows.units = { association_id: "assoc-a", stripe_customer_id: "cus_1", label: "12B", dues_cents: 50_000 };
+    fake.on("units", { data: { ...UNIT, dues_cents: 50_000 } });
     vi.spyOn(stripe().paymentIntents, "create").mockResolvedValue({ id: "pi_1", client_secret: "secret" } as never);
     expect((await payment.POST(post("/api/stripe/payment-intent", big))).status).toBe(200);
   });
 
   it("is still refused for a home on the association's amount", async () => {
-    rows.associations = { ...(rows.associations as object), dues_cents: 28500 };
-    rows.units = { association_id: "assoc-a", stripe_customer_id: "cus_1", label: "12B", dues_cents: null };
+    fake.on("units", { data: { ...UNIT, dues_cents: null } });
     const create = vi.spyOn(stripe().paymentIntents, "create");
     create.mockClear();
     const response = await payment.POST(post("/api/stripe/payment-intent", big));
@@ -128,7 +120,7 @@ describe("starting to save a payment method", () => {
   const body = { associationId: "assoc-a", unitId: "unit-1" };
 
   it("refuses a home that belongs to a different association, before Stripe is asked", async () => {
-    rows.units = { association_id: "assoc-b", stripe_customer_id: null, label: "12B" };
+    fake.on("units", { data: { ...UNIT, association_id: "assoc-b", stripe_customer_id: null } });
     const customer = vi.spyOn(stripe().customers, "create");
     const intent = vi.spyOn(stripe().setupIntents, "create");
     const response = await setup.POST(post("/api/stripe/setup-intent", body));

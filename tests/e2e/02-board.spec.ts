@@ -46,9 +46,11 @@ test.describe("board workspace", () => {
       expect(names, `${section.row} offers the wrong tabs`).toEqual(section.tabs);
 
       for (const tab of section.tabs) {
-        await nav.getByRole("link", { name: tab, exact: true }).click();
+        const link = nav.getByRole("link", { name: tab, exact: true });
+        const href = (await link.getAttribute("href"))?.split("?")[0];
+        await link.click();
+        await page.waitForURL((url) => url.pathname === href);
         await page.waitForLoadState("networkidle");
-        await page.waitForTimeout(250);
         await expectHealthy(page, `${section.row}, ${tab}`);
         // Whichever tab is open, its row stays lit.
         await expect(page.locator('aside a[aria-current="page"]')).toHaveText(
@@ -74,7 +76,8 @@ test.describe("board workspace", () => {
 
     const rail = page.locator("aside > div").first();
     await page.evaluate(() => window.scrollTo(0, 1200));
-    await page.waitForTimeout(400);
+    // The scroll itself is the thing the sticky rail is measured against.
+    await page.waitForFunction(() => window.scrollY > 0);
 
     const box = await rail.boundingBox();
     expect(box, "the sidebar disappeared on scroll").toBeTruthy();
@@ -106,14 +109,19 @@ test.describe("board actions", () => {
     expect(needsReview, "nothing to confirm, so this proves nothing").toBeGreaterThan(0);
 
     await page.getByRole("button", { name: "Confirm" }).first().click();
-    await page.waitForTimeout(700);
+    await expect
+      .poll(
+        async () =>
+          Number(
+            (await inspect(page)).text.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0",
+          ),
+        { message: "confirming did not move the transaction" },
+      )
+      .toBe(needsReview - 1);
 
     // Money records are append-only since 0106: a confirmation is a record,
     // not a draft, so there is no Undo on it. A wrong line is reversed.
     await expect(page.getByRole("button", { name: /^Undo$/ })).toHaveCount(0);
-    const after = (await inspect(page)).text;
-    const left = Number(after.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0");
-    expect(left, "confirming did not move the transaction").toBe(needsReview - 1);
   });
 
   test("adding and removing a household both work, and removal is reversible", async ({
@@ -127,30 +135,30 @@ test.describe("board actions", () => {
     await page.getByLabel("Household email").fill("probe@example.com");
     await page.getByLabel("Unit", { exact: true }).fill("999");
     await page.getByRole("button", { name: "Save" }).click();
-    await page.waitForTimeout(800);
+    await expect(page.getByLabel("Household name")).toBeHidden();
 
     // The roster pages at 50 and sorts by unit, so a new unit 999 lands
     // on a later page. Search rather than scroll.
     const search = page.getByPlaceholder(/Search owners/i);
     await search.fill("E2E Probe");
-    await page.waitForTimeout(500);
+    const probeRow = page.getByRole("button", { name: "E2E Probe Household, unit 999" });
+    await expect(probeRow, "the household was not added").toBeVisible();
     expect(
       (await inspect(page)).text,
       "the household was not added",
     ).toContain("E2E Probe Household");
 
     // Remove lives in the household's panel, so open the row first.
-    await page.getByRole("button", { name: "E2E Probe Household, unit 999" }).click();
+    await probeRow.click();
     await page
       .getByRole("button", { name: "Remove E2E Probe Household from the roster" })
       .click();
-    await page.waitForTimeout(600);
+    await expect(probeRow).toHaveCount(0);
     expect((await inspect(page)).text).not.toContain("E2E Probe Household");
 
     await page.getByRole("button", { name: /^Undo$/ }).last().click();
-    await page.waitForTimeout(700);
     await search.fill("E2E Probe");
-    await page.waitForTimeout(400);
+    await expect(probeRow, "undo did not bring the household back").toBeVisible();
     expect(
       (await inspect(page)).text,
       "undo did not bring the household back",
@@ -165,11 +173,10 @@ test.describe("board actions", () => {
     test.skip(!health.text.includes("Publish"), "nothing is waiting for review");
 
     await page.getByRole("button", { name: "Reject" }).first().click();
-    await page.waitForTimeout(600);
     const undo = page.getByRole("button", { name: /^Undo$/ }).last();
     await expect(undo, "rejecting a post offered no way back").toBeVisible();
     await undo.click();
-    await page.waitForTimeout(600);
+    await expect(undo).toBeHidden();
     await expectHealthy(page, "forum after undo");
   });
 
@@ -180,7 +187,6 @@ test.describe("board actions", () => {
 
     await page.getByRole("link", { name: "Send reminders" }).or(page.getByRole("button", { name: "Send reminders" })).first().click();
     await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(500);
 
     // Every household behind is listed with the letter its rung calls for,
     // not one template picked for the group.
@@ -202,9 +208,10 @@ test.describe("board actions", () => {
     if ((await rows.count()) > 0) {
       const name = (await rows.first().textContent()) ?? "";
       await rows.first().click();
-      await page.waitForTimeout(300);
-      const to = await page.getByText(/^To /).first().textContent();
-      expect(to ?? "", "the preview did not follow the selection").toContain(name.slice(0, 6));
+      await expect(
+        page.getByText(/^To /).first(),
+        "the preview did not follow the selection",
+      ).toContainText(name.slice(0, 6));
     }
   });
 
@@ -236,12 +243,11 @@ test.describe("board actions", () => {
     const toggle = page.locator('button[role="switch"]').first();
     const was = await toggle.getAttribute("aria-checked");
     await toggle.click();
-    await page.waitForTimeout(500);
-    expect(await toggle.getAttribute("aria-checked")).not.toBe(was);
+    await expect(toggle).not.toHaveAttribute("aria-checked", was ?? "false");
 
     // Put it back so the next test starts from the same place.
     await toggle.click();
-    await page.waitForTimeout(300);
+    await expect(toggle).toHaveAttribute("aria-checked", was ?? "false");
     expect(forum).toBeTruthy();
   });
 });
@@ -269,7 +275,7 @@ test.describe("shared costs", () => {
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "History" }).first().click();
-    await page.waitForTimeout(400);
+    await expect(page.getByText("Peak").first(), "the chart legend never rendered").toBeVisible();
     const health = await expectHealthy(page, "shared cost history");
     expect(health.text, "the chart legend never rendered").toContain("Peak");
   });
@@ -331,21 +337,19 @@ test.describe("turning a layer on", () => {
     expect(before.text, "an empty association was shown a table").toContain("Nothing shared yet");
 
     await page.getByRole("button", { name: "Add a shared cost" }).click();
-    await page.waitForTimeout(400);
 
     await page.getByLabel(/What owners will see on their statement/).fill("Water and sewer");
     await page.getByLabel(/Who the association pays/).fill("Kirkland Public Utilities");
     await page.getByLabel(/By people living there/).check();
     await page.getByRole("button", { name: "Add shared cost" }).click();
-    await page.waitForTimeout(600);
+    await expect(page.getByText("Kirkland Public Utilities").first()).toBeVisible();
 
     const added = await inspect(page);
     expect(added.text, "the provider was not recorded").toContain("Kirkland Public Utilities");
 
     await page.getByRole("button", { name: "Post a bill" }).first().click();
-    await page.waitForTimeout(400);
     await page.getByLabel(/What the provider charged/).fill("420");
-    await page.waitForTimeout(400);
+    await expect(page.getByText(/across \d+ homes is/)).toBeVisible();
 
     // The split is shown before it is saved. A board that cannot see what each
     // home will be charged will not use this twice.
@@ -353,7 +357,7 @@ test.describe("turning a layer on", () => {
     expect(preview.text, "the split was not previewed").toMatch(/across \d+ homes is/);
 
     await page.getByRole("button", { name: "Post bill" }).click();
-    await page.waitForTimeout(700);
+    await expect(page.getByText("$420.00").first()).toBeVisible();
 
     const posted = await inspect(page);
     expect(posted.crashed, "posting a bill crashed").toBe(false);
@@ -371,13 +375,11 @@ test.describe("turning a layer on", () => {
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "Add a shared cost" }).click();
-    await page.waitForTimeout(300);
     await page.getByLabel(/What owners will see on their statement/).fill("Trash");
     await page.getByRole("button", { name: "Add shared cost" }).click();
-    await page.waitForTimeout(500);
 
     await page.getByRole("button", { name: /Stop passing on Trash/ }).click();
-    await page.waitForTimeout(600);
+    await expect(page.getByRole("button", { name: /Stop passing on Trash/ })).toHaveCount(0);
 
     const health = await inspect(page);
     expect(health.crashed, "removing a shared cost crashed").toBe(false);
@@ -462,18 +464,16 @@ test.describe("a board can actually run a vote", () => {
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "New ballot" }).click();
-    await page.waitForTimeout(400);
 
     // Three things since the launch scope: the question, the choices, the
     // day it ends. Nothing about quorum stands between a volunteer and a vote.
     await page.getByLabel("Ballot title").fill("Replace the pool fence");
     await page.getByLabel("Ballot detail").fill("The current fence fails inspection.");
-    await page.waitForTimeout(300);
     const preview = await inspect(page);
     expect(preview.text, "the form still asks about quorum").not.toMatch(/quorum/i);
 
     await page.getByRole("button", { name: "Open the ballot" }).click();
-    await page.waitForTimeout(700);
+    await expect(page.getByRole("button", { name: "Open the ballot" })).toBeHidden();
 
     const after = await expectHealthy(page, "voting after opening a ballot");
     expect(after.text).toContain("Replace the pool fence");
@@ -484,14 +484,12 @@ test.describe("a board can actually run a vote", () => {
     await page.goto("/board/voting");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "New ballot" }).click();
-    await page.waitForTimeout(400);
 
     const open = page.getByRole("button", { name: "Open the ballot" });
     await expect(open, "an untitled ballot could be opened").toBeDisabled();
 
     await page.getByLabel("Ballot title").fill("A question");
     await page.getByLabel("Choice 2").fill("");
-    await page.waitForTimeout(300);
     await expect(open, "a ballot with one choice could be opened").toBeDisabled();
   });
 });
@@ -515,7 +513,6 @@ test.describe("vendors", () => {
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("button", { name: "Record a payment" }).click();
-    await page.waitForTimeout(400);
 
     await page.getByLabel("Amount paid").fill("1380");
     // Their date, not today's. A payment entered in April for a February
@@ -523,10 +520,9 @@ test.describe("vendors", () => {
     await page.getByLabel("Date paid").fill("2026-02-14");
     await page.getByLabel("Payment method").selectOption("check");
     await page.getByLabel("Reference").fill("1042");
-    await page.waitForTimeout(300);
 
     await page.getByRole("button", { name: "Record payment" }).click();
-    await page.waitForTimeout(700);
+    await expect(page.getByText("1042").first(), "the recorded payment never appeared").toBeVisible();
 
     const health = await expectHealthy(page, "vendors after recording a payment");
     expect(health.text, "the recorded payment never appeared").toContain("1042");
@@ -536,7 +532,6 @@ test.describe("vendors", () => {
     await page.goto("/board/vendors");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Record a payment" }).click();
-    await page.waitForTimeout(400);
 
     await expect(page.getByText("Send this payment through Your HOAsis")).toHaveCount(0);
     await expect(page.getByLabel("Category")).toBeVisible();

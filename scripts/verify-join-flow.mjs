@@ -16,32 +16,13 @@
  * because the built in mailer is capped; the trigger under test fires on the
  * insert either way.
  */
-import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { createHarness } from "./lib/harness.mjs";
 
-const env = Object.fromEntries(
-  readFileSync(new URL(process.env.ENV_FILE ?? "../.env.local", import.meta.url), "utf8")
-    .split("\n").filter((l) => l && !l.startsWith("#"))
-    .map((l) => { const i = l.indexOf("="); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, "")]; }),
-);
-
-const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
+const {
+  admin, anon, stamp, PASSWORD, check, cleanup, cleanupAll, report,
+} = createHarness({
+  passwordPrefix: "join-",
 });
-const anon = () =>
-  createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
-
-const stamp = Date.now();
-const PASSWORD = "join-" + Math.random().toString(36).slice(2) + "A1";
-const results = [];
-let failures = 0;
-const check = (name, passed, detail = "") => {
-  results.push({ name, passed, detail });
-  if (!passed) failures++;
-};
-const cleanup = { users: [], associations: [] };
 const mail = (tag) => `willow-${tag}-${stamp}@example.com`;
 
 async function signUp(email, fullName) {
@@ -252,15 +233,7 @@ try {
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
-  for (const id of cleanup.associations) {
-    // A cleanup that fails leaves this association in the live project,
-    // where the dues cron goes on billing it. So it fails the run.
-    const { error } = await admin.from("associations").delete().eq("id", id);
-    if (error) check("cleanup removed the association", false, error.message);
-  }
-  for (const id of cleanup.users) await admin.auth.admin.deleteUser(id).catch(() => {});
+  await cleanupAll();
 }
 
-for (const r of results) console.log(`${r.passed ? "  ok  " : "FAIL  "}${r.name}${r.detail ? `  (${r.detail})` : ""}`);
-console.log(`\n${results.length - failures}/${results.length} passed`);
-process.exit(failures ? 1 : 0);
+report();

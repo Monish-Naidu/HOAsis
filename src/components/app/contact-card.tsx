@@ -92,7 +92,7 @@ export function ContactCard() {
                   setPhone(e.target.value);
                   setPhoneProblem(null);
                 }}
-                placeholder="(937) 555-0140"
+                placeholder="(425) 555-0142"
                 aria-invalid={phoneProblem ? true : undefined}
                 className={field}
                 autoFocus
@@ -111,7 +111,7 @@ export function ContactCard() {
                 autoComplete="street-address"
                 value={mailing}
                 onChange={(e) => setMailing(e.target.value)}
-                placeholder="PO Box 210, Dayton, OH 45401"
+                placeholder="PO Box 210, Bothell, WA 98011"
                 className={field}
               />
               <span className="mt-1 block text-footnote leading-snug text-fg-subtle">
