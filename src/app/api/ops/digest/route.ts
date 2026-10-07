@@ -4,6 +4,7 @@ import { loadOpsReport } from "@/lib/ops";
 import { buildDigest } from "@/lib/ops-digest";
 import { platformOwnerEmails } from "@/lib/platform-owner";
 import { emailSender, resendKey } from "@/lib/email/sender";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/log";
 
 /**
@@ -12,6 +13,10 @@ import { logger } from "@/lib/log";
  * Reads the same report /admin shows and emails the platform owners when
  * there is something in it. Authorised the way the other crons are, with
  * CRON_SECRET. `?dry=1` builds the email and sends nothing.
+ *
+ * Also the morning the books close: every fiscal year that ended and has
+ * no row yet gets one (close_ended_fiscal_years, 0109), before the report
+ * is read so a close that failed is in the digest.
  */
 
 export const runtime = "nodejs";
@@ -31,6 +36,11 @@ export async function GET(request: NextRequest) {
   }
   const dryRun = request.nextUrl.searchParams.get("dry") === "1";
   const now = new Date().toISOString();
+  if (!dryRun) {
+    const { data: closed, error: closeError } = await supabaseAdmin().rpc("close_ended_fiscal_years");
+    if (closeError) log.error("fiscal years did not close", { err: closeError.message });
+    else if (closed) log.info("fiscal years closed", { count: closed });
+  }
   const report = await loadOpsReport(new Date(now));
   const digest = buildDigest(report, now, `${request.nextUrl.origin}/admin`);
   const to = platformOwnerEmails();
