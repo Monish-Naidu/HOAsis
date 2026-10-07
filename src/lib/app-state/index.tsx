@@ -1,8 +1,8 @@
 "use client";
 
-export { AppStateProvider, useAppState } from "./app-state/provider";
-export { resetAllStores } from "./app-state/core";
-export type { LedgerReversal, SettingsPatch, UploadOutcome, View } from "./app-state/types";
+export { AppStateProvider, useAppState } from "./provider";
+export { resetAllStores } from "./core";
+export type { LedgerReversal, SettingsPatch, UploadOutcome, View } from "./types";
 export {
   bucketRequests,
   DECIDED_STATUSES,
@@ -22,4 +22,4 @@ export {
   useVendorGaps,
   useVisiblePosts,
   withLiveSlices,
-} from "./app-state/selectors";
+} from "./selectors";
