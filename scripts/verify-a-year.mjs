@@ -340,7 +340,9 @@ try {
 
   const { data: ledger } = await treasurer.client
     .from("ledger_entries").select("amount_cents, category").eq("association_id", hoa);
-  const collected = ledger.filter((e) => e.category === "Assessments").reduce((t, e) => t + e.amount_cents, 0);
+  // The payment comes in whole and the fee leaves as its own line (0101);
+  // together they are what the bank received.
+  const collected = ledger.filter((e) => e.category === "Assessments" || e.category === "Processing fees").reduce((t, e) => t + e.amount_cents, 0);
   // 52 payments across the year, each net of a 35 cent processor fee.
   const expected = 52 * (DUES - 35);
   check(

@@ -537,7 +537,8 @@ try {
   const ledger = await all(() =>
     treasurer.client.from("ledger_entries").select("amount_cents, category")
       .eq("association_id", hoa));
-  const banked = ledger.filter((e) => e.category === "Assessments").reduce((t, e) => t + e.amount_cents, 0);
+  // The payment whole plus the fee line (0101) is what the bank received.
+  const banked = ledger.filter((e) => e.category === "Assessments" || e.category === "Processing fees").reduce((t, e) => t + e.amount_cents, 0);
   check(
     "and the bank shows every payment, net of the processor's cut",
     banked === -paidAll - paymentsMade * 35,
