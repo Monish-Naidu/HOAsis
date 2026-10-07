@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, Copy, Download, FileText, History, Paperclip, Search } from "lucide-react";
-import { Badge, Button, ButtonLink, Callout, Card, EmptyState, PageHeader, Segmented, fieldClass } from "@/components/ui/primitives";
-import { InlineBar, PeriodPicker, SelectField } from "@/components/app/finance-ui";
+import { Badge, Button, ButtonLink, Callout, Card, EmptyState, PageHeader, fieldClass } from "@/components/ui/primitives";
+import { InlineBar, PeriodControl, SelectField } from "@/components/app/finance-ui";
 import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
@@ -20,15 +20,15 @@ import {
   ledgerFilterCounts,
   ledgerTotals,
   totalsByCategory,
-  periodRange,
   PERIOD_LABEL,
   PERIOD_PHRASE,
   widerPeriod,
   type LedgerFilter,
   type PeriodPreset,
 } from "@/lib/metrics";
+import { usePeriod } from "@/lib/use-period";
 import { useUrlClear, useUrlFilter, withFilter } from "@/lib/url-filter";
-import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { cn, formatDate, money, pluralize } from "@/lib/utils";
 
 type StatusFilter = "any" | "cleared" | "pending" | "needs-review";
 
@@ -61,41 +61,23 @@ export function TransactionsScreen() {
   const { community, ledger, confirmLedgerEntry } = useAppState();
   const { notify } = useToast();
   const params = useSearchParams();
-  const asOf = todayIsoDate();
-
+  
   // Period, dates, status, category and the search text are in the URL, so a
   // view can be bookmarked or sent to another officer. Account and direction
   // are quick narrowing and stay on the page.
   const pathname = usePathname();
   const clearUrl = useUrlClear();
-  const customDefault = periodRange("custom", asOf);
-  const [urlPreset, setPreset] = useUrlFilter<PeriodPreset>("period", PERIODS, DEFAULT_PERIOD);
-  const [from, setFrom] = useUrlFilter<string>("from", null, customDefault.from);
-  const [to, setTo] = useUrlFilter<string>("to", null, customDefault.to);
+  const period = usePeriod(PERIODS, DEFAULT_PERIOD);
+  const range = period.value;
+  const preset = range.preset;
   const [status, setStatus] = useUrlFilter<StatusFilter>("status", STATUSES, "any");
   const [categoryRaw, setCategory] = useUrlFilter<string>("category", null, "all");
   const [search, setSearch] = useUrlFilter<string>("q", null, "");
-  // Older links (the top bar's search, a year on the trends page) name their
-  // dates and no period; they open on those dates.
-  const legacyDates = Boolean(params.get("from") && params.get("to") && params.get("period") === null);
-  const [legacyHeld, setLegacyHeld] = useState(legacyDates);
-  const preset: PeriodPreset = legacyHeld ? "custom" : urlPreset;
-  const custom = { from, to };
-  function choosePreset(next: PeriodPreset) {
-    setLegacyHeld(false);
-    setPreset(next);
-  }
-  function chooseRange(r: { from: string; to: string }) {
-    setLegacyHeld(false);
-    if (r.from !== from) setFrom(r.from);
-    else if (r.to !== to) setTo(r.to);
-  }
   const [accountId, setAccountId] = useState("all");
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
   const [open, setOpen] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
 
-  const range = preset === "custom" ? custom : periodRange(preset, asOf);
   // A real association's lines come down for the last two years. A period
   // that reaches further back needs the rest fetched, and says so rather
   // than reading as an empty year.
@@ -124,23 +106,36 @@ export function TransactionsScreen() {
       from: range.from,
       to: range.to,
       accountId: accountId === "all" ? undefined : accountId,
-      category: category === "all" ? undefined : category,
       status: status === "any" ? undefined : status,
-      direction: direction === "all" ? undefined : direction,
       search,
     }),
-    [range.from, range.to, accountId, category, status, direction, search],
+    [range.from, range.to, accountId, status, search],
   );
+  // Each figure answers to every filter but its own. Money in and out keep
+  // reading the whole period while one of them is the filter, and the
+  // category panel keeps listing every category while one is chosen.
   const counts = useMemo(() => ledgerFilterCounts(ledger, baseFilter), [ledger, baseFilter]);
-  const rows = useMemo(() => filterLedger(ledger, baseFilter), [ledger, baseFilter]);
+  const pool = useMemo(() => filterLedger(ledger, baseFilter), [ledger, baseFilter]);
+  const inCategory = useMemo(
+    () => (category === "all" ? pool : filterLedger(pool, { category })),
+    [pool, category],
+  );
+  const rows = useMemo(
+    () => (direction === "all" ? inCategory : filterLedger(inCategory, { direction })),
+    [inCategory, direction],
+  );
+  const totals = ledgerTotals(inCategory);
+  const byCategory = totalsByCategory(direction === "all" ? pool : filterLedger(pool, { direction }));
+  const byCategoryMax = Math.max(1, ...byCategory.map((r) => Math.abs(r.inCents - r.outCents)));
+  // A dropdown only earns its place when it can change the list: lines
+  // waiting on a decision to filter to. One already chosen stays, so it can
+  // be undone.
+  const showStatus = counts.status["needs-review"] > 0 || status !== "any";
   // Whether something besides the period is cutting the list down, which
   // decides if the empty state offers a wider period or clearing the filters.
   const narrowed = status !== "any" || category !== "all" || accountId !== "all" || direction !== "all" || search.trim() !== "";
   const wider = widerPeriod(preset);
   const widerHref = wider ? `${pathname}?${withFilter(params.toString(), "period", wider, DEFAULT_PERIOD)}` : pathname;
-  const totals = ledgerTotals(rows);
-  const byCategory = totalsByCategory(rows);
-  const byCategoryMax = Math.max(1, ...byCategory.map((r) => Math.abs(r.inCents - r.outCents)));
   const accounts = community.bankAccounts;
   const accountName = (id: string) => {
     const a = accounts.find((x) => x.id === id);
@@ -180,107 +175,132 @@ export function TransactionsScreen() {
       />
 
       <Card>
-        {/* The toolbar: period first, then the narrowing, then search. */}
-        <div className="flex flex-col gap-3 border-b border-border px-5 py-3">
-          <PeriodPicker preset={preset} onPreset={choosePreset} range={custom} onRange={chooseRange} presets={PERIODS} />
-          <div className="flex flex-wrap items-center gap-2">
-            {accounts.length > 1 ? (
-              <SelectField
-                label="Account"
-                value={accountId}
-                onChange={setAccountId}
-                options={[
-                  { value: "all", label: "All accounts" },
-                  ...accounts.map((a) => ({ value: a.id, label: `${a.name} ••${a.mask}` })),
-                ]}
-              />
-            ) : null}
+        {/* One row: the period, the dropdowns that can do something, search. */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-3">
+          <PeriodControl
+            value={range}
+            onChange={period.set}
+            presets={PERIODS}
+            asOf={period.asOf}
+            fyMonth={period.fyMonth}
+            className="w-full sm:w-auto"
+          />
+          {accounts.length > 1 ? (
             <SelectField
-              label="Category"
-              value={category}
-              onChange={setCategory}
+              label="Account"
+              value={accountId}
+              onChange={setAccountId}
               options={[
-                { value: "all", label: `All categories (${counts.categoryAll})` },
-                ...categories.map((c) => ({ value: c, label: `${c} (${counts.category[c] ?? 0})` })),
+                { value: "all", label: "All accounts" },
+                ...accounts.map((a) => ({ value: a.id, label: `${a.name} ••${a.mask}` })),
               ]}
             />
+          ) : null}
+          {showStatus ? (
             <SelectField
               label="Status"
               value={status}
               onChange={setStatus}
               options={STATUSES.map((value) => ({ value, label: `${STATUS_LABEL[value]} (${counts.status[value]})` }))}
             />
-            <Segmented
-              label="Direction"
-              value={direction}
-              onChange={setDirection}
-              options={[
-                { value: "all", label: "All" },
-                { value: "in", label: "Money in" },
-                { value: "out", label: "Money out" },
-              ]}
+          ) : null}
+          <label className="relative ml-auto min-w-[12rem] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-fg-subtle" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search description or payee"
+              aria-label="Search transactions"
+              className={cn(fieldClass, "pl-8 pr-2 text-footnote")}
             />
-            <label className="relative ml-auto min-w-[12rem] flex-1 sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-fg-subtle" />
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search description or payee"
-                aria-label="Search transactions"
-                className={cn(fieldClass, "pl-8 pr-2 text-footnote")}
-              />
-            </label>
-          </div>
+          </label>
         </div>
 
-        {/* What the filter adds up to. */}
+        {/* What the filter adds up to. Money in and Money out are also the
+            direction filter: press one to see only those lines, again to clear. */}
         <dl className="grid grid-cols-2 gap-px border-b border-border bg-border sm:grid-cols-4">
-          {[
-            { label: "Money in", value: money(totals.inCents, { cents: false }), tone: "text-ok" },
-            { label: "Money out", value: money(totals.outCents, { cents: false }), tone: "text-fg" },
-            {
-              label: "Net",
-              value: money(totals.netCents, { sign: totals.netCents > 0, cents: false }),
-              tone: totals.netCents >= 0 ? "text-fg" : "text-danger",
-            },
-            { label: "Lines", value: String(totals.count), tone: "text-fg" },
-          ].map((s) => (
-            <div key={s.label} className="min-w-0 bg-surface px-5 py-3">
-              <dt className="text-footnote font-medium text-fg-muted">{s.label}</dt>
-              <dd className={cn("tnum mt-0.5 text-headline font-semibold tracking-[-0.02em]", s.tone)}>{s.value}</dd>
-            </div>
-          ))}
+          {(
+            [
+              { label: "Money in", value: money(totals.inCents, { cents: false }), tone: "text-ok", dir: "in" },
+              { label: "Money out", value: money(totals.outCents, { cents: false }), tone: "text-fg", dir: "out" },
+              {
+                label: "Net",
+                value: money(totals.netCents, { sign: totals.netCents > 0, cents: false }),
+                tone: totals.netCents >= 0 ? "text-fg" : "text-danger",
+              },
+              { label: "Lines", value: String(rows.length), tone: "text-fg" },
+            ] as { label: string; value: string; tone: string; dir?: "in" | "out" }[]
+          ).map((f) => {
+            const body = (
+              <>
+                <dt className="text-footnote font-medium text-fg-muted">{f.label}</dt>
+                <dd className={cn("tnum mt-0.5 text-headline font-semibold tracking-[-0.02em]", f.tone)}>{f.value}</dd>
+              </>
+            );
+            const dir = f.dir;
+            const pressed = dir !== undefined && direction === dir;
+            return (
+              <div key={f.label} className="min-w-0 bg-surface">
+                {dir ? (
+                  <button
+                    type="button"
+                    aria-pressed={pressed}
+                    onClick={() => setDirection(pressed ? "all" : dir)}
+                    className={cn(
+                      "block w-full px-5 py-3 text-left transition-colors hover:bg-surface-2",
+                      pressed && "bg-brand-soft shadow-[inset_0_-2px_0_var(--brand)]",
+                    )}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div className="px-5 py-3">{body}</div>
+                )}
+              </div>
+            );
+          })}
         </dl>
 
-        {/* The same rows, added up by category, for "how much did we spend
-            on landscaping last year" without a spreadsheet. Folded: most
-            visits are about one line, not the shape of the period. */}
+        {/* The same rows, added up by category: "how much did we spend on
+            landscaping last year" without a spreadsheet, and the way to
+            narrow to one. Open, because it is the category filter. */}
         {byCategory.length > 1 ? (
-          <details className="group border-b border-border">
+          <details open className="group border-b border-border">
             <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-2.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
               <span>By category · {byCategory.length} categories</span>
               <ChevronDown className="size-4 text-fg-subtle transition-transform group-open:rotate-180" />
             </summary>
-            <ul className="grid gap-x-8 gap-y-3 px-5 pb-4 pt-1 sm:grid-cols-2">
+            <ul className="grid gap-x-3 gap-y-1 px-3 pb-3 pt-1 sm:grid-cols-2">
               {byCategory.map((r) => {
                 const net = r.inCents - r.outCents;
+                const pressed = category === r.category;
                 return (
                   <li key={r.category}>
-                    <div className="flex items-baseline justify-between gap-3 text-footnote">
-                      <span className="min-w-0 truncate text-fg">
-                        {r.category} <span className="tnum text-fg-subtle">· {r.count}</span>
+                    <button
+                      type="button"
+                      aria-pressed={pressed}
+                      onClick={() => setCategory(pressed ? "all" : r.category)}
+                      className={cn(
+                        "block w-full rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-2",
+                        pressed && "bg-brand-soft ring-1 ring-brand",
+                      )}
+                    >
+                      <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-footnote">
+                        <span className="min-w-0 text-fg">
+                          {r.category} <span className="tnum text-fg-subtle">· {r.count}</span>
+                        </span>
+                        <span className={cn("tnum shrink-0 font-semibold", net > 0 ? "text-ok" : "text-fg")}>
+                          {money(net, { sign: net > 0, cents: false })}
+                        </span>
                       </span>
-                      <span className={cn("tnum shrink-0 font-semibold", net > 0 ? "text-ok" : "text-fg")}>
-                        {money(net, { sign: net > 0, cents: false })}
-                      </span>
-                    </div>
-                    <InlineBar
-                      value={Math.abs(net)}
-                      max={byCategoryMax}
-                      colorClass={net > 0 ? "bg-ok" : "bg-chart-1"}
-                      className="mt-1"
-                    />
+                      <InlineBar
+                        value={Math.abs(net)}
+                        max={byCategoryMax}
+                        colorClass={net > 0 ? "bg-ok" : "bg-chart-1"}
+                        className="mt-1"
+                      />
+                    </button>
                   </li>
                 );
               })}

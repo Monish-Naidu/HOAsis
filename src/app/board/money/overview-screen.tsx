@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { Landmark, ShieldAlert } from "lucide-react";
-import { Button, Callout, Card, CardHeader, Meter, PageHeader, Segmented } from "@/components/ui/primitives";
+import { Button, Callout, Card, CardHeader, Meter, PageHeader } from "@/components/ui/primitives";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { BankConnect } from "@/components/app/bank-connect";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
-import { DeltaChip, SectionLink, StatTile } from "@/components/app/finance-ui";
+import { DeltaChip, PeriodControl, SectionLink, StatTile } from "@/components/app/finance-ui";
 import { OpeningBalances } from "./opening-balances";
 import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
@@ -21,13 +20,21 @@ import {
   ledgerYears,
   monthName,
   monthlyFlowsBetween,
+  rangeWords,
+  type PeriodPreset,
   operatingRunway,
   pastDueHint,
-  periodRange,
   spendingBetween,
 } from "@/lib/metrics";
-import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { cn, formatDate, money, pluralize } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
+import { usePeriod } from "@/lib/use-period";
+
+/**
+ * The periods the Overview's charts can read. A month or 30 days would draw
+ * one or two bars, so those are left to Transactions.
+ */
+const OVERVIEW_PERIODS: readonly PeriodPreset[] = ["last-12-months", "this-year", "last-year", "custom"];
 
 /**
  * Finances, the overview: where the money stands today, and the one or two
@@ -45,34 +52,30 @@ export function OverviewScreen() {
   const cash = cashPosition(community);
   const exposure = insuranceExposure(community);
 
-  const thisYear = Number(todayIsoDate().slice(0, 4));
   const years = ledgerYears(community);
-  // The charts read one window: the last twelve months, or a calendar
-  // year. A treasurer in February wants the winter they just paid for, not
-  // six weeks of a new year.
-  const [span, setSpan] = useState<string>("rolling");
-  const rolling = span === "rolling";
-  const year = rolling ? (years[0] ?? thisYear) : Number(span);
-  const today = todayIsoDate();
-  const window = rolling
-    ? periodRange("last-12-months", today)
-    : { from: `${year}-01-01`, to: year === thisYear ? today : `${year}-12-31` };
+  // The charts read one window, which the period control sets. The default is
+  // the last twelve months: a treasurer in February wants the winter they
+  // just paid for, not six weeks of a new year. A month or 30 days would make
+  // a chart of one bar, so those are not offered here.
+  const period = usePeriod(OVERVIEW_PERIODS, "last-12-months");
+  const window = period.value;
+  const rolling = window.preset === "last-12-months";
   const flows = monthlyFlowsBetween(community, window.from, window.to);
   const spending = spendingBetween(community, window.from, window.to);
   const flowIn = flows.reduce((t, m) => t + m.inCents, 0);
   const flowOut = flows.reduce((t, m) => t + m.outCents, 0);
-  const monthOf = (iso: string) => Number(iso.slice(5, 7));
-  const spanLabel = rolling
-    ? `${monthName(monthOf(window.from))} ${window.from.slice(0, 4)} to ${monthName(monthOf(window.to))} ${window.to.slice(0, 4)}`
-    : year === thisYear
-      ? `January to ${monthName(monthOf(today), "long")}`
-      : `All of ${year}`;
-  const runway = operatingRunway(community, today);
+  const spanLabel = rangeWords(window.from, window.to);
+  // The year-on-year card compares calendar years, so it shows for the
+  // rolling window (the latest year the books have) and for a whole calendar
+  // year, and stays out of the way for a fiscal year that spans two.
+  const calendarYear = window.from.slice(5) === "01-01" && window.from.slice(0, 4) === window.to.slice(0, 4);
+  const year = rolling ? (years[0] ?? Number(period.asOf.slice(0, 4))) : Number(window.to.slice(0, 4));
+  const runway = operatingRunway(community, period.asOf);
   const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
 
   const lastYear = years.find((y) => y < year);
   const cmp =
-    moduleOn("money-compare") && lastYear !== undefined
+    moduleOn("money-compare") && (rolling || calendarYear) && lastYear !== undefined
       ? compareYears(community, lastYear, year)
       : null;
   const showBudget = moduleOn("money-budget");
@@ -153,8 +156,6 @@ export function OverviewScreen() {
         />
       </div>
 
-      <OpeningBalances />
-
       {!primary ? (
         <Card className="mt-6 p-5">
           <div className="mb-4">
@@ -174,6 +175,63 @@ export function OverviewScreen() {
             }}
           />
         </Card>
+      ) : null}
+
+      {/* The charts, one period control for both. */}
+      {hasFlows || spending.rows.length > 0 ? (
+        <section className="mt-6">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">Activity</h2>
+            <PeriodControl
+              value={window}
+              onChange={period.set}
+              presets={OVERVIEW_PERIODS}
+              asOf={period.asOf}
+              fyMonth={period.fyMonth}
+              className="w-full sm:w-auto"
+            />
+          </div>
+          <div className="grid gap-4 xl:grid-cols-5">
+            {hasFlows ? (
+              <Card className={cn("flex flex-col", spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
+                <CardHeader
+                  title="Money in and out"
+                  subtitle={`${spanLabel}: ${money(flowIn, { cents: false })} in, ${money(flowOut, { cents: false })} out`}
+                />
+                <MoneyFlowChart months={flows} />
+                {/* The number a treasurer is asked at the annual meeting. */}
+                {runway.months > 0 ? (
+                  <p className="mt-auto border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-muted">
+                    A typical month brings in {money(runway.avgInCents, { cents: false })} and pays out{" "}
+                    {money(runway.avgOutCents, { cents: false })}.
+                    {runway.coversMonths !== null
+                      ? ` With nothing coming in, the operating account would cover ${Math.round(runway.coversMonths * 10) / 10} months of bills.`
+                      : ""}
+                  </p>
+                ) : null}
+              </Card>
+            ) : null}
+            {spending.rows.length > 0 ? (
+              <Card className={hasFlows ? "xl:col-span-2" : "xl:col-span-5"}>
+                <CardHeader title="Where it went" />
+                <SpendingDonut
+                  rows={spending.rows}
+                  totalCents={spending.totalCents}
+                  reportHref="/board/money/transactions"
+                />
+                {/* Savings moved between the association's own accounts: shown
+                    beside the total, never inside it, so this card and the
+                    chart's money out are one figure. */}
+                {spending.reserveCents > 0 ? (
+                  <p className="flex items-baseline justify-between gap-3 border-t border-border px-5 py-3 text-footnote text-fg-muted">
+                    <span>Moved to reserves, not counted as spending</span>
+                    <span className="tnum font-semibold text-fg">{money(spending.reserveCents, { cents: false })}</span>
+                  </p>
+                ) : null}
+              </Card>
+            ) : null}
+          </div>
+        </section>
       ) : null}
 
       {/* The decisions, while there are any. Confirming here keeps the
@@ -256,66 +314,6 @@ export function OverviewScreen() {
         </Card>
       ) : null}
 
-      {/* The charts, one year control for both. */}
-      {hasFlows || spending.rows.length > 0 ? (
-        <section className="mt-6">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">Through the year</h2>
-            <Segmented
-              label="Period"
-              value={span}
-              onChange={setSpan}
-              options={[
-                { value: "rolling", label: "Last 12 months" },
-                ...[...years]
-                  .sort((a, b) => a - b)
-                  .map((y) => ({ value: String(y), label: y === thisYear ? "This year" : String(y) })),
-              ]}
-            />
-          </div>
-          <div className="grid gap-4 xl:grid-cols-5">
-            {hasFlows ? (
-              <Card className={cn("flex flex-col", spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
-                <CardHeader
-                  title="Money in and out"
-                  subtitle={`${spanLabel}: ${money(flowIn, { cents: false })} in, ${money(flowOut, { cents: false })} out`}
-                />
-                <MoneyFlowChart months={flows} />
-                {/* The number a treasurer is asked at the annual meeting. */}
-                {runway.months > 0 ? (
-                  <p className="mt-auto border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-muted">
-                    A typical month brings in {money(runway.avgInCents, { cents: false })} and pays out{" "}
-                    {money(runway.avgOutCents, { cents: false })}.
-                    {runway.coversMonths !== null
-                      ? ` With nothing coming in, the operating account would cover ${Math.round(runway.coversMonths * 10) / 10} months of bills.`
-                      : ""}
-                  </p>
-                ) : null}
-              </Card>
-            ) : null}
-            {spending.rows.length > 0 ? (
-              <Card className={hasFlows ? "xl:col-span-2" : "xl:col-span-5"}>
-                <CardHeader title="Where it went" />
-                <SpendingDonut
-                  rows={spending.rows}
-                  totalCents={spending.totalCents}
-                  reportHref="/board/money/transactions"
-                />
-                {/* Savings moved between the association's own accounts: shown
-                    beside the total, never inside it, so this card and the
-                    chart's money out are one figure. */}
-                {spending.reserveCents > 0 ? (
-                  <p className="flex items-baseline justify-between gap-3 border-t border-border px-5 py-3 text-footnote text-fg-muted">
-                    <span>Moved to reserves, not counted as spending</span>
-                    <span className="tnum font-semibold text-fg">{money(spending.reserveCents, { cents: false })}</span>
-                  </p>
-                ) : null}
-              </Card>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
       {/* Budget pace, a glance and a link, once the budget module is on.
           The dues collection card that sat beside it said what the
           Past due tab says in more detail, one click away. */}
@@ -364,6 +362,8 @@ export function OverviewScreen() {
             )}
           </Card>
       ) : null}
+
+      <OpeningBalances />
 
       {primary && recon.staleFeeds.length ? (
         <p className="mt-4 flex items-center gap-1.5 text-footnote text-fg-muted">

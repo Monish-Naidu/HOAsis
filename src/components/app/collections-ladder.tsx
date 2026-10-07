@@ -114,6 +114,7 @@ export function CollectionsLadder({
             value={stage}
             onChange={setStage}
             options={chips.map((f) => ({ value: f, label: FILTER_LABEL[f], count: counts[f] }))}
+            className="pointer-coarse:[&>button]:h-9"
           />
         </div>
       ) : null}

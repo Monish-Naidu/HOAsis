@@ -1,9 +1,18 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus } from "lucide-react";
-import { Segmented as SegmentedControl, Select } from "@/components/ui/primitives";
-import { PERIOD_LABEL, type Delta, type PeriodPreset } from "@/lib/metrics";
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import { Button, Segmented as SegmentedControl, Select } from "@/components/ui/primitives";
+import {
+  periodRange,
+  periodWords,
+  presetMenuLabel,
+  rangeWords,
+  stepPeriod,
+  type Delta,
+  type PeriodPreset,
+} from "@/lib/metrics";
 import { cn, money } from "@/lib/utils";
 
 /**
@@ -125,7 +134,7 @@ export interface SegmentOption<T extends string> {
 
 /**
  * The primitive segmented control with the finance screens' prop names, so
- * the period picker and the year control look like every other one. Taller
+ * the year control look like every other one. Taller
  * under a finger: 28px was under any touch guideline for a thing tapped
  * every visit.
  */
@@ -190,56 +199,206 @@ export function SelectField<T extends string>({
 
 /* ----------------------------------------------------------------- period */
 
-const PRESETS: PeriodPreset[] = ["this-month", "last-month", "this-year", "last-year", "last-12-months", "custom"];
+const MENU_PRESETS: PeriodPreset[] = ["this-month", "last-month", "last-30-days", "this-year", "last-year", "last-12-months"];
 
 /**
- * The period a treasurer means: the presets they reach for, and a pair of
- * dates for the once a year they need something else.
+ * One button for the period, in words and dates: "Last 30 days · Sep 7 to
+ * Oct 7, 2026". The dates are always there, so nobody has to know what a
+ * preset means. It opens a short menu; arrows beside it step a month or a
+ * year back and forward when the period is one.
+ *
+ * Replaces a row of seven chips whose "This year", "Last year" and "Last 12
+ * months" overlapped. The parent owns the value (see `usePeriod`), so the
+ * Overview and Transactions share one control and one set of URL params.
  */
-export function PeriodPicker({
-  preset,
-  onPreset,
-  range,
-  onRange,
-  presets = PRESETS,
+export function PeriodControl({
+  value,
+  onChange,
+  presets = [...MENU_PRESETS, "custom"],
+  asOf,
+  fyMonth = 1,
+  className,
 }: {
-  /** The presets to offer, for a screen with one the others do not need. */
+  value: { preset: PeriodPreset; from: string; to: string };
+  onChange: (next: { preset: PeriodPreset; from: string; to: string }) => void;
+  /** The presets to offer, for a screen with some the others do not need. */
   presets?: readonly PeriodPreset[];
-  preset: PeriodPreset;
-  onPreset: (preset: PeriodPreset) => void;
-  range: { from: string; to: string };
-  onRange: (range: { from: string; to: string }) => void;
+  asOf: string;
+  fyMonth?: number;
+  className?: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [customPicked, setCustomPicked] = useState(false);
+  const [draft, setDraft] = useState({ from: value.from, to: value.to });
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  const words = periodWords(value.preset, value, fyMonth);
+  const back = stepPeriod(value.preset, value, -1, asOf, fyMonth);
+  const forward = stepPeriod(value.preset, value, 1, asOf, fyMonth);
+  const draftOk = draft.from !== "" && draft.to !== "" && draft.from <= draft.to;
+
+  function show() {
+    setDraft({ from: value.from, to: value.to });
+    setCustomPicked(value.preset === "custom");
+    setOpen(true);
+  }
+
+  // Custom dates are applied when the menu closes, so a half-typed range is
+  // never searched while it is still wrong.
+  const applyAndClose = useCallback(() => {
+    if (customPicked && draftOk && (value.preset !== "custom" || draft.from !== value.from || draft.to !== value.to)) {
+      onChange({ preset: "custom", from: draft.from, to: draft.to });
+    }
+    setOpen(false);
+  }, [customPicked, draftOk, draft, value, onChange]);
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (root.current && !root.current.contains(e.target as Node)) applyAndClose();
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [open, applyAndClose]);
+
+  const arrow =
+    "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border-2 bg-surface text-fg-muted transition-colors hover:border-fg-subtle hover:text-fg disabled:pointer-events-none disabled:opacity-40 pointer-coarse:size-11";
   const field =
-    "tnum h-8 rounded-lg border border-border-2 bg-surface px-2 text-footnote text-fg outline-none focus:border-brand";
+    "tnum h-9 w-full min-w-0 rounded-lg border border-border-2 bg-surface px-2 text-footnote text-fg outline-none focus:border-brand";
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Segmented
-        ariaLabel="Period"
-        value={preset}
-        onChange={onPreset}
-        options={presets.map((p) => ({ value: p, label: PERIOD_LABEL[p] }))}
-      />
-      {preset === "custom" ? (
-        <span className="inline-flex items-center gap-1.5">
-          <input
-            type="date"
-            aria-label="From"
-            value={range.from}
-            max={range.to}
-            onChange={(e) => onRange({ ...range, from: e.target.value })}
-            className={field}
-          />
-          <span className="text-footnote text-fg-subtle">to</span>
-          <input
-            type="date"
-            aria-label="To"
-            value={range.to}
-            min={range.from}
-            onChange={(e) => onRange({ ...range, to: e.target.value })}
-            className={field}
-          />
+    <div
+      ref={root}
+      className={cn("relative flex max-w-full items-center gap-1.5", className)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) {
+          setOpen(false);
+          trigger.current?.focus();
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-label="Previous period"
+        disabled={!back}
+        onClick={() => back && onChange(back)}
+        className={arrow}
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+      <button
+        ref={trigger}
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => (open ? applyAndClose() : show())}
+        className="flex min-h-9 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border border-border-2 bg-surface px-3 py-1 text-left text-footnote transition-colors hover:border-fg-subtle pointer-coarse:min-h-11"
+      >
+        {/* Stacked on a phone so the button and both arrows keep one line. */}
+        <span className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:gap-2">
+          <span className="font-semibold text-fg">{words.label}</span>
+          <span aria-hidden className="hidden text-fg-subtle sm:inline">
+            ·
+          </span>
+          <span className="tnum text-fg-muted">{words.dates}</span>
         </span>
+        <ChevronDown className={cn("size-4 shrink-0 text-fg-subtle transition-transform", open && "rotate-180")} />
+      </button>
+      <button
+        type="button"
+        aria-label="Next period"
+        disabled={!forward}
+        onClick={() => forward && onChange(forward)}
+        className={arrow}
+      >
+        <ChevronRight className="size-4" />
+      </button>
+
+      {open ? (
+        <div
+          role="group"
+          aria-label="Choose a period"
+          className="absolute left-0 top-full z-30 mt-1.5 w-[min(22rem,calc(100vw-2rem))] rounded-card border border-border bg-surface p-1.5 shadow-float"
+        >
+          <ul>
+            {presets
+              .filter((p) => p !== "custom")
+              .map((p) => {
+                const r = periodRange(p, asOf, fyMonth);
+                const current = value.preset === p;
+                return (
+                  <li key={p}>
+                    <button
+                      type="button"
+                      aria-pressed={current}
+                      onClick={() => {
+                        setOpen(false);
+                        if (!current) onChange({ preset: p, ...r });
+                        trigger.current?.focus();
+                      }}
+                      className={cn(
+                        "flex w-full items-baseline justify-between gap-3 rounded-lg px-3 py-2 text-left text-footnote transition-colors hover:bg-surface-2 pointer-coarse:py-3",
+                        current ? "bg-surface-3 font-semibold text-fg" : "text-fg",
+                      )}
+                    >
+                      {presetMenuLabel(p, fyMonth)}
+                      <span className="tnum text-caption font-normal text-fg-muted">{rangeWords(r.from, r.to)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            {presets.includes("custom") ? (
+              <li>
+                <button
+                  type="button"
+                  aria-pressed={customPicked}
+                  onClick={() => setCustomPicked(true)}
+                  className={cn(
+                    "flex w-full items-baseline justify-between gap-3 rounded-lg px-3 py-2 text-left text-footnote transition-colors hover:bg-surface-2 pointer-coarse:py-3",
+                    customPicked ? "bg-surface-3 font-semibold text-fg" : "text-fg",
+                  )}
+                >
+                  Custom
+                  <span className="text-caption font-normal text-fg-muted">Pick two dates</span>
+                </button>
+              </li>
+            ) : null}
+          </ul>
+          {customPicked ? (
+            <div className="mt-1 border-t border-border px-3 pb-2 pt-3">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block text-caption text-fg-muted">
+                  From
+                  <input
+                    type="date"
+                    aria-label="From"
+                    value={draft.from}
+                    max={draft.to || undefined}
+                    onChange={(e) => setDraft({ ...draft, from: e.target.value })}
+                    className={cn(field, "mt-1")}
+                  />
+                </label>
+                <label className="block text-caption text-fg-muted">
+                  To
+                  <input
+                    type="date"
+                    aria-label="To"
+                    value={draft.to}
+                    min={draft.from || undefined}
+                    onChange={(e) => setDraft({ ...draft, to: e.target.value })}
+                    className={cn(field, "mt-1")}
+                  />
+                </label>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <Button size="sm" variant="primary" disabled={!draftOk} onClick={applyAndClose}>
+                  Apply
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
