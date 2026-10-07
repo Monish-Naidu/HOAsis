@@ -857,7 +857,12 @@ export const PERIOD_LABEL: Record<PeriodPreset, string> = {
 };
 
 /** The first and last day a preset covers, measured from the given day. */
-export function periodRange(preset: PeriodPreset, asOf: string): { from: string; to: string } {
+export function periodRange(
+  preset: PeriodPreset,
+  asOf: string,
+  /** The month the fiscal year starts in. Only "this year" and "last year" care. */
+  fyMonth = 1,
+): { from: string; to: string } {
   const year = yearOf(asOf);
   const month = monthOf(asOf);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -875,9 +880,9 @@ export function periodRange(preset: PeriodPreset, asOf: string): { from: string;
       return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(lastDay(y, m))}` };
     }
     case "this-year":
-      return { from: `${year}-01-01`, to: `${year}-12-31` };
+      return fiscalYearRange(fiscalYearOf(asOf, fyMonth), fyMonth);
     case "last-year":
-      return { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` };
+      return fiscalYearRange(fiscalYearOf(asOf, fyMonth) - 1, fyMonth);
     case "last-12-months":
       // Twelve whole months ending today, so the window starts on the first
       // of the month a year back rather than on an arbitrary day.
@@ -885,6 +890,132 @@ export function periodRange(preset: PeriodPreset, asOf: string): { from: string;
     case "custom":
       return { from: `${year}-01-01`, to: asOf };
   }
+}
+
+/**
+ * The month a fiscal year starts in, from however the association wrote it:
+ * "07-01" from the setup wizard, "July 1" from the older fixtures.
+ */
+export function fiscalMonth(fiscalYearStart: string | undefined): number {
+  const raw = fiscalYearStart ?? "";
+  const numeric = Number(raw.slice(0, 2));
+  if (/^\d{2}-/.test(raw) && numeric >= 1 && numeric <= 12) return numeric;
+  const named = monthNames().findIndex((n) => raw.toLowerCase().startsWith(n.toLowerCase()));
+  return named >= 0 ? named + 1 : 1;
+}
+
+function monthNames() {
+  return Array.from({ length: 12 }, (_, i) => monthName(i + 1, "long"));
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const monthEnd = (y: number, m: number) =>
+  `${y}-${pad2(m)}-${pad2(new Date(Date.UTC(y, m, 0)).getUTCDate())}`;
+
+/** The year a fiscal year starts in, for the one a date falls in. */
+function fiscalYearOf(date: string, fyMonth: number): number {
+  return monthOf(date) >= fyMonth ? yearOf(date) : yearOf(date) - 1;
+}
+
+/** The whole fiscal year that starts in `startYear`. January starts are calendar years. */
+function fiscalYearRange(startYear: number, fyMonth: number) {
+  return {
+    from: `${startYear}-${pad2(fyMonth)}-01`,
+    to: fyMonth === 1 ? `${startYear}-12-31` : monthEnd(startYear + 1, fyMonth - 1),
+  };
+}
+
+/** "Sep 7 to Oct 7, 2026": the year once when both ends share it, twice when not. */
+export function rangeWords(from: string, to: string): string {
+  const part = (iso: string) => `${monthName(monthOf(iso))} ${Number(iso.slice(8, 10))}`;
+  return yearOf(from) === yearOf(to)
+    ? `${part(from)} to ${part(to)}, ${yearOf(to)}`
+    : `${part(from)}, ${yearOf(from)} to ${part(to)}, ${yearOf(to)}`;
+}
+
+type PeriodUnit = "month" | "year";
+
+/**
+ * Whether a range is one whole month or one whole fiscal year, which is what
+ * the arrows can step by. A 30-day or 12-month window has no unit: stepping
+ * it would mean inventing a boundary nobody asked for. A custom range that
+ * happens to be a whole month steps like a month.
+ */
+function periodUnit(preset: PeriodPreset, r: { from: string; to: string }, fyMonth: number): PeriodUnit | null {
+  if (preset === "last-30-days" || preset === "last-12-months") return null;
+  if (r.from.slice(8) === "01" && r.to === monthEnd(yearOf(r.from), monthOf(r.from))) return "month";
+  if (
+    r.from.slice(8) === "01" &&
+    monthOf(r.from) === fyMonth &&
+    r.to === fiscalYearRange(yearOf(r.from), fyMonth).to
+  )
+    return "year";
+  return null;
+}
+
+/**
+ * How a period reads on the button: the name first, then the dates, so
+ * nobody has to know what a preset means. A custom range that is a whole
+ * month or year is named as one.
+ */
+export function periodWords(
+  preset: PeriodPreset,
+  r: { from: string; to: string },
+  fyMonth = 1,
+): { label: string; dates: string } {
+  const dates = rangeWords(r.from, r.to);
+  const fiscal = fyMonth !== 1;
+  const unit = periodUnit(preset, r, fyMonth);
+  let label: string = PERIOD_LABEL[preset];
+  if (preset === "this-year" || preset === "last-year") {
+    label = fiscal ? `Fiscal year ${yearOf(r.from)}` : PERIOD_LABEL[preset];
+  } else if (preset === "custom") {
+    label =
+      unit === "month"
+        ? `${monthName(monthOf(r.from), "long")} ${yearOf(r.from)}`
+        : unit === "year"
+          ? fiscal
+            ? `Fiscal year ${yearOf(r.from)}`
+            : String(yearOf(r.from))
+          : "Custom";
+  }
+  return { label, dates };
+}
+
+/** The words for a preset in the menu, where "This year" would mislead on a July start. */
+export function presetMenuLabel(preset: PeriodPreset, fyMonth = 1): string {
+  if (fyMonth === 1) return PERIOD_LABEL[preset];
+  if (preset === "this-year") return "This fiscal year";
+  if (preset === "last-year") return "Last fiscal year";
+  return PERIOD_LABEL[preset];
+}
+
+/**
+ * The period one step back or forward, or null when there is none: a 30-day
+ * or custom window does not step, and nothing steps into a month that has
+ * not begun. The result is a preset when it lands on one ("This month" back
+ * one is "Last month"), otherwise a custom range, so the URL needs no new
+ * parameter.
+ */
+export function stepPeriod(
+  preset: PeriodPreset,
+  r: { from: string; to: string },
+  dir: -1 | 1,
+  asOf: string,
+  fyMonth = 1,
+): { preset: PeriodPreset; from: string; to: string } | null {
+  const unit = periodUnit(preset, r, fyMonth);
+  if (!unit) return null;
+  const size = unit === "month" ? 1 : 12;
+  const from = shiftMonths(r.from, dir * size);
+  if (from > asOf) return null;
+  const end = shiftMonths(r.from, dir * size + size - 1);
+  const to = monthEnd(yearOf(end), monthOf(end));
+  const landed = (["this-month", "last-month", "this-year", "last-year"] as const).find((p) => {
+    const pr = periodRange(p, asOf, fyMonth);
+    return pr.from === from && pr.to === to;
+  });
+  return { preset: landed ?? "custom", from, to };
 }
 
 /** A period as it reads in a sentence: "Nothing in the last 30 days". */

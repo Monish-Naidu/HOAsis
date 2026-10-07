@@ -480,7 +480,7 @@ Rows in its order:
 | --- | --- |
 | 1. Monthly rollup tables kept by triggers; `association_overview` reads them | next, after the refactors |
 | 2. Fiscal-year close, reopen logged | next |
-| 3. Period filter with fiscal years and compare-to-last-year on Transactions and Overview; totals on the category chips | next |
+| 3. Period filter with fiscal years and compare-to-last-year on Transactions and Overview; totals on the category chips | done 2026-10-07 for the period control and the category totals (pull request #22, at Monish's word on the Finances tabs): one period button that says its dates, arrows that step by month or year, fiscal years named, the figures as the direction filter, categories as a pressable list with counts and totals, Starting balances folded at the bottom once set. Left: compare to last year |
 | 4. History import: statements per home, then bank lines, through the roster-import pattern | next, before the first association with years behind it |
 | 5. Budget versus actual and Trends switched on, reworked to the rollups | later |
 | 6. Annual records: exports per area for a year, then the screen | later |

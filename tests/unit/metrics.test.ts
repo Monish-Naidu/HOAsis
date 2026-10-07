@@ -17,6 +17,9 @@ import {
   netByYear,
   operatingRunway,
   periodRange,
+  periodWords,
+  stepPeriod,
+  fiscalMonth,
   spendingBetween,
   vendorDecisions,
   yearSummary,
@@ -595,5 +598,61 @@ describe("delinquency", () => {
     expect(d.households).toBe(4);
     expect(d.current).toBe(4);
     expect(d.collectionRate).toBe(1);
+  });
+});
+
+describe("period words and stepping", () => {
+  const asOf = "2026-10-07";
+
+  it("names a preset and shows its dates", () => {
+    expect(periodWords("last-30-days", periodRange("last-30-days", asOf))).toEqual({
+      label: "Last 30 days",
+      dates: "Sep 8 to Oct 7, 2026",
+    });
+  });
+
+  it("reads the fiscal month from either way it is written", () => {
+    expect(fiscalMonth("07-01")).toBe(7);
+    expect(fiscalMonth("July 1")).toBe(7);
+    expect(fiscalMonth("January 1")).toBe(1);
+    expect(fiscalMonth(undefined)).toBe(1);
+  });
+
+  it("makes this year and last year fiscal when the year does not start in January", () => {
+    expect(periodRange("this-year", asOf, 7)).toEqual({ from: "2026-07-01", to: "2027-06-30" });
+    expect(periodRange("last-year", asOf, 7)).toEqual({ from: "2025-07-01", to: "2026-06-30" });
+    // Before the start month, this year is the one that began last calendar year.
+    expect(periodRange("this-year", "2026-03-10", 7)).toEqual({ from: "2025-07-01", to: "2026-06-30" });
+    expect(periodRange("this-year", asOf)).toEqual({ from: "2026-01-01", to: "2026-12-31" });
+  });
+
+  it("says which year a fiscal year is", () => {
+    const r = periodRange("this-year", asOf, 7);
+    expect(periodWords("this-year", r, 7)).toEqual({ label: "Fiscal year 2026", dates: "Jul 1, 2026 to Jun 30, 2027" });
+    expect(periodWords("this-year", periodRange("this-year", asOf)).label).toBe("This year");
+  });
+
+  it("steps a month back through the presets and then as custom dates", () => {
+    const thisMonth = periodRange("this-month", asOf);
+    const back = stepPeriod("this-month", thisMonth, -1, asOf)!;
+    expect(back).toEqual({ preset: "last-month", from: "2026-09-01", to: "2026-09-30" });
+    expect(stepPeriod(back.preset, back, -1, asOf)).toEqual({ preset: "custom", from: "2026-08-01", to: "2026-08-31" });
+    expect(stepPeriod("this-month", thisMonth, 1, asOf)).toBeNull();
+    // Leap February.
+    expect(stepPeriod("custom", { from: "2024-03-01", to: "2024-03-31" }, -1, asOf)).toMatchObject({ to: "2024-02-29" });
+  });
+
+  it("steps a fiscal year by its own unit", () => {
+    const r = periodRange("this-year", asOf, 7);
+    expect(stepPeriod("this-year", r, -1, asOf, 7)).toEqual({ preset: "last-year", from: "2025-07-01", to: "2026-06-30" });
+    expect(stepPeriod("this-year", r, 1, asOf, 7)).toBeNull();
+    const cal = periodRange("this-year", asOf);
+    expect(stepPeriod("this-year", cal, -1, asOf)).toEqual({ preset: "last-year", from: "2025-01-01", to: "2025-12-31" });
+  });
+
+  it("does not step 30 days, 12 months or an odd custom range", () => {
+    expect(stepPeriod("last-30-days", periodRange("last-30-days", asOf), -1, asOf)).toBeNull();
+    expect(stepPeriod("last-12-months", periodRange("last-12-months", asOf), -1, asOf)).toBeNull();
+    expect(stepPeriod("custom", { from: "2026-03-05", to: "2026-04-09" }, -1, asOf)).toBeNull();
   });
 });

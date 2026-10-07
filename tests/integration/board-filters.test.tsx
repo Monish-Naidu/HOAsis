@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // The URL a screen opens on, set per test. replace is spied on so a click can
@@ -99,22 +99,151 @@ describe("Past due filters", () => {
 });
 
 describe("Transactions filters", () => {
-  it("opens on the last 30 days, not an empty this month", () => {
+  beforeEach(() => {
     url.path = "/board/money/transactions";
-    open(<TransactionsScreen />);
-    expect(screen.getByRole("button", { name: "Last 30 days" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("counts statuses and categories in the selects", () => {
-    url.path = "/board/money/transactions";
+  it("opens on the last 30 days, and says the dates in words", () => {
+    open(<TransactionsScreen />);
+    // One button, not seven chips: the name and the dates, so nobody has to
+    // know what a preset means. The demo's clock is pinned to 2026-08-20.
+    const button = screen.getByRole("button", { name: /^Last 30 days/ });
+    expect(button).toHaveTextContent("Last 30 days");
+    expect(button).toHaveTextContent("Jul 22 to Aug 20, 2026");
+    expect(screen.queryByRole("button", { name: "Last year" })).toBeNull();
+  });
+
+  it("lists the periods in a menu, each with its dates, and writes the choice to the URL", async () => {
+    const user = userEvent.setup();
+    open(<TransactionsScreen />);
+    await user.click(screen.getByRole("button", { name: /^Last 30 days/ }));
+    expect(screen.getByRole("button", { name: /^This month.*Aug 1 to Aug 31, 2026/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Last month/ }));
+    expect(replace).toHaveBeenCalledWith("/board/money/transactions?period=last-month", { scroll: false });
+  });
+
+  it("applies custom dates when the menu closes, and keeps them in the URL", async () => {
+    const user = userEvent.setup();
+    open(<TransactionsScreen />);
+    await user.click(screen.getByRole("button", { name: /^Last 30 days/ }));
+    await user.click(screen.getByRole("button", { name: /^Custom/ }));
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-03-05" } });
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-04-09" } });
+    expect(replace).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    expect(replace).toHaveBeenCalledWith(
+      "/board/money/transactions?period=custom&from=2026-03-05&to=2026-04-09",
+      { scroll: false },
+    );
+  });
+
+  it("steps a month back and forward with the arrows, and not past today", async () => {
+    const user = userEvent.setup();
+    url.search = "period=this-month";
+    open(<TransactionsScreen />);
+    expect(screen.getByRole("button", { name: "Next period" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Previous period" }));
+    // This month back one is Last month, which is a preset, so the link stays short.
+    expect(replace).toHaveBeenLastCalledWith("/board/money/transactions?period=last-month", { scroll: false });
+  });
+
+  it("steps past the presets as a custom month, named in words", async () => {
+    const user = userEvent.setup();
+    url.search = "period=custom&from=2026-06-01&to=2026-06-30";
+    open(<TransactionsScreen />);
+    const button = screen.getByRole("button", { name: /^June 2026/ });
+    expect(button).toHaveTextContent("Jun 1 to Jun 30, 2026");
+    await user.click(screen.getByRole("button", { name: "Previous period" }));
+    expect(replace).toHaveBeenLastCalledWith(
+      "/board/money/transactions?period=custom&from=2026-05-01&to=2026-05-31",
+      { scroll: false },
+    );
+    // The screen shows May on the click, before the router catches up, so
+    // forward from there is June again.
+    await user.click(screen.getByRole("button", { name: "Next period" }));
+    expect(replace).toHaveBeenLastCalledWith(
+      "/board/money/transactions?period=custom&from=2026-06-01&to=2026-06-30",
+      { scroll: false },
+    );
+  });
+
+  it("does not step a 30-day or an odd custom range", () => {
+    open(<TransactionsScreen />);
+    expect(screen.getByRole("button", { name: "Previous period" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next period" })).toBeDisabled();
+  });
+
+  it("has no category dropdown; the By category panel is the category filter", async () => {
+    const user = userEvent.setup();
     url.search = "period=this-year";
     open(<TransactionsScreen />);
-    expect(screen.getByRole("option", { name: /^To confirm \(\d+\)$/ })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /^All categories \(\d+\)$/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Category")).toBeNull();
+    expect(screen.queryByRole("option", { name: /^All categories/ })).toBeNull();
+    const panel = screen.getByText(/^By category/).closest("details")!;
+    expect(panel).toHaveAttribute("open");
+    const first = within(panel).getAllByRole("button")[0];
+    expect(first).toHaveAttribute("aria-pressed", "false");
+    await user.click(first);
+    expect(replace).toHaveBeenLastCalledWith(
+      expect.stringMatching(/^\/board\/money\/transactions\?period=this-year&category=/),
+      { scroll: false },
+    );
+  });
+
+  it("shows a category as pressed when the URL names it, and clears on a second press", async () => {
+    const user = userEvent.setup();
+    url.search = "period=this-year";
+    open(<TransactionsScreen />);
+    const panel = screen.getByText(/^By category/).closest("details")!;
+    const name = within(panel).getAllByRole("button")[0].textContent!.split(" · ")[0];
+    cleanup();
+    url.search = `period=this-year&category=${encodeURIComponent(name)}`;
+    open(<TransactionsScreen />);
+    const pressed = screen
+      .getByText(/^By category/)
+      .closest("details")!
+      .querySelector('button[aria-pressed="true"]') as HTMLElement;
+    expect(pressed).toHaveTextContent(name);
+    await user.click(pressed);
+    expect(replace).toHaveBeenLastCalledWith("/board/money/transactions?period=this-year", { scroll: false });
+  });
+
+  it("makes Money in and Money out the direction filter, with no separate switch", async () => {
+    const user = userEvent.setup();
+    url.search = "period=this-year";
+    open(<TransactionsScreen />);
+    expect(screen.queryByRole("group", { name: "Direction" })).toBeNull();
+    const moneyIn = screen.getByRole("button", { name: /^Money in/ });
+    const linesBefore = screen.getByText("Lines").nextSibling!.textContent;
+    expect(moneyIn).toHaveAttribute("aria-pressed", "false");
+    await user.click(moneyIn);
+    expect(moneyIn).toHaveAttribute("aria-pressed", "true");
+    // Money out keeps reading the whole period while Money in is the filter.
+    expect(screen.getByRole("button", { name: /^Money out/ })).toHaveAttribute("aria-pressed", "false");
+    expect(Number(screen.getByText("Lines").nextSibling!.textContent)).toBeLessThan(Number(linesBefore));
+    await user.click(moneyIn);
+    expect(moneyIn).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Lines").nextSibling!.textContent).toBe(linesBefore);
+  });
+
+  it("offers the Status dropdown only when there are lines to confirm, counted", () => {
+    url.search = "period=this-year";
+    open(<TransactionsScreen />);
+    const toConfirm = seen.state.ledger.some((e) => e.status === "needs-review");
+    if (toConfirm) {
+      expect(screen.getByRole("option", { name: /^To confirm \(\d+\)$/ })).toBeInTheDocument();
+    } else {
+      expect(screen.queryByLabelText("Status")).toBeNull();
+    }
+  });
+
+  it("keeps the Status dropdown while a status is chosen, so it can be undone", () => {
+    url.search = "period=this-month&status=cleared";
+    open(<TransactionsScreen />);
+    expect(screen.getByLabelText("Status")).toHaveValue("cleared");
   });
 
   it("says what is empty and links to the next wider period", () => {
-    url.path = "/board/money/transactions";
     url.search = "period=this-month&q=zzzz-nothing";
     open(<TransactionsScreen />);
     // A search narrows it, so the empty state offers clearing it first.
@@ -123,10 +252,10 @@ describe("Transactions filters", () => {
   });
 
   it("opens an older link's own dates as a custom window, and says so when it is empty", () => {
-    url.path = "/board/money/transactions";
     url.search = "from=1999-01-01&to=1999-01-31";
     open(<TransactionsScreen />);
-    expect(screen.getByRole("button", { name: "Custom" })).toHaveAttribute("aria-pressed", "true");
+    const button = screen.getByRole("button", { name: /^January 1999/ });
+    expect(button).toHaveTextContent("Jan 1 to Jan 31, 1999");
     expect(screen.getByText("Nothing in these dates.")).toBeInTheDocument();
   });
 });
