@@ -3,11 +3,11 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { allCommunities, seededCommunities, communityById } from "@/lib/data/communities";
 import type { Community } from "@/lib/data/community";
-import { caps, DEFAULT_ROLE_CAPABILITIES, DEFAULT_ROLE_VIEWS, NO_CAPABILITIES, sees as seesArea } from "@/lib/data/accounts";
+import { caps, DEFAULT_ROLE_CAPABILITIES, DEFAULT_ROLE_VIEWS, NO_CAPABILITIES } from "@/lib/data/accounts";
 import { DUES_HIGH_MESSAGE, MAX_DUES_CENTS, isEmail } from "@/lib/input-checks";
 import { addDays, daysFromToday, formatDate, money, setToday, todayIsoDate } from "@/lib/utils";
 import { createdCommunitiesStore, saveCreatedCommunity } from "@/lib/data/created-communities";
-import { useRemote, setRemoteAssociation, loadRemote, preferRemoteAssociation, refreshRemote, reportRemoteError, NOTHING_CHANGED, WRITE_TIMEOUT_MS } from "@/lib/data/remote-store";
+import { useRemote, loadRemote, preferRemoteAssociation, refreshRemote, reportRemoteError, NOTHING_CHANGED, WRITE_TIMEOUT_MS } from "@/lib/data/remote-store";
 import { officeOf } from "@/lib/board-offices";
 import { ownerDues } from "@/lib/home-types";
 import { setHomeDues as writeHomeDues } from "@/lib/roster/apply";
@@ -15,7 +15,6 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 import type { Json } from "@/lib/supabase/database.types";
 import { documentTitle, formatSize, mimeTypeOf, rejectReason, storagePathFor, toDbVisibility, toDocumentRecord } from "@/lib/documents";
-import { signOutOfSupabase } from "@/lib/auth";
 
 import { buildCommunity, draftCollectionPolicy, type CommunityDraft, reservableSpaceNames } from "@/lib/data/new-community";
 import { isRecord } from "@/lib/core/guards";
@@ -26,7 +25,6 @@ import { chargeProblem } from "@/lib/payments/charges";
 import { MANUAL_METHOD_LABEL, manualPaymentLabel, type ManualMethod, type PaymentInstrument } from "@/lib/payments/instruments";
 import { parseManualLabel, reversalReasonProblem, pairManualPayments, recentManualPayments, type HandMethod, type ManualPaymentRow } from "@/lib/payments/manual-payments";
 import { placeLabel } from "@/lib/wording";
-import { pickSeat } from "@/lib/home-choice";
 import { addStatementLine } from "@/lib/statement";
 import { homeCount } from "@/lib/metrics";
 import { activityWords } from "@/lib/activity";
@@ -34,8 +32,10 @@ import { noticeToast, replyEmailState, type ReplyEmail } from "@/lib/email/plain
 import { vendorNameProblem } from "@/lib/vendor-name";
 import { statusAfterReply, statusLabel } from "@/lib/request-status";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
-import { communityStore, demoActivityStore, destructive, dismissStore, emailNotice, homePhotoStore, homeStore, isUuid, joinLine, latest, logDemoActivity, MUTABLE_SLICES, newId, NO_SESSION, NOT_CHANGED, noticesInFlight, remoteWrite, resetCommunity, sessionStore, sessionUserId, sliceStore, useHydrated, useStore, ValidationError, voteReceipt } from "./app-state/core";
-import type { AppState, LedgerReversal, SettingsPatch, UploadOutcome, View } from "./app-state/types";
+import { communityStore, demoActivityStore, destructive, dismissStore, emailNotice, homePhotoStore, homeStore, isUuid, joinLine, latest, logDemoActivity, MUTABLE_SLICES, newId, NOT_CHANGED, noticesInFlight, remoteWrite, resetCommunity, sessionStore, sessionUserId, sliceStore, useHydrated, useStore, ValidationError, voteReceipt } from "./app-state/core";
+import type { AppState, LedgerReversal, SettingsPatch, UploadOutcome } from "./app-state/types";
+import { useSessionActions } from "./app-state/use-session";
+import type { BaseDeps } from "./app-state/core";
 
 export { resetAllStores } from "./app-state/core";
 export type { LedgerReversal, SettingsPatch, UploadOutcome, View } from "./app-state/types";
@@ -105,84 +105,57 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const joinRequestList = useStore(sliceStore(communityId, "joinRequests"));
   const demoActivity = useStore(demoActivityStore(communityId));
 
-  // A seat's account id is the profile id, so a person with two homes holds
-  // two accounts with one id. Only seats with their own profile id are theirs,
-  // which means there is no way to be looking at somebody else's.
-  const mySeats = useMemo(() => {
-    if (remote.community) {
-      return remote.community.accounts.filter((a) => a.id === remote.profileId);
-    }
-    const demo = accountList.find((candidate) => candidate.id === session.accountId);
-    return demo ? [demo] : [];
-  }, [remote.community, remote.profileId, accountList, session.accountId]);
+  const baseDeps: BaseDeps = {
+    session,
+    chosenHome,
+    remote,
+    communityId,
+    community,
+    settings,
+    accountList,
+    ownerList,
+    bankAccountList,
+    budgetLines,
+    localDismissals,
+    ownerChargeMap,
+    amenities,
+    forms,
+    posts,
+    requestList,
+    instruments,
+    ledger,
+    payouts,
+    invoices,
+    vendors,
+    threads,
+    documents,
+    governingDocs,
+    violationList,
+    reportList,
+    associationRow,
+    meetingList,
+    reserveComponentList,
+    sharedCosts,
+    sharedCostBills,
+    ballots,
+    templates,
+    announcementList,
+    actionItemList,
+    joinRequestList,
+    demoActivity,
+  };
 
-  const account = useMemo(() => pickSeat(mySeats, chosenHome), [mySeats, chosenHome]);
-
-  const chooseHome = useCallback(
-    (unitId: string) => {
-      if (mySeats.some((s) => s.ownerId === unitId)) homeStore.set(unitId);
-    },
-    [mySeats],
-  );
-
-  /* --------------------------------------------------------------- session */
-
-  const signIn = useCallback(
-    (id: string) => {
-      const next = sliceStore(communityId, "accounts")
-        .getSnapshot()
-        .find((a) => a.id === id);
-      sessionStore.set({
-        accountId: id,
-        view: next && next.role !== "resident" ? "board" : "resident",
-      });
-    },
-    [communityId],
-  );
-
-  const signOut = useCallback(() => {
-    sessionStore.set(NO_SESSION);
-    // Clearing the demo seat is not signing out if there is a real session
-    // behind it, so end that too rather than leaving somebody logged in on a
-    // page that says they are not.
-    void signOutOfSupabase();
-  }, []);
-
-  const setView = useCallback(
-    (view: View) => sessionStore.update((current) => ({ ...current, view })),
-    [],
-  );
-
-  /**
-   * Switching association also signs you out.
-   *
-   * An account belongs to one community, so carrying a session across would
-   * leave a President of one association holding capabilities in another. The
-   * safe move is to make the person sign in again on the other side.
-   */
-  const setCommunity = useCallback(
-    (nextId: string): "switched" | "signed-out" => {
-      // A real member holding two associations switches between them without
-      // signing out, because the database knows which they belong to. Demo
-      // seats still sign out, since picking a seat is how you choose a person.
-      if (remote.associations.some((a) => a.id === nextId)) {
-        void setRemoteAssociation(nextId);
-        return "switched";
-      }
-      sessionStore.set(NO_SESSION);
-      communityStore.set(nextId);
-      return "signed-out";
-    },
-    [remote.associations],
-  );
-
-  const can = useCallback(
-    (c: Capability) => Boolean(account && account.capabilities[c]),
-    [account],
-  );
-  const sees = useCallback((c: Capability) => seesArea(account, c), [account]);
-
-  /* -------------------------------------------------------------- settings */
+  const {
+    mySeats,
+    account,
+    chooseHome,
+    signIn,
+    signOut,
+    setView,
+    setCommunity,
+    can,
+    sees,
+  } = useSessionActions(baseDeps);
 
   const updateSettings = useCallback(
     (patch: SettingsPatch) => {

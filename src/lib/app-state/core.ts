@@ -5,9 +5,9 @@ import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { todayIsoDate } from "@/lib/utils";
 import { newId } from "@/lib/core/ids";
 import { PersistedStore, type Store } from "@/lib/core/store";
-import { NOTHING_CHANGED, remoteSnapshot, reportRemoteError } from "@/lib/data/remote-store";
+import { NOTHING_CHANGED, remoteSnapshot, reportRemoteError, type RemoteState } from "@/lib/data/remote-store";
 import { isAssociation, isBudgetLines, isChargeLedger, isCommunitySettings, isRecordArray, isSession } from "@/lib/core/guards";
-import type { Activity } from "@/lib/types";
+import type { Account, Activity, Capability } from "@/lib/types";
 import { meetingJoin } from "@/lib/meetings/video";
 import type { SendOutcome } from "@/lib/email/plain-error";
 import type { View } from "./types";
@@ -473,4 +473,59 @@ const alwaysFalse = () => false;
  */
 export function useHydrated() {
   return useSyncExternalStore(noopSubscribe, alwaysTrue, alwaysFalse);
+}
+
+/**
+ * What the provider reads before any action exists: the session, the remote
+ * store, and one live copy of every slice. Each area's hook is handed this (or
+ * a part of it) once per render, so a callback closes over the same values it
+ * did when it was written inline in the provider and its dependency list stays
+ * as it was.
+ */
+export interface BaseDeps {
+  session: Session;
+  chosenHome: string;
+  remote: RemoteState;
+  communityId: string;
+  /** The seed community for the active id; the live slices are the fields below. */
+  community: Community;
+  settings: Community["settings"];
+  accountList: Community["accounts"];
+  ownerList: Community["owners"];
+  bankAccountList: Community["bankAccounts"];
+  budgetLines: Community["budget"];
+  localDismissals: string[];
+  ownerChargeMap: Community["ownerCharges"];
+  amenities: Community["amenities"];
+  forms: Community["forms"];
+  posts: Community["posts"];
+  requestList: Community["requests"];
+  instruments: Community["instruments"];
+  ledger: Community["ledger"];
+  payouts: Community["payouts"];
+  invoices: Community["invoices"];
+  vendors: Community["vendors"];
+  threads: Community["threads"];
+  documents: Community["documents"];
+  governingDocs: Community["governingDocs"];
+  violationList: Community["violations"];
+  reportList: Community["violationReports"];
+  associationRow: Community["association"];
+  meetingList: Community["meetings"];
+  reserveComponentList: Community["reserveComponents"];
+  sharedCosts: Community["sharedCosts"];
+  sharedCostBills: Community["sharedCostBills"];
+  ballots: Community["ballots"];
+  templates: Community["templates"];
+  announcementList: Community["announcements"];
+  actionItemList: Community["actionItems"];
+  joinRequestList: Community["joinRequests"];
+  demoActivity: Activity[];
+}
+
+/** `BaseDeps` plus who is acting, which the session hook works out first. */
+export interface AppDeps extends BaseDeps {
+  mySeats: Account[];
+  account: Account | null;
+  can: (c: Capability) => boolean;
 }
