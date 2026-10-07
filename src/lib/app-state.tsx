@@ -7,15 +7,12 @@ import { daysFromToday, setToday } from "@/lib/utils";
 import { createdCommunitiesStore } from "@/lib/data/created-communities";
 import { useRemote } from "@/lib/data/remote-store";
 import { ownerDues } from "@/lib/home-types";
-import { supabaseBrowser } from "@/lib/supabase/client";
 
 import type { ForumPost, Owner } from "@/lib/types";
 import { type PaymentInstrument } from "@/lib/payments/instruments";
 import { homeCount } from "@/lib/metrics";
-import { activityWords } from "@/lib/activity";
-import { vendorNameProblem } from "@/lib/vendor-name";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
-import { communityStore, demoActivityStore, destructive, dismissStore, homePhotoStore, homeStore, logDemoActivity, MUTABLE_SLICES, newId, remoteWrite, sessionStore, sliceStore, useHydrated, useStore } from "./app-state/core";
+import { communityStore, demoActivityStore, dismissStore, homePhotoStore, homeStore, MUTABLE_SLICES, sessionStore, sliceStore, useHydrated, useStore } from "./app-state/core";
 import type { AppState } from "./app-state/types";
 import { useSessionActions } from "./app-state/use-session";
 import type { BaseDeps } from "./app-state/core";
@@ -28,6 +25,7 @@ import { useCommunicationsActions } from "./app-state/use-communications";
 import { useMeetingsActions } from "./app-state/use-meetings";
 import { useRequestsActions } from "./app-state/use-requests";
 import { useDocumentsActions } from "./app-state/use-documents";
+import { useVendorsActions } from "./app-state/use-vendors";
 
 export { resetAllStores } from "./app-state/core";
 export type { LedgerReversal, SettingsPatch, UploadOutcome, View } from "./app-state/types";
@@ -267,82 +265,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     replyToRequest,
   } = useRequestsActions(deps);
 
-  const markW9Requested = useCallback(
-    (vendorId: string) => {
-      if (remote.community) {
-        void remoteWrite("Noting the W-9", () =>
-          supabaseBrowser()
-            .from("vendors")
-            .update({ w9_on_file: true }, { count: "exact" })
-            .eq("id", vendorId),
-        );
-        return;
-      }
-      sliceStore(communityId, "vendors").update((all) =>
-        all.map((vendor) => (vendor.id === vendorId ? { ...vendor, w9OnFile: true } : vendor)),
-      );
-    },
-    [remote.community, communityId],
-  );
-
-  const addVendor = useCallback(
-    (vendor: Community["vendors"][number]) => {
-      // The same rule the form shows, held here too: a second call cannot
-      // add "cascade grounds co." beside "Cascade Grounds Co.".
-      const known = remote.community ? remote.community.vendors : sliceStore(communityId, "vendors").getSnapshot();
-      if (vendorNameProblem(vendor.name, known)) return;
-      if (remote.community) {
-        const rc = remote.community;
-        void remoteWrite("Adding the vendor", () =>
-          supabaseBrowser().from("vendors").insert({
-            id: newId(),
-            association_id: rc.id,
-            name: vendor.name,
-            service: vendor.service,
-            ach_enabled: vendor.achEnabled,
-            w9_on_file: vendor.w9OnFile,
-            coi_expires_on: vendor.coiExpires ?? null,
-            default_category: vendor.defaultCategory,
-          }),
-        );
-        return;
-      }
-      logDemoActivity(communityId, "vendor", activityWords.vendor(vendor.name), { service: vendor.service });
-      sliceStore(communityId, "vendors").update((all) => [vendor, ...all]);
-    },
-    [remote.community, communityId],
-  );
-
-  const removeVendor = useCallback(
-    (vendorId: string) => {
-      if (remote.community) {
-        const rc = remote.community;
-        const vendor = rc.vendors.find((v) => v.id === vendorId);
-        void remoteWrite("Removing the vendor", () =>
-          supabaseBrowser().from("vendors").delete({ count: "exact" }).eq("id", vendorId),
-        );
-        return () => {
-          if (!vendor) return;
-          void remoteWrite("Restoring the vendor", () =>
-            supabaseBrowser().from("vendors").insert({
-              id: vendor.id,
-              association_id: rc.id,
-              name: vendor.name,
-              service: vendor.service,
-              ach_enabled: vendor.achEnabled,
-              w9_on_file: vendor.w9OnFile,
-              coi_expires_on: vendor.coiExpires ?? null,
-              default_category: vendor.defaultCategory,
-            }),
-          );
-        };
-      }
-      return destructive(sliceStore(communityId, "vendors"), (all) =>
-        all.filter((v) => v.id !== vendorId),
-      );
-    },
-    [remote.community, communityId],
-  );
+  const { markW9Requested, addVendor, removeVendor } = useVendorsActions(deps);
 
   const {
     uploadDocuments,
