@@ -9,10 +9,10 @@
  * over the rows. If it ever drifts, a report in June would disagree with the
  * same report run in March, which is the thing the rollups must never do.
  */
-import { createHarness, day } from "./lib/harness.mjs";
+import { createHarness } from "./lib/harness.mjs";
 
 const {
-  admin, stamp, check, makeUser, cleanup, cleanupAll, report,
+  admin, check, makeUser, cleanup, cleanupAll, report,
 } = createHarness({
   passwordPrefix: "rollups-",
   emailTag: "rollups",
