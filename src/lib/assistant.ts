@@ -32,7 +32,7 @@ const intents: Intent[] = [
     keywords: ["balance", "owe", "late", "overdue", "past", "due", "behind", "payment"],
     phrases: ["do i owe", "am i late", "late payment", "what do i owe", "my balance"],
     answer: (c) => {
-      const o = c.owner;
+      const o = c.home;
       if (o.daysPastDue > 0) {
         return {
           text: `Yes. Your dues are ${o.daysPastDue} days past due, and you owe ${money(o.balanceCents)}.`,
@@ -68,7 +68,7 @@ const intents: Intent[] = [
     keywords: ["last", "history", "receipt", "paid", "statement", "cleared"],
     phrases: ["last payment", "did my payment", "payment history", "when did i pay"],
     answer: (c) => {
-      const p = c.owner.lastPayment;
+      const p = c.home.lastPayment;
       if (!p) return { text: "No payments on file yet." };
       return {
         text: `Your last payment was ${money(p.amountCents)} on ${formatDate(p.date, "long")}${
@@ -83,7 +83,7 @@ const intents: Intent[] = [
     keywords: ["autopay", "automatic", "recurring", "auto"],
     phrases: ["turn on autopay", "set up autopay"],
     answer: (c) => ({
-      text: c.owner.autopay
+      text: c.home.autopay
         ? `Autopay is on. Your dues of ${money(c.association.duesCents)} are paid for you when they come due.`
         : `Autopay is off. Turn it on and your dues of ${money(c.association.duesCents)} are paid for you when they come due.`,
       action: { label: "Autopay settings", href: "/resident/pay#autopay" },

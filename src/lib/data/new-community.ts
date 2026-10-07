@@ -1,4 +1,4 @@
-import type { Account, BankAccount, Owner, Cents, ISODate, HomeType,
+import type { Account, BankAccount, Home, Cents, ISODate, HomeType,
   Amenity,
 } from "@/lib/types";
 import type { LotPhase } from "@/lib/lots";
@@ -559,15 +559,15 @@ export function unitCount(draft: CommunityDraft): number {
 export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community {
   const suffix = shortHash(`${draft.name}|${draft.city}|${draft.founder.email}`);
   const id = slugify(draft.name, suffix);
-  const ownerId = (unit: string) => `${id}-own-${unit}`;
+  const homeId = (unit: string) => `${id}-own-${unit}`;
   // A home without an address yet is shown by its number, in the community's
   // own words: "Lot 12" on a subdivision, "Unit 12" anywhere attached.
   const numbered = (unit: string) =>
     `${wordingFor(homeTypesOf(draft), draft.origin).numberExample} ${unit}`;
   const accountId = (unit: string) => `${id}-acct-${unit}`;
 
-  const founderOwner: Owner = {
-    id: ownerId(draft.founder.unit),
+  const founderHome: Home = {
+    id: homeId(draft.founder.unit),
     displayName: draft.founder.name,
     members: [draft.founder.name],
     email: draft.founder.email,
@@ -589,10 +589,10 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
   // association's unnamed homes are not the builder's.
   const unsoldLabel = draft.origin === "builder" ? "Not sold yet" : "No owner listed";
 
-  const otherOwners: Owner[] = otherHomes(draft).map((household) => {
+  const otherHomeRows: Home[] = otherHomes(draft).map((household) => {
     const sold = Boolean(household.name.trim());
     return {
-      id: ownerId(household.unit),
+      id: homeId(household.unit),
       displayName: sold ? household.name : unsoldLabel,
       members: sold ? [household.name] : [],
       email: household.email,
@@ -612,11 +612,11 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     };
   });
 
-  const owners = [founderOwner, ...otherOwners];
+  const homes = [founderHome, ...otherHomeRows];
 
   const founderAccount: Account = {
     id: accountId(draft.founder.unit),
-    ownerId: founderOwner.id,
+    homeId: founderHome.id,
     name: draft.founder.name,
     email: draft.founder.email,
     unit: draft.founder.unit,
@@ -630,14 +630,14 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
   // Only a home with somebody in it gets a login. An unsold lot has nobody to
   // sign in as, and creating an account for one would put a resident seat in
   // the roster that can never be used.
-  const otherAccounts: Account[] = otherOwners
-    .filter((owner) => owner.members.length > 0)
-    .map((owner) => ({
-      id: accountId(owner.unit),
-      ownerId: owner.id,
-      name: owner.displayName,
-      email: owner.email,
-      unit: owner.unit,
+  const otherAccounts: Account[] = otherHomeRows
+    .filter((home) => home.members.length > 0)
+    .map((home) => ({
+      id: accountId(home.unit),
+      homeId: home.id,
+      name: home.displayName,
+      email: home.email,
+      unit: home.unit,
       role: "resident" as const,
       capabilities: NO_CAPABILITIES,
       views: caps([]),
@@ -693,7 +693,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       collectionPolicy: draftCollectionPolicy(draft),
     },
 
-    owners,
+    homes,
     accounts: [founderAccount, ...otherAccounts],
     instruments: [],
 
@@ -756,7 +756,7 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       .map((form) => ({ ...form, updatedDate: asOf })),
     templates: messageTemplates.map((template) => ({ ...template, updatedDate: asOf })),
 
-    ownerCharges: Object.fromEntries(owners.map((owner) => [owner.id, []])),
+    homeCharges: Object.fromEntries(homes.map((home) => [home.id, []])),
   };
 }
 

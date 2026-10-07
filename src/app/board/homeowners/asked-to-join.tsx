@@ -30,7 +30,7 @@ export function AskedToJoin({
   onRecordSale,
 }: {
   /** Opens the sale form on a home, with the buyer filled in. Absent when this seat may not record sales. */
-  onRecordSale?: (ownerId: string, buyer: { name: string; email: string }) => void;
+  onRecordSale?: (homeId: string, buyer: { name: string; email: string }) => void;
 }) {
   const { community, approveJoinRequest, seatJoinRequest, declineJoinRequest } = useAppState();
   const { notify } = useToast();
@@ -47,7 +47,7 @@ export function AskedToJoin({
         if (ok) notify(`${request.name} is on the roster at ${homeLabel(community, request.unit.trim())}`, "ok");
         return;
       }
-      const home = community.owners.find((o) => o.id === choice);
+      const home = community.homes.find((o) => o.id === choice);
       const ok = await seatJoinRequest(request.id, choice, mode === "second");
       if (ok && home) {
         notify(
@@ -126,23 +126,23 @@ function RequestRow({
 }: {
   request: JoinRequest;
   onLetIn: (choice: string, mode: "seat" | "second" | "new") => Promise<void>;
-  onRecordSale?: (ownerId: string, buyer: { name: string; email: string }) => void;
+  onRecordSale?: (homeId: string, buyer: { name: string; email: string }) => void;
   onDecline?: () => Promise<void>;
 }) {
   const { community, accounts } = useAppState();
   const typed = request.unit.trim();
-  const homes = [...community.owners].sort((a, b) =>
+  const homes = [...community.homes].sort((a, b) =>
     a.unit.localeCompare(b.unit, undefined, { numeric: true }),
   );
   // Starts on the best match and on nothing otherwise. The board can always
   // change it, and nothing happens until they press a button.
-  const [choice, setChoice] = useState(() => bestMatch(community, community.owners, typed)?.id ?? "");
+  const [choice, setChoice] = useState(() => bestMatch(community, community.homes, typed)?.id ?? "");
   const [busy, setBusy] = useState(false);
 
   const home = homes.find((o) => o.id === choice) ?? null;
-  const taken = Boolean(typed) && community.owners.some((o) => o.unit === typed);
+  const taken = Boolean(typed) && community.homes.some((o) => o.unit === typed);
   const plan = home
-    ? seatPlan(home, request, accounts.some((a) => a.ownerId === home.id))
+    ? seatPlan(home, request, accounts.some((a) => a.homeId === home.id))
     : null;
   const first = request.name.split(/\s+/)[0] || request.name;
 

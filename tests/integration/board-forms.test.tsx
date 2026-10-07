@@ -20,7 +20,7 @@ const { RecordPayment } = await import("@/components/app/record-payment");
 const { AddCreditForm, ChangeDuesForm, RecordPaymentForm } = await import("@/app/board/homeowners/household-money");
 const { DuesSettings } = await import("@/components/app/dues-settings");
 const { HomeownersScreen } = await import("@/app/board/homeowners/homeowners-screen");
-const { ownerDues } = await import("@/lib/home-types");
+const { homeDues } = await import("@/lib/home-types");
 const { OpeningBalances } = await import("@/app/board/money/opening-balances");
 const { DraftField } = await import("@/app/board/settings/settings-screen");
 const { CollectionsLadder } = await import("@/components/app/collections-ladder");
@@ -56,22 +56,22 @@ function wrap(ui: ReactNode) {
 }
 
 const OPENING = "Balance brought forward";
-const openingLine = (ownerId: string) =>
-  (seen.state.community.ownerCharges[ownerId] ?? []).find((l) => l.label === OPENING);
-const box = (ownerId: string) => {
-  const owner = seen.state.community.owners.find((o) => o.id === ownerId)!;
-  return screen.getByLabelText(`Starting balance for ${owner.displayName}, ${owner.unit}`) as HTMLInputElement;
+const openingLine = (homeId: string) =>
+  (seen.state.community.homeCharges[homeId] ?? []).find((l) => l.label === OPENING);
+const box = (homeId: string) => {
+  const home = seen.state.community.homes.find((o) => o.id === homeId)!;
+  return screen.getByLabelText(`Starting balance for ${home.displayName}, ${home.unit}`) as HTMLInputElement;
 };
 
 describe("opening balances", () => {
   it("starts each box from the home's opening line, never from what it owes today", () => {
     const figures = openingFigures({
-      owners: [
+      homes: [
         { id: "billed", balanceCents: 75_000 },
         { id: "carried", balanceCents: 75_000 },
         { id: "credit", balanceCents: 0 },
       ] as never,
-      ownerCharges: {
+      homeCharges: {
         // Owes this month's dues and nothing from before the switch.
         billed: [{ id: "c1", date: "2026-08-01", label: "August assessment", kind: "charge", amountCents: 75_000, balanceAfterCents: 75_000 }],
         // Came over owing $500, and has been billed $250 since.
@@ -88,7 +88,7 @@ describe("opening balances", () => {
 
   it("shows a home that owes money an empty box, with what it owes today beside it", () => {
     wrap(<BalancesScreen />);
-    const behind = seen.state.community.owners.find((o) => o.balanceCents > 0 && !openingLine(o.id))!;
+    const behind = seen.state.community.homes.find((o) => o.balanceCents > 0 && !openingLine(o.id))!;
 
     expect(box(behind.id).value).toBe("");
     // The figure is there to read, not to save back.
@@ -104,9 +104,9 @@ describe("opening balances", () => {
   it("saves the one home that was changed and leaves every other statement alone", async () => {
     const user = userEvent.setup();
     wrap(<BalancesScreen />);
-    const [target, ...others] = seen.state.community.owners;
+    const [target, ...others] = seen.state.community.homes;
     const before = Object.fromEntries(
-      seen.state.community.owners.map((o) => [o.id, { balance: o.balanceCents, lines: seen.state.community.ownerCharges[o.id]?.length ?? 0 }]),
+      seen.state.community.homes.map((o) => [o.id, { balance: o.balanceCents, lines: seen.state.community.homeCharges[o.id]?.length ?? 0 }]),
     );
 
     await user.type(box(target.id), "1240.50");
@@ -116,20 +116,20 @@ describe("opening balances", () => {
     expect(openingLine(target.id)?.amountCents).toBe(124_050);
     // Pressing the button with every box prefilled from today's balance
     // gave each of these a brought-forward line of its own.
-    for (const owner of others) {
-      const now = seen.state.community.owners.find((o) => o.id === owner.id)!;
-      expect(now.balanceCents, `${owner.unit} had its balance rewritten`).toBe(before[owner.id].balance);
+    for (const home of others) {
+      const now = seen.state.community.homes.find((o) => o.id === home.id)!;
+      expect(now.balanceCents, `${home.unit} had its balance rewritten`).toBe(before[home.id].balance);
       expect(
-        seen.state.community.ownerCharges[owner.id]?.length ?? 0,
-        `${owner.unit} was given a line it never had`,
-      ).toBe(before[owner.id].lines);
+        seen.state.community.homeCharges[home.id]?.length ?? 0,
+        `${home.unit} was given a line it never had`,
+      ).toBe(before[home.id].lines);
     }
   });
 
   it("does not offer to save the same figure twice", async () => {
     const user = userEvent.setup();
     wrap(<BalancesScreen />);
-    const target = seen.state.community.owners[0];
+    const target = seen.state.community.homes[0];
 
     await user.type(box(target.id), "300");
     await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
@@ -141,7 +141,7 @@ describe("opening balances", () => {
     await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
     await screen.findByRole("button", { name: "Saved" });
 
-    const lines = (seen.state.community.ownerCharges[target.id] ?? []).filter((l) => l.label === OPENING);
+    const lines = (seen.state.community.homeCharges[target.id] ?? []).filter((l) => l.label === OPENING);
     expect(lines).toHaveLength(1);
     expect(lines[0].amountCents).toBe(25_000);
   });
@@ -154,7 +154,7 @@ describe("correcting the date on opening balances", () => {
   it("moves the date on a line already set, without the amount being typed again", async () => {
     const user = userEvent.setup();
     const { unmount } = wrap(<BalancesScreen />);
-    const [target, untouched] = seen.state.community.owners.filter((o) => !openingLine(o.id));
+    const [target, untouched] = seen.state.community.homes.filter((o) => !openingLine(o.id));
     const typedOn = dateBox().value;
 
     await user.type(box(target.id), "410");
@@ -184,7 +184,7 @@ describe("correcting the date on opening balances", () => {
   it("does not offer to save with the date cleared", async () => {
     const user = userEvent.setup();
     wrap(<BalancesScreen />);
-    const target = seen.state.community.owners[0];
+    const target = seen.state.community.homes[0];
 
     await user.type(box(target.id), "410");
     fireEvent.change(dateBox(), { target: { value: "" } });
@@ -211,10 +211,10 @@ describe("the collections ladder", () => {
     wrap(<CollectionsLadder />);
     const community = seen.state.community;
     const owed = collectionsLadder(community, policyFor(community.settings)).rows.find((r) => r.actionDue)!;
-    const row = () => screen.getByText(owed.owner.displayName).closest("div")!;
+    const row = () => screen.getByText(owed.home.displayName).closest("div")!;
     expect(within(row()).queryByText(/· Sent /)).not.toBeInTheDocument();
 
-    act(() => void seen.state.messageOwner(owed.owner.id, "Your dues", "A reminder.", "Billing"));
+    act(() => void seen.state.messageOwner(owed.home.id, "Your dues", "A reminder.", "Billing"));
 
     expect(within(row()).getByText(/ late · Sent \w+ \d+ · /)).toBeInTheDocument();
   });
@@ -448,22 +448,22 @@ describe("a home's own dues in the browser copy", () => {
     wrap(<HomeownersScreen />);
     // The President may change finances; nobody is signed in to begin with.
     act(() => seen.state.signIn("acct-arya"));
-    const owner = seen.state.community.owners.find((o) => !o.placeholder)!;
-    const standard = ownerDues(seen.state.community.association, { homeType: owner.homeType });
+    const home = seen.state.community.homes.find((o) => !o.placeholder)!;
+    const standard = homeDues(seen.state.community.association, { homeType: home.homeType });
 
-    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
     // What it pays now, and where that comes from, before anything is typed.
     expect(screen.getByText(/Pays .* a month now, from /)).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), String(standard / 100 + 75));
     await user.click(screen.getByRole("button", { name: "Save dues" }));
 
-    const after = seen.state.community.owners.find((o) => o.id === owner.id)!;
+    const after = seen.state.community.homes.find((o) => o.id === home.id)!;
     expect(after.duesCents).toBe(standard + 7_500);
-    expect(ownerDues(seen.state.community.association, after)).toBe(standard + 7_500);
+    expect(homeDues(seen.state.community.association, after)).toBe(standard + 7_500);
     // The neighbour is untouched.
-    const other = seen.state.community.owners.find((o) => o.id !== owner.id)!;
+    const other = seen.state.community.homes.find((o) => o.id !== home.id)!;
     expect(other.duesCents).toBeUndefined();
     expect(await screen.findByText(/pays .* from the next bill\./)).toBeInTheDocument();
   });
@@ -472,15 +472,15 @@ describe("a home's own dues in the browser copy", () => {
     const user = userEvent.setup();
     wrap(<HomeownersScreen />);
     act(() => seen.state.signIn("acct-arya"));
-    const owner = seen.state.community.owners.find((o) => !o.placeholder)!;
+    const home = seen.state.community.homes.find((o) => !o.placeholder)!;
     await act(async () => {
-      await seen.state.setHomeDues([{ ownerId: owner.id, cents: 41_000 }]);
+      await seen.state.setHomeDues([{ homeId: home.id, cents: 41_000 }]);
     });
-    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
     expect(screen.getByText(/from its own amount/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Use the standard rate" }));
-    expect(seen.state.community.owners.find((o) => o.id === owner.id)!.duesCents).toBeUndefined();
+    expect(seen.state.community.homes.find((o) => o.id === home.id)!.duesCents).toBeUndefined();
   });
 
   it("the form offers the standard rate only to a home that has its own amount", () => {
@@ -566,12 +566,12 @@ describe("a home's own dues in the browser copy", () => {
     expect(screen.queryByText(/pay their own amount|pays its own amount/)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/^Each home, per month/)).toBeInTheDocument();
 
-    const [a, b, c] = seen.state.community.owners;
+    const [a, b, c] = seen.state.community.homes;
     await act(async () => {
       await seen.state.setHomeDues([
-        { ownerId: a.id, cents: 31_000 },
-        { ownerId: b.id, cents: 33_000 },
-        { ownerId: c.id, cents: 35_000 },
+        { homeId: a.id, cents: 31_000 },
+        { homeId: b.id, cents: 33_000 },
+        { homeId: c.id, cents: 35_000 },
       ]);
     });
     expect(screen.getByText(/3 homes pay their own amount/)).toBeInTheDocument();

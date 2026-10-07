@@ -126,19 +126,19 @@ export function CollectionsLadder({
           </p>
         ) : null}
         {shown.map((row) => (
-          <div key={row.owner.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3">
+          <div key={row.home.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3">
             {/* At least 12rem for the name and the step, so on a phone the
                 amount and the badge wrap under them rather than squeezing
                 the text to a word per line. */}
             <div className="min-w-[12rem] flex-1">
               <p className="truncate text-body font-medium text-fg">
-                {row.owner.displayName}
+                {row.home.displayName}
                 <span className="ml-2 text-footnote font-normal text-fg-muted">
-                  {placeLabel(row.owner.unit)}
+                  {placeLabel(row.home.unit)}
                 </span>
               </p>
               <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
-                {pluralize(row.owner.daysPastDue, "day")} late ·{" "}
+                {pluralize(row.home.daysPastDue, "day")} late ·{" "}
                 {/* The day this step's letter went, so "nothing owed today"
                     can be seen to be because it was sent. */}
                 {row.sentOn ? `Sent ${formatDate(row.sentOn)} · ` : ""}
@@ -153,9 +153,9 @@ export function CollectionsLadder({
             </div>
             <span className="ml-auto flex shrink-0 items-center gap-3">
               <span className="tnum text-body font-semibold text-fg">
-                {money(row.owner.balanceCents)}
+                {money(row.home.balanceCents)}
               </span>
-              {autopayFailedUnits?.has(row.owner.id) ? <Badge tone="warn">Autopay failed</Badge> : null}
+              {autopayFailedUnits?.has(row.home.id) ? <Badge tone="warn">Autopay failed</Badge> : null}
               <Badge tone={TONE[row.stage]}>{STEP[row.stage]}</Badge>
             </span>
           </div>

@@ -34,14 +34,14 @@ export function DuesSettings() {
   const { community, updateAssociation, addChargeToAll, can } = useAppState();
   const { notify } = useToast();
   const association = community.association;
-  const present = countByType(community.owners);
+  const present = countByType(community.homes);
   // Kinds that have homes, plus any the association named at founding.
   const kinds = homeTypesOf({
     homeTypes: [...homeTypesOf(community.profile), ...present.map((p) => p.type)],
   });
   const mixed = kinds.length > 1;
   // Homes that pay an amount of their own, set on Homeowners.
-  const ownCount = homesWithOwnDues(community.owners);
+  const ownCount = homesWithOwnDues(community.homes);
 
   const initial = () =>
     Object.fromEntries(kinds.map((k) => [k, duesFor(association, k) / 100])) as Record<
@@ -55,7 +55,7 @@ export function DuesSettings() {
     Object.fromEntries(Object.entries(initial()).map(([k, v]) => [k, String(v)])) as Record<HomeType, string>,
   );
   const [charging, setCharging] = useState(false);
-  const homes = community.owners.length;
+  const homes = community.homes.length;
   const [split, setSplit] = useState(
     mixed && kinds.some((k) => duesFor(association, k) !== association.duesCents),
   );
@@ -81,7 +81,7 @@ export function DuesSettings() {
       : association.duesCadence === "quarterly"
         ? "quarter"
         : "year";
-  const projected = totalDues({ duesCents: nextBase, duesByType: nextByType }, community.owners);
+  const projected = totalDues({ duesCents: nextBase, duesByType: nextByType }, community.homes);
 
   function save() {
     if (!valid) return;
@@ -139,7 +139,7 @@ export function DuesSettings() {
           ) : (
             <Amount
               label={ownCount ? `Standard rate, per ${cadence}` : `Each home, per ${cadence}`}
-              hint={countLine(community.owners.length - ownCount)}
+              hint={countLine(community.homes.length - ownCount)}
               value={base}
               problem={base.trim() ? duesTextProblem(base) : null}
               onChange={setBase}
@@ -159,7 +159,7 @@ export function DuesSettings() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-footnote text-fg-muted">
             <span className="tnum font-semibold text-fg">{money(projected, { cents: false })}</span>{" "}
-            per {cadence} across {community.owners.length} homes
+            per {cadence} across {community.homes.length} homes
           </p>
           <Button size="sm" disabled={!valid || !changed} onClick={save}>
             Save dues

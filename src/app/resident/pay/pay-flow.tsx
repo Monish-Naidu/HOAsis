@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Callout, Card, IconTile, SectionTitle, SuccessMark, Toggle, fieldClass } from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
-import { useAppState, useCurrentOwner, useMyInstruments } from "@/lib/app-state";
+import { useAppState, useCurrentHome, useMyInstruments } from "@/lib/app-state";
 import {
   FEE_SCHEDULE,
   cheapestRail,
@@ -38,7 +38,7 @@ import { useToast } from "@/components/app/toast";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { policyFor } from "@/lib/collections";
 import { moduleOn } from "@/lib/modules";
-import { ownerDues } from "@/lib/home-types";
+import { homeDues } from "@/lib/home-types";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
@@ -49,7 +49,7 @@ const RAIL_ICON: Record<InstrumentKind, typeof Landmark> = {
 };
 
 export function PayFlow() {
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const instruments = useMyInstruments();
   const {
     settings,
@@ -64,7 +64,7 @@ export function PayFlow() {
   const collections = policyFor(settings);
   // This home's own amount: in a mixed community a condo and a townhome
   // can pay different dues.
-  const duesCents = ownerDues(community.association, owner ?? undefined);
+  const duesCents = homeDues(community.association, home ?? undefined);
   const nextCharge = community.nextChargeDate;
   const { notify } = useToast();
 
@@ -78,8 +78,8 @@ export function PayFlow() {
   const [custom, setCustom] = useState("");
   // Autopay is the owner's standing instruction, so it starts from what they
   // last saved rather than from a default that quietly forgets the cap.
-  const plan = owner?.autopayPlan;
-  const [autopay, setAutopayOn] = useState(owner?.autopay ?? false);
+  const plan = home?.autopayPlan;
+  const [autopay, setAutopayOn] = useState(home?.autopay ?? false);
   const [autopayDay, setAutopayDay] = useState(plan?.day ?? 1);
   const [capCents, setCapCents] = useState<number | null>(plan?.capCents ?? null);
   const [capText, setCapText] = useState(plan?.capCents ? String(plan.capCents / 100) : "");
@@ -92,7 +92,7 @@ export function PayFlow() {
     null,
   );
 
-  const balanceCents = owner?.balanceCents ?? 0;
+  const balanceCents = home?.balanceCents ?? 0;
 
   // Falls back to the household default, then to whatever exists, so the
   // screen is never in a state where nothing is selected.
@@ -173,7 +173,7 @@ export function PayFlow() {
         // The save was refused and a toast has said why. Put the card back
         // to what is actually saved, so a switch that reads on, or a day
         // that reads the 5th, is never something the database does not hold.
-        setAutopayOn(owner?.autopay ?? false);
+        setAutopayOn(home?.autopay ?? false);
         setAutopayDay(plan?.day ?? 1);
         setCapCents(plan?.capCents ?? null);
         setCapText(plan?.capCents ? String(plan.capCents / 100) : "");
@@ -193,7 +193,7 @@ export function PayFlow() {
     ? computePaymentCost(selected.kind, amountCents, policy)
     : null;
 
-  if (!owner) return null;
+  if (!home) return null;
 
   /* ------------------------------------------------------------- receipt */
   if (paid) {
@@ -237,8 +237,8 @@ export function PayFlow() {
       subtitle={
         // What is owed now, before when the next bill lands. "Dues due
         // October 1" above a past-due September balance read as all clear.
-        owner.daysPastDue > 0 && balanceCents > 0
-          ? `${money(balanceCents)} past due, ${pluralize(owner.daysPastDue, "day")}`
+        home.daysPastDue > 0 && balanceCents > 0
+          ? `${money(balanceCents)} past due, ${pluralize(home.daysPastDue, "day")}`
           : `Next dues ${formatDate(nextCharge, "long")}`
       }
     />
@@ -518,7 +518,7 @@ export function PayFlow() {
     // that refuses every charge, and a pay form in front of it is a lie.
     const stripeReady = Boolean(community.association.stripeChargesEnabled);
     const inFlight = (community.pendingPayments ?? []).filter(
-      (p) => p.unitId === owner.id && p.state === "pending",
+      (p) => p.unitId === home.id && p.state === "pending",
     );
     return (
       <div className="animate-rise space-y-6">
@@ -552,7 +552,7 @@ export function PayFlow() {
                 <TestModeGuide audience="resident" />
                 <StripePayPanel
                   associationId={community.association.id}
-                  unitId={owner.id}
+                  unitId={home.id}
                   amountCents={amountCents}
                   publishableKey={publishableKey}
                   instruments={instruments}
@@ -783,7 +783,7 @@ export function PayFlow() {
               // a resident can never be shown a payment the association has no
               // record of.
               recordPayment({
-                ownerId: owner.id,
+                homeId: home.id,
                 amountCents,
                 processorCents: cost.processorCents,
                 platformCents: cost.platformCents,

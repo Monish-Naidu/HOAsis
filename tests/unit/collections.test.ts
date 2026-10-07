@@ -53,7 +53,7 @@ describe("collections ladder", () => {
     const ladder = collectionsLadder(mehrMeadows, P);
     expect(ladder.dueNow.every((r) => r.stage !== "current")).toBe(true);
     expect(ladder.totalCents).toBe(
-      ladder.rows.reduce((t, r) => t + r.owner.balanceCents, 0),
+      ladder.rows.reduce((t, r) => t + r.home.balanceCents, 0),
     );
   });
 
@@ -67,7 +67,7 @@ describe("collections ladder", () => {
 
   it("flags accounts that ran past the demand stage", () => {
     const ladder = collectionsLadder(mehrMeadows, P);
-    expect(ladder.skipped.every((r) => r.owner.daysPastDue > P.demandDay)).toBe(true);
+    expect(ladder.skipped.every((r) => r.home.daysPastDue > P.demandDay)).toBe(true);
   });
 });
 
@@ -78,24 +78,24 @@ describe("collections ladder", () => {
  */
 describe("a notice that has already gone out", () => {
   const asOf = mehrMeadows.asOf;
-  const home = { ...mehrMeadows.owners[0], id: "own-late", balanceCents: 30_000 };
+  const home = { ...mehrMeadows.homes[0], id: "own-late", balanceCents: 30_000 };
 
   /** One home, `daysPastDue` days behind, with the threads given. */
   function community(daysPastDue: number, threads: MessageThread[]): Community {
-    return { ...mehrMeadows, owners: [{ ...home, daysPastDue }], threads };
+    return { ...mehrMeadows, homes: [{ ...home, daysPastDue }], threads };
   }
 
   /** A thread to the home, with one message per `[days ago, who wrote it]`. */
   function thread(
     tag: MessageThread["tag"],
     messages: [daysAgo: number, direction: "outbound" | "inbound"][],
-    ownerId = home.id,
+    homeId = home.id,
   ): MessageThread {
     return {
       id: `t-${tag}-${messages.map(([d]) => d).join("-")}`,
       subject: "Your assessment is past due",
       participants: [home.displayName, "Board"],
-      ownerId,
+      homeId,
       updatedDate: addDays(asOf, -Math.min(...messages.map(([d]) => d))),
       unread: false,
       tag,

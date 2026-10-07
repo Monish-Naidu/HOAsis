@@ -1,4 +1,4 @@
-import type { ChargeLine, Cents, ISODate, Owner } from "@/lib/types";
+import type { ChargeLine, Cents, ISODate, Home } from "@/lib/types";
 
 /**
  * Per-owner account history.
@@ -49,9 +49,9 @@ function onDay(year: number, month: number, day: number): ISODate {
 }
 
 /** A stable small number from an owner id, so the same owner always pays on the same day. */
-function seedOf(owner: Owner): number {
+function seedOf(home: Home): number {
   let hash = 0;
-  for (const ch of owner.id) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+  for (const ch of home.id) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
   return hash;
 }
 
@@ -66,17 +66,17 @@ function processingCost(amountCents: Cents, isAch: boolean): Cents {
  * the owner's balance divides into. Any remainder becomes a late fee, which is
  * what a real balance that is not a clean multiple of the assessment usually is.
  */
-export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLine[] {
+export function buildHomeLedger(home: Home, options: LedgerOptions): ChargeLine[] {
   const { assessmentCents, nextChargeDate, months = 7 } = options;
   if (assessmentCents <= 0) return [];
 
-  const seed = seedOf(owner);
-  const isAch = owner.autopay || seed % 2 === 0;
-  const method = owner.autopayMethod ?? (isAch ? `Bank ••${2000 + (seed % 7000)}` : `Visa ••${1000 + (seed % 8000)}`);
+  const seed = seedOf(home);
+  const isAch = home.autopay || seed % 2 === 0;
+  const method = home.autopayMethod ?? (isAch ? `Bank ••${2000 + (seed % 7000)}` : `Visa ••${1000 + (seed % 8000)}`);
   const payDay = 2 + (seed % 6);
 
-  const unpaidMonths = Math.floor(owner.balanceCents / assessmentCents);
-  const lateFeeCents = owner.balanceCents - unpaidMonths * assessmentCents;
+  const unpaidMonths = Math.floor(home.balanceCents / assessmentCents);
+  const lateFeeCents = home.balanceCents - unpaidMonths * assessmentCents;
   // A household twelve months behind needs twelve months of history, otherwise
   // the whole arrears collapses into one implausible late fee.
   //
@@ -84,18 +84,18 @@ export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLi
   // open months end at last month. Only a home that is not late can owe the
   // coming bill, which the daily run posts up to a week early. Anchoring every
   // open month on the coming one made a home 30 days late owe nothing yet.
-  const anchor = owner.daysPastDue > 0 ? 1 : 0;
+  const anchor = home.daysPastDue > 0 ? 1 : 0;
   const span = Math.max(months, unpaidMonths + 1 + anchor);
 
   const lines: ChargeLine[] = [];
   let balance: Cents = 0;
   let seq = 0;
-  const nextId = () => `${owner.id}-ch-${String(++seq).padStart(2, "0")}`;
+  const nextId = () => `${home.id}-ch-${String(++seq).padStart(2, "0")}`;
 
   // Oldest first while the running balance is walked forward, reversed at the end.
   for (let offset = span - 1; offset >= 0; offset--) {
     const { year, month, iso } = shiftMonths(nextChargeDate, -offset);
-    if (iso < owner.moveInDate) continue;
+    if (iso < home.moveInDate) continue;
     // Not billed yet: a late home's coming bill has not been posted.
     if (offset < anchor) continue;
     // An owner who owes nothing has not been billed for the coming month yet.
@@ -149,14 +149,14 @@ export function buildOwnerLedger(owner: Owner, options: LedgerOptions): ChargeLi
 }
 
 /** Builds the whole roster, letting hand written histories through untouched. */
-export function buildOwnerLedgers(
-  owners: Owner[],
+export function buildHomeLedgers(
+  homes: Home[],
   options: LedgerOptions,
 ): Record<string, ChargeLine[]> {
   const handWritten = options.handWritten ?? {};
   const ledgers: Record<string, ChargeLine[]> = {};
-  for (const owner of owners) {
-    ledgers[owner.id] = handWritten[owner.id] ?? buildOwnerLedger(owner, options);
+  for (const home of homes) {
+    ledgers[home.id] = handWritten[home.id] ?? buildHomeLedger(home, options);
   }
   return ledgers;
 }

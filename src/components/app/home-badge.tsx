@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { Camera, ChevronRight, Home as HomeIcon } from "lucide-react";
-import { useAppState, useCurrentOwner, useHomePhoto } from "@/lib/app-state";
+import { useAppState, useCurrentHome, useHomePhoto } from "@/lib/app-state";
 import { shrinkImage } from "@/lib/home-photo";
 import { useToast } from "@/components/app/toast";
 import { HOME_TYPE_LABEL, isMixed } from "@/lib/home-types";
@@ -21,14 +21,14 @@ import { homeLabel } from "@/lib/wording";
  */
 export function HomeBadge() {
   const { settings, community } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   // In a mixed community the kind of home is part of what the home is.
   const kind =
-    isMixed(community.profile) && owner?.homeType ? HOME_TYPE_LABEL[owner.homeType].one : null;
+    isMixed(community.profile) && home?.homeType ? HOME_TYPE_LABEL[home.homeType].one : null;
   const { photo, uploaded, setPhoto } = useHomePhoto();
   const { notify } = useToast();
   const input = useRef<HTMLInputElement>(null);
-  if (!owner) return null;
+  if (!home) return null;
 
   async function choose(file: File) {
     try {
@@ -86,10 +86,10 @@ export function HomeBadge() {
             is signed in, and a third name on the same screen read as
             clutter (Monish, 2026-09-26). */}
         <p className="truncate text-headline font-semibold tracking-[-0.015em] sm:text-title3">
-          {owner.address}
+          {home.address}
         </p>
         <p className="mt-0.5 truncate text-body text-white/90">
-          {homeLabel(community, owner.unit)}
+          {homeLabel(community, home.unit)}
           {kind ? ` · ${kind}` : ""}
         </p>
         <p className="truncate text-footnote text-white/70">{settings.displayName}</p>

@@ -57,6 +57,8 @@ reviewers in `.claude/agents/`, the priority list in `docs/work-tracker.md`.
   patterns; where the two differ, the skill wins. A restyle Monish has not
   seen goes to a pull request with a preview, not to `main`.
 - **Screens import from `@/lib/data` only.** Never a fixture file directly.
+- **`Home` is a home on the register** (its balance, bill, seats); a person is an `Account` or a
+  seat. `homeId` is a unit id (the `unit_id` column).
 - **Derive, don't hardcode.** If a number can be computed from the records,
   compute it in a selector. Two screens showing different values for one
   concept is the failure this product is positioned against.

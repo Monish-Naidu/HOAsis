@@ -62,7 +62,7 @@ export type CardBrand = "visa" | "mastercard" | "amex" | "discover" | "unknown";
 
 export interface PaymentInstrument {
   id: string;
-  ownerId: string;
+  homeId: string;
   kind: InstrumentKind;
   /** What the resident sees. "BECU checking", "Visa". */
   label: string;
@@ -205,7 +205,7 @@ export function validateCard(
  */
 export function tokenizeCard(
   input: CardInput,
-  context: { ownerId: string; today: string; referenceDate: { year: number; month: number } },
+  context: { homeId: string; today: string; referenceDate: { year: number; month: number } },
 ): Omit<PaymentInstrument, "id" | "isDefault"> {
   const problems = validateCard(input, context.referenceDate);
   if (problems.length > 0) {
@@ -214,7 +214,7 @@ export function tokenizeCard(
   const digits = input.number.replace(/\D/g, "");
   const brand = detectBrand(digits);
   return {
-    ownerId: context.ownerId,
+    homeId: context.homeId,
     kind: "card",
     label: BRAND_LABEL[brand],
     mask: digits.slice(-4),
@@ -263,10 +263,10 @@ export interface LinkedBankAccount {
  */
 export function linkBankAccount(
   account: LinkedBankAccount,
-  context: { ownerId: string; today: string },
+  context: { homeId: string; today: string },
 ): Omit<PaymentInstrument, "id" | "isDefault"> {
   return {
-    ownerId: context.ownerId,
+    homeId: context.homeId,
     kind: "ach",
     label: `${account.institution} ${account.accountType}`,
     mask: account.mask,

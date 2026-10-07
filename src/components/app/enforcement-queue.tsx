@@ -34,7 +34,7 @@ import {
   resolvedInYear,
 } from "@/lib/violations";
 import type { QueueItem, ViolationSource } from "@/lib/violations";
-import type { Owner, Violation, ViolationReport } from "@/lib/types";
+import type { Home, Violation, ViolationReport } from "@/lib/types";
 import {
   cn,
   daysFromToday,
@@ -196,10 +196,10 @@ export function EnforcementQueue() {
     setNoticeCitation("");
   }
 
-  function ownerFor(report: ViolationReport): Owner | undefined {
+  function homeFor(report: ViolationReport): Home | undefined {
     return (
-      community.owners.find((o) => o.id === report.subjectOwnerId) ??
-      community.owners.find((o) => o.unit === report.subjectUnit)
+      community.homes.find((o) => o.id === report.subjectHomeId) ??
+      community.homes.find((o) => o.unit === report.subjectUnit)
     );
   }
 
@@ -221,14 +221,14 @@ export function EnforcementQueue() {
   }
 
   function sendNotice(report: ViolationReport) {
-    const owner = ownerFor(report);
-    if (!owner) return;
+    const home = homeFor(report);
+    if (!home) return;
     try {
       const raised = raiseNoticeFromReport(report.id, {
         rule: noticeRule,
         ruleCitation: noticeCitation,
-        ownerId: owner.id,
-        ownerName: owner.displayName,
+        homeId: home.id,
+        ownerName: home.displayName,
       });
       notify(`${raised.reference} opened against unit ${report.subjectUnit}. It is under Open.`);
       setEditor(null);
@@ -271,7 +271,7 @@ export function EnforcementQueue() {
 
       {logging ? (
         <CityNoticeForm
-          owners={community.owners}
+          homes={community.homes}
           onCancel={() => setLogging(false)}
           onSave={(input) => {
             try {
@@ -413,7 +413,7 @@ export function EnforcementQueue() {
                 onAdvance={advance}
                 onResolve={resolve}
                 onPrint={setPrinting}
-                ownerFor={ownerFor}
+                homeFor={homeFor}
                 reportFor={(id) => community.violationReports.find((r) => r.id === id)}
                 citationFor={(citation) => resolveCitation(citation, community.governingDocs)}
               />
@@ -449,7 +449,7 @@ function QueueRow({
   onAdvance,
   onResolve,
   onPrint,
-  ownerFor,
+  homeFor,
   reportFor,
   citationFor,
 }: {
@@ -470,7 +470,7 @@ function QueueRow({
   onAdvance: (violation: Violation) => void;
   onResolve: (violation: Violation) => void;
   onPrint: (violation: Violation) => void;
-  ownerFor: (report: ViolationReport) => Owner | undefined;
+  homeFor: (report: ViolationReport) => Home | undefined;
   reportFor: (id: string) => ViolationReport | undefined;
   citationFor: (citation: string) => CitationMatch;
 }) {
@@ -492,9 +492,9 @@ function QueueRow({
 
   if (item.kind === "report") {
     const { report } = item;
-    const owner = ownerFor(report);
+    const home = homeFor(report);
     title = report.what;
-    where = `${placeLabel(report.subjectUnit)}${owner ? ` · ${owner.displayName}` : ""}`;
+    where = `${placeLabel(report.subjectUnit)}${home ? ` · ${home.displayName}` : ""}`;
     when = `Reported ${formatDate(report.submittedOn)}`;
     status = REPORT_STATUS[report.status];
     if (report.status === "verified" && !report.violationId) {
@@ -600,7 +600,7 @@ function QueueRow({
           {item.kind === "report" ? (
             <ReportDetail
               report={item.report}
-              owner={ownerFor(item.report)}
+              home={homeFor(item.report)}
               editor={editor}
               note={note}
               onNote={onNote}
@@ -661,7 +661,7 @@ function VerificationNote({ report }: { report: ViolationReport }) {
 
 function ReportDetail({
   report,
-  owner,
+  home,
   editor,
   note,
   onNote,
@@ -675,7 +675,7 @@ function ReportDetail({
   onSendNotice,
 }: {
   report: ViolationReport;
-  owner: Owner | undefined;
+  home: Home | undefined;
   editor: Editor;
   note: string;
   onNote: (value: string) => void;
@@ -780,21 +780,21 @@ function ReportDetail({
               variant="secondary"
               size="sm"
               onClick={() => onStart({ id: report.id, mode: "notice" })}
-              disabled={!owner}
+              disabled={!home}
             >
               <Send className="size-3.5" />
               Send notice
             </Button>
           ) : null}
-          {!owner ? (
+          {!home ? (
             <p className="text-footnote text-warn">
               No owner on file for unit {report.subjectUnit}. Add the owner under Homeowners first.
             </p>
           ) : null}
-          {editor?.mode === "notice" && owner ? (
+          {editor?.mode === "notice" && home ? (
             <div className="rounded-card border border-border bg-surface-2 p-3.5">
               <p className="text-footnote text-fg-muted">
-                To {owner.displayName}, unit {owner.unit}. Starts as a courtesy notice.
+                To {home.displayName}, unit {home.unit}. Starts as a courtesy notice.
               </p>
               <label className="mt-3 block">
                 <span className={LABEL}>What the notice says</span>
@@ -1000,18 +1000,18 @@ function ViolationDetail({
 /* -------------------------------------------------------------------------- */
 
 function CityNoticeForm({
-  owners,
+  homes,
   onCancel,
   onSave,
 }: {
-  owners: Owner[];
+  homes: Home[];
   onCancel: () => void;
   onSave: (input: {
     agency: string;
     caseNumber: string;
     deadline: string;
     rule: string;
-    ownerId?: string;
+    homeId?: string;
     ownerName?: string;
     unit?: string;
   }) => void;
@@ -1020,10 +1020,10 @@ function CityNoticeForm({
   const [caseNumber, setCaseNumber] = useState("");
   const [deadline, setDeadline] = useState("");
   const [what, setWhat] = useState("");
-  const [ownerId, setOwnerId] = useState("");
-  const owner = owners.find((o) => o.id === ownerId);
+  const [homeId, setHomeId] = useState("");
+  const home = homes.find((o) => o.id === homeId);
   const ready = agency.trim() && what.trim() && deadline;
-  const sorted = [...owners].sort((a, b) =>
+  const sorted = [...homes].sort((a, b) =>
     a.unit.localeCompare(b.unit, undefined, { numeric: true }),
   );
 
@@ -1076,8 +1076,8 @@ function CityNoticeForm({
         <label className="block">
           <span className={LABEL}>About</span>
           <select
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
+            value={homeId}
+            onChange={(e) => setHomeId(e.target.value)}
             aria-label="Which home the notice is about"
             className={INPUT}
           >
@@ -1113,9 +1113,9 @@ function CityNoticeForm({
               caseNumber,
               deadline,
               rule: what,
-              ownerId: owner?.id,
-              ownerName: owner?.displayName,
-              unit: owner?.unit,
+              homeId: home?.id,
+              ownerName: home?.displayName,
+              unit: home?.unit,
             })
           }
         >

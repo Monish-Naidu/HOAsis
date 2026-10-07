@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bestMatch, homeOption, seatPlan } from "@/app/board/homeowners/join-match";
 import type { Community } from "@/lib/data/community";
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 
 /**
  * Which home a join request means, and what "Let them in" does on it.
@@ -10,7 +10,7 @@ import type { Owner } from "@/lib/types";
  */
 
 const community = { profile: undefined } as unknown as Community;
-const home = (unit: string, extra: Partial<Owner> = {}): Owner =>
+const home = (unit: string, extra: Partial<Home> = {}): Home =>
   ({
     id: `home-${unit}`,
     displayName: "Pat Lee",
@@ -25,7 +25,7 @@ const home = (unit: string, extra: Partial<Owner> = {}): Owner =>
     standing: "current",
     daysPastDue: 0,
     ...extra,
-  }) as Owner;
+  }) as Home;
 
 describe("bestMatch", () => {
   const homes = [home("3"), home("4"), home("12")];

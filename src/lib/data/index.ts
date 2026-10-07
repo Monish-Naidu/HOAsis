@@ -21,7 +21,7 @@ import {
 import { documents } from "./documents";
 import {
   ledgerEntries,
-  ownerCharges,
+  homeCharges,
   paymentMethods,
   payouts,
   vendors,
@@ -43,7 +43,7 @@ import {
 } from "./library";
 import { policyTemplates } from "./policy-templates";
 import { ballots, meetings } from "./voting";
-import { boardMembers, currentOwner, owners, CURRENT_OWNER_ID } from "./owners";
+import { boardMembers, currentHome, homes, CURRENT_HOME_ID } from "./owners";
 import { requests, violations } from "./requests";
 import { daysFromToday } from "@/lib/utils";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
@@ -80,13 +80,13 @@ export {
   bankAccounts,
   boardMembers,
   budget,
-  CURRENT_OWNER_ID,
-  currentOwner,
+  CURRENT_HOME_ID,
+  currentHome,
   documents,
   events,
   ledgerEntries,
-  owners,
-  ownerCharges,
+  homes,
+  homeCharges,
   paymentMethods,
   payouts,
   requests,
@@ -132,8 +132,8 @@ export type { BudgetLine };
 /* and a Map turns those repeated linear scans into constant time.             */
 /* -------------------------------------------------------------------------- */
 
-export const ownersById: ReadonlyMap<string, (typeof owners)[number]> = new Map(
-  owners.map((owner) => [owner.id, owner]),
+export const homesById: ReadonlyMap<string, (typeof homes)[number]> = new Map(
+  homes.map((home) => [home.id, home]),
 );
 
 export const accountsById: ReadonlyMap<string, (typeof accounts)[number]> = new Map(
@@ -163,22 +163,22 @@ export function cashPosition() {
 }
 
 export function delinquency() {
-  const past = owners.filter((o) => o.daysPastDue > 0);
+  const past = homes.filter((o) => o.daysPastDue > 0);
   const totalCents = past.reduce((sum, o) => sum + o.balanceCents, 0);
   const byBucket = {
     grace: past.filter((o) => o.standing === "grace"),
     late: past.filter((o) => o.standing === "late"),
     collections: past.filter((o) => o.standing === "collections"),
   };
-  const billedThisMonth = owners.length;
-  const currentCount = owners.length - past.length;
+  const billedThisMonth = homes.length;
+  const currentCount = homes.length - past.length;
   return {
     past,
     totalCents,
     byBucket,
     /** Share of billed owners with nothing outstanding. */
     collectionRate: currentCount / billedThisMonth,
-    autopayRate: owners.filter((o) => o.autopay).length / owners.length,
+    autopayRate: homes.filter((o) => o.autopay).length / homes.length,
   };
 }
 
@@ -255,19 +255,19 @@ export function openRequests() {
   return requests.filter((r) => !["approved", "denied", "closed"].includes(r.status));
 }
 
-export function requestsForOwner(ownerId: string) {
+export function requestsForHome(homeId: string) {
   return requests
-    .filter((r) => r.ownerId === ownerId)
+    .filter((r) => r.homeId === homeId)
     .sort((a, b) => (a.submittedDate < b.submittedDate ? 1 : -1));
 }
 
-export function ownerBalanceDue() {
-  const next = ownerCharges.find((c) => c.kind === "charge" && daysFromToday(c.date) >= 0);
+export function homeBalanceDue() {
+  const next = homeCharges.find((c) => c.kind === "charge" && daysFromToday(c.date) >= 0);
   return {
-    balanceCents: currentOwner.balanceCents,
+    balanceCents: currentHome.balanceCents,
     nextChargeDate: next?.date,
     nextChargeCents: next?.amountCents ?? association.duesCents,
-    autopay: currentOwner.autopay,
+    autopay: currentHome.autopay,
   };
 }
 
@@ -279,23 +279,23 @@ export function ownerBalanceDue() {
 /* -------------------------------------------------------------------------- */
 
 export function assistantContext() {
-  const due = ownerBalanceDue();
+  const due = homeBalanceDue();
   const cash = cashPosition();
   const interest = interestSummary();
   const reserve = reserveSummary();
-  const mine = requestsForOwner(CURRENT_OWNER_ID);
-  const lastPayment = ownerCharges.find((c) => c.kind === "payment");
+  const mine = requestsForHome(CURRENT_HOME_ID);
+  const lastPayment = homeCharges.find((c) => c.kind === "payment");
   const live = liveMeeting();
 
   return {
-    owner: {
-      name: currentOwner.members[0],
-      unit: currentOwner.unit,
+    home: {
+      name: currentHome.members[0],
+      unit: currentHome.unit,
       balanceCents: due.balanceCents,
       nextChargeDate: due.nextChargeDate,
-      standing: currentOwner.standing,
-      daysPastDue: currentOwner.daysPastDue,
-      autopay: currentOwner.autopay,
+      standing: currentHome.standing,
+      daysPastDue: currentHome.daysPastDue,
+      autopay: currentHome.autopay,
       lastPayment: lastPayment
         ? {
             date: lastPayment.date,

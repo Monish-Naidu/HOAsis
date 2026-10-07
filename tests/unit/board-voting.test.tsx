@@ -47,7 +47,7 @@ vi.mock("@/lib/app-state", async (original) => ({
     closeBallot,
     settings: { showLiveVoteResults: false },
     // The card compares a ballot's count with the register.
-    community: { owners: [], association: { unitCount: 88 } },
+    community: { homes: [], association: { unitCount: 88 } },
   }),
 }));
 

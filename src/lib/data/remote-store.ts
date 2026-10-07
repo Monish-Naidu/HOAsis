@@ -511,7 +511,7 @@ export async function loadEarlierStatement(unitId: string): Promise<boolean> {
     set({
       community: {
         ...current,
-        ownerCharges: { ...current.ownerCharges, [unitId]: lines },
+        homeCharges: { ...current.homeCharges, [unitId]: lines },
         history: {
           ...current.history,
           statementsLoaded: [...current.history.statementsLoaded, unitId],

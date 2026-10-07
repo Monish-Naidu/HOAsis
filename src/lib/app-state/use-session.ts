@@ -30,7 +30,7 @@ export function useSessionActions(deps: BaseDeps) {
 
   const chooseHome = useCallback(
     (unitId: string) => {
-      if (mySeats.some((s) => s.ownerId === unitId)) homeStore.set(unitId);
+      if (mySeats.some((s) => s.homeId === unitId)) homeStore.set(unitId);
     },
     [mySeats],
   );

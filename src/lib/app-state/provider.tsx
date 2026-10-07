@@ -57,13 +57,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // the community does.
   const settings = useStore(sliceStore(communityId, "settings"));
   const accountList = useStore(sliceStore(communityId, "accounts"));
-  const ownerList = useStore(sliceStore(communityId, "owners"));
+  const homeList = useStore(sliceStore(communityId, "homes"));
   const bankAccountList = useStore(sliceStore(communityId, "bankAccounts"));
   const budgetLines = useStore(sliceStore(communityId, "budget"));
   // Demo associations keep their skipped setup tasks here. Real ones keep them
   // in the database, loaded alongside the community.
   const localDismissals = useStore(dismissStore(communityId));
-  const ownerChargeMap = useStore(sliceStore(communityId, "ownerCharges"));
+  const homeChargeMap = useStore(sliceStore(communityId, "homeCharges"));
   const amenities = useStore(sliceStore(communityId, "amenities"));
   const forms = useStore(sliceStore(communityId, "forms"));
   const posts = useStore(sliceStore(communityId, "posts"));
@@ -100,11 +100,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     community,
     settings,
     accountList,
-    ownerList,
+    homeList,
     bankAccountList,
     budgetLines,
     localDismissals,
-    ownerChargeMap,
+    homeChargeMap,
     amenities,
     forms,
     posts,
@@ -275,9 +275,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ...community,
       settings,
       accounts: accountList,
-      owners: ownerList,
+      homes: homeList,
       bankAccounts: bankAccountList,
-      ownerCharges: ownerChargeMap,
+      homeCharges: homeChargeMap,
       budget: budgetLines,
       amenities,
       forms,
@@ -309,9 +309,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       community,
       settings,
       accountList,
-      ownerList,
+      homeList,
       bankAccountList,
-      ownerChargeMap,
+      homeChargeMap,
       budgetLines,
       amenities,
       forms,

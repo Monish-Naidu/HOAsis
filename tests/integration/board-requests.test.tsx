@@ -45,13 +45,13 @@ function wrap(ui: ReactNode) {
 const LONG = `${"The fence along the east lot line needs to come down for the drainage work. ".repeat(4)}Second paragraph.`;
 
 function request(over: Partial<HomeRequest> = {}): HomeRequest {
-  const owner = seen.state.community.owners[0];
+  const home = seen.state.community.homes[0];
   return {
     id: "req-open-1",
     reference: "REQ-2026-901",
-    ownerId: owner.id,
-    ownerName: owner.displayName,
-    unit: owner.unit,
+    homeId: home.id,
+    ownerName: home.displayName,
+    unit: home.unit,
     kind: "architectural",
     title: "Replace the east fence",
     summary: LONG,
@@ -61,7 +61,7 @@ function request(over: Partial<HomeRequest> = {}): HomeRequest {
     dueReason: "Bylaws give the board 30 days",
     attachments: [{ name: "fence-plan.pdf", size: "212 KB" }],
     thread: [
-      { id: "t1", at: "2026-08-10", actor: owner.displayName, actorRole: "resident", body: "Sent for review.", kind: "note" },
+      { id: "t1", at: "2026-08-10", actor: home.displayName, actorRole: "resident", body: "Sent for review.", kind: "note" },
       { id: "t2", at: "2026-08-11", actor: "Arya Patel", actorRole: "board", body: "Received, thank you.", kind: "note" },
     ],
     submission: {

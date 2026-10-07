@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Paperclip, ScrollText } from "lucide-react";
 import { Badge, Button, Callout, Card, EmptyState, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { SignaturePad } from "@/components/app/signature-pad";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { FormField, FormSubmission, HomeRequest } from "@/lib/types";
 import { cn, addDays, formatDate, todayIsoDate } from "@/lib/utils";
@@ -26,7 +26,7 @@ import { confirmedReference } from "@/lib/request-reference";
  */
 export function FillForm({ formId }: { formId: string }) {
   const { community, requests, addRequest, isRemote } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const { notify } = useToast();
   const router = useRouter();
 
@@ -88,7 +88,7 @@ export function FillForm({ formId }: { formId: string }) {
   const canSubmit = missing.length === 0 && typedName.trim().length > 1;
 
   async function submit() {
-    if (!owner || !form || !canSubmit || sending) return;
+    if (!home || !form || !canSubmit || sending) return;
     const seq = 200 + requests.length;
     // The form's own number. Right for the demo; a guess for a real
     // association, where the database numbers the request.
@@ -129,9 +129,9 @@ export function FillForm({ formId }: { formId: string }) {
         .slice(0, 3)
         .map((a) => `${a.label}: ${a.value}`)
         .join(". "),
-      ownerId: owner.id,
-      ownerName: owner.displayName,
-      unit: owner.unit,
+      homeId: home.id,
+      ownerName: home.displayName,
+      unit: home.unit,
       status: "submitted",
       submittedDate: todayIsoDate(),
       dueDate,
@@ -145,7 +145,7 @@ export function FillForm({ formId }: { formId: string }) {
         {
           id: `rt-${seq}-1`,
           at: todayIsoDate(),
-          actor: owner.members[0],
+          actor: home.members[0],
           actorRole: "resident",
           body: `Submitted ${form.label}, signed by ${typedName.trim()}.`,
           kind: "note",

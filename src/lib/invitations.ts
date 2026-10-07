@@ -17,9 +17,9 @@
 const INVITE_SECRET = "hoasis-invite-v1";
 
 /** A short check code over the association and household. */
-function checkCode(communityId: string, ownerId: string): string {
+function checkCode(communityId: string, homeId: string): string {
   let hash = 2_166_136_261;
-  for (const ch of `${INVITE_SECRET}:${communityId}:${ownerId}`) {
+  for (const ch of `${INVITE_SECRET}:${communityId}:${homeId}`) {
     hash ^= ch.charCodeAt(0);
     hash = Math.imul(hash, 16_777_619) >>> 0;
   }
@@ -28,33 +28,33 @@ function checkCode(communityId: string, ownerId: string): string {
 
 export interface Invitation {
   communityId: string;
-  ownerId: string;
+  homeId: string;
   code: string;
 }
 
 /** The path a household follows to claim their account. */
-export function invitePath(communityId: string, ownerId: string): string {
+export function invitePath(communityId: string, homeId: string): string {
   const params = new URLSearchParams({
     c: communityId,
-    o: ownerId,
-    k: checkCode(communityId, ownerId),
+    o: homeId,
+    k: checkCode(communityId, homeId),
   });
   return `/join?${params.toString()}`;
 }
 
 /** The full link, for pasting into an email the board sends themselves. */
-export function inviteUrl(communityId: string, ownerId: string, origin: string): string {
-  return `${origin}${invitePath(communityId, ownerId)}`;
+export function inviteUrl(communityId: string, homeId: string, origin: string): string {
+  return `${origin}${invitePath(communityId, homeId)}`;
 }
 
 /** Reads an invitation off a query string, rejecting anything that fails the check. */
 export function parseInvitation(params: URLSearchParams): Invitation | null {
   const communityId = params.get("c");
-  const ownerId = params.get("o");
+  const homeId = params.get("o");
   const code = params.get("k");
-  if (!communityId || !ownerId || !code) return null;
-  if (checkCode(communityId, ownerId) !== code) return null;
-  return { communityId, ownerId, code };
+  if (!communityId || !homeId || !code) return null;
+  if (checkCode(communityId, homeId) !== code) return null;
+  return { communityId, homeId, code };
 }
 
 /**

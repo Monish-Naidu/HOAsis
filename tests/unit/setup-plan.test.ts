@@ -251,7 +251,7 @@ describe("add every home and its owner", () => {
     const t = taskOf(
       signedIn((x) => {
         // Home 4 has nobody listed.
-        x.owners[3] = { ...x.owners[3], members: [], placeholder: true };
+        x.homes[3] = { ...x.homes[3], members: [], placeholder: true };
       }),
       "roster",
     )!;
@@ -279,7 +279,7 @@ describe("add every home and its owner", () => {
     const c = signedIn(undefined, { origin: "builder", previously: undefined });
     expect(taskOf(c, "roster")!.complete).toBe(true);
     // But the founder alone is not a register.
-    const alone = signedIn((x) => { x.owners = x.owners.slice(0, 1); }, { origin: "builder", previously: undefined });
+    const alone = signedIn((x) => { x.homes = x.homes.slice(0, 1); }, { origin: "builder", previously: undefined });
     expect(taskOf(alone, "roster")!.complete).toBe(false);
   });
 });
@@ -300,7 +300,7 @@ describe("enter what each home owes today", () => {
 
   it("is done when one opening balance is saved", () => {
     expect(taskOf(signedIn(), "opening-balances")!.complete).toBe(false);
-    const c = signedIn((x) => { x.ownerCharges[x.owners[1].id] = [OPENING]; });
+    const c = signedIn((x) => { x.homeCharges[x.homes[1].id] = [OPENING]; });
     expect(taskOf(c, "opening-balances")!.complete).toBe(true);
     expect(taskOf(c, "opening-balances")!.because).toBe("1 home with an opening balance saved.");
   });
@@ -333,11 +333,11 @@ describe("turn on online payments", () => {
     expect(without.payments.headline).toMatch(/steps? left before owners can pay online/);
     // Homes, owners, invites and the rest being done does not change it.
     const everythingButStripe = signedIn((x) => {
-      x.ownerCharges[x.owners[1].id] = [OPENING];
+      x.homeCharges[x.homes[1].id] = [OPENING];
       x.emailLog = [{ id: "e", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z" },
         { id: "f", to: "dana@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z" }];
-      x.owners[3].placeholder = false;
-      x.owners[3].members = ["Lee Park"];
+      x.homes[3].placeholder = false;
+      x.homes[3].members = ["Lee Park"];
     });
     expect(planOf(everythingButStripe).canTakePayments).toBe(false);
     expect(planOf(everythingButStripe).payments.stepsLeft).toBe(1);
@@ -384,11 +384,11 @@ describe("check the first bill", () => {
 
   it("says each home pays what it pays, with the total, when some homes have their own amount", () => {
     const c = signedIn((x) => {
-      x.owners = x.owners.map((o, i) => (i === 1 ? { ...o, duesCents: 31_000 } : o));
+      x.homes = x.homes.map((o, i) => (i === 1 ? { ...o, duesCents: 31_000 } : o));
     });
     const t = taskOf(c, "first-bill")!;
-    const total = c.owners.length * 25_000 + 6_000;
-    expect(t.because).toContain(`$${(total / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })} across ${c.owners.length} homes, each at what it pays`);
+    const total = c.homes.length * 25_000 + 6_000;
+    expect(t.because).toContain(`$${(total / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })} across ${c.homes.length} homes, each at what it pays`);
     expect(t.because).not.toContain("per home, billed");
   });
 
@@ -400,7 +400,7 @@ describe("check the first bill", () => {
 
 describe("invite the owners", () => {
   it("is not done with no owners named, and says to add them first", () => {
-    const c = signedIn((x) => { x.owners = x.owners.slice(0, 1); });
+    const c = signedIn((x) => { x.homes = x.homes.slice(0, 1); });
     const t = taskOf(c, "invites")!;
     expect(t.complete).toBe(false);
     expect(t.because).toMatch(/Add every home's owner first/);
@@ -421,7 +421,7 @@ describe("invite the owners", () => {
     const both = signedIn((x) => {
       x.emailLog = [{ id: "e", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z" }];
       // Dana signed in on her own.
-      x.accounts = [...x.accounts, { ...x.accounts[0], id: "a-dana", ownerId: x.owners[2].id, role: "resident" }];
+      x.accounts = [...x.accounts, { ...x.accounts[0], id: "a-dana", homeId: x.homes[2].id, role: "resident" }];
     });
     const t = taskOf(both, "invites")!;
     expect(t.complete).toBe(true);
@@ -440,7 +440,7 @@ describe("invite the owners", () => {
   });
 
   it("does not count the founder's own sign in as somebody being reached", () => {
-    const c = signedIn((x) => { x.owners = x.owners.map((o, i) => (i === 0 ? o : { ...o, email: "" })); });
+    const c = signedIn((x) => { x.homes = x.homes.map((o, i) => (i === 0 ? o : { ...o, email: "" })); });
     expect(taskOf(c, "invites")!.complete).toBe(false);
   });
 });

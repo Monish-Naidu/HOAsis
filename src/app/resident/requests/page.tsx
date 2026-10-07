@@ -4,7 +4,7 @@ import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, Gavel, Plus } from "lucide-react";
 import { Badge, ButtonLink, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { bucketRequests, useAppState, useCurrentOwner, useMyRequests } from "@/lib/app-state";
+import { bucketRequests, useAppState, useCurrentHome, useMyRequests } from "@/lib/app-state";
 import { kindLabel, requestStatusLabel, requestStatusTone } from "@/lib/request-status";
 import { formatDate, pluralize, relativeDays } from "@/lib/utils";
 import { openNoticesForHome } from "@/lib/resident-wording";
@@ -15,14 +15,14 @@ export default function ResidentRequests() {
   const mine = useMyRequests();
   const { open, decided, history } = bucketRequests(mine);
   const { community } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   // A notice against your own home used to exist only on the board's side,
   // which meant the evidence was something described to you rather than
   // something you could look at.
-  const notices = owner
-    ? community.violations.filter((v) => v.ownerId === owner.id || v.unit === owner.unit)
+  const notices = home
+    ? community.violations.filter((v) => v.homeId === home.id || v.unit === home.unit)
     : [];
-  const openNotices = openNoticesForHome(community.violations, owner);
+  const openNotices = openNoticesForHome(community.violations, home);
 
   return (
     <div className="animate-rise space-y-6">

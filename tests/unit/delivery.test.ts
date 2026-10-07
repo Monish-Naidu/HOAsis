@@ -10,7 +10,7 @@ import {
   withinSendingHours,
   type ContactConsent,
 } from "@/lib/delivery";
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 
 /**
  * Which notices may go which way.
@@ -22,7 +22,7 @@ import type { Owner } from "@/lib/types";
  * has to hold in the layer rather than in a paragraph on a screen.
  */
 
-function owner(patch: Partial<Owner> = {}): Owner {
+function home(patch: Partial<Home> = {}): Home {
   return {
     id: "own-1",
     displayName: "A Household",
@@ -61,7 +61,7 @@ describe("what mail is for", () => {
   it("never lets a lien warning go by text", () => {
     // The one that has to hold. A texted preforeclosure warning is not a
     // cheaper notice, it is not notice.
-    const rows = reachability(owner(), "lien-warning", CONSENTED, REGISTERED);
+    const rows = reachability(home(), "lien-warning", CONSENTED, REGISTERED);
     const sms = rows.find((r) => r.channel === "sms")!;
     expect(sms.usable).toBe(false);
     expect(sms.blocker).toContain("cannot go by text");
@@ -82,7 +82,7 @@ describe("what mail is for", () => {
 
 describe("consent to be texted", () => {
   it("is not implied by having somebody's phone number", () => {
-    const rows = reachability(owner(), "dues-reminder", undefined, REGISTERED);
+    const rows = reachability(home(), "dues-reminder", undefined, REGISTERED);
     const sms = rows.find((r) => r.channel === "sms")!;
     expect(sms.usable).toBe(false);
     expect(sms.blocker).toContain("not agreed");
@@ -108,7 +108,7 @@ describe("being allowed to text at all", () => {
   it("refuses until the carriers know who the association is", () => {
     // Unregistered traffic is filtered silently, so a button that appears to
     // work and does nothing is the worst of the options.
-    const rows = reachability(owner(), "dues-reminder", CONSENTED, NOT_REGISTERED);
+    const rows = reachability(home(), "dues-reminder", CONSENTED, NOT_REGISTERED);
     const sms = rows.find((r) => r.channel === "sms")!;
     expect(sms.usable).toBe(false);
     expect(sms.blocker).toContain("not registered");
@@ -144,24 +144,24 @@ describe("being allowed to text at all", () => {
 describe("reachability", () => {
   it("returns a verdict for every channel rather than a shorter list", () => {
     // "We could not text them" is information. A silently shorter list is not.
-    const rows = reachability(owner(), "general", CONSENTED, REGISTERED);
+    const rows = reachability(home(), "general", CONSENTED, REGISTERED);
     expect(rows.map((r) => r.channel)).toEqual(["email", "sms", "portal", "mail"]);
     expect(rows.every((r) => r.usable || r.blocker)).toBe(true);
   });
 
   it("says no email on file rather than failing quietly", () => {
-    const rows = reachability(owner({ email: "  " }), "general", CONSENTED, REGISTERED);
+    const rows = reachability(home({ email: "  " }), "general", CONSENTED, REGISTERED);
     expect(rows.find((r) => r.channel === "email")!.blocker).toBe("No email on file");
   });
 
   it("keeps the portal open for anything it may carry", () => {
-    const rows = reachability(owner({ email: "" }), "general", undefined, NOT_REGISTERED);
+    const rows = reachability(home({ email: "" }), "general", undefined, NOT_REGISTERED);
     expect(rows.find((r) => r.channel === "portal")!.usable).toBe(true);
   });
 
   it("cannot reach a household with no email, no consent and no address", () => {
     const rows = reachability(
-      owner({ email: "", phone: "", address: "" }),
+      home({ email: "", phone: "", address: "" }),
       "lien-warning",
       undefined,
       NOT_REGISTERED,
@@ -172,9 +172,9 @@ describe("reachability", () => {
 
 describe("audienceFor", () => {
   const roster = [
-    owner({ id: "a" }),
-    owner({ id: "b", email: "" }),
-    owner({ id: "c", phone: "" }),
+    home({ id: "a" }),
+    home({ id: "b", email: "" }),
+    home({ id: "c", phone: "" }),
   ];
   const consent = { a: CONSENTED, b: CONSENTED, c: CONSENTED };
 
@@ -195,7 +195,7 @@ describe("audienceFor", () => {
 
   it("counts households nothing can reach", () => {
     const audience = audienceFor(
-      [owner({ id: "z", email: "", phone: "", address: "" })],
+      [home({ id: "z", email: "", phone: "", address: "" })],
       "lien-warning",
       {},
       NOT_REGISTERED,

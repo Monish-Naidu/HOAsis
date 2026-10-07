@@ -302,12 +302,12 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
   const { community, isRemote } = useAppState();
   const local = !isRemote && Boolean(community.profile);
   const name = community.settings.displayName;
-  const homes = community.owners.length;
+  const homes = community.homes.length;
   const dues = community.association.duesCents;
   const cadence = community.association.duesCadence;
   // A mixed community names its kinds, and says so when they pay differently.
-  const mix = describeMix(community.owners);
-  const varies = duesVary(community.association, community.owners);
+  const mix = describeMix(community.homes);
+  const varies = duesVary(community.association, community.homes);
 
   return (
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
@@ -337,11 +337,11 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
           <Done
             label={
               varies
-                ? `${money(totalDues(community.association, community.owners))} ${cadence} in dues`
+                ? `${money(totalDues(community.association, community.homes))} ${cadence} in dues`
                 : `${money(dues)} ${cadence} dues`
             }
             detail={
-              homesWithOwnDues(community.owners) > 0
+              homesWithOwnDues(community.homes) > 0
                 ? "Each home at what it pays"
                 : varies
                   ? "Each kind of home at its own amount"
@@ -1000,7 +1000,7 @@ function HouseholdInline({ task }: { task: PlanTask }) {
   function save() {
     // A home that is listed with nobody named gets its owner here, rather than
     // a refusal that says the home is already on the roster.
-    const listed = community.owners.find((o) => o.unit === entry.unit.trim() && !hasOwner(o));
+    const listed = community.homes.find((o) => o.unit === entry.unit.trim() && !hasOwner(o));
     if (listed) {
       const name = entry.name.trim();
       void setHouseholdOwner(listed.id, { name, email: entry.email }).then((ok) => {
@@ -1012,8 +1012,8 @@ function HouseholdInline({ task }: { task: PlanTask }) {
       return;
     }
     try {
-      const owner = addOwner(entry);
-      notify(`Added ${owner.displayName}, home ${owner.unit}`);
+      const home = addOwner(entry);
+      notify(`Added ${home.displayName}, home ${home.unit}`);
       setEntry({ name: "", email: "", unit: "" });
     } catch (error) {
       notify(error instanceof Error ? error.message : "Could not add that home. Check the details and try again.", "warn");

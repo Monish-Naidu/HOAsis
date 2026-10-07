@@ -61,7 +61,7 @@ describe("what needs fixing", () => {
     act(() => seen.state.signIn("acct-arya"));
     act(() => {
       seen.state.addNotice({
-        ownerId: "own-042",
+        homeId: "own-042",
         ownerName: "Monish Naidu",
         unit: "42",
         rule: "Fence needs paint",

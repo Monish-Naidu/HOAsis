@@ -116,6 +116,12 @@ export interface PersistedStoreOptions<T> {
    * holds yesterday's JSON. Returning false falls back to the seed.
    */
   validate?: (value: unknown) => value is T;
+  /**
+   * Brings a value stored under an older name for a field up to the current
+   * one, before `validate` sees it. Without it a rename drops what a returning
+   * browser remembered.
+   */
+  migrate?: (value: unknown) => unknown;
   /** Shared so one flaky storage engine trips the circuit for every store. */
   breaker?: CircuitBreaker;
   /** Injected for tests, and absent during server rendering. */
@@ -134,6 +140,7 @@ export interface PersistedStoreOptions<T> {
  */
 export class PersistedStore<T> extends Store<T> {
   private readonly validate?: (value: unknown) => value is T;
+  private readonly migrate?: (value: unknown) => unknown;
   private readonly breaker: CircuitBreaker;
   private readonly onError?: (error: Error) => void;
   private readonly injectedStorage?: PersistedStoreOptions<T>["storage"];
@@ -145,6 +152,7 @@ export class PersistedStore<T> extends Store<T> {
   ) {
     super(key, seed);
     this.validate = options.validate;
+    this.migrate = options.migrate;
     this.breaker = options.breaker ?? new CircuitBreaker(`storage:${key}`);
     this.onError = options.onError;
     this.injectedStorage = options.storage;
@@ -182,6 +190,8 @@ export class PersistedStore<T> extends Store<T> {
         this.clear();
         return this.seed;
       }
+
+      if (this.migrate) parsed = this.migrate(parsed);
 
       if (this.validate && !this.validate(parsed)) {
         this.report(
@@ -228,4 +238,25 @@ export class PersistedStore<T> extends Store<T> {
       console.warn(`[hoasis] ${toError(error).message}`);
     }
   }
+}
+
+/**
+ * Field names the app used before a home stopped being called an owner. A
+ * browser that stored data under them keeps it: `ownerId` held a home's id,
+ * and a community kept its homes under `owners`.
+ */
+const LEGACY_FIELDS: Record<string, string> = {
+  ownerId: "homeId",
+  subjectOwnerId: "subjectHomeId",
+};
+
+/** Renames the legacy fields anywhere inside stored JSON; values are untouched. */
+export function renameLegacyFields(value: unknown, extra: Record<string, string> = {}): unknown {
+  if (Array.isArray(value)) return value.map((v) => renameLegacyFields(v, extra));
+  if (value === null || typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value)) {
+    out[LEGACY_FIELDS[key] ?? extra[key] ?? key] = renameLegacyFields(v, extra);
+  }
+  return out;
 }

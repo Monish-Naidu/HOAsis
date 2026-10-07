@@ -11,7 +11,7 @@ import { collectionsLadder, policyFor, type CollectionStage } from "@/lib/collec
 import { dueLetter, renderLetter } from "@/lib/letters";
 import { homeLabel } from "@/lib/wording";
 import { cn, formatDate, pluralize, money, todayIsoDate } from "@/lib/utils";
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 
 /**
  * One send for everyone behind, each getting the letter their account is due.
@@ -49,9 +49,9 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
   const rows = useMemo(
     () =>
       ladder.rows.map((row) => ({
-        owner: row.owner,
+        home: row.home,
         stage: row.stage,
-        letter: dueLetter(row.owner, policy, templates),
+        letter: dueLetter(row.home, policy, templates),
         // False once this rung's letter has gone out, and the day it did.
         actionDue: row.actionDue,
         sentOn: row.sentOn,
@@ -66,8 +66,8 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
   const notYet = waiting.filter((r) => !r.sentOn);
   const [sending, setSending] = useState(false);
 
-  const [selectedId, setSelectedId] = useState<string | null>(due[0]?.owner.id ?? null);
-  const selected = due.find((r) => r.owner.id === selectedId) ?? due[0];
+  const [selectedId, setSelectedId] = useState<string | null>(due[0]?.home.id ?? null);
+  const selected = due.find((r) => r.home.id === selectedId) ?? due[0];
   const [edit, setEdit] = useState<{ id: string; subject: string; body: string } | null>(null);
 
   function startEditing(template: MessageTemplate) {
@@ -95,8 +95,8 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
     setSending(true);
     const landed = await Promise.all(
       going.map((row) => {
-        const letter = renderLetter(row.letter!, row.owner, community);
-        return messageOwner(row.owner.id, letter.subject, letter.body, "Billing");
+        const letter = renderLetter(row.letter!, row.home, community);
+        return messageOwner(row.home.id, letter.subject, letter.body, "Billing");
       }),
     );
     setSending(false);
@@ -114,7 +114,7 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
   const editingSelected = edit && selected?.letter && edit.id === selected.letter.id;
   const preview =
     selected?.letter && !editingSelected
-      ? renderLetter(selected.letter, selected.owner, community)
+      ? renderLetter(selected.letter, selected.home, community)
       : null;
 
   return (
@@ -140,26 +140,26 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
         {/* Who, and which letter. */}
         <ul className="divide-y divide-border border-b border-border md:border-b-0 md:border-r">
           {due.map((row) => {
-            const on = selected?.owner.id === row.owner.id;
+            const on = selected?.home.id === row.home.id;
             return (
-              <li key={row.owner.id}>
+              <li key={row.home.id}>
                 <button
                   type="button"
-                  onClick={() => setSelectedId(row.owner.id)}
+                  onClick={() => setSelectedId(row.home.id)}
                   aria-pressed={on}
                   className={cn(
                     "flex w-full items-center gap-3 px-5 py-3 text-left transition-colors",
                     on ? "bg-surface-2" : "hover:bg-surface-2",
                   )}
                 >
-                  <Avatar name={row.owner.members[0] ?? row.owner.displayName} className="size-8" />
+                  <Avatar name={row.home.members[0] ?? row.home.displayName} className="size-8" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-body font-medium text-fg">
-                      {row.owner.displayName}
+                      {row.home.displayName}
                     </span>
                     <span className="tnum block truncate text-footnote text-fg-muted">
-                      {homeLabel(community, row.owner.unit)} · {money(row.owner.balanceCents)} ·{" "}
-                      {pluralize(row.owner.daysPastDue, "day")} late
+                      {homeLabel(community, row.home.unit)} · {money(row.home.balanceCents)} ·{" "}
+                      {pluralize(row.home.daysPastDue, "day")} late
                     </span>
                   </span>
                   <Badge tone={LETTER_TONE[row.stage]}>{row.letter?.name}</Badge>
@@ -168,15 +168,15 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
             );
           })}
           {waiting.map((row) => (
-            <li key={row.owner.id} className="flex items-center gap-3 px-5 py-3 opacity-70">
-              <Avatar name={row.owner.members[0] ?? row.owner.displayName} className="size-8" tone="neutral" />
+            <li key={row.home.id} className="flex items-center gap-3 px-5 py-3 opacity-70">
+              <Avatar name={row.home.members[0] ?? row.home.displayName} className="size-8" tone="neutral" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-body font-medium text-fg">
-                  {row.owner.displayName}
+                  {row.home.displayName}
                 </span>
                 <span className="tnum block truncate text-footnote text-fg-muted">
-                  {homeLabel(community, row.owner.unit)} · {money(row.owner.balanceCents)} ·{" "}
-                  {pluralize(row.owner.daysPastDue, "day")} late
+                  {homeLabel(community, row.home.unit)} · {money(row.home.balanceCents)} ·{" "}
+                  {pluralize(row.home.daysPastDue, "day")} late
                 </span>
               </span>
               <span className="shrink-0 text-footnote text-fg-subtle">
@@ -203,7 +203,7 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
                 onCancel={() => setEdit(null)}
               />
             ) : preview ? (
-              <LetterPreview owner={selected.owner} letter={preview}>
+              <LetterPreview home={selected.home} letter={preview}>
                 <button
                   type="button"
                   onClick={() => startEditing(selected.letter!)}
@@ -250,19 +250,19 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
 
 /** The letter as one household will read it. */
 function LetterPreview({
-  owner,
+  home,
   letter,
   children,
 }: {
-  owner: Owner;
+  home: Home;
   letter: { subject: string; body: string };
   children?: React.ReactNode;
 }) {
   return (
     <div>
       <p className="truncate text-footnote text-fg-muted">
-        To {owner.displayName}
-        {owner.email ? ` · ${owner.email}` : ""}
+        To {home.displayName}
+        {home.email ? ` · ${home.email}` : ""}
       </p>
       <p className="mt-2 text-body font-semibold text-fg">{letter.subject}</p>
       <div className="mt-3 whitespace-pre-wrap text-body leading-relaxed text-fg">{letter.body}</div>

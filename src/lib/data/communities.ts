@@ -16,11 +16,11 @@ import {
 import { documents as mmDocuments } from "./documents";
 import { forumPosts as mmPosts } from "./forum";
 import { invoices as mmInvoices } from "./invoices";
-import { ledgerEntries as mmLedger, ownerCharges as mmCharges, payouts as mmPayouts, vendors as mmVendors } from "./ledger";
-import { buildOwnerLedgers } from "./owner-ledger";
+import { ledgerEntries as mmLedger, homeCharges as mmCharges, payouts as mmPayouts, vendors as mmVendors } from "./ledger";
+import { buildHomeLedgers } from "./owner-ledger";
 import { createdCommunities } from "./created-communities";
 import { threads as mmThreads } from "./messages";
-import { owners as mmOwners } from "./owners";
+import { homes as mmHomes } from "./owners";
 import { paymentInstruments as mmInstruments } from "./payments";
 import {
   requests as mmRequests,
@@ -51,7 +51,7 @@ export const mehrMeadows: Community = {
   nextChargeDate: "2026-09-01",
   association: mmAssociation,
   settings: mmSettings,
-  owners: mmOwners,
+  homes: mmHomes,
   accounts: mmAccounts,
   instruments: mmInstruments,
   bankAccounts: mmBankAccounts,
@@ -85,7 +85,7 @@ export const mehrMeadows: Community = {
   amenityStatus: mmAmenityStatus,
   forms: mmForms,
   templates: mmTemplates,
-  ownerCharges: buildOwnerLedgers(mmOwners, {
+  homeCharges: buildHomeLedgers(mmHomes, {
     assessmentCents: 28_500,
     nextChargeDate: "2026-09-01",
     // From January, so every month the books call billed has dues lines on

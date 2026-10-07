@@ -1,6 +1,6 @@
-import { Home, Receipt, CreditCard, Banknote } from "lucide-react";
+import { Home as HomeIcon, Receipt, CreditCard, Banknote } from "lucide-react";
 import type { Community } from "@/lib/data/community";
-import type { Capability, Owner } from "@/lib/types";
+import type { Capability, Home } from "@/lib/types";
 import { BOARD_ROUTES, routeOffered } from "@/lib/board-routes";
 import { money } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
@@ -60,7 +60,7 @@ export function boardShortcuts(query: string, community: Community, can: (c: Cap
   const unit = unitInQuery(query);
   const homes =
     unit !== null && offered("homeowners", community, can)
-      ? community.owners.filter((o) => o.unit.trim().toLowerCase() === unit)
+      ? community.homes.filter((o) => o.unit.trim().toLowerCase() === unit)
       : [];
   // "55" alone is a unit before it is fifty-five dollars. Typing "$55" or
   // "55.00" says money.
@@ -98,7 +98,7 @@ export function boardShortcuts(query: string, community: Community, can: (c: Cap
           `Open ${homeLabel(community, o.unit)}`,
           `${o.displayName}${o.address ? ` · ${o.address}` : ""}`,
           `/board/homeowners?open=${encodeURIComponent(o.id)}`,
-          Home,
+          HomeIcon,
         ),
       );
     }
@@ -107,30 +107,30 @@ export function boardShortcuts(query: string, community: Community, can: (c: Cap
 }
 
 /** Shortcuts for an owner: their own money, never anybody else's home. */
-export function residentShortcuts(query: string, community: Community, owner: Owner | null): SearchHit[] {
+export function residentShortcuts(query: string, community: Community, home: Home | null): SearchHit[] {
   const out: SearchHit[] = [];
   const unit = unitInQuery(query);
-  const myHome = unit !== null && owner !== null && owner.unit.trim().toLowerCase() === unit;
+  const myHome = unit !== null && home !== null && home.unit.trim().toLowerCase() === unit;
   const cents = myHome && BARE_NUMBER.test(query.trim()) ? null : amountInQuery(query);
   if (cents !== null) {
     out.push(
       shortcut(
         "act-pay",
         `Pay ${money(cents)}`,
-        owner && owner.balanceCents > 0 ? `Payments · you owe ${money(owner.balanceCents)}` : "Payments",
+        home && home.balanceCents > 0 ? `Payments · you owe ${money(home.balanceCents)}` : "Payments",
         "/resident/pay",
         CreditCard,
       ),
     );
   }
-  if (myHome && owner) {
+  if (myHome && home) {
     out.push(
       shortcut(
         "act-my-home",
-        `Open ${homeLabel(community, owner.unit)}`,
+        `Open ${homeLabel(community, home.unit)}`,
         "Account · your balance and history",
         "/resident/account",
-        Home,
+        HomeIcon,
       ),
     );
   }

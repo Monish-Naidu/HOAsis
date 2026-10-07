@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, FileSearch, FileTex
 import { Button, Callout, Card, SectionTitle, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import type { HomeRequest, RequestKind } from "@/lib/types";
 import { cn, formatDate, money, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
@@ -55,7 +55,7 @@ const kinds = [
 
 export function NewRequestForm() {
   const { amenities, forms, addRequest, community, isRemote, requests: allRequests } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   // The number to show once it is sent, or null when only the database
   // knows it (see `confirmedReference`).
   const [reference, setReference] = useState<string | null>(null);
@@ -133,7 +133,7 @@ export function NewRequestForm() {
   }
 
   async function submit() {
-    if (!owner || !kind || sending) return;
+    if (!home || !kind || sending) return;
     const seq = 200 + allRequests.length;
     const ref = `REQ-${todayIsoDate().slice(0, 4)}-${seq}`;
     const detail =
@@ -159,9 +159,9 @@ export function NewRequestForm() {
       kind: kind as RequestKind,
       title: effectiveTitle,
       summary: detail || effectiveTitle,
-      ownerId: owner.id,
-      ownerName: owner.displayName,
-      unit: owner.unit,
+      homeId: home.id,
+      ownerName: home.displayName,
+      unit: home.unit,
       status: "submitted",
       submittedDate: todayIsoDate(),
       attachments: [
@@ -174,7 +174,7 @@ export function NewRequestForm() {
         {
           id: `rt-${seq}-1`,
           at: todayIsoDate(),
-          actor: owner.members[0],
+          actor: home.members[0],
           actorRole: "resident",
           body: detail || effectiveTitle,
           kind: "note",
@@ -279,7 +279,7 @@ export function NewRequestForm() {
                 <SlotPicker
                   amenity={selectedAmenity}
                   bookings={community.amenityBookings}
-                  unit={owner?.unit ?? ""}
+                  unit={home?.unit ?? ""}
                   value={slot}
                   onChange={setSlot}
                 />

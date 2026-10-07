@@ -1,4 +1,4 @@
-import type { Association, Cents, Owner } from "@/lib/types";
+import type { Association, Cents, Home } from "@/lib/types";
 import type { PropertyType } from "@/lib/data/new-community";
 
 /**
@@ -85,11 +85,11 @@ export function duesFor(association: DuesTerms, homeType?: PropertyType, ownCent
 }
 
 /** What this owner's home pays per period. */
-export function ownerDues(
+export function homeDues(
   association: DuesTerms,
-  owner?: Pick<Owner, "homeType" | "duesCents">,
+  home?: Pick<Home, "homeType" | "duesCents">,
 ): Cents {
-  return duesFor(association, owner?.homeType, owner?.duesCents);
+  return duesFor(association, home?.homeType, home?.duesCents);
 }
 
 /** Where a home's amount comes from, for a screen that says why. */
@@ -97,27 +97,27 @@ export type DuesSource = "own" | "kind" | "association";
 
 export function duesSource(
   association: DuesTerms,
-  owner?: Pick<Owner, "homeType" | "duesCents">,
+  home?: Pick<Home, "homeType" | "duesCents">,
 ): DuesSource {
-  if (owner?.duesCents && owner.duesCents > 0) return "own";
-  const kind = owner?.homeType ? association.duesByType?.[owner.homeType] : undefined;
+  if (home?.duesCents && home.duesCents > 0) return "own";
+  const kind = home?.homeType ? association.duesByType?.[home.homeType] : undefined;
   return kind && kind > 0 && kind !== association.duesCents ? "kind" : "association";
 }
 
 /** Where a home's amount comes from, in words: "its own amount", "townhome rate", "the association's rate". */
 export function duesSourceLabel(
   association: DuesTerms,
-  owner?: Pick<Owner, "homeType" | "duesCents">,
+  home?: Pick<Home, "homeType" | "duesCents">,
 ): string {
-  const source = duesSource(association, owner);
+  const source = duesSource(association, home);
   if (source === "own") return "its own amount";
-  if (source === "kind" && owner?.homeType) return `${HOME_TYPE_LABEL[owner.homeType].one.toLowerCase()} rate`;
+  if (source === "kind" && home?.homeType) return `${HOME_TYPE_LABEL[home.homeType].one.toLowerCase()} rate`;
   return "the association's rate";
 }
 
 /** How many homes carry an amount of their own. */
-export function homesWithOwnDues(owners: Pick<Owner, "duesCents">[]): number {
-  return owners.filter((o) => Boolean(o.duesCents && o.duesCents > 0)).length;
+export function homesWithOwnDues(homes: Pick<Home, "duesCents">[]): number {
+  return homes.filter((o) => Boolean(o.duesCents && o.duesCents > 0)).length;
 }
 
 /**
@@ -126,22 +126,22 @@ export function homesWithOwnDues(owners: Pick<Owner, "duesCents">[]): number {
  */
 export function duesVary(
   association: DuesTerms,
-  owners?: Pick<Owner, "homeType" | "duesCents">[],
+  homes?: Pick<Home, "homeType" | "duesCents">[],
 ): boolean {
   const amounts = new Set(
     Object.values(association.duesByType ?? {}).filter((v): v is number => Boolean(v && v > 0)),
   );
   amounts.add(association.duesCents);
   if (amounts.size > 1) return true;
-  return (owners ?? []).some((o) => ownerDues(association, o) !== association.duesCents);
+  return (homes ?? []).some((o) => homeDues(association, o) !== association.duesCents);
 }
 
 /** Every home's dues added up, per period. The one number a budget starts from. */
 export function totalDues(
   association: DuesTerms,
-  owners: Pick<Owner, "homeType" | "duesCents">[],
+  homes: Pick<Home, "homeType" | "duesCents">[],
 ): Cents {
-  return owners.reduce((sum, o) => sum + ownerDues(association, o), 0);
+  return homes.reduce((sum, o) => sum + homeDues(association, o), 0);
 }
 
 /** How many homes of each kind, only kinds that are present. */

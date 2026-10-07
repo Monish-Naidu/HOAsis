@@ -240,7 +240,7 @@ export function useCommunicationsActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         const me = rc.accounts.find((a) => a.id === remote.profileId);
-        const home = me ? rc.owners.find((o) => o.id === me.ownerId) : undefined;
+        const home = me ? rc.homes.find((o) => o.id === me.homeId) : undefined;
         const roleLabel: Record<string, string> = {
           president: "Board President",
           "vice-president": "Vice President",
@@ -263,8 +263,8 @@ export function useCommunicationsActions(deps: AppDeps) {
       const me = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
-      const owner = me
-        ? sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === me.ownerId)
+      const home = me
+        ? sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === me.homeId)
         : undefined;
       const roleLabel: Record<string, string> = {
         president: "Board President",
@@ -275,7 +275,7 @@ export function useCommunicationsActions(deps: AppDeps) {
       const reply: ForumReply = {
         id: `fr-${postId}-${Date.now().toString(36)}`,
         author: me?.name ?? "Neighbor",
-        unit: owner?.unit ?? "",
+        unit: home?.unit ?? "",
         authorRole: me ? roleLabel[me.role] : undefined,
         at: todayIsoDate(),
         body: text,
@@ -292,7 +292,7 @@ export function useCommunicationsActions(deps: AppDeps) {
 
   const messageBoard = useCallback(
     async (
-      ownerId: string,
+      homeId: string,
       subject: string,
       body: string,
       tag: MessageThread["tag"] = "General",
@@ -305,7 +305,7 @@ export function useCommunicationsActions(deps: AppDeps) {
         let threadId: string | null = null;
         const ok = await remoteWrite("Sending your message", async () => {
           const result = await supabaseBrowser().rpc("start_owner_thread", {
-            p_unit_id: ownerId,
+            p_unit_id: homeId,
             p_subject: subject.trim(),
             p_body: body.trim(),
             p_tag: tag,
@@ -326,15 +326,15 @@ export function useCommunicationsActions(deps: AppDeps) {
         }
         return ok;
       }
-      const owner = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId);
-      const from = owner?.members[0] ?? owner?.displayName ?? "Owner";
+      const home = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId);
+      const from = home?.members[0] ?? home?.displayName ?? "Owner";
       sliceStore(communityId, "threads").update((all) => [
         {
           id: `t-${newId()}`,
           subject: subject.trim(),
           participants: [from],
-          ownerId,
-          unit: owner?.unit,
+          homeId,
+          unit: home?.unit,
           updatedDate: todayIsoDate(),
           unread: true,
           tag,
@@ -359,14 +359,14 @@ export function useCommunicationsActions(deps: AppDeps) {
   );
 
   const replyAsOwner = useCallback(
-    async (threadId: string, ownerId: string, body: string) => {
+    async (threadId: string, homeId: string, body: string) => {
       if (!body.trim()) return false;
       if (remote.community) {
         return remoteWrite("Sending your reply", () =>
           supabaseBrowser().rpc("reply_as_owner", { p_thread_id: threadId, p_body: body.trim() }),
         );
       }
-      const owner = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId);
+      const home = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId);
       sliceStore(communityId, "threads").update((all) =>
         all.map((t) =>
           t.id === threadId
@@ -379,7 +379,7 @@ export function useCommunicationsActions(deps: AppDeps) {
                   {
                     id: `m-${newId()}`,
                     at: todayIsoDate(),
-                    from: owner?.members[0] ?? owner?.displayName ?? "Owner",
+                    from: home?.members[0] ?? home?.displayName ?? "Owner",
                     fromRole: "resident",
                     direction: "inbound",
                     channel: "portal",
@@ -421,13 +421,13 @@ export function useCommunicationsActions(deps: AppDeps) {
         ).then(async (ok): Promise<ReplyEmail | false> => {
           if (!ok) return false;
           // The channel on the message says "email", so it is one.
-          if (!thread.ownerId) return "none";
+          if (!thread.homeId) return "none";
           return replyEmailState(
             await emailNotice(
               rc.id,
               {
                 kind: thread.tag === "Billing" ? "letter" : "message",
-                unitIds: [thread.ownerId],
+                unitIds: [thread.homeId],
                 subject: thread.subject,
                 body,
               },
@@ -441,7 +441,7 @@ export function useCommunicationsActions(deps: AppDeps) {
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
       const replied = sliceStore(communityId, "threads").getSnapshot().find((t) => t.id === threadId);
       logDemoActivity(communityId, "thread", activityWords.reply(replied?.unit ?? "an owner"), {
-        unit_id: replied?.ownerId,
+        unit_id: replied?.homeId,
         home: replied?.unit,
         subject: replied?.subject,
       });
@@ -470,7 +470,7 @@ export function useCommunicationsActions(deps: AppDeps) {
 
   const messageOwner = useCallback(
     (
-      ownerId: string,
+      homeId: string,
       subject: string,
       body: string,
       tag: Community["threads"][number]["tag"] = "General",
@@ -487,8 +487,8 @@ export function useCommunicationsActions(deps: AppDeps) {
       });
       if (remote.community) {
         const rc = remote.community;
-        const owner = rc.owners.find((o) => o.id === ownerId);
-        if (!owner) return false;
+        const home = rc.homes.find((o) => o.id === homeId);
+        if (!home) return false;
         const sender = rc.accounts.find((a) => a.id === remote.profileId);
         const senderName = sender?.name ?? "Board";
         // Resolves once the letter is on its thread, so a screen sending
@@ -498,8 +498,8 @@ export function useCommunicationsActions(deps: AppDeps) {
             id,
             association_id: rc.id,
             subject,
-            unit_id: ownerId,
-            participants: [owner.displayName, senderName],
+            unit_id: homeId,
+            participants: [home.displayName, senderName],
             tag,
             updated_on: todayIsoDate(),
             unread: false,
@@ -511,7 +511,7 @@ export function useCommunicationsActions(deps: AppDeps) {
           if (ok) {
             void emailNotice(rc.id, {
               kind: tag === "Billing" ? "letter" : "message",
-              unitIds: [ownerId],
+              unitIds: [homeId],
               subject,
               body,
             });
@@ -519,10 +519,10 @@ export function useCommunicationsActions(deps: AppDeps) {
           return ok;
         });
       }
-      const owner = sliceStore(communityId, "owners")
+      const home = sliceStore(communityId, "homes")
         .getSnapshot()
-        .find((o) => o.id === ownerId);
-      if (!owner) return false;
+        .find((o) => o.id === homeId);
+      if (!home) return false;
       const sender = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
@@ -531,9 +531,9 @@ export function useCommunicationsActions(deps: AppDeps) {
         {
           id,
           subject,
-          participants: [owner.displayName, senderName],
-          ownerId,
-          unit: owner.unit,
+          participants: [home.displayName, senderName],
+          homeId,
+          unit: home.unit,
           updatedDate: todayIsoDate(),
           unread: false,
           tag,

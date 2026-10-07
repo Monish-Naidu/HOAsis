@@ -36,7 +36,7 @@ export function ImportScreen() {
 
   const mayImport = can("settings");
   const seesMoney = can("finances");
-  const existingUnits = community.owners.map((o) => o.unit);
+  const existingUnits = community.homes.map((o) => o.unit);
 
   if (!mayImport) {
     return (
@@ -59,19 +59,19 @@ export function ImportScreen() {
       } else {
         // The browser copy: the same store the roster's own form writes to.
         let created = 0;
-        const balances: { ownerId: string; amountCents: number }[] = [];
-        const dues: { ownerId: string; cents: number }[] = [];
+        const balances: { homeId: string; amountCents: number }[] = [];
+        const dues: { homeId: string; cents: number }[] = [];
         for (const row of rows) {
-          const known = community.owners.find((o) => o.unit.toLowerCase() === row.unit.toLowerCase());
+          const known = community.homes.find((o) => o.unit.toLowerCase() === row.unit.toLowerCase());
           if (known) {
-            if (row.openingBalanceCents !== undefined) balances.push({ ownerId: known.id, amountCents: row.openingBalanceCents });
-            if (row.duesCents) dues.push({ ownerId: known.id, cents: row.duesCents });
+            if (row.openingBalanceCents !== undefined) balances.push({ homeId: known.id, amountCents: row.openingBalanceCents });
+            if (row.duesCents) dues.push({ homeId: known.id, cents: row.duesCents });
             continue;
           }
-          const owner = addOwner({ name: row.name, email: row.email, unit: row.unit });
+          const home = addOwner({ name: row.name, email: row.email, unit: row.unit });
           created++;
-          if (row.openingBalanceCents !== undefined) balances.push({ ownerId: owner.id, amountCents: row.openingBalanceCents });
-          if (row.duesCents) dues.push({ ownerId: owner.id, cents: row.duesCents });
+          if (row.openingBalanceCents !== undefined) balances.push({ homeId: home.id, amountCents: row.openingBalanceCents });
+          if (row.duesCents) dues.push({ homeId: home.id, cents: row.duesCents });
         }
         if (balances.length) setOpeningBalances(asOf, balances);
         if (dues.length) setHomeDues(dues);
@@ -92,7 +92,7 @@ export function ImportScreen() {
   }
 
   if (outcome) {
-    const withEmail = community.owners.filter((o) => o.email && !o.placeholder).length;
+    const withEmail = community.homes.filter((o) => o.email && !o.placeholder).length;
     return (
       <>
         <PageHeader eyebrow="Homeowners" title="Roster imported" />
@@ -182,9 +182,9 @@ export function ImportScreen() {
       </Card>
 
       <p className="mt-4 text-footnote text-fg-subtle">
-        {community.owners.length ? `${pluralize(community.owners.length, w.home)} on the register now` : "The register is empty"}
-        {seesMoney && community.owners.some((o) => o.balanceCents > 0)
-          ? `, ${money(community.owners.reduce((t, o) => t + Math.max(0, o.balanceCents), 0))} owed`
+        {community.homes.length ? `${pluralize(community.homes.length, w.home)} on the register now` : "The register is empty"}
+        {seesMoney && community.homes.some((o) => o.balanceCents > 0)
+          ? `, ${money(community.homes.reduce((t, o) => t + Math.max(0, o.balanceCents), 0))} owed`
           : ""}
         .
       </p>

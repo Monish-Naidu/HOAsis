@@ -1,7 +1,7 @@
-import { buildOwnerLedgers } from "./owner-ledger";
+import { buildHomeLedgers } from "./owner-ledger";
 import type { Community } from "./community";
 import { GRANTABLE } from "./accounts";
-import type { Capabilities, Capability, Owner } from "@/lib/types";
+import type { Capabilities, Capability, Home } from "@/lib/types";
 
 /**
  * Test Community #1.
@@ -150,7 +150,7 @@ const ledger = [
 
 const openingBalance = ledger.reduce((sum, e) => (e.status === "cleared" ? sum + e.amountCents : sum), 0);
 
-const owners: Owner[] = [
+const homes: Home[] = [
     {
       id: "tc1-own-1",
       displayName: "Priya Venkatesan",
@@ -273,12 +273,12 @@ export const testCommunityOne: Community = {
     paymentFeeWaivedOnAch: true,
   },
 
-  owners,
+  homes,
 
   accounts: [
     {
       id: "tc1-acct-priya",
-      ownerId: "tc1-own-1",
+      homeId: "tc1-own-1",
       name: "Priya Venkatesan",
       email: "priya.v@example.com",
       unit: "1",
@@ -288,7 +288,7 @@ export const testCommunityOne: Community = {
     },
     {
       id: "tc1-acct-grant",
-      ownerId: "tc1-own-2",
+      homeId: "tc1-own-2",
       name: "Grant Holloway",
       email: "g.holloway@example.com",
       unit: "2",
@@ -298,7 +298,7 @@ export const testCommunityOne: Community = {
     },
     {
       id: "tc1-acct-marcus",
-      ownerId: "tc1-own-3",
+      homeId: "tc1-own-3",
       name: "Marcus Henderson",
       email: "hendersons@example.com",
       unit: "3",
@@ -308,7 +308,7 @@ export const testCommunityOne: Community = {
     },
     {
       id: "tc1-acct-lena",
-      ownerId: "tc1-own-4",
+      homeId: "tc1-own-4",
       name: "Lena Okonkwo",
       email: "l.okonkwo@example.com",
       unit: "4",
@@ -318,7 +318,7 @@ export const testCommunityOne: Community = {
     },
     {
       id: "tc1-acct-dmitri",
-      ownerId: "tc1-own-5",
+      homeId: "tc1-own-5",
       name: "Dmitri Sokolov",
       email: "d.sokolov@example.com",
       unit: "5",
@@ -331,7 +331,7 @@ export const testCommunityOne: Community = {
   instruments: [
     {
       id: "tc1-pm-priya",
-      ownerId: "tc1-own-1",
+      homeId: "tc1-own-1",
       kind: "ach",
       label: "WaFd checking",
       mask: "5512",
@@ -343,7 +343,7 @@ export const testCommunityOne: Community = {
     },
     {
       id: "tc1-pm-grant",
-      ownerId: "tc1-own-2",
+      homeId: "tc1-own-2",
       kind: "ach",
       label: "BECU checking",
       mask: "7730",
@@ -355,7 +355,7 @@ export const testCommunityOne: Community = {
     },
     {
       id: "tc1-pm-marcus",
-      ownerId: "tc1-own-3",
+      homeId: "tc1-own-3",
       kind: "card",
       label: "Visa",
       mask: "9921",
@@ -368,7 +368,7 @@ export const testCommunityOne: Community = {
     },
     {
       id: "tc1-pm-dmitri",
-      ownerId: "tc1-own-5",
+      homeId: "tc1-own-5",
       kind: "ach",
       label: "Chase checking",
       mask: "2094",
@@ -476,7 +476,7 @@ export const testCommunityOne: Community = {
       kind: "architectural",
       title: "Replace the front door and repaint the trim",
       summary: "Same color as the existing trim. Contractor quote attached.",
-      ownerId: "tc1-own-5",
+      homeId: "tc1-own-5",
       ownerName: "Dmitri Sokolov",
       unit: "5",
       status: "in-review",
@@ -501,7 +501,7 @@ export const testCommunityOne: Community = {
       kind: "maintenance",
       title: "Streetlight out at the Alder Court entrance",
       summary: "Reported to the city, who confirmed it is on their pole.",
-      ownerId: "tc1-own-3",
+      homeId: "tc1-own-3",
       ownerName: "Marcus & Joy Henderson",
       unit: "3",
       status: "closed",
@@ -616,7 +616,7 @@ export const testCommunityOne: Community = {
       id: "tc1-th-1",
       subject: "December assessment, running a week behind",
       participants: ["Marcus Henderson", "Grant Holloway"],
-      ownerId: "tc1-own-3",
+      homeId: "tc1-own-3",
       unit: "3",
       updatedDate: "2027-01-09",
       unread: false,
@@ -714,7 +714,7 @@ The {{association}} Board`,
     },
   ],
 
-  ownerCharges: buildOwnerLedgers(owners, {
+  homeCharges: buildHomeLedgers(homes, {
     assessmentCents: DUES,
     nextChargeDate: "2027-03-01",
     handWritten: {

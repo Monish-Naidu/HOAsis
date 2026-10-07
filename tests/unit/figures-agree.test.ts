@@ -13,7 +13,7 @@ import {
 } from "@/lib/metrics";
 import { addStatementLine, balanceSplit, compareStatement, isDuesLine, orderStatement } from "@/lib/statement";
 import { statementLines } from "@/lib/data/remote";
-import type { ChargeLine, LedgerEntry, Owner } from "@/lib/types";
+import type { ChargeLine, LedgerEntry, Home } from "@/lib/types";
 
 const c = mehrMeadows;
 const AUG_20 = "2026-08-20";
@@ -25,15 +25,15 @@ describe("what was billed is the dues lines on the statements", () => {
     // Eight months billed, every home on every one: 88 homes at $285.
     expect(before.months).toHaveLength(8);
     expect(before.expectedYtd).toBe(88 * 28_500 * 8);
-    const lines = Object.values(c.ownerCharges)
+    const lines = Object.values(c.homeCharges)
       .flat()
       .filter((l) => isDuesLine(l) && l.date >= "2026-01-01" && l.date < "2026-09-01");
     expect(before.expectedYtd).toBe(lines.reduce((t, l) => t + l.amountCents, 0));
   });
 
   it("does not move when a home's dues change", () => {
-    const owners = c.owners.map((o) => (o.unit === "42" ? { ...o, duesCents: 31_000 } : o));
-    const after = duesCollection({ ...c, owners }, 2026);
+    const homes = c.homes.map((o) => (o.unit === "42" ? { ...o, duesCents: 31_000 } : o));
+    const after = duesCollection({ ...c, homes }, 2026);
     expect(after.expectedYtd).toBe(before.expectedYtd);
     expect(after.rate).toBe(before.rate);
     // The next bill is what the rate moves.
@@ -41,8 +41,8 @@ describe("what was billed is the dues lines on the statements", () => {
   });
 
   it("does not move when a home is added, and counts it from its first bill", () => {
-    const added: Owner = { ...c.owners[1], id: "own-new", unit: "999", duesCents: undefined };
-    const withHome: Community = { ...c, owners: [...c.owners, added] };
+    const added: Home = { ...c.homes[1], id: "own-new", unit: "999", duesCents: undefined };
+    const withHome: Community = { ...c, homes: [...c.homes, added] };
     expect(duesCollection(withHome, 2026).expectedYtd).toBe(before.expectedYtd);
 
     // Billed in August only: August grows by one bill, the months before do not.
@@ -54,14 +54,14 @@ describe("what was billed is the dues lines on the statements", () => {
       amountCents: 28_500,
       balanceAfterCents: 28_500,
     };
-    const billed = duesCollection({ ...withHome, ownerCharges: { ...c.ownerCharges, "own-new": [augBill] } }, 2026);
+    const billed = duesCollection({ ...withHome, homeCharges: { ...c.homeCharges, "own-new": [augBill] } }, 2026);
     expect(billed.expectedYtd).toBe(before.expectedYtd + 28_500);
     expect(billed.months[0].expectedCents).toBe(before.months[0].expectedCents);
   });
 
   it("leaves a bill that has not fallen due out of the year so far", () => {
     // September's bill is on the statements on August 20 and is not billed yet.
-    const posted = Object.values(c.ownerCharges).flat().filter((l) => l.date === "2026-09-01");
+    const posted = Object.values(c.homeCharges).flat().filter((l) => l.date === "2026-09-01");
     expect(posted.length).toBeGreaterThan(0);
     expect(before.months.map((m) => m.label)).not.toContain("Sep");
   });
@@ -82,14 +82,14 @@ describe("what was billed is the dues lines on the statements", () => {
 
 describe("one count of homes", () => {
   it("counts the register, so an added home is counted at once", () => {
-    expect(homeCount(c)).toBe(c.owners.length);
-    const added: Owner = { ...c.owners[1], id: "own-new", unit: "999" };
+    expect(homeCount(c)).toBe(c.homes.length);
+    const added: Home = { ...c.homes[1], id: "own-new", unit: "999" };
     // The stored count says 88 and the register says 89: the register wins.
-    expect(homeCount({ ...c, owners: [...c.owners, added] })).toBe(c.association.unitCount + 1);
+    expect(homeCount({ ...c, homes: [...c.homes, added] })).toBe(c.association.unitCount + 1);
   });
 
   it("falls back to the stored count only before the register has loaded", () => {
-    expect(homeCount({ ...c, owners: [] })).toBe(c.association.unitCount);
+    expect(homeCount({ ...c, homes: [] })).toBe(c.association.unitCount);
   });
 });
 
@@ -123,14 +123,14 @@ describe("owed now, and billed but not yet due", () => {
   it("is the same answer for the demo's resident as the board's days past due", () => {
     // Unit 42 owes the September bill and nothing more; the board lists it as
     // not late, and the split says nothing is owed now.
-    const me = c.owners.find((o) => o.unit === "42")!;
-    const split = balanceSplit(c.ownerCharges[me.id], me.balanceCents, AUG_20);
+    const me = c.homes.find((o) => o.unit === "42")!;
+    const split = balanceSplit(c.homeCharges[me.id], me.balanceCents, AUG_20);
     expect(me.daysPastDue).toBe(0);
     expect(split.owedNowCents).toBe(0);
     expect(split.notYetDueCents).toBe(me.balanceCents);
     // And for every home: nothing owed now exactly when it is not past due.
-    for (const o of c.owners) {
-      const s = balanceSplit(c.ownerCharges[o.id] ?? [], o.balanceCents, AUG_20);
+    for (const o of c.homes) {
+      const s = balanceSplit(c.homeCharges[o.id] ?? [], o.balanceCents, AUG_20);
       if (o.daysPastDue > 0) expect(s.owedNowCents).toBeGreaterThan(0);
     }
   });
@@ -191,10 +191,10 @@ describe("spending", () => {
 });
 
 /** The two lines a hand-recorded check writes, and the two a reversal adds, as the database and the demo write them (0083, 0088). */
-function checkAndReversal(ownerId: string, paidOn: string, reversedOn: string, cents: number) {
+function checkAndReversal(homeId: string, paidOn: string, reversedOn: string, cents: number) {
   const ledger = (id: string, date: string, description: string, amountCents: number): LedgerEntry => ({
     id, date, description, counterparty: "Owner", category: "Assessments", accountId: "acct-operating",
-    amountCents, status: "cleared", ownerId,
+    amountCents, status: "cleared", homeId,
   });
   return {
     payment: { id: "chk", date: paidOn, label: "Check payment #1", kind: "payment", amountCents: -cents, balanceAfterCents: 0 } as ChargeLine,
@@ -205,8 +205,8 @@ function checkAndReversal(ownerId: string, paidOn: string, reversedOn: string, c
 }
 
 describe("a payment recorded and then reversed", () => {
-  const owner = c.owners[0];
-  const ownerCharges = (extra: ChargeLine[]) => ({ ...c.ownerCharges, [owner.id]: [...extra, ...(c.ownerCharges[owner.id] ?? [])] });
+  const home = c.homes[0];
+  const homeCharges = (extra: ChargeLine[]) => ({ ...c.homeCharges, [home.id]: [...extra, ...(c.homeCharges[home.id] ?? [])] });
   const figures = (x: Community) => ({
     collected: duesCollection(x, 2026),
     flows: monthlyFlowsBetween(x, "2026-01-01", AUG_20),
@@ -215,12 +215,12 @@ describe("a payment recorded and then reversed", () => {
     totals: ledgerTotals(x.ledger),
   });
   const before = figures(c);
-  const { payment, reversal, deposit, takenBack } = checkAndReversal(owner.id, "2026-08-10", "2026-08-12", 100);
+  const { payment, reversal, deposit, takenBack } = checkAndReversal(home.id, "2026-08-10", "2026-08-12", 100);
 
   it("leaves collected, money in and spending exactly where they were", () => {
     const after = figures({
       ...c,
-      ownerCharges: ownerCharges([reversal, payment]),
+      homeCharges: homeCharges([reversal, payment]),
       ledger: [takenBack, deposit, ...c.ledger],
     });
     expect(after.collected.collectedYtd).toBe(before.collected.collectedYtd);
@@ -236,15 +236,15 @@ describe("a payment recorded and then reversed", () => {
   it("is not spending, and not a category, while the payment alone is money in", () => {
     const only = figures({ ...c, ledger: [takenBack, ...c.ledger] });
     expect(only.spending).toEqual(before.spending);
-    const paid = figures({ ...c, ownerCharges: ownerCharges([payment]), ledger: [deposit, ...c.ledger] });
+    const paid = figures({ ...c, homeCharges: homeCharges([payment]), ledger: [deposit, ...c.ledger] });
     expect(paid.collected.collectedYtd).toBe(before.collected.collectedYtd + 100);
     expect(paid.year.incomeCents).toBe(before.year.incomeCents + 100);
   });
 
   it("takes a reversal off in the month it happens, not the month of the payment", () => {
     // Paid in July, taken back in August: July keeps the dollar, August loses it.
-    const lines = checkAndReversal(owner.id, "2026-07-10", "2026-08-12", 100);
-    const x: Community = { ...c, ownerCharges: ownerCharges([lines.reversal, lines.payment]), ledger: [lines.takenBack, lines.deposit, ...c.ledger] };
+    const lines = checkAndReversal(home.id, "2026-07-10", "2026-08-12", 100);
+    const x: Community = { ...c, homeCharges: homeCharges([lines.reversal, lines.payment]), ledger: [lines.takenBack, lines.deposit, ...c.ledger] };
     const flows = monthlyFlowsBetween(x, "2026-07-01", AUG_20);
     const base = monthlyFlowsBetween(c, "2026-07-01", AUG_20);
     expect(flows[0].inCents).toBe(base[0].inCents + 100);
@@ -265,16 +265,16 @@ describe("a payment recorded and then reversed", () => {
 
 describe("the current month does not flip the year", () => {
   const OCT_6 = "2026-10-06";
-  const owner = c.owners[0];
+  const home = c.homes[0];
   const at = (x: Community): Community => ({ ...x, asOf: OCT_6 });
   const base = at(c);
   const paid: Community = at({
     ...c,
-    ownerCharges: {
-      ...c.ownerCharges,
-      [owner.id]: [
+    homeCharges: {
+      ...c.homeCharges,
+      [home.id]: [
         { id: "oct", date: OCT_6, label: "Check payment", kind: "payment", amountCents: -100, balanceAfterCents: 0 },
-        ...(c.ownerCharges[owner.id] ?? []),
+        ...(c.homeCharges[home.id] ?? []),
       ],
     },
     ledger: [
@@ -304,7 +304,7 @@ describe("the current month does not flip the year", () => {
     const x = duesCollection(base, 2026, OCT_6);
     // September's bill is posted and unpaid on October 6: billed, nothing in.
     const sep = x.months.find((m) => m.label === "Sep")!;
-    const posted = Object.values(c.ownerCharges).flat().filter((l) => isDuesLine(l) && l.date === "2026-09-01");
+    const posted = Object.values(c.homeCharges).flat().filter((l) => isDuesLine(l) && l.date === "2026-09-01");
     expect(sep.expectedCents).toBe(posted.reduce((t, l) => t + l.amountCents, 0));
     expect(sep.collectedCents).toBe(0);
   });

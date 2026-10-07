@@ -6,7 +6,7 @@
  */
 
 import type { Community } from "@/lib/data/community";
-import type { CollectionPolicy, CommunitySettings, Owner } from "@/lib/types";
+import type { CollectionPolicy, CommunitySettings, Home } from "@/lib/types";
 import { addDays } from "@/lib/utils";
 
 export type { CollectionPolicy };
@@ -131,7 +131,7 @@ export function stageFor(daysPastDue: number, policy: CollectionPolicy): Collect
 }
 
 export interface LadderRow {
-  owner: Owner;
+  home: Home;
   stage: CollectionStage;
   /** The stage after this one, and how many days until they reach it. */
   nextStage?: CollectionStage;
@@ -159,10 +159,10 @@ function rungDay(stage: CollectionStage, policy: CollectionPolicy): number | und
  * owner replying to last month's reminder moves the thread's date, and that
  * reply is not this month's notice having gone out.
  */
-function billingLetterSince(c: Community, ownerId: string, since: string): string | undefined {
+function billingLetterSince(c: Community, homeId: string, since: string): string | undefined {
   let latest: string | undefined;
   for (const thread of c.threads) {
-    if (thread.ownerId !== ownerId || thread.tag !== "Billing") continue;
+    if (thread.homeId !== homeId || thread.tag !== "Billing") continue;
     for (const message of thread.messages ?? []) {
       if (message.direction !== "outbound") continue;
       const day = message.at.slice(0, 10);
@@ -180,10 +180,10 @@ function billingLetterSince(c: Community, ownerId: string, since: string): strin
  * the largest one.
  */
 export function collectionsLadder(c: Community, policy: CollectionPolicy) {
-  const rows: LadderRow[] = c.owners
+  const rows: LadderRow[] = c.homes
     .filter((o) => o.daysPastDue > 0)
-    .map((owner) => {
-      const stage = stageFor(owner.daysPastDue, policy);
+    .map((home) => {
+      const stage = stageFor(home.daysPastDue, policy);
       const index = STAGE_ORDER.indexOf(stage);
       const nextStage = STAGE_ORDER[index + 1];
       const nextDay =
@@ -207,12 +207,12 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
       const sentOn =
         reached === undefined
           ? undefined
-          : billingLetterSince(c, owner.id, addDays(c.asOf, -(owner.daysPastDue - reached)));
+          : billingLetterSince(c, home.id, addDays(c.asOf, -(home.daysPastDue - reached)));
       return {
-        owner,
+        home,
         stage,
         nextStage,
-        daysToNext: nextDay === undefined ? undefined : nextDay - owner.daysPastDue,
+        daysToNext: nextDay === undefined ? undefined : nextDay - home.daysPastDue,
         actionDue: stage !== "current" && !sentOn,
         sentOn,
       };
@@ -229,7 +229,7 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
     lateNotice: byStage("late-notice"),
     demand: byStage("demand"),
     counsel: byStage("counsel"),
-    totalCents: rows.reduce((t, r) => t + r.owner.balanceCents, 0),
+    totalCents: rows.reduce((t, r) => t + r.home.balanceCents, 0),
     /**
      * Anybody the ladder has skipped past.
      *
@@ -239,15 +239,15 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
      */
     skipped: rows.filter(
       (r) =>
-        r.owner.daysPastDue > policy.demandDay &&
+        r.home.daysPastDue > policy.demandDay &&
         // "No notice on record" has to mean the record: a billing letter to
         // this home since it fell behind. Counting days alone flagged a
         // household that had been sent every letter on the ladder.
         !c.threads.some(
           (t) =>
-            t.ownerId === r.owner.id &&
+            t.homeId === r.home.id &&
             t.tag === "Billing" &&
-            t.updatedDate >= addDays(c.asOf, -r.owner.daysPastDue),
+            t.updatedDate >= addDays(c.asOf, -r.home.daysPastDue),
         ),
     ),
   };
@@ -262,17 +262,17 @@ export const LADDER_FILTERS = ["all", "current", "reminder", "late-notice", "dem
 export type LadderFilter = (typeof LADDER_FILTERS)[number];
 
 export function matchesLadderFilter(
-  row: Pick<LadderRow, "stage"> & { owner: Pick<Owner, "id"> },
+  row: Pick<LadderRow, "stage"> & { home: Pick<Home, "id"> },
   filter: LadderFilter,
   autopayFailed: ReadonlySet<string> = new Set(),
 ): boolean {
   if (filter === "all") return true;
-  if (filter === "autopay-failed") return autopayFailed.has(row.owner.id);
+  if (filter === "autopay-failed") return autopayFailed.has(row.home.id);
   return row.stage === filter;
 }
 
 export function ladderFilterCounts(
-  rows: readonly (Pick<LadderRow, "stage"> & { owner: Pick<Owner, "id"> })[],
+  rows: readonly (Pick<LadderRow, "stage"> & { home: Pick<Home, "id"> })[],
   autopayFailed: ReadonlySet<string> = new Set(),
 ): Record<LadderFilter, number> {
   const counts = {} as Record<LadderFilter, number>;

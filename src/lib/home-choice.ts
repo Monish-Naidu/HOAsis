@@ -12,7 +12,7 @@ import type { Account } from "./types";
  */
 export function pickSeat(seats: Account[], chosenUnitId: string | null | undefined): Account | null {
   if (seats.length === 0) return null;
-  return seats.find((s) => s.ownerId === chosenUnitId) ?? seats[0];
+  return seats.find((s) => s.homeId === chosenUnitId) ?? seats[0];
 }
 
 /** The quiet line above the balance when someone holds more than one home. */

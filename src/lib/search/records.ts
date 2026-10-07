@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { Community } from "@/lib/data/community";
 import type { TintName } from "@/components/ui/primitives";
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 import { formatDate, money } from "@/lib/utils";
 import { vendorPaidThisYear } from "@/lib/metrics";
 import { statusLabel } from "@/lib/request-status";
@@ -157,7 +157,7 @@ export function boardIndex(c: Community): SearchHit[] {
   const hits: SearchHit[] = [];
   const hit = (h: Draft) => hits.push({ ...h, tint: TINT[h.kind], section: KIND_LABEL[h.kind] });
 
-  for (const o of c.owners) {
+  for (const o of c.homes) {
     hit({
       id: `own-${o.id}`,
       kind: "household",
@@ -312,7 +312,7 @@ export function boardIndex(c: Community): SearchHit[] {
 }
 
 /** What one resident may search: their own things, and what every owner may read. */
-export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
+export function residentIndex(c: Community, home: Home | null): SearchHit[] {
   const hits: SearchHit[] = [];
   const hit = (h: Draft) => hits.push({ ...h, tint: TINT[h.kind], section: KIND_LABEL[h.kind] });
 
@@ -366,9 +366,9 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       keywords: `${b.kind} ${b.body.join(" ").slice(0, 400)} ${dateWords(b.closesDate)}`,
     });
   }
-  if (owner) {
+  if (home) {
     for (const r of c.requests) {
-      if (r.ownerId !== owner.id) continue;
+      if (r.homeId !== home.id) continue;
       hit({
         id: `req-${r.id}`,
         kind: "request",
@@ -380,7 +380,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       });
     }
     for (const v of c.violations) {
-      if (v.ownerId !== owner.id) continue;
+      if (v.homeId !== home.id) continue;
       hit({
         id: `vio-${v.id}`,
         kind: "notice",
@@ -392,7 +392,7 @@ export function residentIndex(c: Community, owner: Owner | null): SearchHit[] {
       });
     }
     // Their own charges and payments: "october dues" or "285" finds the line.
-    for (const line of c.ownerCharges[owner.id] ?? []) {
+    for (const line of c.homeCharges[home.id] ?? []) {
       hit({
         id: `chg-${line.id}`,
         kind: "charge",

@@ -49,7 +49,7 @@ import {
   type HomeFilter,
 } from "@/lib/roster-filters";
 import { dueLetter, renderLetter } from "@/lib/letters";
-import type { HomeType, MessageThread, Owner } from "@/lib/types";
+import type { HomeType, MessageThread, Home } from "@/lib/types";
 import type { ManualMethod } from "@/lib/payments/instruments";
 import type { ManualPaymentRow } from "@/lib/payments/manual-payments";
 import {
@@ -59,7 +59,7 @@ import {
   duesSource,
   duesSourceLabel,
   duesVary,
-  ownerDues,
+  homeDues,
 } from "@/lib/home-types";
 import { cn, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
@@ -246,7 +246,7 @@ export function HomeownersScreen() {
   const params = useSearchParams();
   const { notify } = useToast();
 
-  const owners = community.owners;
+  const homes = community.homes;
   // Opening balances are for an association that switched here mid-life. A
   // new build starts every home at zero, so for it the screen is noise.
   const showOpeningBalances =
@@ -255,7 +255,7 @@ export function HomeownersScreen() {
   // The chip and the search text live in the URL, so a view can be shared.
   const [filter, setFilter] = useUrlFilter<HomeFilter>("filter", HOME_FILTERS, "all");
   // A mixed community can narrow the roster to one kind of home.
-  const kinds = countByType(owners);
+  const kinds = countByType(homes);
   const mixed = kinds.length > 1;
   const [kind, setKind] = useState<HomeType | "all">("all");
   // Search from the top bar lands here with the household's name filled in.
@@ -273,12 +273,12 @@ export function HomeownersScreen() {
   }>({ name: "", email: "", unit: "" });
   const [sale, setSale] = useState<{
     open: boolean;
-    ownerId: string | null;
+    homeId: string | null;
     name: string;
     email: string;
     closingDate: string;
     settle: boolean;
-  }>({ open: false, ownerId: null, name: "", email: "", closingDate: todayIsoDate(), settle: true });
+  }>({ open: false, homeId: null, name: "", email: "", closingDate: todayIsoDate(), settle: true });
   // The Collections ladder on Finances links here with the composer open.
   const [reminding, setReminding] = useState(params.get("remind") === "1");
   const policy = policyFor(community.settings);
@@ -301,11 +301,11 @@ export function HomeownersScreen() {
   // Behind first, furthest behind at the top, then by unit.
   const sorted = useMemo(
     () =>
-      [...owners].sort((a, b) => {
+      [...homes].sort((a, b) => {
         if (a.daysPastDue !== b.daysPastDue) return b.daysPastDue - a.daysPastDue;
         return Number(a.unit) - Number(b.unit);
       }),
-    [owners],
+    [homes],
   );
 
   const matching = useMemo(() => {
@@ -327,35 +327,35 @@ export function HomeownersScreen() {
 
   // The two money chips need the books; the other three are facts about the
   // register, so a seat that cannot see balances still gets them.
-  const counts = homeFilterCounts(owners);
+  const counts = homeFilterCounts(homes);
   const segments = HOME_FILTERS.filter((key) => seesMoney || (key !== "paid-up" && key !== "past-due")).map(
     (key) => ({ key, label: HOME_FILTER_LABEL[key], count: counts[key] }),
   );
 
-  function toggle(owner: Owner, withComposer = false) {
-    const opening = openId !== owner.id || withComposer;
-    setOpenId(opening ? owner.id : null);
+  function toggle(home: Home, withComposer = false) {
+    const opening = openId !== home.id || withComposer;
+    setOpenId(opening ? home.id : null);
     setFocusComposer(withComposer);
   }
 
   function saveOwner() {
     try {
-      const owner = addOwner({ ...entry, homeType: mixed ? (entry.homeType ?? kinds[0].type) : undefined });
+      const home = addOwner({ ...entry, homeType: mixed ? (entry.homeType ?? kinds[0].type) : undefined });
       setEntry({ name: "", email: "", unit: "" });
       setAdding(false);
-      notify(`Added ${owner.displayName}, ${homeLabel(community, owner.unit)}`, "ok", {
+      notify(`Added ${home.displayName}, ${homeLabel(community, home.unit)}`, "ok", {
         label: "Undo",
-        onClick: () => removeOwner(owner.id)(),
+        onClick: () => removeOwner(home.id)(),
       });
     } catch (error) {
       notify(error instanceof Error ? error.message : "Could not add that household", "warn");
     }
   }
 
-  function startSale(owner: Owner | null, buyer?: { name: string; email: string }) {
+  function startSale(home: Home | null, buyer?: { name: string; email: string }) {
     setSale({
       open: true,
-      ownerId: owner?.id ?? null,
+      homeId: home?.id ?? null,
       name: buyer?.name ?? "",
       email: buyer?.email ?? "",
       closingDate: todayIsoDate(),
@@ -365,7 +365,7 @@ export function HomeownersScreen() {
   }
 
   function recordSale() {
-    const seller = owners.find((o) => o.id === sale.ownerId);
+    const seller = homes.find((o) => o.id === sale.homeId);
     if (!seller) return;
     const buyer = sale.name.trim();
     void Promise.resolve(
@@ -386,10 +386,10 @@ export function HomeownersScreen() {
 
   // Each person's own seat on a home. A real association loads them with the
   // roster; the demo has an account per person, which is the same thing.
-  function seatsOf(owner: Owner): OwnerSeat[] {
-    if (owner.seats) return owner.seats;
+  function seatsOf(home: Home): OwnerSeat[] {
+    if (home.seats) return home.seats;
     return accounts
-      .filter((a) => a.ownerId === owner.id)
+      .filter((a) => a.homeId === home.id)
       .map((a) => ({
         id: a.id,
         name: a.name,
@@ -398,10 +398,10 @@ export function HomeownersScreen() {
       }));
   }
 
-  function remove(owner: Owner) {
-    const undo = removeOwner(owner.id);
-    if (openId === owner.id) setOpenId(null);
-    notify(`Removed ${owner.displayName}`, "warn", { label: "Undo", onClick: undo });
+  function remove(home: Home) {
+    const undo = removeOwner(home.id);
+    if (openId === home.id) setOpenId(null);
+    notify(`Removed ${home.displayName}`, "warn", { label: "Undo", onClick: undo });
   }
 
   /**
@@ -411,25 +411,25 @@ export function HomeownersScreen() {
    * demo has an account for everybody, so nobody there is waiting.
    */
   const notSignedUp = isRemote
-    ? owners.filter((o) => o.email && !accounts.some((a) => a.ownerId === o.id))
+    ? homes.filter((o) => o.email && !accounts.some((a) => a.homeId === o.id))
     : [];
 
-  function inviteLinkFor(owner: Owner): string {
+  function inviteLinkFor(home: Home): string {
     return isRemote && community.association.joinCode
-      ? remoteInviteUrl(community.association.joinCode, owner.email, window.location.origin)
-      : inviteUrl(community.id, owner.id, window.location.origin);
+      ? remoteInviteUrl(community.association.joinCode, home.email, window.location.origin)
+      : inviteUrl(community.id, home.id, window.location.origin);
   }
 
-  function copyInvite(owner: Owner) {
-    const url = inviteLinkFor(owner);
+  function copyInvite(home: Home) {
+    const url = inviteLinkFor(home);
     navigator.clipboard
       .writeText(url)
-      .then(() => notify(`Invitation link for ${owner.displayName} copied`, "ok"))
+      .then(() => notify(`Invitation link for ${home.displayName} copied`, "ok"))
       .catch(() => notify("Could not copy. Select the link and copy it manually.", "warn"));
   }
 
   /** Emails the invitation, to one household or to everyone still waiting. */
-  async function emailInvites(recipients: Owner[]) {
+  async function emailInvites(recipients: Home[]) {
     const withEmail = recipients.filter((o) => o.email.trim());
     if (!withEmail.length) {
       notify("Nobody here has an email address yet", "warn");
@@ -461,17 +461,17 @@ export function HomeownersScreen() {
    * under its own subject, because a dues reminder is not a reply to a
    * question about the pool.
    */
-  function send(owner: Owner, body: string, subject?: string) {
-    const thread = threadFor(threads, owner);
-    if (subject) messageOwner(owner.id, subject, body, "Billing");
+  function send(home: Home, body: string, subject?: string) {
+    const thread = threadFor(threads, home);
+    if (subject) messageOwner(home.id, subject, body, "Billing");
     else if (thread) {
       // Said once the email has answered, so a failed send is not "Sent".
       void replyToThread(thread.id, body).then((email) => {
-        if (email) notify(replyToast(email, owner.displayName), email === "failed" ? "warn" : "ok");
+        if (email) notify(replyToast(email, home.displayName), email === "failed" ? "warn" : "ok");
       });
       return;
-    } else messageOwner(owner.id, `A note from the ${community.settings.displayName} board`, body);
-    notify(`Sent to ${owner.displayName}`, "ok");
+    } else messageOwner(home.id, `A note from the ${community.settings.displayName} board`, body);
+    notify(`Sent to ${home.displayName}`, "ok");
   }
 
   function exportRoster() {
@@ -480,18 +480,18 @@ export function HomeownersScreen() {
       { header: "Household", value: (o) => o.displayName },
       { header: "Address", value: (o) => o.address },
       ...(mixed
-        ? [{ header: "Kind", value: (o: Owner) => (o.homeType ? HOME_TYPE_LABEL[o.homeType].one : "") }]
+        ? [{ header: "Kind", value: (o: Home) => (o.homeType ? HOME_TYPE_LABEL[o.homeType].one : "") }]
         : []),
       { header: "Email", value: (o) => o.email },
       { header: "Phone", value: (o) => o.phone },
       // What each home pays per period, by the one rule: its own amount,
       // else its kind's, else the association's.
-      { header: "Dues", value: (o) => (ownerDues(community.association, o) / 100).toFixed(2) },
+      { header: "Dues", value: (o) => (homeDues(community.association, o) / 100).toFixed(2) },
       ...(seesMoney
         ? [
-            { header: "Balance", value: (o: Owner) => (o.balanceCents / 100).toFixed(2) },
-            { header: "Days past due", value: (o: Owner) => o.daysPastDue },
-            { header: "Autopay", value: (o: Owner) => (o.autopay ? "yes" : "no") },
+            { header: "Balance", value: (o: Home) => (o.balanceCents / 100).toFixed(2) },
+            { header: "Days past due", value: (o: Home) => o.daysPastDue },
+            { header: "Autopay", value: (o: Home) => (o.autopay ? "yes" : "no") },
           ]
         : []),
     ]);
@@ -508,7 +508,7 @@ export function HomeownersScreen() {
     );
   }
 
-  const seller = owners.find((o) => o.id === sale.ownerId) ?? null;
+  const seller = homes.find((o) => o.id === sale.homeId) ?? null;
 
   return (
     <>
@@ -556,8 +556,8 @@ export function HomeownersScreen() {
         <AskedToJoin
           onRecordSale={
             changesMoney
-              ? (ownerId, buyer) => {
-                  const home = owners.find((o) => o.id === ownerId);
+              ? (homeId, buyer) => {
+                  const home = homes.find((o) => o.id === homeId);
                   if (home) startSale(home, buyer);
                 }
               : undefined
@@ -580,7 +580,7 @@ export function HomeownersScreen() {
               className="pointer-coarse:[&>button]:h-9"
             />
           ) : (
-            <p className="tnum text-footnote font-medium text-fg-muted">{pluralize(owners.length, "home")}</p>
+            <p className="tnum text-footnote font-medium text-fg-muted">{pluralize(homes.length, "home")}</p>
           )}
           <div className="flex flex-wrap items-center gap-1">
             {mixed ? (
@@ -732,13 +732,13 @@ export function HomeownersScreen() {
             <div className="mt-3 grid items-end gap-3 sm:grid-cols-[1fr_1fr_1fr_10rem_auto]">
               <Field label="Home being sold">
                 <Select
-                  value={sale.ownerId ?? ""}
-                  onChange={(e) => setSale({ ...sale, ownerId: e.target.value || null })}
+                  value={sale.homeId ?? ""}
+                  onChange={(e) => setSale({ ...sale, homeId: e.target.value || null })}
                   aria-label="Home being sold"
                   className="w-full [&>select]:min-h-11"
                 >
                   <option value="">Which home?</option>
-                  {[...owners]
+                  {[...homes]
                     .sort((a, b) => Number(a.unit) - Number(b.unit))
                     .map((o) => (
                       <option key={o.id} value={o.id}>
@@ -885,7 +885,7 @@ export function HomeownersScreen() {
                             {o.displayName}
                           </span>
                           {o.boardRole ? <Badge tone="brand">{o.boardRole}</Badge> : null}
-                          {isRemote && o.email && !o.placeholder && !accounts.some((a) => a.ownerId === o.id) ? (
+                          {isRemote && o.email && !o.placeholder && !accounts.some((a) => a.homeId === o.id) ? (
                             <Badge tone="neutral">Not signed up</Badge>
                           ) : null}
                         </span>
@@ -920,7 +920,7 @@ export function HomeownersScreen() {
                       </span>
                       <span className="flex justify-end whitespace-nowrap md:justify-start">
                         {seesMoney || o.placeholder ? (
-                          <DuesBadge owner={o} unsold={community.profile?.origin === "builder"} />
+                          <DuesBadge home={o} unsold={community.profile?.origin === "builder"} />
                         ) : null}
                       </span>
                       {/* A glyph, not 88 bordered buttons down the page. On a
@@ -945,7 +945,7 @@ export function HomeownersScreen() {
                   {open ? (
                     <HouseholdDetail
                       key={o.id}
-                      owner={o}
+                      home={o}
                       thread={threadFor(threads, o)}
                       focusComposer={focusComposer}
                       letter={(() => {
@@ -964,7 +964,7 @@ export function HomeownersScreen() {
                       onRecordPayment={
                         changesMoney && !o.placeholder
                           ? (input) =>
-                              Promise.resolve(recordManualPayment({ ownerId: o.id, ...input })).then((ok) => {
+                              Promise.resolve(recordManualPayment({ homeId: o.id, ...input })).then((ok) => {
                                 if (ok) notify(`Recorded ${money(input.amountCents)} from ${o.displayName}`, "ok");
                                 return ok;
                               })
@@ -984,7 +984,7 @@ export function HomeownersScreen() {
                       onAddCredit={
                         changesMoney && !o.placeholder
                           ? (input) =>
-                              Promise.resolve(addCredit({ ownerId: o.id, ...input })).then((ok) => {
+                              Promise.resolve(addCredit({ homeId: o.id, ...input })).then((ok) => {
                                 if (ok) notify(`Added a ${money(input.amountCents)} credit to ${o.displayName}`, "ok");
                                 return ok;
                               })
@@ -993,7 +993,7 @@ export function HomeownersScreen() {
                       onAddCharge={
                         changesMoney && !o.placeholder
                           ? (input) =>
-                              Promise.resolve(addCharge({ ownerId: o.id, ...input })).then((ok) => {
+                              Promise.resolve(addCharge({ homeId: o.id, ...input })).then((ok) => {
                                 if (ok) notify(`Charge added to ${homeLabel(community, o.unit)}.`, "ok");
                                 return ok;
                               })
@@ -1004,9 +1004,9 @@ export function HomeownersScreen() {
                           ? (cents) =>
                               // Said once the write is back. A refusal has
                               // already been said by the write itself.
-                              Promise.resolve(setHomeDues([{ ownerId: o.id, cents }])).then((ok) => {
+                              Promise.resolve(setHomeDues([{ homeId: o.id, cents }])).then((ok) => {
                                 if (ok) {
-                                  const pays = ownerDues(community.association, {
+                                  const pays = homeDues(community.association, {
                                     homeType: o.homeType,
                                     duesCents: cents ?? undefined,
                                   });
@@ -1017,10 +1017,10 @@ export function HomeownersScreen() {
                           : undefined
                       }
                       duesNow={{
-                        cents: ownerDues(community.association, o),
+                        cents: homeDues(community.association, o),
                         sourceLabel: duesSourceLabel(community.association, o),
                         hasOwn: duesSource(community.association, o) === "own",
-                        standardCents: ownerDues(community.association, { homeType: o.homeType }),
+                        standardCents: homeDues(community.association, { homeType: o.homeType }),
                         period:
                           community.association.duesCadence === "monthly"
                             ? "month"
@@ -1029,8 +1029,8 @@ export function HomeownersScreen() {
                               : "year",
                       }}
                       duesLine={
-                        duesVary(community.association, community.owners)
-                          ? `${money(ownerDues(community.association, o))} ${community.association.duesCadence}`
+                        duesVary(community.association, community.homes)
+                          ? `${money(homeDues(community.association, o))} ${community.association.duesCadence}`
                           : undefined
                       }
                       onSetKind={
@@ -1047,7 +1047,7 @@ export function HomeownersScreen() {
                           : undefined
                       }
                       onChangeEmail={
-                        mayChangeRoster && !o.placeholder && (!isRemote || !accounts.some((a) => a.ownerId === o.id))
+                        mayChangeRoster && !o.placeholder && (!isRemote || !accounts.some((a) => a.homeId === o.id))
                           ? (email) =>
                               Promise.resolve(changeOwnerEmail(o.id, email)).then((ok) => {
                                 if (ok) notify(`${o.displayName}'s email is now ${email}`, "ok");
@@ -1087,7 +1087,7 @@ export function HomeownersScreen() {
                       }
                       onInvite={() => copyInvite(o)}
                       onEmailInvite={isRemote && o.email && mayInvite ? () => void emailInvites([o]) : undefined}
-                      signedUp={!isRemote || accounts.some((a) => a.ownerId === o.id)}
+                      signedUp={!isRemote || accounts.some((a) => a.homeId === o.id)}
                       onRemove={() => remove(o)}
                     />
                   ) : null}
@@ -1133,35 +1133,35 @@ export function HomeownersScreen() {
 }
 
 /** The most recent thread with this household, if the board has one. */
-function threadFor(threads: MessageThread[], owner: Owner) {
+function threadFor(threads: MessageThread[], home: Home) {
   return threads
-    .filter((t) => t.ownerId === owner.id)
+    .filter((t) => t.homeId === home.id)
     .sort((a, b) => b.updatedDate.localeCompare(a.updatedDate))[0];
 }
 
-function DuesBadge({ owner, unsold }: { owner: Owner; unsold: boolean }) {
+function DuesBadge({ home, unsold }: { home: Home; unsold: boolean }) {
   // Nobody on record: not paid up, not behind, nobody to message. It read
   // "Paid up" beside a Message button that could reach nobody.
-  if (owner.placeholder) return <Badge tone="neutral">{unsold ? "Unsold" : "No owner"}</Badge>;
+  if (home.placeholder) return <Badge tone="neutral">{unsold ? "Unsold" : "No owner"}</Badge>;
   // Days late, the same fact Collections leads with. "In collections" here
   // and "Attorney next" there read as two different states for one home.
-  if (owner.standing === "collections") {
+  if (home.standing === "collections") {
     return (
       <Badge tone="danger" dot>
-        {pluralize(owner.daysPastDue, "day")} late
+        {pluralize(home.daysPastDue, "day")} late
       </Badge>
     );
   }
-  if (owner.daysPastDue > 0) {
+  if (home.daysPastDue > 0) {
     return (
       <Badge tone="warn" dot>
-        {pluralize(owner.daysPastDue, "day")} late
+        {pluralize(home.daysPastDue, "day")} late
       </Badge>
     );
   }
   // Owed but not late: the only thing on the statement is a bill whose due
   // date has not come. "Balance due" read as a problem beside "Paid up".
-  if (owner.balanceCents > 0) return <Badge tone="neutral">Not due yet</Badge>;
+  if (home.balanceCents > 0) return <Badge tone="neutral">Not due yet</Badge>;
   return (
     <Badge tone="ok" dot>
       Paid up
@@ -1170,7 +1170,7 @@ function DuesBadge({ owner, unsold }: { owner: Owner; unsold: boolean }) {
 }
 
 function HouseholdDetail({
-  owner,
+  home,
   thread,
   focusComposer,
   letter,
@@ -1197,7 +1197,7 @@ function HouseholdDetail({
   onChangeDues,
   duesNow,
 }: {
-  owner: Owner;
+  home: Home;
   thread?: MessageThread;
   focusComposer: boolean;
   /** The dues letter this household is due today, already filled in. Null when none is. */
@@ -1289,25 +1289,25 @@ function HouseholdDetail({
       <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <dl className="divide-y divide-border">
           <KeyValue label="Email">
-            <a href={`mailto:${owner.email}`} className="text-accent hover:underline">
-              {owner.email}
+            <a href={`mailto:${home.email}`} className="text-accent hover:underline">
+              {home.email}
             </a>
           </KeyValue>
           <KeyValue label="Phone">
-            <a href={`tel:${owner.phone.replace(/[^\d+]/g, "")}`} className="text-accent hover:underline">
-              {owner.phone}
+            <a href={`tel:${home.phone.replace(/[^\d+]/g, "")}`} className="text-accent hover:underline">
+              {home.phone}
             </a>
           </KeyValue>
-          <KeyValue label="Address">{owner.address}</KeyValue>
+          <KeyValue label="Address">{home.address}</KeyValue>
           {onSetKind ? (
             <KeyValue label="Kind of home">
               <Select
                 size="sm"
-                value={owner.homeType ?? ""}
+                value={home.homeType ?? ""}
                 onChange={(e) => onSetKind(e.target.value as HomeType)}
-                aria-label={`Kind of home for ${owner.unit}`}
+                aria-label={`Kind of home for ${home.unit}`}
               >
-                {owner.homeType ? null : <option value="">Not set</option>}
+                {home.homeType ? null : <option value="">Not set</option>}
                 {HOME_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {HOME_TYPE_LABEL[t].one}
@@ -1317,22 +1317,22 @@ function HouseholdDetail({
             </KeyValue>
           ) : null}
           {duesLine ? <KeyValue label="Dues">{duesLine}</KeyValue> : null}
-          {owner.mailingAddress ? (
-            <KeyValue label="Mail goes to">{owner.mailingAddress}</KeyValue>
+          {home.mailingAddress ? (
+            <KeyValue label="Mail goes to">{home.mailingAddress}</KeyValue>
           ) : null}
           {removable.length ? (
             <PeopleOnHome people={people} removable={removable} homeLabel={homeName} onRemove={onRemoveSeat} />
-          ) : owner.members.length > 1 ? (
-            <KeyValue label="On title">{owner.members.join(", ")}</KeyValue>
+          ) : home.members.length > 1 ? (
+            <KeyValue label="On title">{home.members.join(", ")}</KeyValue>
           ) : null}
-          <KeyValue label="Moved in">{formatDate(owner.moveInDate, "long")}</KeyValue>
-          {owner.previousOwners?.length ? (
+          <KeyValue label="Moved in">{formatDate(home.moveInDate, "long")}</KeyValue>
+          {home.previousOwners?.length ? (
             <div className="py-1.5">
               <dt className="text-body text-fg-muted">
-                {owner.previousOwners.length === 1 ? "Previous owner" : "Previous owners"}
+                {home.previousOwners.length === 1 ? "Previous owner" : "Previous owners"}
               </dt>
               <dd className="mt-1 space-y-1">
-                {owner.previousOwners.map((t) => (
+                {home.previousOwners.map((t) => (
                   <p key={`${t.name}-${t.to}`} className="flex items-baseline justify-between gap-4 text-body">
                     <span className="min-w-0 truncate font-medium text-fg">{t.name}</span>
                     <span className="tnum shrink-0 text-footnote text-fg-muted">
@@ -1344,23 +1344,23 @@ function HouseholdDetail({
             </div>
           ) : null}
           <KeyValue label="Balance">
-            <span className={owner.balanceCents > 0 ? "text-fg" : "text-fg-muted"}>
-              {money(owner.balanceCents)}
+            <span className={home.balanceCents > 0 ? "text-fg" : "text-fg-muted"}>
+              {money(home.balanceCents)}
             </span>
           </KeyValue>
           <KeyValue label="Autopay">
-            {owner.autopay ? `On${owner.autopayMethod ? `, ${owner.autopayMethod}` : ""}` : "Off"}
+            {home.autopay ? `On${home.autopayMethod ? `, ${home.autopayMethod}` : ""}` : "Off"}
           </KeyValue>
-          {owner.boardRole ? <KeyValue label="Board">{owner.boardRole}</KeyValue> : null}
+          {home.boardRole ? <KeyValue label="Board">{home.boardRole}</KeyValue> : null}
         </dl>
 
-        {owner.placeholder ? (
-          <AddOwnerForm unit={owner.unit} onSave={onSetOwner} />
+        {home.placeholder ? (
+          <AddOwnerForm unit={home.unit} onSave={onSetOwner} />
         ) : (
         <div>
           <label className="block">
             <span className="mb-1.5 flex items-center justify-between gap-3 text-footnote font-semibold text-fg-muted">
-              <span>Message {owner.members[0]?.split(" ")[0] ?? owner.displayName}</span>
+              <span>Message {home.members[0]?.split(" ")[0] ?? home.displayName}</span>
               {letter && !subject ? (
                 <button
                   type="button"
@@ -1376,7 +1376,7 @@ function HouseholdDetail({
               onChange={(e) => setDraft(e.target.value)}
               rows={subject ? 10 : 4}
               autoFocus={focusComposer}
-              aria-label={`Message to ${owner.displayName}`}
+              aria-label={`Message to ${home.displayName}`}
               placeholder="Write a short note. They can reply by email."
               className={cn(textareaClass, "resize-none")}
             />
@@ -1393,7 +1393,7 @@ function HouseholdDetail({
                   </a>
                 </>
               ) : (
-                `Sent by email to ${owner.email}`
+                `Sent by email to ${home.email}`
               )}
             </p>
             <Button
@@ -1415,18 +1415,18 @@ function HouseholdDetail({
       </div>
 
       {editing === "email" && onChangeEmail ? (
-        <ChangeEmailForm current={owner.email} onSave={onChangeEmail} onCancel={() => setEditing(null)} />
+        <ChangeEmailForm current={home.email} onSave={onChangeEmail} onCancel={() => setEditing(null)} />
       ) : null}
       {editing === "second" && onAddSecondOwner ? (
-        <SecondOwnerForm unit={owner.unit} homeName={homeName} onSave={onAddSecondOwner} onCancel={() => setEditing(null)} />
+        <SecondOwnerForm unit={home.unit} homeName={homeName} onSave={onAddSecondOwner} onCancel={() => setEditing(null)} />
       ) : null}
 
       {editing === "payment" && onRecordPayment ? (
         <RecordPaymentForm
-          unit={owner.unit}
+          unit={home.unit}
           homeName={homeName}
           existing={hand.status === "ready" ? hand.rows : undefined}
-          balanceCents={owner.balanceCents}
+          balanceCents={home.balanceCents}
           onSave={(input) => onRecordPayment(input).then((ok) => ok && loadHandPayments().then(() => ok))}
           onCancel={() => setEditing(null)}
         />
@@ -1442,7 +1442,7 @@ function HouseholdDetail({
         />
       ) : null}
       {editing === "credit" && onAddCredit ? (
-        <AddCreditForm unit={owner.unit} homeName={homeName} onSave={onAddCredit} onCancel={() => setEditing(null)} />
+        <AddCreditForm unit={home.unit} homeName={homeName} onSave={onAddCredit} onCancel={() => setEditing(null)} />
       ) : null}
       {editing === "charge" && onAddCharge ? (
         <AddChargeForm
@@ -1453,7 +1453,7 @@ function HouseholdDetail({
       ) : null}
       {editing === "dues" && onChangeDues ? (
         <ChangeDuesForm
-          unit={owner.unit}
+          unit={home.unit}
           homeName={homeName}
           period={duesNow.period}
           nowCents={duesNow.cents}
@@ -1471,7 +1471,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={() => openHandPayments("payment")}
-            aria-label={`Record a payment from ${owner.displayName}`}
+            aria-label={`Record a payment from ${home.displayName}`}
           >
             <Banknote className="size-3.5" />
             Record a payment
@@ -1483,7 +1483,7 @@ function HouseholdDetail({
             size="sm"
             className="text-fg-muted"
             onClick={() => openHandPayments("hand")}
-            aria-label={`Payments recorded by hand for ${owner.displayName}`}
+            aria-label={`Payments recorded by hand for ${home.displayName}`}
           >
             Payments recorded by hand
           </Button>
@@ -1493,7 +1493,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={() => setEditing(editing === "credit" ? null : "credit")}
-            aria-label={`Add a credit to ${owner.displayName}`}
+            aria-label={`Add a credit to ${home.displayName}`}
           >
             <Plus className="size-3.5" />
             Add a credit
@@ -1504,7 +1504,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={() => setEditing(editing === "charge" ? null : "charge")}
-            aria-label={`Add a charge to ${owner.displayName}`}
+            aria-label={`Add a charge to ${home.displayName}`}
           >
             <Plus className="size-3.5" />
             Add a charge
@@ -1515,7 +1515,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={() => setEditing(editing === "dues" ? null : "dues")}
-            aria-label={`Change the dues for ${owner.displayName}`}
+            aria-label={`Change the dues for ${home.displayName}`}
           >
             <Banknote className="size-3.5" />
             Change dues
@@ -1526,7 +1526,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={onSale}
-            aria-label={`Record the sale of ${owner.displayName}'s home`}
+            aria-label={`Record the sale of ${home.displayName}'s home`}
           >
             <ArrowRightLeft className="size-3.5" />
             Record a sale
@@ -1536,7 +1536,7 @@ function HouseholdDetail({
           variant="ghost"
           size="sm"
           onClick={onInvite}
-          aria-label={`Copy the invitation link for ${owner.displayName}`}
+          aria-label={`Copy the invitation link for ${home.displayName}`}
         >
           <LinkIcon className="size-3.5" />
           Copy invite link
@@ -1546,7 +1546,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={onEmailInvite}
-            aria-label={`Email an invitation to ${owner.displayName}`}
+            aria-label={`Email an invitation to ${home.displayName}`}
           >
             <Send className="size-3.5" />
             {signedUp ? "Email sign-in link" : "Email invite"}
@@ -1557,7 +1557,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={() => setEditing(editing === "email" ? null : "email")}
-            aria-label={`Change the email for ${owner.displayName}`}
+            aria-label={`Change the email for ${home.displayName}`}
           >
             <Mail className="size-3.5" />
             Change email
@@ -1568,7 +1568,7 @@ function HouseholdDetail({
             variant="ghost"
             size="sm"
             onClick={() => setEditing(editing === "second" ? null : "second")}
-            aria-label={`Add a second owner to ${owner.unit}`}
+            aria-label={`Add a second owner to ${home.unit}`}
           >
             <Plus className="size-3.5" />
             Add a second owner
@@ -1579,7 +1579,7 @@ function HouseholdDetail({
           size="sm"
           className="ml-auto hover:text-danger"
           onClick={onRemove}
-          aria-label={`Remove ${owner.displayName} from the roster`}
+          aria-label={`Remove ${home.displayName} from the roster`}
         >
           <Trash2 className="size-3.5" />
           Remove

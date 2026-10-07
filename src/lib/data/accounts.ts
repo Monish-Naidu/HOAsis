@@ -98,7 +98,7 @@ export const DEFAULT_ROLE_VIEWS: Record<string, Capability[]> = {
 export const accounts: Account[] = [
   {
     id: "acct-arya",
-    ownerId: "own-007",
+    homeId: "own-007",
     name: "Arya Mehr",
     email: "arya.mehr@example.com",
     unit: "7",
@@ -108,7 +108,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acct-dana",
-    ownerId: "own-019",
+    homeId: "own-019",
     name: "Dana Whitcomb",
     email: "dana.whitcomb@example.com",
     unit: "19",
@@ -118,7 +118,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acct-sofia",
-    ownerId: "own-031",
+    homeId: "own-031",
     name: "Sofia Bergman",
     email: "s.bergman@example.com",
     unit: "31",
@@ -128,7 +128,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acct-ellis",
-    ownerId: "own-071",
+    homeId: "own-071",
     name: "Ellis Wright",
     email: "ellis.wright@example.com",
     unit: "71",
@@ -138,7 +138,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acct-monish",
-    ownerId: "own-042",
+    homeId: "own-042",
     name: "Monish Naidu",
     email: "monish.naidu@example.com",
     unit: "42",
@@ -148,7 +148,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acct-nina",
-    ownerId: "own-015",
+    homeId: "own-015",
     name: "Nina Sharma",
     email: "nina.sharma@example.com",
     unit: "15",

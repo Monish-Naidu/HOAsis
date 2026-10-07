@@ -1,4 +1,4 @@
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 
 /**
  * The roster's filter chips, and the count on each.
@@ -19,7 +19,7 @@ export const HOME_FILTER_LABEL: Record<HomeFilter, string> = {
   "no-email": "No email on file",
 };
 
-type FilterFields = Pick<Owner, "daysPastDue" | "placeholder" | "autopay" | "email">;
+type FilterFields = Pick<Home, "daysPastDue" | "placeholder" | "autopay" | "email">;
 
 export function matchesHomeFilter(o: FilterFields, filter: HomeFilter): boolean {
   switch (filter) {
@@ -36,8 +36,8 @@ export function matchesHomeFilter(o: FilterFields, filter: HomeFilter): boolean 
   }
 }
 
-export function homeFilterCounts(owners: readonly FilterFields[]): Record<HomeFilter, number> {
+export function homeFilterCounts(homes: readonly FilterFields[]): Record<HomeFilter, number> {
   const counts = {} as Record<HomeFilter, number>;
-  for (const f of HOME_FILTERS) counts[f] = owners.filter((o) => matchesHomeFilter(o, f)).length;
+  for (const f of HOME_FILTERS) counts[f] = homes.filter((o) => matchesHomeFilter(o, f)).length;
   return counts;
 }

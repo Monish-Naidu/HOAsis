@@ -42,7 +42,7 @@ export function NoticeLetter({
   const placeLabel = useHomeLabel();
   const { community } = useAppState();
   const { association } = community;
-  const owner = community.owners.find((o) => o.id === violation.ownerId);
+  const home = community.homes.find((o) => o.id === violation.homeId);
   const today = todayIsoDate();
   const where = placeLabel(violation.unit);
 
@@ -96,10 +96,10 @@ export function NoticeLetter({
         <div className="mt-8">
           <p className="font-medium">{violation.ownerName}</p>
           <p className="text-fg-muted">{where}</p>
-          {owner?.mailingAddress ? (
-            <p className="text-fg-muted">{owner.mailingAddress}</p>
-          ) : owner?.address && owner.address !== where ? (
-            <p className="text-fg-muted">{owner.address}</p>
+          {home?.mailingAddress ? (
+            <p className="text-fg-muted">{home.mailingAddress}</p>
+          ) : home?.address && home.address !== where ? (
+            <p className="text-fg-muted">{home.address}</p>
           ) : null}
         </div>
 

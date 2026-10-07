@@ -28,7 +28,7 @@ export function useEnforcementActions(deps: AppDeps) {
       reporterName: string;
       reporterUnit: string;
       subjectUnit: string;
-      subjectOwnerId?: string;
+      subjectHomeId?: string;
       what: string;
       observedOn: string;
     }) => {
@@ -43,7 +43,7 @@ export function useEnforcementActions(deps: AppDeps) {
         reporterName: input.reporterName,
         reporterUnit: input.reporterUnit,
         subjectUnit: input.subjectUnit.trim(),
-        subjectOwnerId: input.subjectOwnerId,
+        subjectHomeId: input.subjectHomeId,
         what: input.what.trim(),
         observedOn: input.observedOn,
         submittedOn: todayIsoDate(),
@@ -60,7 +60,7 @@ export function useEnforcementActions(deps: AppDeps) {
             reporter_name: report.reporterName,
             reporter_unit: report.reporterUnit,
             subject_unit: report.subjectUnit,
-            subject_unit_id: isUuid(report.subjectOwnerId ?? "") ? report.subjectOwnerId : null,
+            subject_unit_id: isUuid(report.subjectHomeId ?? "") ? report.subjectHomeId : null,
             what: report.what,
             observed_on: report.observedOn,
             submitted_on: report.submittedOn,
@@ -155,7 +155,7 @@ export function useEnforcementActions(deps: AppDeps) {
   const raiseNoticeFromReport = useCallback(
     (
       reportId: string,
-      input: { rule: string; ruleCitation: string; ownerId: string; ownerName: string },
+      input: { rule: string; ruleCitation: string; homeId: string; ownerName: string },
     ) => {
       const reports = remote.community
         ? remote.community.violationReports
@@ -176,7 +176,7 @@ export function useEnforcementActions(deps: AppDeps) {
       const violation: Violation = {
         id: remote.community ? newId() : `vio-${communityId}-${sequence}`,
         reference: `VIO-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
-        ownerId: input.ownerId,
+        homeId: input.homeId,
         ownerName: input.ownerName,
         unit: report.subjectUnit,
         rule: input.rule.trim(),
@@ -212,7 +212,7 @@ export function useEnforcementActions(deps: AppDeps) {
             id: violation.id,
             association_id: rc.id,
             reference: violation.reference,
-            unit_id: isUuid(violation.ownerId) ? violation.ownerId : null,
+            unit_id: isUuid(violation.homeId) ? violation.homeId : null,
             unit_label: violation.unit,
             owner_name: violation.ownerName,
             rule: violation.rule,
@@ -252,7 +252,7 @@ export function useEnforcementActions(deps: AppDeps) {
 
   const addNotice = useCallback(
     (input: {
-      ownerId: string;
+      homeId: string;
       ownerName: string;
       unit: string;
       rule: string;
@@ -269,7 +269,7 @@ export function useEnforcementActions(deps: AppDeps) {
       const violation: Violation = {
         id: remote.community ? newId() : `vio-${communityId}-${sequence}`,
         reference: `VIO-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
-        ownerId: input.ownerId,
+        homeId: input.homeId,
         ownerName: input.ownerName.trim(),
         unit: input.unit.trim(),
         rule: input.rule.trim(),
@@ -289,7 +289,7 @@ export function useEnforcementActions(deps: AppDeps) {
             id: violation.id,
             association_id: rc.id,
             reference: violation.reference,
-            unit_id: isUuid(violation.ownerId) ? violation.ownerId : null,
+            unit_id: isUuid(violation.homeId) ? violation.homeId : null,
             unit_label: violation.unit,
             owner_name: violation.ownerName,
             rule: violation.rule,
@@ -310,7 +310,7 @@ export function useEnforcementActions(deps: AppDeps) {
         return violation;
       }
       logDemoActivity(communityId, "violation", activityWords.notice(violation.unit, violation.rule), {
-        unit_id: violation.ownerId,
+        unit_id: violation.homeId,
         home: violation.unit,
         reference: violation.reference,
       });
@@ -357,7 +357,7 @@ export function useEnforcementActions(deps: AppDeps) {
       caseNumber: string;
       deadline: string;
       rule: string;
-      ownerId?: string;
+      homeId?: string;
       ownerName?: string;
       unit?: string;
     }) => {
@@ -373,7 +373,7 @@ export function useEnforcementActions(deps: AppDeps) {
       const violation: Violation = {
         id: remote.community ? newId() : `vio-${communityId}-${sequence}`,
         reference: `CITY-${todayIsoDate().slice(0, 4)}-${String(100 + sequence)}`,
-        ownerId: input.ownerId ?? "",
+        homeId: input.homeId ?? "",
         // Against the association itself unless a home is named.
         ownerName: input.ownerName?.trim() || "The association",
         unit: input.unit?.trim() || "Common area",
@@ -397,7 +397,7 @@ export function useEnforcementActions(deps: AppDeps) {
             id: violation.id,
             association_id: rc.id,
             reference: violation.reference,
-            unit_id: isUuid(violation.ownerId) ? violation.ownerId : null,
+            unit_id: isUuid(violation.homeId) ? violation.homeId : null,
             unit_label: violation.unit,
             owner_name: violation.ownerName,
             rule: violation.rule,

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import {
   useAppState,
-  useCurrentOwner,
+  useCurrentHome,
   usePendingApprovals,
   useReconciliation,
   useUnreadThreadCount,
@@ -114,7 +114,7 @@ function useBoardNotices(): Notice[] {
 
 function useResidentNotices(): Notice[] {
   const { community } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const notices: Notice[] = [];
 
   const live = community.meetings.find((m) => m.status === "live");
@@ -130,7 +130,7 @@ function useResidentNotices(): Notice[] {
   }
   // Only notices that are open and addressed to this home. It sits above the
   // balance: it can carry a fine, and it was reachable from nowhere else.
-  const openNotices = openNoticesForHome(community.violations, owner);
+  const openNotices = openNoticesForHome(community.violations, home);
   if (openNotices.length > 0) {
     notices.push({
       id: "notice",
@@ -140,14 +140,14 @@ function useResidentNotices(): Notice[] {
       tone: "bg-warn-soft text-warn",
     });
   }
-  if (owner && owner.balanceCents > 0) {
+  if (home && home.balanceCents > 0) {
     notices.push({
       id: "balance",
-      title: owner.daysPastDue > 0 ? "Your dues are past due" : "A payment is coming up",
-      detail: `${money(owner.balanceCents)} ${owner.daysPastDue > 0 ? `· ${pastDueLabel(owner.daysPastDue)}` : `· due ${relativeDays(community.nextChargeDate)}`}`,
+      title: home.daysPastDue > 0 ? "Your dues are past due" : "A payment is coming up",
+      detail: `${money(home.balanceCents)} ${home.daysPastDue > 0 ? `· ${pastDueLabel(home.daysPastDue)}` : `· due ${relativeDays(community.nextChargeDate)}`}`,
       href: "/resident/pay",
       icon: CircleDollarSign,
-      tone: owner.daysPastDue > 0 ? "bg-danger-soft text-danger" : "bg-info-soft text-info",
+      tone: home.daysPastDue > 0 ? "bg-danger-soft text-danger" : "bg-info-soft text-info",
     });
   }
   const toVote = community.ballots.filter(
@@ -178,7 +178,7 @@ function useResidentNotices(): Notice[] {
     });
   }
   const requests = community.requests;
-  const mine = owner ? requests.filter((r) => r.ownerId === owner.id) : [];
+  const mine = home ? requests.filter((r) => r.homeId === home.id) : [];
   const updated = mine
     .map((r) => ({ r, last: [...r.thread].sort((a, b) => (a.at < b.at ? 1 : -1))[0] }))
     // The app's own routing line on a new request is not news from the board.
@@ -190,9 +190,9 @@ function useResidentNotices(): Notice[] {
         daysFromToday(x.last.at) >= -14,
     )
     .sort((a, b) => (a.last.at < b.last.at ? 1 : -1))[0];
-  const answered = owner
+  const answered = home
     ? community.threads
-        .filter((t) => t.ownerId === owner.id)
+        .filter((t) => t.homeId === home.id)
         .map((t) => ({ t, last: t.messages[t.messages.length - 1] }))
         .filter((x) => x.last && x.last.fromRole !== "resident" && daysFromToday(x.last.at) >= -14)
         .sort((a, b) => (a.t.updatedDate < b.t.updatedDate ? 1 : -1))[0]

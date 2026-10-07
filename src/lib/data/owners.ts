@@ -1,9 +1,9 @@
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 
 /** The resident persona the prototype signs you in as. */
-export const CURRENT_OWNER_ID = "own-042";
+export const CURRENT_HOME_ID = "own-042";
 
-export const owners: Owner[] = [
+export const homes: Home[] = [
   {
     id: "own-042",
     displayName: "Monish Naidu",
@@ -242,11 +242,11 @@ const LAST = [
   "Ellery", "Falk", "Grimaldi", "Hayes", "Ito", "Janssen", "Kirby",
 ];
 
-const TAKEN = new Set(owners.map((o) => Number(o.unit)));
+const TAKEN = new Set(homes.map((o) => Number(o.unit)));
 
-function fillerOwners(): Owner[] {
-  const rows: Owner[] = [];
-  for (let unit = 1; unit <= 88 && owners.length + rows.length < 88; unit++) {
+function fillerHomes(): Home[] {
+  const rows: Home[] = [];
+  for (let unit = 1; unit <= 88 && homes.length + rows.length < 88; unit++) {
     if (TAKEN.has(unit)) continue;
     const i = rows.length;
     const first = FIRST[(unit * 7 + i) % FIRST.length];
@@ -273,9 +273,9 @@ function fillerOwners(): Owner[] {
   return rows;
 }
 
-owners.push(...fillerOwners());
+homes.push(...fillerHomes());
 
-export const currentOwner = owners.find((o) => o.id === CURRENT_OWNER_ID)!;
+export const currentHome = homes.find((o) => o.id === CURRENT_HOME_ID)!;
 
 /** Board roster, derived. One source of truth for who holds a seat. */
-export const boardMembers = owners.filter((o) => o.boardRole);
+export const boardMembers = homes.filter((o) => o.boardRole);

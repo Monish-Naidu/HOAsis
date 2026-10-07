@@ -3,9 +3,9 @@ import { homesLine, pickSeat, voteCountLine } from "@/lib/home-choice";
 import { caps } from "@/lib/data/accounts";
 import type { Account } from "@/lib/types";
 
-const seat = (ownerId: string, unit: string): Account => ({
+const seat = (homeId: string, unit: string): Account => ({
   id: "pat",
-  ownerId,
+  homeId,
   name: "Pat",
   email: "pat@example.com",
   unit,

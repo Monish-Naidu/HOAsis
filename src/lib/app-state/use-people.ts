@@ -7,7 +7,7 @@ import { todayIsoDate } from "@/lib/utils";
 import { reportRemoteError, WRITE_TIMEOUT_MS } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
-import type { AccessLevel, AccountRole, Capabilities, Capability, HomeType, JoinRequest, Owner } from "@/lib/types";
+import type { AccessLevel, AccountRole, Capabilities, Capability, HomeType, JoinRequest, Home } from "@/lib/types";
 import { placeLabel } from "@/lib/wording";
 import { activityWords } from "@/lib/activity";
 
@@ -118,18 +118,18 @@ export function usePeopleActions(deps: AppDeps) {
   );
 
   const setHomeRole = useCallback(
-    (ownerId: string, role: AccountRole) => {
+    (homeId: string, role: AccountRole) => {
       if (!remote.community) {
         const account = sliceStore(communityId, "accounts")
           .getSnapshot()
-          .find((a) => a.ownerId === ownerId);
+          .find((a) => a.homeId === homeId);
         if (account) setAccountRole(account.id, role);
         return;
       }
       const rc = remote.community;
       // The presidency needs a person, not a home; that is a handover.
       if (role === "president") {
-        const holder = rc.accounts.find((a) => a.ownerId === ownerId);
+        const holder = rc.accounts.find((a) => a.homeId === homeId);
         if (holder) setAccountRole(holder.id, role);
         return;
       }
@@ -147,7 +147,7 @@ export function usePeopleActions(deps: AppDeps) {
             { count: "exact" },
           )
           .eq("association_id", rc.id)
-          .eq("unit_id", ownerId)
+          .eq("unit_id", homeId)
           .is("ends_on", null)
           .neq("role", "president"),
       );
@@ -168,20 +168,20 @@ export function usePeopleActions(deps: AppDeps) {
       email: string;
       unit: string;
       homeType?: HomeType;
-    }): { owner: Owner; saved: Promise<boolean> } => {
+    }): { home: Home; saved: Promise<boolean> } => {
       const unit = input.unit.trim();
       const existing = remote.community
-        ? remote.community.owners
-        : sliceStore(communityId, "owners").getSnapshot();
+        ? remote.community.homes
+        : sliceStore(communityId, "homes").getSnapshot();
       if (existing.some((o) => o.unit === unit)) {
         throw new ValidationError(`${placeLabel(unit)} is already on the roster`, { unit });
       }
 
       // The id is chosen here so the screen can name the household before
       // the write lands; the database takes it as given.
-      const ownerId = remote.community ? newId() : `${communityId}-own-${unit}`;
-      const owner: Owner = {
-        id: ownerId,
+      const homeId = remote.community ? newId() : `${communityId}-own-${unit}`;
+      const home: Home = {
+        id: homeId,
         displayName: input.name.trim(),
         members: [input.name.trim()],
         email: input.email.trim(),
@@ -201,9 +201,9 @@ export function usePeopleActions(deps: AppDeps) {
         const saved = remoteWrite("Adding the home", async () => {
           const added = await supabaseBrowser().rpc("add_household", {
             p_association_id: rc.id,
-            p_unit_id: ownerId,
-            p_name: owner.displayName,
-            p_email: owner.email,
+            p_unit_id: homeId,
+            p_name: home.displayName,
+            p_email: home.email,
             p_unit: unit,
           });
           // The kind of home rides on the unit the function just made.
@@ -211,26 +211,26 @@ export function usePeopleActions(deps: AppDeps) {
           return supabaseBrowser()
             .from("units")
             .update({ home_type: input.homeType })
-            .eq("id", ownerId);
+            .eq("id", homeId);
         });
-        return { owner, saved };
+        return { home, saved };
       }
 
-      sliceStore(communityId, "owners").update((all) => [...all, owner]);
+      sliceStore(communityId, "homes").update((all) => [...all, home]);
       sliceStore(communityId, "accounts").update((all) => [
         ...all,
         {
           id: `${communityId}-acct-${unit}`,
-          ownerId,
-          name: owner.displayName,
-          email: owner.email,
+          homeId,
+          name: home.displayName,
+          email: home.email,
           unit,
           role: "resident" as const,
           capabilities: NO_CAPABILITIES,
           views: NO_CAPABILITIES,
         },
       ]);
-      return { owner, saved: Promise.resolve(true) };
+      return { home, saved: Promise.resolve(true) };
     },
     [remote.community, communityId],
   );
@@ -242,7 +242,7 @@ export function usePeopleActions(deps: AppDeps) {
    */
   const addOwner = useCallback(
     (input: { name: string; email: string; unit: string; homeType?: HomeType }) =>
-      addOwnerSaving(input).owner,
+      addOwnerSaving(input).home,
     [addOwnerSaving],
   );
 
@@ -261,7 +261,7 @@ export function usePeopleActions(deps: AppDeps) {
    * loses that dispute.
    */
   const setHouseholdOwner = useCallback(
-    (ownerId: string, input: { name: string; email: string }) => {
+    (homeId: string, input: { name: string; email: string }) => {
       const name = input.name.trim();
       const email = input.email.trim();
       if (remote.community) {
@@ -276,14 +276,14 @@ export function usePeopleActions(deps: AppDeps) {
           supabaseBrowser()
             .from("memberships")
             .update({ full_name: name, invited_email: email || null }, { count: "exact" })
-            .eq("unit_id", ownerId)
+            .eq("unit_id", homeId)
             .is("profile_id", null)
             .is("ends_on", null),
         );
       }
-      sliceStore(communityId, "owners").update((all) =>
+      sliceStore(communityId, "homes").update((all) =>
         all.map((o) =>
-          o.id === ownerId
+          o.id === homeId
             ? { ...o, displayName: name, members: [name], email, placeholder: false }
             : o,
         ),
@@ -299,20 +299,20 @@ export function usePeopleActions(deps: AppDeps) {
    * a second owner is. Nothing is added to the register.
    */
   const seatInDemo = useCallback(
-    (ownerId: string, input: { name: string; email: string }, second: boolean) => {
-      const owners = sliceStore(communityId, "owners");
-      const owner = owners.getSnapshot().find((o) => o.id === ownerId);
-      if (!owner) return false;
+    (homeId: string, input: { name: string; email: string }, second: boolean) => {
+      const homes = sliceStore(communityId, "homes");
+      const home = homes.getSnapshot().find((o) => o.id === homeId);
+      if (!home) return false;
       const name = input.name.trim();
       const email = input.email.trim();
       const accounts = sliceStore(communityId, "accounts");
-      const onHome = accounts.getSnapshot().filter((a) => a.ownerId === ownerId);
-      if (second || owner.placeholder) {
+      const onHome = accounts.getSnapshot().filter((a) => a.homeId === homeId);
+      if (second || home.placeholder) {
         // A second owner joins the names on title; the first owner of an
         // empty home replaces the stand in name.
-        owners.update((all) =>
+        homes.update((all) =>
           all.map((o) =>
-            o.id !== ownerId
+            o.id !== homeId
               ? o
               : second
                 ? { ...o, members: [...o.members, name] }
@@ -322,11 +322,11 @@ export function usePeopleActions(deps: AppDeps) {
         accounts.update((all) => [
           ...all,
           {
-            id: `${communityId}-acct-${owner.unit}${second ? `-${onHome.length + 1}` : ""}`,
-            ownerId,
+            id: `${communityId}-acct-${home.unit}${second ? `-${onHome.length + 1}` : ""}`,
+            homeId,
             name,
             email,
-            unit: owner.unit,
+            unit: home.unit,
             role: "resident" as const,
             capabilities: NO_CAPABILITIES,
             views: NO_CAPABILITIES,
@@ -335,11 +335,11 @@ export function usePeopleActions(deps: AppDeps) {
         return true;
       }
       // A home with a listed owner who has no email: the requester takes it.
-      owners.update((all) =>
-        all.map((o) => (o.id === ownerId ? { ...o, displayName: name, members: [name], email } : o)),
+      homes.update((all) =>
+        all.map((o) => (o.id === homeId ? { ...o, displayName: name, members: [name], email } : o)),
       );
       accounts.update((all) =>
-        all.map((a) => (a.ownerId === ownerId ? { ...a, name, email } : a)),
+        all.map((a) => (a.homeId === homeId ? { ...a, name, email } : a)),
       );
       return true;
     },
@@ -351,17 +351,17 @@ export function usePeopleActions(deps: AppDeps) {
    * the same home: the bill, the balance and the vote stay the home's.
    */
   const addSecondOwner = useCallback(
-    (ownerId: string, input: { name: string; email: string }) => {
+    (homeId: string, input: { name: string; email: string }) => {
       if (remote.community) {
         return remoteWrite("Adding the second owner", () =>
           supabaseBrowser().rpc("add_second_owner", {
-            p_unit_id: ownerId,
+            p_unit_id: homeId,
             p_name: input.name.trim(),
             p_email: input.email.trim(),
           }),
         );
       }
-      return Promise.resolve(seatInDemo(ownerId, input, true));
+      return Promise.resolve(seatInDemo(homeId, input, true));
     },
     [remote.community, seatInDemo],
   );
@@ -373,20 +373,20 @@ export function usePeopleActions(deps: AppDeps) {
    * demo drops the second name and account from the household.
    */
   const removeCoOwner = useCallback(
-    (ownerId: string, seatId: string) => {
+    (homeId: string, seatId: string) => {
       if (remote.community) {
         return remoteWrite("Removing the owner", () =>
           supabaseBrowser().rpc("remove_owner", { p_membership_id: seatId }),
         );
       }
       const accounts = sliceStore(communityId, "accounts");
-      const gone = accounts.getSnapshot().find((a) => a.id === seatId && a.ownerId === ownerId);
-      const onHome = accounts.getSnapshot().filter((a) => a.ownerId === ownerId);
+      const gone = accounts.getSnapshot().find((a) => a.id === seatId && a.homeId === homeId);
+      const onHome = accounts.getSnapshot().filter((a) => a.homeId === homeId);
       if (!gone || onHome.length < 2) return Promise.resolve(false);
       accounts.update((all) => all.filter((a) => a.id !== seatId));
-      sliceStore(communityId, "owners").update((all) =>
+      sliceStore(communityId, "homes").update((all) =>
         all.map((o) => {
-          if (o.id !== ownerId) return o;
+          if (o.id !== homeId) return o;
           const members = o.members.filter((m) => m !== gone.name);
           const first = members[0] ?? o.displayName;
           return {
@@ -408,31 +408,31 @@ export function usePeopleActions(deps: AppDeps) {
    * invitation link, so a typo no longer strands them.
    */
   const changeOwnerEmail = useCallback(
-    (ownerId: string, email: string) => {
+    (homeId: string, email: string) => {
       const next = email.trim();
       if (remote.community) {
-        const current = remote.community.owners.find((o) => o.id === ownerId);
+        const current = remote.community.homes.find((o) => o.id === homeId);
         return remoteWrite("Changing the email", () =>
           supabaseBrowser().rpc("change_owner_email", {
-            p_unit_id: ownerId,
+            p_unit_id: homeId,
             p_old_email: current?.email ?? "",
             p_new_email: next,
           }),
         );
       }
-      const was = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId)?.email;
-      const home = sliceStore(communityId, "owners").getSnapshot().find((o) => o.id === ownerId);
+      const was = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId)?.email;
+      const home = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId);
       if (home && was !== next) {
         logDemoActivity(communityId, "seat", activityWords.email(home.unit, was ?? "no email", next), {
-          unit_id: ownerId,
+          unit_id: homeId,
           home: home.unit,
         });
       }
-      sliceStore(communityId, "owners").update((all) =>
-        all.map((o) => (o.id === ownerId ? { ...o, email: next } : o)),
+      sliceStore(communityId, "homes").update((all) =>
+        all.map((o) => (o.id === homeId ? { ...o, email: next } : o)),
       );
       sliceStore(communityId, "accounts").update((all) =>
-        all.map((a) => (a.ownerId === ownerId && a.email === was ? { ...a, email: next } : a)),
+        all.map((a) => (a.homeId === homeId && a.email === was ? { ...a, email: next } : a)),
       );
       return Promise.resolve(true);
     },
@@ -447,18 +447,18 @@ export function usePeopleActions(deps: AppDeps) {
    * changes behind them.
    */
   const setHomeType = useCallback(
-    (ownerIds: string[], homeType: HomeType) => {
-      if (!ownerIds.length) return true;
+    (homeIds: string[], homeType: HomeType) => {
+      if (!homeIds.length) return true;
       if (remote.community) {
         return remoteWrite("Saving the kind of home", () =>
           supabaseBrowser()
             .from("units")
             .update({ home_type: homeType }, { count: "exact" })
-            .in("id", ownerIds),
+            .in("id", homeIds),
         );
       }
-      const ids = new Set(ownerIds);
-      sliceStore(communityId, "owners").update((all) =>
+      const ids = new Set(homeIds);
+      sliceStore(communityId, "homes").update((all) =>
         all.map((o) => (ids.has(o.id) ? { ...o, homeType } : o)),
       );
       return true;
@@ -473,7 +473,7 @@ export function usePeopleActions(deps: AppDeps) {
    * issued keep their amount.
    */
   const setHomeDues = useCallback(
-    (changes: { ownerId: string; cents: number | null }[]) => {
+    (changes: { homeId: string; cents: number | null }[]) => {
       if (!changes.length) return true;
       if (changes.some((c) => c.cents !== null && (!Number.isInteger(c.cents) || c.cents < 0))) {
         reportRemoteError("Dues cannot be negative");
@@ -486,26 +486,26 @@ export function usePeopleActions(deps: AppDeps) {
       if (remote.community) {
         return remoteWrite("Saving dues", async () => {
           const supabase = supabaseBrowser();
-          for (const { ownerId, cents } of changes) {
+          for (const { homeId, cents } of changes) {
             const { error } = await supabase.rpc("set_home_dues", {
-              p_unit_id: ownerId,
+              p_unit_id: homeId,
               p_dues_cents: cents,
             });
             if (error) throw new Error(error.message);
           }
         }, { timeoutMs: WRITE_TIMEOUT_MS + changes.length * 1_000 });
       }
-      const byOwner = new Map(changes.map((c) => [c.ownerId, c.cents]));
-      for (const o of sliceStore(communityId, "owners").getSnapshot()) {
-        if (!byOwner.has(o.id)) continue;
-        const next = byOwner.get(o.id) || null;
+      const byHome = new Map(changes.map((c) => [c.homeId, c.cents]));
+      for (const o of sliceStore(communityId, "homes").getSnapshot()) {
+        if (!byHome.has(o.id)) continue;
+        const next = byHome.get(o.id) || null;
         if (next === (o.duesCents ?? null)) continue;
         logDemoActivity(communityId, "unit", activityWords.dues(o.unit, next), { unit_id: o.id, home: o.unit });
       }
-      sliceStore(communityId, "owners").update((all) =>
+      sliceStore(communityId, "homes").update((all) =>
         all.map((o) => {
-          if (!byOwner.has(o.id)) return o;
-          const cents = byOwner.get(o.id);
+          if (!byHome.has(o.id)) return o;
+          const cents = byHome.get(o.id);
           // Zero reads as no amount, as it does in the database.
           const { duesCents: _was, ...rest } = o;
           void _was;
@@ -519,13 +519,13 @@ export function usePeopleActions(deps: AppDeps) {
 
   /** Removes a household and its account together, returning one undo for both. */
   const removeOwner = useCallback(
-    (ownerId: string) => {
+    (homeId: string) => {
       if (!remote.community) {
-        const undoOwners = destructive(sliceStore(communityId, "owners"), (all) =>
-          all.filter((o) => o.id !== ownerId),
+        const undoOwners = destructive(sliceStore(communityId, "homes"), (all) =>
+          all.filter((o) => o.id !== homeId),
         );
         const undoAccounts = destructive(sliceStore(communityId, "accounts"), (all) =>
-          all.filter((a) => a.ownerId !== ownerId),
+          all.filter((a) => a.homeId !== homeId),
         );
         return () => {
           undoOwners();
@@ -538,22 +538,22 @@ export function usePeopleActions(deps: AppDeps) {
       // that still owes money, saying so through the toast. The undo below
       // only fits the deleted case; a retired home is brought back by hand.
       const rc = remote.community;
-      const owner = rc.owners.find((o) => o.id === ownerId);
-      const hasStatement = (rc.ownerCharges[ownerId] ?? []).length > 0;
+      const home = rc.homes.find((o) => o.id === homeId);
+      const hasStatement = (rc.homeCharges[homeId] ?? []).length > 0;
       void remoteWrite(hasStatement ? "Retiring the home" : "Removing the household", () =>
         hasStatement
-          ? supabaseBrowser().rpc("retire_home", { p_unit_id: ownerId })
-          : supabaseBrowser().rpc("remove_household", { p_unit_id: ownerId }),
+          ? supabaseBrowser().rpc("retire_home", { p_unit_id: homeId })
+          : supabaseBrowser().rpc("remove_household", { p_unit_id: homeId }),
       );
       return () => {
-        if (!owner || hasStatement) return;
+        if (!home || hasStatement) return;
         void remoteWrite("Restoring the household", () =>
           supabaseBrowser().rpc("add_household", {
             p_association_id: rc.id,
-            p_unit_id: owner.id,
-            p_name: owner.displayName,
-            p_email: owner.email,
-            p_unit: owner.unit,
+            p_unit_id: home.id,
+            p_name: home.displayName,
+            p_email: home.email,
+            p_unit: home.unit,
           }),
         );
       };
@@ -563,7 +563,7 @@ export function usePeopleActions(deps: AppDeps) {
 
   const transferHome = useCallback(
     (
-      ownerId: string,
+      homeId: string,
       input: { name: string; email: string; closingDate: string; settleBalance: boolean },
     ) => {
       const name = input.name.trim();
@@ -576,12 +576,12 @@ export function usePeopleActions(deps: AppDeps) {
           // failed attempt re-reads the association, so a second try does not
           // settle a balance the first one already settled.
           const now = latest(rc);
-          const owner = now.owners.find((o) => o.id === ownerId);
-          const owed = owner?.balanceCents ?? 0;
+          const home = now.homes.find((o) => o.id === homeId);
+          const owed = home?.balanceCents ?? 0;
           const settle = input.settleBalance && owed > 0;
           const recordSale = () =>
             supabase.rpc("transfer_home", {
-              p_unit_id: ownerId,
+              p_unit_id: homeId,
               p_new_name: name,
               p_new_email: email,
               p_closing_date: input.closingDate,
@@ -591,7 +591,7 @@ export function usePeopleActions(deps: AppDeps) {
           const recordPayment = () =>
             supabase.from("charges").insert({
               association_id: rc.id,
-              unit_id: ownerId,
+              unit_id: homeId,
               kind: "payment",
               label: "Paid at closing",
               amount_cents: -owed,
@@ -606,8 +606,8 @@ export function usePeopleActions(deps: AppDeps) {
               association_id: rc.id,
               bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
               occurred_on: input.closingDate,
-              description: `Paid at closing, ${placeLabel(owner?.unit ?? "")}`.trim(),
-              counterparty: owner?.displayName ?? "Title company",
+              description: `Paid at closing, ${placeLabel(home?.unit ?? "")}`.trim(),
+              counterparty: home?.displayName ?? "Title company",
               category: "Assessments",
               amount_cents: owed,
               confirmed_at: new Date().toISOString(),
@@ -624,14 +624,14 @@ export function usePeopleActions(deps: AppDeps) {
           // database refuses that sale outright, and money written ahead of
           // a sale that cannot happen is the fault sale first was put in to
           // stop.
-          const seats = now.accounts.filter((a) => a.ownerId === ownerId);
+          const seats = now.accounts.filter((a) => a.homeId === homeId);
           const ownHome =
             seats.some((a) => a.id === remote.profileId) &&
             !seats.some((a) => a.role === "president");
           if (settle && ownHome) {
             // The one refusal that can be seen coming, checked before any
             // money is written.
-            if (owner && input.closingDate < owner.moveInDate) {
+            if (home && input.closingDate < home.moveInDate) {
               throw new Error("the closing date is before this owner took ownership. Check the date");
             }
             const { error } = await recordPayment();
@@ -668,13 +668,13 @@ export function usePeopleActions(deps: AppDeps) {
         });
       }
 
-      const owners = sliceStore(communityId, "owners");
-      const before = owners.getSnapshot().find((o) => o.id === ownerId);
+      const homes = sliceStore(communityId, "homes");
+      const before = homes.getSnapshot().find((o) => o.id === homeId);
       if (!before) return false;
       const settle = input.settleBalance && before.balanceCents > 0;
-      owners.update((all) =>
+      homes.update((all) =>
         all.map((o) =>
-          o.id === ownerId
+          o.id === homeId
             ? {
                 ...o,
                 displayName: name,
@@ -692,27 +692,27 @@ export function usePeopleActions(deps: AppDeps) {
         ),
       );
       if (settle) {
-        sliceStore(communityId, "ownerCharges").update((all) => ({
+        sliceStore(communityId, "homeCharges").update((all) => ({
           ...all,
-          [ownerId]: [
+          [homeId]: [
             {
-              id: `${ownerId}-closing-${input.closingDate}`,
+              id: `${homeId}-closing-${input.closingDate}`,
               date: input.closingDate,
               label: "Paid at closing",
               kind: "payment" as const,
               amountCents: -before.balanceCents,
               balanceAfterCents: 0,
             },
-            ...(all[ownerId] ?? []),
+            ...(all[homeId] ?? []),
           ],
         }));
       }
       // The seller's sign-in goes with them; the buyer gets a resident seat.
       sliceStore(communityId, "accounts").update((all) => [
-        ...all.filter((a) => a.ownerId !== ownerId),
+        ...all.filter((a) => a.homeId !== homeId),
         {
           id: `${communityId}-acct-${before.unit}-${input.closingDate}`,
-          ownerId,
+          homeId,
           name,
           email,
           unit: before.unit,
@@ -744,9 +744,9 @@ export function usePeopleActions(deps: AppDeps) {
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
       if (!me) return Promise.resolve(false);
-      sliceStore(communityId, "owners").update((all) =>
+      sliceStore(communityId, "homes").update((all) =>
         all.map((o) =>
-          o.id === me.ownerId
+          o.id === me.homeId
             ? { ...o, phone: input.phone, mailingAddress: input.mailingAddress || undefined }
             : o,
         ),
@@ -792,7 +792,7 @@ export function usePeopleActions(deps: AppDeps) {
       if (!request) return false;
       // The roster is the only door. Approving is adding the household with
       // the address they gave, so the same rules apply as to any other add.
-      const { owner, saved } = addOwnerSaving({ name: request.name, email: request.email, unit });
+      const { home, saved } = addOwnerSaving({ name: request.name, email: request.email, unit });
       // The household first, and only then the decision. Marked approved
       // while the add was still in the air, a refused add left a request
       // that read "approved", a welcome email on its way, and no home.
@@ -807,7 +807,7 @@ export function usePeopleActions(deps: AppDeps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             associationId: remote.community.id,
-            unitIds: [owner.id],
+            unitIds: [home.id],
             kind: "welcome",
           }),
         }).catch(() => undefined); // The roster is right already; the server logs a failed email.
@@ -824,7 +824,7 @@ export function usePeopleActions(deps: AppDeps) {
    * so a refusal leaves it waiting.
    */
   const seatJoinRequest = useCallback(
-    async (requestId: string, ownerId: string, second: boolean) => {
+    async (requestId: string, homeId: string, second: boolean) => {
       const existing = remote.community
         ? remote.community.joinRequests
         : sliceStore(communityId, "joinRequests").getSnapshot();
@@ -834,7 +834,7 @@ export function usePeopleActions(deps: AppDeps) {
         const seated = await remoteWrite("Letting them in", () =>
           supabaseBrowser().rpc("seat_join_request", {
             p_request_id: requestId,
-            p_unit_id: ownerId,
+            p_unit_id: homeId,
             p_as_second: second,
           }),
         );
@@ -849,14 +849,14 @@ export function usePeopleActions(deps: AppDeps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               associationId: remote.community.id,
-              unitIds: [ownerId],
+              unitIds: [homeId],
               kind: "welcome",
             }),
           }).catch(() => undefined); // The roster is right already; the server logs a failed email.
         }
         return decided;
       }
-      if (!seatInDemo(ownerId, { name: request.name, email: request.email }, second)) return false;
+      if (!seatInDemo(homeId, { name: request.name, email: request.email }, second)) return false;
       return decideJoin(requestId, "approved");
     },
     [remote.community, communityId, decideJoin, seatInDemo],

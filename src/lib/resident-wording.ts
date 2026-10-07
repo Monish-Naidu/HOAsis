@@ -1,4 +1,4 @@
-import type { Owner, Violation } from "@/lib/types";
+import type { Home, Violation } from "@/lib/types";
 import { formatDate, pastDueLabel, pluralize } from "@/lib/utils";
 
 /**
@@ -14,15 +14,15 @@ import { formatDate, pastDueLabel, pluralize } from "@/lib/utils";
  * contradict the amount printed above it.
  */
 export function balanceStanding(
-  owner: Pick<Owner, "balanceCents" | "standing" | "daysPastDue">,
+  home: Pick<Home, "balanceCents" | "standing" | "daysPastDue">,
 ): { label: string; tone: "ok" | "neutral" | "warn" | "danger" } {
-  if (owner.standing === "current") {
-    return owner.balanceCents > 0
+  if (home.standing === "current") {
+    return home.balanceCents > 0
       ? { label: "Not late", tone: "neutral" }
       : { label: "Paid up", tone: "ok" };
   }
-  if (owner.standing === "collections") return { label: "In collections", tone: "danger" };
-  return { label: pastDueLabel(owner.daysPastDue), tone: "warn" };
+  if (home.standing === "collections") return { label: "In collections", tone: "danger" };
+  return { label: pastDueLabel(home.daysPastDue), tone: "warn" };
 }
 
 /**
@@ -32,11 +32,11 @@ export function balanceStanding(
  */
 export function openNoticesForHome(
   violations: Violation[],
-  owner: Pick<Owner, "id" | "unit"> | null | undefined,
+  home: Pick<Home, "id" | "unit"> | null | undefined,
 ): Violation[] {
-  if (!owner) return [];
+  if (!home) return [];
   return violations.filter(
-    (v) => v.stage !== "cured" && (v.ownerId === owner.id || v.unit === owner.unit),
+    (v) => v.stage !== "cured" && (v.homeId === home.id || v.unit === home.unit),
   );
 }
 

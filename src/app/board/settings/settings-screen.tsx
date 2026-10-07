@@ -101,7 +101,7 @@ export function SettingsScreen() {
   const [newAmenity, setNewAmenity] = useState("");
   const [name, setName] = useState(settings.displayName);
   const [newFormLabel, setNewFormLabel] = useState("");
-  const [appointing, setAppointing] = useState<{ ownerId: string; role: AccountRole } | null>(null);
+  const [appointing, setAppointing] = useState<{ homeId: string; role: AccountRole } | null>(null);
 
   const roleFromLabel = (label?: string): AccountRole =>
     ((Object.keys(ROLE_LABEL) as AccountRole[]).find((r) => ROLE_LABEL[r] === label) ??
@@ -109,12 +109,12 @@ export function SettingsScreen() {
   // Every home with a named owner, signed up or not, with the role it holds.
   // An officer can be named the day the association is set up; their access
   // is waiting when they create their account.
-  const homes = community.owners
-    .filter((o) => !o.placeholder && (o.email || accounts.some((a) => a.ownerId === o.id)))
+  const homes = community.homes
+    .filter((o) => !o.placeholder && (o.email || accounts.some((a) => a.homeId === o.id)))
     .map((o) => {
-      const holder = accounts.find((a) => a.ownerId === o.id);
+      const holder = accounts.find((a) => a.homeId === o.id);
       return {
-        ownerId: o.id,
+        homeId: o.id,
         name: o.displayName,
         unit: o.unit,
         role: holder?.role ?? roleFromLabel(o.boardRole),
@@ -136,8 +136,8 @@ export function SettingsScreen() {
   // Terms of office, where the database keeps them: when each sitting
   // officer took the seat, and who held one before. Absent for the demo.
   const terms = community.boardTerms ?? [];
-  const sinceFor = (ownerId: string, role: AccountRole) =>
-    terms.find((t) => !t.to && t.role === role && t.unit === community.owners.find((o) => o.id === ownerId)?.unit)?.from;
+  const sinceFor = (homeId: string, role: AccountRole) =>
+    terms.find((t) => !t.to && t.role === role && t.unit === community.homes.find((o) => o.id === homeId)?.unit)?.from;
   const pastTerms = terms
     .filter((t): t is typeof t & { to: string } => Boolean(t.to))
     .sort((a, b) => b.to.localeCompare(a.to) || b.from.localeCompare(a.from));
@@ -568,7 +568,7 @@ export function SettingsScreen() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setAppointing({ ownerId: "", role: "secretary" })}
+                  onClick={() => setAppointing({ homeId: "", role: "secretary" })}
                 >
                   <Plus className="size-3.5" />
                   Add a board member
@@ -581,22 +581,22 @@ export function SettingsScreen() {
               className="flex flex-wrap items-end gap-2 border-b border-border bg-surface-2 px-5 py-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                const home = candidates.find((h) => h.ownerId === appointing.ownerId);
+                const home = candidates.find((h) => h.homeId === appointing.homeId);
                 if (!home) return;
-                setHomeRole(home.ownerId, appointing.role);
+                setHomeRole(home.homeId, appointing.role);
                 notify(`${home.name} is ${ROLE_LABEL[appointing.role]}`, "ok");
                 setAppointing(null);
               }}
             >
               <Select
-                value={appointing.ownerId}
-                onChange={(e) => setAppointing({ ...appointing, ownerId: e.target.value })}
+                value={appointing.homeId}
+                onChange={(e) => setAppointing({ ...appointing, homeId: e.target.value })}
                 aria-label="Which home"
                 className="min-w-[12rem] flex-1"
               >
                 <option value="">Choose a home</option>
                 {candidates.map((h) => (
-                  <option key={h.ownerId} value={h.ownerId}>
+                  <option key={h.homeId} value={h.homeId}>
                     {homeLabel(community, h.unit)} · {h.name}
                   </option>
                 ))}
@@ -614,7 +614,7 @@ export function SettingsScreen() {
                   </option>
                 ))}
               </Select>
-              <Button type="submit" variant="secondary" size="md" disabled={!appointing.ownerId}>
+              <Button type="submit" variant="secondary" size="md" disabled={!appointing.homeId}>
                 Add
               </Button>
               <Button variant="ghost" size="md" onClick={() => setAppointing(null)}>
@@ -624,13 +624,13 @@ export function SettingsScreen() {
           ) : null}
           <div className="divide-y divide-border">
             {officers.map((row) => (
-              <div key={row.ownerId} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
+              <div key={row.homeId} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
                 <div className="min-w-[10rem] flex-1">
                   <p className="truncate text-body font-medium text-fg">{row.name}</p>
                   <p className="truncate text-footnote text-fg-muted">
                     {homeLabel(community, row.unit)}
-                    {sinceFor(row.ownerId, row.role)
-                      ? ` · since ${formatDate(sinceFor(row.ownerId, row.role) as string, "long")}`
+                    {sinceFor(row.homeId, row.role)
+                      ? ` · since ${formatDate(sinceFor(row.homeId, row.role) as string, "long")}`
                       : ""}
                     {row.signedUp ? "" : " · not signed up yet"}
                   </p>
@@ -652,7 +652,7 @@ export function SettingsScreen() {
                 {isPresident && row.role !== "president" ? (
                   <Select
                     value={row.role}
-                    onChange={(e) => setHomeRole(row.ownerId, e.target.value as AccountRole)}
+                    onChange={(e) => setHomeRole(row.homeId, e.target.value as AccountRole)}
                     aria-label={`${row.name}'s role`}
                   >
                     {(["vice-president", "treasurer", "secretary", "resident"] as const).map((r) => (
@@ -719,7 +719,7 @@ export function SettingsScreen() {
               [
                 [documents.length, "documents"],
                 [community.history?.ledgerCount ?? ledger.length, "transactions"],
-                [community.owners.length, "owners"],
+                [community.homes.length, "owners"],
                 [vendors.length, "vendors"],
                 [community.meetings.length, "meetings on record"],
                 [requests.length, "requests"],
@@ -1374,7 +1374,7 @@ function ActivityList({ rows }: { rows: Activity[] }) {
   const [shown, setShown] = useState(ACTIVITY_PAGE);
   const placeLabel = useHomeLabel();
   const { community } = useAppState();
-  const unitLabelById = (id: string) => community.owners.find((o) => o.id === id)?.unit;
+  const unitLabelById = (id: string) => community.homes.find((o) => o.id === id)?.unit;
   if (rows.length === 0) {
     return (
       <p className="px-5 py-6 text-center text-callout text-fg-muted">

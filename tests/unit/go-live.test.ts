@@ -47,7 +47,7 @@ describe("goLiveChecklist", () => {
     expect(item(c, "dues").done).toBe(true);
 
     const alone = community((x) => {
-      x.owners = x.owners.slice(0, 1);
+      x.homes = x.homes.slice(0, 1);
       x.association.duesCents = 0;
     });
     expect(item(alone, "roster").done).toBe(false);
@@ -80,7 +80,7 @@ describe("goLiveChecklist", () => {
     expect(item(scheduled, "first-bill").detail).toMatch(/First bill goes out/);
 
     const issued = community((x) => {
-      x.ownerCharges[x.owners[1].id] = [
+      x.homeCharges[x.homes[1].id] = [
         { id: "c1", date: "2026-09-01", label: "September 2026 dues", kind: "charge", amountCents: 5000, balanceAfterCents: 5000 },
       ];
     });
@@ -88,7 +88,7 @@ describe("goLiveChecklist", () => {
 
     const opening = community((x) => {
       x.association.duesCents = 0;
-      x.ownerCharges[x.owners[1].id] = [
+      x.homeCharges[x.homes[1].id] = [
         { id: "c1", date: "2026-09-01", label: "Balance brought forward", kind: "charge", amountCents: 5000, balanceAfterCents: 5000 },
       ];
     });
@@ -108,7 +108,7 @@ describe("goLiveChecklist", () => {
     const joined = community((x) => {
       x.accounts = [
         ...x.accounts,
-        { id: "p2", ownerId: x.owners[1].id, name: "Marcus Bell", email: "marcus@example.com", unit: "2", role: "resident", capabilities: x.accounts[0].capabilities, views: x.accounts[0].views },
+        { id: "p2", homeId: x.homes[1].id, name: "Marcus Bell", email: "marcus@example.com", unit: "2", role: "resident", capabilities: x.accounts[0].capabilities, views: x.accounts[0].views },
       ];
     });
     expect(item(joined, "invites").done).toBe(true);

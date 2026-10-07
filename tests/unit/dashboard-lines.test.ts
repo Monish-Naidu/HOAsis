@@ -27,11 +27,11 @@ const c = mehrMeadows;
 /** A new association: nothing on the books, no homes, no bank. */
 const empty: Community = {
   ...c,
-  owners: [],
+  homes: [],
   bankAccounts: [],
   ledger: [],
   meetings: [],
-  ownerCharges: {},
+  homeCharges: {},
   reserveComponents: [],
   recentDuesBill: undefined,
 };
@@ -59,11 +59,11 @@ describe("cash and reserves", () => {
 describe("past due", () => {
   it("names the homes, the dollars and the oldest balance", () => {
     expect(pastDueLine(c)).toMatch(/^\d+ homes? · \$[\d,]+ · oldest \d+ days?$/);
-    expect(oldestPastDueDays(c)).toBe(Math.max(...c.owners.map((o) => o.daysPastDue)));
+    expect(oldestPastDueDays(c)).toBe(Math.max(...c.homes.map((o) => o.daysPastDue)));
   });
 
   it("says everyone is current when nobody is behind", () => {
-    const current = { ...c, owners: c.owners.map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 })) };
+    const current = { ...c, homes: c.homes.map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 })) };
     expect(pastDueLine(current)).toBe("Everyone is current");
   });
 });
@@ -122,7 +122,7 @@ describe("this month sentence", () => {
   it("builds the month from the records", () => {
     const line = thisMonthLine(c)!;
     expect(line).toMatch(/^August: billed \$[\d,]+ on the 1st, \$[\d,]+ collected so far \(\d+%\), autopay covers \d+ homes, reminders go out on the 16th\.$/);
-    const homes = c.owners.filter((o) => !o.placeholder && o.autopay).length;
+    const homes = c.homes.filter((o) => !o.placeholder && o.autopay).length;
     expect(line).toContain(`autopay covers ${homes} homes`);
   });
 

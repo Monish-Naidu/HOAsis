@@ -78,14 +78,14 @@ describe("the board inbox", () => {
   it("stores the office on a thread an owner starts in the demo", async () => {
     wrap(<BoardCommunications />);
     act(() => seen.state.signIn("acct-monish"));
-    const owner = seen.state.community.owners.find((o) => o.id === "own-042")!;
+    const home = seen.state.community.homes.find((o) => o.id === "own-042")!;
     await act(async () => {
-      await seen.state.messageBoard(owner.id, "Budget question", "Where did the surplus go?", "Billing", "treasurer");
+      await seen.state.messageBoard(home.id, "Budget question", "Where did the surplus go?", "Billing", "treasurer");
     });
     const made = seen.state.threads.find((t) => t.subject === "Budget question");
     expect(made?.toRole).toBe("treasurer");
     await act(async () => {
-      await seen.state.messageBoard(owner.id, "Hello", "Anyone there?");
+      await seen.state.messageBoard(home.id, "Hello", "Anyone there?");
     });
     expect(seen.state.threads.find((t) => t.subject === "Hello")?.toRole).toBe("board");
   });

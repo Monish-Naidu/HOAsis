@@ -10,7 +10,7 @@ import type { PaymentInstrument } from "@/lib/payments/instruments";
 export const paymentInstruments: PaymentInstrument[] = [
   {
     id: "pm-ach-becu",
-    ownerId: "own-042",
+    homeId: "own-042",
     kind: "ach",
     label: "BECU checking",
     mask: "2288",
@@ -22,7 +22,7 @@ export const paymentInstruments: PaymentInstrument[] = [
   },
   {
     id: "pm-card-visa",
-    ownerId: "own-042",
+    homeId: "own-042",
     kind: "card",
     label: "Visa",
     mask: "4402",
@@ -35,7 +35,7 @@ export const paymentInstruments: PaymentInstrument[] = [
   },
   {
     id: "pm-ach-arya",
-    ownerId: "own-007",
+    homeId: "own-007",
     kind: "ach",
     label: "BECU checking",
     mask: "4471",

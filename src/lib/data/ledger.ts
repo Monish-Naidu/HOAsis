@@ -984,7 +984,7 @@ export const ledgerEntries: LedgerEntry[] = [...recentEntries, ...buildLedgerHis
 /* One owner's account history (Monish Naidu, unit 42)                   */
 /* -------------------------------------------------------------------------- */
 
-export const ownerCharges: ChargeLine[] = [
+export const homeCharges: ChargeLine[] = [
   {
     id: "ch-09",
     date: "2026-09-01",

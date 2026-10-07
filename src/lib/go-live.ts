@@ -94,10 +94,10 @@ const DUES = /dues/i;
 
 export function goLiveChecklist(community: Community, today: ISODate): GoLive {
   const a = community.association;
-  const owners = community.owners;
-  const president = owners.find((o) => o.boardRole === "President");
+  const homes = community.homes;
+  const president = homes.find((o) => o.boardRole === "President");
 
-  const otherHomes = owners.filter((o) => o.id !== president?.id);
+  const otherHomes = homes.filter((o) => o.id !== president?.id);
   const named = otherHomes.filter((o) => !o.placeholder);
   const rosterDone = otherHomes.length > 0;
 
@@ -105,7 +105,7 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
 
   const stripeDone = Boolean(a.stripeChargesEnabled);
 
-  const issued = Object.values(community.ownerCharges).some((lines) =>
+  const issued = Object.values(community.homeCharges).some((lines) =>
     lines.some((l) => l.kind === "charge" && DUES.test(l.label) && !OPENING_LINE.test(l.label)),
   );
   const next = community.nextChargeDate;
@@ -113,9 +113,9 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
 
   const reachable = named.filter((o) => o.email.trim());
   const invitesSent = community.emailLog.some((e) => e.category === "invite" && !e.error);
-  const residents = community.accounts.filter((acct) => acct.role === "resident" || acct.ownerId !== president?.id);
+  const residents = community.accounts.filter((acct) => acct.role === "resident" || acct.homeId !== president?.id);
   const joined = residents.length > 0;
-  const invitesDone = invitesSent || (reachable.length > 0 && reachable.every((o) => residents.some((r) => r.ownerId === o.id)));
+  const invitesDone = invitesSent || (reachable.length > 0 && reachable.every((o) => residents.some((r) => r.homeId === o.id)));
 
   const billing = billingStatus(community, today);
   const billingDone = billing.done;
@@ -125,7 +125,7 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
       key: "roster",
       label: "Homes added",
       detail: rosterDone
-        ? `${owners.length} homes listed, ${named.length} with an owner named`
+        ? `${homes.length} homes listed, ${named.length} with an owner named`
         : "Only your own home is listed",
       done: rosterDone,
       href: "/board/homeowners/import",

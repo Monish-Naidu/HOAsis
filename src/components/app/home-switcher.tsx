@@ -73,18 +73,18 @@ function HomeList({ place, onClose }: { place: { left: number; top: number }; on
         className="fixed z-50 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-card border border-border bg-surface text-fg shadow-float"
       >
         {mySeats.map((seat) => {
-          const owner = community.owners.find((o) => o.id === seat.ownerId);
+          const home = community.homes.find((o) => o.id === seat.homeId);
           const label = homeLabel(community, seat.unit);
-          const address = owner?.address && owner.address !== label ? owner.address : "";
-          const active = seat.ownerId === account?.ownerId;
+          const address = home?.address && home.address !== label ? home.address : "";
+          const active = seat.homeId === account?.homeId;
           return (
-            <li key={seat.ownerId}>
+            <li key={seat.homeId}>
               <button
                 type="button"
                 role="option"
                 aria-selected={active}
                 onClick={() => {
-                  chooseHome(seat.ownerId);
+                  chooseHome(seat.homeId);
                   onClose();
                 }}
                 className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
@@ -95,14 +95,14 @@ function HomeList({ place, onClose }: { place: { left: number; top: number }; on
                     <span className="block truncate text-footnote text-fg-subtle">{address}</span>
                   ) : null}
                 </span>
-                {owner ? (
+                {home ? (
                   <span
                     className={cn(
                       "tnum shrink-0 text-footnote font-medium",
-                      owner.balanceCents > 0 ? "text-fg" : "text-fg-subtle",
+                      home.balanceCents > 0 ? "text-fg" : "text-fg-subtle",
                     )}
                   >
-                    {money(owner.balanceCents)}
+                    {money(home.balanceCents)}
                   </span>
                 ) : null}
                 {active ? <Check className="size-3.5 shrink-0 text-ok" aria-hidden /> : null}

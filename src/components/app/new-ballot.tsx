@@ -21,7 +21,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
   const { community, addBallot, ballots } = useAppState();
   const { notify } = useToast();
 
-  const homes = community.owners.length || community.association.unitCount;
+  const homes = community.homes.length || community.association.unitCount;
   const today = todayIsoDate();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");

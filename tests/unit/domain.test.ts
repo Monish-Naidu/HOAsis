@@ -8,12 +8,12 @@ import {
   delinquency,
   insuranceExposure,
   interestSummary,
-  ownersById,
+  homesById,
   reserveSummary,
   bankAccounts,
   savingsOffers,
   association,
-  owners,
+  homes,
 } from "@/lib/data";
 import { complianceRegister } from "@/lib/compliance";
 import { mehrMeadows } from "@/lib/data/communities";
@@ -77,20 +77,20 @@ describe("association arithmetic", () => {
 
   it("derives the collection rate from the roster rather than a constant", () => {
     const d = delinquency();
-    const pastDue = owners.filter((o) => o.daysPastDue > 0);
+    const pastDue = homes.filter((o) => o.daysPastDue > 0);
     expect(d.past).toHaveLength(pastDue.length);
     expect(d.totalCents).toBe(pastDue.reduce((sum, o) => sum + o.balanceCents, 0));
-    expect(d.collectionRate).toBeCloseTo((owners.length - pastDue.length) / owners.length, 5);
+    expect(d.collectionRate).toBeCloseTo((homes.length - pastDue.length) / homes.length, 5);
   });
 
   it("has one owner record per unit, all 88 of them", () => {
-    expect(owners).toHaveLength(association.unitCount);
-    expect(new Set(owners.map((o) => o.unit)).size).toBe(association.unitCount);
+    expect(homes).toHaveLength(association.unitCount);
+    expect(new Set(homes.map((o) => o.unit)).size).toBe(association.unitCount);
   });
 
   it("indexes owners by id for constant time lookup", () => {
-    expect(ownersById.size).toBe(owners.length);
-    expect(ownersById.get("own-042")?.displayName).toBe("Monish Naidu");
+    expect(homesById.size).toBe(homes.length);
+    expect(homesById.get("own-042")?.displayName).toBe("Monish Naidu");
   });
 
   it("keeps percent funded between zero and one", () => {
