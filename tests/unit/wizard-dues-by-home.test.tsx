@@ -59,11 +59,11 @@ const base: CommunityDraft = {
 };
 
 describe("the dues step", () => {
-  it("keeps Each home pays for the default choice, and offers by home without by kind for one kind", async () => {
+  it("keeps Each unit pays for the default choice, and offers by home without by kind for one kind", async () => {
     openOn(base, "dues");
-    expect(await screen.findByLabelText(/Each home pays/i)).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Same for every home" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Different by home" })).toBeInTheDocument();
+    expect(await screen.findByLabelText(/Each unit pays/i)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Same for every unit" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Different by unit" })).toBeInTheDocument();
     // One kind of home, so there is no "by kind" to offer.
     expect(screen.queryByRole("radio", { name: "Different by kind" })).not.toBeInTheDocument();
   });
@@ -77,13 +77,13 @@ describe("the dues step", () => {
   it("says what by home is for, and relabels the amount as the fallback", async () => {
     const user = userEvent.setup();
     openOn(base, "dues");
-    await user.click(await screen.findByRole("radio", { name: "Different by home" }));
+    await user.click(await screen.findByRole("radio", { name: "Different by unit" }));
     expect(screen.getByText("For buildings where a larger unit pays more.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Most homes pay/)).toHaveValue(210);
-    expect(screen.queryByLabelText(/Each home pays/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Most units pay/)).toHaveValue(210);
+    expect(screen.queryByLabelText(/Each unit pays/i)).not.toBeInTheDocument();
     // And back again.
-    await user.click(screen.getByRole("radio", { name: "Same for every home" }));
-    expect(screen.getByLabelText(/Each home pays/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Same for every unit" }));
+    expect(screen.getByLabelText(/Each unit pays/i)).toBeInTheDocument();
   });
 });
 
@@ -91,7 +91,7 @@ describe("the homes step, by home", () => {
   it("gives each range an optional amount and totals by the rule", async () => {
     const user = userEvent.setup();
     openOn({ ...base, duesByHome: true }, "homes");
-    const upstairs = await screen.findByLabelText("Each home in this range pays, Second floor");
+    const upstairs = await screen.findByLabelText("Each unit in this range pays, Second floor");
     // Blank shows the usual amount, and the total is every home at it.
     expect(upstairs).toHaveValue(null);
     expect(screen.getByText(/\$1,680 per month/)).toBeInTheDocument();
@@ -104,8 +104,8 @@ describe("the homes step, by home", () => {
 
   it("shows no range amounts unless the board bills by home", async () => {
     openOn(base, "homes");
-    await screen.findByLabelText("First floor first lot");
-    expect(screen.queryByLabelText(/Each home in this range pays/)).not.toBeInTheDocument();
+    await screen.findByLabelText("First floor first unit");
+    expect(screen.queryByLabelText(/Each unit in this range pays/)).not.toBeInTheDocument();
   });
 
   it("gives each address row an optional amount", async () => {

@@ -22,6 +22,17 @@ export function dollarsToCents(raw: string): number {
 }
 
 export const WHOLE_CENTS_MESSAGE = "Enter dollars and cents, like 285.00";
+export const FRACTION_CENTS_MESSAGE = "Use whole cents, like 12.50";
+
+/**
+ * Why text that is not a plain amount was refused: a third decimal gets its
+ * own line, anything else (letters, "12e3") the general one. Dues, a hand
+ * payment and the pay screen all say it this way.
+ */
+export function amountFormatMessage(raw: string): string {
+  const text = raw.trim().replace(/^\$/, "").replace(/,/g, "").trim();
+  return /^-?\d*\.\d{3,}$/.test(text) ? FRACTION_CENTS_MESSAGE : WHOLE_CENTS_MESSAGE;
+}
 
 /**
  * A payment the board records by hand: above zero, in whole cents, and no
@@ -33,7 +44,7 @@ export const WHOLE_CENTS_MESSAGE = "Enter dollars and cents, like 285.00";
 export function checkManualPayment(raw: string, balanceCents: number): PayAmountCheck {
   if (!raw.trim()) return { ok: false, message: "Enter an amount above $0" };
   const cents = dollarsToCents(raw);
-  if (!Number.isFinite(cents)) return { ok: false, message: WHOLE_CENTS_MESSAGE };
+  if (!Number.isFinite(cents)) return { ok: false, message: amountFormatMessage(raw) };
   if (cents <= 0) return { ok: false, message: "Enter an amount above $0" };
   const owed = Math.max(balanceCents, 0);
   const ceiling = owed + MAX_EXTRA_PAYMENT_CENTS;
@@ -70,6 +81,10 @@ export type PayAmountCheck =
 export function checkPayAmount(raw: string, balanceCents: number): PayAmountCheck {
   const none = { ok: false, message: "Enter an amount above $0" } as const;
   const cents = dollarsToCents(raw);
+  // A third decimal is a different problem from letters or zero, and says so.
+  if (!Number.isFinite(cents) && raw.trim() && amountFormatMessage(raw) === FRACTION_CENTS_MESSAGE) {
+    return { ok: false, message: FRACTION_CENTS_MESSAGE };
+  }
   if (!Number.isFinite(cents) || cents <= 0) return none;
   const owed = Math.max(balanceCents, 0);
   const ceiling = owed + MAX_EXTRA_PAYMENT_CENTS;
@@ -128,7 +143,7 @@ export function duesTextProblem(raw: string): string | null {
   if (!raw.trim()) return null;
   const cents = dollarsToCents(raw);
   // "abc", a third decimal and "12e3" are a format problem, said as one.
-  return Number.isFinite(cents) ? duesProblem(cents) : WHOLE_CENTS_MESSAGE;
+  return Number.isFinite(cents) ? duesProblem(cents) : amountFormatMessage(raw);
 }
 
 export const LATE_FEE_MIN_DAYS = 2;

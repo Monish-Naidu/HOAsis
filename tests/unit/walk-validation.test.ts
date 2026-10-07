@@ -216,7 +216,7 @@ describe("money typed as dollars", () => {
   });
 
   it("names the format problem for a dues field instead of calling it zero", () => {
-    expect(duesTextProblem("285.555")).toBe("Enter dollars and cents, like 285.00");
+    expect(duesTextProblem("285.555")).toBe("Use whole cents, like 12.50");
     expect(duesTextProblem("12e3")).toBe("Enter dollars and cents, like 285.00");
     expect(duesTextProblem("100000")).toBeNull();
     expect(duesTextProblem("100000.01")).toBe(DUES_HIGH_MESSAGE);
@@ -246,5 +246,19 @@ describe("a payment recorded by hand", () => {
     expect(checkManualPayment("12e3", balance).ok).toBe(false);
     expect(checkManualPayment("0", balance).ok).toBe(false);
     expect(checkManualPayment("", balance).ok).toBe(false);
+  });
+});
+
+describe("the pay screen's other amount", () => {
+  it("says whole cents for more than two decimals and keeps the old words for the rest", () => {
+    expect(checkPayAmount("1.999", 10_000)).toEqual({ ok: false, message: "Use whole cents, like 12.50" });
+    expect(checkPayAmount("$12.505", 10_000).ok).toBe(false);
+    for (const bad of ["0", "-5", "abc", "", "12e3"]) {
+      expect(checkPayAmount(bad, 10_000)).toEqual({ ok: false, message: "Enter an amount above $0" });
+    }
+    expect(checkPayAmount("12.50", 10_000)).toEqual({ ok: true, cents: 1250, extraCents: 0 });
+  });
+  it("is the same line on a hand payment", () => {
+    expect(checkManualPayment("1.999", 10_000)).toEqual({ ok: false, message: "Use whole cents, like 12.50" });
   });
 });

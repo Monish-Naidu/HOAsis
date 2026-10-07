@@ -31,7 +31,7 @@ async function clearOnce(page: Page) {
   await page.reload();
 }
 
-type Kind = "Detached homes" | "Townhomes" | "Condominiums";
+type Kind = "Detached homes" | "Townhomes" | "Condos";
 
 /** Founds an association from the plat, with three lots and a named buyer. */
 async function found(page: Page, name: string, property: Kind) {
@@ -62,7 +62,7 @@ async function found(page: Page, name: string, property: Kind) {
   await next();
   await page.getByRole("button", { name: new RegExp(property) }).click();
   await next();
-  await page.getByLabel(/Each home pays/i).fill("250");
+  await page.getByLabel(/Each (home|unit|lot) pays/i).fill("250");
   await next();
 
   await page.getByRole("button", { name: /^Pool$/ }).click();
@@ -70,11 +70,11 @@ async function found(page: Page, name: string, property: Kind) {
 
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
-  await page.getByLabel("Your home address").fill("1 Founder Way");
+  await page.getByLabel(/^Your (home|unit|lot) address/).fill("1 Founder Way");
   await page.getByLabel(/^(Lot|Home|Unit) number$/).fill("1");
   await next();
-  await page.getByLabel("Phase 1 first lot").fill("1");
-  await page.getByLabel("Phase 1 last lot").fill("3");
+  await page.getByLabel(/^Phase 1 first (home|unit|lot)$/).fill("1");
+  await page.getByLabel(/^Phase 1 last (home|unit|lot)$/).fill("3");
 
   // One lot has sold. The other two are the builder's, which is the ordinary
   // state of a community that is still being built.
@@ -130,7 +130,7 @@ async function completeEverything(page: Page, property: Kind) {
   if (property !== "Detached homes") {
     await uploadDoc(page, "Maintenance responsibility matrix.pdf");
   }
-  if (property === "Condominiums") {
+  if (property === "Condos") {
     await uploadDoc(page, "Structural inspection report.pdf");
   }
 
@@ -193,7 +193,7 @@ async function completeEverything(page: Page, property: Kind) {
   await expect(page.getByText("Bellevue Lawn").locator("visible=true").first()).toBeVisible();
 }
 
-for (const property of ["Detached homes", "Townhomes", "Condominiums"] as const) {
+for (const property of ["Detached homes", "Townhomes", "Condos"] as const) {
   test(`${property}: every step maps to a screen that can finish it`, async ({ page }) => {
     test.setTimeout(120_000);
     await found(page, `${property.split(" ")[0]} Complete HOA`, property);

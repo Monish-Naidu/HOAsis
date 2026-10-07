@@ -15,6 +15,11 @@ import { addStatementLine } from "@/lib/statement";
 import { activityWords } from "@/lib/activity";
 import type { LedgerReversal } from "./types";
 
+/** Who a payment line names: the household's name when known, else the home ("Lot 7"), never a bare "Owner". */
+function payerName(home: { displayName?: string; unit: string } | undefined): string {
+  return home?.displayName?.trim() || (home ? placeLabel(home.unit) : "Unknown home");
+}
+
 /**
  * Money: payments and charges, credits, reversals, starting balances, saved
  * payment methods, autopay, invoices, payouts, reserves and the ledger review.
@@ -163,7 +168,7 @@ export function useMoneyActions(deps: AppDeps) {
           id: `led-${date}-${input.homeId}-${all.length + 1}`,
           date,
           description: `Assessment payment, unit ${home?.unit ?? "?"}`,
-          counterparty: home?.displayName ?? "Owner",
+          counterparty: payerName(home),
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
           amountCents: input.amountCents,
@@ -352,7 +357,7 @@ export function useMoneyActions(deps: AppDeps) {
           id: `led-reversal-${date}-${paymentId}`,
           date,
           description: `Payment reversed, ${placeLabel(home?.unit ?? "?")}`,
-          counterparty: home?.displayName ?? "Owner",
+          counterparty: payerName(home),
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
           amountCents: -amountCents,

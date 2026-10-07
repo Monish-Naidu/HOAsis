@@ -121,3 +121,15 @@ describe("who is emailed", () => {
     expect(people.map((p) => p.email)).toEqual(["arya@example.com", "sofia@example.com"]);
   });
 });
+
+describe("Mine across two offices", () => {
+  const threads = [
+    { id: "t1", toRole: "treasurer" as const },
+    { id: "t2", toRole: "president" as const },
+    { id: "t3", toRole: "board" as const },
+  ];
+  it("lists the treasurer's and the board's, and not the President's", () => {
+    expect(threads.filter((t) => isMine(t, "treasurer")).map((t) => t.id)).toEqual(["t1", "t3"]);
+    expect(threads.filter((t) => isMine(t, "president")).map((t) => t.id)).toEqual(["t2", "t3"]);
+  });
+});

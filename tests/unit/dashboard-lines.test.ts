@@ -136,6 +136,11 @@ describe("this month sentence", () => {
     expect(thisMonthLine({ ...c, asOf }, asOf)).toMatch(/^October: the bill of \$[\d,]+ posts on the 1st, /);
   });
 
+  it("promises no reminders before any bill has been issued", () => {
+    const fresh = { ...c, homeCharges: {}, recentDuesBill: undefined, nextChargeDate: "2026-09-01" };
+    expect(thisMonthLine(fresh)).toBe("First bill goes out Sep 1.");
+  });
+
   it("has nothing to say for an association with no homes", () => {
     expect(thisMonthLine(empty)).toBeNull();
   });

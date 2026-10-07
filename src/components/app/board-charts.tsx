@@ -266,7 +266,7 @@ export function SpendingDonut({
               )}
             >
               <span className={cn("size-2.5 shrink-0 rounded-sm", sliceClass(row, i, "chip"))} />
-              <span className="min-w-0 flex-1 truncate text-footnote font-medium text-fg">
+              <span className="min-w-0 flex-1 text-footnote font-medium leading-tight text-fg">
                 {row.category}
               </span>
               <span className="tnum text-footnote font-semibold text-fg">

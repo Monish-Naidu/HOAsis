@@ -96,7 +96,7 @@ export function CollectionsLadder({
           ladder.dueNow.length
             ? `${ladder.dueNow.length} ${ladder.dueNow.length === 1 ? "needs" : "need"} a notice today`
             : "No notice owed today"
-        }. ${money(ladder.totalCents)} outstanding.`}
+        }. ${money(ladder.totalCents)} past due across ${pluralize(ladder.rows.length, "home")}.`}
         action={
           ladder.dueNow.length ? (
             <ButtonLink href="/board/homeowners?remind=1" variant="primary" size="md">

@@ -116,6 +116,30 @@ export function boardLocked(phase: BillingPhase): boolean {
   }
 }
 
+/**
+ * What the lock is called on every screen that mentions it: the banner, the
+ * wall, the Settings card and the owner's note. Null while the board can still
+ * work, so nothing says "read-only" before it is true.
+ */
+export function lockWords(phase: BillingPhase): { title: string; body: string; pill: string } | null {
+  if (!boardLocked(phase)) return null;
+  const title =
+    phase.phase === "ended"
+      ? "The free 90 days ended"
+      : phase.phase === "past_due"
+        ? "The last payment failed"
+        : "The subscription ended";
+  return {
+    title,
+    body: "The board's screens are read-only until a card is added; residents can still pay.",
+    pill: "Read-only",
+  };
+}
+
+/** The owner's one line when the board is locked, from the same words. */
+export const OWNER_LOCK_NOTE =
+  "The board's subscription ended, so the board's side is paused. You can still pay and read everything here.";
+
 /** The four columns of an associations row that decide the lock. */
 export interface BillingRow {
   subscription_status: string | null;

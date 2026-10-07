@@ -6,6 +6,7 @@ import {
   billingPhase,
   boardLocked,
   checkoutTrialEnd,
+  lockWords,
   rowLocked,
   statusFromStripe,
   subscriptionLine,
@@ -199,5 +200,19 @@ describe("rowLocked, the rule the jobs read", () => {
 
   it("gives jobs a reason to print", () => {
     expect(LOCKED_REASON).toBe("the association's subscription is not paid");
+  });
+});
+
+describe("the words for the lock", () => {
+  it("name the phase and say nothing while the board can still work", () => {
+    const base = { homes: 4, hasSubscription: false, trialEndsOn: "2026-06-01" };
+    const ended = billingPhase({ ...base, status: "trialing" }, "2026-10-01");
+    expect(lockWords(ended)?.title).toBe("The free 90 days ended");
+    expect(lockWords(billingPhase({ ...base, status: "canceled" }, "2026-10-01"))?.title).toBe("The subscription ended");
+    expect(lockWords(billingPhase({ ...base, status: "past_due", pastDueSince: "2026-09-01" }, "2026-10-01"))?.title).toBe(
+      "The last payment failed",
+    );
+    expect(lockWords(billingPhase({ ...base, status: "trialing" }, "2026-06-05"))).toBeNull();
+    expect(lockWords(billingPhase({ ...base, status: "active" }, "2026-10-01"))).toBeNull();
   });
 });

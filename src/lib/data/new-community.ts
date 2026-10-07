@@ -7,9 +7,9 @@ import { caps, GRANTABLE, NO_CAPABILITIES } from "./accounts";
 
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
-import { wordingFor } from "@/lib/wording";
+import { isNumbered, wordingFor } from "@/lib/wording";
 import { homeTypesOf, soleType } from "@/lib/home-types";
-import { expandPhases, lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor } from "@/lib/lots";
+import { expandPhases, lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor, phaseProblems } from "@/lib/lots";
 import { addDays, nextDueOnOrAfter } from "@/lib/utils";
 import { policyWithLateFee } from "@/lib/collections";
 import { associationNameProblem, duesProblem } from "@/lib/input-checks";
@@ -429,6 +429,11 @@ export function defaultHomeNaming(draft: CommunityDraft): HomeNaming {
 export function homesAnswered(draft: CommunityDraft): boolean {
   if (draft.parkedHouseholds?.length) return false;
   if ((draft.homeNaming ?? defaultHomeNaming(draft)) === "addresses") return true;
+  // A range with a problem creates nothing, and an amount of zero is not "the
+  // usual". Both are shown under the range, so Continue waits for them rather
+  // than quietly dropping homes or swapping the amount.
+  if (phaseProblems(draft.phases ?? []).length > 0) return false;
+  if (draftOwnDuesProblem(draft)) return false;
   return expandPhases(draft.phases ?? [], draft.lotPrefix ?? "").length > 0;
 }
 
@@ -562,8 +567,12 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
   const homeId = (unit: string) => `${id}-own-${unit}`;
   // A home without an address yet is shown by its number, in the community's
   // own words: "Lot 12" on a subdivision, "Unit 12" anywhere attached.
+  // A label the range already printed ("Unit 102") is left as it is, so the
+  // word is never put on twice.
   const numbered = (unit: string) =>
-    `${wordingFor(homeTypesOf(draft), draft.origin).numberExample} ${unit}`;
+    isNumbered(unit)
+      ? `${wordingFor(homeTypesOf(draft), draft.origin).numberExample} ${unit}`
+      : unit;
   const accountId = (unit: string) => `${id}-acct-${unit}`;
 
   const founderHome: Home = {

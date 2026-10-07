@@ -7,6 +7,7 @@ import { homeCount } from "@/lib/metrics";
 import { useToast } from "@/components/app/toast";
 import { monthlyFor } from "@/lib/pricing";
 import { formatDate, money } from "@/lib/utils";
+import { lockWords } from "@/lib/billing";
 import { usePhase } from "./trial-banner";
 
 /**
@@ -68,26 +69,32 @@ export function BillingRow() {
       </Button>
     );
   } else if (phase.phase === "ended") {
-    description = `The free 90 days ended ${formatDate(phase.endsOn, "long")}. ${price} from the day a card is added.`;
-    status = <Badge tone="danger">Free period ended</Badge>;
+    const lock = lockWords(phase);
+    description = lock
+      ? `${lock.title} ${formatDate(phase.endsOn, "long")}. ${lock.body} ${price} from the day a card is added.`
+      : `The free 90 days ended ${formatDate(phase.endsOn, "long")}. ${price} from the day a card is added.`;
+    status = <Badge tone="danger">{lock ? lock.pill : "Card needed"}</Badge>;
     button = (
       <Button variant="primary" size="sm" onClick={() => open("checkout")} disabled={busy}>
         {busy ? "Opening…" : "Add a card"}
       </Button>
     );
   } else if (phase.phase === "past_due") {
-    description = `${price}. The last payment did not go through; Stripe will retry.`;
-    status = <Badge tone="danger">Payment failed</Badge>;
+    const lock = lockWords(phase);
+    description = lock
+      ? `${lock.title}. ${lock.body}`
+      : `${price}. The last payment failed; Stripe will retry.`;
+    status = <Badge tone="danger">{lock ? lock.pill : "Retrying"}</Badge>;
     button = (
       <Button variant="primary" size="sm" onClick={() => open("portal")} disabled={busy}>
         {busy ? "Opening…" : "Update the card"}
       </Button>
     );
   } else if (phase.phase === "canceled") {
-    // The phase's own word is "ended". Owners can still pay while it is, so
-    // the card says what stopped (the board's access) and not a bare "Cancelled".
-    description = `The subscription ended. Owners can still pay; the board is read-only. Nothing is billed and nothing is deleted. Start again at ${price} on Stripe's billing page.`;
-    status = <Badge tone="neutral">Subscription ended</Badge>;
+    // The phase's own word is "ended"; billing.ts has the words for what stopped.
+    const lock = lockWords(phase);
+    description = `${lock?.title}. ${lock?.body} Nothing is billed and nothing is deleted. Start again at ${price} on Stripe's billing page.`;
+    status = <Badge tone="neutral">{lock?.pill}</Badge>;
     button = (
       <Button variant="secondary" size="sm" onClick={() => open("portal")} disabled={busy}>
         {busy ? "Opening…" : "Manage billing"}

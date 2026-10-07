@@ -217,6 +217,7 @@ export function PeriodControl({
   presets = [...MENU_PRESETS, "custom"],
   asOf,
   fyMonth = 1,
+  earliest,
   className,
 }: {
   value: { preset: PeriodPreset; from: string; to: string };
@@ -225,6 +226,8 @@ export function PeriodControl({
   presets?: readonly PeriodPreset[];
   asOf: string;
   fyMonth?: number;
+  /** The first date with money on the books: Previous stops when the period before would end ahead of it. */
+  earliest?: string | null;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -234,7 +237,8 @@ export function PeriodControl({
   const trigger = useRef<HTMLButtonElement>(null);
 
   const words = periodWords(value.preset, value, fyMonth);
-  const back = stepPeriod(value.preset, value, -1, asOf, fyMonth);
+  const stepped = stepPeriod(value.preset, value, -1, asOf, fyMonth);
+  const back = stepped && earliest && stepped.to < earliest ? null : stepped;
   const forward = stepPeriod(value.preset, value, 1, asOf, fyMonth);
   const draftOk = draft.from !== "" && draft.to !== "" && draft.from <= draft.to;
 

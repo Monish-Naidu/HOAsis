@@ -426,7 +426,7 @@ export function SettingsScreen() {
               <DraftField
                 value={community.association.insuranceCarrier ?? ""}
                 onCommit={(insuranceCarrier) => updateAssociation({ insuranceCarrier })}
-                placeholder="Farmers Insurance"
+                placeholder="Carrier name"
                 aria-label="Insurance carrier"
                 className={cn(fieldClass, "mt-1.5")}
               />
@@ -436,7 +436,7 @@ export function SettingsScreen() {
               <DraftField
                 value={community.association.insurancePolicyNo ?? ""}
                 onCommit={(insurancePolicyNo) => updateAssociation({ insurancePolicyNo })}
-                placeholder="WA-CA-4471982"
+                placeholder="Policy number"
                 aria-label="Policy number"
                 className={cn(fieldClass, "mt-1.5")}
               />
@@ -719,7 +719,7 @@ export function SettingsScreen() {
               [
                 [documents.length, "documents"],
                 [community.history?.ledgerCount ?? ledger.length, "transactions"],
-                [community.homes.length, "owners"],
+                [community.homes.length, "homes"],
                 [vendors.length, "vendors"],
                 [community.meetings.length, "meetings on record"],
                 [requests.length, "requests"],
@@ -758,13 +758,17 @@ export function SettingsScreen() {
               </Callout>
             </div>
           ) : null}
+          {/* The grid is wider than a phone. The fade on the right edge says
+              there is more to scroll to, and the member column stays put so
+              a row is never read without its name. */}
+          <div className="relative">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] text-left">
               <thead>
                 <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
                   {/* Wide enough for a name and a title on one line each; the
                       capability columns share what is left. */}
-                  <th className="w-[13rem] min-w-[13rem] px-5 py-2.5 font-semibold">Board member</th>
+                  <th className="sticky left-0 z-10 w-[13rem] min-w-[13rem] bg-surface px-5 py-2.5 font-semibold">Board member</th>
                   {GRID_AREAS.map((c) => (
                     <th key={c} className="px-2 py-2.5 text-center font-semibold">
                       {CAPABILITY_LABEL[c]}
@@ -777,7 +781,7 @@ export function SettingsScreen() {
                   .filter((a) => a.role !== "resident")
                   .map((a) => (
                     <tr key={a.id} className="border-b border-border last:border-b-0">
-                      <td className="px-5 py-3">
+                      <td className="sticky left-0 z-10 bg-surface px-5 py-3">
                         <p className="text-body font-medium text-fg">{a.name}</p>
                         <p className="text-footnote text-fg-muted">{ROLE_LABEL[a.role]}</p>
                       </td>
@@ -800,6 +804,11 @@ export function SettingsScreen() {
                   ))}
               </tbody>
             </table>
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface to-transparent xl:hidden"
+          />
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-5 py-3 text-footnote text-fg-subtle">
             <span className="inline-flex items-center gap-1.5"><Minus className="size-3.5" aria-hidden /> No access</span>
@@ -1042,7 +1051,7 @@ export function ContactEmailRow({
             if (ok) notify(next ? "Saved. Replies go to that address." : "Saved. Emails now say not to reply.", "ok");
           });
         }}
-        placeholder="board@maplecourt.org"
+        placeholder="board@yourassociation.org"
         aria-label="Board contact email"
         className={cn(fieldClass, "w-64 max-w-full")}
       />

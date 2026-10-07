@@ -1,4 +1,5 @@
 import { CAPABILITY_LABEL } from "@/lib/data/accounts";
+import { moduleOn } from "@/lib/modules";
 import type { Activity } from "@/lib/types";
 import { formatDate, money } from "@/lib/utils";
 
@@ -22,10 +23,16 @@ function rawHome(row: Activity, unitLabelById: (id: string) => string | undefine
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** A capability list as the access grid names the areas: "Messages, Meetings". */
+/**
+ * A capability list as the access grid names the areas: "Messages, Meetings".
+ * The compliance capability belongs to a module that is switched off, so the
+ * grid has no column for it and the line does not name it either.
+ */
 function areaWords(list: unknown): string {
-  if (!Array.isArray(list) || list.length === 0) return "nothing";
-  return list
+  if (!Array.isArray(list)) return "nothing";
+  const shown = list.filter((c) => c !== "compliance" || moduleOn("compliance"));
+  if (shown.length === 0) return "nothing";
+  return shown
     .map((c) => CAPABILITY_LABEL[c as keyof typeof CAPABILITY_LABEL] ?? String(c))
     .sort()
     .join(", ");
