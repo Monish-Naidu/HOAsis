@@ -10,30 +10,21 @@ review (257 findings, seven walkers). Both are summarised here; the full
 findings were session files and are not in the repo, so anything worth
 keeping is written into a row below.
 
-**Where it stands (2026-10-06, early):** pull requests #10 and #11 merged
-and live (owners with several homes, autopay failures on Past due, notices
-name their rule, support can reassign the presidency); migrations through
-0099 applied. Pull request #12: board contact address, retiring a home, the
-daily digest email (section 14), the Azure plan (docs/azure-migration-plan.md).
-Monish's overnight list of 2026-10-05 is section 14. Earlier note follows.
+**Where it stands (2026-10-07):** pull requests #7 to #20 are merged and
+live; migrations through 0107 are applied. Sections 9 to 20 hold what
+landed on 2026-10-05 and 06. The game plan below is the order from here;
+sections 11 to 20 keep the row-level detail.
 
-**Where it stood (end of 2026-10-05):** pull requests #7, #8 and #9 are
-merged and live; migrations through 0094 are applied. Every row marked
-done in sections 9 to 13 is on production. Next: the open rows of section
-12 (owners with several homes, an unreachable president, autopay failures
-on Past due), the notice title field, the hydration error on `/start`, and
-the decisions waiting on Monish. Earlier note follows.
+## The game plan (agreed 2026-10-07)
 
-**Where it stood (2026-10-05, night):** sections 0, 2 to 5, 9, 10 and most
-of 11 are on production (pull request #7 merged, main at 41597a9), with the
-first half of section 12: one-off charges, undoing a payment recorded by
-hand, sale privacy, autopay retry, no late fee on a starting balance.
-Migrations through 0091 are applied to the live database. On branch
-`first-year`, not yet merged: removing one of two owners, an owner changing
-their own email, and late fees after a reversed payment. Next: section 13
-(what the browser walk found), then the rest of section 12. Waiting on
-Monish: search engines (section 11), automatic dues email (section 12),
-staging and Resend (section 8), the wording questions in section 10.
+| Phase | What | Rows |
+| --- | --- | --- |
+| 1. Prove it | A second review round on the merged build (founder from nothing, a treasurer's first month, an owner on a phone, the year-two reviewer re-run on the billing lock, append-only and offices); Monish's own walk; one fix chunk | new section when run |
+| 2. The refactors | Split `src/lib/app-state.tsx` by area (one area per commit, both state suites after each); `Owner` to `Home` and `ownerId` to `homeId`; the demo and the library text out of the signed-in bundle; Settings, Homeowners and the wizard into sections | section 17 |
+| 3. First-year needs | Real file upload on requests and notices; meetings (change, cancel, minutes, attendance); printable statement and a year-end run; fines that post to the balance; a complete export and an "Annual records" screen; a time zone per association; the financial reporting plan (docs/financial-reporting.md) | sections 15 and 16 |
+| 4. Operations | Session revoke and an actor filter on Activity; the autopay job filtered to homes due today; seat the winners from a closed ballot and a results email; a skip link and an axe pass | section 16 |
+| 5. Growth | Instalments and reserve drawdowns, paper and proxy votes with quorum, document versions, resale certificates, 1099s, merging associations, texts, QuickBooks, Spanish, native apps | section 15 |
+| Monish | Resend domain, Supabase staging terms, Sentry DSN, an uptime check, the `EMAIL_FROM` value on Vercel, Stripe live mode, the LLC and the lawyer pass | docs/go-live-monish.md |
 
 Status words: **done** (in the working tree and checked), **doing**,
 **next**, **waiting** (on Monish), **later** (not for launch).
