@@ -150,7 +150,7 @@ answers.
 | Step | What | Why first | Size |
 | --- | --- | --- | --- |
 | 1 | Monthly rollup tables with triggers; `association_overview` reads them | Everything after needs fast sums; append-only makes it safe now | Done 2026-10-07: 0108, `ledger_months` and `statement_months`, `scripts/verify-rollups.mjs` |
-| 2 | Fiscal-year close with a `fiscal_years` row, reopen logged | Closed years stop moving; the year-over-year view has a fixed base | 2 days |
+| 2 | Fiscal-year close with a `fiscal_years` row, reopen logged | Closed years stop moving; the year-over-year view has a fixed base | Done 2026-10-07: 0109, closed by the daily ops job, `reopen_fiscal_year` and `close_fiscal_year` for the board, `scripts/verify-fiscal-years.mjs`; the screen that shows a closed year is still to build |
 | 3 | Period filter with fiscal years and "compare to a year earlier" on Transactions and Overview; chip totals | Cheapest visible win on screens that exist | 2 days |
 | 4 | Statement history import, then ledger history import | The first association with years behind it needs this on day one | 1 week |
 | 5 | Switch on Budget versus actual and Trends, reworked to the rollups and the rules above | Already built; needs the pass | 3 days |
