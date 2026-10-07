@@ -468,3 +468,22 @@ smart filtering." Built the same day (pull request #20).
 | Theme buttons labelled; Washington placeholders; "Test mode: payments are simulated"; the subscription card says its phase; "Pay" everywhere; "Continue" until the amount is valid; one form at a time on Pay; resolved notices with dates | done |
 | Left: a past-due change against last month (no history selector yet); the autopay day picker stays and the copy follows it | later |
 
+## 21. Financial reporting
+
+Monish, 2026-10-07: "how do we build a proper financial reporting platform;
+as we get more HOAs who have been there for years, how do we keep
+historical data, do we show trends, and what filters and views do we give
+users that are actually helpful." The plan is docs/financial-reporting.md.
+Rows in its order:
+
+| Step | Status |
+| --- | --- |
+| 1. Monthly rollup tables kept by triggers; `association_overview` reads them | next, after the refactors |
+| 2. Fiscal-year close, reopen logged | next |
+| 3. Period filter with fiscal years and compare-to-last-year on Transactions and Overview; totals on the category chips | next |
+| 4. History import: statements per home, then bank lines, through the roster-import pattern | next, before the first association with years behind it |
+| 5. Budget versus actual and Trends switched on, reworked to the rollups | later |
+| 6. Annual records: exports per area for a year, then the screen | later |
+| 7. Saved views, five defaults | later |
+| 8. Per-home and reserve trends | later |
+
