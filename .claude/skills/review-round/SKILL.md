@@ -79,3 +79,9 @@ not seen was rolled back on 2026-09-24.
   symptom reports it as a product bug. Say which is which in the brief.
 - Agents that share `src/lib/app-state.tsx` overwrite each other. Boundary
   or sequence, never both at once.
+- A stacked pull request (base = another branch) is closed by GitHub, not
+  retargeted, when its base branch is deleted on merge. Open stacked work
+  against main after the first merge, or merge without `--delete-branch`.
+- A walker's test association can be left locked (subscription cancelled)
+  by an earlier billing test. Check `association_writable` on it before
+  a signed-in walk, and put it back on a trial afterwards.
