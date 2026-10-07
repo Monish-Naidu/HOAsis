@@ -9,7 +9,7 @@ function scope(overrides: Partial<AssistantScope> = {}): AssistantScope {
 describe("assistant", () => {
   it("answers a late payment question from the account, not from a guess", () => {
     const ctx = scope();
-    ctx.owner = { ...ctx.owner, balanceCents: 85_500, daysPastDue: 62, standing: "late" };
+    ctx.home = { ...ctx.home, balanceCents: 85_500, daysPastDue: 62, standing: "late" };
     const answer = answerQuestion("do I have a late payment?", ctx);
     expect(answer.text).toContain("62 days past due");
     expect(answer.text).toContain("$855.00");
@@ -18,7 +18,7 @@ describe("assistant", () => {
 
   it("says no plainly when the account is current", () => {
     const ctx = scope();
-    ctx.owner = { ...ctx.owner, balanceCents: 0, daysPastDue: 0, standing: "current" };
+    ctx.home = { ...ctx.home, balanceCents: 0, daysPastDue: 0, standing: "current" };
     expect(answerQuestion("am I late", ctx).text).toContain("No late payment");
   });
 
@@ -61,7 +61,7 @@ describe("assistant", () => {
 
   it("never states a figure that is not in the snapshot", () => {
     const ctx = scope();
-    ctx.owner = { ...ctx.owner, balanceCents: 12_345 };
+    ctx.home = { ...ctx.home, balanceCents: 12_345 };
     const answer = answerQuestion("what is my balance", ctx);
     const amounts = answer.text.match(/\$[\d,]+\.\d{2}/g) ?? [];
     for (const amount of amounts) expect(amount).toBe("$123.45");

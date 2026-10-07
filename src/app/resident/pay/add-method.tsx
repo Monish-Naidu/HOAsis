@@ -9,7 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Badge, Button, Callout, Card } from "@/components/ui/primitives";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { supportedInstitutions } from "@/lib/data";
 import { isHoasisError } from "@/lib/core/errors";
 import {
@@ -48,14 +48,14 @@ const RAILS: { id: Rail; label: string; icon: typeof Landmark; hint: string }[] 
 export function AddMethod({ onDone }: { onDone: () => void }) {
   const [rail, setRail] = useState<Rail>("ach");
   const { isRemote, community } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
 
   // A real association saves methods through Stripe, so the demo tokenizer
   // below never sees a real number. This is the "change of one function" the
   // instruments module promised.
   if (isRemote) {
     const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
-    if (!owner || !community.association.stripeAccountId || !publishableKey) {
+    if (!home || !community.association.stripeAccountId || !publishableKey) {
       return (
         <Card className="p-4">
           <p className="text-body font-medium text-fg">Online payments are not set up yet</p>
@@ -68,7 +68,7 @@ export function AddMethod({ onDone }: { onDone: () => void }) {
     return (
       <StripeSetupPanel
         associationId={community.association.id}
-        unitId={owner.id}
+        unitId={home.id}
         publishableKey={publishableKey}
         onDone={onDone}
       />
@@ -109,7 +109,7 @@ export function AddMethod({ onDone }: { onDone: () => void }) {
 
 function LinkBank({ onDone }: { onDone: () => void }) {
   const { addInstrument } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const [institutionId, setInstitutionId] = useState<string | null>(null);
 
   const institution = supportedInstitutions.find((i) => i.id === institutionId);
@@ -153,11 +153,11 @@ function LinkBank({ onDone }: { onDone: () => void }) {
             key={account.mask}
             type="button"
             onClick={() => {
-              if (!owner) return;
+              if (!home) return;
               addInstrument(
                 linkBankAccount(
                   { institution: institution.name, accountType: account.type, mask: account.mask },
-                  { ownerId: owner.id, today: todayIsoDate() },
+                  { homeId: home.id, today: todayIsoDate() },
                 ),
               );
               onDone();
@@ -187,7 +187,7 @@ const TEST_CARD = "4242 4242 4242 4242";
 
 function AddCard({ onDone }: { onDone: () => void }) {
   const { addInstrument } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const [number, setNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
@@ -199,7 +199,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!owner) return;
+    if (!home) return;
     const [monthPart, yearPart] = expiry.split("/");
     try {
       const instrument = tokenizeCard(
@@ -210,7 +210,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
           cvc,
           postalCode,
         },
-        { ownerId: owner.id, today: todayIsoDate(), referenceDate: REFERENCE },
+        { homeId: home.id, today: todayIsoDate(), referenceDate: REFERENCE },
       );
       addInstrument(instrument);
       // Clear the field immediately. Nothing here should outlive the submit.

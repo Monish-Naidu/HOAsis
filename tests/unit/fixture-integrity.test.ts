@@ -24,21 +24,21 @@ describe("every community is internally consistent", () => {
       });
 
       it("gives every owner a unit that exists on the register", () => {
-        const units = new Set(community.owners.map((o) => o.unit));
+        const units = new Set(community.homes.map((o) => o.unit));
         // Two owners sharing a unit means two bills for one home.
-        expect(units.size).toBe(community.owners.length);
+        expect(units.size).toBe(community.homes.length);
       });
 
       it("counts homes rather than storing a number that can drift", () => {
-        if (community.owners.length > 0) {
-          expect(community.association.unitCount).toBe(community.owners.length);
+        if (community.homes.length > 0) {
+          expect(community.association.unitCount).toBe(community.homes.length);
         }
       });
 
       it("points every account at an owner that exists", () => {
-        const owners = new Set(community.owners.map((o) => o.id));
+        const homes = new Set(community.homes.map((o) => o.id));
         for (const account of community.accounts) {
-          expect(owners.has(account.ownerId), `${account.name} has no owner`).toBe(true);
+          expect(homes.has(account.homeId), `${account.name} has no owner`).toBe(true);
         }
       });
 
@@ -111,7 +111,7 @@ describe("every community is internally consistent", () => {
         const cents = [
           community.association.duesCents,
           ...community.bankAccounts.map((a) => a.balanceCents),
-          ...community.owners.map((o) => o.balanceCents),
+          ...community.homes.map((o) => o.balanceCents),
           ...community.budget.map((b) => b.annualCents),
         ];
         for (const value of cents) {

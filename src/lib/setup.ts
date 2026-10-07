@@ -1,6 +1,6 @@
 import type { Community } from "@/lib/data/community";
 import type { AssociationOrigin, PreviousSetup } from "@/lib/data/new-community";
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 import { OPENING_LINE, billingStatus } from "@/lib/go-live";
 import { BEFORE_THE_BANK, BUILDER_STEPS, HANDOVER_STEPS, type PortingStep } from "@/lib/porting";
 import { duesVary, homesWithOwnDues, totalDues } from "@/lib/home-types";
@@ -86,14 +86,14 @@ export interface SetupTask {
 }
 
 /** An owner is listed: somebody is named, and it is not a stand-in for an empty home. */
-export function hasOwner(o: Owner): boolean {
+export function hasOwner(o: Home): boolean {
   return !o.placeholder && o.members.length > 0;
 }
 
 /** Who is on the register, and who is missing. */
 export function rosterStatus(c: Community, f: PlanFacts = factsOf(c)) {
-  const homes = c.owners.length;
-  const withoutOwner = c.owners.filter((o) => !hasOwner(o)).length;
+  const homes = c.homes.length;
+  const withoutOwner = c.homes.filter((o) => !hasOwner(o)).length;
   // A builder still selling expects unsold lots, so the homes existing is the
   // whole of it there. Everyone else has an owner for every home.
   const stillSelling = f.origin === "builder";
@@ -107,15 +107,15 @@ export function rosterStatus(c: Community, f: PlanFacts = factsOf(c)) {
 
 /** Homes with an opening balance saved. A balance set to nothing leaves no line. */
 export function openingBalanceCount(c: Community): number {
-  return c.owners.filter((o) =>
-    (c.ownerCharges[o.id] ?? []).some((l) => OPENING_LINE.test(l.label)),
+  return c.homes.filter((o) =>
+    (c.homeCharges[o.id] ?? []).some((l) => OPENING_LINE.test(l.label)),
   ).length;
 }
 
 /** The first dues bill: when, and for how much per home. */
 export function firstBill(c: Community) {
   const cents = c.association.duesCents;
-  const issued = Object.values(c.ownerCharges).some((lines) =>
+  const issued = Object.values(c.homeCharges).some((lines) =>
     lines.some((l) => l.kind === "charge" && /dues/i.test(l.label) && !OPENING_LINE.test(l.label)),
   );
   return {
@@ -123,10 +123,10 @@ export function firstBill(c: Community) {
     cents,
     cadence: c.association.duesCadence,
     // Counts a home's own amount as well as a kind's.
-    varies: duesVary(c.association, c.owners),
-    ownCount: homesWithOwnDues(c.owners),
-    totalCents: totalDues(c.association, c.owners),
-    homes: c.owners.length,
+    varies: duesVary(c.association, c.homes),
+    ownCount: homesWithOwnDues(c.homes),
+    totalCents: totalDues(c.association, c.homes),
+    homes: c.homes.length,
     issued,
     done: cents > 0 && Boolean(c.nextChargeDate),
   };
@@ -138,14 +138,14 @@ export function firstBill(c: Community) {
  * "somebody got in" true before anybody was asked.
  */
 export function inviteStatus(c: Community) {
-  const founder = c.owners.find((o) => o.boardRole === "President");
-  const others = c.owners.filter((o) => o.id !== founder?.id && hasOwner(o));
+  const founder = c.homes.find((o) => o.boardRole === "President");
+  const others = c.homes.filter((o) => o.id !== founder?.id && hasOwner(o));
   const withEmail = others.filter((o) => o.email.trim());
   const sent = c.emailLog.filter((e) => e.category === "invite" && !e.error);
   const reached = withEmail.filter((o) => {
     const email = o.email.trim().toLowerCase();
     return (
-      c.accounts.some((a) => a.ownerId === o.id) ||
+      c.accounts.some((a) => a.homeId === o.id) ||
       sent.some((e) => e.to.trim().toLowerCase() === email || (e.unit && e.unit === o.unit))
     );
   });

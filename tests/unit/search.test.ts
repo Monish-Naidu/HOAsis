@@ -26,7 +26,7 @@ describe("the search index", () => {
   const index = boardIndex(mehrMeadows);
 
   it("finds a household by name, member, or unit", () => {
-    const rhea = mehrMeadows.owners.find((o) => o.displayName === "Rhea Calloway")!;
+    const rhea = mehrMeadows.homes.find((o) => o.displayName === "Rhea Calloway")!;
     expect(searchHits(index, "calloway")[0].title).toBe("Rhea Calloway");
     expect(searchHits(index, rhea.email).some((h) => h.title === "Rhea Calloway")).toBe(true);
     expect(searchHits(index, `unit ${rhea.unit}`).some((h) => h.title === "Rhea Calloway")).toBe(true);
@@ -52,7 +52,7 @@ describe("the search index", () => {
         { ...mehrMeadows.ballots[0], id: "shut", audience: "owners" as const, status: "open" as const, closesDate: "2020-01-01" },
       ],
     };
-    for (const hits of [boardIndex(past), residentIndex(past, past.owners[0])]) {
+    for (const hits of [boardIndex(past), residentIndex(past, past.homes[0])]) {
       expect(hits.find((h) => h.id === "mtg-gone")!.subtitle).toMatch(/· ended$/);
       const ballot = hits.find((h) => h.id === "bal-shut")!.subtitle;
       expect(ballot).toContain("closed · closes Jan 1, 2020");
@@ -82,11 +82,11 @@ describe("the search index", () => {
   });
 
   it("gives a resident only their own requests and notices", () => {
-    const mine = mehrMeadows.owners.find((o) => mehrMeadows.requests.some((r) => r.ownerId === o.id))!;
+    const mine = mehrMeadows.homes.find((o) => mehrMeadows.requests.some((r) => r.homeId === o.id))!;
     const hits = residentIndex(mehrMeadows, mine);
     const requests = hits.filter((h) => h.kind === "request");
     expect(requests.length).toBeGreaterThan(0);
-    const theirs = mehrMeadows.requests.filter((r) => r.ownerId !== mine.id);
+    const theirs = mehrMeadows.requests.filter((r) => r.homeId !== mine.id);
     for (const r of theirs) expect(hits.some((h) => h.id === `req-${r.id}`)).toBe(false);
     expect(hits.some((h) => h.kind === "household" || h.kind === "transaction")).toBe(false);
     expect(hits.filter((h) => h.kind === "document").every((h) => !h.subtitle.includes("board"))).toBe(true);
@@ -100,13 +100,13 @@ describe("the search index, typed the way people type", () => {
     expect(searchHits(index, "callo")[0].title).toBe("Rhea Calloway");
     expect(searchHits(index, "caloway")[0].title).toBe("Rhea Calloway");
     expect(searchHits(index, "CALLOWAY")[0].title).toBe("Rhea Calloway");
-    const rhea = mehrMeadows.owners.find((o) => o.displayName === "Rhea Calloway")!;
+    const rhea = mehrMeadows.homes.find((o) => o.displayName === "Rhea Calloway")!;
     expect(searchHits(index, rhea.phone.replace(/\D/g, "")).some((h) => h.title === "Rhea Calloway")).toBe(true);
     expect(searchHits(index, rhea.unit).some((h) => h.id === `own-${rhea.id}`)).toBe(true);
   });
 
   it("opens a household expanded, not the roster it is somewhere on", () => {
-    const rhea = mehrMeadows.owners.find((o) => o.displayName === "Rhea Calloway")!;
+    const rhea = mehrMeadows.homes.find((o) => o.displayName === "Rhea Calloway")!;
     expect(searchHits(index, "calloway")[0].href).toContain(`open=${rhea.id}`);
   });
 
@@ -189,7 +189,7 @@ describe("pages and shortcuts", () => {
   });
 
   it("turns a unit number into Open home, only for a seat that may open the roster", () => {
-    const rhea = mehrMeadows.owners.find((o) => o.displayName === "Rhea Calloway")!;
+    const rhea = mehrMeadows.homes.find((o) => o.displayName === "Rhea Calloway")!;
     const hits = boardShortcuts(`unit ${rhea.unit}`, mehrMeadows, all);
     expect(hits.some((h) => h.href === `/board/homeowners?open=${rhea.id}`)).toBe(true);
     // A bare number that is a unit is the home, not fifty-five dollars.
@@ -204,12 +204,12 @@ describe("pages and shortcuts", () => {
   });
 
   it("gives a resident Pay for an amount and their own home only for a unit", () => {
-    const owner = mehrMeadows.owners.find((o) => !o.placeholder)!;
-    const other = mehrMeadows.owners.find((o) => o.id !== owner.id && o.unit !== owner.unit)!;
-    expect(residentShortcuts("120", mehrMeadows, owner)[0].href).toBe("/resident/pay");
-    expect(residentShortcuts(owner.unit, mehrMeadows, owner)[0].href).toBe("/resident/account");
+    const home = mehrMeadows.homes.find((o) => !o.placeholder)!;
+    const other = mehrMeadows.homes.find((o) => o.id !== home.id && o.unit !== home.unit)!;
+    expect(residentShortcuts("120", mehrMeadows, home)[0].href).toBe("/resident/pay");
+    expect(residentShortcuts(home.unit, mehrMeadows, home)[0].href).toBe("/resident/account");
     // Somebody else's unit is not theirs to open; the number is only money.
-    expect(residentShortcuts(other.unit, mehrMeadows, owner).map((h) => h.href)).toEqual(["/resident/pay"]);
+    expect(residentShortcuts(other.unit, mehrMeadows, home).map((h) => h.href)).toEqual(["/resident/pay"]);
   });
 
   it("lists Shortcuts before every other group", () => {
@@ -222,11 +222,11 @@ describe("pages and shortcuts", () => {
 
 describe("a resident's own account", () => {
   it("finds their charges by month and amount, and nobody else's", () => {
-    const owner = mehrMeadows.owners.find((o) => (mehrMeadows.ownerCharges[o.id] ?? []).length > 0)!;
-    const line = mehrMeadows.ownerCharges[owner.id].find((l) => l.kind === "charge")!;
-    const hits = residentIndex(mehrMeadows, owner);
+    const home = mehrMeadows.homes.find((o) => (mehrMeadows.homeCharges[o.id] ?? []).length > 0)!;
+    const line = mehrMeadows.homeCharges[home.id].find((l) => l.kind === "charge")!;
+    const hits = residentIndex(mehrMeadows, home);
     const mine = hits.filter((h) => h.kind === "charge");
-    expect(mine.length).toBe(mehrMeadows.ownerCharges[owner.id].length);
+    expect(mine.length).toBe(mehrMeadows.homeCharges[home.id].length);
     expect(searchHits(hits, line.label).some((h) => h.id === `chg-${line.id}`)).toBe(true);
     expect(searchHits(hits, String(Math.abs(line.amountCents) / 100), 200).some((h) => h.id === `chg-${line.id}`)).toBe(true);
     expect(residentIndex(mehrMeadows, null).some((h) => h.kind === "charge")).toBe(false);
@@ -281,7 +281,7 @@ describe("the letter a household is due", () => {
   const policy = policyFor(mehrMeadows.settings);
 
   it("follows the ladder, and nothing goes before the reminder day", () => {
-    for (const o of mehrMeadows.owners) {
+    for (const o of mehrMeadows.homes) {
       const letter = dueLetter(o, policy, mehrMeadows.templates);
       if (o.daysPastDue < policy.reminderDay) expect(letter).toBeNull();
       else if (o.daysPastDue < policy.lateNoticeDay) expect(letter?.trigger).toBe("past-due");
@@ -291,13 +291,13 @@ describe("the letter a household is due", () => {
   });
 
   it("fills every token from that household's own record", () => {
-    const owner = mehrMeadows.owners.find((o) => o.daysPastDue >= policy.lateNoticeDay)!;
-    const template = dueLetter(owner, policy, mehrMeadows.templates)!;
-    const letter = renderLetter(template, owner, mehrMeadows);
+    const home = mehrMeadows.homes.find((o) => o.daysPastDue >= policy.lateNoticeDay)!;
+    const template = dueLetter(home, policy, mehrMeadows.templates)!;
+    const letter = renderLetter(template, home, mehrMeadows);
     expect(letter.subject).not.toContain("{{");
     expect(letter.body).not.toContain("{{");
-    expect(letter.body).toContain(owner.displayName);
-    expect(letter.body).toContain(`unit ${owner.unit}`);
-    expect(letter.body).toContain(String(owner.daysPastDue));
+    expect(letter.body).toContain(home.displayName);
+    expect(letter.body).toContain(`unit ${home.unit}`);
+    expect(letter.body).toContain(String(home.daysPastDue));
   });
 });

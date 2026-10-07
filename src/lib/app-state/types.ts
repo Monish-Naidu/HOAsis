@@ -1,6 +1,6 @@
 import type { Community } from "@/lib/data/community";
 import type { CommunityDraft } from "@/lib/data/new-community";
-import type { AccessLevel, Account, AccountRole, Announcement, AutopayPlan, BankAccount, Capability, DocumentRecord, ForumPost, HomeRequest, HomeType, MessageThread, Owner, ThreadAddress, VendorInvoice, Violation, ViolationReport, WorkOrder } from "@/lib/types";
+import type { AccessLevel, Account, AccountRole, Announcement, AutopayPlan, BankAccount, Capability, DocumentRecord, ForumPost, HomeRequest, HomeType, MessageThread, Home, ThreadAddress, VendorInvoice, Violation, ViolationReport, WorkOrder } from "@/lib/types";
 import type { ManualMethod, PaymentInstrument } from "@/lib/payments/instruments";
 import type { ManualPaymentRow } from "@/lib/payments/manual-payments";
 import type { ReplyEmail } from "@/lib/email/plain-error";
@@ -101,14 +101,14 @@ export interface AppState {
   setCapability: (accountId: string, capability: Capability, level: AccessLevel) => void;
   resetDemo: () => void;
   /** Adds a household to the register, with the account that lets them sign in. */
-  addOwner: (input: { name: string; email: string; unit: string; homeType?: HomeType }) => Owner;
+  addOwner: (input: { name: string; email: string; unit: string; homeType?: HomeType }) => Home;
   /** A neighbour telling the board about another home. Never a violation. */
   addViolationReport: (input: {
     reporterId: string;
     reporterName: string;
     reporterUnit: string;
     subjectUnit: string;
-    subjectOwnerId?: string;
+    subjectHomeId?: string;
     what: string;
     observedOn: string;
   }) => ViolationReport;
@@ -118,7 +118,7 @@ export interface AppState {
   /** Refuses anything nobody has gone and looked at. */
   raiseNoticeFromReport: (
     reportId: string,
-    input: { rule: string; ruleCitation: string; ownerId: string; ownerName: string },
+    input: { rule: string; ruleCitation: string; homeId: string; ownerName: string },
   ) => Violation;
   /**
    * What each home owed on the day the association switched to us. Only the
@@ -127,22 +127,22 @@ export interface AppState {
    */
   setOpeningBalances: (
     asOf: string,
-    balances: { ownerId: string; amountCents: number }[],
+    balances: { homeId: string; amountCents: number }[],
   ) => boolean | Promise<boolean>;
   /** Names the owner of a home that has none on record yet. */
-  setHouseholdOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
+  setHouseholdOwner: (homeId: string, input: { name: string; email: string }) => Promise<boolean>;
   /** A second person on a home that already has an owner, with a sign-in of their own. */
-  addSecondOwner: (ownerId: string, input: { name: string; email: string }) => Promise<boolean>;
+  addSecondOwner: (homeId: string, input: { name: string; email: string }) => Promise<boolean>;
   /**
    * Ends one of two owners' seats on a home today. `seatId` is the membership
    * id for a real association and the account id in the demo. The other owner
    * stays. (removeOwner, above, removes a whole household.)
    */
-  removeCoOwner: (ownerId: string, seatId: string) => Promise<boolean>;
+  removeCoOwner: (homeId: string, seatId: string) => Promise<boolean>;
   /** The address a not yet signed in owner claims their seat with. */
-  changeOwnerEmail: (ownerId: string, email: string) => Promise<boolean>;
+  changeOwnerEmail: (homeId: string, email: string) => Promise<boolean>;
   /** Which kind of home these are: detached, townhome or condo. */
-  setHomeType: (ownerIds: string[], homeType: HomeType) => boolean | Promise<boolean>;
+  setHomeType: (homeIds: string[], homeType: HomeType) => boolean | Promise<boolean>;
   /**
    * What each of these homes pays of its own, from the next bill. A null
    * amount clears it, so the home pays what its kind or the association
@@ -150,9 +150,9 @@ export interface AppState {
    * wait before it says saved; false when it was refused.
    */
   setHomeDues: (
-    changes: { ownerId: string; cents: number | null }[],
+    changes: { homeId: string; cents: number | null }[],
   ) => boolean | Promise<boolean>;
-  removeOwner: (ownerId: string) => () => void;
+  removeOwner: (homeId: string) => () => void;
   /**
    * A home changes hands. The seller's seat ends on the closing date, the
    * buyer is seated with a clean statement, and the home keeps its history.
@@ -160,7 +160,7 @@ export interface AppState {
    * case and is written as a payment, or carried to the buyer.
    */
   transferHome: (
-    ownerId: string,
+    homeId: string,
     input: { name: string; email: string; closingDate: string; settleBalance: boolean },
   ) => boolean | Promise<boolean>;
   /** Connects an account the association can receive dues into. */
@@ -173,7 +173,7 @@ export interface AppState {
   addBankAccount: (account: BankAccount) => void;
   /** Records a payment on the statement, the balance, the books, and the bank. */
   recordPayment: (input: {
-    ownerId: string;
+    homeId: string;
     amountCents: number;
     processorCents: number;
     platformCents: number;
@@ -186,7 +186,7 @@ export interface AppState {
    * statement, the balance and the books have all taken it.
    */
   recordManualPayment: (input: {
-    ownerId: string;
+    homeId: string;
     amountCents: number;
     method: ManualMethod;
     reference: string;
@@ -202,10 +202,10 @@ export interface AppState {
    * Real associations read them on demand; the demo returns what this session
    * entered. Rejects when the read fails.
    */
-  manualPaymentsFor: (ownerId: string) => Promise<ManualPaymentRow[]>;
+  manualPaymentsFor: (homeId: string) => Promise<ManualPaymentRow[]>;
   /** A credit on one home's statement, such as a waived late fee. Not money in the bank. */
   addCredit: (input: {
-    ownerId: string;
+    homeId: string;
     amountCents: number;
     reason: string;
   }) => boolean | Promise<boolean>;
@@ -215,7 +215,7 @@ export interface AppState {
    * not dues, so it draws no late fee. Resolves true once it is on the books.
    */
   addCharge: (input: {
-    ownerId: string;
+    homeId: string;
     amountCents: number;
     label: string;
     dueOn: string;
@@ -319,7 +319,7 @@ export interface AppState {
   replyToThread: (threadId: string, body: string) => Promise<ReplyEmail | false>;
   /** An owner starting a conversation with the board. Resolves true when it landed. */
   messageBoard: (
-    ownerId: string,
+    homeId: string,
     subject: string,
     body: string,
     tag?: MessageThread["tag"],
@@ -327,7 +327,7 @@ export interface AppState {
     toRole?: ThreadAddress,
   ) => Promise<boolean>;
   /** An owner answering one of their home's conversations. */
-  replyAsOwner: (threadId: string, ownerId: string, body: string) => Promise<boolean>;
+  replyAsOwner: (threadId: string, homeId: string, body: string) => Promise<boolean>;
   /**
    * A new letter to one household, on its own thread.
    *
@@ -336,7 +336,7 @@ export interface AppState {
    * board's record is the thread; the resident's copy goes by email.
    */
   messageOwner: (
-    ownerId: string,
+    homeId: string,
     subject: string,
     body: string,
     tag?: Community["threads"][number]["tag"],
@@ -429,7 +429,7 @@ export interface AppState {
    * Lets a requester in on a home already on the register, chosen by the
    * board. `second` shares the home with its owner. Creates no home.
    */
-  seatJoinRequest: (requestId: string, ownerId: string, second: boolean) => Promise<boolean>;
+  seatJoinRequest: (requestId: string, homeId: string, second: boolean) => Promise<boolean>;
   declineJoinRequest: (requestId: string) => Promise<boolean>;
   /**
    * Somebody outside asking in. Works signed out: the code names the
@@ -438,7 +438,7 @@ export interface AppState {
   /** The association behind a join code: its name and where it is, or null. */
   lookupJoinCode: (code: string) => Promise<{ name: string; place: string } | null>;
   /** Gives a home's holder an office, whether or not they have signed up yet. */
-  setHomeRole: (ownerId: string, role: AccountRole) => void;
+  setHomeRole: (homeId: string, role: AccountRole) => void;
   requestToJoin: (input: {
     code: string;
     name: string;
@@ -466,7 +466,7 @@ export interface AppState {
    * which rule. No report behind it and no stage ladder in front of it.
    */
   addNotice: (input: {
-    ownerId: string;
+    homeId: string;
     ownerName: string;
     unit: string;
     rule: string;
@@ -484,7 +484,7 @@ export interface AppState {
     caseNumber: string;
     deadline: string;
     rule: string;
-    ownerId?: string;
+    homeId?: string;
     ownerName?: string;
     unit?: string;
   }) => Violation;

@@ -50,7 +50,7 @@ export function DeliveryPanel() {
   // Nothing has been registered with the carriers, which is the honest state
   // and the reason text is offline rather than offered and silently dropped.
   const sms = smsReadiness({ ein: community.association.ein });
-  const audience = audienceFor(community.owners, kind, {}, sms);
+  const audience = audienceFor(community.homes, kind, {}, sms);
 
   return (
     <Card>

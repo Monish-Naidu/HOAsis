@@ -4,7 +4,7 @@ import type { Community } from "@/lib/data/community";
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { todayIsoDate } from "@/lib/utils";
 import { newId } from "@/lib/core/ids";
-import { PersistedStore, type Store } from "@/lib/core/store";
+import { PersistedStore, renameLegacyFields, type Store } from "@/lib/core/store";
 import { NOTHING_CHANGED, remoteSnapshot, reportRemoteError, type RemoteState } from "@/lib/data/remote-store";
 import { isAssociation, isBudgetLines, isChargeLedger, isCommunitySettings, isRecordArray, isSession } from "@/lib/core/guards";
 import type { Account, Activity, Capability } from "@/lib/types";
@@ -262,9 +262,9 @@ export const homePhotoStore = new PersistedStore<Record<string, string>>(
 export const MUTABLE_SLICES = [
   "settings",
   "accounts",
-  "owners",
+  "homes",
   "bankAccounts",
-  "ownerCharges",
+  "homeCharges",
   "budget",
   "amenities",
   "forms",
@@ -325,23 +325,31 @@ export const registry = new Map<string, PersistedStore<never>>();
  */
 export const DEMO_FIXTURE_VERSION = 2;
 
+/**
+ * The slices that were renamed after browsers had already stored them. The
+ * storage key keeps the old name: renaming it would drop every demo browser's
+ * remembered state.
+ */
+const STORED_AS: Partial<Record<MutableSlice, string>> = { homes: "owners", homeCharges: "ownerCharges" };
+
 export function sliceStore<K extends MutableSlice>(
   communityId: string,
   slice: K,
 ): PersistedStore<Community[K]> {
-  const key = `hoasis:${communityId}:v${DEMO_FIXTURE_VERSION}:${slice}`;
+  const key = `hoasis:${communityId}:v${DEMO_FIXTURE_VERSION}:${STORED_AS[slice] ?? slice}`;
   const existing = registry.get(key);
   if (existing) return existing as unknown as PersistedStore<Community[K]>;
 
   const seed = communityById(communityId)[slice];
   const store = new PersistedStore(key, seed, {
     breaker: storageBreaker,
+    migrate: renameLegacyFields,
     validate:
       slice === "association"
         ? (isAssociation as (v: unknown) => v is Community[K])
         : slice === "settings"
         ? (isCommunitySettings as (v: unknown) => v is Community[K])
-        : slice === "ownerCharges"
+        : slice === "homeCharges"
           ? (isChargeLedger as (v: unknown) => v is Community[K])
           : slice === "budget"
             ? (isBudgetLines as (v: unknown) => v is Community[K])
@@ -491,11 +499,11 @@ export interface BaseDeps {
   community: Community;
   settings: Community["settings"];
   accountList: Community["accounts"];
-  ownerList: Community["owners"];
+  homeList: Community["homes"];
   bankAccountList: Community["bankAccounts"];
   budgetLines: Community["budget"];
   localDismissals: string[];
-  ownerChargeMap: Community["ownerCharges"];
+  homeChargeMap: Community["homeCharges"];
   amenities: Community["amenities"];
   forms: Community["forms"];
   posts: Community["posts"];

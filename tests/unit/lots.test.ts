@@ -249,12 +249,12 @@ describe("the founder's own lot", () => {
     };
 
     const community = buildCommunity(draft, "2026-08-26");
-    expect(community.owners).toHaveLength(4);
-    expect(new Set(community.owners.map((o) => o.id)).size).toBe(4);
-    expect(community.owners.find((o) => o.unit === "Lot 1")?.displayName).toBe("Pat");
+    expect(community.homes).toHaveLength(4);
+    expect(new Set(community.homes.map((o) => o.id)).size).toBe(4);
+    expect(community.homes.find((o) => o.unit === "Lot 1")?.displayName).toBe("Pat");
     // An unsold lot is still a home that owes the assessment, and the roster
     // says it has no owner yet rather than naming a builder nobody typed.
-    const unsold = community.owners.find((o) => o.unit === "Lot 2");
+    const unsold = community.homes.find((o) => o.unit === "Lot 2");
     expect(unsold?.displayName).toBe("Not sold yet");
     expect(unsold?.placeholder).toBe(true);
   });
@@ -282,9 +282,9 @@ describe("the founder's own lot", () => {
     expect(final.households).toHaveLength(39);
 
     const community = buildCommunity(final, "2026-08-26");
-    expect(community.owners).toHaveLength(40);
-    expect(community.owners.filter((o) => o.unit === "Lot 12").map((o) => o.displayName)).toEqual(["Pat"]);
-    expect(community.owners.some((o) => o.unit === "12")).toBe(false);
+    expect(community.homes).toHaveLength(40);
+    expect(community.homes.filter((o) => o.unit === "Lot 12").map((o) => o.displayName)).toEqual(["Pat"]);
+    expect(community.homes.some((o) => o.unit === "12")).toBe(false);
   });
 
   it("finds the founder under a joined prefix and in any case", () => {
@@ -318,8 +318,8 @@ describe("the founder's own lot", () => {
     expect(final.founder.unit).toBe("A-2");
     expect(final.households.map((h) => h.unit)).toEqual(["A-1", "A-3", "A-4"]);
     const community = buildCommunity(final, "2026-08-26");
-    expect(community.owners).toHaveLength(4);
-    expect(community.owners.filter((o) => o.unit === "A-2").map((o) => o.displayName)).toEqual(["Pat"]);
+    expect(community.homes).toHaveLength(4);
+    expect(community.homes.filter((o) => o.unit === "A-2").map((o) => o.displayName)).toEqual(["Pat"]);
   });
 
   it("gives the founder their range's kind of home under that prefix, typed either way", () => {

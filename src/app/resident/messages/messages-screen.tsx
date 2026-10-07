@@ -7,7 +7,7 @@ import { addressLabel, boardOffices, boardSignature, officeChoiceLabel, OFFICES,
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useToast } from "@/components/app/toast";
 import { Badge, Button, Card, EmptyState, SectionTitle, Select, fieldClass } from "@/components/ui/primitives";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import type { MessageEvent, MessageThread, ThreadAddress } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ const field =
  */
 export function MessagesScreen() {
   const { community, messageBoard, replyAsOwner } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const { notify } = useToast();
   // A request page sends its owner here with the subject filled in, so a
   // question about a request opens ready to type.
@@ -48,17 +48,17 @@ export function MessagesScreen() {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
-  if (!owner) return null;
+  if (!home) return null;
   const offices = boardOffices(community.accounts);
   const threads = community.threads
-    .filter((t) => t.ownerId === owner.id)
+    .filter((t) => t.homeId === home.id)
     .sort((a, b) => (a.updatedDate < b.updatedDate ? 1 : -1));
 
   async function send() {
-    if (!owner) return;
+    if (!home) return;
     setSending(true);
     try {
-      const ok = await messageBoard(owner.id, subject, body, topic, to);
+      const ok = await messageBoard(home.id, subject, body, topic, to);
       if (ok) {
         notify(to === "board" ? "Sent to the board" : `Sent to the ${addressLabel(to)}`);
         setSubject("");
@@ -208,7 +208,7 @@ export function MessagesScreen() {
               <ThreadRow
                 key={t.id}
                 thread={t}
-                onReply={(text) => replyAsOwner(t.id, owner.id, text)}
+                onReply={(text) => replyAsOwner(t.id, home.id, text)}
               />
             ))}
           </Card>

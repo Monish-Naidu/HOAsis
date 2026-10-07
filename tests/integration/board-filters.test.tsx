@@ -49,7 +49,7 @@ beforeEach(() => {
 describe("Homeowners filters", () => {
   it("puts a count on every chip, from the same rule as the list", () => {
     open(<HomeownersScreen />);
-    const counts = homeFilterCounts(seen.state.community.owners);
+    const counts = homeFilterCounts(seen.state.community.homes);
     for (const [name, count] of [
       ["Paid up", counts["paid-up"]],
       ["Past due", counts["past-due"]],

@@ -106,8 +106,8 @@ describe("agingBuckets", () => {
   it("partitions the roster: counts sum to every household, cents to every balance", () => {
     const aging = agingBuckets(c);
     expect(aging.buckets.map((b) => b.key)).toEqual(["current", "1-30", "31-60", "61+"]);
-    expect(aging.buckets.reduce((t, b) => t + b.count, 0)).toBe(c.owners.length);
-    expect(aging.totalCents).toBe(c.owners.reduce((t, o) => t + o.balanceCents, 0));
+    expect(aging.buckets.reduce((t, b) => t + b.count, 0)).toBe(c.homes.length);
+    expect(aging.totalCents).toBe(c.homes.reduce((t, o) => t + o.balanceCents, 0));
     expect(aging.buckets.reduce((t, b) => t + b.cents, 0)).toBe(aging.totalCents);
   });
 
@@ -115,18 +115,18 @@ describe("agingBuckets", () => {
     const aging = agingBuckets(c);
     const seen = new Set<string>();
     for (const b of aging.buckets) {
-      for (const o of b.owners) {
+      for (const o of b.homes) {
         expect(seen.has(o.id), `${o.id} is in two buckets`).toBe(false);
         seen.add(o.id);
       }
     }
     const sixtyPlus = aging.buckets.find((b) => b.key === "61+")!;
-    expect(sixtyPlus.owners.every((o) => o.daysPastDue > 60)).toBe(true);
+    expect(sixtyPlus.homes.every((o) => o.daysPastDue > 60)).toBe(true);
   });
 
   it("agrees with the past-due total the dashboard shows", () => {
     const aging = agingBuckets(c);
-    const pastDue = c.owners.filter((o) => o.daysPastDue > 0);
+    const pastDue = c.homes.filter((o) => o.daysPastDue > 0);
     expect(aging.pastDueCount).toBe(pastDue.length);
     expect(aging.pastDueCents).toBe(pastDue.reduce((t, o) => t + o.balanceCents, 0));
   });
@@ -144,9 +144,9 @@ describe("duesCollection", () => {
 
 describe("duesCollection, gross of fees", () => {
   it("reads a month everyone paid as 100%, though the bank got the net", () => {
-    const owners = mehrMeadows.owners.slice(0, 2).map((o) => ({ ...o, homeType: undefined }));
+    const homes = mehrMeadows.homes.slice(0, 2).map((o) => ({ ...o, homeType: undefined }));
     const dues = mehrMeadows.association.duesCents;
-    const ledger = owners.map((o, i) => ({
+    const ledger = homes.map((o, i) => ({
       id: `net-${i}`,
       date: "2026-03-02",
       description: "Assessment payment",
@@ -156,8 +156,8 @@ describe("duesCollection, gross of fees", () => {
       amountCents: dues - 900, // the processor's cut, taken out of the deposit
       status: "cleared" as const,
     }));
-    const ownerCharges = Object.fromEntries(
-      owners.map((o) => [
+    const homeCharges = Object.fromEntries(
+      homes.map((o) => [
         o.id,
         [{ id: `p-${o.id}`, date: "2026-03-02", label: "Card payment", kind: "payment" as const, amountCents: -dues, balanceAfterCents: 0 }],
       ]),
@@ -165,9 +165,9 @@ describe("duesCollection, gross of fees", () => {
     const c = {
       ...mehrMeadows,
       association: { ...mehrMeadows.association, unitCount: 2, duesCadence: "monthly" as const },
-      owners,
+      homes,
       ledger,
-      ownerCharges,
+      homeCharges,
     };
     const d = duesCollection(c, 2026);
     expect(d.months).toHaveLength(1);
@@ -186,8 +186,8 @@ function billing(
     ...mehrMeadows,
     asOf,
     association: { ...mehrMeadows.association, duesByType: undefined, ...patch },
-    owners: [],
-    ownerCharges: {},
+    homes: [],
+    homeCharges: {},
     ledger: lines.map(([date, category, amountCents], i) => ({
       id: `l-${i}`,
       date,
@@ -203,10 +203,10 @@ function billing(
 
 describe("duesCollection, with homes on their own amounts", () => {
   it("holds each bill against what every home pays, by the one rule", () => {
-    const owners = [
-      { ...mehrMeadows.owners[0], homeType: undefined, duesCents: 34_000 },
-      { ...mehrMeadows.owners[1], homeType: undefined, duesCents: undefined },
-      { ...mehrMeadows.owners[2], homeType: undefined, duesCents: undefined },
+    const homes = [
+      { ...mehrMeadows.homes[0], homeType: undefined, duesCents: 34_000 },
+      { ...mehrMeadows.homes[1], homeType: undefined, duesCents: undefined },
+      { ...mehrMeadows.homes[2], homeType: undefined, duesCents: undefined },
     ];
     const c: Community = {
       ...billing(
@@ -214,7 +214,7 @@ describe("duesCollection, with homes on their own amounts", () => {
         "2026-08-20",
         [["2026-08-05", "Assessments", 76_000]],
       ),
-      owners,
+      homes,
     };
     const d = duesCollection(c, 2026);
     expect(d.expectedCents).toBe(34_000 + 21_000 + 21_000);
@@ -371,7 +371,7 @@ describe("lines waiting on review", () => {
   const c: Community = {
     ...mehrMeadows,
     asOf: "2026-08-20",
-    ownerCharges: {},
+    homeCharges: {},
     ledger: [
       { ...base, id: "dep", date: "2026-08-12", description: "Deposit", category: "Assessments", amountCents: 57_000, status: "needs-review" },
       { ...base, id: "gate", date: "2026-08-11", description: "Gate motor", category: "Repairs & maintenance", amountCents: -138_000 },
@@ -407,7 +407,7 @@ describe("lateFeesOwed", () => {
     amountCents: number,
     balanceAfterCents: number,
   ): ChargeLine => ({ id, date, label, kind: amountCents < 0 ? "payment" : "charge", amountCents, balanceAfterCents });
-  const owner = (id: string, balanceCents: number) => ({ ...mehrMeadows.owners[0], id, balanceCents });
+  const home = (id: string, balanceCents: number) => ({ ...mehrMeadows.homes[0], id, balanceCents });
 
   // Five statements written out by hand, each kept newest first as the app
   // keeps them. Dues are $300 and a late fee is $25.
@@ -452,16 +452,16 @@ describe("lateFeesOwed", () => {
   const c: Community = {
     ...mehrMeadows,
     history: undefined,
-    owners: [
-      owner("never", 65_000),
-      owner("again", 32_500),
-      owner("sameDay", 20_000),
-      owner("partly", 1_500),
-      owner("paid", 0),
+    homes: [
+      home("never", 65_000),
+      home("again", 32_500),
+      home("sameDay", 20_000),
+      home("partly", 1_500),
+      home("paid", 0),
     ],
-    ownerCharges: statements,
+    homeCharges: statements,
   };
-  const only = (id: string): Community => ({ ...c, owners: c.owners.filter((o) => o.id === id) });
+  const only = (id: string): Community => ({ ...c, homes: c.homes.filter((o) => o.id === id) });
 
   it("counts the fees charged since each household last stood at zero", () => {
     expect(lateFeesOwed(only("never"))).toBe(5_000);
@@ -592,9 +592,9 @@ describe("vendorDecisions", () => {
 
 describe("delinquency", () => {
   it("does not count a home with nobody on record as a household paying on time", () => {
-    const owners = mehrMeadows.owners.slice(0, 4).map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 }));
-    owners.push({ ...owners[0], id: "empty", placeholder: true, displayName: "Lot 99" });
-    const d = delinquency({ ...mehrMeadows, owners });
+    const homes = mehrMeadows.homes.slice(0, 4).map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 }));
+    homes.push({ ...homes[0], id: "empty", placeholder: true, displayName: "Lot 99" });
+    const d = delinquency({ ...mehrMeadows, homes });
     expect(d.households).toBe(4);
     expect(d.current).toBe(4);
     expect(d.collectionRate).toBe(1);

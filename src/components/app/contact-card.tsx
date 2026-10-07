@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Button, Card, SectionTitle, fieldClass } from "@/components/ui/primitives";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { requestEmailChange, useAuth } from "@/lib/auth";
 import { checkNewEmail, emailChangeSent } from "@/lib/email-change";
 import { checkPhone } from "@/lib/input-checks";
@@ -19,19 +19,19 @@ import { useToast } from "@/components/app/toast";
  * often not the home, so it is its own field rather than assumed.
  */
 export function ContactCard() {
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const { updateMyContact, isRemote } = useAppState();
   // The roster carries the invited address; the person who founded the
   // association was never invited, so their own is the one they signed in with.
   const auth = useAuth();
-  const email = owner?.email || auth.user?.email || "";
+  const email = home?.email || auth.user?.email || "";
   const { notify } = useToast();
   const [editing, setEditing] = useState(false);
-  const [phone, setPhone] = useState(owner?.phone ?? "");
-  const [mailing, setMailing] = useState(owner?.mailingAddress ?? "");
+  const [phone, setPhone] = useState(home?.phone ?? "");
+  const [mailing, setMailing] = useState(home?.mailingAddress ?? "");
   const [phoneProblem, setPhoneProblem] = useState<string | null>(null);
 
-  if (!owner) return null;
+  if (!home) return null;
 
   const field =
     fieldClass;
@@ -61,8 +61,8 @@ export function ContactCard() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setPhone(owner.phone);
-              setMailing(owner.mailingAddress ?? "");
+              setPhone(home.phone);
+              setMailing(home.mailingAddress ?? "");
               setPhoneProblem(null);
               setEditing(true);
             }}
@@ -131,12 +131,12 @@ export function ContactCard() {
           <dl className="divide-y divide-border">
             <div className="flex items-start justify-between gap-4 px-4 py-3">
               <dt className="text-footnote text-fg-muted">Phone</dt>
-              <dd className="text-right text-body text-fg">{owner.phone || "Not on file"}</dd>
+              <dd className="text-right text-body text-fg">{home.phone || "Not on file"}</dd>
             </div>
             <div className="flex items-start justify-between gap-4 px-4 py-3">
               <dt className="text-footnote text-fg-muted">Mail goes to</dt>
               <dd className="min-w-0 text-right text-body text-fg">
-                {owner.mailingAddress || owner.address || "The home"}
+                {home.mailingAddress || home.address || "The home"}
               </dd>
             </div>
           </dl>

@@ -5,61 +5,61 @@ import { useState } from "react";
 import { ChevronDown, CircleDollarSign, Download, History, Receipt } from "lucide-react";
 import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 
-import { useAppState, useCurrentOwner, useOwnerCharges } from "@/lib/app-state";
+import { useAppState, useCurrentHome, useHomeCharges } from "@/lib/app-state";
 import { loadEarlierStatement } from "@/lib/data/remote-store";
 import { formatDate, money, today, todayIsoDate } from "@/lib/utils";
 import { balanceSplit } from "@/lib/statement";
 import { balanceStanding } from "@/lib/resident-wording";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
-import { HOME_TYPE_LABEL, isMixed, ownerDues } from "@/lib/home-types";
+import { HOME_TYPE_LABEL, isMixed, homeDues } from "@/lib/home-types";
 
 export default function ResidentAccount() {
   const { community } = useAppState();
   const association = community.association;
-  const currentOwner = useCurrentOwner();
-  const ownerCharges = useOwnerCharges();
+  const currentHome = useCurrentHome();
+  const homeCharges = useHomeCharges();
   const [loadingEarlier, setLoadingEarlier] = useState(false);
-  if (!currentOwner) return null;
-  const standing = balanceStanding(currentOwner);
+  if (!currentHome) return null;
+  const standing = balanceStanding(currentHome);
   // A real association sends the last two years; the rest is one tap away.
   const history = community.history;
   const earlierCount = history
-    ? Math.max(0, (history.statementCounts[currentOwner.id] ?? 0) - ownerCharges.length)
+    ? Math.max(0, (history.statementCounts[currentHome.id] ?? 0) - homeCharges.length)
     : 0;
-  const hasEarlier = earlierCount > 0 && !history?.statementsLoaded.includes(currentOwner.id);
+  const hasEarlier = earlierCount > 0 && !history?.statementsLoaded.includes(currentHome.id);
 
   async function showEarlier() {
-    if (!currentOwner) return;
+    if (!currentHome) return;
     setLoadingEarlier(true);
-    await loadEarlierStatement(currentOwner.id);
+    await loadEarlierStatement(currentHome.id);
     setLoadingEarlier(false);
   }
   // The rate is what this home pays a bill from now on; a bill already on the
   // statement keeps the amount it was issued at. Said so when they differ.
-  const rate = ownerDues(association, currentOwner);
-  const upcoming = balanceSplit(ownerCharges, currentOwner.balanceCents, todayIsoDate()).upcoming;
+  const rate = homeDues(association, currentHome);
+  const upcoming = balanceSplit(homeCharges, currentHome.balanceCents, todayIsoDate()).upcoming;
   const issuedAtOtherAmount = upcoming && upcoming.amountCents !== rate ? upcoming : null;
   // The year the ledger is actually in, not a constant.
-  const paidYear = ownerCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
+  const paidYear = homeCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
   // That year's payments only. Summing every line was right while a statement
   // held one year; with five it put the whole history under "Paid in".
-  const paidThisYear = ownerCharges
+  const paidThisYear = homeCharges
     .filter((c) => c.kind === "payment" && c.date.startsWith(paidYear))
     .reduce((t, c) => t + Math.abs(c.amountCents), 0);
 
   // Six lines, the last few months, and the rest folded by year. A year of
   // dues and payments was twenty-four rows before the contact details.
   const RECENT = 6;
-  const recent = ownerCharges.slice(0, RECENT);
+  const recent = homeCharges.slice(0, RECENT);
   const olderYears = Object.entries(
-    ownerCharges.slice(RECENT).reduce<Record<string, typeof ownerCharges>>((acc, line) => {
+    homeCharges.slice(RECENT).reduce<Record<string, typeof homeCharges>>((acc, line) => {
       (acc[line.date.slice(0, 4)] ??= []).push(line);
       return acc;
     }, {}),
   ).sort((a, b) => b[0].localeCompare(a[0]));
 
-  const row = (line: (typeof ownerCharges)[number], i: number) => {
+  const row = (line: (typeof homeCharges)[number], i: number) => {
             const isPayment = line.kind === "payment";
             const body = (
               <>
@@ -139,11 +139,11 @@ export default function ResidentAccount() {
       <ResidentTitle
         title="Statement"
         subtitle={[
-          homeLabel(community, currentOwner.unit),
-          isMixed(community.profile) && currentOwner.homeType
-            ? HOME_TYPE_LABEL[currentOwner.homeType].one
+          homeLabel(community, currentHome.unit),
+          isMixed(community.profile) && currentHome.homeType
+            ? HOME_TYPE_LABEL[currentHome.homeType].one
             : null,
-          currentOwner.displayName,
+          currentHome.displayName,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -155,7 +155,7 @@ export default function ResidentAccount() {
             Balance
           </p>
           <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
-            {money(currentOwner.balanceCents)}
+            {money(currentHome.balanceCents)}
           </p>
           {/* "Paid up" is for a home that owes nothing; the words come from
               one helper so every screen agrees. */}
@@ -196,8 +196,8 @@ export default function ResidentAccount() {
               onClick={() =>
                 // The ledger as a spreadsheet, for a tax return or a lender.
                 downloadCsv(
-                  `dues-${currentOwner.unit}-${paidYear}.csv`,
-                  toCsv(ownerCharges, [
+                  `dues-${currentHome.unit}-${paidYear}.csv`,
+                  toCsv(homeCharges, [
                     { header: "Date", value: (c) => c.date },
                     { header: "Description", value: (c) => c.label },
                     { header: "Method", value: (c) => c.method ?? "" },

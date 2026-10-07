@@ -32,7 +32,7 @@ function Controls() {
       <button
         onClick={() => {
           signIn("acct-arya");
-          addNotice({ ownerId: "own-042", ownerName: "Monish Naidu", unit: "42", rule: "Fence needs paint" });
+          addNotice({ homeId: "own-042", ownerName: "Monish Naidu", unit: "42", rule: "Fence needs paint" });
           signIn("acct-monish");
         }}
       >
@@ -41,7 +41,7 @@ function Controls() {
       <button
         onClick={() => {
           signIn("acct-arya");
-          addNotice({ ownerId: "own-055", ownerName: "Rhea Calloway", unit: "55", rule: "Bins out" });
+          addNotice({ homeId: "own-055", ownerName: "Rhea Calloway", unit: "55", rule: "Bins out" });
           signIn("acct-monish");
         }}
       >

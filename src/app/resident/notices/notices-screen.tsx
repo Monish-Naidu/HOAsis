@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Gavel, ShieldCheck } from "lucide-react";
 import { Badge, Button, Card, EmptyState, textareaClass } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { useToast } from "@/components/app/toast";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { resolveCitation } from "@/lib/governing";
 import type { Violation } from "@/lib/types";
 import { cn, formatDate, money, relativeDays } from "@/lib/utils";
@@ -59,9 +59,9 @@ const STAGE: Record<
  */
 export function NoticesScreen() {
   const { community } = useAppState();
-  const owner = useCurrentOwner();
-  const mine = owner
-    ? community.violations.filter((v) => v.ownerId === owner.id || v.unit === owner.unit)
+  const home = useCurrentHome();
+  const mine = home
+    ? community.violations.filter((v) => v.homeId === home.id || v.unit === home.unit)
     : [];
 
   return (

@@ -69,7 +69,7 @@ export function AutopayFailuresCard({ failures }: { failures: AutopayFailure[] }
   const placeLabel = useHomeLabel();
   const shown = failuresToShow(failures, todayIsoDate());
   if (shown.length === 0) return null;
-  const owners = new Map(community.owners.map((o) => [o.id, o]));
+  const homes = new Map(community.homes.map((o) => [o.id, o]));
 
   return (
     <Card className="mt-6">
@@ -79,18 +79,18 @@ export function AutopayFailuresCard({ failures }: { failures: AutopayFailure[] }
       />
       <ul className="divide-y divide-border">
         {shown.map((f) => {
-          const owner = owners.get(f.unitId);
+          const home = homes.get(f.unitId);
           return (
             <li key={`${f.unitId}-${f.month}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
               <div className="min-w-[12rem] flex-1">
                 <p className="truncate text-body font-medium text-fg">
-                  {owner ? placeLabel(owner.unit) : "A home"}
-                  {owner ? (
+                  {home ? placeLabel(home.unit) : "A home"}
+                  {home ? (
                     <Link
-                      href={`/board/homeowners?open=${owner.id}`}
+                      href={`/board/homeowners?open=${home.id}`}
                       className="ml-2 text-footnote font-normal text-brand hover:underline"
                     >
-                      {owner.displayName}
+                      {home.displayName}
                     </Link>
                   ) : null}
                 </p>

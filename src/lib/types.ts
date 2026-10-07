@@ -173,7 +173,7 @@ export interface PendingPayment {
 /* People + units                                                              */
 /* -------------------------------------------------------------------------- */
 
-export interface Owner {
+export interface Home {
   id: ID;
   /** Households can have two names on title. One record, one bill. */
   displayName: string;
@@ -392,7 +392,7 @@ export interface LedgerEntry {
   suggestedCategory?: LedgerCategory;
   suggestionConfidence?: number;
   matchedBy?: "auto" | "manual";
-  ownerId?: ID;
+  homeId?: ID;
   duplicateOfId?: ID;
   /** The vendor payment this line is, when it is one. Opens the invoice. */
   payoutId?: ID;
@@ -519,7 +519,7 @@ export interface HomeRequest {
   kind: RequestKind;
   title: string;
   summary: string;
-  ownerId: ID;
+  homeId: ID;
   ownerName: string;
   unit: string;
   status: RequestStatus;
@@ -598,7 +598,7 @@ export interface ViolationPhoto {
 export interface Violation {
   id: ID;
   reference: string;
-  ownerId: ID;
+  homeId: ID;
   ownerName: string;
   unit: string;
   /** The rule, in a few words. The title of the notice everywhere. */
@@ -669,7 +669,7 @@ export interface ViolationReport {
   reporterUnit: string;
   /** The home the report is about. */
   subjectUnit: string;
-  subjectOwnerId?: ID;
+  subjectHomeId?: ID;
   what: string;
   observedOn: ISODate;
   submittedOn: ISODate;
@@ -755,7 +755,7 @@ export interface MessageThread {
   id: ID;
   subject: string;
   participants: string[];
-  ownerId?: ID;
+  homeId?: ID;
   unit?: string;
   updatedDate: ISODate;
   unread: boolean;
@@ -957,7 +957,7 @@ export type Capabilities = Record<Capability, boolean>;
 
 export interface Account {
   id: ID;
-  ownerId: ID;
+  homeId: ID;
   name: string;
   email: string;
   unit: string;

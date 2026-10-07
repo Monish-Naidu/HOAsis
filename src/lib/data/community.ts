@@ -23,7 +23,7 @@ import type {
   LedgerEntry,
   Meeting,
   MessageThread,
-  Owner,
+  Home,
   Payout,
   PendingPayment,
   ReserveComponent,
@@ -68,7 +68,7 @@ export interface Community {
   association: Association;
   settings: CommunitySettings;
 
-  owners: Owner[];
+  homes: Home[];
   accounts: Account[];
   instruments: PaymentInstrument[];
   /** Stripe payments still in flight. Absent in the fixture demo on purpose. */
@@ -156,7 +156,7 @@ export interface Community {
   templates: MessageTemplate[];
 
   /** Charge history, keyed by owner. Only seeded for the demo households. */
-  ownerCharges: Record<string, import("@/lib/types").ChargeLine[]>;
+  homeCharges: Record<string, import("@/lib/types").ChargeLine[]>;
 
   /**
    * The months the server summed, for a real association with more history

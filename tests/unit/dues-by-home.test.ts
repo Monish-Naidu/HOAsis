@@ -13,7 +13,7 @@ import {
   duesSourceLabel,
   duesVary,
   homesWithOwnDues,
-  ownerDues,
+  homeDues,
   totalDues,
 } from "@/lib/home-types";
 import { parseRosterCsv, rosterSummary, rosterTemplateCsv } from "@/lib/roster/csv";
@@ -30,23 +30,23 @@ const association = { duesCents: 21_000, duesByType: { condos: 30_000 } as const
 
 describe("what a home pays", () => {
   it("is its own amount when it has one, whatever its kind", () => {
-    expect(ownerDues(association, { homeType: "condos", duesCents: 34_000 })).toBe(34_000);
-    expect(ownerDues(association, { duesCents: 28_500 })).toBe(28_500);
+    expect(homeDues(association, { homeType: "condos", duesCents: 34_000 })).toBe(34_000);
+    expect(homeDues(association, { duesCents: 28_500 })).toBe(28_500);
   });
 
   it("is its kind's amount when the association bills by kind and the home has none", () => {
-    expect(ownerDues(association, { homeType: "condos" })).toBe(30_000);
+    expect(homeDues(association, { homeType: "condos" })).toBe(30_000);
   });
 
   it("is the association's amount otherwise", () => {
-    expect(ownerDues(association, { homeType: "townhomes" })).toBe(21_000);
-    expect(ownerDues(association, {})).toBe(21_000);
-    expect(ownerDues(association, undefined)).toBe(21_000);
+    expect(homeDues(association, { homeType: "townhomes" })).toBe(21_000);
+    expect(homeDues(association, {})).toBe(21_000);
+    expect(homeDues(association, undefined)).toBe(21_000);
   });
 
   it("goes back to the kind's or the association's when the home's own is cleared", () => {
-    expect(ownerDues(association, { homeType: "condos", duesCents: undefined })).toBe(30_000);
-    expect(ownerDues({ duesCents: 21_000 }, { homeType: "condos", duesCents: undefined })).toBe(21_000);
+    expect(homeDues(association, { homeType: "condos", duesCents: undefined })).toBe(30_000);
+    expect(homeDues({ duesCents: 21_000 }, { homeType: "condos", duesCents: undefined })).toBe(21_000);
   });
 
   it("reads a zero as not set, as the database does", () => {
@@ -67,7 +67,7 @@ describe("what a home pays", () => {
 });
 
 describe("totals with a mix", () => {
-  const owners = [
+  const homes = [
     { homeType: "condos" as const, duesCents: 34_000 },
     { homeType: "condos" as const },
     { homeType: "townhomes" as const },
@@ -75,11 +75,11 @@ describe("totals with a mix", () => {
   ];
 
   it("add each home at what it pays", () => {
-    expect(totalDues(association, owners)).toBe(34_000 + 30_000 + 21_000 + 21_000);
+    expect(totalDues(association, homes)).toBe(34_000 + 30_000 + 21_000 + 21_000);
   });
 
   it("count the homes that have their own amount", () => {
-    expect(homesWithOwnDues(owners)).toBe(1);
+    expect(homesWithOwnDues(homes)).toBe(1);
     expect(homesWithOwnDues([{}, { duesCents: 0 }])).toBe(0);
   });
 
@@ -166,12 +166,12 @@ describe("the wizard's amounts, through finalizeDraft and buildCommunity", () =>
 
   it("carries the amounts onto the look-around copy's owners", () => {
     const community = buildCommunity(finalizeDraft(building()), "2026-08-20");
-    const upstairs = community.owners.find((o) => o.unit === "202")!;
-    const downstairs = community.owners.find((o) => o.unit === "102")!;
-    expect(ownerDues(community.association, upstairs)).toBe(28_500);
-    expect(ownerDues(community.association, downstairs)).toBe(21_000);
-    expect(duesVary(community.association, community.owners)).toBe(true);
-    expect(totalDues(community.association, community.owners)).toBe(4 * 21_000 + 4 * 28_500);
+    const upstairs = community.homes.find((o) => o.unit === "202")!;
+    const downstairs = community.homes.find((o) => o.unit === "102")!;
+    expect(homeDues(community.association, upstairs)).toBe(28_500);
+    expect(homeDues(community.association, downstairs)).toBe(21_000);
+    expect(duesVary(community.association, community.homes)).toBe(true);
+    expect(totalDues(community.association, community.homes)).toBe(4 * 21_000 + 4 * 28_500);
     // The budget starts from the same total.
     expect(community.budget[0].annualCents).toBe((4 * 21_000 + 4 * 28_500) * 12);
   });
@@ -183,8 +183,8 @@ describe("the wizard's amounts, through finalizeDraft and buildCommunity", () =>
     expect(done.households.every((h) => h.duesCents === undefined)).toBe(true);
     expect(draftOwnDuesCount(done)).toBe(0);
     const community = buildCommunity(done, "2026-08-20");
-    expect(community.owners.every((o) => ownerDues(community.association, o) === 21_000)).toBe(true);
-    expect(duesVary(community.association, community.owners)).toBe(false);
+    expect(community.homes.every((o) => homeDues(community.association, o) === 21_000)).toBe(true);
+    expect(duesVary(community.association, community.homes)).toBe(false);
   });
 
   it("ignores every per-home amount when the board did not pick by home", () => {

@@ -41,7 +41,7 @@ function summarise(c: Community, from: string): CommunityHistory {
   }
   const statements = new Map<string, StatementMonth>();
   const counts: Record<string, number> = {};
-  for (const [unitId, lines] of Object.entries(c.ownerCharges)) {
+  for (const [unitId, lines] of Object.entries(c.homeCharges)) {
     counts[unitId] = lines.length;
     for (const line of lines) {
       if (line.date >= from) continue;
@@ -70,8 +70,8 @@ function windowed(c: Community, from: string): Community {
   return {
     ...c,
     ledger: c.ledger.filter((e) => e.date >= from),
-    ownerCharges: Object.fromEntries(
-      Object.entries(c.ownerCharges).map(([id, lines]) => [id, lines.filter((l) => l.date >= from)]),
+    homeCharges: Object.fromEntries(
+      Object.entries(c.homeCharges).map(([id, lines]) => [id, lines.filter((l) => l.date >= from)]),
     ),
     history: summarise(c, from),
   };

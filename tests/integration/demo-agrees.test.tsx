@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const { AppStateProvider, useAppState, useOwnerCharges } = await import("@/lib/app-state");
+const { AppStateProvider, useAppState, useHomeCharges } = await import("@/lib/app-state");
 const { default: ResidentHome } = await import("@/app/resident/page");
 const { default: ResidentAccount } = await import("@/app/resident/account/page");
 const { cashPosition, duesCollection, homeCount, monthlyFlowsBetween, spendingBetween, vendorPaidThisYear } = await import("@/lib/metrics");
@@ -22,7 +22,7 @@ describe("a check recorded and reversed in the demo", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     // A finance holder: reversing a payment is theirs to do.
     act(() => result.current.signIn("acct-arya"));
-    const owner = result.current.community.owners[0];
+    const home = result.current.community.homes[0];
     const figures = () => {
       const x = result.current.community;
       return {
@@ -34,11 +34,11 @@ describe("a check recorded and reversed in the demo", () => {
     };
     const before = figures();
     act(() => {
-      result.current.recordManualPayment({ ownerId: owner.id, amountCents: 100, method: "check", reference: "1", receivedOn: TODAY });
+      result.current.recordManualPayment({ homeId: home.id, amountCents: 100, method: "check", reference: "1", receivedOn: TODAY });
     });
     const during = figures();
     expect(during.dues.collectedYtd).toBe(before.dues.collectedYtd + 100);
-    const line = result.current.community.ownerCharges[owner.id].find((l) => l.kind === "payment" && l.label.includes("Check"))!;
+    const line = result.current.community.homeCharges[home.id].find((l) => l.kind === "payment" && l.label.includes("Check"))!;
     act(() => {
       result.current.reverseManualPayment(line.id, "Entered twice");
     });
@@ -49,7 +49,7 @@ describe("a check recorded and reversed in the demo", () => {
     expect(after.spending).toEqual(before.spending);
     expect(after.cash).toBe(before.cash);
     // The line the database writes: a charge, not dues.
-    expect(result.current.community.ownerCharges[owner.id].find((l) => l.label.startsWith("Payment reversed"))).toMatchObject({ kind: "charge", category: "other", amountCents: 100 });
+    expect(result.current.community.homeCharges[home.id].find((l) => l.label.startsWith("Payment reversed"))).toMatchObject({ kind: "charge", category: "other", amountCents: 100 });
   });
 });
 
@@ -133,10 +133,10 @@ describe("a dues change and a new home in the demo", () => {
     const billed = () => duesCollection(result.current.community, 2026).expectedYtd;
     const before = billed();
     const homesBefore = homeCount(result.current.community);
-    const unit42 = result.current.community.owners.find((o) => o.unit === "42")!;
+    const unit42 = result.current.community.homes.find((o) => o.unit === "42")!;
 
     act(() => {
-      result.current.setHomeDues([{ ownerId: unit42.id, cents: 31_000 }]);
+      result.current.setHomeDues([{ homeId: unit42.id, cents: 31_000 }]);
     });
     expect(billed()).toBe(before);
 
@@ -151,21 +151,21 @@ describe("a dues change and a new home in the demo", () => {
 describe("a bank payment in the demo", () => {
   it("is the full amount on the statement and in the books, with the fee as its own line, worded as the database words it", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const owner = result.current.community.owners.find((o) => o.daysPastDue > 0)!;
+    const home = result.current.community.homes.find((o) => o.daysPastDue > 0)!;
     act(() => {
       result.current.recordPayment({
-        ownerId: owner.id, amountCents: 28_500, processorCents: 228, platformCents: 0,
+        homeId: home.id, amountCents: 28_500, processorCents: 228, platformCents: 0,
         platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
       });
     });
-    const line = result.current.community.ownerCharges[owner.id].find((l) => l.kind === "payment" && l.id.startsWith("pay-"))!;
+    const line = result.current.community.homeCharges[home.id].find((l) => l.kind === "payment" && l.id.startsWith("pay-"))!;
     expect(line).toMatchObject({ label: "Bank payment", amountCents: -28_500, feeCents: 228 });
     // The whole payment in and the fee out as its own line, as record_payment
     // books it since 0101; the two net to what the bank received.
     const [fee, deposit] = result.current.ledger;
-    expect(fee).toMatchObject({ description: `Processing fee, unit ${owner.unit}`, category: "Processing fees", amountCents: -228 });
+    expect(fee).toMatchObject({ description: `Processing fee, unit ${home.unit}`, category: "Processing fees", amountCents: -228 });
     expect(deposit).toMatchObject({
-      description: `Assessment payment, unit ${owner.unit}`,
+      description: `Assessment payment, unit ${home.unit}`,
       category: "Assessments",
       amountCents: 28_500,
     });
@@ -181,7 +181,7 @@ describe("the resident home card", () => {
         <button
           onClick={() =>
             recordPayment({
-              ownerId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
+              homeId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
               platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
             })
           }
@@ -211,7 +211,7 @@ describe("the resident home card", () => {
     const user = userEvent.setup();
     function Change() {
       const { setHomeDues } = useAppState();
-      return <button onClick={() => setHomeDues([{ ownerId: "own-042", cents: 31_000 }])}>change dues</button>;
+      return <button onClick={() => setHomeDues([{ homeId: "own-042", cents: 31_000 }])}>change dues</button>;
     }
     render(
       <AppStateProvider>
@@ -234,11 +234,11 @@ describe("the resident home card", () => {
   });
 
   it("puts a payment made today below the bill dated later, with balances that follow", () => {
-    const { result } = renderHook(() => ({ state: useAppState(), lines: useOwnerCharges() }), { wrapper });
+    const { result } = renderHook(() => ({ state: useAppState(), lines: useHomeCharges() }), { wrapper });
     act(() => result.current.state.signIn("acct-monish"));
     act(() => {
       result.current.state.recordPayment({
-        ownerId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
+        homeId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
         platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
       });
     });

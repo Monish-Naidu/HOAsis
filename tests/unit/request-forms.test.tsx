@@ -25,7 +25,7 @@ let answer: () => unknown = () => undefined;
 let isRemote = true;
 const addRequest = vi.fn(() => answer());
 
-const owner = { id: "unit-4", displayName: "Pat Okafor", unit: "4", members: ["Pat Okafor"] };
+const home = { id: "unit-4", displayName: "Pat Okafor", unit: "4", members: ["Pat Okafor"] };
 const forms = [
   {
     id: "fence",
@@ -58,7 +58,7 @@ vi.mock("@/lib/app-state", async (original) => ({
     requests: [],
     community: { association: { name: "Willow Creek Estates" }, forms, amenityBookings: [] },
   }),
-  useCurrentOwner: () => owner,
+  useCurrentHome: () => home,
 }));
 
 const { ToastProvider } = await import("@/components/app/toast");

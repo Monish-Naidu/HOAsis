@@ -3,7 +3,7 @@ import { homeFilterCounts, matchesHomeFilter } from "@/lib/roster-filters";
 import { ladderFilterCounts, matchesLadderFilter } from "@/lib/collections";
 import { applyRequestFilters, requestFilterCounts } from "@/lib/request-filters";
 
-const owner = (over: Partial<{ daysPastDue: number; placeholder: boolean; autopay: boolean; email: string }>) => ({
+const home = (over: Partial<{ daysPastDue: number; placeholder: boolean; autopay: boolean; email: string }>) => ({
   daysPastDue: 0,
   placeholder: false,
   autopay: false,
@@ -12,37 +12,37 @@ const owner = (over: Partial<{ daysPastDue: number; placeholder: boolean; autopa
 });
 
 describe("homeowner chips", () => {
-  const owners = [
-    owner({}),
-    owner({ autopay: true }),
-    owner({ daysPastDue: 20, email: "" }),
-    owner({ placeholder: true, email: "" }),
+  const homes = [
+    home({}),
+    home({ autopay: true }),
+    home({ daysPastDue: 20, email: "" }),
+    home({ placeholder: true, email: "" }),
   ];
 
   it("counts each chip with the same rule that filters the list", () => {
-    expect(homeFilterCounts(owners)).toEqual({ all: 4, "paid-up": 2, "past-due": 1, autopay: 1, "no-email": 1 });
+    expect(homeFilterCounts(homes)).toEqual({ all: 4, "paid-up": 2, "past-due": 1, autopay: 1, "no-email": 1 });
     for (const f of ["paid-up", "past-due", "autopay", "no-email"] as const) {
-      expect(owners.filter((o) => matchesHomeFilter(o, f))).toHaveLength(homeFilterCounts(owners)[f]);
+      expect(homes.filter((o) => matchesHomeFilter(o, f))).toHaveLength(homeFilterCounts(homes)[f]);
     }
   });
 
   it("does not call a home with nobody on record paid up, on autopay or missing an email", () => {
-    const vacant = owner({ placeholder: true, email: "", autopay: true });
+    const vacant = home({ placeholder: true, email: "", autopay: true });
     expect(matchesHomeFilter(vacant, "paid-up")).toBe(false);
     expect(matchesHomeFilter(vacant, "autopay")).toBe(false);
     expect(matchesHomeFilter(vacant, "no-email")).toBe(false);
   });
 
   it("treats a blank email as none", () => {
-    expect(matchesHomeFilter(owner({ email: "   " }), "no-email")).toBe(true);
+    expect(matchesHomeFilter(home({ email: "   " }), "no-email")).toBe(true);
   });
 });
 
 describe("past due chips", () => {
   const rows = [
-    { stage: "reminder" as const, owner: { id: "a" } },
-    { stage: "reminder" as const, owner: { id: "b" } },
-    { stage: "demand" as const, owner: { id: "c" } },
+    { stage: "reminder" as const, home: { id: "a" } },
+    { stage: "reminder" as const, home: { id: "b" } },
+    { stage: "demand" as const, home: { id: "c" } },
   ];
 
   it("counts a rung and the homes whose autopay failed", () => {

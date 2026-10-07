@@ -1,6 +1,6 @@
 import { homeLabel } from "@/lib/wording";
 import type { Community } from "@/lib/data/community";
-import type { JoinRequest, Owner } from "@/lib/types";
+import type { JoinRequest, Home } from "@/lib/types";
 
 /**
  * Which home a person who asked to join means, and what letting them in does.
@@ -18,10 +18,10 @@ const plain = (text: string) => text.trim().toLowerCase().replace(/\s+/g, " ");
  * lot. Two homes that both fit select nothing: guessing between them is
  * how a person ends up on the neighbour's home.
  */
-export function bestMatch(community: Community, owners: Owner[], typed: string): Owner | null {
+export function bestMatch(community: Community, homes: Home[], typed: string): Home | null {
   const wanted = plain(typed);
   if (!wanted) return null;
-  const hits = owners.filter(
+  const hits = homes.filter(
     (o) =>
       plain(o.unit) === wanted ||
       plain(homeLabel(community, o.unit)) === wanted ||
@@ -38,21 +38,21 @@ export function bestMatch(community: Community, owners: Owner[], typed: string):
  *   different  somebody else owns it: share it, or record a sale
  */
 export function seatPlan(
-  owner: Owner,
+  home: Home,
   request: Pick<JoinRequest, "email">,
   ownerHasSignedIn: boolean,
 ): "seat" | "different" {
-  if (owner.placeholder) return "seat";
-  const listed = owner.email.trim().toLowerCase();
+  if (home.placeholder) return "seat";
+  const listed = home.email.trim().toLowerCase();
   if (listed && listed === request.email.trim().toLowerCase()) return "seat";
   if (!ownerHasSignedIn && !listed) return "seat";
   return "different";
 }
 
 /** The picker's line for a home: label, address when it adds something, who owns it. */
-export function homeOption(community: Community, owner: Owner): string {
-  const label = homeLabel(community, owner.unit);
+export function homeOption(community: Community, home: Home): string {
+  const label = homeLabel(community, home.unit);
   const address =
-    owner.address && owner.address !== owner.unit && owner.address !== label ? owner.address : "";
-  return [label, address, owner.displayName].filter(Boolean).join(" · ");
+    home.address && home.address !== home.unit && home.address !== label ? home.address : "";
+  return [label, address, home.displayName].filter(Boolean).join(" · ");
 }

@@ -110,7 +110,7 @@ export function profileFromCommunity(community: Community): AssociationProfile {
     // Without answers we cannot know, so amenities stay in the plan if the
     // association has any recorded, and drop out only when it truly has none.
     sharedSpaces: answers?.sharedSpaces ?? (community.amenities.length ? ["clubhouse"] : []),
-    homes: community.owners.length,
+    homes: community.homes.length,
     stateName: community.association.stateName,
   };
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Check, Send, ShieldCheck } from "lucide-react";
 import { Button, Callout, Card, EmptyState, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 
 const input =
@@ -29,7 +29,7 @@ const input =
  */
 export function ReportForm() {
   const { community, addViolationReport } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const { notify } = useToast();
 
   const [unit, setUnit] = useState("");
@@ -37,20 +37,20 @@ export function ReportForm() {
   const [observedOn, setObservedOn] = useState(community.asOf);
   const [sent, setSent] = useState<string | null>(null);
 
-  const mine = owner?.unit ?? "";
-  const known = community.owners.some((o) => o.unit === unit.trim());
+  const mine = home?.unit ?? "";
+  const known = community.homes.some((o) => o.unit === unit.trim());
   const isMine = unit.trim() !== "" && unit.trim() === mine;
   const ready = unit.trim() && what.trim().length > 10 && !isMine;
 
   function submit() {
-    if (!ready || !owner) return;
-    const subject = community.owners.find((o) => o.unit === unit.trim());
+    if (!ready || !home) return;
+    const subject = community.homes.find((o) => o.unit === unit.trim());
     const report = addViolationReport({
-      reporterId: owner.id,
-      reporterName: owner.displayName,
-      reporterUnit: owner.unit,
+      reporterId: home.id,
+      reporterName: home.displayName,
+      reporterUnit: home.unit,
       subjectUnit: unit.trim(),
-      subjectOwnerId: subject?.id,
+      subjectHomeId: subject?.id,
       what,
       observedOn,
     });
@@ -58,7 +58,7 @@ export function ReportForm() {
     notify("Sent to the board. Your name is not shared with the home you reported.");
   }
 
-  if (!owner) {
+  if (!home) {
     return (
       <Card>
         <EmptyState

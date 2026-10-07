@@ -11,7 +11,7 @@ import type {
   CommunityHistory,
   CommunitySettings,
   LedgerEntry,
-  Owner,
+  Home,
   Payout,
 } from "@/lib/types";
 import { caps } from "./accounts";
@@ -182,7 +182,7 @@ function fundsActual(funds: FundsSummary, category: string, kind: "income" | "ex
 }
 
 /** Standing derived from how long money has been owed, not stored separately. */
-function standingFor(daysPastDue: number, balanceCents: number): Owner["standing"] {
+function standingFor(daysPastDue: number, balanceCents: number): Home["standing"] {
   if (balanceCents <= 0) return "current";
   if (daysPastDue > 90) return "collections";
   if (daysPastDue > 30) return "late";
@@ -506,7 +506,7 @@ export async function loadCommunity(
     else seatedByUnit.set(m.unit_id, [m.profile_id]);
   }
 
-  const owners: Owner[] = unitRows.map((unit) => {
+  const homes: Home[] = unitRows.map((unit) => {
     const holder = holderByUnit.get(unit.id);
     const summary = unitSummary.get(unit.id);
     const balanceCents = Number(summary?.balance_cents ?? 0);
@@ -567,7 +567,7 @@ export async function loadCommunity(
       moveInDate: holder?.starts_on ?? unit.created_at.slice(0, 10),
       balanceCents,
       autopay: Boolean(holder?.autopay),
-      autopayPlan: (holder?.autopay as Owner["autopayPlan"]) ?? undefined,
+      autopayPlan: (holder?.autopay as Home["autopayPlan"]) ?? undefined,
       standing: standingFor(daysPastDue, balanceCents),
       daysPastDue,
       boardRole:
@@ -585,7 +585,7 @@ export async function loadCommunity(
     .filter((m) => m.profile_id)
     .map((m) => ({
       id: m.profile_id as string,
-      ownerId: m.unit_id,
+      homeId: m.unit_id,
       name: m.full_name,
       email: m.invited_email ?? "",
       unit: unitRows.find((u) => u.id === m.unit_id)?.label ?? "",
@@ -608,7 +608,7 @@ export async function loadCommunity(
   // running figure starts from the balance the server carried into the
   // window and walks the same rows the balance view sums, so the statement
   // and the balance cannot disagree.
-  const ownerCharges: Record<string, ChargeLine[]> = {};
+  const homeCharges: Record<string, ChargeLine[]> = {};
   const rowsByUnit = new Map<string, ChargeRow[]>();
   for (const c of chargeRows) {
     const list = rowsByUnit.get(c.unit_id);
@@ -616,7 +616,7 @@ export async function loadCommunity(
     else rowsByUnit.set(c.unit_id, [c]);
   }
   for (const unit of unitRows) {
-    ownerCharges[unit.id] = statementLines(
+    homeCharges[unit.id] = statementLines(
       rowsByUnit.get(unit.id) ?? [],
       Number(unitSummary.get(unit.id)?.carried_cents ?? 0),
     );
@@ -732,7 +732,7 @@ export async function loadCommunity(
       reserveStudy: stored.reserveStudy ?? undefined,
     },
 
-    owners,
+    homes,
     accounts,
     // Saved methods are kept by home, so two people on one title share them,
     // and row level security hands a member every row on their home. After a
@@ -747,7 +747,7 @@ export async function loadCommunity(
       .map((i) => ({
         ...(i.detail ?? {}),
         id: i.id,
-        ownerId: i.unit_id,
+        homeId: i.unit_id,
         kind: i.kind,
         label: i.label,
         mask: i.mask,
@@ -988,7 +988,7 @@ export async function loadCommunity(
     violations: (violationRows.data ?? []).map((v) => ({
       id: v.id,
       reference: v.reference,
-      ownerId: v.unit_id ?? "",
+      homeId: v.unit_id ?? "",
       ownerName: v.owner_name,
       unit: v.unit_label,
       rule: v.rule,
@@ -1017,7 +1017,7 @@ export async function loadCommunity(
       reporterName: r.reporter_name,
       reporterUnit: r.reporter_unit,
       subjectUnit: r.subject_unit,
-      subjectOwnerId: r.subject_unit_id ?? undefined,
+      subjectHomeId: r.subject_unit_id ?? undefined,
       what: r.what,
       observedOn: r.observed_on,
       submittedOn: r.submitted_on,
@@ -1032,7 +1032,7 @@ export async function loadCommunity(
       id: t.id,
       subject: t.subject,
       participants: (t.participants ?? []) as string[],
-      ownerId: t.unit_id ?? undefined,
+      homeId: t.unit_id ?? undefined,
       unit: t.unit_id ? unitRows.find((u) => u.id === t.unit_id)?.label : undefined,
       updatedDate: t.updated_on,
       unread: t.unread,
@@ -1073,7 +1073,7 @@ export async function loadCommunity(
     requests: (requests.data ?? []).map((r) => ({
       id: r.id,
       reference: r.reference,
-      ownerId: r.unit_id,
+      homeId: r.unit_id,
       ownerName: holderByUnit.get(r.unit_id)?.full_name ?? "",
       unit: unitRows.find((u) => u.id === r.unit_id)?.label ?? "",
       kind: r.kind,
@@ -1246,7 +1246,7 @@ export async function loadCommunity(
         ...rows.filter((t) => !t.baseline_id).map((t) => toTemplate(t, t.id)),
       ];
     })(),
-    ownerCharges,
+    homeCharges,
     history,
     boardTerms,
     activity,

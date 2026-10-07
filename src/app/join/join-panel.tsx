@@ -12,7 +12,7 @@ import { hasSupabase } from "@/lib/supabase/env";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { joinReturnPath, openInvitedHome } from "./invited";
 import { resendConfirmation } from "./resend";
-import { ownerDues } from "@/lib/home-types";
+import { homeDues } from "@/lib/home-types";
 import { isEmail } from "@/lib/input-checks";
 import { cn, money } from "@/lib/utils";
 
@@ -43,8 +43,8 @@ export function JoinPanel() {
   const hasToken = search.has("c") || search.has("o") || search.has("k");
   const ready = useStorageReady();
   const community = useCommunityById(invitation?.communityId);
-  const owner = community?.owners.find((o) => o.id === invitation?.ownerId);
-  const account = community?.accounts.find((a) => a.ownerId === invitation?.ownerId);
+  const home = community?.homes.find((o) => o.id === invitation?.homeId);
+  const account = community?.accounts.find((a) => a.homeId === invitation?.homeId);
 
   if (!hasToken) {
     const invited = search.has("invite");
@@ -62,7 +62,7 @@ export function JoinPanel() {
     return <Card className="h-40 animate-pulse bg-surface-2" aria-label="Loading invitation" />;
   }
 
-  if (!invitation || !community || !owner || !account) {
+  if (!invitation || !community || !home || !account) {
     return (
       <Card className="p-6">
         <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
@@ -101,11 +101,11 @@ export function JoinPanel() {
       </div>
 
       <div className="space-y-3 px-6 py-5">
-        <Row label="Household" value={owner.displayName} />
-        <Row label="Unit" value={owner.unit} />
+        <Row label="Household" value={home.displayName} />
+        <Row label="Unit" value={home.unit} />
         <Row
           label="Dues"
-          value={`${money(ownerDues(community.association, owner))} ${community.association.duesCadence}`}
+          value={`${money(homeDues(community.association, home))} ${community.association.duesCadence}`}
         />
 
         <Button variant="primary" size="md" className="mt-2 w-full" onClick={accept}>

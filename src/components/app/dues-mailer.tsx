@@ -99,8 +99,8 @@ export function DuesMailer() {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   const delinq = delinquency(community);
-  const withEmail = community.owners.filter((o) => o.email.trim().length > 0).length;
-  const unreachable = community.owners.length - withEmail;
+  const withEmail = community.homes.filter((o) => o.email.trim().length > 0).length;
+  const unreachable = community.homes.length - withEmail;
 
   async function run(category: Category, dryRun: boolean) {
     setBusy({ category, dryRun });
@@ -162,7 +162,7 @@ export function DuesMailer() {
         <Run
           title="Dues coming due"
           detail={
-            duesVary(community.association, community.owners)
+            duesVary(community.association, community.homes)
               ? `Everyone, each at their own amount. Due ${formatDate(community.nextChargeDate, "medium")}.`
               : `Everyone. ${money(community.association.duesCents)} due ${formatDate(community.nextChargeDate, "medium")}.`
           }

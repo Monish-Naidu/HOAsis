@@ -53,7 +53,7 @@ export function useMoneyActions(deps: AppDeps) {
    */
   const applyLocalPayment = useCallback(
     (input: {
-      ownerId: string;
+      homeId: string;
       amountCents: number;
       processorCents: number;
       platformCents: number;
@@ -63,8 +63,8 @@ export function useMoneyActions(deps: AppDeps) {
       date: string;
     }) => {
       const date = input.date;
-      const charges = sliceStore(communityId, "ownerCharges");
-      const existing = charges.getSnapshot()[input.ownerId] ?? [];
+      const charges = sliceStore(communityId, "homeCharges");
+      const existing = charges.getSnapshot()[input.homeId] ?? [];
 
       // What each charge still owes, after everything already applied to it.
       const paidAgainst = new Map<string, number>();
@@ -93,20 +93,20 @@ export function useMoneyActions(deps: AppDeps) {
         remaining -= take;
       }
 
-      const owners = sliceStore(communityId, "owners");
-      const owner = owners.getSnapshot().find((o) => o.id === input.ownerId);
-      const balanceAfter = Math.max(0, (owner?.balanceCents ?? 0) - input.amountCents);
+      const homes = sliceStore(communityId, "homes");
+      const home = homes.getSnapshot().find((o) => o.id === input.homeId);
+      const balanceAfter = Math.max(0, (home?.balanceCents ?? 0) - input.amountCents);
 
       // Placed by its date, after the charges of that day, with the running
       // balances restated: written at the top it sat above a bill dated
       // later and the balance beside it read as if paid before billed.
-      const headBefore = existing[0]?.balanceAfterCents ?? owner?.balanceCents ?? 0;
+      const headBefore = existing[0]?.balanceAfterCents ?? home?.balanceCents ?? 0;
       charges.update((all) => ({
         ...all,
-        [input.ownerId]: addStatementLine(
-          all[input.ownerId] ?? [],
+        [input.homeId]: addStatementLine(
+          all[input.homeId] ?? [],
           {
-            id: `pay-${date}-${input.ownerId}-${existing.length + 1}`,
+            id: `pay-${date}-${input.homeId}-${existing.length + 1}`,
             date,
             label: input.label,
             kind: "payment" as const,
@@ -123,9 +123,9 @@ export function useMoneyActions(deps: AppDeps) {
         ),
       }));
 
-      owners.update((all) =>
+      homes.update((all) =>
         all.map((o) =>
-          o.id === input.ownerId
+          o.id === input.homeId
             ? { ...o, balanceCents: balanceAfter, daysPastDue: 0, standing: "current" as const }
             : o,
         ),
@@ -146,30 +146,30 @@ export function useMoneyActions(deps: AppDeps) {
         ...(absorbed > 0
           ? [
               {
-                id: `led-${date}-${input.ownerId}-fee-${all.length + 1}`,
+                id: `led-${date}-${input.homeId}-fee-${all.length + 1}`,
                 date,
-                description: `Processing fee, unit ${owner?.unit ?? "?"}`,
+                description: `Processing fee, unit ${home?.unit ?? "?"}`,
                 counterparty: "Stripe",
                 category: "Processing fees" as const,
                 accountId: operating?.id ?? "unassigned",
                 amountCents: -absorbed,
                 status: "cleared" as const,
                 matchedBy: "auto" as const,
-                ownerId: input.ownerId,
+                homeId: input.homeId,
               },
             ]
           : []),
         {
-          id: `led-${date}-${input.ownerId}-${all.length + 1}`,
+          id: `led-${date}-${input.homeId}-${all.length + 1}`,
           date,
-          description: `Assessment payment, unit ${owner?.unit ?? "?"}`,
-          counterparty: owner?.displayName ?? "Owner",
+          description: `Assessment payment, unit ${home?.unit ?? "?"}`,
+          counterparty: home?.displayName ?? "Owner",
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
           amountCents: input.amountCents,
           status: "cleared" as const,
           matchedBy: "auto" as const,
-          ownerId: input.ownerId,
+          homeId: input.homeId,
         },
         ...all,
       ]);
@@ -212,7 +212,7 @@ export function useMoneyActions(deps: AppDeps) {
    */
   const recordPayment = useCallback(
     (input: {
-      ownerId: string;
+      homeId: string;
       amountCents: number;
       /** What the processor takes out of the deposit. */
       processorCents: number;
@@ -227,7 +227,7 @@ export function useMoneyActions(deps: AppDeps) {
         // cannot land on the statement and miss the books.
         void remoteWrite("Recording the payment", () =>
           supabaseBrowser().rpc("record_payment", {
-            p_unit_id: input.ownerId,
+            p_unit_id: input.homeId,
             p_amount_cents: input.amountCents,
             p_rail: input.kind,
             p_processor_fee_cents: input.processorCents,
@@ -255,7 +255,7 @@ export function useMoneyActions(deps: AppDeps) {
    */
   const recordManualPayment = useCallback(
     (input: {
-      ownerId: string;
+      homeId: string;
       amountCents: number;
       method: ManualMethod;
       reference: string;
@@ -264,7 +264,7 @@ export function useMoneyActions(deps: AppDeps) {
       if (remote.community) {
         return remoteWrite("Recording the payment", () =>
           supabaseBrowser().rpc("record_manual_payment", {
-            p_unit_id: input.ownerId,
+            p_unit_id: input.homeId,
             p_amount_cents: input.amountCents,
             p_method: input.method,
             p_reference: input.reference.trim(),
@@ -273,7 +273,7 @@ export function useMoneyActions(deps: AppDeps) {
         );
       }
       applyLocalPayment({
-        ownerId: input.ownerId,
+        homeId: input.homeId,
         amountCents: input.amountCents,
         processorCents: 0,
         platformCents: 0,
@@ -307,24 +307,24 @@ export function useMoneyActions(deps: AppDeps) {
         );
       }
       const date = todayIsoDate();
-      const charges = sliceStore(communityId, "ownerCharges");
-      let ownerId: string | null = null;
+      const charges = sliceStore(communityId, "homeCharges");
+      let homeId: string | null = null;
       let amountCents = 0;
       for (const [id, lines] of Object.entries(charges.getSnapshot())) {
         const line = lines.find((l) => l.id === paymentId);
         if (line) {
-          ownerId = id;
+          homeId = id;
           amountCents = -line.amountCents;
         }
       }
-      if (!ownerId || amountCents <= 0) return false;
-      const owners = sliceStore(communityId, "owners");
-      const owner = owners.getSnapshot().find((o) => o.id === ownerId);
-      const balanceAfter = (owner?.balanceCents ?? 0) + amountCents;
-      const homeId = ownerId;
+      if (!homeId || amountCents <= 0) return false;
+      const homes = sliceStore(communityId, "homes");
+      const home = homes.getSnapshot().find((o) => o.id === homeId);
+      const balanceAfter = (home?.balanceCents ?? 0) + amountCents;
+      const paidHomeId = homeId;
       charges.update((all) => ({
         ...all,
-        [homeId]: [
+        [paidHomeId]: [
           {
             id: `reversal-${date}-${paymentId}`,
             date,
@@ -336,11 +336,11 @@ export function useMoneyActions(deps: AppDeps) {
             amountCents,
             balanceAfterCents: balanceAfter,
           },
-          ...(all[homeId] ?? []).map((l) => (l.id === paymentId ? { ...l, reversed: true } : l)),
+          ...(all[paidHomeId] ?? []).map((l) => (l.id === paymentId ? { ...l, reversed: true } : l)),
         ],
       }));
-      owners.update((all) =>
-        all.map((o) => (o.id === homeId ? { ...o, balanceCents: balanceAfter } : o)),
+      homes.update((all) =>
+        all.map((o) => (o.id === paidHomeId ? { ...o, balanceCents: balanceAfter } : o)),
       );
       // The deposit comes back out of the books and the bank, as the money
       // went in, so collected and the bank balance fall with the balance.
@@ -351,14 +351,14 @@ export function useMoneyActions(deps: AppDeps) {
         {
           id: `led-reversal-${date}-${paymentId}`,
           date,
-          description: `Payment reversed, ${placeLabel(owner?.unit ?? "?")}`,
-          counterparty: owner?.displayName ?? "Owner",
+          description: `Payment reversed, ${placeLabel(home?.unit ?? "?")}`,
+          counterparty: home?.displayName ?? "Owner",
           category: "Assessments" as const,
           accountId: operating?.id ?? "unassigned",
           amountCents: -amountCents,
           status: "cleared" as const,
           matchedBy: "auto" as const,
-          ownerId: homeId,
+          homeId: homeId,
         },
         ...all,
       ]);
@@ -387,22 +387,22 @@ export function useMoneyActions(deps: AppDeps) {
    * beside it. Row level security already lets a finance holder read both.
    */
   const manualPaymentsFor = useCallback(
-    async (ownerId: string): Promise<ManualPaymentRow[]> => {
+    async (homeId: string): Promise<ManualPaymentRow[]> => {
       if (remote.community) {
-        if (!isUuid(ownerId)) return [];
+        if (!isUuid(homeId)) return [];
         const supabase = supabaseBrowser();
         const [paid, lines] = await Promise.all([
           supabase
             .from("payments")
             .select("id, amount_cents, rail, state, refunded_cents, created_at")
-            .eq("unit_id", ownerId)
+            .eq("unit_id", homeId)
             .in("rail", ["check", "cash"])
             .order("created_at", { ascending: false })
             .limit(10),
           supabase
             .from("charges")
             .select("label, amount_cents, due_on")
-            .eq("unit_id", ownerId)
+            .eq("unit_id", homeId)
             .eq("kind", "payment")
             .or("label.like.Check payment*,label.like.Cash payment*")
             .order("created_at", { ascending: true }),
@@ -426,7 +426,7 @@ export function useMoneyActions(deps: AppDeps) {
           ),
         );
       }
-      const lines = sliceStore(communityId, "ownerCharges").getSnapshot()[ownerId] ?? [];
+      const lines = sliceStore(communityId, "homeCharges").getSnapshot()[homeId] ?? [];
       const rows: ManualPaymentRow[] = [];
       for (const l of lines) {
         const parsed = l.kind === "payment" ? parseManualLabel(l.label) : null;
@@ -452,43 +452,43 @@ export function useMoneyActions(deps: AppDeps) {
    * activity row a direct insert into charges could not.
    */
   const addCredit = useCallback(
-    (input: { ownerId: string; amountCents: number; reason: string }) => {
+    (input: { homeId: string; amountCents: number; reason: string }) => {
       const reason = input.reason.trim();
       if (input.amountCents <= 0 || !reason) return false;
       const date = todayIsoDate();
       if (remote.community) {
         return remoteWrite("Adding the credit", () =>
           supabaseBrowser().rpc("add_credit", {
-            p_unit_id: input.ownerId,
+            p_unit_id: input.homeId,
             p_amount_cents: input.amountCents,
             p_label: reason,
           }),
         );
       }
-      const owner = sliceStore(communityId, "owners")
+      const home = sliceStore(communityId, "homes")
         .getSnapshot()
-        .find((o) => o.id === input.ownerId);
-      logDemoActivity(communityId, "charge", activityWords.credit(input.amountCents, owner?.unit ?? "a home", reason), {
-        unit_id: input.ownerId,
-        home: owner?.unit,
+        .find((o) => o.id === input.homeId);
+      logDemoActivity(communityId, "charge", activityWords.credit(input.amountCents, home?.unit ?? "a home", reason), {
+        unit_id: input.homeId,
+        home: home?.unit,
       });
-      const balanceAfter = (owner?.balanceCents ?? 0) - input.amountCents;
-      sliceStore(communityId, "ownerCharges").update((all) => ({
+      const balanceAfter = (home?.balanceCents ?? 0) - input.amountCents;
+      sliceStore(communityId, "homeCharges").update((all) => ({
         ...all,
-        [input.ownerId]: [
+        [input.homeId]: [
           {
-            id: `credit-${date}-${input.ownerId}-${(all[input.ownerId] ?? []).length + 1}`,
+            id: `credit-${date}-${input.homeId}-${(all[input.homeId] ?? []).length + 1}`,
             date,
             label: reason,
             kind: "credit" as const,
             amountCents: -input.amountCents,
             balanceAfterCents: balanceAfter,
           },
-          ...(all[input.ownerId] ?? []),
+          ...(all[input.homeId] ?? []),
         ],
       }));
-      sliceStore(communityId, "owners").update((all) =>
-        all.map((o) => (o.id === input.ownerId ? { ...o, balanceCents: balanceAfter } : o)),
+      sliceStore(communityId, "homes").update((all) =>
+        all.map((o) => (o.id === input.homeId ? { ...o, balanceCents: balanceAfter } : o)),
       );
       return true;
     },
@@ -497,27 +497,27 @@ export function useMoneyActions(deps: AppDeps) {
 
   /** One charge line on a home's demo statement, with the balance it leaves. */
   const addLocalCharge = useCallback(
-    (ownerId: string, amountCents: number, label: string, dueOn: string) => {
-      const owner = sliceStore(communityId, "owners")
+    (homeId: string, amountCents: number, label: string, dueOn: string) => {
+      const home = sliceStore(communityId, "homes")
         .getSnapshot()
-        .find((o) => o.id === ownerId);
-      const balanceAfter = (owner?.balanceCents ?? 0) + amountCents;
-      sliceStore(communityId, "ownerCharges").update((all) => ({
+        .find((o) => o.id === homeId);
+      const balanceAfter = (home?.balanceCents ?? 0) + amountCents;
+      sliceStore(communityId, "homeCharges").update((all) => ({
         ...all,
-        [ownerId]: [
+        [homeId]: [
           {
-            id: `charge-${dueOn}-${ownerId}-${(all[ownerId] ?? []).length + 1}`,
+            id: `charge-${dueOn}-${homeId}-${(all[homeId] ?? []).length + 1}`,
             date: dueOn,
             label,
             kind: "charge" as const,
             amountCents,
             balanceAfterCents: balanceAfter,
           },
-          ...(all[ownerId] ?? []),
+          ...(all[homeId] ?? []),
         ],
       }));
-      sliceStore(communityId, "owners").update((all) =>
-        all.map((o) => (o.id === ownerId ? { ...o, balanceCents: balanceAfter } : o)),
+      sliceStore(communityId, "homes").update((all) =>
+        all.map((o) => (o.id === homeId ? { ...o, balanceCents: balanceAfter } : o)),
       );
     },
     [communityId],
@@ -530,21 +530,21 @@ export function useMoneyActions(deps: AppDeps) {
    * The charge is not dues, so it draws no late fee.
    */
   const addCharge = useCallback(
-    (input: { ownerId: string; amountCents: number; label: string; dueOn: string }) => {
+    (input: { homeId: string; amountCents: number; label: string; dueOn: string }) => {
       const label = input.label.trim();
       if (!can("finances")) return false;
       if (chargeProblem({ ...input, label }, todayIsoDate())) return false;
       if (remote.community) {
         return remoteWrite("Adding the charge", () =>
           supabaseBrowser().rpc("add_charge", {
-            p_unit_id: input.ownerId,
+            p_unit_id: input.homeId,
             p_amount_cents: input.amountCents,
             p_label: label,
             p_due_on: input.dueOn,
           }),
         );
       }
-      addLocalCharge(input.ownerId, input.amountCents, label, input.dueOn);
+      addLocalCharge(input.homeId, input.amountCents, label, input.dueOn);
       return true;
     },
     [can, remote.community, addLocalCharge],
@@ -567,7 +567,7 @@ export function useMoneyActions(deps: AppDeps) {
           }),
         );
       }
-      for (const o of sliceStore(communityId, "owners").getSnapshot()) {
+      for (const o of sliceStore(communityId, "homes").getSnapshot()) {
         addLocalCharge(o.id, input.amountCents, label, input.dueOn);
       }
       return true;
@@ -648,7 +648,7 @@ export function useMoneyActions(deps: AppDeps) {
   );
 
   const setOpeningBalances = useCallback(
-    (asOf: string, balances: { ownerId: string; amountCents: number }[]) => {
+    (asOf: string, balances: { homeId: string; amountCents: number }[]) => {
       if (remote.community) {
         // One line per home. A correction is a second line for the
         // difference rather than a delete and a rewrite (0106), so the
@@ -663,8 +663,8 @@ export function useMoneyActions(deps: AppDeps) {
             .eq("label", "Balance brought forward");
           if (readError) throw new Error(readError.message);
           const held = (data ?? []) as { unit_id: string; amount_cents: number; due_on: string }[];
-          for (const { ownerId, amountCents } of balances) {
-            const mine = held.filter((row) => row.unit_id === ownerId);
+          for (const { homeId, amountCents } of balances) {
+            const mine = held.filter((row) => row.unit_id === homeId);
             const delta = correctionCents(
               mine.map((row) => row.amount_cents),
               amountCents,
@@ -678,7 +678,7 @@ export function useMoneyActions(deps: AppDeps) {
             }
             const { error } = await supabase.from("charges").insert({
               association_id: rc.id,
-              unit_id: ownerId,
+              unit_id: homeId,
               kind: delta > 0 ? "charge" : "credit",
               label: "Balance brought forward",
               amount_cents: delta,
@@ -688,7 +688,7 @@ export function useMoneyActions(deps: AppDeps) {
           }
         }, { timeoutMs: WRITE_TIMEOUT_MS + balances.length * 1_000 });
       }
-      const byOwner = new Map(balances.map((b) => [b.ownerId, b.amountCents]));
+      const byHome = new Map(balances.map((b) => [b.homeId, b.amountCents]));
 
       // Only the balance moves. Standing and days past due are deliberately
       // left alone: a figure typed into a box says what is owed and says
@@ -697,26 +697,26 @@ export function useMoneyActions(deps: AppDeps) {
       // their first day here on the strength of an inference. The ladder runs
       // off the calendar from the switch date, which is the whole reason it is
       // defensible at a hearing.
-      sliceStore(communityId, "owners").update((all) =>
-        all.map((owner) => {
-          const amount = byOwner.get(owner.id);
-          return amount === undefined ? owner : { ...owner, balanceCents: amount };
+      sliceStore(communityId, "homes").update((all) =>
+        all.map((home) => {
+          const amount = byHome.get(home.id);
+          return amount === undefined ? home : { ...home, balanceCents: amount };
         }),
       );
 
-      sliceStore(communityId, "ownerCharges").update((all) => {
+      sliceStore(communityId, "homeCharges").update((all) => {
         const next = { ...all };
-        for (const { ownerId, amountCents } of balances) {
-          const existing = (next[ownerId] ?? []).filter(
-            (line) => line.id !== `${ownerId}-opening`,
+        for (const { homeId, amountCents } of balances) {
+          const existing = (next[homeId] ?? []).filter(
+            (line) => line.id !== `${homeId}-opening`,
           );
           if (amountCents === 0) {
-            next[ownerId] = existing;
+            next[homeId] = existing;
             continue;
           }
-          next[ownerId] = [
+          next[homeId] = [
             {
-              id: `${ownerId}-opening`,
+              id: `${homeId}-opening`,
               date: asOf,
               label: "Balance brought forward",
               kind: "charge" as const,
@@ -741,7 +741,7 @@ export function useMoneyActions(deps: AppDeps) {
         // The home on screen. set_my_autopay writes every seat the person
         // holds, which would switch autopay on or off for all their homes at
         // once; this one names the home.
-        const unitId = account?.ownerId;
+        const unitId = account?.homeId;
         if (!unitId) return Promise.resolve(false);
         return remoteWrite(plan ? "Saving autopay" : "Turning autopay off", () =>
           supabaseBrowser().rpc("set_my_home_autopay", {
@@ -755,16 +755,16 @@ export function useMoneyActions(deps: AppDeps) {
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
       if (!me) return Promise.resolve(false);
-      sliceStore(communityId, "owners").update((all) =>
+      sliceStore(communityId, "homes").update((all) =>
         all.map((o) =>
-          o.id === me.ownerId
+          o.id === me.homeId
             ? { ...o, autopay: Boolean(plan), autopayPlan: plan ?? undefined }
             : o,
         ),
       );
       return Promise.resolve(true);
     },
-    [remote.community, communityId, account?.ownerId],
+    [remote.community, communityId, account?.homeId],
   );
 
   const addInstrument = useCallback(
@@ -772,7 +772,7 @@ export function useMoneyActions(deps: AppDeps) {
       const existing = remote.community
         ? remote.community.instruments
         : sliceStore(communityId, "instruments").getSnapshot();
-      const mine = existing.filter((i) => i.ownerId === draft.ownerId);
+      const mine = existing.filter((i) => i.homeId === draft.homeId);
       const instrument: PaymentInstrument = {
         ...draft,
         id: remote.community ? newId() : `pm-${draft.kind}-${draft.mask}-${existing.length}`,
@@ -782,12 +782,12 @@ export function useMoneyActions(deps: AppDeps) {
       };
       if (remote.community) {
         const rc = remote.community;
-        const { id, ownerId, kind, label, mask, isDefault, addedDate, ...detail } = instrument;
+        const { id, homeId, kind, label, mask, isDefault, addedDate, ...detail } = instrument;
         void remoteWrite("Saving the payment method", () =>
           supabaseBrowser().from("payment_instruments").insert({
             id,
             association_id: rc.id,
-            unit_id: ownerId,
+            unit_id: homeId,
             profile_id: remote.profileId,
             kind,
             label,
@@ -828,7 +828,7 @@ export function useMoneyActions(deps: AppDeps) {
         const removed = all.find((i) => i.id === instrumentId);
         const kept = all.filter((i) => i.id !== instrumentId);
         if (!removed?.isDefault) return kept;
-        const successor = kept.find((i) => i.ownerId === removed.ownerId);
+        const successor = kept.find((i) => i.homeId === removed.homeId);
         return successor
           ? kept.map((i) => (i.id === successor.id ? { ...i, isDefault: true } : i))
           : kept;
@@ -847,7 +847,7 @@ export function useMoneyActions(deps: AppDeps) {
           const { error } = await supabase
             .from("payment_instruments")
             .update({ is_default: false })
-            .eq("unit_id", target.ownerId);
+            .eq("unit_id", target.homeId);
           if (error) throw new Error(error.message);
           // The first update clears the others and may match none. This one is
           // aimed at the method just chosen, so it has to land.
@@ -863,7 +863,7 @@ export function useMoneyActions(deps: AppDeps) {
         if (!target) return all;
         // Exactly one default per household, enforced on write.
         return all.map((i) =>
-          i.ownerId === target.ownerId ? { ...i, isDefault: i.id === instrumentId } : i,
+          i.homeId === target.homeId ? { ...i, isDefault: i.id === instrumentId } : i,
         );
       });
     },

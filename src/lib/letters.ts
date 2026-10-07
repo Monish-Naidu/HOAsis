@@ -1,9 +1,9 @@
 import type { Community } from "@/lib/data/community";
 import { renderTemplate, type MessageTemplate } from "@/lib/data/templates";
 import { type CollectionPolicy, type CollectionStage, stageFor } from "@/lib/collections";
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 import { money } from "@/lib/utils";
-import { ownerDues } from "@/lib/home-types";
+import { homeDues } from "@/lib/home-types";
 
 /**
  * Which letter a household is owed, and what it says once filled in.
@@ -34,12 +34,12 @@ export function letterTrigger(stage: CollectionStage): MessageTemplate["trigger"
 
 /** The letter a household is due today, or null when it is not yet at the reminder day. */
 export function dueLetter(
-  owner: Owner,
+  home: Home,
   policy: CollectionPolicy,
   templates: MessageTemplate[],
 ): MessageTemplate | null {
-  if (owner.daysPastDue <= 0) return null;
-  const trigger = letterTrigger(stageFor(owner.daysPastDue, policy));
+  if (home.daysPastDue <= 0) return null;
+  const trigger = letterTrigger(stageFor(home.daysPastDue, policy));
   if (!trigger) return null;
   return templates.find((t) => t.trigger === trigger) ?? null;
 }
@@ -51,16 +51,16 @@ export function dueLetter(
  * notices whose subject line still said {{unit}}.
  */
 export function letterFields(
-  owner: Owner,
+  home: Home,
   community: Pick<Community, "association" | "settings">,
 ): Record<string, string> {
   return {
-    owner: owner.displayName,
-    unit: owner.unit,
-    balance: money(owner.balanceCents),
-    days_past_due: String(owner.daysPastDue),
+    owner: home.displayName,
+    unit: home.unit,
+    balance: money(home.balanceCents),
+    days_past_due: String(home.daysPastDue),
     association: community.settings.displayName,
-    dues: money(ownerDues(community.association, owner)),
+    dues: money(homeDues(community.association, home)),
     portal_link: "yourhoasis.com/resident/pay",
   };
 }
@@ -68,10 +68,10 @@ export function letterFields(
 /** A template with this household's figures in it, ready to send. */
 export function renderLetter(
   template: Pick<MessageTemplate, "subject" | "body">,
-  owner: Owner,
+  home: Home,
   community: Pick<Community, "association" | "settings">,
 ): { subject: string; body: string } {
-  const fields = letterFields(owner, community);
+  const fields = letterFields(home, community);
   return {
     subject: renderTemplate(template.subject, fields),
     body: renderTemplate(template.body, fields),

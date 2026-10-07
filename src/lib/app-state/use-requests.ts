@@ -92,7 +92,7 @@ export function useRequestsActions(deps: AppDeps) {
           const { data, error } = await supabaseBrowser().from("requests").insert({
             id: newId(),
             association_id: rc.id,
-            unit_id: request.ownerId,
+            unit_id: request.homeId,
             filed_by: remote.profileId,
             reference: request.reference,
             kind: request.kind,

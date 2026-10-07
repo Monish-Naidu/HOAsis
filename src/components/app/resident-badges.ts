@@ -8,9 +8,9 @@
  */
 
 import { useMemo } from "react";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import type { Community } from "@/lib/data/community";
-import type { Owner } from "@/lib/types";
+import type { Home } from "@/lib/types";
 import { ballotPhase } from "@/lib/phases";
 import { openNoticesForHome } from "@/lib/resident-wording";
 
@@ -39,10 +39,10 @@ export interface ResidentBadge {
  */
 export function residentBadges(
   community: Pick<Community, "ballots" | "violations">,
-  owner: Pick<Owner, "id" | "unit"> | null,
+  home: Pick<Home, "id" | "unit"> | null,
 ): Partial<Record<string, ResidentBadge>> {
   const badges: Partial<Record<string, ResidentBadge>> = {};
-  if (!owner) return badges;
+  if (!home) return badges;
 
   const toVote = community.ballots.filter(
     (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
@@ -55,7 +55,7 @@ export function residentBadges(
     };
   }
 
-  const notices = openNoticesForHome(community.violations, owner).length;
+  const notices = openNoticesForHome(community.violations, home).length;
   if (notices > 0) {
     badges["/resident/requests"] = {
       count: notices,
@@ -68,6 +68,6 @@ export function residentBadges(
 
 export function useResidentBadges(): Partial<Record<string, ResidentBadge>> {
   const { community } = useAppState();
-  const owner = useCurrentOwner();
-  return useMemo(() => residentBadges(community, owner), [community, owner]);
+  const home = useCurrentHome();
+  return useMemo(() => residentBadges(community, home), [community, home]);
 }

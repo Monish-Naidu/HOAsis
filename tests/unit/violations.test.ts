@@ -225,7 +225,7 @@ describe("evidenceIsClean", () => {
   const base: Violation = {
     id: "v",
     reference: "VIO-1",
-    ownerId: "own-1",
+    homeId: "own-1",
     ownerName: "Somebody",
     unit: "1",
     rule: "A rule",

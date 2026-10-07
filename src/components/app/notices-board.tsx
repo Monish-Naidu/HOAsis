@@ -8,7 +8,7 @@ import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
-import type { Owner, Violation } from "@/lib/types";
+import type { Home, Violation } from "@/lib/types";
 import { cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib/utils";
 import { useHomeLabel } from "@/components/app/use-home-label";
 
@@ -95,7 +95,7 @@ function Notices() {
 
       {creating ? (
         <NewNotice
-          owners={community.owners}
+          homes={community.homes}
           onCancel={() => setCreating(false)}
           onSave={(input) => {
             try {
@@ -268,14 +268,14 @@ function NoticeRow({
 }
 
 function NewNotice({
-  owners,
+  homes,
   onCancel,
   onSave,
 }: {
-  owners: Owner[];
+  homes: Home[];
   onCancel: () => void;
   onSave: (input: {
-    ownerId: string;
+    homeId: string;
     ownerName: string;
     unit: string;
     rule: string;
@@ -284,13 +284,13 @@ function NewNotice({
   }) => void;
 }) {
   const placeLabel = useHomeLabel();
-  const [ownerId, setOwnerId] = useState("");
+  const [homeId, setHomeId] = useState("");
   const [rule, setRule] = useState("");
   const [what, setWhat] = useState("");
   const [citation, setCitation] = useState("");
-  const owner = owners.find((o) => o.id === ownerId);
-  const ready = Boolean(owner) && rule.trim().length > 1 && what.trim().length > 3;
-  const sorted = [...owners].sort((a, b) =>
+  const home = homes.find((o) => o.id === homeId);
+  const ready = Boolean(home) && rule.trim().length > 1 && what.trim().length > 3;
+  const sorted = [...homes].sort((a, b) =>
     a.unit.localeCompare(b.unit, undefined, { numeric: true }),
   );
 
@@ -312,8 +312,8 @@ function NewNotice({
         <label className="block">
           <span className={LABEL}>Which home</span>
           <Select
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
+            value={homeId}
+            onChange={(e) => setHomeId(e.target.value)}
             autoFocus
             aria-label="Which home"
             className="mt-1.5 w-full"
@@ -366,11 +366,11 @@ function NewNotice({
           size="sm"
           disabled={!ready}
           onClick={() =>
-            owner &&
+            home &&
             onSave({
-              ownerId: owner.id,
-              ownerName: owner.displayName,
-              unit: owner.unit,
+              homeId: home.id,
+              ownerName: home.displayName,
+              unit: home.unit,
               rule,
               fix: what,
               ruleCitation: citation,

@@ -21,7 +21,7 @@ vi.mock("@/lib/app-state", async (original) => ({
       id: "assoc-1",
       nextChargeDate: "2026-11-01",
       association: { duesCents: 28_500 },
-      owners: [{ id: "o1", email: "ana@example.com" }],
+      homes: [{ id: "o1", email: "ana@example.com" }],
     },
   }),
 }));

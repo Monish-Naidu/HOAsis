@@ -30,7 +30,7 @@ import { CommunityHero, CommunityName, PhotoStrip } from "@/components/app/commu
 import { HomeSwitcher } from "@/components/app/home-switcher";
 import { HomeBadge } from "@/components/app/home-badge";
 import { DemoBanner } from "@/components/app/local-copy-banner";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { cn } from "@/lib/utils";
 
@@ -58,15 +58,15 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const [phonePreview, setPhonePreview] = useState(false);
   const pathname = usePathname();
   const { settings, community } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const associationName = settings.displayName;
   const tabs = visibleResidentTabs(settings);
   const badges = useResidentBadges();
-  const ownerName = owner?.members[0] ?? "";
+  const ownerName = home?.members[0] ?? "";
   // By section, so the statement lights Payments and Voting lights Meetings.
   const sectionHref = residentSectionFor(pathname)?.href ?? "";
-  const unit = owner?.unit ?? "";
-  const address = owner?.address ?? "";
+  const unit = home?.unit ?? "";
+  const address = home?.address ?? "";
   // "Lot 12" or "Unit 3", then the street only when one is on file.
   const homeLine = (() => {
     const label = homeLabel(community, unit);

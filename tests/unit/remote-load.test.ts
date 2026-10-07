@@ -67,7 +67,7 @@ describe("loadCommunity", () => {
     const community = await loadCommunity(database(), "assoc-1");
 
     expect(community.id).toBe("assoc-1");
-    expect(community.owners).toEqual([]);
+    expect(community.homes).toEqual([]);
     // Quarterly from July, due on the 1st, opened October 4: the next bill is
     // January 1, and three months and a few days of the fiscal year are gone.
     expect(community.nextChargeDate).toBe("2027-01-01");
@@ -139,7 +139,7 @@ describe("loadCommunity", () => {
       }),
       "assoc-1",
     );
-    const own = Object.fromEntries(community.owners.map((o) => [o.unit, o.duesCents]));
+    const own = Object.fromEntries(community.homes.map((o) => [o.unit, o.duesCents]));
     expect(own).toEqual({ "101": undefined, "201": 40_000 });
     // $300 association amount for the first, $400 for the second, four quarterly bills a year.
     expect(community.budget.find((b) => b.category === "Assessments")?.annualCents).toBe((30_000 + 40_000) * 4);

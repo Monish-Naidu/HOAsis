@@ -5,8 +5,8 @@ import { seededCommunities } from "@/lib/data/communities";
 import type { Community } from "@/lib/data/community";
 import { daysFromToday } from "@/lib/utils";
 import { createdCommunitiesStore } from "@/lib/data/created-communities";
-import { ownerDues } from "@/lib/home-types";
-import type { ForumPost, Owner } from "@/lib/types";
+import { homeDues } from "@/lib/home-types";
+import type { ForumPost, Home } from "@/lib/types";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 import { homeCount } from "@/lib/metrics";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
@@ -17,21 +17,21 @@ import { useAppState } from "./provider";
  * The owner record behind the signed in account. An admin switching to the
  * resident view sees their own unit and their own balance, not a demo one.
  */
-export function useCurrentOwner(): Owner | null {
+export function useCurrentHome(): Home | null {
   const { account, community } = useAppState();
   // Indexed per community, so a lookup stays constant time as either grows.
   const index = useMemo(
-    () => new Map(community.owners.map((owner) => [owner.id, owner])),
+    () => new Map(community.homes.map((home) => [home.id, home])),
     [community],
   );
-  return useMemo(() => (account ? (index.get(account.ownerId) ?? null) : null), [account, index]);
+  return useMemo(() => (account ? (index.get(account.homeId) ?? null) : null), [account, index]);
 }
 
 /** Charge history is only seeded for a few households; everyone else sees an empty ledger. */
-export function useOwnerCharges() {
+export function useHomeCharges() {
   const { community } = useAppState();
-  const owner = useCurrentOwner();
-  return owner ? (community.ownerCharges[owner.id] ?? []) : [];
+  const home = useCurrentHome();
+  return home ? (community.homeCharges[home.id] ?? []) : [];
 }
 
 /**
@@ -47,41 +47,41 @@ export function useHomePhoto(): {
   uploaded: boolean;
   setPhoto: (dataUrl: string | null) => void;
 } {
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const { settings } = useAppState();
   const all = useStore(homePhotoStore);
-  const ownerId = owner?.id;
+  const homeId = home?.id;
   const setPhoto = useCallback(
     (dataUrl: string | null) => {
-      if (!ownerId) return;
+      if (!homeId) return;
       homePhotoStore.update((current) => {
         const next = { ...current };
-        if (dataUrl) next[ownerId] = dataUrl;
-        else delete next[ownerId];
+        if (dataUrl) next[homeId] = dataUrl;
+        else delete next[homeId];
         return next;
       });
     },
-    [ownerId],
+    [homeId],
   );
-  const own = ownerId ? (all[ownerId] ?? null) : null;
+  const own = homeId ? (all[homeId] ?? null) : null;
   return {
-    photo: own ?? owner?.photoUrl ?? settings.photoUrl ?? null,
+    photo: own ?? home?.photoUrl ?? settings.photoUrl ?? null,
     uploaded: Boolean(own),
     setPhoto,
   };
 }
 
 export function useMyRequests() {
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const { requests: all } = useAppState();
   return useMemo(
     () =>
-      owner
+      home
         ? all
-            .filter((r) => r.ownerId === owner.id)
+            .filter((r) => r.homeId === home.id)
             .sort((a, b) => (a.submittedDate < b.submittedDate ? 1 : -1))
         : [],
-    [owner, all],
+    [home, all],
   );
 }
 
@@ -175,8 +175,8 @@ export function useVendorGaps() {
  */
 export function useAssistantContext() {
   const { community, settings, requests, documents, amenities } = useAppState();
-  const owner = useCurrentOwner();
-  const charges = useOwnerCharges();
+  const home = useCurrentHome();
+  const charges = useHomeCharges();
 
   return useMemo(() => {
     const lastPayment = charges.find((c) => c.kind === "payment");
@@ -201,14 +201,14 @@ export function useAssistantContext() {
     const funded = community.reserveComponents.reduce((t, c) => t + c.fundedCents, 0);
 
     return {
-      owner: {
-        name: owner?.members[0] ?? "",
-        unit: owner?.unit ?? "",
-        balanceCents: owner?.balanceCents ?? 0,
+      home: {
+        name: home?.members[0] ?? "",
+        unit: home?.unit ?? "",
+        balanceCents: home?.balanceCents ?? 0,
         nextChargeDate: community.nextChargeDate as string | undefined,
-        standing: owner?.standing ?? "current",
-        daysPastDue: owner?.daysPastDue ?? 0,
-        autopay: owner?.autopay ?? false,
+        standing: home?.standing ?? "current",
+        daysPastDue: home?.daysPastDue ?? 0,
+        autopay: home?.autopay ?? false,
         lastPayment: lastPayment
           ? {
               date: lastPayment.date,
@@ -222,7 +222,7 @@ export function useAssistantContext() {
         name: community.association.name,
         // What this owner's home pays, which is the one figure the assistant
         // says about dues.
-        duesCents: ownerDues(community.association, owner ?? undefined),
+        duesCents: homeDues(community.association, home ?? undefined),
         unitCount: homeCount(community),
         operatingCents: cash.operating,
         reserveCents: reserveBalance,
@@ -255,7 +255,7 @@ export function useAssistantContext() {
         .filter((b) => b.audience === "owners" && ballotPhase(b) === "open")
         .map((b) => ({ title: b.title, closesDate: b.closesDate, voted: Boolean(b.myVoteOptionId) })),
       requests: requests
-        .filter((r) => r.ownerId === owner?.id)
+        .filter((r) => r.homeId === home?.id)
         .map((r) => ({
           reference: r.reference,
           title: r.title,
@@ -266,21 +266,21 @@ export function useAssistantContext() {
       amenities: amenities.map((a) => ({ name: a.name, status: a.status, detail: a.detail })),
       fundsVisible: settings.showFundsToResidents,
     };
-  }, [community, settings, requests, documents, amenities, owner, charges]);
+  }, [community, settings, requests, documents, amenities, home, charges]);
 }
 
 /** The signed in household's payment instruments, default first. */
 export function useMyInstruments(): PaymentInstrument[] {
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const { instruments } = useAppState();
   return useMemo(
     () =>
-      owner
+      home
         ? instruments
-            .filter((i) => i.ownerId === owner.id)
+            .filter((i) => i.homeId === home.id)
             .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
         : [],
-    [owner, instruments],
+    [home, instruments],
   );
 }
 

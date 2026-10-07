@@ -74,9 +74,9 @@ describe("homes by address", () => {
 
   it("puts the address on the roster rather than an invented number", () => {
     const community = buildCommunity(finalizeDraft(byAddress()), "2026-08-20");
-    const addresses = community.owners.map((o) => o.address).sort();
+    const addresses = community.homes.map((o) => o.address).sort();
     expect(addresses).toEqual(["1 Alder Way", "3 Alder Way", "5 Alder Way"]);
-    expect(community.owners.find((o) => o.boardRole === "President")?.unit).toBe("1 Alder Way");
+    expect(community.homes.find((o) => o.boardRole === "President")?.unit).toBe("1 Alder Way");
   });
 
   it("suggests addresses for owners who already run detached homes, numbers otherwise", () => {
@@ -150,22 +150,22 @@ describe("a mix of homes", () => {
 
   it("bills each home its own kind's dues", () => {
     const community = buildCommunity(finalizeDraft(mixed()), "2026-08-20");
-    const condo = community.owners.find((o) => o.unit === "30")!;
-    const town = community.owners.find((o) => o.unit === "3")!;
+    const condo = community.homes.find((o) => o.unit === "30")!;
+    const town = community.homes.find((o) => o.unit === "3")!;
     expect(duesFor(community.association, condo.homeType)).toBe(42_000);
     expect(duesFor(community.association, town.homeType)).toBe(30_000);
     expect(duesVary(community.association)).toBe(true);
-    expect(totalDues(community.association, community.owners)).toBe(20 * 30_000 + 20 * 42_000);
+    expect(totalDues(community.association, community.homes)).toBe(20 * 30_000 + 20 * 42_000);
     expect(community.budget[0].annualCents).toBe((20 * 30_000 + 20 * 42_000) * 12);
   });
 
   it("describes the mix in plain words", () => {
     const community = buildCommunity(finalizeDraft(mixed()), "2026-08-20");
-    expect(countByType(community.owners)).toEqual([
+    expect(countByType(community.homes)).toEqual([
       { type: "townhomes", count: 20 },
       { type: "condos", count: 20 },
     ]);
-    expect(describeMix(community.owners)).toBe("20 townhomes and 20 condos");
+    expect(describeMix(community.homes)).toBe("20 townhomes and 20 condos");
   });
 
   it("uses words that fit every kind", () => {
@@ -210,11 +210,11 @@ describe("a condo founder who leaves the unit number blank", () => {
     const done = finalizeDraft(condos());
     expect(unitCount(done)).toBe(12);
     const community = buildCommunity(done, "2026-08-20");
-    expect(community.owners).toHaveLength(12);
-    expect(new Set(community.owners.map((o) => o.unit)).size).toBe(12);
+    expect(community.homes).toHaveLength(12);
+    expect(new Set(community.homes.map((o) => o.unit)).size).toBe(12);
     expect(draftDuesTotal(done)).toBe(12 * 30_000);
     // Still the President, in one of the twelve, with the address they gave.
-    const mine = community.owners.find((o) => o.boardRole === "President")!;
+    const mine = community.homes.find((o) => o.boardRole === "President")!;
     expect(mine.unit).toBe("1");
     expect(mine.address).toBe("1 Harbor Way");
   });
@@ -234,7 +234,7 @@ describe("a condo founder who leaves the unit number blank", () => {
     expect(unitCount(typed)).toBe(unitCount(done));
     expect(draftDuesTotal(typed)).toBe(4 * 20_000);
     expect(draftDuesTotal(typed)).toBe(draftDuesTotal(done));
-    expect(buildCommunity(done, "2026-08-20").owners).toHaveLength(4);
+    expect(buildCommunity(done, "2026-08-20").homes).toHaveLength(4);
   });
 
   it("does not move a founder whose number is in the ranges", () => {
@@ -263,7 +263,7 @@ describe("a home with nobody named", () => {
     ],
   });
   const empty = (origin: CommunityDraft["origin"]) =>
-    buildCommunity(finalizeDraft(draftFor(origin)), "2026-08-20").owners.find((o) => o.unit === "3")!;
+    buildCommunity(finalizeDraft(draftFor(origin)), "2026-08-20").homes.find((o) => o.unit === "3")!;
 
   it("is not sold yet only when the builder is setting the community up", () => {
     expect(empty("builder").displayName).toBe("Not sold yet");
@@ -277,7 +277,7 @@ describe("a home with nobody named", () => {
   it("is marked a placeholder, so the roster does not call it paid up", () => {
     expect(empty("builder").placeholder).toBe(true);
     expect(empty("existing").placeholder).toBe(true);
-    const named = buildCommunity(finalizeDraft(draftFor("existing")), "2026-08-20").owners.find(
+    const named = buildCommunity(finalizeDraft(draftFor("existing")), "2026-08-20").homes.find(
       (o) => o.unit === "2",
     )!;
     expect(named.placeholder).toBe(false);

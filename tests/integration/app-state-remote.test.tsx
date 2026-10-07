@@ -276,8 +276,8 @@ describe("a write aimed at one row", () => {
       "update memberships",
       (s, c) => s.setAccountRole(c.accounts.find((a) => a.role !== "president")!.id, "secretary"),
     ],
-    ["Saving the role (by home)", "update memberships", (s, c) => s.setHomeRole(c.owners[3].id, "secretary")],
-    ["Saving the kind of home", "update units", (s, c) => s.setHomeType([c.owners[0].id], "condos")],
+    ["Saving the role (by home)", "update memberships", (s, c) => s.setHomeRole(c.homes[3].id, "secretary")],
+    ["Saving the kind of home", "update units", (s, c) => s.setHomeType([c.homes[0].id], "condos")],
     ["Saving what you saw", "update violation_reports", (s) => s.verifyReport("rep-1", "Pat", "Seen it")],
     ["Closing the report", "update violation_reports", (s) => s.dismissReport("rep-1", "Nothing there")],
     ["Closing the ballot", "update ballots", (s, c) => s.closeBallot(c.ballots[0].id)],
@@ -293,7 +293,7 @@ describe("a write aimed at one row", () => {
     ["Saving the decision on a request", "update requests", (s, c) => s.updateRequestStatus(c.requests[0].id, "approved")],
     ["Noting the W-9", "update vendors", (s, c) => s.markW9Requested(c.vendors[0].id)],
     ["Removing the vendor", "delete vendors", (s, c) => s.removeVendor(c.vendors[0].id)],
-    ["Adding the owner", "update memberships", (s, c) => s.setHouseholdOwner(c.owners[0].id, { name: "Jane Doe", email: "" })],
+    ["Adding the owner", "update memberships", (s, c) => s.setHouseholdOwner(c.homes[0].id, { name: "Jane Doe", email: "" })],
     [
       "Saving amenities",
       "update amenities",
@@ -318,8 +318,8 @@ describe("a write aimed at one row", () => {
         return s.raiseNoticeFromReport(report.id, {
           rule: "Trash cans left out",
           ruleCitation: "Rules 4.2",
-          ownerId: c.owners[0].id,
-          ownerName: c.owners[0].displayName,
+          homeId: c.homes[0].id,
+          ownerName: c.homes[0].displayName,
         });
       },
     ],
@@ -352,7 +352,7 @@ describe("a write aimed at one row", () => {
     // capability: the update matches nothing and comes back with no error.
     db.answer = (s) => (s.target === "units" ? { count: 0 } : undefined);
     const { result } = renderApp();
-    act(() => void result.current.setHomeType([server().owners[0].id], "condos"));
+    act(() => void result.current.setHomeType([server().homes[0].id], "condos"));
     await settled();
 
     expect(errors).toEqual([
@@ -368,7 +368,7 @@ describe("a write aimed at one row", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setHouseholdOwner(server().owners[0].id, { name: "Jane Doe", email: "" });
+      ok = await result.current.setHouseholdOwner(server().homes[0].id, { name: "Jane Doe", email: "" });
     });
 
     expect(ok).toBe(false);
@@ -536,8 +536,8 @@ describe("raising a notice from a report", () => {
     state.raiseNoticeFromReport(report.id, {
       rule: "Trash cans left out",
       ruleCitation: "Rules 4.2",
-      ownerId: c.owners[0].id,
-      ownerName: c.owners[0].displayName,
+      homeId: c.homes[0].id,
+      ownerName: c.homes[0].displayName,
     });
     return report;
   };
@@ -601,11 +601,11 @@ describe("raising a notice from a report", () => {
 describe("a write that may rightly match nothing", () => {
   it("a first opening balance has nothing to update or delete", async () => {
     const { result } = renderApp();
-    const home = server().owners[0];
+    const home = server().homes[0];
     await act(async () => {
       // The first opening balance for a home has no earlier line, and since
       // money lines are never updated or deleted (0106) it writes one insert.
-      await result.current.setOpeningBalances("2026-07-01", [{ ownerId: home.id, amountCents: 50_000 }]);
+      await result.current.setOpeningBalances("2026-07-01", [{ homeId: home.id, amountCents: 50_000 }]);
     });
     await settled();
 
@@ -675,18 +675,18 @@ describe("approving a request to join", () => {
 
 describe("letting somebody in on a home already on the register", () => {
   const request = () => server().joinRequests.find((j) => j.status === "pending")!;
-  const home = () => server().owners.find((o) => o.unit === request().unit)!;
+  const plainHome = () => server().homes.find((o) => o.unit === request().unit)!;
 
   it("seats them on the chosen home, then marks the request, then sends the welcome", async () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.seatJoinRequest(request().id, home().id, false);
+      ok = await result.current.seatJoinRequest(request().id, plainHome().id, false);
     });
 
     expect(ok).toBe(true);
     expect(targets()).toEqual(["rpc:seat_join_request", "update join_requests"]);
-    expect(writes()[0].values).toEqual({ p_request_id: request().id, p_unit_id: home().id, p_as_second: false });
+    expect(writes()[0].values).toEqual({ p_request_id: request().id, p_unit_id: plainHome().id, p_as_second: false });
     // No home was made from what they typed.
     expect(targets()).not.toContain("rpc:add_household");
     expect(fetched.map((f) => f.url)).toEqual(["/api/email/invite"]);
@@ -695,7 +695,7 @@ describe("letting somebody in on a home already on the register", () => {
   it("as a second owner sends no welcome, which would reach the first owner too", async () => {
     const { result } = renderApp();
     await act(async () => {
-      await result.current.seatJoinRequest(request().id, home().id, true);
+      await result.current.seatJoinRequest(request().id, plainHome().id, true);
     });
 
     expect((writes()[0].values as { p_as_second: boolean }).p_as_second).toBe(true);
@@ -711,7 +711,7 @@ describe("letting somebody in on a home already on the register", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.seatJoinRequest(request().id, home().id, false);
+      ok = await result.current.seatJoinRequest(request().id, plainHome().id, false);
     });
 
     expect(ok).toBe(false);
@@ -724,7 +724,7 @@ describe("letting somebody in on a home already on the register", () => {
 
   it("adds a second owner and changes an email through their own functions", async () => {
     const { result } = renderApp();
-    const target = server().owners[0];
+    const target = server().homes[0];
     await act(async () => {
       await result.current.addSecondOwner(target.id, { name: " Lee Two ", email: " lee@example.com " });
       await result.current.changeOwnerEmail(target.id, " fixed@example.com ");
@@ -744,7 +744,7 @@ describe("the Homeowners screen: asked to join", () => {
   it("starts on the home they typed, and offers a second owner or a sale when it has an owner", async () => {
     const user = userEvent.setup();
     renderScreen(<screens.HomeownersScreen />);
-    const home = server().owners.find((o) => o.unit === request().unit)!;
+    const home = server().homes.find((o) => o.unit === request().unit)!;
 
     expect(picker().value).toBe(home.id);
     expect(screen.queryByRole("button", { name: "Let them in" })).not.toBeInTheDocument();
@@ -759,8 +759,8 @@ describe("the Homeowners screen: asked to join", () => {
 
   it("lets them in on a home with no owner listed", async () => {
     const user = userEvent.setup();
-    const home = server().owners.find((o) => o.unit === request().unit)!;
-    change({ owners: server().owners.map((o) => (o.id === home.id ? { ...o, placeholder: true, displayName: "No owner yet", email: "" } : o)) });
+    const home = server().homes.find((o) => o.unit === request().unit)!;
+    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, placeholder: true, displayName: "No owner yet", email: "" } : o)) });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -796,10 +796,10 @@ describe("the Homeowners screen: asked to join", () => {
 describe("the Homeowners screen: the household card and the join code", () => {
   // One on the first page of the roster, which sorts behind first, then by unit.
   const unsigned = () =>
-    [...server().owners]
+    [...server().homes]
       .sort((a, b) => (a.daysPastDue !== b.daysPastDue ? b.daysPastDue - a.daysPastDue : Number(a.unit) - Number(b.unit)))
       .slice(0, 50)
-      .find((o) => !o.placeholder && !server().accounts.some((a) => a.ownerId === o.id))!;
+      .find((o) => !o.placeholder && !server().accounts.some((a) => a.homeId === o.id))!;
 
   it("changes the email a not yet signed in owner will claim their seat with", async () => {
     const user = userEvent.setup();
@@ -917,25 +917,25 @@ describe("founding an association", () => {
 });
 
 describe("a home's own dues", () => {
-  const home = () => server().owners.find((o) => !o.placeholder && !o.homeType)!;
+  const plainHome = () => server().homes.find((o) => !o.placeholder && !o.homeType)!;
 
   it("writes through set_home_dues, which is the only way a finance holder may", async () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setHomeDues([{ ownerId: home().id, cents: 28_500 }]);
+      ok = await result.current.setHomeDues([{ homeId: plainHome().id, cents: 28_500 }]);
     });
     expect(ok).toBe(true);
     expect(targets()).toEqual(["rpc:set_home_dues"]);
-    expect(writes()[0].values).toEqual({ p_unit_id: home().id, p_dues_cents: 28_500 });
+    expect(writes()[0].values).toEqual({ p_unit_id: plainHome().id, p_dues_cents: 28_500 });
   });
 
   it("sends null to clear it", async () => {
     const { result } = renderApp();
     await act(async () => {
-      await result.current.setHomeDues([{ ownerId: home().id, cents: null }]);
+      await result.current.setHomeDues([{ homeId: plainHome().id, cents: null }]);
     });
-    expect(writes()[0].values).toEqual({ p_unit_id: home().id, p_dues_cents: null });
+    expect(writes()[0].values).toEqual({ p_unit_id: plainHome().id, p_dues_cents: null });
   });
 
   it("answers false and says why when the database refused it", async () => {
@@ -944,7 +944,7 @@ describe("a home's own dues", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setHomeDues([{ ownerId: home().id, cents: 100 }]);
+      ok = await result.current.setHomeDues([{ homeId: plainHome().id, cents: 100 }]);
     });
     expect(ok).toBe(false);
     expect(errors.join(" ")).toMatch(/Saving dues: You cannot change dues for that home/);
@@ -954,7 +954,7 @@ describe("a home's own dues", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setHomeDues([{ ownerId: home().id, cents: -1 }]);
+      ok = await result.current.setHomeDues([{ homeId: plainHome().id, cents: -1 }]);
     });
     expect(ok).toBe(false);
     expect(writes()).toHaveLength(0);
@@ -962,28 +962,28 @@ describe("a home's own dues", () => {
 
   it("Change dues says it only once the write has landed", async () => {
     const user = userEvent.setup();
-    const owner = home();
+    const home = plainHome();
     renderScreen(<screens.HomeownersScreen />);
-    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
     await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
     await settled();
 
     expect(writes().map((w) => w.target)).toEqual(["rpc:set_home_dues"]);
-    expect(writes()[0].values).toEqual({ p_unit_id: owner.id, p_dues_cents: 31_000 });
+    expect(writes()[0].values).toEqual({ p_unit_id: home.id, p_dues_cents: 31_000 });
     expect(await screen.findByText(/pays \$310(\.00)? from the next bill/)).toBeInTheDocument();
   });
 
   it("Change dues stays open and says nothing was saved when the write is refused", async () => {
     const user = userEvent.setup();
-    const owner = home();
+    const home = plainHome();
     db.answer = (s) =>
       s.target === "rpc:set_home_dues" ? { error: { message: "You cannot change dues for that home" } } : undefined;
     renderScreen(<screens.HomeownersScreen />);
-    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
     await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
@@ -996,19 +996,19 @@ describe("a home's own dues", () => {
 
   it("Use the standard rate clears it and says what the home pays then", async () => {
     const user = userEvent.setup();
-    const owner = home();
-    change({ owners: server().owners.map((o) => (o.id === owner.id ? { ...o, duesCents: 28_500 } : o)) });
+    const home = plainHome();
+    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, duesCents: 28_500 } : o)) });
     await act(async () => {
       await store.refreshRemote();
     });
     renderScreen(<screens.HomeownersScreen />);
-    await user.click(screen.getByRole("button", { name: `Message ${owner.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${owner.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
     expect(screen.getByText(/from its own amount/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Use the standard rate" }));
     await settled();
 
-    expect(writes()[0].values).toEqual({ p_unit_id: owner.id, p_dues_cents: null });
+    expect(writes()[0].values).toEqual({ p_unit_id: home.id, p_dues_cents: null });
     const standard = server().association.duesCents;
     expect(
       await screen.findByText(new RegExp(`pays \\$${standard / 100}(\\.00)? from the next bill`)),
@@ -1096,7 +1096,7 @@ describe("founding an association with dues by home", () => {
 });
 
 describe("recording a sale", () => {
-  const seller = () => server().owners.find((o) => o.balanceCents > 0 && !o.boardRole)!;
+  const seller = () => server().homes.find((o) => o.balanceCents > 0 && !o.boardRole)!;
   const sale = { name: "Priya Nair", email: "priya@example.com", closingDate: "2026-08-20", settleBalance: true };
 
   it("records the sale before any money, so a refused sale writes nothing", async () => {
@@ -1138,7 +1138,7 @@ describe("recording a sale", () => {
     // A payment lands, and is read back, between the form opening and the
     // press: the first attempt is refused and the association is re-read.
     db.answer = (s) => (s.target === "rpc:transfer_home" ? { error: { message: "Check the date" } } : undefined);
-    change({ owners: server().owners.map((o) => (o.id === home.id ? { ...o, balanceCents: 10_000 } : o)) });
+    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, balanceCents: 10_000 } : o)) });
     await act(async () => {
       await result.current.transferHome(home.id, sale);
     });
@@ -1172,11 +1172,11 @@ describe("an officer recording the sale of their own home", () => {
 
   /** The signed in officer becomes the Treasurer living in a home that owes. */
   async function treasurerAtHome() {
-    const home = server().owners.find((o) => o.balanceCents > 0 && !o.boardRole)!;
+    const home = server().homes.find((o) => o.balanceCents > 0 && !o.boardRole)!;
     change({
       accounts: server()
-        .accounts.filter((a) => a.ownerId !== home.id)
-        .map((a) => (a.id === ME ? { ...a, role: "treasurer" as const, ownerId: home.id } : a)),
+        .accounts.filter((a) => a.homeId !== home.id)
+        .map((a) => (a.id === ME ? { ...a, role: "treasurer" as const, homeId: home.id } : a)),
     });
     await act(async () => {
       await store.refreshRemote();
@@ -1232,7 +1232,7 @@ describe("an officer recording the sale of their own home", () => {
   it("still sells first when the home is the President's, which the database refuses", async () => {
     // ME is the President here, as in every other test in this file.
     const mine = server().accounts.find((a) => a.id === ME)!;
-    change({ owners: server().owners.map((o) => (o.id === mine.ownerId ? { ...o, balanceCents: 30_000 } : o)) });
+    change({ homes: server().homes.map((o) => (o.id === mine.homeId ? { ...o, balanceCents: 30_000 } : o)) });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -1242,7 +1242,7 @@ describe("an officer recording the sale of their own home", () => {
         : undefined;
     const { result } = renderApp();
     await act(async () => {
-      await result.current.transferHome(mine.ownerId, sale);
+      await result.current.transferHome(mine.homeId, sale);
     });
 
     expect(targets()).toEqual(["rpc:transfer_home"]);
@@ -1494,13 +1494,13 @@ describe("opening balances", () => {
   const OPENING = "Balance brought forward";
 
   it("writes only the homes it was given, and resolves when they are written", async () => {
-    const [first, second] = server().owners;
+    const [first, second] = server().homes;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.setOpeningBalances("2026-07-01", [
-        { ownerId: first.id, amountCents: 50_000 },
-        { ownerId: second.id, amountCents: 0 },
+        { homeId: first.id, amountCents: 50_000 },
+        { homeId: second.id, amountCents: 0 },
       ]);
     });
 
@@ -1517,7 +1517,7 @@ describe("opening balances", () => {
   });
 
   it("corrects a figure with a second line for the difference, never an update or a delete", async () => {
-    const [first, second] = server().owners;
+    const [first, second] = server().homes;
     db.answer = (s) =>
       s.op === "select" && s.target === "charges"
         ? {
@@ -1530,8 +1530,8 @@ describe("opening balances", () => {
     const { result } = renderApp();
     await act(async () => {
       await result.current.setOpeningBalances("2026-07-01", [
-        { ownerId: first.id, amountCents: 50_000 },
-        { ownerId: second.id, amountCents: 4_000 },
+        { homeId: first.id, amountCents: 50_000 },
+        { homeId: second.id, amountCents: 4_000 },
       ]);
     });
 
@@ -1541,7 +1541,7 @@ describe("opening balances", () => {
   });
 
   it("will not move the date of a line that is already on the books", async () => {
-    const [first] = server().owners;
+    const [first] = server().homes;
     db.answer = (s) =>
       s.op === "select" && s.target === "charges"
         ? { data: [{ unit_id: first.id, amount_cents: 30_000, due_on: "2026-07-01" }] }
@@ -1549,7 +1549,7 @@ describe("opening balances", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setOpeningBalances("2026-08-01", [{ ownerId: first.id, amountCents: 30_000 }]);
+      ok = await result.current.setOpeningBalances("2026-08-01", [{ homeId: first.id, amountCents: 30_000 }]);
     });
 
     expect(ok).toBe(false);
@@ -1674,7 +1674,7 @@ describe("recording an owner's check or cash", () => {
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.recordManualPayment({
-        ownerId: UNIT,
+        homeId: UNIT,
         amountCents: 6_000,
         method: "check",
         reference: " 1042 ",
@@ -1699,7 +1699,7 @@ describe("recording an owner's check or cash", () => {
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.recordManualPayment({
-        ownerId: UNIT, amountCents: 100, method: "cash", reference: "", receivedOn: "2026-10-01",
+        homeId: UNIT, amountCents: 100, method: "cash", reference: "", receivedOn: "2026-10-01",
       });
     });
     expect(ok).toBe(false);
@@ -1709,16 +1709,16 @@ describe("recording an owner's check or cash", () => {
 
 describe("a credit on a statement", () => {
   it("goes through add_credit, which logs the activity row, with the reason trimmed and no ledger line", async () => {
-    const owner = server().owners[0];
+    const home = server().homes[0];
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: " Late fee waived " });
+      ok = await result.current.addCredit({ homeId: home.id, amountCents: 2_500, reason: " Late fee waived " });
     });
     expect(ok).toBe(true);
     expect(targets()).toEqual(["rpc:add_credit"]);
     expect(writes()[0].values).toEqual({
-      p_unit_id: owner.id,
+      p_unit_id: home.id,
       p_amount_cents: 2_500,
       p_label: "Late fee waived",
     });
@@ -1783,7 +1783,7 @@ describe("the opening balances screen, for a real association", () => {
     });
     db.answer = (s) => (s.target === "charges" && s.op === "insert" ? held : undefined);
     renderScreen(<screens.BalancesScreen />);
-    const home = server().owners[0];
+    const home = server().homes[0];
 
     await user.type(
       screen.getByLabelText(`Starting balance for ${home.displayName}, ${home.unit}`),
@@ -1809,7 +1809,7 @@ describe("the opening balances screen, for a real association", () => {
 
 describe("a board reply", () => {
   it("is appended by the database, and then emailed", async () => {
-    const thread = server().threads.find((t) => t.ownerId)!;
+    const thread = server().threads.find((t) => t.homeId)!;
     const { result } = renderApp();
     act(() => void result.current.replyToThread(thread.id, "On it."));
     await settled();
@@ -1821,12 +1821,12 @@ describe("a board reply", () => {
     expect(writes()[0].values).toEqual({ p_thread_id: thread.id, p_body: "On it." });
     expect(fetched[0]).toMatchObject({
       url: "/api/email/notify",
-      body: { associationId: ASSOCIATION, unitIds: [thread.ownerId], body: "On it." },
+      body: { associationId: ASSOCIATION, unitIds: [thread.homeId], body: "On it." },
     });
   });
 
   it("says the email did not go when the route sent none, and sent when it did", async () => {
-    const thread = server().threads.find((t) => t.ownerId)!;
+    const thread = server().threads.find((t) => t.homeId)!;
     const { result } = renderApp();
     route = () => ({ body: { sent: 0, failed: 1, already: 0, remaining: 0, errors: ["a@b.com: Invalid `to` field"] } });
     let email: unknown;
@@ -1848,7 +1848,7 @@ describe("a board reply", () => {
       s.target === "rpc:reply_as_board"
         ? { error: { message: "That conversation is not yours to answer" } }
         : undefined;
-    const thread = server().threads.find((t) => t.ownerId)!;
+    const thread = server().threads.find((t) => t.homeId)!;
     const { result } = renderApp();
     act(() => void result.current.replyToThread(thread.id, "On it."));
     await settled();
@@ -1860,13 +1860,13 @@ describe("a board reply", () => {
 
 describe("a notice about a home", () => {
   it("stores what needs fixing, so the owner and the letter read the same words", async () => {
-    const owner = server().owners[0];
+    const home = server().homes[0];
     const { result } = renderApp();
     act(() => {
       result.current.addNotice({
-        ownerId: owner.id,
-        ownerName: owner.displayName,
-        unit: owner.unit,
+        homeId: home.id,
+        ownerName: home.displayName,
+        unit: home.unit,
         rule: "Trash cans",
         fix: " Bring them in by Tuesday ",
       });
@@ -2262,8 +2262,8 @@ describe("screens that said saved before they knew", () => {
 
   it("the roster does not say a home was re-typed when the write was refused", async () => {
     const user = userEvent.setup();
-    const home = server().owners.find((o) => !o.placeholder)!;
-    change({ owners: server().owners.map((o) => (o.id === home.id ? { ...o, homeType: "single-family" as const } : o)) });
+    const home = server().homes.find((o) => !o.placeholder)!;
+    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, homeType: "single-family" as const } : o)) });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -2282,8 +2282,8 @@ describe("screens that said saved before they knew", () => {
 
   it("the roster says it once the write has landed", async () => {
     const user = userEvent.setup();
-    const home = server().owners.find((o) => !o.placeholder)!;
-    change({ owners: server().owners.map((o) => (o.id === home.id ? { ...o, homeType: "single-family" as const } : o)) });
+    const home = server().homes.find((o) => !o.placeholder)!;
+    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, homeType: "single-family" as const } : o)) });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -2302,9 +2302,9 @@ describe("inviting everybody who has not signed up", () => {
     // One call of every home: the route read the first two hundred and the
     // rest were never invited.
     const user = userEvent.setup();
-    const [home] = server().owners;
+    const [home] = server().homes;
     change({
-      owners: Array.from({ length: 201 }, (_, i) => ({
+      homes: Array.from({ length: 201 }, (_, i) => ({
         ...home,
         id: `home-${i + 1}`,
         unit: String(i + 1),
@@ -2346,15 +2346,15 @@ describe("sending reminders", () => {
     db.answer = (s) => {
       if (s.target === "threads" && s.op === "insert") {
         const row = s.values as { id: string; subject: string; unit_id: string; messages: never[] };
-        const owner = server().owners.find((o) => o.id === row.unit_id)!;
+        const home = server().homes.find((o) => o.id === row.unit_id)!;
         change({
           threads: [
             {
               id: row.id,
               subject: row.subject,
-              participants: [owner.displayName, "Pat"],
-              ownerId: owner.id,
-              unit: owner.unit,
+              participants: [home.displayName, "Pat"],
+              homeId: home.id,
+              unit: home.unit,
               updatedDate: server().asOf,
               unread: false,
               tag: "Billing",
@@ -2374,14 +2374,14 @@ describe("sending reminders", () => {
     const before = await owed();
     expect(before.length).toBeGreaterThan(1);
     // One of them was written to today, from the roster.
-    const already = before[0].owner;
+    const already = before[0].home;
     change({
       threads: [
         {
           id: "sent-today",
           subject: "Your dues",
           participants: [already.displayName, "Pat"],
-          ownerId: already.id,
+          homeId: already.id,
           unit: already.unit,
           updatedDate: server().asOf,
           unread: false,
@@ -2474,8 +2474,8 @@ describe("a person who holds two homes", () => {
   /** The President's seat, and a second seat of theirs on another home. */
   function twoSeats() {
     const first = server().accounts.find((a) => a.id === ME)!;
-    const other = server().owners.find((o) => o.id !== first.ownerId)!;
-    const second = { ...first, ownerId: other.id, unit: other.unit };
+    const other = server().homes.find((o) => o.id !== first.homeId)!;
+    const second = { ...first, homeId: other.id, unit: other.unit };
     change({ accounts: [...server().accounts, second] });
     return { first, second };
   }
@@ -2487,26 +2487,26 @@ describe("a person who holds two homes", () => {
     });
     const { result } = renderApp();
 
-    expect(result.current.mySeats.map((s) => s.ownerId)).toEqual([first.ownerId, second.ownerId]);
-    expect(result.current.account?.ownerId).toBe(first.ownerId);
+    expect(result.current.mySeats.map((s) => s.homeId)).toEqual([first.homeId, second.homeId]);
+    expect(result.current.account?.homeId).toBe(first.homeId);
 
-    act(() => result.current.chooseHome(second.ownerId));
-    expect(result.current.account?.ownerId).toBe(second.ownerId);
-    expect(window.localStorage.getItem("hoasis-home")).toBe(JSON.stringify(second.ownerId));
+    act(() => result.current.chooseHome(second.homeId));
+    expect(result.current.account?.homeId).toBe(second.homeId);
+    expect(window.localStorage.getItem("hoasis-home")).toBe(JSON.stringify(second.homeId));
 
     // A home they do not hold is ignored rather than followed.
     act(() => result.current.chooseHome("somebody-elses"));
-    expect(result.current.account?.ownerId).toBe(second.ownerId);
+    expect(result.current.account?.homeId).toBe(second.homeId);
 
     // Autopay is written for the home on screen, not for every seat.
     await act(async () => {
       await result.current.setAutopay({ day: 3, capCents: 50000 } as never);
     });
     const autopay = writes().find((s) => s.target === "rpc:set_my_home_autopay");
-    expect(autopay?.values).toMatchObject({ p_association_id: ASSOCIATION, p_unit_id: second.ownerId });
+    expect(autopay?.values).toMatchObject({ p_association_id: ASSOCIATION, p_unit_id: second.homeId });
 
-    act(() => result.current.chooseHome(first.ownerId));
-    expect(result.current.account?.ownerId).toBe(first.ownerId);
+    act(() => result.current.chooseHome(first.homeId));
+    expect(result.current.account?.homeId).toBe(first.homeId);
   });
 
   it("is one seat for most people", () => {

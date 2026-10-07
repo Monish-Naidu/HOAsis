@@ -81,13 +81,13 @@ describe("one resident navigation", () => {
   });
 });
 
-const owner = { id: "own-1", unit: "1" };
+const home = { id: "own-1", unit: "1" };
 const openBallot = { audience: "owners", status: "open", closesDate: "2099-01-01" };
-const notice = (over: object) => ({ ownerId: "own-1", unit: "1", stage: "first-notice", ...over });
+const notice = (over: object) => ({ homeId: "own-1", unit: "1", stage: "first-notice", ...over });
 
 describe("counts on the rail and the bar", () => {
   it("has none for a balance, since an amount is not a count", () => {
-    const badges = residentBadges({ ballots: [], violations: [] } as never, owner);
+    const badges = residentBadges({ ballots: [], violations: [] } as never, home);
     expect(badges).toEqual({});
   });
 
@@ -102,7 +102,7 @@ describe("counts on the rail and the bar", () => {
         ],
         violations: [],
       } as never,
-      owner,
+      home,
     );
     expect(badges["/resident/calendar"]?.count).toBe(1);
     expect(badges["/resident/requests"]).toBeUndefined();
@@ -116,10 +116,10 @@ describe("counts on the rail and the bar", () => {
           notice({}),
           notice({ stage: "fined" }),
           notice({ stage: "cured" }),
-          notice({ ownerId: "own-9", unit: "9" }),
+          notice({ homeId: "own-9", unit: "9" }),
         ],
       } as never,
-      owner,
+      home,
     );
     expect(badges["/resident/requests"]).toMatchObject({ count: 2, hint: "open notices about your home" });
   });
@@ -129,10 +129,10 @@ describe("counts on the rail and the bar", () => {
       {
         ballots: [],
         violations: [],
-        requests: [{ ownerId: "own-1", thread: [{ at: "2026-08-19", actorRole: "board" }] }],
-        threads: [{ ownerId: "own-1", messages: [{ at: "2026-08-19", fromRole: "board" }] }],
+        requests: [{ homeId: "own-1", thread: [{ at: "2026-08-19", actorRole: "board" }] }],
+        threads: [{ homeId: "own-1", messages: [{ at: "2026-08-19", fromRole: "board" }] }],
       } as never,
-      owner,
+      home,
     );
     expect(badges).toEqual({});
   });

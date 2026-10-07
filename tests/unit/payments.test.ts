@@ -23,7 +23,7 @@ import {
 import { ValidationError } from "@/lib/core/errors";
 
 const NOW = { year: 2026, month: 8 };
-const CONTEXT = { ownerId: "own-042", today: "2026-08-21", referenceDate: NOW };
+const CONTEXT = { homeId: "own-042", today: "2026-08-21", referenceDate: NOW };
 
 /** Publicly documented test numbers. None of these is a real card. */
 const TEST_CARDS = {
@@ -204,7 +204,7 @@ describe("processor cost", () => {
 describe("display", () => {
   const card: PaymentInstrument = {
     id: "pm-1",
-    ownerId: "own-042",
+    homeId: "own-042",
     kind: "card",
     label: "Visa",
     mask: "4242",

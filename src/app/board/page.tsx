@@ -362,9 +362,9 @@ function StatTiles() {
   const { community, sees } = useAppState();
   const canLink = useCanLink();
   const seesMoney = mayOpen("/board/money", sees);
-  const households = community.owners.filter((o) => !o.placeholder).length;
-  const signedUp = community.owners.filter(
-    (o) => !o.placeholder && community.accounts.some((a) => a.ownerId === o.id),
+  const households = community.homes.filter((o) => !o.placeholder).length;
+  const signedUp = community.homes.filter(
+    (o) => !o.placeholder && community.accounts.some((a) => a.homeId === o.id),
   ).length;
   const cash = cashPosition(community);
   const delinq = delinquency(community);

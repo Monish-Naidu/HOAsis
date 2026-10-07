@@ -25,8 +25,8 @@ import { isDuesLine, isPaymentReversal } from "@/lib/statement";
  * moment a household was added; it is only the answer before the register has
  * loaded.
  */
-export function homeCount(c: Pick<Community, "owners" | "association">): number {
-  return c.owners.length || c.association.unitCount;
+export function homeCount(c: Pick<Community, "homes" | "association">): number {
+  return c.homes.length || c.association.unitCount;
 }
 
 /** Operating and reserve balances, and their total, from the bank accounts. */
@@ -42,11 +42,11 @@ export function cashPosition(c: Community) {
 
 /** Who is behind on dues and by how much, from the owners' balances and days past due. */
 export function delinquency(c: Community) {
-  const past = c.owners.filter((o) => o.daysPastDue > 0);
+  const past = c.homes.filter((o) => o.daysPastDue > 0);
   // A home with nobody on record is not a household that is paying on time.
   // It was counted as one, so a new build with forty unsold lots read as
   // ninety percent current before anybody had paid anything.
-  const households = c.owners.filter((o) => !o.placeholder).length;
+  const households = c.homes.filter((o) => !o.placeholder).length;
   const billed = households || 1;
   return {
     past,
@@ -59,7 +59,7 @@ export function delinquency(c: Community) {
       collections: past.filter((o) => o.standing === "collections"),
     },
     collectionRate: (households - past.filter((o) => !o.placeholder).length) / billed,
-    autopayRate: c.owners.filter((o) => o.autopay && !o.placeholder).length / billed,
+    autopayRate: c.homes.filter((o) => o.autopay && !o.placeholder).length / billed,
   };
 }
 
@@ -76,14 +76,14 @@ export function lateFeesOwed(c: Community): number {
   // the server read each whole statement back to its last zero.
   if (c.history) return c.history.lateFeesOwedCents;
   let total = 0;
-  for (const owner of c.owners) {
-    if (owner.balanceCents <= 0) continue;
+  for (const home of c.homes) {
+    if (home.balanceCents <= 0) continue;
     // Oldest first. A statement is kept newest first, and a sort by date
     // alone leaves two lines of one day in that order, so a fee and the
     // payment that cleared it the same afternoon read as payment, then fee:
     // a fee still owed that was in fact paid. Turned over first, the stable
     // sort keeps a day's lines in the order they happened.
-    const lines = [...(c.ownerCharges[owner.id] ?? [])].reverse().sort((a, b) => a.date.localeCompare(b.date));
+    const lines = [...(c.homeCharges[home.id] ?? [])].reverse().sort((a, b) => a.date.localeCompare(b.date));
     let since = 0;
     lines.forEach((line, i) => {
       if (line.balanceAfterCents <= 0) since = i + 1;
@@ -95,7 +95,7 @@ export function lateFeesOwed(c: Community): number {
     // Never more than the household still owes. $325 billed and $310 paid
     // leaves $15 past due, and "$15 past due, $25 of it late fees" is a
     // sentence nobody can add up. The database caps its figure the same way.
-    total += Math.min(owner.balanceCents, fees);
+    total += Math.min(home.balanceCents, fees);
   }
   return total;
 }
@@ -563,7 +563,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   const { unitCount, duesCents, duesCadence, fiscalYearStart } = c.association;
   // Every home at its own amount. In a mixed community kinds pay differently,
   // and a roster that has not loaded yet falls back to the unit count.
-  const perPeriod = c.owners.length ? totalDues(c.association, c.owners) : unitCount * duesCents;
+  const perPeriod = c.homes.length ? totalDues(c.association, c.homes) : unitCount * duesCents;
   // What the next bill comes to, every home together, at today's rates.
   const expectedCents = Math.round(perPeriod);
   // What each bill was, from the dues lines the statements carry. A month
@@ -575,7 +575,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   const billedIn = (y: number) => {
     const cents = Array.from({ length: 12 }, () => 0);
     const seen = Array.from({ length: 12 }, () => false);
-    for (const lines of Object.values(c.ownerCharges ?? {})) {
+    for (const lines of Object.values(c.homeCharges ?? {})) {
       for (const line of lines) {
         if (!isDuesLine(line) || yearOf(line.date) !== y || line.date < statementsFrom) continue;
         cents[monthOf(line.date) - 1] += line.amountCents;
@@ -586,7 +586,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   };
   const billedThisYear = billedIn(year);
   // Any dues line at all, on hand. Without one, nothing says what was billed.
-  const hasDuesLines = Object.values(c.ownerCharges ?? {}).some((lines) =>
+  const hasDuesLines = Object.values(c.homeCharges ?? {}).some((lines) =>
     lines.some((l) => isDuesLine(l) && l.date >= statementsFrom),
   );
   // Months before the statements on hand were summed by the server, which
@@ -629,7 +629,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
       // Net: a reversal or refund (negative) comes off what was deposited.
       if (e.category === "Assessments") deposited[monthOf(e.date) - 1] += e.amountCents;
     }
-    for (const lines of Object.values(c.ownerCharges ?? {})) {
+    for (const lines of Object.values(c.homeCharges ?? {})) {
       for (const line of lines) {
         if (yearOf(line.date) !== y || line.date < linesFrom) continue;
         const m = monthOf(line.date) - 1;
@@ -760,13 +760,13 @@ export function agingBuckets(c: Community) {
     { key: "61+", label: "Over 60 days", test: (d) => d > 60 },
   ];
   const buckets = spec.map((b) => {
-    const owners = c.owners.filter((o) => b.test(o.daysPastDue));
+    const homes = c.homes.filter((o) => b.test(o.daysPastDue));
     return {
       key: b.key,
       label: b.label,
-      owners,
-      count: owners.length,
-      cents: owners.reduce((t, o) => t + o.balanceCents, 0),
+      homes,
+      count: homes.length,
+      cents: homes.reduce((t, o) => t + o.balanceCents, 0),
     };
   });
   const totalCents = buckets.reduce((t, b) => t + b.cents, 0);
@@ -1438,7 +1438,7 @@ export function sharedCostSummary(c: Community) {
   });
 
   const monthlyCents = rows.reduce((t, r) => t + (r.latest?.totalCents ?? 0), 0);
-  const homes = rows[0]?.latest?.homes ?? c.owners.length;
+  const homes = rows[0]?.latest?.homes ?? c.homes.length;
 
   return {
     rows,
@@ -1470,8 +1470,8 @@ export function assessmentProgress(c: Community) {
       installmentsPaid: paidInstallments,
       installmentsLeft: Math.max(0, a.installments - paidInstallments),
       /** What one home still owes on it, on average. Buyers ask this. */
-      perHomeRemainingCents: c.owners.length
-        ? Math.round(remaining / c.owners.length)
+      perHomeRemainingCents: c.homes.length
+        ? Math.round(remaining / c.homes.length)
         : remaining,
     };
   });
@@ -1646,7 +1646,7 @@ export function reserveLine(c: Community): string | null {
 
 /** The longest any home has been behind, in days. Zero when nobody is. */
 export function oldestPastDueDays(c: Community): number {
-  return c.owners.reduce((max, o) => Math.max(max, o.daysPastDue), 0);
+  return c.homes.reduce((max, o) => Math.max(max, o.daysPastDue), 0);
 }
 
 /**
@@ -1726,7 +1726,7 @@ export function meetingStatus(m: Pick<Community["meetings"][number], "rsvps" | "
  * leaves the billed clause out rather than saying zero.
  */
 export function thisMonthLine(c: Community, asOf: string = c.asOf): string | null {
-  const homes = c.owners.filter((o) => !o.placeholder);
+  const homes = c.homes.filter((o) => !o.placeholder);
   if (homes.length === 0) return null;
   const month = monthOf(asOf);
   const dues = duesCollection(c, yearOf(asOf), asOf);
@@ -1762,12 +1762,12 @@ export function thisMonthLine(c: Community, asOf: string = c.asOf): string | nul
  * Each is the first thing to do, or null once there is something to read.
  */
 export function dashboardFirstSteps(c: Community) {
-  const homes = c.owners.filter((o) => !o.placeholder).length;
+  const homes = c.homes.filter((o) => !o.placeholder).length;
   return {
     cash: c.bankAccounts.length === 0 ? "Add your bank account to see your balance" : null,
     owed: homes === 0 ? "Add your homes to see what is owed" : null,
     dues:
-      c.association.duesCents <= 0 && !c.owners.some((o) => (o.duesCents ?? 0) > 0)
+      c.association.duesCents <= 0 && !c.homes.some((o) => (o.duesCents ?? 0) > 0)
         ? "Set the dues amount to see how collection is going"
         : homes === 0
           ? "Add your homes to see how collection is going"

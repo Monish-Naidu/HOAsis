@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
               ({
                 ...((i.detail as object) ?? {}),
                 id: i.id,
-                ownerId: i.unit_id,
+                homeId: i.unit_id,
                 kind: i.kind,
                 label: i.label,
                 mask: i.mask,

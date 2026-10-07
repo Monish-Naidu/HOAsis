@@ -263,7 +263,7 @@ export function SharedCostsScreen() {
                 {billFor === row.cost.id ? (
                   <PostBill
                     costName={row.cost.name}
-                    homes={row.latest?.homes ?? community.owners.length}
+                    homes={row.latest?.homes ?? community.homes.length}
                     unit={row.cost.usageUnit}
                     onCancel={() => setBillFor(null)}
                     onSave={(bill) => {

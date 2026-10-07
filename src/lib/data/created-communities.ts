@@ -1,5 +1,5 @@
 import { CircuitBreaker } from "@/lib/core/circuit-breaker";
-import { PersistedStore } from "@/lib/core/store";
+import { PersistedStore, renameLegacyFields } from "@/lib/core/store";
 import { isRecord } from "@/lib/core/guards";
 import type { Community } from "./community";
 
@@ -27,16 +27,35 @@ function isCommunityArray(value: unknown): value is Community[] {
         typeof entry.label === "string" &&
         isRecord(entry.association) &&
         isRecord(entry.settings) &&
-        Array.isArray(entry.owners) &&
+        Array.isArray(entry.homes) &&
         Array.isArray(entry.accounts),
     )
   );
 }
 
+/** A community stored before homes stopped being called owners keeps its homes. */
+function migrateCommunities(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map((entry) => {
+    const next = renameLegacyFields(entry);
+    if (!isRecord(next)) return next;
+    const { owners, ownerCharges, ...rest } = next;
+    return {
+      ...rest,
+      ...(owners !== undefined && rest.homes === undefined ? { homes: owners } : {}),
+      ...(ownerCharges !== undefined && rest.homeCharges === undefined ? { homeCharges: ownerCharges } : {}),
+    };
+  });
+}
+
 export const createdCommunitiesStore = new PersistedStore<Community[]>(
   "hoasis:created-communities",
   [],
-  { breaker, validate: isCommunityArray },
+  {
+    breaker,
+    validate: isCommunityArray,
+    migrate: migrateCommunities,
+  },
 );
 
 /** Adds a community, replacing any earlier one with the same id. */

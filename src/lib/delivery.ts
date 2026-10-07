@@ -1,4 +1,4 @@
-import type { ISODate, Owner } from "@/lib/types";
+import type { ISODate, Home } from "@/lib/types";
 
 /**
  * How a notice is allowed to reach somebody.
@@ -174,7 +174,7 @@ export interface SmsReadiness {
  * list is not.
  */
 export function reachability(
-  owner: Owner,
+  home: Home,
   kind: NoticeKind,
   consent: ContactConsent | undefined,
   sms: SmsReadiness,
@@ -185,10 +185,10 @@ export function reachability(
   return [
     {
       channel: "email",
-      usable: allowed.has("email") && owner.email.trim().length > 0,
+      usable: allowed.has("email") && home.email.trim().length > 0,
       blocker: !allowed.has("email")
         ? `${rule.label} cannot go by email`
-        : owner.email.trim()
+        : home.email.trim()
           ? undefined
           : "No email on file",
     },
@@ -197,13 +197,13 @@ export function reachability(
       usable:
         allowed.has("sms") &&
         sms.registered &&
-        owner.phone.trim().length > 0 &&
+        home.phone.trim().length > 0 &&
         hasConsent(consent?.sms),
       blocker: !allowed.has("sms")
         ? `${rule.label} cannot go by text`
         : !sms.registered
           ? "The association is not registered to send text yet"
-          : !owner.phone.trim()
+          : !home.phone.trim()
             ? "No mobile number on file"
             : !hasConsent(consent?.sms)
               ? "They have not agreed to be texted"
@@ -218,8 +218,8 @@ export function reachability(
     },
     {
       channel: "mail",
-      usable: owner.address.trim().length > 0,
-      blocker: owner.address.trim() ? undefined : "No mailing address on file",
+      usable: home.address.trim().length > 0,
+      blocker: home.address.trim() ? undefined : "No mailing address on file",
     },
   ];
 }
@@ -283,25 +283,25 @@ export interface AudienceBreakdown {
 
 /** How a whole roster splits across channels for one kind of notice. */
 export function audienceFor(
-  owners: Owner[],
+  homes: Home[],
   kind: NoticeKind,
-  consentByOwner: Record<string, ContactConsent>,
+  consentByHome: Record<string, ContactConsent>,
   sms: SmsReadiness,
 ): AudienceBreakdown {
   const byChannel: Record<Channel, number> = { email: 0, sms: 0, portal: 0, mail: 0 };
   let unreachable = 0;
 
-  for (const owner of owners) {
-    const rows = reachability(owner, kind, consentByOwner[owner.id], sms);
+  for (const home of homes) {
+    const rows = reachability(home, kind, consentByHome[home.id], sms);
     for (const row of rows) if (row.usable) byChannel[row.channel] += 1;
     if (!rows.some((r) => r.usable)) unreachable += 1;
   }
 
   const rule = noticeRule(kind);
   return {
-    total: owners.length,
+    total: homes.length,
     byChannel,
-    mailOnly: rule.mailIsTheNotice ? owners.length : 0,
+    mailOnly: rule.mailIsTheNotice ? homes.length : 0,
     unreachable,
     mailIsTheNotice: rule.mailIsTheNotice,
   };

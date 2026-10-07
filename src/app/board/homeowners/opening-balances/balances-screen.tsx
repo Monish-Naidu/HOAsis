@@ -30,15 +30,15 @@ const OPENING_LABEL = "Balance brought forward";
  * been billed once owed its dues twice.
  */
 export function openingFigures(
-  community: Pick<ReturnType<typeof useAppState>["community"], "owners" | "ownerCharges">,
+  community: Pick<ReturnType<typeof useAppState>["community"], "homes" | "homeCharges">,
 ) {
   return Object.fromEntries(
-    community.owners.map((owner) => {
+    community.homes.map((home) => {
       // A correction is a second line for the difference (0106), so the
       // figure is what the lines add up to.
-      const lines = (community.ownerCharges[owner.id] ?? []).filter((l) => l.label === OPENING_LABEL);
+      const lines = (community.homeCharges[home.id] ?? []).filter((l) => l.label === OPENING_LABEL);
       const total = lines.reduce((sum, l) => sum + l.amountCents, 0);
-      return [owner.id, lines.length ? (total / 100).toFixed(2) : ""];
+      return [home.id, lines.length ? (total / 100).toFixed(2) : ""];
     }),
   );
 }
@@ -51,12 +51,12 @@ export function openingFigures(
  * able to move the date without typing every amount again.
  */
 export function openingDates(
-  community: Pick<ReturnType<typeof useAppState>["community"], "owners" | "ownerCharges">,
+  community: Pick<ReturnType<typeof useAppState>["community"], "homes" | "homeCharges">,
 ): Record<string, string> {
   const dates: Record<string, string> = {};
-  for (const owner of community.owners) {
-    const line = (community.ownerCharges[owner.id] ?? []).find((l) => l.label === OPENING_LABEL);
-    if (line) dates[owner.id] = line.date;
+  for (const home of community.homes) {
+    const line = (community.homeCharges[home.id] ?? []).find((l) => l.label === OPENING_LABEL);
+    if (line) dates[home.id] = line.date;
   }
   return dates;
 }
@@ -80,9 +80,9 @@ export function BalancesScreen() {
   const { community, setOpeningBalances } = useAppState();
   const { notify } = useToast();
 
-  const owners = useMemo(
-    () => [...community.owners].sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true })),
-    [community.owners],
+  const homes = useMemo(
+    () => [...community.homes].sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true })),
+    [community.homes],
   );
 
   // What is on file for each home, and what is in each box. A home is saved
@@ -104,17 +104,17 @@ export function BalancesScreen() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const parsed = owners.map((owner) => {
-    const raw = entered[owner.id] ?? "";
+  const parsed = homes.map((home) => {
+    const raw = entered[home.id] ?? "";
     const redated =
-      dateMoved && dateOnFile[owner.id] !== undefined && dateOnFile[owner.id] !== asOf;
+      dateMoved && dateOnFile[home.id] !== undefined && dateOnFile[home.id] !== asOf;
     return {
-      owner,
+      home,
       raw,
       cents: toCents(raw),
       // A new figure, or the same figure under a corrected date. The second
       // applies only to a home that has a line to re-date.
-      changed: raw.trim() !== (onFile[owner.id] ?? "") || redated,
+      changed: raw.trim() !== (onFile[home.id] ?? "") || redated,
     };
   });
   const bad = parsed.filter((row) => row.cents === null);
@@ -133,21 +133,21 @@ export function BalancesScreen() {
     setSaving(true);
     const ok = await setOpeningBalances(
       asOf,
-      sending.map((row) => ({ ownerId: row.owner.id, amountCents: row.cents ?? 0 })),
+      sending.map((row) => ({ homeId: row.home.id, amountCents: row.cents ?? 0 })),
     );
     setSaving(false);
     // A refusal has already been said by the write itself.
     if (!ok) return;
     setOnFile((all) => ({
       ...all,
-      ...Object.fromEntries(sending.map((row) => [row.owner.id, row.raw.trim()])),
+      ...Object.fromEntries(sending.map((row) => [row.home.id, row.raw.trim()])),
     }));
     setDateOnFile((all) => {
       const next = { ...all };
       for (const row of sending) {
         // A home set to nothing has no line left to carry a date.
-        if (row.cents) next[row.owner.id] = asOf;
-        else delete next[row.owner.id];
+        if (row.cents) next[row.home.id] = asOf;
+        else delete next[row.home.id];
       }
       return next;
     });
@@ -158,7 +158,7 @@ export function BalancesScreen() {
     );
   }
 
-  if (owners.length === 0) {
+  if (homes.length === 0) {
     return (
       <>
         <PageHeader
@@ -222,7 +222,7 @@ export function BalancesScreen() {
 
       <Card className="mt-5">
         <CardHeader
-          title={`${pluralize(owners.length, "home")} on the register`}
+          title={`${pluralize(homes.length, "home")} on the register`}
           subtitle={
             owing.length > 0
               ? `${pluralize(owing.length, "home")} carrying a balance, ${money(totalCents)} in total`
@@ -230,20 +230,20 @@ export function BalancesScreen() {
           }
         />
         <div className="divide-y divide-border">
-          {parsed.map(({ owner, raw, cents }) => (
-            <div key={owner.id} className="flex items-center gap-3 px-5 py-2.5">
+          {parsed.map(({ home, raw, cents }) => (
+            <div key={home.id} className="flex items-center gap-3 px-5 py-2.5">
               {/* Two lines, like the Homeowners list: the name, then the home
                   and what it owes today, so neither is clipped at phone width. */}
               <div className="min-w-0 flex-1">
-                <span className="block truncate text-body font-medium text-fg">{owner.displayName}</span>
+                <span className="block truncate text-body font-medium text-fg">{home.displayName}</span>
                 {/* For reference only. It includes everything billed and paid
                     here since the switch, so it is not the figure to type. */}
                 <span className="block text-footnote text-fg-muted">
-                  {owner.unit}
-                  {owner.balanceCents > 0
-                    ? ` · Owes ${money(owner.balanceCents)} today`
-                    : owner.balanceCents < 0
-                      ? ` · ${money(-owner.balanceCents)} in credit today`
+                  {home.unit}
+                  {home.balanceCents > 0
+                    ? ` · Owes ${money(home.balanceCents)} today`
+                    : home.balanceCents < 0
+                      ? ` · ${money(-home.balanceCents)} in credit today`
                       : ""}
                 </span>
               </div>
@@ -255,11 +255,11 @@ export function BalancesScreen() {
                   inputMode="decimal"
                   value={raw}
                   onChange={(e) => {
-                    setEntered((all) => ({ ...all, [owner.id]: e.target.value }));
+                    setEntered((all) => ({ ...all, [home.id]: e.target.value }));
                     setSaved(false);
                   }}
                   placeholder="Not set"
-                  aria-label={`Starting balance for ${owner.displayName}, ${owner.unit}`}
+                  aria-label={`Starting balance for ${home.displayName}, ${home.unit}`}
                   className={`tnum h-9 w-full rounded-lg border bg-surface pl-6 pr-3 text-right text-body text-fg outline-none focus:border-brand ${
                     cents === null ? "border-danger" : "border-border-2"
                   }`}

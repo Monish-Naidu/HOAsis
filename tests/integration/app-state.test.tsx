@@ -5,7 +5,7 @@ import {
   AppStateProvider,
   bucketRequests,
   useAppState,
-  useCurrentOwner,
+  useCurrentHome,
   useMyRequests,
 } from "@/lib/app-state";
 import type { ChargeLine, HomeRequest } from "@/lib/types";
@@ -17,7 +17,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 /** Renders the two hooks a screen would use, against one shared provider. */
 function renderApp() {
   return renderHook(
-    () => ({ state: useAppState(), owner: useCurrentOwner(), myRequests: useMyRequests() }),
+    () => ({ state: useAppState(), home: useCurrentHome(), myRequests: useMyRequests() }),
     { wrapper },
   );
 }
@@ -30,7 +30,7 @@ describe("session", () => {
   it("starts signed out", () => {
     const { result } = renderApp();
     expect(result.current.state.account).toBeNull();
-    expect(result.current.owner).toBeNull();
+    expect(result.current.home).toBeNull();
   });
 
   it("lands an admin in the admin view and a resident in the resident view", () => {
@@ -56,10 +56,10 @@ describe("session", () => {
   it("resolves the signed in account to its own household", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    expect(result.current.owner?.unit).toBe("7");
+    expect(result.current.home?.unit).toBe("7");
 
     act(() => result.current.state.signIn(MONISH));
-    expect(result.current.owner?.unit).toBe("42");
+    expect(result.current.home?.unit).toBe("42");
   });
 
   it("survives a remount, so a reload keeps you signed in", () => {
@@ -218,14 +218,14 @@ describe("admin settings reach the resident side", () => {
 });
 
 describe("requests", () => {
-  function draft(ownerId: string, overrides: Partial<HomeRequest> = {}): HomeRequest {
+  function draft(homeId: string, overrides: Partial<HomeRequest> = {}): HomeRequest {
     return {
-      id: `req-test-${overrides.reference ?? ownerId}`,
+      id: `req-test-${overrides.reference ?? homeId}`,
       reference: "REQ-TEST-1",
       kind: "maintenance",
       title: "Gate latch is broken",
       summary: "It does not catch.",
-      ownerId,
+      homeId,
       ownerName: "Test Owner",
       unit: "7",
       status: "submitted",
@@ -545,7 +545,7 @@ describe("admin actions change real records", () => {
   it("records a sale: the buyer is seated clean and the seller's balance is settled at closing", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const seller = result.current.state.community.owners.find(
+    const seller = result.current.state.community.homes.find(
       (o) => o.balanceCents > 0 && !o.boardRole,
     )!;
     const owed = seller.balanceCents;
@@ -559,14 +559,14 @@ describe("admin actions change real records", () => {
       }),
     );
 
-    const home = result.current.state.community.owners.find((o) => o.id === seller.id)!;
+    const home = result.current.state.community.homes.find((o) => o.id === seller.id)!;
     expect(home.displayName).toBe("Priya Nair");
     expect(home.balanceCents).toBe(0);
     expect(home.standing).toBe("current");
-    const statement = result.current.state.community.ownerCharges[seller.id];
+    const statement = result.current.state.community.homeCharges[seller.id];
     expect(statement[0]).toMatchObject({ label: "Paid at closing", amountCents: -owed });
     // The seller's sign in went with them; the buyer has a resident seat.
-    const seats = result.current.state.accounts.filter((a) => a.ownerId === seller.id);
+    const seats = result.current.state.accounts.filter((a) => a.homeId === seller.id);
     expect(seats).toHaveLength(1);
     expect(seats[0]).toMatchObject({ name: "Priya Nair", role: "resident" });
   });
@@ -643,7 +643,7 @@ describe("reports from residents", () => {
         result.current.state.raiseNoticeFromReport(report.id, {
           rule: "Boat stored on a driveway",
           ruleCitation: "CC&Rs Art. IX §2(b)",
-          ownerId: "own-043",
+          homeId: "own-043",
           ownerName: "Somebody",
         }),
       ),
@@ -670,7 +670,7 @@ describe("reports from residents", () => {
       raised = result.current.state.raiseNoticeFromReport(report.id, {
         rule: "Boat stored on a driveway",
         ruleCitation: "CC&Rs Art. IX §2(b)",
-        ownerId: "own-043",
+        homeId: "own-043",
         ownerName: "Somebody",
       });
     });
@@ -704,7 +704,7 @@ describe("reports from residents", () => {
         result.current.state.raiseNoticeFromReport(report.id, {
           rule: "Anything",
           ruleCitation: "Rules & Regs §1.1",
-          ownerId: "own-043",
+          homeId: "own-043",
           ownerName: "Somebody",
         }),
       ),
@@ -723,20 +723,20 @@ describe("opening balances", () => {
   it("sets the balance and writes it onto the statement as a dated line", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const owner = result.current.state.community.owners[1];
+    const home = result.current.state.community.homes[1];
 
     act(() =>
       result.current.state.setOpeningBalances("2026-07-01", [
-        { ownerId: owner.id, amountCents: 124_050 },
+        { homeId: home.id, amountCents: 124_050 },
       ]),
     );
 
-    const after = result.current.state.community.owners.find((o) => o.id === owner.id)!;
+    const after = result.current.state.community.homes.find((o) => o.id === home.id)!;
     expect(after.balanceCents).toBe(124_050);
 
     // A balance that appears from nowhere is one an owner disputes and a board
     // cannot defend, so it is a line on the statement with a date on it.
-    const opening = result.current.state.community.ownerCharges[owner.id]?.[0];
+    const opening = result.current.state.community.homeCharges[home.id]?.[0];
     expect(opening?.label).toBe("Balance brought forward");
     expect(opening?.date).toBe("2026-07-01");
     expect(opening?.amountCents).toBe(124_050);
@@ -745,18 +745,18 @@ describe("opening balances", () => {
   it("does not put anybody into collections on the strength of a typed number", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const owner = result.current.state.community.owners.find((o) => o.standing === "current")!;
+    const home = result.current.state.community.homes.find((o) => o.standing === "current")!;
 
     act(() =>
       result.current.state.setOpeningBalances("2026-07-01", [
-        { ownerId: owner.id, amountCents: 90_000 },
+        { homeId: home.id, amountCents: 90_000 },
       ]),
     );
 
     // The figure says what is owed. It says nothing about how long it has been
     // owed, and the ladder runs off the calendar from the switch date, which
     // is what makes it defensible at a hearing.
-    const after = result.current.state.community.owners.find((o) => o.id === owner.id)!;
+    const after = result.current.state.community.homes.find((o) => o.id === home.id)!;
     expect(after.standing).toBe("current");
     expect(after.daysPastDue).toBe(0);
   });
@@ -764,20 +764,20 @@ describe("opening balances", () => {
   it("can be corrected without stacking a second opening line", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const owner = result.current.state.community.owners[2];
+    const home = result.current.state.community.homes[2];
 
     act(() =>
       result.current.state.setOpeningBalances("2026-07-01", [
-        { ownerId: owner.id, amountCents: 50_000 },
+        { homeId: home.id, amountCents: 50_000 },
       ]),
     );
     act(() =>
       result.current.state.setOpeningBalances("2026-07-01", [
-        { ownerId: owner.id, amountCents: 25_000 },
+        { homeId: home.id, amountCents: 25_000 },
       ]),
     );
 
-    const lines = result.current.state.community.ownerCharges[owner.id] ?? [];
+    const lines = result.current.state.community.homeCharges[home.id] ?? [];
     const opening = lines.filter((l) => l.label === "Balance brought forward");
     expect(opening, "a correction stacked a second opening balance").toHaveLength(1);
     expect(opening[0].amountCents).toBe(25_000);
@@ -786,23 +786,23 @@ describe("opening balances", () => {
   it("clears the line entirely when a home turns out to owe nothing", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const owner = result.current.state.community.owners[3];
+    const home = result.current.state.community.homes[3];
 
     act(() =>
       result.current.state.setOpeningBalances("2026-07-01", [
-        { ownerId: owner.id, amountCents: 30_000 },
+        { homeId: home.id, amountCents: 30_000 },
       ]),
     );
     act(() =>
       result.current.state.setOpeningBalances("2026-07-01", [
-        { ownerId: owner.id, amountCents: 0 },
+        { homeId: home.id, amountCents: 0 },
       ]),
     );
 
-    const lines = result.current.state.community.ownerCharges[owner.id] ?? [];
+    const lines = result.current.state.community.homeCharges[home.id] ?? [];
     expect(lines.some((l) => l.label === "Balance brought forward")).toBe(false);
     expect(
-      result.current.state.community.owners.find((o) => o.id === owner.id)!.balanceCents,
+      result.current.state.community.homes.find((o) => o.id === home.id)!.balanceCents,
     ).toBe(0);
   });
 });
@@ -857,7 +857,7 @@ describe("payment instruments", () => {
     act(() => result.current.state.signIn("acct-nina"));
     act(() =>
       result.current.state.addInstrument({
-        ownerId: "own-015",
+        homeId: "own-015",
         kind: "ach",
         label: "BECU checking",
         mask: "1111",
@@ -872,11 +872,11 @@ describe("payment instruments", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(MONISH));
     const second = result.current.state.instruments.find(
-      (i) => i.ownerId === "own-042" && !i.isDefault,
+      (i) => i.homeId === "own-042" && !i.isDefault,
     )!;
 
     act(() => result.current.state.setDefaultInstrument(second.id));
-    const mine = result.current.state.instruments.filter((i) => i.ownerId === "own-042");
+    const mine = result.current.state.instruments.filter((i) => i.homeId === "own-042");
     expect(mine.filter((i) => i.isDefault)).toHaveLength(1);
     expect(mine.find((i) => i.isDefault)!.id).toBe(second.id);
   });
@@ -885,11 +885,11 @@ describe("payment instruments", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(MONISH));
     const current = result.current.state.instruments.find(
-      (i) => i.ownerId === "own-042" && i.isDefault,
+      (i) => i.homeId === "own-042" && i.isDefault,
     )!;
 
     act(() => result.current.state.removeInstrument(current.id));
-    const mine = result.current.state.instruments.filter((i) => i.ownerId === "own-042");
+    const mine = result.current.state.instruments.filter((i) => i.homeId === "own-042");
     expect(mine.filter((i) => i.isDefault)).toHaveLength(1);
   });
 
@@ -897,7 +897,7 @@ describe("payment instruments", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
     act(() => result.current.state.setDefaultInstrument("pm-ach-arya"));
-    const monish = result.current.state.instruments.filter((i) => i.ownerId === "own-042");
+    const monish = result.current.state.instruments.filter((i) => i.homeId === "own-042");
     expect(monish.filter((i) => i.isDefault)).toHaveLength(1);
   });
 });
@@ -924,7 +924,7 @@ describe("every admin can use the resident side", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(admin.id));
     act(() => result.current.state.setView("resident"));
-    expect(result.current.owner?.unit).toBe(admin.unit);
+    expect(result.current.home?.unit).toBe(admin.unit);
   });
 
   it.each(ADMINS)("$role keeps their capabilities while in resident view", (admin) => {
@@ -1047,24 +1047,24 @@ describe("undo on board decisions", () => {
 describe("the roster", () => {
   it("adds a household and the account that lets them sign in", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const before = result.current.community.owners.length;
+    const before = result.current.community.homes.length;
 
     act(() => {
       result.current.addOwner({ name: "Rosa Delgado", email: "rosa@example.com", unit: "99" });
     });
 
-    const owner = result.current.community.owners.find((o) => o.unit === "99")!;
-    expect(result.current.community.owners.length).toBe(before + 1);
-    expect(owner.displayName).toBe("Rosa Delgado");
+    const home = result.current.community.homes.find((o) => o.unit === "99")!;
+    expect(result.current.community.homes.length).toBe(before + 1);
+    expect(home.displayName).toBe("Rosa Delgado");
 
-    const account = result.current.accounts.find((a) => a.ownerId === owner.id)!;
+    const account = result.current.accounts.find((a) => a.homeId === home.id)!;
     expect(account.role).toBe("resident");
     expect(account.capabilities.finances).toBe(false);
   });
 
   it("refuses a unit that is already on the register", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const taken = result.current.community.owners[0].unit;
+    const taken = result.current.community.homes[0].unit;
     expect(() =>
       result.current.addOwner({ name: "Someone Else", email: "x@example.com", unit: taken }),
     ).toThrow(/already on the roster/i);
@@ -1075,18 +1075,18 @@ describe("the roster", () => {
     act(() => {
       result.current.addOwner({ name: "Temp Household", email: "t@example.com", unit: "98" });
     });
-    const owner = result.current.community.owners.find((o) => o.unit === "98")!;
+    const home = result.current.community.homes.find((o) => o.unit === "98")!;
 
     let undo = () => {};
     act(() => {
-      undo = result.current.removeOwner(owner.id);
+      undo = result.current.removeOwner(home.id);
     });
-    expect(result.current.community.owners.some((o) => o.id === owner.id)).toBe(false);
-    expect(result.current.accounts.some((a) => a.ownerId === owner.id)).toBe(false);
+    expect(result.current.community.homes.some((o) => o.id === home.id)).toBe(false);
+    expect(result.current.accounts.some((a) => a.homeId === home.id)).toBe(false);
 
     act(() => undo());
-    expect(result.current.community.owners.some((o) => o.id === owner.id)).toBe(true);
-    expect(result.current.accounts.some((a) => a.ownerId === owner.id)).toBe(true);
+    expect(result.current.community.homes.some((o) => o.id === home.id)).toBe(true);
+    expect(result.current.accounts.some((a) => a.homeId === home.id)).toBe(true);
   });
 });
 
@@ -1097,19 +1097,19 @@ describe("letting somebody in on a home already on the register (demo)", () => {
   it("seats them beside the owner of the home the board chose, and adds no home", async () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     const request = pending(result.current);
-    const home = result.current.community.owners.find((o) => o.unit === request.unit)!;
-    const homes = result.current.community.owners.length;
-    const seatsBefore = result.current.accounts.filter((a) => a.ownerId === home.id).length;
+    const home = result.current.community.homes.find((o) => o.unit === request.unit)!;
+    const homes = result.current.community.homes.length;
+    const seatsBefore = result.current.accounts.filter((a) => a.homeId === home.id).length;
 
     await act(async () => {
       expect(await result.current.seatJoinRequest(request.id, home.id, true)).toBe(true);
     });
 
-    expect(result.current.community.owners.length).toBe(homes);
-    const now = result.current.community.owners.find((o) => o.id === home.id)!;
+    expect(result.current.community.homes.length).toBe(homes);
+    const now = result.current.community.homes.find((o) => o.id === home.id)!;
     expect(now.members).toContain(request.name);
     expect(now.displayName).toBe(home.displayName);
-    const seats = result.current.accounts.filter((a) => a.ownerId === home.id);
+    const seats = result.current.accounts.filter((a) => a.homeId === home.id);
     expect(seats.some((a) => a.email === request.email)).toBe(true);
     expect(seats).toHaveLength(seatsBefore + 1);
     expect(result.current.community.joinRequests.find((j) => j.id === request.id)!.status).toBe("approved");
@@ -1118,25 +1118,25 @@ describe("letting somebody in on a home already on the register (demo)", () => {
   it("gives an empty home its owner without making a second home", async () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     const request = pending(result.current);
-    const empty = result.current.community.owners[1];
+    const empty = result.current.community.homes[1];
     act(() => {
       result.current.removeOwner(empty.id);
     });
     act(() => {
       result.current.addOwner({ name: "x", email: "", unit: "A1" });
     });
-    const target = result.current.community.owners.find((o) => o.unit === "A1")!;
+    const target = result.current.community.homes.find((o) => o.unit === "A1")!;
     await act(async () => {
       await result.current.setHouseholdOwner(target.id, { name: "", email: "" });
     });
-    const homes = result.current.community.owners.length;
+    const homes = result.current.community.homes.length;
 
     await act(async () => {
       await result.current.seatJoinRequest(request.id, target.id, false);
     });
 
-    const now = result.current.community.owners.find((o) => o.id === target.id)!;
-    expect(result.current.community.owners.length).toBe(homes);
+    const now = result.current.community.homes.find((o) => o.id === target.id)!;
+    expect(result.current.community.homes.length).toBe(homes);
     expect(now.displayName).toBe(request.name);
     expect(now.email).toBe(request.email);
     expect(now.placeholder).toBe(false);
@@ -1144,28 +1144,28 @@ describe("letting somebody in on a home already on the register (demo)", () => {
 
   it("adds a second owner from the household card, with a sign in of their own", async () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const home = result.current.community.owners[0];
-    const before = result.current.accounts.filter((a) => a.ownerId === home.id).length;
+    const home = result.current.community.homes[0];
+    const before = result.current.accounts.filter((a) => a.homeId === home.id).length;
 
     await act(async () => {
       expect(await result.current.addSecondOwner(home.id, { name: "Lee Two", email: "lee@example.com" })).toBe(true);
     });
 
-    expect(result.current.community.owners.find((o) => o.id === home.id)!.members).toContain("Lee Two");
-    expect(result.current.accounts.filter((a) => a.ownerId === home.id)).toHaveLength(before + 1);
+    expect(result.current.community.homes.find((o) => o.id === home.id)!.members).toContain("Lee Two");
+    expect(result.current.accounts.filter((a) => a.homeId === home.id)).toHaveLength(before + 1);
     // One home, one balance: nothing about the second owner is billed.
-    expect(result.current.community.owners.find((o) => o.id === home.id)!.balanceCents).toBe(home.balanceCents);
+    expect(result.current.community.homes.find((o) => o.id === home.id)!.balanceCents).toBe(home.balanceCents);
   });
 
   it("changes the email invitations go to", async () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const home = result.current.community.owners[0];
+    const home = result.current.community.homes[0];
 
     await act(async () => {
       await result.current.changeOwnerEmail(home.id, "fixed@example.com");
     });
 
-    expect(result.current.community.owners.find((o) => o.id === home.id)!.email).toBe("fixed@example.com");
+    expect(result.current.community.homes.find((o) => o.id === home.id)!.email).toBe("fixed@example.com");
   });
 });
 
@@ -1179,7 +1179,7 @@ const lastPayment = (lines: { kind: string }[]) => lines.find((l) => l.kind === 
 describe("taking a payment", () => {
   it("writes the statement, the balance, the books, the budget, and the bank together", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const owner = result.current.community.owners.find((o) => o.balanceCents > 0)!;
+    const home = result.current.community.homes.find((o) => o.balanceCents > 0)!;
     const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
     const bankBefore = operating.balanceCents;
     const ledgerBefore = result.current.ledger.length;
@@ -1189,8 +1189,8 @@ describe("taking a payment", () => {
 
     act(() => {
       result.current.recordPayment({
-        ownerId: owner.id,
-        amountCents: owner.balanceCents,
+        homeId: home.id,
+        amountCents: home.balanceCents,
         processorCents: 35,
         platformCents: 0,
         platformPaidBy: "association",
@@ -1201,23 +1201,23 @@ describe("taking a payment", () => {
 
     const after = result.current.community;
     // The household's own statement.
-    const statement = after.ownerCharges[owner.id];
-    expect(lastPayment(statement).amountCents).toBe(-owner.balanceCents);
+    const statement = after.homeCharges[home.id];
+    expect(lastPayment(statement).amountCents).toBe(-home.balanceCents);
     // Their balance.
-    expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(0);
+    expect(after.homes.find((o) => o.id === home.id)!.balanceCents).toBe(0);
     // The association's books: the payment whole and the processor's cut as
     // its own line (0101), netting to what the bank received.
     expect(result.current.ledger.length).toBe(ledgerBefore + 2);
     expect(result.current.ledger[0].amountCents).toBe(-35);
-    expect(result.current.ledger[1].amountCents).toBe(owner.balanceCents);
+    expect(result.current.ledger[1].amountCents).toBe(home.balanceCents);
     // Budget performance.
     const incomeAfter = after.budget
       .filter((b) => b.kind === "income")
       .reduce((t, b) => t + b.ytdActualCents, 0);
-    expect(incomeAfter).toBe(incomeBefore + owner.balanceCents);
+    expect(incomeAfter).toBe(incomeBefore + home.balanceCents);
     // And the bank the board reconciles against.
     expect(after.bankAccounts.find((a) => a.id === operating.id)!.balanceCents).toBe(
-      bankBefore + owner.balanceCents - 35,
+      bankBefore + home.balanceCents - 35,
     );
   });
 
@@ -1226,12 +1226,12 @@ describe("taking a payment", () => {
     // A home with a bill already due: money is applied to bills that have
     // fallen due, as record_payment does, and the first home on the list owes
     // only the September bill, which has not.
-    const owner = result.current.community.owners.find(
-      (o) => o.daysPastDue > 0 && (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge"),
+    const home = result.current.community.homes.find(
+      (o) => o.daysPastDue > 0 && (result.current.community.homeCharges[o.id] ?? []).some((c) => c.kind === "charge"),
     )!;
     // The oldest charge that still owes something, which is not the same as
     // the oldest charge: earlier ones have already been paid off.
-    const lines = result.current.community.ownerCharges[owner.id];
+    const lines = result.current.community.homeCharges[home.id];
     const coveredBy = new Map<string, number>();
     for (const line of lines) {
       for (const applied of line.appliedTo ?? []) {
@@ -1244,7 +1244,7 @@ describe("taking a payment", () => {
 
     act(() => {
       result.current.recordPayment({
-        ownerId: owner.id,
+        homeId: home.id,
         amountCents: oldest.amountCents,
         processorCents: 35,
         platformCents: 0,
@@ -1254,19 +1254,19 @@ describe("taking a payment", () => {
       });
     });
 
-    const applied = lastPayment(result.current.community.ownerCharges[owner.id]).appliedTo ?? [];
+    const applied = lastPayment(result.current.community.homeCharges[home.id]).appliedTo ?? [];
     expect(applied[0]?.chargeId).toBe(oldest.id);
   });
 
   it("carries the association's own fee out of the deposit when it absorbs it", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const owner = result.current.community.owners[0];
+    const home = result.current.community.homes[0];
     const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
     const before = operating.balanceCents;
 
     act(() => {
       result.current.recordPayment({
-        ownerId: owner.id,
+        homeId: home.id,
         amountCents: 10_000,
         processorCents: 35,
         platformCents: 150,
@@ -1285,13 +1285,13 @@ describe("taking a payment", () => {
 describe("recording an owner's check or cash (demo)", () => {
   it("puts a check on the statement, the balance, the books and the bank, without a fee", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const owner = result.current.community.owners.find((o) => o.balanceCents > 6_000)!;
+    const home = result.current.community.homes.find((o) => o.balanceCents > 6_000)!;
     const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
     const ledgerBefore = result.current.ledger.length;
 
     act(() => {
       void result.current.recordManualPayment({
-        ownerId: owner.id,
+        homeId: home.id,
         amountCents: 6_000,
         method: "check",
         reference: "1042",
@@ -1300,7 +1300,7 @@ describe("recording an owner's check or cash (demo)", () => {
     });
 
     const after = result.current.community;
-    const line = lastPayment(after.ownerCharges[owner.id]);
+    const line = lastPayment(after.homeCharges[home.id]);
     expect(line).toMatchObject({
       kind: "payment",
       label: "Check payment #1042",
@@ -1308,7 +1308,7 @@ describe("recording an owner's check or cash (demo)", () => {
       date: "2026-08-18",
       method: "Check",
     });
-    expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(owner.balanceCents - 6_000);
+    expect(after.homes.find((o) => o.id === home.id)!.balanceCents).toBe(home.balanceCents - 6_000);
     expect(result.current.ledger.length).toBe(ledgerBefore + 1);
     expect(result.current.ledger[0]).toMatchObject({ amountCents: 6_000, category: "Assessments", date: "2026-08-18" });
     expect(after.bankAccounts.find((a) => a.id === operating.id)!.balanceCents).toBe(
@@ -1318,19 +1318,19 @@ describe("recording an owner's check or cash (demo)", () => {
 
   it("reads Cash payment with no number, and applies to the oldest charge first", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const owner = result.current.community.owners.find(
-      (o) => (result.current.community.ownerCharges[o.id] ?? []).some((c) => c.kind === "charge") && o.daysPastDue > 0,
+    const home = result.current.community.homes.find(
+      (o) => (result.current.community.homeCharges[o.id] ?? []).some((c) => c.kind === "charge") && o.daysPastDue > 0,
     )!;
     act(() => {
       void result.current.recordManualPayment({
-        ownerId: owner.id,
+        homeId: home.id,
         amountCents: 100,
         method: "cash",
         reference: "",
         receivedOn: "2026-08-20",
       });
     });
-    const line = lastPayment(result.current.community.ownerCharges[owner.id]);
+    const line = lastPayment(result.current.community.homeCharges[home.id]);
     expect(line.label).toBe("Cash payment");
     expect(line.appliedTo?.length).toBeGreaterThan(0);
   });
@@ -1339,33 +1339,33 @@ describe("recording an owner's check or cash (demo)", () => {
 describe("a credit on a statement (demo)", () => {
   it("lowers the balance with the reason as its label and leaves the books alone", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const owner = result.current.community.owners.find((o) => o.balanceCents > 2_500)!;
+    const home = result.current.community.homes.find((o) => o.balanceCents > 2_500)!;
     const ledgerBefore = result.current.ledger.length;
     const bankBefore = result.current.community.bankAccounts.map((a) => a.balanceCents);
 
     act(() => {
-      void result.current.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: "Late fee waived" });
+      void result.current.addCredit({ homeId: home.id, amountCents: 2_500, reason: "Late fee waived" });
     });
 
     const after = result.current.community;
-    expect(after.ownerCharges[owner.id][0]).toMatchObject({
+    expect(after.homeCharges[home.id][0]).toMatchObject({
       kind: "credit",
       label: "Late fee waived",
       amountCents: -2_500,
     });
-    expect(after.owners.find((o) => o.id === owner.id)!.balanceCents).toBe(owner.balanceCents - 2_500);
+    expect(after.homes.find((o) => o.id === home.id)!.balanceCents).toBe(home.balanceCents - 2_500);
     expect(result.current.ledger.length).toBe(ledgerBefore);
     expect(after.bankAccounts.map((a) => a.balanceCents)).toEqual(bankBefore);
   });
 
   it("refuses a credit with no reason or no amount", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    const owner = result.current.community.owners[0];
+    const home = result.current.community.homes[0];
     let a: unknown;
     let b: unknown;
     act(() => {
-      a = result.current.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: "  " });
-      b = result.current.addCredit({ ownerId: owner.id, amountCents: 0, reason: "Waived" });
+      a = result.current.addCredit({ homeId: home.id, amountCents: 2_500, reason: "  " });
+      b = result.current.addCredit({ homeId: home.id, amountCents: 0, reason: "Waived" });
     });
     expect([a, b]).toEqual([false, false]);
   });
@@ -1399,13 +1399,13 @@ describe("the demo's Activity", () => {
   it("records a credit, a dues change, an email change, a vendor, a meeting and a reply, as the database words them", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const owner = result.current.state.community.owners.find((o) => o.balanceCents > 2_500)!;
+    const home = result.current.state.community.homes.find((o) => o.balanceCents > 2_500)!;
     const thread = result.current.state.threads[0];
 
     act(() => {
-      void result.current.state.addCredit({ ownerId: owner.id, amountCents: 2_500, reason: "Late fee waived" });
-      void result.current.state.setHomeDues([{ ownerId: owner.id, cents: 31_000 }]);
-      void result.current.state.changeOwnerEmail(owner.id, "new.address@example.com");
+      void result.current.state.addCredit({ homeId: home.id, amountCents: 2_500, reason: "Late fee waived" });
+      void result.current.state.setHomeDues([{ homeId: home.id, cents: 31_000 }]);
+      void result.current.state.changeOwnerEmail(home.id, "new.address@example.com");
       result.current.state.addVendor({
         id: "v-new",
         name: "Acme Paving",
@@ -1420,9 +1420,9 @@ describe("the demo's Activity", () => {
     const lines = (result.current.state.community.activity ?? []).map((a) => a.summary);
     expect(lines).toEqual(
       expect.arrayContaining([
-        `Credit of $25.00 added for ${owner.unit}: Late fee waived`,
-        `Dues for ${owner.unit} set to $310.00`,
-        `Email for ${owner.unit} changed from ${owner.email} to new.address@example.com`,
+        `Credit of $25.00 added for ${home.unit}: Late fee waived`,
+        `Dues for ${home.unit} set to $310.00`,
+        `Email for ${home.unit} changed from ${home.email} to new.address@example.com`,
         "Vendor Acme Paving added",
       ]),
     );

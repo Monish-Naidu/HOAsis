@@ -23,7 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { IconTile, type TintName } from "@/components/ui/primitives";
-import { useAppState, useCurrentOwner } from "@/lib/app-state";
+import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { BOARD_ROUTES } from "@/lib/board-routes";
 import { moduleOn } from "@/lib/modules";
 import {
@@ -188,7 +188,7 @@ function Highlight({ text, ranges }: { text: string; ranges: Range[] }) {
 
 function Palette({ onClose }: { onClose: () => void }) {
   const { community, sees } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const pathname = usePathname();
   const router = useRouter();
   const board = pathname.startsWith("/board");
@@ -203,7 +203,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   // table. Pages go through `routeOffered` themselves. Folded once here, so
   // a keystroke is one pass over the index and no string normalisation.
   const index = useMemo(() => {
-    if (!board) return prepareIndex([...residentPages(community), ...residentIndex(community, owner)]);
+    if (!board) return prepareIndex([...residentPages(community), ...residentIndex(community, home)]);
     const allowed = (kind: SearchKind) => {
       if (kind === "page" || kind === "shortcut" || kind === "charge") return true;
       const href = KIND_ROUTE[kind];
@@ -214,7 +214,7 @@ function Palette({ onClose }: { onClose: () => void }) {
       return moduleOn(route.module) && (!route.need || route.need.some((c) => sees(c)));
     };
     return prepareIndex([...boardPages(community, sees), ...boardIndex(community).filter((h) => allowed(h.kind))]);
-  }, [board, community, owner, sees]);
+  }, [board, community, home, sees]);
 
   const trimmed = query.trim();
   const rows = useMemo<Row[]>(() => {
@@ -238,7 +238,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     }
     const shortcuts = board
       ? boardShortcuts(trimmed, community, sees)
-      : residentShortcuts(trimmed, community, owner);
+      : residentShortcuts(trimmed, community, home);
     const found = searchIndex(index, trimmed);
     return [
       ...shortcuts.map<Row>((h) => ({
@@ -268,7 +268,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         hit: s.item,
       })),
     ];
-  }, [trimmed, board, community, sees, owner, index, recent]);
+  }, [trimmed, board, community, sees, home, index, recent]);
 
   const groups = useMemo(() => groupHits(rows, trimmed === "" ? 5 : 6), [rows, trimmed]);
   const flat = useMemo(() => groups.flatMap((g) => g.hits), [groups]);

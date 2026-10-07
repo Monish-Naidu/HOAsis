@@ -18,14 +18,14 @@ import { calendarEntries } from "@/lib/metrics";
 import { ballotPhase } from "@/lib/phases";
 import {
   useAppState,
-  useCurrentOwner,
+  useCurrentHome,
   useMyRequests,
-  useOwnerCharges,
+  useHomeCharges,
 } from "@/lib/app-state";
 import { HomeSchedule } from "@/components/app/home-schedule";
 import { cn, formatDate, money, pastDueLabel, relativeDays, todayIsoDate } from "@/lib/utils";
 import { balanceSplit } from "@/lib/statement";
-import { ownerDues } from "@/lib/home-types";
+import { homeDues } from "@/lib/home-types";
 import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { Announcements } from "./announcements";
 import { HomesNote } from "@/components/app/home-switcher";
@@ -40,14 +40,14 @@ import { BoardPausedNote } from "@/components/app/board-paused-note";
  */
 export default function ResidentHome() {
   const { community } = useAppState();
-  const owner = useCurrentOwner();
+  const home = useCurrentHome();
   const live = community.meetings.find((m) => m.status === "live");
   const toVote = community.ballots.filter(
     (b) => b.audience === "owners" && ballotPhase(b) === "open" && !b.myVoteOptionId,
   );
   // A notice against this home is the thing an owner most needs to see first,
   // and it used to be a card inside Requests that nothing pointed at.
-  const openNotices = openNoticesForHome(community.violations, owner);
+  const openNotices = openNoticesForHome(community.violations, home);
   const notice = openNotices.length ? noticeSummary(openNotices) : null;
 
   return (
@@ -140,27 +140,27 @@ export default function ResidentHome() {
  */
 function AccountSummary() {
   const { community } = useAppState();
-  const owner = useCurrentOwner();
-  const charges = useOwnerCharges();
-  if (!owner) return null;
+  const home = useCurrentHome();
+  const charges = useHomeCharges();
+  if (!home) return null;
 
-  const past = owner.daysPastDue > 0;
+  const past = home.daysPastDue > 0;
   const nextCharge = community.nextChargeDate;
   // Two different things: what the statement says is owed, and what this home
   // pays a month. The card and the button follow the statement; the rate only
   // stands in when no bill is posted yet.
-  const split = balanceSplit(charges, owner.balanceCents, todayIsoDate());
+  const split = balanceSplit(charges, home.balanceCents, todayIsoDate());
   // Everything owed is a bill that has not fallen due. The daily run posts a
   // bill up to a week early, and calling that "current balance" next to a
   // "Paid up" badge on the board is two answers to one question.
   const early = !past && split.owedNowCents === 0 && split.notYetDueCents > 0;
-  const shown = early ? split.notYetDueCents : owner.balanceCents;
+  const shown = early ? split.notYetDueCents : home.balanceCents;
   // This home's own amount: in a mixed community kinds pay differently.
   const amount =
-    owner.balanceCents > 0
+    home.balanceCents > 0
       ? shown
-      : (split.upcoming?.amountCents ?? ownerDues(community.association, owner));
-  const covered = owner.autopay && owner.balanceCents <= 0;
+      : (split.upcoming?.amountCents ?? homeDues(community.association, home));
+  const covered = home.autopay && home.balanceCents <= 0;
 
   return (
     <Card>
@@ -196,7 +196,7 @@ function AccountSummary() {
           </div>
         </div>
         <div className="flex flex-col gap-1 @xl:items-end">
-          {owner.autopay ? (
+          {home.autopay ? (
             <p className="inline-flex items-center gap-1.5 text-footnote font-semibold text-ok">
               <CheckCircle2 className="size-3.5" />
               Autopay is on
@@ -211,7 +211,7 @@ function AccountSummary() {
           )}
           <p className="text-footnote text-fg-muted">
             {past
-              ? pastDueLabel(owner.daysPastDue)
+              ? pastDueLabel(home.daysPastDue)
               : early && split.nextBill
                 ? `Due ${formatDate(split.nextBill.date, "long")}`
                 : `Next dues ${formatDate(split.upcoming?.date ?? nextCharge, "long")}`}
@@ -234,7 +234,7 @@ function AccountSummary() {
         >
           {covered
             ? "Pay early"
-            : early || owner.balanceCents <= 0
+            : early || home.balanceCents <= 0
               ? `Pay early: ${money(amount, { cents: false })}`
               : `Pay ${money(amount, { cents: false })}`}
         </Link>
@@ -292,7 +292,7 @@ function QuickActions() {
  * announcement. Every row is read from the record it reports on.
  */
 function RecentActivity() {
-  const charges = useOwnerCharges();
+  const charges = useHomeCharges();
   const requests = useMyRequests();
 
   interface ActivityRow {
