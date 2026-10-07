@@ -478,8 +478,8 @@ Rows in its order:
 
 | Step | Status |
 | --- | --- |
-| 1. Monthly rollup tables kept by triggers; `association_overview` reads them | next, after the refactors |
-| 2. Fiscal-year close, reopen logged | next |
+| 1. Monthly rollup tables kept by triggers; `association_overview` reads them | done 2026-10-07 (#23, migration 0108): `ledger_months`, `statement_months`, `scripts/verify-rollups.mjs` |
+| 2. Fiscal-year close, reopen logged | done 2026-10-07 (#26, migration 0109): `fiscal_years` written by the daily ops job for every ended year, `reopen_fiscal_year` and `close_fiscal_year` for a finance holder, `scripts/verify-fiscal-years.mjs`. Left: the Finances screen that shows a closed year and its Reopen button |
 | 3. Period filter with fiscal years and compare-to-last-year on Transactions and Overview; totals on the category chips | done 2026-10-07 for the period control and the category totals (pull request #22, at Monish's word on the Finances tabs): one period button that says its dates, arrows that step by month or year, fiscal years named, the figures as the direction filter, categories as a pressable list with counts and totals, Starting balances folded at the bottom once set. Left: compare to last year |
 | 4. History import: statements per home, then bank lines, through the roster-import pattern | next, before the first association with years behind it |
 | 5. Budget versus actual and Trends switched on, reworked to the rollups | later |
@@ -487,3 +487,59 @@ Rows in its order:
 | 7. Saved views, five defaults | later |
 | 8. Per-home and reserve trends | later |
 
+
+## 22. The third walk, 2026-10-07
+
+Two walkers on the merged build (main at a794aa0, frozen on port 3101):
+a founder creating three associations signed out (40 detached homes from
+a spreadsheet, a 24-unit condo building on a phone, a 120-lot builder
+subdivision), and the test treasurer on a desktop then the test owner on
+a phone, signed in. The test association had been left with its
+subscription cancelled by an earlier billing test, so the treasurer's
+money writes were refused; it is back on a trial until 2027-01-05, and
+Dana Whitcomb is a resident again so it has one treasurer. Reports under
+the session scratchpad `walk3-founder/` and `walk3-signed-in/`.
+
+Nothing broke. Wrong, confusing and polish, most serious first:
+
+| Where | What happens | Status |
+| --- | --- | --- |
+| Past due, new association | "Households current: 100%, 1 of 1 household" while the age table says 24 households | fixing |
+| Transactions, Money out | Pressing the figure lists reserve transfers and reversals the figure does not count, and the filter is not in the URL so a reload drops it | fixing |
+| Finances, Previous period | Stepping back past the first money lands on a year with nothing and the whole section, control included, disappears | fixing |
+| Past due summary | "4 need a notice today. $9,730.00 outstanding" ties every past-due home's money to the four | fixing |
+| Messages, Mine | For the treasurer, Mine lists every conversation, including ones to other officers | fixing |
+| Create, step 9 | Two ranges that overlap and a $0 dues entry both let Continue through; the second range is dropped silently and the $0 becomes the usual amount | fixing |
+| Homeowners | A range prefix is printed twice: "Unit 102 · Condo · Unit Unit 102" | fixing |
+| Settings and Homeowners | "40 owners" counts homes with nobody on them; "No email on file 0" leaves out the 39 homes with no owner | fixing |
+| Billing lock | Settings switches and request actions go through while the banner says the board side is read-only; the lock is described four ways (cancelled, ended, not paid, paused) | fixing: migration 0110 adds `associations`, `requests` (not an owner's own), `threads`, `thread_replies`, `posts` to the lock; one wording |
+| Setup, Starting balances | The setup task means what each home owes; Finances means the bank balance; saving one leaves the other undone | fixing: the task is "Enter what each home owes" |
+| Dashboard | "Reminders go out on the 16th" before any bill exists | fixing |
+| Requests | A request under "Needs a decision" wears a "Needs info" pill; after Schedule it the pill says "Scheduled" with no date; after Mark fixed it says "Closed" | fixing |
+| Setup links | "List your amenities" opens the top of Settings; "Check the first bill" says Change for a read-only fact | fixing |
+| Create, steps 6 to 10 | home, unit, lot and condo for the same thing in one card | fixing |
+| Toasts | "1 email was not sent. It is saved here" | fixing: "saved in Messages" |
+| Descriptions | "unit 15" in transactions and subjects, "Lot 15" everywhere else; a reversal's counterparty is "Owner" | fixing |
+| Owner Settings and Pay | Empty and invalid email both say "Enter your new email address"; "1.999" says "above $0" | fixing |
+| Finances at 1440 | Category names truncate with room to spare; the starting-balance summary names only the operating account | fixing |
+| Settings | Example placeholders read like saved data (board@maplecourt.org, Farmers Insurance) | fixing |
+| Settings, phone | The access grid is cut at 390px with no hint that it scrolls | fixing |
+| Overview | "Operating account ••" with nothing after the dots | fixing |
+| Dues total | "$37 per month across 3 homes" for $37.05 | fixing |
+| Owner home | A meeting four days past still under From the board | fixing |
+| Dashboard | Messages waiting on a reply are not in Needs you today; the Homeowners badge is the past-due count with no label | fixing |
+| Activity | "Compliance" in the log and thread category, "Notices" in the nav | fixing |
+| Hydration error #418 | Production builds only, most board pages signed in; a dev server signed out and signed in is clean, so the mismatch is build-time state | open, section 13 |
+| Sign-in test logins | The block says real accounts while the demo block says made-up, with the same first names on different homes; local builds only | leave |
+| Last 12 months | Nov 1 to Oct 7 is twelve calendar months with the current one partial | as designed |
+| Test data | Two homes at one address, two identical payments on Sep 26 | leave |
+
+Walked and clean: the wizard's gating and rounding, dues by kind and by
+home summing the same, the late fee into the collections policy, a pasted
+list of 39 addresses, every setup task link, Setting up counts on the
+card, the nav and the page, the period control's presets and arrows, the
+Try as switch, the sign-in person picker, dark mode on the dashboard and
+Finances, 390px with no overflow, the dashboard figures against Finances,
+Past due chips in the URL, Homeowners filters in the URL across a new
+browser, Settings activity, the owner writing to the treasurer from a
+phone, the theme buttons.
