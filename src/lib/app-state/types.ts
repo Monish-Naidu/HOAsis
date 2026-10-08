@@ -1,6 +1,6 @@
 import type { Community } from "@/lib/data/community";
 import type { CommunityDraft } from "@/lib/data/new-community";
-import type { AccessLevel, Account, AccountRole, Announcement, AutopayPlan, BankAccount, Capability, DocumentRecord, ForumPost, HomeRequest, HomeType, MessageThread, Home, ThreadAddress, VendorInvoice, Violation, ViolationReport, WorkOrder } from "@/lib/types";
+import type { AccessLevel, Account, AccountRole, Announcement, AutopayPlan, BankAccount, Capability, DocumentRecord, ForumPost, HomeRequest, HomeType, MeetingAttendee, MessageThread, Home, PhotoVantage, ThreadAddress, VendorInvoice, Violation, ViolationReport, WorkOrder } from "@/lib/types";
 import type { ManualMethod, PaymentInstrument } from "@/lib/payments/instruments";
 import type { ManualPaymentRow } from "@/lib/payments/manual-payments";
 import type { ReplyEmail } from "@/lib/email/plain-error";
@@ -204,6 +204,9 @@ export interface AppState {
    */
   manualPaymentsFor: (homeId: string) => Promise<ManualPaymentRow[]>;
   /** A credit on one home's statement, such as a waived late fee. Not money in the bank. */
+  /** A closed fiscal year (0109): reopen with a reason, close again by hand. Signed in only. */
+  reopenFiscalYear: (startsOn: string, reason: string) => boolean | Promise<boolean>;
+  closeFiscalYear: (startsOn: string) => boolean | Promise<boolean>;
   addCredit: (input: {
     homeId: string;
     amountCents: number;
@@ -275,6 +278,8 @@ export interface AppState {
    * request was not saved. The demo answers with nothing: its number stands.
    */
   addRequest: (request: HomeRequest) => void | Promise<string | null>;
+  /** Files on a request that exists. Resolves true when every file that could go was saved. */
+  attachFiles: (requestId: string, files: File[]) => Promise<boolean>;
   addInstrument: (instrument: Omit<PaymentInstrument, "id" | "isDefault">) => PaymentInstrument;
   /** Returns an undo where one is possible; a Stripe method, once detached, is gone. */
   removeInstrument: (instrumentId: string) => (() => void) | undefined;
@@ -415,6 +420,12 @@ export interface AppState {
   setWorkOrder: (requestId: string, workOrder: WorkOrder | null) => void;
   /** Whether the signed in person is coming to a meeting. */
   rsvpMeeting: (meetingId: string, response: "yes" | "no") => Promise<boolean>;
+  /** Moves a meeting that has not happened. Refused in the past; resolves false if nothing was kept. */
+  rescheduleMeeting: (meetingId: string, to: { date: string; time?: string; location?: string }) => Promise<boolean>;
+  /** Cancels a meeting that has not happened; it stays on the record with the reason. */
+  cancelMeeting: (meetingId: string, reason: string) => Promise<boolean>;
+  /** Minutes and who came, for a meeting that was held. Saving again replaces them. */
+  recordMinutes: (meetingId: string, minutes: string, attended: MeetingAttendee[]) => Promise<boolean>;
   addActionItem: (input: {
     title: string;
     ownerName: string;
@@ -460,6 +471,19 @@ export interface AppState {
   setPayoutNotes: (payoutId: string, notes: string) => void;
   /** Moves a notice along, or closes it. Cured is how a notice is resolved. */
   setViolationStage: (violationId: string, stage: Violation["stage"]) => void;
+  /**
+   * Fines a notice that has had its hearing: the amount goes on the home's
+   * statement as a charge and the notice moves to fined. Resolves false when
+   * it was refused (see `fineProblem`) or the write failed.
+   */
+  fineViolation: (violationId: string, amountCents: number, note: string) => Promise<boolean>;
+  /** A photo on a notice, with what it shows and where it was taken from. */
+  addViolationPhoto: (
+    violationId: string,
+    file: File,
+    brief: string,
+    vantage: PhotoVantage,
+  ) => Promise<boolean>;
   /**
    * The board's own notice to a home, from its own observation. The simple
    * Notices page since the launch scope: one home, what was seen, optionally

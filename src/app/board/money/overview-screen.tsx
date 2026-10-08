@@ -6,6 +6,7 @@ import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { BankConnect } from "@/components/app/bank-connect";
 import { MoneyFlowChart, SpendingDonut } from "@/components/app/board-charts";
 import { DeltaChip, PeriodControl, SectionLink, StatTile } from "@/components/app/finance-ui";
+import { ClosedYears } from "./closed-years";
 import { OpeningBalances } from "./opening-balances";
 import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
@@ -26,7 +27,9 @@ import {
   type PeriodPreset,
   operatingRunway,
   pastDueHint,
+  percentChange,
   spendingBetween,
+  yearEarlierFlows,
 } from "@/lib/metrics";
 import { cn, formatDate, money, pluralize } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
@@ -67,6 +70,7 @@ export function OverviewScreen() {
   const flowIn = flows.reduce((t, m) => t + m.inCents, 0);
   const flowOut = flows.reduce((t, m) => t + m.outCents, 0);
   const spanLabel = rangeWords(window.from, window.to);
+  const earlier = yearEarlierFlows(community, window.from, window.to);
   // The year-on-year card compares calendar years, so it shows for the
   // rolling window (the latest year the books have) and for a whole calendar
   // year, and stays out of the way for a fiscal year that spans two.
@@ -220,6 +224,14 @@ export function OverviewScreen() {
                   title="Money in and out"
                   subtitle={`${spanLabel}: ${money(flowIn, { cents: false })} in, ${money(flowOut, { cents: false })} out`}
                 />
+                {earlier ? (
+                  <p className="px-5 pb-1 text-footnote text-fg-muted">
+                    A year earlier ({rangeWords(earlier.from, earlier.to)}): {money(earlier.inCents, { cents: false })} in
+                    {percentChange(flowIn, earlier.inCents) ? ` (${percentChange(flowIn, earlier.inCents)} now)` : ""},{" "}
+                    {money(earlier.outCents, { cents: false })} out
+                    {percentChange(flowOut, earlier.outCents) ? ` (${percentChange(flowOut, earlier.outCents)} now)` : ""}.
+                  </p>
+                ) : null}
                 <MoneyFlowChart months={flows} />
                 {/* The number a treasurer is asked at the annual meeting. */}
                 {runway.months > 0 ? (
@@ -385,6 +397,7 @@ export function OverviewScreen() {
       ) : null}
 
       <OpeningBalances />
+      <ClosedYears />
 
       {primary && recon.staleFeeds.length ? (
         <p className="mt-4 flex items-center gap-1.5 text-footnote text-fg-muted">

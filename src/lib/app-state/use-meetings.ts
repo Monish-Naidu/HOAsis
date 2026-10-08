@@ -3,7 +3,8 @@ import type { Community } from "@/lib/data/community";
 import { type AppDeps, emailNotice, isUuid, joinLine, latest, logDemoActivity, newId, noticesInFlight, remoteWrite, sessionStore, sliceStore, ValidationError, voteReceipt } from "./core";
 import { formatDate, todayIsoDate } from "@/lib/utils";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import type { ActionItem } from "@/lib/types";
+import type { ActionItem, MeetingAttendee } from "@/lib/types";
+import { meetingPhase } from "@/lib/phases";
 import { activityWords } from "@/lib/activity";
 import { noticeToast } from "@/lib/email/plain-error";
 import type { useCommunicationsActions } from "./use-communications";
@@ -283,6 +284,117 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
     [remote.community, communityId],
   );
 
+  /**
+   * Moves a meeting that has not happened to another day. The first date it
+   * was noticed for is kept, so the screen can say "Was Oct 3". The database
+   * refuses a past date and a meeting that is over, and so does the demo.
+   */
+  const rescheduleMeeting = useCallback(
+    (meetingId: string, to: { date: string; time?: string; location?: string }) => {
+      const meetings = remote.community ? remote.community.meetings : meetingList;
+      const m = meetings.find((x) => x.id === meetingId);
+      if (!m) return Promise.resolve(false);
+      if (to.date < todayIsoDate()) throw new ValidationError("Pick a date that has not passed.", { date: to.date });
+      if (m.status === "cancelled" || meetingPhase(m) === "ended") {
+        throw new ValidationError("That meeting is over.", { meetingId });
+      }
+      const time = to.time?.trim() || undefined;
+      const location = to.location?.trim() || undefined;
+      if (remote.community) {
+        return remoteWrite("Changing the date", () =>
+          supabaseBrowser().rpc("reschedule_meeting", {
+            p_meeting_id: meetingId,
+            p_held_on: to.date,
+            p_held_at: time ?? null,
+            p_location: location ?? null,
+          }),
+        );
+      }
+      logDemoActivity(communityId, "meeting", `Moved meeting "${m.title}" to ${to.date}`, { was: m.date, now: to.date });
+      sliceStore(communityId, "meetings").update((all) =>
+        all
+          .map((x) =>
+            x.id === meetingId
+              ? {
+                  ...x,
+                  date: to.date,
+                  time: time ?? x.time,
+                  location: location ?? x.location,
+                  rescheduledFrom: x.rescheduledFrom ?? (x.date !== to.date ? x.date : undefined),
+                  status: "scheduled" as const,
+                }
+              : x,
+          )
+          .sort((a, b) => a.date.localeCompare(b.date)),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, meetingList, communityId],
+  );
+
+  /** Cancels a meeting that has not happened. It stays on the record with the reason. */
+  const cancelMeeting = useCallback(
+    (meetingId: string, reason: string) => {
+      const meetings = remote.community ? remote.community.meetings : meetingList;
+      const m = meetings.find((x) => x.id === meetingId);
+      if (!m) return Promise.resolve(false);
+      const why = reason.trim();
+      if (why.length < 3) throw new ValidationError("Say why the meeting is cancelled.", { reason });
+      if (m.status === "cancelled" || meetingPhase(m) === "ended") {
+        throw new ValidationError("That meeting is over.", { meetingId });
+      }
+      if (remote.community) {
+        return remoteWrite("Cancelling the meeting", () =>
+          supabaseBrowser().rpc("cancel_meeting", { p_meeting_id: meetingId, p_reason: why }),
+        );
+      }
+      logDemoActivity(communityId, "meeting", `Cancelled meeting "${m.title}"`, { reason: why });
+      sliceStore(communityId, "meetings").update((all) =>
+        all.map((x) =>
+          x.id === meetingId
+            ? { ...x, status: "cancelled" as const, cancelledDate: todayIsoDate(), cancelReason: why }
+            : x,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, meetingList, communityId],
+  );
+
+  /**
+   * The minutes of a meeting that was held, and who came. Saved again, it
+   * replaces what was there. A meeting still to come or cancelled has none.
+   */
+  const recordMinutes = useCallback(
+    (meetingId: string, minutes: string, attended: MeetingAttendee[]) => {
+      const meetings = remote.community ? remote.community.meetings : meetingList;
+      const m = meetings.find((x) => x.id === meetingId);
+      if (!m) return Promise.resolve(false);
+      const text = minutes.trim();
+      if (m.status === "cancelled") throw new ValidationError("A cancelled meeting has no minutes.", { meetingId });
+      if (m.date > todayIsoDate()) throw new ValidationError("The meeting has not happened yet.", { meetingId });
+      if (text.length < 10) throw new ValidationError("Write the minutes first.", { minutes });
+      if (text.length > 20000) throw new ValidationError("Keep the minutes under 20,000 characters.", {});
+      if (remote.community) {
+        return remoteWrite("Saving the minutes", () =>
+          supabaseBrowser().rpc("record_minutes", {
+            p_meeting_id: meetingId,
+            p_minutes: text,
+            p_attended: attended.map((a) => ({ name: a.name, unit: a.unit ?? null, role: a.role ?? null, channel: a.channel })),
+          }),
+        );
+      }
+      logDemoActivity(communityId, "meeting", `Minutes recorded for "${m.title}"`, { attended: attended.length });
+      sliceStore(communityId, "meetings").update((all) =>
+        all.map((x) =>
+          x.id === meetingId ? { ...x, minutes: text, minutesDate: todayIsoDate(), attended, status: "ended" as const } : x,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, meetingList, communityId],
+  );
+
   const castVote = useCallback(
     (ballotId: string, optionIds: string | string[]) => {
       const picks = Array.isArray(optionIds) ? optionIds : [optionIds];
@@ -339,6 +451,9 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
     removeActionItem,
     addBallot,
     addMeeting,
+    rescheduleMeeting,
+    cancelMeeting,
+    recordMinutes,
     castVote,
   };
 }

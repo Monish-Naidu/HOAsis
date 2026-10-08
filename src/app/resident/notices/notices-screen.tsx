@@ -5,11 +5,12 @@ import Link from "next/link";
 import { ArrowLeft, Check, Gavel, ShieldCheck } from "lucide-react";
 import { Badge, Button, Card, EmptyState, textareaClass } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
+import { fineLine } from "@/components/app/notice-forms";
 import { useToast } from "@/components/app/toast";
 import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { resolveCitation } from "@/lib/governing";
 import type { Violation } from "@/lib/types";
-import { cn, formatDate, money, relativeDays } from "@/lib/utils";
+import { cn, formatDate, relativeDays } from "@/lib/utils";
 
 const STAGE: Record<
   Violation["stage"],
@@ -137,10 +138,9 @@ export function NoticesScreen() {
 
                   {violation.stage !== "cured" ? (
                     <p className="mt-1 text-footnote font-medium text-fg">
-                      Next step {relativeDays(violation.nextActionDate)}
-                      {violation.fineCents > 0
-                        ? ` · ${money(violation.fineCents)} fine`
-                        : ""}
+                      {violation.stage === "fined"
+                        ? fineLine(violation)
+                        : `Next step ${relativeDays(violation.nextActionDate)}`}
                     </p>
                   ) : null}
                 </div>

@@ -1,18 +1,39 @@
 import { useCallback } from "react";
 import { type AppDeps, isUuid, logDemoActivity, newId, remoteWrite, sliceStore, ValidationError } from "./core";
-import { addDays, todayIsoDate } from "@/lib/utils";
+import { addDays, money, todayIsoDate } from "@/lib/utils";
 import { NOTHING_CHANGED } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import type { Violation, ViolationReport } from "@/lib/types";
+import type { PhotoVantage, Violation, ViolationReport } from "@/lib/types";
+import { attachmentFileName, attachmentPath, attachmentProblem, uploadAttachment } from "@/lib/attachments";
 import { canRaiseNotice } from "@/lib/violations";
 import { activityWords } from "@/lib/activity";
+
+/** The range fine_violation (0113) accepts: $1 to $10,000. */
+export const FINE_MIN_CENTS = 100;
+export const FINE_MAX_CENTS = 1_000_000;
+
+/**
+ * Why this notice cannot be fined for this amount, in the words the form
+ * shows; null when it can. The database refuses the same things, so this is
+ * the screen and the demo saying it first.
+ */
+export function fineProblem(
+  violation: Pick<Violation, "stage" | "fineCents">,
+  amountCents: number,
+): string | null {
+  if (violation.stage !== "hearing") return "A fine follows a hearing";
+  if (violation.fineCents > 0) return "This notice has already been fined";
+  if (!Number.isInteger(amountCents) || amountCents < FINE_MIN_CENTS) return "Enter a fine of at least $1";
+  if (amountCents > FINE_MAX_CENTS) return "A fine is $10,000 at most";
+  return null;
+}
 
 /**
  * Enforcement: what residents report, what the board raises from it, the
  * stages a violation moves through, and city notices.
  */
 export function useEnforcementActions(deps: AppDeps) {
-  const { remote, communityId } = deps;
+  const { remote, communityId, account, can } = deps;
 
   /**
    * A neighbour telling the board about another home.
@@ -351,6 +372,123 @@ export function useEnforcementActions(deps: AppDeps) {
     [remote.community, communityId],
   );
 
+  /**
+   * Imposes the fine a hearing decided on. Signed in, fine_violation (0113)
+   * moves the notice to fined, sets the date and puts the charge on the
+   * home's statement in one transaction, and the re-read after it brings
+   * all three back. Signed out, the same three things are done to the local
+   * slices, so the demo statement agrees with the notice.
+   */
+  const fineViolation = useCallback(
+    (violationId: string, amountCents: number, note: string): Promise<boolean> => {
+      if (!can("compliance")) return Promise.resolve(false);
+      const violations = remote.community
+        ? remote.community.violations
+        : sliceStore(communityId, "violations").getSnapshot();
+      const violation = violations.find((v) => v.id === violationId);
+      if (!violation || fineProblem(violation, amountCents)) return Promise.resolve(false);
+      const dueOn = addDays(todayIsoDate(), 30);
+      if (remote.community) {
+        return remoteWrite("Fining the home", () =>
+          supabaseBrowser().rpc("fine_violation", {
+            p_violation_id: violationId,
+            p_amount_cents: amountCents,
+            p_note: note.trim(),
+          }),
+        );
+      }
+      sliceStore(communityId, "violations").update((all) =>
+        all.map((v) =>
+          v.id === violationId
+            ? { ...v, stage: "fined" as const, fineCents: amountCents, nextActionDate: dueOn }
+            : v,
+        ),
+      );
+      if (violation.homeId) {
+        const home = sliceStore(communityId, "homes")
+          .getSnapshot()
+          .find((o) => o.id === violation.homeId);
+        const balanceAfter = (home?.balanceCents ?? 0) + amountCents;
+        sliceStore(communityId, "homeCharges").update((all) => ({
+          ...all,
+          [violation.homeId]: [
+            {
+              id: `charge-fine-${violationId}`,
+              date: dueOn,
+              label: `Fine: ${violation.rule}`.slice(0, 80),
+              kind: "charge" as const,
+              amountCents,
+              balanceAfterCents: balanceAfter,
+            },
+            ...(all[violation.homeId] ?? []),
+          ],
+        }));
+        sliceStore(communityId, "homes").update((all) =>
+          all.map((o) => (o.id === violation.homeId ? { ...o, balanceCents: balanceAfter } : o)),
+        );
+      }
+      logDemoActivity(communityId, "violation", `Fined ${violation.unit} ${money(amountCents)}: ${violation.rule}`, {
+        unit_id: violation.homeId,
+        home: violation.unit,
+        reference: violation.reference,
+      });
+      return Promise.resolve(true);
+    },
+    [can, remote.community, communityId],
+  );
+
+  /**
+   * A photograph on a notice. Signed in, the file goes into the private
+   * bucket and the notice is then told about it (add_violation_photo, 0111);
+   * the re-read after the write brings the photo back with a signed link, so
+   * nothing is patched locally. Signed out there is no storage: the photo
+   * joins the list with what it shows and no image, as the demo's own do.
+   */
+  const addViolationPhoto = useCallback(
+    (violationId: string, file: File, brief: string, vantage: PhotoVantage): Promise<boolean> => {
+      const what = brief.trim();
+      if (!can("compliance") || what.length < 3 || attachmentProblem(file) !== null) {
+        return Promise.resolve(false);
+      }
+      if (remote.community) {
+        const rc = remote.community;
+        const path = attachmentPath(rc.id, "violations", violationId, attachmentFileName(file.name));
+        return remoteWrite("Adding the photo", async () => {
+          const supabase = supabaseBrowser();
+          const up = await uploadAttachment(supabase, path, file);
+          if (up.error) return { error: { message: up.error } };
+          return supabase.rpc("add_violation_photo", {
+            p_violation_id: violationId,
+            p_brief: what,
+            p_vantage: vantage,
+            p_path: path,
+          });
+        });
+      }
+      sliceStore(communityId, "violations").update((all) =>
+        all.map((v) =>
+          v.id === violationId
+            ? {
+                ...v,
+                photos: [
+                  ...v.photos,
+                  {
+                    id: `photo-${violationId}-${v.photos.length + 1}`,
+                    brief: what,
+                    takenOn: todayIsoDate(),
+                    takenBy: account?.name ?? "The board",
+                    vantage,
+                  },
+                ],
+              }
+            : v,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [can, account?.name, remote.community, communityId],
+  );
+
   const addCityNotice = useCallback(
     (input: {
       agency: string;
@@ -451,6 +589,8 @@ export function useEnforcementActions(deps: AppDeps) {
     raiseNoticeFromReport,
     addNotice,
     setViolationStage,
+    fineViolation,
+    addViolationPhoto,
     addCityNotice,
     markViolationFixed,
   };

@@ -13,6 +13,8 @@ import type {
   Ballot,
   BankAccount,
   Activity,
+  Cents,
+  ISODate,
   BoardTerm,
   CommunityAmenity,
   CommunityHistory,
@@ -168,4 +170,26 @@ export interface Community {
   boardTerms?: BoardTerm[];
   /** The newest board actions, latest first. Remote only. */
   activity?: Activity[];
+  /**
+   * The fiscal years that have been closed (migration 0109), newest first.
+   * A closed year is read from its row, never recomputed; a reopened one is
+   * back on the live figures until the next close. Remote, finance viewers.
+   */
+  fiscalYears?: FiscalYear[];
+}
+
+export interface FiscalYear {
+  startsOn: ISODate;
+  endsOn: ISODate;
+  inCents: Cents;
+  outCents: Cents;
+  billedCents: Cents;
+  collectedCents: Cents;
+  accounts: { bankAccountId: string; openingCents: Cents; closingCents: Cents }[];
+  categories: { category: string; inCents: Cents; outCents: Cents }[];
+  closedOn: ISODate;
+  /** Null when the daily job closed it. */
+  closedBy: string | null;
+  reopenedOn?: ISODate;
+  reopenReason?: string;
 }

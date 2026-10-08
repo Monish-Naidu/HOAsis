@@ -22,7 +22,7 @@ import { duesFor } from "@/lib/home-types";
 import { withReversals } from "@/lib/ledger-corrections";
 import { compareStatement } from "@/lib/statement";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
-import { addDays, clockTime, daysBetween, nextDueOnOrAfter } from "@/lib/utils";
+import { addDays, clockTime, daysBetween, localIsoDate, nextDueOnOrAfter } from "@/lib/utils";
 import { isPostedDuesBill } from "@/lib/email/bill-run";
 
 /**
@@ -348,7 +348,7 @@ export async function loadCommunity(
   supabase: SupabaseClient,
   associationId: string,
 ): Promise<Community> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localIsoDate();
   const windowFrom = historyWindowFrom(today);
 
   // One round trip per table rather than a nested select, because the shapes
@@ -367,6 +367,7 @@ export async function loadCommunity(
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
     paymentRows, replyRows, actionRows, joinRows, emailRows, termRows, activityRows,
+    fiscalYearRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     // A retired home (0099) keeps its records but is off the register.
@@ -437,9 +438,25 @@ export async function loadCommunity(
     // The newest hundred board actions; RLS answers nothing for a seat
     // that may not open Settings, and the card says so.
     supabase.from("activity").select("*").eq("association_id", associationId).order("at", { ascending: false }).limit(100),
+    // Closed fiscal years (0109). Finance viewers only; an owner gets no rows.
+    supabase.from("fiscal_years").select("*").eq("association_id", associationId).order("starts_on", { ascending: false }),
   ]);
 
   const urlByPath = documents.urlByPath;
+
+  // Files on requests and photos on notices (0111) open the same way as
+  // documents: a short-lived signed link per stored path, made once here.
+  const attachmentPaths = [
+    ...(requests.data ?? []).flatMap((r) => ((r.attachments ?? []) as { path?: string }[]).map((f) => f.path)),
+    ...(violationRows.data ?? []).flatMap((v) => ((v.photos ?? []) as { path?: string }[]).map((f) => f.path)),
+  ].filter((path): path is string => Boolean(path));
+  const attachmentUrl = new Map<string, string>();
+  if (attachmentPaths.length) {
+    const { data: signed } = await supabase.storage.from("attachments").createSignedUrls(attachmentPaths, SIGNED_URL_SECONDS);
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl && !item.error) attachmentUrl.set(item.path, item.signedUrl);
+    }
+  }
 
   if (association.error || !association.data) {
     throw new Error(`Could not load that association: ${association.error?.message ?? "not found"}`);
@@ -652,6 +669,29 @@ export async function loadCommunity(
     role: t.role,
     from: t.starts_on,
     to: t.ends_on ?? undefined,
+  }));
+
+  const fiscalYears: Community["fiscalYears"] = (fiscalYearRows.data ?? []).map((y) => ({
+    startsOn: y.starts_on,
+    endsOn: y.ends_on,
+    inCents: Number(y.in_cents),
+    outCents: Number(y.out_cents),
+    billedCents: Number(y.billed_cents),
+    collectedCents: Number(y.collected_cents),
+    accounts: ((y.accounts ?? []) as { bank_account_id: string; opening_cents: number; closing_cents: number }[]).map((x) => ({
+      bankAccountId: x.bank_account_id,
+      openingCents: Number(x.opening_cents),
+      closingCents: Number(x.closing_cents),
+    })),
+    categories: ((y.categories ?? []) as { category: string; in_cents: number; out_cents: number }[]).map((x) => ({
+      category: x.category,
+      inCents: Number(x.in_cents),
+      outCents: Number(x.out_cents),
+    })),
+    closedOn: String(y.closed_at).slice(0, 10),
+    closedBy: y.closed_by ?? null,
+    reopenedOn: y.reopened_at ? String(y.reopened_at).slice(0, 10) : undefined,
+    reopenReason: y.reopen_reason ?? undefined,
   }));
 
   const activity: Activity[] = (activityRows.data ?? []).map((r) => ({
@@ -997,7 +1037,9 @@ export async function loadCommunity(
       stage: v.stage,
       openedDate: v.opened_on,
       nextActionDate: v.next_action_on ?? v.opened_on,
-      photos: (v.photos ?? []) as Community["violations"][number]["photos"],
+      photos: ((v.photos ?? []) as Community["violations"][number]["photos"]).map((photo) =>
+        photo.path ? { ...photo, src: attachmentUrl.get(photo.path) ?? photo.src } : photo,
+      ),
       fineCents: v.fine_cents,
       reportId: v.report_id ?? undefined,
       source: v.source as Community["violations"][number]["source"],
@@ -1085,7 +1127,9 @@ export async function loadCommunity(
       dueReason: r.due_reason ?? undefined,
       decisionDate: r.decided_on ?? undefined,
       decidedBy: r.decided_by ?? undefined,
-      attachments: (r.attachments ?? []) as Community["requests"][number]["attachments"],
+      attachments: ((r.attachments ?? []) as Community["requests"][number]["attachments"]).map((file) =>
+        file.path ? { ...file, url: attachmentUrl.get(file.path) ?? file.url } : file,
+      ),
       thread: (r.thread ?? []) as Community["requests"][number]["thread"],
       submission: r.submission ?? undefined,
       certificateId: r.certificate_id ?? undefined,
@@ -1113,6 +1157,12 @@ export async function loadCommunity(
       dialIn: m.dial_in ?? "",
       passcode: m.passcode ?? "",
       status: m.status as Community["meetings"][number]["status"],
+      cancelledDate: m.cancelled_on ?? undefined,
+      cancelReason: m.cancel_reason ?? undefined,
+      rescheduledFrom: m.rescheduled_from ?? undefined,
+      minutes: m.minutes ?? undefined,
+      minutesDate: m.minutes_on ?? undefined,
+      attended: (m.attended ?? []) as Community["meetings"][number]["attendees"],
       kind: (m.kind ?? "board") as Community["meetings"][number]["kind"],
       agenda: (m.agenda ?? []) as string[],
       ballotIds: (ballots.data ?? []).filter((b) => b.meeting_id === m.id).map((b) => b.id),
@@ -1250,5 +1300,6 @@ export async function loadCommunity(
     history,
     boardTerms,
     activity,
+    fiscalYears,
   };
 }

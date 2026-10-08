@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalendarDays, CalendarPlus, ChevronDown, Megaphone, Video } from "lucide-react";
-import { Button, Card, CardHeader, EmptyState, PageHeader, buttonClass } from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, buttonClass } from "@/components/ui/primitives";
 import { meetingJoin } from "@/lib/meetings/video";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
@@ -12,6 +12,8 @@ import { cn, formatDate, pluralize, todayIsoDate } from "@/lib/utils";
 import { useToast } from "@/components/app/toast";
 import type { Meeting } from "@/lib/types";
 import { useHomeLabel } from "@/components/app/use-home-label";
+import { attendedLine, cancelledLine, wasLine } from "@/lib/meeting-notices";
+import { MeetingChanges, MinutesPanel } from "./meeting-changes";
 
 /**
  * Who said they are coming. A headcount before the day is how a board knows
@@ -68,17 +70,18 @@ export default function BoardMeetings() {
   // A meeting still marked live (the demo's) counts as today too.
   const today = todayIsoDate();
   const todays = community.meetings.filter(
-    (m) => m.status !== "ended" && (m.date === today || m.status === "live"),
+    (m) => m.status !== "ended" && m.status !== "cancelled" && (m.date === today || m.status === "live"),
   );
   // Split by phase, not stored status: nothing marks a real association's
   // meeting ended, so its date does. One held today is still upcoming.
   const upcoming = [...community.meetings]
-    .filter((m) => meetingPhase(m) !== "ended")
+    .filter((m) => meetingPhase(m) !== "ended" && m.status !== "cancelled")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
   // Newest first. What was on the agenda, and who came, is the record the
   // next board inherits; it used to vanish the day the meeting ended.
+  // A cancelled meeting moves here the day it is cancelled, with its reason.
   const past = [...community.meetings]
-    .filter((m) => meetingPhase(m) === "ended")
+    .filter((m) => meetingPhase(m) === "ended" || m.status === "cancelled")
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   async function sendNotice(m: Meeting) {
@@ -159,6 +162,7 @@ export default function BoardMeetings() {
               </div>
               <p className="mt-0.5 text-footnote text-fg-muted">
                 {m.time} · {m.location}
+                {wasLine(m) ? <span className="text-fg-subtle"> · {wasLine(m)}</span> : null}
               </p>
               <p className="mt-0.5 text-footnote text-fg-subtle">
                 <a
@@ -181,6 +185,7 @@ export default function BoardMeetings() {
                   : ""}
               </p>
               <Rsvps meeting={m} />
+              <MeetingChanges meeting={m} />
             </div>
             {m.noticeSentDate ? null : confirming === m.id ? (
               <div className="max-w-xs shrink-0 text-right">
@@ -234,12 +239,21 @@ export default function BoardMeetings() {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-body font-medium text-fg">{m.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-body font-medium text-fg">{m.title}</p>
+                    {m.status === "cancelled" ? <Badge tone="danger">Cancelled</Badge> : null}
+                  </div>
                   <p className="mt-0.5 text-footnote text-fg-muted">
                     {formatDate(m.date, "long")} · {m.time} · {m.location}
-                    {m.attendees.length ? ` · ${m.attendees.length} attended` : ""}
+                    {wasLine(m) ? ` · ${wasLine(m)}` : ""}
+                    {m.status !== "cancelled" && (m.attended?.length || m.attendees.length)
+                      ? ` · ${(m.attended?.length ? attendedLine(m) : `${m.attendees.length} attended`)}`
+                      : ""}
                     {m.ballotIds.length ? ` · ${pluralize(m.ballotIds.length, "ballot")}` : ""}
                   </p>
+                  {m.status === "cancelled" ? (
+                    <p className="mt-0.5 text-footnote text-danger">{cancelledLine(m)}</p>
+                  ) : null}
                 </div>
                 <ChevronDown className="mt-1 size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
               </summary>
@@ -255,7 +269,7 @@ export default function BoardMeetings() {
                     ))}
                   </ol>
                 </div>
-                {m.attendees.length ? (
+                {m.status !== "cancelled" && m.attendees.length && !m.attended?.length ? (
                   <div>
                     <p className="text-footnote font-semibold text-fg-muted">In the room</p>
                     <ul className="mt-1.5 space-y-1">
@@ -268,6 +282,12 @@ export default function BoardMeetings() {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                ) : null}
+                {m.status !== "cancelled" ? (
+                  <div className="sm:col-span-2">
+                    {m.minutes ? null : <p className="mb-2 text-footnote font-semibold text-fg-muted">Record minutes</p>}
+                    <MinutesPanel meeting={m} />
                   </div>
                 ) : null}
               </div>

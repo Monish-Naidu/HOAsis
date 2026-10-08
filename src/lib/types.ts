@@ -529,7 +529,12 @@ export interface HomeRequest {
   dueReason?: string;
   decisionDate?: ISODate;
   decidedBy?: string;
-  attachments: { name: string; size: string }[];
+  /**
+   * The files on the request. `path` is where the file sits in the
+   * attachments bucket (0111) and `url` a short-lived signed link to it,
+   * made when the association loads; a demo attachment has neither.
+   */
+  attachments: { name: string; size: string; path?: string; url?: string; addedOn?: ISODate }[];
   thread: RequestThreadEvent[];
   /** The form the owner filled in, when the request started from one. */
   submission?: FormSubmission;
@@ -593,6 +598,8 @@ export interface ViolationPhoto {
   vantage: PhotoVantage;
   /** The image itself, where the association has uploaded one. */
   src?: string;
+  /** Where the image sits in the attachments bucket (0111); `src` is its signed link. */
+  path?: string;
 }
 
 export interface Violation {
@@ -888,7 +895,7 @@ export interface Meeting {
   title: string;
   date: ISODate;
   time: string;
-  status: "scheduled" | "live" | "ended";
+  status: "scheduled" | "live" | "ended" | "cancelled";
   kind: "board" | "annual" | "workshop" | "special";
   location: string;
   dialIn: string;
@@ -905,6 +912,16 @@ export interface Meeting {
   recordingAvailable?: boolean;
   /** Who said they are coming, and who said they are not. */
   rsvps?: MeetingRsvp[];
+  /** Set when the board cancelled it (0112); the meeting stays on the record. */
+  cancelledDate?: ISODate;
+  cancelReason?: string;
+  /** The date it was first noticed for, when it has been moved. */
+  rescheduledFrom?: ISODate;
+  /** Plain-text minutes written by the board after the meeting, and when. */
+  minutes?: string;
+  minutesDate?: ISODate;
+  /** Who came, as the board marked it with the minutes. `rsvps` is what owners said beforehand. */
+  attended?: MeetingAttendee[];
 }
 
 export interface MeetingRsvp {

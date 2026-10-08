@@ -2,7 +2,7 @@ import type { Community } from "@/lib/data/community";
 import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
-import { addDays, daysBetween, daysFromToday, formatDate, money, ordinal, pluralize } from "@/lib/utils";
+import { addDays, addYears, daysBetween, daysFromToday, formatDate, money, ordinal, pluralize } from "@/lib/utils";
 import { policyFor } from "@/lib/collections";
 import { totalDues } from "@/lib/home-types";
 import { isDuesLine, isPaymentReversal } from "@/lib/statement";
@@ -294,6 +294,35 @@ export function monthlyFlowsBetween(c: Community, from: string, to: string) {
     else row.outCents += -e.amountCents;
   }
   return months;
+}
+
+/**
+ * The same period a year earlier, and what moved in it: the line under
+ * every money figure that says whether this year is better or worse. Null
+ * when the books do not reach back that far, so a first-year association
+ * reads nothing rather than a zero.
+ */
+export function yearEarlierFlows(
+  c: Community,
+  from: string,
+  to: string,
+): { from: string; to: string; inCents: number; outCents: number } | null {
+  const earlier = { from: addYears(from, -1), to: addYears(to, -1) };
+  const first = firstMoneyOn(c);
+  if (!first || first > earlier.to) return null;
+  const months = monthlyFlowsBetween(c, earlier.from, earlier.to);
+  return {
+    ...earlier,
+    inCents: months.reduce((t, m) => t + m.inCents, 0),
+    outCents: months.reduce((t, m) => t + m.outCents, 0),
+  };
+}
+
+/** "+12%" or "-8%" against an earlier figure; null when the earlier one was nothing. */
+export function percentChange(now: number, earlier: number): string | null {
+  if (earlier <= 0) return null;
+  const pct = Math.round(((now - earlier) / earlier) * 100);
+  return `${pct >= 0 ? "+" : ""}${pct}%`;
 }
 
 /**
@@ -1358,7 +1387,9 @@ export function calendarEntries(c: Community) {
     rows.push({
       id: `cal-${m.id}`,
       date: m.date,
-      title: m.title,
+      // A cancelled meeting stays on the calendar, marked, so nobody turns
+      // up for it; the Meetings page carries the reason.
+      title: m.status === "cancelled" ? `Cancelled: ${m.title}` : m.title,
       detail: `${m.time} · ${m.location}`,
       kind: "meeting",
       // The meeting's own row on the calendar page, where the RSVP is.

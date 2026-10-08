@@ -10,6 +10,7 @@ import {
   Lock,
   Mail,
   Plus,
+  Printer,
   Search,
   Send,
   Trash2,
@@ -29,6 +30,7 @@ import {
   AddCreditForm,
   ChangeDuesForm,
   HandPaymentsPanel,
+  PrintStatementForm,
   RecordPaymentForm,
   type HandPaymentsState,
 } from "./household-money";
@@ -1259,7 +1261,7 @@ function HouseholdDetail({
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
-  const [editing, setEditing] = useState<"email" | "second" | "payment" | "hand" | "credit" | "charge" | "dues" | null>(null);
+  const [editing, setEditing] = useState<"email" | "second" | "payment" | "hand" | "credit" | "charge" | "dues" | "statement" | null>(null);
   const [hand, setHand] = useState<HandPaymentsState>({ status: "loading" });
 
   // Read in the click that opens the form or the list, not in an effect, and
@@ -1447,6 +1449,9 @@ function HouseholdDetail({
       {editing === "credit" && onAddCredit ? (
         <AddCreditForm unit={home.unit} homeName={homeName} onSave={onAddCredit} onCancel={() => setEditing(null)} />
       ) : null}
+      {editing === "statement" ? (
+        <PrintStatementForm home={home} homeName={homeName} onClose={() => setEditing(null)} />
+      ) : null}
       {editing === "charge" && onAddCharge ? (
         <AddChargeForm
           heading={`A charge for ${homeName}`}
@@ -1491,6 +1496,15 @@ function HouseholdDetail({
             Payments recorded by hand
           </Button>
         ) : null}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setEditing(editing === "statement" ? null : "statement")}
+          aria-label={`Print a statement for ${home.displayName}`}
+        >
+          <Printer className="size-3.5" />
+          Print statement
+        </Button>
         {onAddCredit ? (
           <Button
             variant="ghost"

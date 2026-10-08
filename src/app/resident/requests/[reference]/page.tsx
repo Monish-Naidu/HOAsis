@@ -9,7 +9,6 @@ import {
   Download,
   Mail,
   MessageSquare,
-  Paperclip,
   Wrench,
 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
@@ -17,6 +16,7 @@ import { useAppState } from "@/lib/app-state";
 import { certificateMailto, certificateValidThrough } from "@/lib/request-certificate";
 import { requestStatusLabel, requestStatusTone } from "@/lib/request-status";
 import { formatDate, money, relativeDays } from "@/lib/utils";
+import { AttachmentList } from "../request-files";
 
 export default function RequestDetail({
   params,
@@ -236,16 +236,7 @@ export default function RequestDetail({
         <section>
           <SectionTitle>Attachments</SectionTitle>
           <Card>
-            {request.attachments.map((a, i) => (
-              <div
-                key={a.name}
-                className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? "border-t border-border" : ""}`}
-              >
-                <Paperclip className="size-3.5 shrink-0 text-fg-subtle" />
-                <span className="min-w-0 flex-1 truncate text-body text-fg">{a.name}</span>
-                <span className="tnum shrink-0 text-footnote text-fg-muted">{a.size}</span>
-              </div>
-            ))}
+            <AttachmentList attachments={request.attachments} />
           </Card>
         </section>
       ) : null}

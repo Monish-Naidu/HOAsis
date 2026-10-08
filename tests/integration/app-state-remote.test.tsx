@@ -2018,6 +2018,35 @@ describe("emailing what the board wrote", () => {
   });
 });
 
+describe("a meeting after the notice", () => {
+  const upcoming = () => server().meetings.find((m) => m.status === "scheduled" && m.date >= "2026-08-20") ?? server().meetings[0];
+  const held = () => server().meetings.find((m) => m.status !== "cancelled" && m.date <= "2026-08-20") ?? server().meetings[0];
+
+  it("moves, cancels and minutes through one function each", async () => {
+    const { result } = renderApp();
+    await act(async () => {
+      await result.current.rescheduleMeeting(upcoming().id, { date: "2030-01-05", time: "7:00 PM" });
+      await result.current.cancelMeeting(upcoming().id, " Storm warning ");
+      await result.current.recordMinutes(held().id, "  Approved the budget.  ", [{ name: "Arya Mehr", unit: "7", channel: "in-person" }]);
+    });
+    await settled();
+    expect(targets()).toEqual(["rpc:reschedule_meeting", "rpc:cancel_meeting", "rpc:record_minutes"]);
+    const [move, cancel, minutes] = writes().map((s) => s.values);
+    expect(move).toEqual({ p_meeting_id: upcoming().id, p_held_on: "2030-01-05", p_held_at: "7:00 PM", p_location: null });
+    expect(cancel).toEqual({ p_meeting_id: upcoming().id, p_reason: "Storm warning" });
+    expect(minutes).toMatchObject({ p_meeting_id: held().id, p_minutes: "Approved the budget.", p_attended: [{ name: "Arya Mehr", unit: "7", role: null, channel: "in-person" }] });
+  });
+
+  it("writes nothing for a past day, a blank reason or thin minutes", async () => {
+    const { result } = renderApp();
+    expect(() => result.current.rescheduleMeeting(upcoming().id, { date: "2026-08-19" })).toThrow("Pick a date that has not passed.");
+    expect(() => result.current.cancelMeeting(upcoming().id, "")).toThrow("Say why the meeting is cancelled.");
+    expect(() => result.current.recordMinutes(held().id, "short", [])).toThrow("Write the minutes first.");
+    await settled();
+    expect(writes()).toHaveLength(0);
+  });
+});
+
 describe("sending a meeting's notice", () => {
   const meeting = () => server().meetings.find((m) => !m.noticeSentDate) ?? server().meetings[0];
   const dated = () => writes().filter((s) => s.target === "meetings");

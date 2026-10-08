@@ -179,6 +179,23 @@ export function daysFromToday(iso: string) {
   return Math.round((parseDate(iso).getTime() - today().getTime()) / DAY_MS);
 }
 
+/**
+ * The calendar date where the person is, as `YYYY-MM-DD`.
+ *
+ * `toISOString()` gives the UTC date, which is tomorrow from 4pm Pacific
+ * on. A treasurer looking at their books in the evening saw a bill "due
+ * tomorrow" turn overdue, and the dashboard's "today" name the wrong day.
+ * The board and the owners of an association live in its time zone, and
+ * their browser's clock is set to it, so the local date is the right one;
+ * the daily jobs run at 13:00 UTC, when every US zone agrees on the date.
+ */
+export function localIsoDate(now: Date = new Date()): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 /** The same calendar day, some years on. A study dated Feb 29 comes due Mar 1. */
 export function addYears(iso: string, years: number): string {
   const [y, m, d] = iso.split("-").map(Number);

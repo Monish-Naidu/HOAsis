@@ -20,6 +20,7 @@ import { Badge, Button, Callout, Card, EmptyState, PageHeader, Stat, textareaCla
 import type { Tone } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
+import { AddPhotoForm, FineForm, fineLine } from "@/components/app/notice-forms";
 import { TabPill } from "@/components/app/tab-pill";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
@@ -508,6 +509,8 @@ function QueueRow({
     concerns = violation.stage === "cured" ? 0 : photoConcerns(violation.photos).length;
     if (violation.stage === "cured") {
       when = `Resolved ${formatDate(violation.resolvedDate ?? violation.nextActionDate)}`;
+    } else if (violation.stage === "fined") {
+      when = fineLine(violation);
     } else if (city) {
       const days = daysFromToday(violation.nextActionDate);
       when = `Deadline ${formatDate(violation.nextActionDate)}`;
@@ -949,6 +952,8 @@ function ViolationDetail({
         </p>
       ) : null}
 
+      {openMatter ? <AddPhotoForm violation={violation} /> : null}
+
       {report ? (
         <div className="space-y-2 rounded-card border border-border bg-surface-2 p-3.5">
           <p className="text-footnote font-semibold text-fg-muted">Started from {report.reference}</p>
@@ -957,6 +962,8 @@ function ViolationDetail({
           <VerificationNote report={report} />
         </div>
       ) : null}
+
+      {!city && violation.stage === "hearing" ? <FineForm violation={violation} /> : null}
 
       {openMatter ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -982,7 +989,7 @@ function ViolationDetail({
               : next
                 ? `Next is ${STAGE[next].label.toLowerCase()}. Fines are set at the hearing, never here.`
                 : violation.stage === "hearing"
-                  ? "The hearing decides what happens next."
+                  ? "Record the fine above if the hearing decided on one, or resolve."
                   : "Resolve once the fine is paid and the problem is fixed."}
           </span>
         </div>

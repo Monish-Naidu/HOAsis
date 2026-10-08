@@ -5,6 +5,9 @@ import { ArrowDownLeft, ArrowUpRight, ChevronDown, Paperclip, Send } from "lucid
 import { Button, textareaClass } from "@/components/ui/primitives";
 import type { HomeRequest } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
+import { useAppState } from "@/lib/app-state";
+import { attachmentProblem } from "@/lib/attachments";
+import { AttachmentList, FILE_ACCEPT, FILE_LIMITS } from "../../resident/requests/request-files";
 
 /**
  * One request, opened in place: everything the owner sent, the conversation so
@@ -28,7 +31,19 @@ export function RequestDetail({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const files = request.attachments;
+  const { attachFiles } = useAppState();
+  const [adding, setAdding] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
   const sent = request.submission;
+
+  async function addFiles(picked: File[]) {
+    if (!picked.length || adding) return;
+    const bad = picked.find((f) => attachmentProblem(f) !== null);
+    setRefused(bad ? `${bad.name}: ${attachmentProblem(bad)}. It will not be added.` : null);
+    setAdding(true);
+    await attachFiles(request.id, picked);
+    setAdding(false);
+  }
 
   async function send() {
     const body = draft.trim();
@@ -82,18 +97,41 @@ export function RequestDetail({
           </div>
         ) : null}
 
-        {files.length ? (
+        {files.length || canChange ? (
           <div>
             <p className="font-semibold text-fg-muted">Files</p>
-            <ul className="mt-1.5 space-y-1">
-              {files.map((f) => (
-                <li key={f.name} className="flex items-center gap-2 text-body text-fg">
-                  <Paperclip className="size-3.5 shrink-0 text-fg-subtle" />
-                  <span className="min-w-0 flex-1 truncate">{f.name}</span>
-                  <span className="tnum shrink-0 text-fg-muted">{f.size}</span>
-                </li>
-              ))}
-            </ul>
+            {files.length ? (
+              <div className="mt-1.5 overflow-hidden rounded-lg border border-border">
+                <AttachmentList attachments={files} />
+              </div>
+            ) : null}
+            {canChange ? (
+              <div className="mt-2">
+                <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-body font-medium text-fg-muted hover:text-fg">
+                  <Paperclip className="size-3.5" />
+                  {adding ? "Adding..." : "Add photos or a PDF"}
+                  <input
+                    type="file"
+                    multiple
+                    accept={FILE_ACCEPT}
+                    aria-label="Add photos or a PDF"
+                    disabled={adding}
+                    className="sr-only"
+                    onChange={(e) => {
+                      const picked = Array.from(e.target.files ?? []);
+                      e.target.value = "";
+                      void addFiles(picked);
+                    }}
+                  />
+                </label>
+                <p className="text-footnote text-fg-subtle">{FILE_LIMITS}</p>
+                {refused ? (
+                  <p role="alert" className="text-footnote text-danger">
+                    {refused}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
