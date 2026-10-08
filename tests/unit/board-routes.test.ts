@@ -112,7 +112,7 @@ describe("sections", () => {
   it("names every section's tabs the way the rail and the page titles do", () => {
     const tabs = (key: string) =>
       sectionPages(BOARD_ROUTES.find((r) => r.key === key)!).map((r) => r.tab ?? r.label);
-    expect(tabs("money")).toEqual(["Overview", "Transactions", "Past due", "Reserves", "Budget", "Trends", "Shared costs"]);
+    expect(tabs("money")).toEqual(["Overview", "Transactions", "Past due", "Reserves", "Budget", "Trends", "Statements", "Shared costs"]);
     expect(tabs("requests")).toEqual(["Requests", "Notices"]);
     expect(tabs("communications")).toEqual(["Inbox", "Announcements", "Community"]);
     expect(tabs("meetings")).toEqual(["Meetings", "Voting"]);

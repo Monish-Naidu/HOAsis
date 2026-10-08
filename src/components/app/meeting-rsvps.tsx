@@ -9,6 +9,7 @@ import { calendarEntries } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { meetingJoin } from "@/lib/meetings/video";
 import type { Meeting } from "@/lib/types";
+import { attendedLine, cancelledLine, wasLine } from "@/lib/meeting-notices";
 import { liveMeetingLine } from "@/lib/resident-wording";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
 
@@ -41,6 +42,19 @@ export function MeetingRsvps() {
             entry.kind === "meeting"
               ? community.meetings.find((x) => `cal-${x.id}` === entry.id && x.status === "scheduled")
               : undefined;
+          const called = entry.kind === "meeting" ? community.meetings.find((x) => `cal-${x.id}` === entry.id) : undefined;
+          if (called?.status === "cancelled") {
+            return (
+              <div key={called.id} className={cn("px-4 py-3", i > 0 && "border-t border-border")}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-body font-medium text-fg-muted line-through">{called.title}</p>
+                  <Badge tone="danger">Cancelled</Badge>
+                </div>
+                <p className="mt-0.5 text-footnote text-fg-muted">{formatDate(called.date, "long")}</p>
+                <p className="mt-0.5 text-footnote font-medium text-danger">{cancelledLine(called)}</p>
+              </div>
+            );
+          }
           if (!m) return <EntryRow key={entry.id} entry={entry} divided={i > 0} showDate />;
           // The person's own answer, and how many neighbours said yes. The
           // board sees the names; here a count is all a resident needs.
@@ -58,6 +72,7 @@ export function MeetingRsvps() {
               </div>
               <p className="mt-0.5 text-footnote text-fg-muted">
                 {formatDate(m.date, "long")} · {relativeDays(m.date)} · {m.time} · {m.location}
+                {wasLine(m) ? ` · ${wasLine(m)}` : ""}
               </p>
               <MeetingJoinDetails meeting={m} />
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -96,6 +111,42 @@ export function MeetingRsvps() {
             </div>
           );
         })}
+      </Card>
+    </section>
+  );
+}
+
+/**
+ * Minutes of meetings that were held, newest first, each folded so a phone
+ * screen is not a wall of text. Nothing at all until the board records some.
+ */
+export function MeetingMinutes() {
+  const { community } = useAppState();
+  const held = community.meetings
+    .filter((m) => m.status !== "cancelled" && m.minutes?.trim())
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  if (held.length === 0) return null;
+  return (
+    <section>
+      <SectionTitle>Minutes</SectionTitle>
+      <Card>
+        {held.map((m, i) => (
+          <details key={m.id} className={cn("group px-4 py-3", i > 0 && "border-t border-border")}>
+            <summary className="cursor-pointer select-none">
+              <span className="text-body font-medium text-fg">{m.title}</span>
+              <span className="mt-0.5 block text-footnote text-fg-muted">
+                {formatDate(m.date, "long")}
+                {attendedLine(m) ? ` · ${attendedLine(m)}` : ""}
+              </span>
+            </summary>
+            <p className="mt-2 whitespace-pre-line text-body text-fg-muted">{m.minutes}</p>
+            {m.attended?.length ? (
+              <p className="mt-3 text-footnote text-fg-subtle">
+                Attended: {m.attended.map((a) => a.name).join(", ")}
+              </p>
+            ) : null}
+          </details>
+        ))}
       </Card>
     </section>
   );

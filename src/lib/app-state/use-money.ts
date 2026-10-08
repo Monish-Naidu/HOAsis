@@ -456,6 +456,39 @@ export function useMoneyActions(deps: AppDeps) {
    * line. Signed in it goes through add_credit (0103), which writes the
    * activity row a direct insert into charges could not.
    */
+  // A closed fiscal year (0109) is reopened to post a correction, and closed
+  // again by hand so the corrected figures are there before the meeting.
+  // Signed in only: the demo has no closed years.
+  const reopenFiscalYear = useCallback(
+    (startsOn: string, reason: string) => {
+      const rc = remote.community;
+      if (!rc) return false;
+      if (reason.trim().length < 3) return false;
+      return remoteWrite("Reopening the year", () =>
+        supabaseBrowser().rpc("reopen_fiscal_year", {
+          p_association_id: rc.id,
+          p_starts_on: startsOn,
+          p_reason: reason.trim(),
+        }),
+      );
+    },
+    [remote.community],
+  );
+
+  const closeFiscalYear = useCallback(
+    (startsOn: string) => {
+      const rc = remote.community;
+      if (!rc) return false;
+      return remoteWrite("Closing the year", () =>
+        supabaseBrowser().rpc("close_fiscal_year", {
+          p_association_id: rc.id,
+          p_starts_on: startsOn,
+        }),
+      );
+    },
+    [remote.community],
+  );
+
   const addCredit = useCallback(
     (input: { homeId: string; amountCents: number; reason: string }) => {
       const reason = input.reason.trim();
@@ -1495,6 +1528,8 @@ export function useMoneyActions(deps: AppDeps) {
   );
 
   return {
+    reopenFiscalYear,
+    closeFiscalYear,
     addBankAccount,
     recordPayment,
     recordManualPayment,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentAnnouncements } from "@/lib/meeting-notices";
+import { attendedLine, cancelledLine, currentAnnouncements, wasLine } from "@/lib/meeting-notices";
 import type { Announcement, DocumentRecord, Meeting } from "@/lib/types";
 
 const ann = (id: string, title: string): Announcement => ({
@@ -29,5 +29,48 @@ describe("announcements about a meeting", () => {
   });
   it("leaves announcements that name no meeting alone", () => {
     expect(currentAnnouncements([list[2]], meetings, [], "2030-01-01")).toEqual([list[2]]);
+  });
+});
+
+describe("minutes on the meeting itself", () => {
+  const held = [{ ...meeting("Budget workshop", "2026-10-03"), minutes: "Approved the budget." } as Meeting];
+  it("prefers the recorded minutes to a file", () => {
+    const out = currentAnnouncements(list, held, [minutes("Budget workshop Minutes, October 3, 2026")], "2026-10-07");
+    expect(out[0].title).toBe("Minutes from Budget workshop");
+    expect(out[0].body).toBe("The minutes are under Meetings.");
+  });
+  it("points at Documents when only a file is on record", () => {
+    const out = currentAnnouncements(list, meetings, [minutes("Budget workshop Minutes, October 3, 2026")], "2026-10-07");
+    expect(out[0].body).toBe("The minutes are in Documents.");
+  });
+  it("ignores minutes that are only spaces", () => {
+    const blank = [{ ...meeting("Budget workshop", "2026-10-03"), minutes: "  " } as Meeting];
+    expect(currentAnnouncements(list, blank, [], "2026-10-07").map((a) => a.id)).toEqual(["b", "c"]);
+  });
+});
+
+describe("a cancelled meeting", () => {
+  const called = [{ ...meeting("Board meeting", "2026-10-20"), status: "cancelled", cancelReason: "Storm warning" } as Meeting];
+  it("turns its notice into a cancellation, even before the day", () => {
+    const out = currentAnnouncements(list, called, [], "2026-10-07");
+    expect(out.find((a) => a.id === "b")).toMatchObject({ title: "Cancelled: Board meeting", body: "Storm warning" });
+  });
+  it("reads Cancelled with its reason, or alone", () => {
+    expect(cancelledLine({ cancelReason: " Storm warning " })).toBe("Cancelled: Storm warning");
+    expect(cancelledLine({})).toBe("Cancelled");
+    expect(cancelledLine({ cancelReason: "  " })).toBe("Cancelled");
+  });
+});
+
+describe("the lines beside a meeting", () => {
+  it("says what date a moved meeting was first noticed for", () => {
+    expect(wasLine({ date: "2026-10-20", rescheduledFrom: "2026-10-13" })).toBe("Was Oct 13");
+    expect(wasLine({ date: "2026-10-20" })).toBeNull();
+    expect(wasLine({ date: "2026-10-20", rescheduledFrom: "2026-10-20" })).toBeNull();
+  });
+  it("counts who came", () => {
+    expect(attendedLine({})).toBeNull();
+    expect(attendedLine({ attended: [] })).toBeNull();
+    expect(attendedLine({ attended: [{ name: "A", channel: "in-person" }] })).toBe("1 attended");
   });
 });

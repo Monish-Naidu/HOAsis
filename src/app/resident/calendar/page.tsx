@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Vote } from "lucide-react";
 import { Card, IconTile } from "@/components/ui/primitives";
 import { CalendarView } from "@/components/app/calendar-view";
-import { LiveMeetingCard, MeetingRsvps } from "@/components/app/meeting-rsvps";
+import { LiveMeetingCard, MeetingMinutes, MeetingRsvps } from "@/components/app/meeting-rsvps";
 import { calendarEntries } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { ballotPhase } from "@/lib/phases";
@@ -37,6 +37,7 @@ export default function ResidentCalendar() {
       {/* What is coming first, with the RSVPs; the month underneath for
           anybody looking for a date. */}
       <MeetingRsvps />
+      <MeetingMinutes />
       <CalendarView entries={calendarEntries(community)} asOf={community.asOf} showUpcoming={false} />
     </div>
   );

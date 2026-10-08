@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { formatSize } from "@/lib/documents";
+import { attachmentProblem, fileSizeWords } from "@/lib/attachments";
+import { newId } from "@/lib/core/ids";
+import { ChosenFiles, FILE_ACCEPT, FILE_LIMITS } from "../request-files";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, FileSearch, FileText, Hammer, Paperclip, PartyPopper, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, FileSearch, FileText, Hammer, Paperclip, PartyPopper } from "lucide-react";
 import { Button, Callout, Card, SectionTitle, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
@@ -54,7 +56,7 @@ const kinds = [
 ] as const;
 
 export function NewRequestForm() {
-  const { amenities, forms, addRequest, community, isRemote, requests: allRequests } = useAppState();
+  const { amenities, forms, addRequest, attachFiles, community, isRemote, requests: allRequests } = useAppState();
   const home = useCurrentHome();
   // The number to show once it is sent, or null when only the database
   // knows it (see `confirmedReference`).
@@ -70,9 +72,9 @@ export function NewRequestForm() {
   const [amenityId, setAmenityId] = useState("");
   const [formId, setFormId] = useState("");
   const [done, setDone] = useState(false);
-  // What the owner attached: names and sizes, which is what the board sees on
-  // the request. The bytes themselves wait for request storage.
-  const [files, setFiles] = useState<{ name: string; size: string }[]>([]);
+  // What the owner picked. A file that cannot go stays listed with the
+  // reason, and is left out when the request is sent.
+  const [files, setFiles] = useState<File[]>([]);
 
   const chosen = kinds.find((k) => k.id === kind);
   const selectedAmenity = amenities.find((a) => a.id === amenityId);
@@ -153,8 +155,10 @@ export function NewRequestForm() {
           ? `${selectedForm.label}. ${body.trim()}`
           : body.trim();
 
+    const sendable = files.filter((f) => attachmentProblem(f) === null);
     const request: HomeRequest = {
-      id: `req-${seq}`,
+      // A real association keys the request, and the files filed under it, by a uuid.
+      id: isRemote ? newId() : `req-${seq}`,
       reference: ref,
       kind: kind as RequestKind,
       title: effectiveTitle,
@@ -168,7 +172,9 @@ export function NewRequestForm() {
         ...(kind === "architectural" && selectedForm
           ? [{ name: selectedForm.fileName, size: selectedForm.size }]
           : []),
-        ...files,
+        // The demo has nowhere to keep the bytes, so the board sees the name
+        // and size. A real association uploads them once the request exists.
+        ...(isRemote ? [] : sendable.map((f) => ({ name: f.name, size: fileSizeWords(f.size) }))),
       ],
       thread: [
         {
@@ -205,6 +211,9 @@ export function NewRequestForm() {
         return;
       }
     }
+    // The request stands whether or not a file makes it; attachFiles says
+    // which one failed.
+    if (isRemote && sendable.length) await attachFiles(request.id, sendable);
     setReference(confirmedReference({ isRemote, guessed: ref, stored }));
     setDone(true);
   }
@@ -372,57 +381,24 @@ export function NewRequestForm() {
               className={cn(textareaClass, "resize-none")}
             />
           </label>
-          {/* A real association has nowhere to keep the file yet: the board
-              was shown its name and nothing else. The control comes back
-              with the upload. */}
-          {isRemote ? (
-            <p className="p-4 text-footnote text-fg-muted">
-              Photos and files cannot be attached here yet. Describe what you see, and the board
-              will ask if it needs a picture.
-            </p>
-          ) : null}
-          <label
-            className={cn(
-              "flex w-full cursor-pointer items-center gap-2 p-4 text-left text-body font-medium text-fg-muted hover:bg-surface-2",
-              isRemote && "hidden",
-            )}
-          >
+          <label className="flex w-full cursor-pointer items-center gap-2 p-4 text-left text-body font-medium text-fg-muted hover:bg-surface-2">
             <Paperclip className="size-3.5" />
-            {files.length ? "Add another" : "Add photos or documents"}
+            {files.length ? "Add another" : "Add photos or a PDF"}
             <input
               type="file"
               multiple
-              accept="image/*,.pdf,.doc,.docx"
-              aria-label="Add photos or documents"
+              accept={FILE_ACCEPT}
+              aria-label="Add photos or a PDF"
               className="sr-only"
               onChange={(e) => {
-                const picked = Array.from(e.target.files ?? []).map((f) => ({
-                  name: f.name,
-                  size: formatSize(f.size),
-                }));
+                const picked = Array.from(e.target.files ?? []);
                 e.target.value = "";
                 if (picked.length) setFiles((all) => [...all, ...picked]);
               }}
             />
           </label>
-          {files.length ? (
-            <ul className="divide-y divide-border border-t border-border">
-              {files.map((f, i) => (
-                <li key={`${f.name}-${i}`} className="flex items-center gap-3 px-4 py-2.5 text-footnote">
-                  <span className="min-w-0 flex-1 truncate text-fg">{f.name}</span>
-                  <span className="shrink-0 text-fg-subtle">{f.size}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${f.name}`}
-                    onClick={() => setFiles((all) => all.filter((_, j) => j !== i))}
-                    className="shrink-0 text-fg-subtle hover:text-danger"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <p className="px-4 pb-3 text-footnote text-fg-subtle">{FILE_LIMITS}</p>
+          <ChosenFiles files={files} onRemove={(i) => setFiles((all) => all.filter((_, j) => j !== i))} />
         </Card>
       </section>
 

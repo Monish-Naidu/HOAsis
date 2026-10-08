@@ -898,6 +898,52 @@
   }
 }
 
+/* Printing statements. Same idea as the letter, but a run of statements has to
+   flow over many pages, so the sheet cannot be absolutely positioned. Instead
+   everything that neither holds nor sits inside the print region is removed,
+   and what holds it is flattened so no shell height or scroll box clips it. */
+.print-statement {
+  display: none;
+}
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+  body[data-printing="statement"] {
+    background: white;
+  }
+  body[data-printing="statement"] *:not(.print-statement):not(.print-statement *):not(:has(.print-statement)) {
+    display: none !important;
+  }
+  body[data-printing="statement"] :has(.print-statement):not(.print-statement) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    transform: none !important;
+  }
+  body[data-printing="statement"] .print-statement {
+    display: block;
+    background: white;
+    color: black;
+  }
+  body[data-printing="statement"] .statement-sheet {
+    break-after: page;
+    padding: 0;
+  }
+  body[data-printing="statement"] .statement-sheet:last-child {
+    break-after: auto;
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Phones zoom into any field whose text is smaller than 16px and never zoom
    back out. A few fields here are 14 or 15px, which is right on a desktop,

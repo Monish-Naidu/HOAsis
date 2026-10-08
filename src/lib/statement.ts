@@ -1,3 +1,5 @@
+import type { Community } from "@/lib/data/community";
+import { fiscalMonth } from "@/lib/metrics";
 import type { ChargeLine, Cents, ISODate } from "@/lib/types";
 
 /**
@@ -125,4 +127,154 @@ export function balanceSplit(lines: ChargeLine[], balanceCents: Cents, asOf: ISO
     break;
   }
   return { owedNowCents: owed - notYetDueCents, notYetDueCents, nextBill, upcoming };
+}
+
+/** One row of a printed statement: a charge or a payment, with the balance after it. */
+export interface StatementRow {
+  id: string;
+  date: ISODate;
+  label: string;
+  method?: string;
+  /** What was added to the balance on this row, or 0. */
+  chargeCents: Cents;
+  /** What was taken off the balance on this row (a payment or a credit), shown positive, or 0. */
+  paymentCents: Cents;
+  balanceCents: Cents;
+}
+
+/** One home's statement for one year, ready to print. */
+export interface HomeStatement {
+  homeId: string;
+  year: number;
+  from: ISODate;
+  to: ISODate;
+  /** "2025", or "Jul 2025 to Jun 2026" when the fiscal year does not start in January. */
+  periodLabel: string;
+  /** Oldest first, the order a statement is read on paper. */
+  rows: StatementRow[];
+  /** What the home owed on the first day of the period. */
+  openingCents: Cents;
+  closingCents: Cents;
+  /** Dues, fees and one-off charges in the period, not counting a payment taken back. */
+  billedCents: Cents;
+  /** Payments in the period, net of any payment taken back. */
+  paidCents: Cents;
+  /** Credits in the period, such as a waived late fee. */
+  creditedCents: Cents;
+  /**
+   * Set when the period starts before the lines this screen holds and the home
+   * has earlier lines it has not fetched: the date the held lines begin. The
+   * opening balance and the totals cannot be trusted then.
+   */
+  linesBegin: ISODate | null;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** First and last day of the year `year`, counted from the association's fiscal year start. */
+export function statementPeriod(fiscalYearStart: string | undefined, year: number): { from: ISODate; to: ISODate } {
+  const m = fiscalMonth(fiscalYearStart);
+  if (m === 1) return { from: `${year}-01-01`, to: `${year}-12-31` };
+  const endYear = year + 1;
+  const lastDay = new Date(Date.UTC(endYear, m - 1, 0)).getUTCDate();
+  return { from: `${year}-${pad2(m)}-01`, to: `${endYear}-${pad2(m - 1)}-${pad2(lastDay)}` };
+}
+
+/** The year a date falls in, counted from the fiscal year start. A fiscal year is named for the year it starts in. */
+export function statementYearOf(fiscalYearStart: string | undefined, date: ISODate): number {
+  const m = fiscalMonth(fiscalYearStart);
+  const y = Number(date.slice(0, 4));
+  return Number(date.slice(5, 7)) >= m ? y : y - 1;
+}
+
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** How a period is named on a select and on the paper. */
+export function statementPeriodLabel(fiscalYearStart: string | undefined, year: number): string {
+  const m = fiscalMonth(fiscalYearStart);
+  if (m === 1) return String(year);
+  return `${MONTH[m - 1]} ${year} to ${MONTH[(m + 10) % 12]} ${year + 1}`;
+}
+
+/**
+ * Every year in which some home has a line, newest first. One home when
+ * `homeId` is given. An association with no lines yet gets the year of `today`
+ * so a select is never empty.
+ */
+export function statementYears(community: Community, today: ISODate, homeId?: string): number[] {
+  const fy = community.association.fiscalYearStart;
+  const years = new Set<number>();
+  const take = (lines: ChargeLine[] | undefined) => lines?.forEach((l) => years.add(statementYearOf(fy, l.date)));
+  if (homeId) take(community.homeCharges[homeId]);
+  else Object.values(community.homeCharges).forEach(take);
+  if (years.size === 0) years.add(statementYearOf(fy, today));
+  return [...years].sort((a, b) => b - a);
+}
+
+/**
+ * One home's statement for a year: the lines in the period with a running
+ * balance, what the home owed coming in and going out, and what was billed and
+ * paid. The balance before a date is read from the line after it, so it holds
+ * however much earlier history there is. Lines are restated the way
+ * `orderStatement` does, so a line stored with a stale balance cannot show one.
+ */
+export function statementFor(community: Community, homeId: string, year: number): HomeStatement {
+  const fy = community.association.fiscalYearStart;
+  const { from, to } = statementPeriod(fy, year);
+  const stored = community.homeCharges[homeId] ?? [];
+  // Oldest first.
+  const all = orderStatement(stored).reverse();
+  const before = all.filter((l) => l.date < from);
+  const inYear = all.filter((l) => l.date >= from && l.date <= to);
+  const first = inYear[0];
+  const openingCents = first
+    ? first.balanceAfterCents - first.amountCents
+    : before.length > 0
+      ? before[before.length - 1].balanceAfterCents
+      : (() => {
+          const later = all.find((l) => l.date > to);
+          return later ? later.balanceAfterCents - later.amountCents : 0;
+        })();
+
+  let billedCents = 0;
+  let paidCents = 0;
+  let creditedCents = 0;
+  const rows: StatementRow[] = inYear.map((l) => {
+    if (l.kind === "payment") paidCents += -l.amountCents;
+    else if (l.kind === "credit") creditedCents += -l.amountCents;
+    else if (isPaymentReversal(l)) paidCents -= l.amountCents;
+    else billedCents += l.amountCents;
+    return {
+      id: l.id,
+      date: l.date,
+      label: l.label,
+      method: l.method,
+      chargeCents: l.amountCents > 0 ? l.amountCents : 0,
+      paymentCents: l.amountCents < 0 ? -l.amountCents : 0,
+      balanceCents: l.balanceAfterCents,
+    };
+  });
+
+  const history = community.history;
+  const held = stored.length;
+  const unfetched =
+    history !== undefined &&
+    !history.statementsLoaded.includes(homeId) &&
+    (history.statementCounts[homeId] ?? 0) > held;
+  const linesBegin = unfetched && history.from > from ? history.from : null;
+
+  return {
+    homeId,
+    year,
+    from,
+    to,
+    periodLabel: statementPeriodLabel(fy, year),
+    rows,
+    openingCents,
+    closingCents: rows.length > 0 ? rows[rows.length - 1].balanceCents : openingCents,
+    billedCents,
+    paidCents,
+    creditedCents,
+    linesBegin,
+  };
 }

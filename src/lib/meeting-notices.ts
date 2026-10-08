@@ -41,11 +41,33 @@ export function currentAnnouncements(
   const out: Announcement[] = [];
   for (const a of announcements) {
     const m = meetingOf(a, meetings);
-    if (!m || m.date >= today) {
+    if (m?.status === "cancelled") {
+      out.push({ ...a, title: `Cancelled: ${m.title}`, body: m.cancelReason?.trim() || "The board cancelled this meeting.", pinned: false });
+    } else if (!m || m.date >= today) {
       out.push(a);
+    } else if (m.minutes?.trim()) {
+      // The board's own minutes win over a file of the same name: they are
+      // on the meeting itself, under Meetings.
+      out.push({ ...a, title: `Minutes from ${m.title}`, body: "The minutes are under Meetings.", pinned: false });
     } else if (hasMinutes(m, documents)) {
       out.push({ ...a, title: `Minutes from ${m.title}`, body: "The minutes are in Documents.", pinned: false });
     }
   }
   return out;
+}
+
+/** How a residents' list says a meeting was called off: "Cancelled: Storm warning". */
+export function cancelledLine(m: Pick<Meeting, "cancelReason">): string {
+  return m.cancelReason?.trim() ? `Cancelled: ${m.cancelReason.trim()}` : "Cancelled";
+}
+
+/** "Was Oct 3", beside the date of a meeting that was moved. */
+export function wasLine(m: Pick<Meeting, "rescheduledFrom" | "date">): string | null {
+  return m.rescheduledFrom && m.rescheduledFrom !== m.date ? `Was ${formatDate(m.rescheduledFrom)}` : null;
+}
+
+/** "3 attended", or nothing when nobody was marked. */
+export function attendedLine(m: Pick<Meeting, "attended">): string | null {
+  const n = m.attended?.length ?? 0;
+  return n ? `${n} attended` : null;
 }

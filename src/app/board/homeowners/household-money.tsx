@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Badge, Button, Field, Select, fieldClass } from "@/components/ui/primitives";
+import { PrintStatementControl } from "@/components/app/statement-print";
+import type { Home } from "@/lib/types";
 import { chargeCents, chargeProblem, MAX_CHARGE_LABEL } from "@/lib/payments/charges";
 import { checkManualPayment, duesTextProblem, homeOverpayNote } from "@/lib/input-checks";
 import { MANUAL_METHOD_LABEL, type ManualMethod } from "@/lib/payments/instruments";
@@ -535,5 +537,23 @@ export function ReversePaymentForm({
         Reverse payment
       </Button>
     </form>
+  );
+}
+
+/**
+ * A home's statement for a year, on paper: for an owner selling, a tax return
+ * or a lender. Same layout the owner prints from their own page.
+ */
+export function PrintStatementForm({ home, homeName, onClose }: { home: Home; homeName: string; onClose: () => void }) {
+  return (
+    <div className="mt-4 space-y-2 border-t border-border pt-3">
+      <p className="text-footnote font-semibold text-fg-muted">A statement for {homeName}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <PrintStatementControl home={home} />
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </div>
   );
 }

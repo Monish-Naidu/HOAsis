@@ -6,6 +6,7 @@ import { Check, ChevronDown, Plus, Printer, ShieldQuestion, X } from "lucide-rea
 import { Badge, Button, Card, EmptyState, PageHeader, Segmented, Select, textareaClass } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
+import { AddPhotoForm } from "@/components/app/notice-forms";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
 import type { Home, Violation } from "@/lib/types";
@@ -247,6 +248,8 @@ function NoticeRow({
           {violation.photos.some((p) => p.src) ? (
             <EvidenceViewer photos={violation.photos.filter((p) => p.src)} />
           ) : null}
+
+          {!resolved ? <AddPhotoForm violation={violation} /> : null}
 
           {!resolved ? (
             <div className="flex flex-wrap items-center gap-2">

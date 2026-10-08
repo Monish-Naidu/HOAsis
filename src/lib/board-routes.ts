@@ -218,6 +218,16 @@ export const BOARD_ROUTES: BoardRoute[] = [
     need: ["finances"],
   },
   {
+    href: "/board/money/statements",
+    hidden: true,
+    parent: "money",
+    label: "Statements",
+    icon: Banknote,
+    key: "money-statements",
+    tint: "teal",
+    need: ["finances"],
+  },
+  {
     href: "/board/shared-costs",
     hidden: true,
     parent: "money",

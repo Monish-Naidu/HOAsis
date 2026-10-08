@@ -136,7 +136,7 @@ Small, known, and not blocking a push. Each was found by a reviewer.
 
 | Question | Recommendation |
 | --- | --- |
-| A time zone per association (everything runs on UTC, so US evenings are a day ahead) | Add one, asked in the wizard from the state, changeable in Settings |
+| A time zone per association (everything runs on UTC, so US evenings are a day ahead) | done 2026-10-07 without a column: today is the browser's local date; a column comes only if a board ever sits outside its association's zone |
 | Which "percent funded" the Reserves screen shows (41% or about 61% for the demo) | The accrued-liability figure the library describes |
 | Re-sending the same notice within an hour is skipped as a duplicate | Keep, and say so on screen |
 | Test logins on the live sign-in page (kept "for now" on 2026-09-26) | Done 2026-10-04: `NEXT_PUBLIC_TEST_LOGINS` removed from Vercel Production; gone from the live site at the next deploy, still on localhost |
@@ -333,15 +333,15 @@ the first real associations are on. Nothing here is started.
 | Item | Why | Size |
 | --- | --- | --- |
 | Dues bill by email the day it posts | Owners not on autopay hear nothing today unless the board presses the mailer; decision waiting on Monish | a fourth money job, paced like the mailer: 2 days |
-| Real file upload on requests and notices | Photos of the problem are the request, for most owners | Supabase storage bucket, size and type limits, 2 to 3 days |
-| Meetings: change the date, cancel, minutes, who attended | A board holds one a month; today a meeting cannot be edited once sent | 2 to 3 days |
-| Printable owner statement (PDF) and a year-end statement run for every home | Asked for at tax time and at every sale | 2 days |
+| Real file upload on requests and notices | Photos of the problem are the request, for most owners | done 2026-10-07: private `attachments` bucket (0111), files on a request from both sides, photos on a notice, `verify-attachments` |
+| Meetings: change the date, cancel, minutes, who attended | A board holds one a month; today a meeting cannot be edited once sent | done 2026-10-07 (0112): Change the date, Cancel the meeting, Record minutes with attendance, the resident side reads them, `verify-meetings`. Left: an email when a meeting moves or is cancelled |
+| Printable owner statement (PDF) and a year-end statement run for every home | Asked for at tax time and at every sale | done 2026-10-07: Print statement on the owner's account and the household card, Finances > Statements with Print all (browser print; no PDF file) |
 | A reply address and a support inbox that reach somebody | Items 1, 2 and 10 in the go-live list; nothing to build, all his | hours |
 
 **First year with customers**
 | Item | Why | Size |
 | --- | --- | --- |
-| Fines that post to the balance, with the notice stages | Notices say "no fine" today because nothing can charge one; add_charge is the piece | 2 days on top of charges |
+| Fines that post to the balance, with the notice stages | Notices say "no fine" today because nothing can charge one; add_charge is the piece | done 2026-10-07 (0113): `fine_violation` after a hearing, once per notice, on the home's statement, `verify-fines` |
 | Paper and proxy votes entered by the board; quorum on a ballot; "dues must be current" to vote | Every annual meeting | 3 days |
 | Home exempt from dues (builder lots, association-owned) and proration for a home added mid-period | Builders and growing communities | 2 days, one migration |
 | Document versions, with the old one kept | Rules get amended; owners must find the current one | 2 days |
@@ -378,7 +378,7 @@ damaging first.
 | No complete export, though Terms promises one | Roster, transactions and a resident statement export; nothing for charges across homes, payouts with approvals, ballots, meetings, requests, documents, email log, activity | next: one support script that dumps everything for one association; later a Settings button |
 | An audit or a records request | No per-home statement for the board; charges and ledger load two years; email log capped at 300, activity at 100; no exports per area | next: an "Annual records" screen with CSVs per area and year |
 | A compromised board member | Access ends at once and is logged, but sessions are not revoked and there is no actor filter on Activity | next: a support script that signs a person out everywhere; an actor filter |
-| A time zone that is not UTC | "Today" is the browser's UTC date, so after 7 pm Eastern the app says tomorrow; the jobs run on the right local day for every US zone | next: `associations.time_zone` and a "today" computed from it |
+| A time zone that is not UTC | "Today" is the browser's UTC date, so after 7 pm Eastern the app says tomorrow; the jobs run on the right local day for every US zone | done 2026-10-07: today is the browser's local date (`localIsoDate`); no column, since the people of an association sit in its zone and the jobs run at 13:00 UTC when every US zone agrees on the date |
 | Growth to 2,000 associations | The autopay job walks every autopay home every day, not the ones due; serial continuations; the bill email at 160,000 owners would take a day | next: filter autopay to homes due today; fan out per association |
 | A storm: special assessment in instalments, a vendor paid in stages, the reserve drawn down | Charge every home posts one equal amount, no instalments, no late fee on it; vendor payments always leave operating; nothing records spending from reserves | later: instalments, a "paid from" account on payouts, a reverse transfer |
 | Budget season | One current rate; no "effective January 1" date; the budget screen is off | later: `dues_effective_on` applied by the dues job |
@@ -480,7 +480,7 @@ Rows in its order:
 | --- | --- |
 | 1. Monthly rollup tables kept by triggers; `association_overview` reads them | done 2026-10-07 (#23, migration 0108): `ledger_months`, `statement_months`, `scripts/verify-rollups.mjs` |
 | 2. Fiscal-year close, reopen logged | done 2026-10-07 (#26, migration 0109): `fiscal_years` written by the daily ops job for every ended year, `reopen_fiscal_year` and `close_fiscal_year` for a finance holder, `scripts/verify-fiscal-years.mjs`. Left: the Finances screen that shows a closed year and its Reopen button |
-| 3. Period filter with fiscal years and compare-to-last-year on Transactions and Overview; totals on the category chips | done 2026-10-07 for the period control and the category totals (pull request #22, at Monish's word on the Finances tabs): one period button that says its dates, arrows that step by month or year, fiscal years named, the figures as the direction filter, categories as a pressable list with counts and totals, Starting balances folded at the bottom once set. Left: compare to last year |
+| 3. Period filter with fiscal years and compare-to-last-year on Transactions and Overview; totals on the category chips | done 2026-10-07: the period control and category totals (#22); the "A year earlier" line under Money in and out with the change in percent; the Closed years card with Reopen and Close the year again |
 | 4. History import: statements per home, then bank lines, through the roster-import pattern | next, before the first association with years behind it |
 | 5. Budget versus actual and Trends switched on, reworked to the rollups | later |
 | 6. Annual records: exports per area for a year, then the screen | later |

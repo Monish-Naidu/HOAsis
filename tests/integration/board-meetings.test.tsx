@@ -124,3 +124,85 @@ describe("the board's Meetings page", () => {
     expect(screen.getAllByText("In the room")).toHaveLength(1);
   });
 });
+
+describe("after the notice: move, cancel, minutes (demo)", () => {
+  const find = (id: string) => seen.state.community.meetings.find((m) => m.id === id)!;
+  const person = { name: "Arya Mehr", unit: "7", role: "President", channel: "in-person" as const };
+
+  it("moves a meeting and remembers the first date", async () => {
+    wrap(<BoardMeetings />);
+    act(() => {
+      seen.state.signIn("acct-arya");
+      seen.state.addMeeting(meeting({ id: "mtg-move", date: "2026-09-10" }));
+    });
+    await act(async () => {
+      await seen.state.rescheduleMeeting("mtg-move", { date: "2026-09-17", time: "7:00 PM" });
+    });
+    expect(find("mtg-move")).toMatchObject({ date: "2026-09-17", time: "7:00 PM", rescheduledFrom: "2026-09-10", location: "Clubhouse" });
+    await act(async () => {
+      await seen.state.rescheduleMeeting("mtg-move", { date: "2026-09-24", location: "Pool house" });
+    });
+    // Moved twice, it still says when it was first noticed for.
+    expect(find("mtg-move")).toMatchObject({ date: "2026-09-24", rescheduledFrom: "2026-09-10", location: "Pool house", time: "7:00 PM" });
+    expect(screen.getByText("Was Sep 10", { exact: false })).toBeInTheDocument();
+  });
+
+  it("refuses a past day, the same day twice, and a meeting that is over", async () => {
+    wrap(<BoardMeetings />);
+    act(() => {
+      seen.state.signIn("acct-arya");
+      seen.state.addMeeting(meeting({ id: "mtg-a", date: "2026-09-10" }));
+      seen.state.addMeeting(meeting({ id: "mtg-old", date: "2026-01-05" }));
+    });
+    expect(() => seen.state.rescheduleMeeting("mtg-a", { date: "2026-08-19" })).toThrow("Pick a date that has not passed.");
+    expect(() => seen.state.rescheduleMeeting("mtg-old", { date: "2026-09-01" })).toThrow("That meeting is over.");
+    await act(async () => {
+      await seen.state.rescheduleMeeting("mtg-a", { date: "2026-09-10" });
+    });
+    expect(find("mtg-a").rescheduledFrom).toBeUndefined();
+  });
+
+  it("cancels with a reason, keeps the row, and moves it to Past meetings", async () => {
+    wrap(<BoardMeetings />);
+    act(() => {
+      seen.state.signIn("acct-arya");
+      seen.state.addMeeting(meeting({ id: "mtg-c", title: "Storm meeting", date: "2026-09-10" }));
+    });
+    expect(() => seen.state.cancelMeeting("mtg-c", " ")).toThrow("Say why the meeting is cancelled.");
+    await act(async () => {
+      await seen.state.cancelMeeting("mtg-c", "Storm warning");
+    });
+    expect(find("mtg-c")).toMatchObject({ status: "cancelled", cancelReason: "Storm warning", cancelledDate: "2026-08-20" });
+    const row = document.getElementById("mtg-mtg-c")!;
+    expect(within(row).getByText("Cancelled")).toBeInTheDocument();
+    expect(within(row).getByText("Cancelled: Storm warning")).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "Cancel the meeting" })).not.toBeInTheDocument();
+    expect(() => seen.state.cancelMeeting("mtg-c", "Again")).toThrow("That meeting is over.");
+    expect(() => seen.state.rescheduleMeeting("mtg-c", { date: "2026-09-12" })).toThrow("That meeting is over.");
+    expect(() => seen.state.recordMinutes("mtg-c", "Nothing happened here.", [])).toThrow("A cancelled meeting has no minutes.");
+  });
+
+  it("records minutes for a meeting that was held, and again to change them", async () => {
+    wrap(<BoardMeetings />);
+    act(() => {
+      seen.state.signIn("acct-arya");
+      seen.state.addMeeting(meeting({ id: "mtg-m", title: "Held meeting", date: "2026-08-10" }));
+      seen.state.addMeeting(meeting({ id: "mtg-next", date: "2026-09-10" }));
+    });
+    expect(() => seen.state.recordMinutes("mtg-next", "Not held yet, so no.", [])).toThrow("The meeting has not happened yet.");
+    expect(() => seen.state.recordMinutes("mtg-m", "short", [])).toThrow("Write the minutes first.");
+    await act(async () => {
+      await seen.state.recordMinutes("mtg-m", "  Approved the budget.  ", [person]);
+    });
+    expect(find("mtg-m")).toMatchObject({ minutes: "Approved the budget.", minutesDate: "2026-08-20", status: "ended", attended: [person] });
+    const row = document.getElementById("mtg-mtg-m")!;
+    expect(within(row).getByText("Approved the budget.")).toBeInTheDocument();
+    expect(within(row).getByText("1 attended")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Edit minutes" })).toBeInTheDocument();
+    await act(async () => {
+      await seen.state.recordMinutes("mtg-m", "Approved the budget and the paving.", []);
+    });
+    expect(find("mtg-m")).toMatchObject({ minutes: "Approved the budget and the paving.", attended: [] });
+  });
+});
+

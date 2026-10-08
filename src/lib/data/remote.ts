@@ -367,6 +367,7 @@ export async function loadCommunity(
     instruments, payoutRows, reportRows, violationRows, threadRows, articleRows,
     budgetRows, reserveRows, templateRows, formRows, sharedCostRows, sharedBillRows,
     paymentRows, replyRows, actionRows, joinRows, emailRows, termRows, activityRows,
+    fiscalYearRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     // A retired home (0099) keeps its records but is off the register.
@@ -437,6 +438,8 @@ export async function loadCommunity(
     // The newest hundred board actions; RLS answers nothing for a seat
     // that may not open Settings, and the card says so.
     supabase.from("activity").select("*").eq("association_id", associationId).order("at", { ascending: false }).limit(100),
+    // Closed fiscal years (0109). Finance viewers only; an owner gets no rows.
+    supabase.from("fiscal_years").select("*").eq("association_id", associationId).order("starts_on", { ascending: false }),
   ]);
 
   const urlByPath = documents.urlByPath;
@@ -666,6 +669,29 @@ export async function loadCommunity(
     role: t.role,
     from: t.starts_on,
     to: t.ends_on ?? undefined,
+  }));
+
+  const fiscalYears: Community["fiscalYears"] = (fiscalYearRows.data ?? []).map((y) => ({
+    startsOn: y.starts_on,
+    endsOn: y.ends_on,
+    inCents: Number(y.in_cents),
+    outCents: Number(y.out_cents),
+    billedCents: Number(y.billed_cents),
+    collectedCents: Number(y.collected_cents),
+    accounts: ((y.accounts ?? []) as { bank_account_id: string; opening_cents: number; closing_cents: number }[]).map((x) => ({
+      bankAccountId: x.bank_account_id,
+      openingCents: Number(x.opening_cents),
+      closingCents: Number(x.closing_cents),
+    })),
+    categories: ((y.categories ?? []) as { category: string; in_cents: number; out_cents: number }[]).map((x) => ({
+      category: x.category,
+      inCents: Number(x.in_cents),
+      outCents: Number(x.out_cents),
+    })),
+    closedOn: String(y.closed_at).slice(0, 10),
+    closedBy: y.closed_by ?? null,
+    reopenedOn: y.reopened_at ? String(y.reopened_at).slice(0, 10) : undefined,
+    reopenReason: y.reopen_reason ?? undefined,
   }));
 
   const activity: Activity[] = (activityRows.data ?? []).map((r) => ({
@@ -1274,5 +1300,6 @@ export async function loadCommunity(
     history,
     boardTerms,
     activity,
+    fiscalYears,
   };
 }

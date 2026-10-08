@@ -12,6 +12,7 @@ import { balanceSplit } from "@/lib/statement";
 import { balanceStanding } from "@/lib/resident-wording";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
+import { PrintStatementControl } from "@/components/app/statement-print";
 import { HOME_TYPE_LABEL, isMixed, homeDues } from "@/lib/home-types";
 
 export default function ResidentAccount() {
@@ -191,7 +192,9 @@ export default function ResidentAccount() {
       <section>
         <SectionTitle
           action={
-            <button
+            <span className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+              <PrintStatementControl home={currentHome} className="flex items-center gap-2" />
+              <button
               type="button"
               onClick={() =>
                 // The ledger as a spreadsheet, for a tax return or a lender.
@@ -210,7 +213,8 @@ export default function ResidentAccount() {
             >
               <Download className="size-3" />
               Download as a spreadsheet
-            </button>
+              </button>
+            </span>
           }
         >
           Activity

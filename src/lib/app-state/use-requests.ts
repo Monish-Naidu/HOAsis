@@ -6,6 +6,8 @@ import type { Json } from "@/lib/supabase/database.types";
 import type { HomeRequest, WorkOrder } from "@/lib/types";
 import { type ReplyEmail, replyEmailState } from "@/lib/email/plain-error";
 import { statusAfterReply, statusLabel } from "@/lib/request-status";
+import { attachmentFileName, attachmentPath, attachmentProblem, fileSizeWords, uploadAttachment } from "@/lib/attachments";
+import { isUuid } from "@/lib/core/ids";
 
 /**
  * Requests: what an owner asks the board for, how the board answers, and the
@@ -90,7 +92,9 @@ export function useRequestsActions(deps: AppDeps) {
         let stored = "";
         return remoteWrite("Sending the request", async () => {
           const { data, error } = await supabaseBrowser().from("requests").insert({
-            id: newId(),
+            // The form names the request before it is sent, so the files can
+            // be filed under it once it is stored.
+            id: isUuid(request.id) ? request.id : newId(),
             association_id: rc.id,
             unit_id: request.homeId,
             filed_by: remote.profileId,
@@ -236,9 +240,58 @@ export function useRequestsActions(deps: AppDeps) {
     [remote.community, remote.profileId, communityId],
   );
 
+  /**
+   * Puts files on a request that already exists: each goes into the bucket
+   * and the request is then told about it. A file that cannot go is skipped
+   * and one that fails is reported, so the others still land. Resolves true
+   * when every file that was tried was saved.
+   */
+  const attachFiles = useCallback(
+    async (requestId: string, files: File[]): Promise<boolean> => {
+      const sendable = files.filter((f) => attachmentProblem(f) === null);
+      if (!sendable.length) return files.length === 0;
+      if (remote.community) {
+        const rc = remote.community;
+        let all = sendable.length === files.length;
+        for (const file of sendable) {
+          const path = attachmentPath(rc.id, "requests", requestId, attachmentFileName(file.name));
+          const ok = await remoteWrite(`Attaching ${file.name}`, async () => {
+            const supabase = supabaseBrowser();
+            const up = await uploadAttachment(supabase, path, file);
+            if (up.error) return { error: { message: up.error } };
+            return supabase.rpc("add_request_attachment", {
+              p_request_id: requestId,
+              p_name: file.name.slice(0, 120),
+              p_size_bytes: file.size,
+              p_path: path,
+            });
+          });
+          all = all && ok;
+        }
+        return all;
+      }
+      sliceStore(communityId, "requests").update((list) =>
+        list.map((r) =>
+          r.id === requestId
+            ? {
+                ...r,
+                attachments: [
+                  ...r.attachments,
+                  ...sendable.map((f) => ({ name: f.name, size: fileSizeWords(f.size), addedOn: todayIsoDate() })),
+                ],
+              }
+            : r,
+        ),
+      );
+      return sendable.length === files.length;
+    },
+    [remote.community, communityId],
+  );
+
   return {
     setWorkOrder,
     addRequest,
+    attachFiles,
     updateRequestStatus,
     replyToRequest,
   };
