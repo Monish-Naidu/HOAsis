@@ -22,7 +22,7 @@ import { duesFor } from "@/lib/home-types";
 import { withReversals } from "@/lib/ledger-corrections";
 import { compareStatement } from "@/lib/statement";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
-import { addDays, clockTime, daysBetween, nextDueOnOrAfter } from "@/lib/utils";
+import { addDays, clockTime, daysBetween, localIsoDate, nextDueOnOrAfter } from "@/lib/utils";
 import { isPostedDuesBill } from "@/lib/email/bill-run";
 
 /**
@@ -348,7 +348,7 @@ export async function loadCommunity(
   supabase: SupabaseClient,
   associationId: string,
 ): Promise<Community> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localIsoDate();
   const windowFrom = historyWindowFrom(today);
 
   // One round trip per table rather than a nested select, because the shapes
