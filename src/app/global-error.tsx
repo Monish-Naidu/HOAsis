@@ -43,7 +43,7 @@ export default function GlobalError({
       </head>
       <body className="font-sans antialiased">
         <div className="flex min-h-dvh flex-col bg-bg text-fg">
-          <main className="flex flex-1 items-center justify-center px-5 pb-20 pt-10">
+          <main id="main" className="flex flex-1 items-center justify-center px-5 pb-20 pt-10">
             <div className="w-full max-w-md rounded-card border border-border bg-surface p-6 shadow-card">
               <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
                 Something went wrong

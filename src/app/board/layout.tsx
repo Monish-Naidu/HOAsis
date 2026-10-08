@@ -68,7 +68,7 @@ export default function BoardLayout({
           />
 
           <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-6 lg:py-8">
-            <main className="min-w-0">
+            <main id="main" className="min-w-0">
               <DemoBanner />
               <LocalCopyBanner />
               <TrialBanner />

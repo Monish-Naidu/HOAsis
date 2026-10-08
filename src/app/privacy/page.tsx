@@ -21,7 +21,7 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-dvh bg-bg">
       <MarketingHeader />
-      <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
+      <main id="main" className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <header>
           <p className="text-footnote font-semibold uppercase tracking-wide text-fg-subtle">Legal</p>
           <h1 className="mt-2 text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[44px]">

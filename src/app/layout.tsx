@@ -65,6 +65,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: textSizeScript }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+        {/* The first thing the Tab key reaches: a keyboard or screen-reader
+            user skips the header and the sidebar in one press. Invisible
+            until focused. */}
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-md bg-brand px-3 py-2 text-body font-semibold text-brand-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+        >
+          Skip to content
+        </a>
         <ThemeKeeper />
         <ErrorBoundary label="The app">
           <AppStateProvider>

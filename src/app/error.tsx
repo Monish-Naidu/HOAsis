@@ -41,7 +41,7 @@ export default function RouteError({
       <header className="px-5 py-5">
         <Wordmark size={32} />
       </header>
-      <main className="flex flex-1 items-center justify-center px-5 pb-20">
+      <main id="main" className="flex flex-1 items-center justify-center px-5 pb-20">
         <Card className="w-full max-w-md p-6">
           <IconTile icon={AlertTriangle} tint="amber" size="md" className="mb-4" />
           <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">

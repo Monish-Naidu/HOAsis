@@ -23,7 +23,7 @@ export default function PlanPage() {
           <ThemeToggle />
         </div>
       </header>
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         {/* The flow reads ?task= to open at one question. */}
         <Suspense>
           <PlanScreen />

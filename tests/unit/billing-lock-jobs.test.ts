@@ -89,4 +89,14 @@ describe("autopay run", () => {
     expect(body.waiting).toEqual([expect.stringContaining("the association's subscription is not paid")]);
     expect(inserted("autopay_runs")).toBe(false);
   });
+
+  it("does not look at a home already charged this month", async () => {
+    // The month's runs are read once; a home in them is never queried.
+    tables({ memberships: [member], associations: [association("active")], units: [{ label: "2" }], charges: [], autopay_runs: [{ unit_id: "u1", state: "charged" }], payments: [] });
+    const { GET } = await import("@/app/api/autopay/run/route");
+    const body = await (await GET(request("/api/autopay/run"))).json();
+    expect(body.checked).toBe(0);
+    expect(fake.callsTo("associations")).toHaveLength(0);
+    expect(fake.callsTo("memberships").some((call) => call.has("lte"))).toBe(true);
+  });
 });

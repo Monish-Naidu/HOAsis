@@ -62,7 +62,7 @@ export default async function UnsubscribePage({
           <Wordmark size={32} />
         </Link>
       </header>
-      <main className="flex flex-1 items-start justify-center px-5 pb-20">
+      <main id="main" className="flex flex-1 items-start justify-center px-5 pb-20">
         <div className="w-full max-w-md rounded-card border border-border bg-surface p-7">
           {done ? (
             <>

@@ -30,7 +30,7 @@ export default function PricingPage() {
     // Clipped sideways: the aurora behind the dial reaches past the column.
     <div className="min-h-dvh overflow-x-clip bg-bg">
       <MarketingHeader />
-      <main className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16">
+      <main id="main" className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16">
         <Reveal>
           <header className="mx-auto max-w-2xl text-center">
             <h1 className="text-balance text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] text-fg sm:text-[60px]">

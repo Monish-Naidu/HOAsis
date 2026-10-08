@@ -26,7 +26,7 @@ export default function DevResetPage() {
           Sign in
         </Link>
       </header>
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10">
+      <main id="main" className="mx-auto w-full max-w-2xl flex-1 px-5 py-10">
         <TestTools />
       </main>
     </div>

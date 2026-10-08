@@ -212,7 +212,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
               ownerName={ownerName}
               homeLine={homeLine}
             />
-            <main className="no-scrollbar flex-1 overflow-y-auto pb-6">
+            <main id="main" className="no-scrollbar flex-1 overflow-y-auto pb-6">
               {pathname === "/resident" ? <CommunityHero compact /> : null}
               <div className="@container px-4 pt-4">
                 {/* The pages under a bar tab (Statement, Messages, Voting)
@@ -297,7 +297,7 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
             width and lays itself out with container queries, so it fills
             this frame the way the dashboard does instead of sitting as a
             narrow column with ground either side (Monish, 2026-09-26). */}
-        <main className="min-w-0 @container">
+        <main id="main" className="min-w-0 @container">
           <DemoBanner />
           <ResidentSectionTabs />
           <Gated pathname={pathname}>{children}</Gated>

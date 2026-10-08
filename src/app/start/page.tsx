@@ -27,7 +27,7 @@ export default function StartPage() {
           <ThemeToggle />
         </div>
       </header>
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         <SetupWizard />
       </main>
     </div>

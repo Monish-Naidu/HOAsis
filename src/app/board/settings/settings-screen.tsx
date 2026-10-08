@@ -32,6 +32,7 @@ import { DisplaySettings } from "@/components/app/display-settings";
 import { DuesSettings } from "@/components/app/dues-settings";
 import { STRIPE_TEST_MODE, TestModeGuide } from "@/components/app/test-mode-guide";
 import { useAppState } from "@/lib/app-state";
+import { useUrlFilter } from "@/lib/url-filter";
 import { AmenityRules } from "@/components/app/amenity-rules";
 import { useCoverPhotoUpload } from "@/components/app/community-hero";
 import { useToast } from "@/components/app/toast";
@@ -1379,21 +1380,52 @@ function AccessControl({
 
 const ACTIVITY_PAGE = 20;
 
-function ActivityList({ rows }: { rows: Activity[] }) {
+function ActivityList({ rows: all }: { rows: Activity[] }) {
   const [shown, setShown] = useState(ACTIVITY_PAGE);
   const placeLabel = useHomeLabel();
   const { community } = useAppState();
   const unitLabelById = (id: string) => community.homes.find((o) => o.id === id)?.unit;
+  // Who did it, in the address bar (`?actor=`) so "everything Dana changed"
+  // can be sent to the president. The names are the ones on the rows.
+  const actors = [...new Set(all.map((r) => r.actorName))].sort();
+  const [actor, setActor] = useUrlFilter<string>("actor", null, "");
+  const rows = actor ? all.filter((r) => r.actorName === actor) : all;
+  const picker =
+    actors.length > 1 ? (
+      <div className="flex items-center gap-2 border-b border-border px-5 py-2">
+        <label htmlFor="activity-actor" className="text-footnote font-semibold text-fg-muted">
+          By
+        </label>
+        <select
+          id="activity-actor"
+          value={actors.includes(actor) ? actor : ""}
+          onChange={(e) => setActor(e.target.value)}
+          className="h-8 rounded-md border border-border bg-surface px-2 text-footnote text-fg"
+        >
+          <option value="">Everyone</option>
+          {actors.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </div>
+    ) : null;
   if (rows.length === 0) {
     return (
-      <p className="px-5 py-6 text-center text-callout text-fg-muted">
-        Nothing recorded yet. Appointing a board member, approving a bill or changing a setting
-        will show here.
-      </p>
+      <>
+        {picker}
+        <p className="px-5 py-6 text-center text-callout text-fg-muted">
+          {actor
+            ? `Nothing by ${actor} in the last ${all.length} actions.`
+            : "Nothing recorded yet. Appointing a board member, approving a bill or changing a setting will show here."}
+        </p>
+      </>
     );
   }
   return (
     <>
+      {picker}
       <ul className="divide-y divide-border">
         {rows.slice(0, shown).map((r) => (
           <li key={r.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-5 py-3">

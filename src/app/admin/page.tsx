@@ -46,7 +46,7 @@ export default async function OpsPage() {
         </div>
       </header>
 
-      <main className="w-full px-5 py-8 sm:px-8">
+      <main id="main" className="w-full px-5 py-8 sm:px-8">
         <PageHeader
           title="Ops"
           description={`The last ${OPS_WINDOW_DAYS} days. Read fresh on every load. How to read it: docs/observability.md.`}
