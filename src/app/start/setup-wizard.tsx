@@ -62,7 +62,6 @@ import {
   savePendingDraft,
 } from "@/lib/pending-draft";
 import {
-  HOME_NUMBER_MESSAGE,
   MAX_ASSOCIATION_NAME,
   associationNameProblem,
   duesProblem,
@@ -434,9 +433,9 @@ function WizardQuestions({
       dues: {
         id: "dues",
         group: "Your community",
-        title: "What does each home pay?",
+        title: `What does each ${w.home} pay?`,
         detail: isMixed(draft)
-          ? "The regular dues. Kinds of home can pay different amounts."
+          ? `The regular dues. Kinds of ${w.home} can pay different amounts.`
           : "The regular dues. Special assessments and anything else come later.",
         enterContinues: true,
         canContinue:
@@ -450,10 +449,10 @@ function WizardQuestions({
           <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
             {draft.duesByType ? null : (
             <DollarField
-              label={draft.duesByHome ? "Most homes pay" : "Each home pays"}
+              label={draft.duesByHome ? `Most ${w.homes} pay` : `Each ${w.home} pays`}
               hint={
                 draft.duesByHome
-                  ? "A range or a home that pays something else is set when you list the homes."
+                  ? `A range or a ${w.home} that pays something else is set when you list the ${w.homes}.`
                   : undefined
               }
               cents={draft.duesCents}
@@ -592,8 +591,8 @@ function WizardQuestions({
         group: "Homes",
         title:
           draft.origin === "builder"
-            ? "Which homes will be in the community?"
-            : "Which homes are in the community?",
+            ? `Which ${w.homes} will be in the community?`
+            : `Which ${w.homes} are in the community?`,
         detail:
           (draft.homeNaming ?? defaultHomeNaming(draft)) === "addresses"
             ? `List each ${w.home} by its address. Owner names and emails can come now or later, and every ${w.home} gets a balance and a vote either way.`
@@ -1095,7 +1094,7 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
 
       <p className="flex items-center gap-2 text-footnote text-fg-muted">
         <MapIcon className="size-3.5 shrink-0" />
-        {pluralHomes(listed + 1)}
+        {pluralHomes(listed + 1, w)}
         {named > 0 ? `, ${named} with an owner listed` : ", owners can come later"}
         {draft.duesCents > 0 ? (
           <>
@@ -1235,7 +1234,7 @@ function RangesStep({ draft, patch }: StepProps) {
             <span>{w.group}</span>
             <span>First</span>
             <span>Last</span>
-            <span className="text-right">Homes</span>
+            <span className="text-right">{w.Home}s</span>
             <span />
           </div>
           {phases.map((phase) => {
@@ -1262,7 +1261,7 @@ function RangesStep({ draft, patch }: StepProps) {
                       onChange={(e) =>
                         editPhase(phase.id, { from: Number.parseInt(e.target.value, 10) })
                       }
-                      aria-label={`${phase.label} first lot`}
+                      aria-label={`${phase.label} first ${w.home}`}
                       className={cn(input, "h-9 tnum")}
                     />
                   </label>
@@ -1277,7 +1276,7 @@ function RangesStep({ draft, patch }: StepProps) {
                       onChange={(e) =>
                         editPhase(phase.id, { to: Number.parseInt(e.target.value, 10) })
                       }
-                      aria-label={`${phase.label} last lot`}
+                      aria-label={`${phase.label} last ${w.home}`}
                       className={cn(input, "h-9 tnum")}
                     />
                   </label>
@@ -1305,10 +1304,10 @@ function RangesStep({ draft, patch }: StepProps) {
                 ) : null}
                 {draft.duesByHome ? (
                   <div className="flex flex-wrap items-center gap-2 px-3.5 pb-2.5">
-                    <span className="text-footnote text-fg-subtle">Each home in this range pays</span>
+                    <span className="text-footnote text-fg-subtle">Each {w.home} in this range pays</span>
                     <div className="w-28">
                       <OwnAmount
-                        label={`Each home in this range pays, ${phase.label}`}
+                        label={`Each ${w.home} in this range pays, ${phase.label}`}
                         value={phase.duesCents}
                         fallback={draft.duesCents}
                         compact
@@ -1504,7 +1503,7 @@ function RangesStep({ draft, patch }: StepProps) {
 
       <p className="flex items-center gap-2 text-footnote text-fg-muted">
         <MapIcon className="size-3.5 shrink-0" />
-        {pluralHomes(unitCount(draft))}
+        {pluralHomes(unitCount(draft), w)}
         {builderSetting
           ? sold > 0
             ? `, ${sold} sold`
@@ -1600,6 +1599,7 @@ function TypeChips({
  */
 function DuesMode({ draft, patch }: StepProps) {
   const types = homeTypesOf(draft);
+  const w = wordingFor(types, draft.origin);
   const mixed = types.length > 1;
   const mode: "same" | "kind" | "home" = draft.duesByHome ? "home" : draft.duesByType ? "kind" : "same";
   function setAmount(t: PropertyType, cents: number) {
@@ -1609,9 +1609,9 @@ function DuesMode({ draft, patch }: StepProps) {
     patch({ duesByType: next, duesCents: next[types[0]] ?? 0 });
   }
   const choices = [
-    { id: "same" as const, label: "Same for every home" },
+    { id: "same" as const, label: `Same for every ${w.home}` },
     ...(mixed ? [{ id: "kind" as const, label: "Different by kind" }] : []),
-    { id: "home" as const, label: "Different by home" },
+    { id: "home" as const, label: `Different by ${w.home}` },
   ];
   function choose(next: "same" | "kind" | "home") {
     if (next === "same") patch({ duesByType: undefined, duesByHome: undefined });
@@ -1629,7 +1629,7 @@ function DuesMode({ draft, patch }: StepProps) {
       <div
         className="inline-flex w-fit flex-wrap gap-1 rounded-xl bg-surface-2 p-1"
         role="radiogroup"
-        aria-label="Do homes pay the same"
+        aria-label={`Do ${w.homes} pay the same`}
       >
         {choices.map((choice) => (
           <button
@@ -1648,7 +1648,7 @@ function DuesMode({ draft, patch }: StepProps) {
         ))}
       </div>
       {mode === "home" ? (
-        <p className="text-footnote text-fg-subtle">For buildings where a larger unit pays more.</p>
+        <p className="text-footnote text-fg-subtle">For buildings where a larger {w.home} pays more.</p>
       ) : null}
       {mode === "kind" ? (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -1941,8 +1941,8 @@ function FounderNumber({
   return (
     <Field
       label={required ? `${w.Home} number` : `${w.Home} number, if you use them`}
-      hint={required ? hint : "Leave it blank if homes go by address. Otherwise, as it appears on your records."}
-      error={required && touched && !draft.founder.unit.trim() ? HOME_NUMBER_MESSAGE : null}
+      hint={required ? hint : `Leave it blank if ${w.homes} go by address. Otherwise, as it appears on your records.`}
+      error={required && touched && !draft.founder.unit.trim() ? `Enter your ${w.home} number` : null}
     >
       <input
         value={draft.founder.unit}
@@ -1964,7 +1964,7 @@ function FounderAddress({
 }: StepProps & { w: Wording; autoFocus?: boolean }) {
   return (
     <Field
-      label={w.fromBuilder ? "Your home address, if it has one" : "Your home address"}
+      label={w.fromBuilder ? `Your ${w.home} address, if it has one` : `Your ${w.home} address`}
       hint={
         w.fromBuilder
           ? "Optional until the county assigns it. Buyers can add theirs when they sign up."
@@ -2012,8 +2012,8 @@ function Field({
   );
 }
 
-function pluralHomes(n: number): string {
-  return `${n} ${n === 1 ? "home" : "homes"}`;
+function pluralHomes(n: number, w: Wording): string {
+  return `${n} ${n === 1 ? w.home : w.homes}`;
 }
 
 function cadenceNoun(draft: CommunityDraft): string {

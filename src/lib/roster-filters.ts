@@ -5,8 +5,8 @@ import type { Home } from "@/lib/types";
  *
  * The count and the list under a chip come from the same predicate, so a chip
  * that says 7 can never open a list of 6. Homes with nobody on record are
- * neither paid up nor on autopay nor missing an email: there is no person to
- * say it of.
+ * neither paid up nor on autopay. They do have no email, though, and a board
+ * looking for who it cannot reach needs them in that list.
  */
 export const HOME_FILTERS = ["all", "paid-up", "past-due", "autopay", "no-email"] as const;
 export type HomeFilter = (typeof HOME_FILTERS)[number];
@@ -32,7 +32,7 @@ export function matchesHomeFilter(o: FilterFields, filter: HomeFilter): boolean 
     case "autopay":
       return o.autopay && !o.placeholder;
     case "no-email":
-      return !o.placeholder && !o.email.trim();
+      return !o.email.trim();
   }
 }
 

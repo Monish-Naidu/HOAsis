@@ -211,7 +211,7 @@ describe("a request opened by the board", () => {
     expect(within(row).queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
   });
 
-  it("keeps a maintenance request Sent after a reply and says it was replied to", async () => {
+  it("keeps a maintenance request unscheduled after a reply and says it was replied to", async () => {
     wrap(<BoardRequests />);
     act(() => {
       seen.state.signIn("acct-arya");
@@ -222,7 +222,7 @@ describe("a request opened by the board", () => {
     });
     expect(seen.state.requests.find((r) => r.id === "req-fix-1")!.status).toBe("submitted");
     const row = document.getElementById("req-req-fix-1")!;
-    expect(within(row).getByText("Sent")).toBeInTheDocument();
+    expect(within(row).getByText("Not scheduled")).toBeInTheDocument();
     expect(within(row).getByText(/^Replied /)).toBeInTheDocument();
     expect(within(row).queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
     expect(within(row).queryByRole("button", { name: /work order/i })).not.toBeInTheDocument();

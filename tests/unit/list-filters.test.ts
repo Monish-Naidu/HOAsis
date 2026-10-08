@@ -20,17 +20,17 @@ describe("homeowner chips", () => {
   ];
 
   it("counts each chip with the same rule that filters the list", () => {
-    expect(homeFilterCounts(homes)).toEqual({ all: 4, "paid-up": 2, "past-due": 1, autopay: 1, "no-email": 1 });
+    expect(homeFilterCounts(homes)).toEqual({ all: 4, "paid-up": 2, "past-due": 1, autopay: 1, "no-email": 2 });
     for (const f of ["paid-up", "past-due", "autopay", "no-email"] as const) {
       expect(homes.filter((o) => matchesHomeFilter(o, f))).toHaveLength(homeFilterCounts(homes)[f]);
     }
   });
 
-  it("does not call a home with nobody on record paid up, on autopay or missing an email", () => {
+  it("does not call a home with nobody on record paid up or on autopay, but it has no email", () => {
     const vacant = home({ placeholder: true, email: "", autopay: true });
     expect(matchesHomeFilter(vacant, "paid-up")).toBe(false);
     expect(matchesHomeFilter(vacant, "autopay")).toBe(false);
-    expect(matchesHomeFilter(vacant, "no-email")).toBe(false);
+    expect(matchesHomeFilter(vacant, "no-email")).toBe(true);
   });
 
   it("treats a blank email as none", () => {

@@ -86,7 +86,7 @@ export function DuesSettings() {
   function save() {
     if (!valid) return;
     updateAssociation({ duesCents: nextBase, duesByType: nextByType });
-    notify(`Saved. The next bill is ${money(projected, { cents: false })} across every home.`);
+    notify(`Saved. The next bill is ${money(projected, { cents: projected % 100 !== 0 })} across every home.`);
   }
 
   return (
@@ -158,7 +158,7 @@ export function DuesSettings() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-footnote text-fg-muted">
-            <span className="tnum font-semibold text-fg">{money(projected, { cents: false })}</span>{" "}
+            <span className="tnum font-semibold text-fg">{money(projected, { cents: projected % 100 !== 0 })}</span>{" "}
             per {cadence} across {community.homes.length} homes
           </p>
           <Button size="sm" disabled={!valid || !changed} onClick={save}>

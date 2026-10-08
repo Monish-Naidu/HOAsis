@@ -9,6 +9,7 @@ import {
   Landmark,
   ListChecks,
   Megaphone,
+  MessageSquare,
   Percent,
   Receipt,
   ShieldAlert,
@@ -37,7 +38,7 @@ import {
 } from "@/lib/metrics";
 import { collectionsLadder, policyFor } from "@/lib/collections";
 import { SectionLink } from "@/components/app/finance-ui";
-import { useAppState, useReconciliation } from "@/lib/app-state";
+import { useAppState, useReconciliation, useUnreadThreadCount } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { boardModuleFor, mayOpen } from "@/lib/board-routes";
 import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
@@ -164,6 +165,8 @@ function ThisMonth() {
 function NeedsYou() {
   const { community, requests } = useAppState();
   const recon = useReconciliation();
+  // The same count as the Messages badge in the nav.
+  const waitingThreads = useUnreadThreadCount();
   const vendors = vendorDecisions(community);
   const openRequests = requests.filter(
     (r) => !["approved", "denied", "closed"].includes(r.status),
@@ -232,6 +235,13 @@ function NeedsYou() {
       label: pluralize(openRequests.length, "request") + " to answer",
       href: "/board/requests",
       icon: ClipboardCheck,
+      tint: "blue",
+    },
+    {
+      count: waitingThreads,
+      label: pluralize(waitingThreads, "conversation") + " waiting on a reply",
+      href: "/board/communications",
+      icon: MessageSquare,
       tint: "blue",
     },
     {

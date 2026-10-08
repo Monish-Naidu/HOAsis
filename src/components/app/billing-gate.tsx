@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CreditCard } from "lucide-react";
 import { Card } from "@/components/ui/primitives";
-import { boardLocked } from "@/lib/billing";
+import { boardLocked, lockWords } from "@/lib/billing";
 import { useAppState } from "@/lib/app-state";
 import { homeCount } from "@/lib/metrics";
 import { monthlyFor } from "@/lib/pricing";
-import { formatDate, money } from "@/lib/utils";
+import { money } from "@/lib/utils";
 import { usePhase } from "./trial-banner";
 
 /**
@@ -32,7 +32,7 @@ export function BillingGate({ children }: { children: React.ReactNode }) {
   }
 
   const homes = homeCount(community);
-  const endsOn = phase.endsOn;
+  const lock = lockWords(phase);
 
   return (
     <Card className="mx-auto max-w-xl">
@@ -41,11 +41,10 @@ export function BillingGate({ children }: { children: React.ReactNode }) {
           <CreditCard className="size-5" />
         </span>
         <h1 className="mt-4 text-title2 font-semibold tracking-tight text-fg">
-          The free 90 days ended {formatDate(endsOn, "long")}
+          {lock?.title}
         </h1>
         <p className="mt-2 max-w-md text-body leading-relaxed text-fg-muted">
-          Everything is still here and residents can still pay. Add a card to open the board&apos;s
-          screens again. It is {money(monthlyFor(homes), { cents: false })} a month for {homes}{" "}
+          {lock?.body} Everything is still here. It is {money(monthlyFor(homes), { cents: false })} a month for {homes}{" "}
           {homes === 1 ? "home" : "homes"}, and you can cancel whenever.
         </p>
         <Link

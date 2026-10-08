@@ -892,7 +892,10 @@ export function HomeownersScreen() {
                         <span className="block truncate text-footnote text-fg-muted">
                           {homeLabel(community, o.unit)}
                           {mixed && o.homeType ? ` · ${HOME_TYPE_LABEL[o.homeType].short}` : ""}
-                          {o.address && o.address !== o.unit && o.address !== homeLabel(community, o.unit)
+                          {o.address &&
+                          o.address !== o.unit &&
+                          o.address !== homeLabel(community, o.unit) &&
+                          !o.address.endsWith(`, ${homeLabel(community, o.unit)}`)
                             ? ` · ${o.address}`
                             : ""}
                         </span>

@@ -48,6 +48,16 @@ export const NOTICE_LABEL: Record<NoticeKind, string> = {
   request: "Emailing the update",
 };
 
+/** Where the thing still lives when its email did not go. */
+const SAVED_WHERE: Record<NoticeKind, string> = {
+  announcement: "The announcement is posted in Messages",
+  meeting: "The meeting is on Meetings",
+  ballot: "The vote is on Voting",
+  letter: "The letter is saved on the home",
+  message: "The message is saved in Messages",
+  request: "The update is saved on the request",
+};
+
 /**
  * The server sends for under a minute at a time and answers with how many
  * it did not reach. Asked again it carries on from there, so a long roster
@@ -175,7 +185,7 @@ export async function emailNotice(
   const unsent = failed + remaining;
   if (unsent > 0) {
     reportRemoteError(
-      `${label}: ${unsent} ${unsent === 1 ? "email was" : "emails were"} not sent. It is saved here`,
+      `${label}: ${unsent} ${unsent === 1 ? "email was" : "emails were"} not sent. ${SAVED_WHERE[notice.kind]}.`,
     );
   }
   if (sent === 0 && already > 0) {

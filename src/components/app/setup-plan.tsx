@@ -639,7 +639,8 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
                 href={task.href || `/start/plan?task=${task.key}`}
                 className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle hover:text-fg"
               >
-                Change
+                {/* The first bill is a fact to read, not a setting to edit. */}
+                {task.key === "first-bill" ? "Look" : "Change"}
               </Link>
             ) : (
               <Link

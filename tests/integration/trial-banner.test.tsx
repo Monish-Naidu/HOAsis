@@ -13,6 +13,8 @@ vi.mock("@/lib/app-state", () => ({
 const { TrialBanner } = await import("@/components/app/trial-banner");
 const { BoardPausedNote } = await import("@/components/app/board-paused-note");
 
+const BODY = "The board's screens are read-only until a card is added; residents can still pay.";
+
 const set = (over: Record<string, unknown>) => {
   association = {
     subscriptionStatus: "active", trialEndsOn: "2026-01-01", billing: { subscriptionId: "sub_1" }, ...over,
@@ -31,17 +33,15 @@ describe("the board banner", () => {
   it("says read-only once the two weeks are up", () => {
     set({ subscriptionStatus: "past_due", pastDueSince: "2026-10-06" });
     render(<TrialBanner />);
-    expect(screen.getByText("Read-only until the subscription is paid.")).toBeInTheDocument();
+    expect(screen.getByText("The last payment failed")).toBeInTheDocument();
+    expect(screen.getByText(BODY)).toBeInTheDocument();
   });
 
   it("says what a cancelled subscription means", () => {
     set({ subscriptionStatus: "canceled" });
     render(<TrialBanner />);
-    expect(
-      screen.getByText(
-        "The subscription was cancelled. Owners can still see their statements; the board side is read-only until it is restarted.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("The subscription ended")).toBeInTheDocument();
+    expect(screen.getByText(BODY)).toBeInTheDocument();
   });
 
   it("is silent for a paid association", () => {
@@ -52,7 +52,7 @@ describe("the board banner", () => {
 });
 
 describe("the owner's Home line", () => {
-  const line = "The board's subscription is not paid, so the board side is paused. Your statement is still here.";
+  const line = "The board's subscription ended, so the board's side is paused. You can still pay and read everything here.";
 
   it("shows when the board is locked, cancelled or past the two weeks", () => {
     set({ subscriptionStatus: "canceled" });

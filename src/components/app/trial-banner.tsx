@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, CalendarClock, CreditCard } from "lucide-react";
 import { ButtonLink, Callout } from "@/components/ui/primitives";
-import { billingPhase, type BillingPhase } from "@/lib/billing";
+import { billingPhase, lockWords, type BillingPhase } from "@/lib/billing";
 import { useAppState } from "@/lib/app-state";
 import { homeCount } from "@/lib/metrics";
 import { monthlyFor } from "@/lib/pricing";
@@ -82,17 +82,20 @@ export function TrialBanner() {
     );
   }
 
+  const lock = lockWords(phase);
+
   if (phase.phase === "ended") {
     return (
       <Callout
         tone="danger"
         className="mb-5"
         icon={<CreditCard className="size-4" />}
-        title={`Your free 90 days ended ${formatDate(phase.endsOn, "long")}`}
+        title={lock ? lock.title : `The free 90 days ended ${formatDate(phase.endsOn, "long")}`}
         action={action}
       >
-        Residents can still pay and nothing is lost. Add a card to keep the board&apos;s screens
-        open; it is {price}.
+        {lock
+          ? lock.body
+          : `Residents can still pay and nothing is lost. Add a card to keep the board's screens open; it is ${price}.`}
       </Callout>
     );
   }
@@ -104,7 +107,7 @@ export function TrialBanner() {
         tone="danger"
         className="mb-5"
         icon={<CreditCard className="size-4" />}
-        title={phase.locked ? "Read-only until the subscription is paid." : "The last payment for Your HOAsis did not go through"}
+        title={lock ? lock.title : "The last payment failed"}
         action={
           <ButtonLink href="/board/settings#billing" variant="secondary" size="sm">
             Update the card
@@ -112,8 +115,8 @@ export function TrialBanner() {
           </ButtonLink>
         }
       >
-        {phase.locked
-          ? `${failed}Residents can still see and pay their statements.`
+        {lock
+          ? lock.body
           : `${failed}Update it within ${phase.daysLeft} ${phase.daysLeft === 1 ? "day" : "days"} or the board side becomes read-only.`}
       </Callout>
     );
@@ -125,7 +128,7 @@ export function TrialBanner() {
         tone="danger"
         className="mb-5"
         icon={<CreditCard className="size-4" />}
-        title="The subscription was cancelled"
+        title={lock?.title}
         action={
           <ButtonLink href="/board/settings#billing" variant="secondary" size="sm">
             Restart it
@@ -133,8 +136,7 @@ export function TrialBanner() {
           </ButtonLink>
         }
       >
-        The subscription was cancelled. Owners can still see their statements; the board side is
-        read-only until it is restarted.
+        {lock?.body}
       </Callout>
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { boardLocked } from "@/lib/billing";
+import { OWNER_LOCK_NOTE, boardLocked } from "@/lib/billing";
 import { usePhase } from "./trial-banner";
 
 /**
@@ -15,8 +15,6 @@ export function BoardPausedNote() {
   const phase = usePhase();
   if (!phase || !boardLocked(phase)) return null;
   return (
-    <p className="text-footnote text-fg-muted">
-      The board&apos;s subscription is not paid, so the board side is paused. Your statement is still here.
-    </p>
+    <p className="text-footnote text-fg-muted">{OWNER_LOCK_NOTE}</p>
   );
 }

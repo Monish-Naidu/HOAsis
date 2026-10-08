@@ -17,9 +17,11 @@ import {
   compareYears,
   insuranceExposure,
   lateFeesOwed,
+  firstMoneyOn,
   ledgerYears,
   monthName,
   monthlyFlowsBetween,
+  periodRange,
   rangeWords,
   type PeriodPreset,
   operatingRunway,
@@ -71,6 +73,7 @@ export function OverviewScreen() {
   const calendarYear = window.from.slice(5) === "01-01" && window.from.slice(0, 4) === window.to.slice(0, 4);
   const year = rolling ? (years[0] ?? Number(period.asOf.slice(0, 4))) : Number(window.to.slice(0, 4));
   const runway = operatingRunway(community, period.asOf);
+  const earliest = firstMoneyOn(community);
   const hasFlows = flows.some((m) => m.inCents > 0 || m.outCents > 0);
 
   const lastYear = years.find((y) => y < year);
@@ -121,7 +124,7 @@ export function OverviewScreen() {
                 // has been matched to anything; the figure is the books' own.
                 isRemote
                 ? `${primary.institution}${primary.mask ? ` ••${primary.mask}` : ""} · from the books`
-                : `${primary.institution} ••${primary.mask} · confirmed through ${formatDate(primary.reconciledThroughDate)}`
+                : `${primary.institution}${primary.mask ? ` ••${primary.mask}` : ""} · confirmed through ${formatDate(primary.reconciledThroughDate)}`
               : "No bank account connected yet"
           }
         />
@@ -178,8 +181,7 @@ export function OverviewScreen() {
       ) : null}
 
       {/* The charts, one period control for both. */}
-      {hasFlows || spending.rows.length > 0 ? (
-        <section className="mt-6">
+      <section className="mt-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-headline font-semibold tracking-[-0.015em] text-fg">Activity</h2>
             <PeriodControl
@@ -188,9 +190,29 @@ export function OverviewScreen() {
               presets={OVERVIEW_PERIODS}
               asOf={period.asOf}
               fyMonth={period.fyMonth}
+              earliest={earliest}
               className="w-full sm:w-auto"
             />
           </div>
+          {!hasFlows && spending.rows.length === 0 ? (
+            <p className="text-body text-fg-muted">
+              Nothing from {spanLabel}.{" "}
+              {window.preset !== "this-year" ? (
+                <button
+                  type="button"
+                  className="font-semibold text-accent hover:underline"
+                  onClick={() =>
+                    period.set({
+                      preset: "this-year",
+                      ...periodRange("this-year", period.asOf, period.fyMonth),
+                    })
+                  }
+                >
+                  Back to this year
+                </button>
+              ) : null}
+            </p>
+          ) : null}
           <div className="grid gap-4 xl:grid-cols-5">
             {hasFlows ? (
               <Card className={cn("flex flex-col", spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
@@ -232,7 +254,6 @@ export function OverviewScreen() {
             ) : null}
           </div>
         </section>
-      ) : null}
 
       {/* The decisions, while there are any. Confirming here keeps the
           review out of the way of the books, one line per transaction. */}

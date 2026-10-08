@@ -48,6 +48,8 @@ const STATUS_LABEL: Record<StatusFilter, string> = {
  * on the first of the month that was an empty screen, and the lines a
  * treasurer is reconciling are usually the last few weeks' anyway.
  */
+const DIRECTIONS: readonly ("all" | "in" | "out")[] = ["all", "in", "out"];
+
 const PERIODS: readonly PeriodPreset[] = ["last-30-days", "this-month", "last-month", "this-year", "last-year", "last-12-months", "custom"];
 const DEFAULT_PERIOD: PeriodPreset = "last-30-days";
 
@@ -62,9 +64,9 @@ export function TransactionsScreen() {
   const { notify } = useToast();
   const params = useSearchParams();
   
-  // Period, dates, status, category and the search text are in the URL, so a
-  // view can be bookmarked or sent to another officer. Account and direction
-  // are quick narrowing and stay on the page.
+  // Period, dates, status, category, direction and the search text are in the
+  // URL, so a view can be bookmarked or sent to another officer. Account is
+  // quick narrowing and stays on the page.
   const pathname = usePathname();
   const clearUrl = useUrlClear();
   const period = usePeriod(PERIODS, DEFAULT_PERIOD);
@@ -74,7 +76,7 @@ export function TransactionsScreen() {
   const [categoryRaw, setCategory] = useUrlFilter<string>("category", null, "all");
   const [search, setSearch] = useUrlFilter<string>("q", null, "");
   const [accountId, setAccountId] = useState("all");
-  const [direction, setDirection] = useState<"all" | "in" | "out">("all");
+  const [direction, setDirection] = useUrlFilter<"all" | "in" | "out">("direction", DIRECTIONS, "all");
   const [open, setOpen] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
 
@@ -341,9 +343,8 @@ export function TransactionsScreen() {
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    clearUrl(["status", "category", "q"]);
+                    clearUrl(["status", "category", "q", "direction"]);
                     setAccountId("all");
-                    setDirection("all");
                   }}
                 >
                   Clear filters

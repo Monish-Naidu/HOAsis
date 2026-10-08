@@ -17,6 +17,32 @@ export function accountsWithoutOpening(community: Community): BankAccount[] {
 }
 
 /**
+ * The folded summary: every account with a starting balance, by kind, so the
+ * reserve is not left out of "$24,000 operating". One "as of" when the dates
+ * agree, one per part when they do not.
+ */
+export function startingBalancesLine(community: Community, stillToSet: number): string {
+  const opening = (id: string) =>
+    community.ledger.find((e) => e.accountId === id && e.category === "Opening balance");
+  const saved = community.bankAccounts.flatMap((a) => {
+    const line = opening(a.id);
+    return line ? [{ kind: a.kind === "operating" ? "operating" : "reserve", cents: line.amountCents, date: line.date }] : [];
+  });
+  if (saved.length === 0) return "Starting balances: not set yet";
+  const parts = (["operating", "reserve"] as const).flatMap((kind) => {
+    const of = saved.filter((r) => r.kind === kind);
+    if (of.length === 0) return [];
+    return [{ kind, cents: of.reduce((t, r) => t + r.cents, 0), date: of.map((r) => r.date).sort()[0] }];
+  });
+  const sameDay = parts.every((p) => p.date === parts[0].date);
+  const body = parts
+    .map((p) => `${money(p.cents, { cents: false })} ${p.kind}${sameDay ? "" : ` as of ${formatDate(p.date)}`}`)
+    .join(", ");
+  const tail = sameDay ? ` as of ${formatDate(parts[0].date)}` : "";
+  return `Starting balances: ${body}${tail}${stillToSet ? `, ${pluralize(stillToSet, "account")} still to set` : ""}`;
+}
+
+/**
  * Day one in the bank. A board that switches in has money already, and the
  * Operating tile reads $0 until the books are told. One row per account:
  * a form for those with no opening line yet, the saved figure for the rest.
@@ -34,16 +60,7 @@ export function OpeningBalances() {
   const saved = community.bankAccounts.filter((a) => opening(a.id));
   if (missing.length === 0 && saved.length === 0) return null;
 
-  const operating = saved.filter((a) => a.kind === "operating");
-  const shown = operating.length ? operating : saved;
-  const total = shown.reduce((t, a) => t + (opening(a.id)?.amountCents ?? 0), 0);
-  const asOf = opening(shown[0]?.id ?? "")?.date;
-  const summary =
-    saved.length === 0
-      ? "Starting balances: not set yet"
-      : `Starting balances: ${money(total, { cents: false })} ${operating.length ? "operating" : "in the bank"} as of ${formatDate(asOf ?? "")}${
-          missing.length ? `, ${pluralize(missing.length, "account")} still to set` : ""
-        }`;
+  const summary = startingBalancesLine(community, missing.length);
 
   return (
     <details open={saved.length === 0} className="group mt-6 rounded-card border border-border bg-surface shadow-card">

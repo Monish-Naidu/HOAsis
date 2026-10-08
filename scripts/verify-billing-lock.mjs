@@ -83,6 +83,20 @@ try {
       reference: `REQ-LOCK-${owner}`, kind: "maintenance", title: `Gutter ${label}`,
     });
     check(`${label}: the resident can still file a request`, !requestError, requestError?.message ?? "");
+
+    // 0110: settings, the board's request changes and its thread edits wait
+    // too; the owner's own request and the owner's own thread do not.
+    const { data: filed } = await admin.from("requests").select("id").eq("reference", `REQ-LOCK-${owner}`).single();
+    // An owner has no update policy on requests (filing is the owner's
+    // only write), so the owner's path through the lock is the insert above.
+    const { data: boardEdit, error: boardEditError } = await president.client.from("requests").update({ status: "in-review" }).eq("id", filed.id).select("id");
+    check(`${label}: the president's status change is refused`, boardEditError?.code === "42501" || (boardEdit ?? []).length === 0, boardEditError?.message ?? String((boardEdit ?? []).length));
+    const { data: settingsEdit, error: settingsError } = await president.client.from("associations").update({ contact_email: "board@example.org" }).eq("id", associationId).select("id");
+    check(`${label}: a settings change is refused`, settingsError?.code === "42501" || (settingsEdit ?? []).length === 0, settingsError?.message ?? String((settingsEdit ?? []).length));
+    const { data: threadEdit, error: threadEditError } = await president.client.from("threads").update({ tag: "Billing" }).eq("id", threadId).select("id");
+    check(`${label}: the president's thread edit is refused`, threadEditError?.code === "42501" || (threadEdit ?? []).length === 0, threadEditError?.message ?? String((threadEdit ?? []).length));
+    const { error: replyRefused } = await president.client.rpc("reply_as_board", { p_thread_id: threadId, p_body: "We are here" });
+    check(`${label}: the president's reply is refused`, replyRefused?.code === "42501", `${replyRefused?.code} ${replyRefused?.message ?? "no error"}`);
   }
 
   await setBilling({ subscription_status: "past_due", past_due_since: noon(-15) });
@@ -94,6 +108,8 @@ try {
   await setBilling({ subscription_status: "active", past_due_since: null });
   const { error: backError } = await presidentAddsVendor();
   check("active again: the president's insert works", !backError, backError?.message ?? "");
+  const { data: settingsBack, error: settingsBackError } = await president.client.from("associations").update({ contact_email: "board@example.org" }).eq("id", associationId).select("id");
+  check("active again: a settings change works", !settingsBackError && (settingsBack ?? []).length === 1, settingsBackError?.message ?? String((settingsBack ?? []).length));
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {

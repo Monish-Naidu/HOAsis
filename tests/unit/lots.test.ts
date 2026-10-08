@@ -709,3 +709,49 @@ describe("what the importer says it did", () => {
     expect(merged.patch.households).toHaveLength(2);
   });
 });
+
+describe("the homes step waits for a range that cannot be created", () => {
+  const base = (phases: LotPhase[]): CommunityDraft => ({
+    ...emptyDraft(),
+    homeNaming: "numbers",
+    duesByHome: true,
+    duesCents: 41_000,
+    phases,
+  });
+
+  it("holds Continue while two groups share numbers", () => {
+    const draft = base([
+      phase({ id: "g1", label: "Group 1", from: 101, to: 112, duesCents: 41_000 }),
+      phase({ id: "g2", label: "Group 2", from: 110, to: 124, duesCents: 41_000 }),
+    ]);
+    expect(homesAnswered(draft)).toBe(false);
+    expect(homesAnswered(base([phase({ id: "g2", from: 113, to: 124, duesCents: 41_000 }), phase({ id: "g1", from: 101, to: 112 })]))).toBe(true);
+  });
+
+  it("holds Continue while a group pays zero, instead of swapping in the usual amount", () => {
+    const draft = base([
+      phase({ id: "g1", label: "Group 1", from: 101, to: 112, duesCents: 0 }),
+      phase({ id: "g2", label: "Group 2", from: 113, to: 124 }),
+    ]);
+    expect(homesAnswered(draft)).toBe(false);
+    // Blank means the usual amount and is fine.
+    expect(homesAnswered(base([phase({ id: "g1", from: 101, to: 112 })]))).toBe(true);
+  });
+});
+
+describe("a home's address from a range", () => {
+  it("puts the word on once when the range already printed it", () => {
+    const draft: CommunityDraft = {
+      ...emptyDraft(),
+      origin: "existing",
+      homeTypes: ["condos"],
+      homeNaming: "numbers",
+      lotPrefix: "Unit ",
+      phases: [phase({ from: 101, to: 103 })],
+      founder: { ...emptyDraft().founder, name: "Pat", email: "p@x.co", unit: "Unit 101" },
+      households: ["Unit 102", "Unit 103"].map((unit) => ({ name: "", email: "", unit })),
+    };
+    const homes = buildCommunity(draft, "2026-08-26").homes;
+    expect(homes.map((h) => h.address)).toEqual(["Unit 101", "Unit 102", "Unit 103"]);
+  });
+});

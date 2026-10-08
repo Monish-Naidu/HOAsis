@@ -51,7 +51,7 @@ type Answers = {
   name: string;
   state: string;
   dues: string;
-  property: "Detached homes" | "Townhomes" | "Condominiums";
+  property: "Detached homes" | "Townhomes" | "Condos";
   origin:
     | "We are building the community"
     | "We are taking over from the builder"
@@ -99,7 +99,7 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await step(page);
   await page.getByRole("button", { name: new RegExp(a.property) }).click();
   await step(page);
-  await page.getByLabel(/Each home pays/i).fill(a.dues);
+  await page.getByLabel(/Each (home|unit|lot) pays/i).fill(a.dues);
   await step(page);
   for (const space of a.spaces ?? []) {
     await page.getByRole("button", { name: new RegExp(`^${space}$`) }).click();
@@ -109,7 +109,7 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   // The homes: which is yours, and the plat.
   await page.getByLabel("Your name").fill("Pat Founder");
   await page.getByLabel("Your email").fill("pat@example.com");
-  await page.getByLabel("Your home address").fill("1 Founder Way");
+  await page.getByLabel(/^Your (home|unit|lot) address/).fill("1 Founder Way");
   // Where homes go by number the founder's number is required; for detached
   // homes by address it is optional. Filled either way.
   await page.getByLabel(/^(Lot|Home|Unit) number/).fill("1");
@@ -118,9 +118,9 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   // groups. At least one range is required, so a test that names none gets
   // a small default.
   const lots = a.lots ?? { from: 1, to: 3 };
-  if ((await page.getByLabel(/^(Phase|Group) 1 first lot$/).count()) > 0) {
-    await page.getByLabel(/^(Phase|Group) 1 first lot$/).fill(String(lots.from));
-    await page.getByLabel(/^(Phase|Group) 1 last lot$/).fill(String(lots.to));
+  if ((await page.getByLabel(/^(Phase|Group) 1 first (home|unit|lot)$/).count()) > 0) {
+    await page.getByLabel(/^(Phase|Group) 1 first (home|unit|lot)$/).fill(String(lots.from));
+    await page.getByLabel(/^(Phase|Group) 1 last (home|unit|lot)$/).fill(String(lots.to));
   } else {
     // Owners who already run detached homes list them by address, and the
     // list may be empty: the founder's own home is already one.
@@ -157,7 +157,7 @@ test.describe("the three questions", () => {
     await page.getByRole("button", { name: /Detached homes/ }).click();
     await expect(go, "the kind of homes was answered and still blocked").toBeEnabled();
     await step(page);
-    await page.getByLabel(/Each home pays/i).fill("120");
+    await page.getByLabel(/Each (home|unit|lot) pays/i).fill("120");
     await step(page);
 
     // Shared spaces are legitimately empty, and say so.
@@ -253,7 +253,7 @@ test.describe("the plan is built from the answers", () => {
       name: "Harbor Condominiums",
       state: "Washington",
       dues: "410",
-      property: "Condominiums",
+      property: "Condos",
       origin: "We are taking over from the builder",
       spaces: ["Pool", "Gym"],
     });
@@ -422,7 +422,7 @@ test.describe("the first weeks of a community still being built", () => {
       name: "Handover HOA",
       state: "Washington",
       dues: "300",
-      property: "Condominiums",
+      property: "Condos",
       origin: "We are taking over from the builder",
     });
 
@@ -447,7 +447,7 @@ test.describe("the first weeks of a community still being built", () => {
     ).toBeLessThan(health.text.indexOf("Get paid"));
     // A turnover has balances on the day control passes, so the list asks.
     expect(health.text, "a turnover is not asked what each home owes").toContain(
-      "Enter starting balances",
+      "Enter what each home owes",
     );
     // And it is not given the builder's group.
     expect(health.text).not.toContain("Before the bank will open an account");
@@ -517,7 +517,7 @@ test.describe("the first weeks of a community still being built", () => {
       "the bank paperwork should come before Get paid",
     ).toBeLessThan(health.text.indexOf("Get paid"));
     // Nothing to carry in for a builder, and no handover steps.
-    expect(health.text).not.toContain("Enter starting balances");
+    expect(health.text).not.toContain("Enter what each home owes");
     expect(health.text).not.toContain("Before you sign the handover");
   });
 
@@ -556,7 +556,7 @@ test.describe("an association that already runs itself", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for an established association");
     expect(health.text, "the opening balances step is missing").toContain(
-      "Enter starting balances",
+      "Enter what each home owes",
     );
     expect(health.text, "an established association was given the builder's paperwork").not.toContain(
       "Before the bank will open an account",
@@ -585,7 +585,7 @@ test.describe("an association that already runs itself", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a fresh association");
     expect(health.text).toContain("Get an EIN");
-    expect(health.text).toContain("Enter starting balances");
+    expect(health.text).toContain("Enter what each home owes");
   });
 
   test("can actually set those balances, and they reach the statement", async ({ page }) => {
@@ -628,7 +628,7 @@ test.describe("what kind of homes changes the plan", () => {
       name: "Tower Condominiums",
       state: "Washington",
       dues: "420",
-      property: "Condominiums",
+      property: "Condos",
       origin: "We are building the community",
     });
     await page.goto("/board/setup");
@@ -702,9 +702,9 @@ test.describe("a community with more than one kind of home", () => {
     await page.getByRole("button", { name: /We are building the community/ }).click();
     await step(page);
     await page.getByRole("button", { name: /Townhomes/ }).click();
-    await page.getByRole("button", { name: /Condominiums/ }).click();
+    await page.getByRole("button", { name: /Condos/ }).click();
     await expect(page.getByRole("button", { name: /Townhomes/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: /Condominiums/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /Condos/ })).toHaveAttribute("aria-pressed", "true");
     await step(page);
 
     // Dues by kind.
@@ -720,10 +720,10 @@ test.describe("a community with more than one kind of home", () => {
     await step(page);
 
     // Two ranges: townhomes 1 to 20, a condo building 21 to 40.
-    await page.getByLabel(/^Phase 1 first lot$/).fill("1");
-    await page.getByLabel(/^Phase 1 last lot$/).fill("20");
+    await page.getByLabel(/^Phase 1 first (home|unit|lot)$/).fill("1");
+    await page.getByLabel(/^Phase 1 last (home|unit|lot)$/).fill("20");
     await page.getByRole("button", { name: /Add another phase/ }).click();
-    await page.getByLabel(/^Phase 2 last lot$/).fill("40");
+    await page.getByLabel(/^Phase 2 last (home|unit|lot)$/).fill("40");
     // A new range starts as the kind nobody has used yet.
     await expect(
       page.getByRole("radiogroup", { name: "Kind of home in Phase 2" }).getByRole("radio", { name: "Condos" }),
@@ -803,7 +803,7 @@ test.describe("get started and signing up are the same flow", () => {
     await step(page);
     await page.getByRole("button", { name: /Detached homes/ }).click();
     await step(page);
-    await page.getByLabel(/Each home pays/i).fill("120");
+    await page.getByLabel(/Each (home|unit|lot) pays/i).fill("120");
     await step(page);
     await step(page); // nothing shared
     await expect(page.getByLabel("Your name"), "the name was not carried forward").toHaveValue(

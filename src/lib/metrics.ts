@@ -2,7 +2,7 @@ import type { Community } from "@/lib/data/community";
 import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
-import { addDays, daysBetween, daysFromToday, money, ordinal, pluralize } from "@/lib/utils";
+import { addDays, daysBetween, daysFromToday, formatDate, money, ordinal, pluralize } from "@/lib/utils";
 import { policyFor } from "@/lib/collections";
 import { totalDues } from "@/lib/home-types";
 import { isDuesLine, isPaymentReversal } from "@/lib/statement";
@@ -43,23 +43,23 @@ export function cashPosition(c: Community) {
 /** Who is behind on dues and by how much, from the owners' balances and days past due. */
 export function delinquency(c: Community) {
   const past = c.homes.filter((o) => o.daysPastDue > 0);
-  // A home with nobody on record is not a household that is paying on time.
-  // It was counted as one, so a new build with forty unsold lots read as
-  // ninety percent current before anybody had paid anything.
-  const households = c.homes.filter((o) => !o.placeholder).length;
+  // Every home on the register, as the aging table counts them. A home with
+  // nothing past due is current, including one that has not been billed yet,
+  // so a new association with no bills reads 24 of 24 and not "1 of 1".
+  const households = c.homes.length;
   const billed = households || 1;
   return {
     past,
     households,
-    current: households - past.filter((o) => !o.placeholder).length,
+    current: households - past.length,
     totalCents: past.reduce((sum, o) => sum + o.balanceCents, 0),
     byBucket: {
       grace: past.filter((o) => o.standing === "grace"),
       late: past.filter((o) => o.standing === "late"),
       collections: past.filter((o) => o.standing === "collections"),
     },
-    collectionRate: (households - past.filter((o) => !o.placeholder).length) / billed,
-    autopayRate: c.homes.filter((o) => o.autopay && !o.placeholder).length / billed,
+    collectionRate: (households - past.length) / billed,
+    autopayRate: c.homes.filter((o) => o.autopay).length / billed,
   };
 }
 
@@ -215,6 +215,25 @@ function isPaymentReturn(e: { category: string; amountCents: number; description
   // description and stays as it was; the server's sums do not split these
   // out, which is only a gap for a reversal older than the loaded months.
   return e.description !== undefined && /^(payment reversed|refund)\b/i.test(e.description);
+}
+
+/**
+ * The date of the first money row the books hold, or null with none. A real
+ * association's server says so even when the early lines are not loaded; the
+ * demo reads it off the ledger.
+ */
+export function firstMoneyOn(c: Community): string | null {
+  if (c.history?.ledgerFrom) return c.history.ledgerFrom;
+  let first: string | null = null;
+  for (const e of ledgerFlows(c)) if (first === null || e.date < first) first = e.date;
+  return first;
+}
+
+/** Whether a string is a real calendar date written `YYYY-MM-DD`. */
+export function isIsoDate(s: string | null): s is string {
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T12:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
 }
 
 /** The calendar years the ledger touches, newest first, for the chart filter. */
@@ -1066,8 +1085,7 @@ export function filterLedger(ledger: Community["ledger"], f: LedgerFilter) {
     if (f.accountId && e.accountId !== f.accountId) return false;
     if (f.category && e.category !== f.category) return false;
     if (f.status && e.status !== f.status) return false;
-    if (f.direction === "in" && e.amountCents < 0) return false;
-    if (f.direction === "out" && e.amountCents >= 0) return false;
+    if (f.direction && ledgerSide(e) !== f.direction) return false;
     // The amount as a person would type it, so "285" and "285.00" both find
     // the line. Search from the top bar lands here with one.
     if (
@@ -1079,6 +1097,19 @@ export function filterLedger(ledger: Community["ledger"], f: LedgerFilter) {
       return false;
     return true;
   });
+}
+
+/**
+ * Which headline a line is counted in: "in" for Money in, "out" for Money
+ * out, null for a line neither counts. The one rule behind the figures and the
+ * list that opens when a figure is pressed, so the two cannot disagree: a held
+ * line, a transfer between the association's own accounts and a starting
+ * balance are in neither, and a returned payment nets against money in.
+ */
+export function ledgerSide(e: Community["ledger"][number]): "in" | "out" | null {
+  if (e.status === "needs-review") return null;
+  if (e.category === "Reserve transfer" || e.category === "Opening balance") return null;
+  return e.amountCents > 0 || isPaymentReturn(e) ? "in" : e.amountCents < 0 ? "out" : null;
 }
 
 /**
@@ -1099,14 +1130,10 @@ export function filterLedger(ledger: Community["ledger"], f: LedgerFilter) {
  */
 export function ledgerTotals(rows: Community["ledger"]) {
   const counted = rows.filter((e) => e.status !== "needs-review");
-  // A starting balance is money the association already had, not money in.
-  const flows = counted.filter(
-    (e) => e.category !== "Reserve transfer" && e.category !== "Opening balance",
-  );
   // A reversed or refunded payment nets against money in, as monthlyFlows has
   // it, so this page and the overview read one figure.
-  const inCents = flows.reduce((t, e) => t + (e.amountCents > 0 || isPaymentReturn(e) ? e.amountCents : 0), 0);
-  const outCents = flows.reduce((t, e) => t + (e.amountCents < 0 && !isPaymentReturn(e) ? -e.amountCents : 0), 0);
+  const inCents = counted.reduce((t, e) => t + (ledgerSide(e) === "in" ? e.amountCents : 0), 0);
+  const outCents = counted.reduce((t, e) => t + (ledgerSide(e) === "out" ? -e.amountCents : 0), 0);
   const running = new Map<string, number>();
   let sum = 0;
   for (let i = rows.length - 1; i >= 0; i--) {
@@ -1716,6 +1743,15 @@ export function meetingStatus(m: Pick<Community["meetings"][number], "rsvps" | "
   };
 }
 
+/** Whether any charge has ever been put on a statement, here or summed by the server. */
+function anyChargeIssued(c: Community): boolean {
+  return (
+    Boolean(c.recentDuesBill) ||
+    Object.values(c.homeCharges ?? {}).some((lines) => lines.some((l) => l.kind === "charge")) ||
+    (c.history?.statementMonths ?? []).some((m) => m.kind === "charge" && m.count > 0)
+  );
+}
+
 /**
  * One sentence about the month in progress, every figure from the records:
  * "October: billed $25,080 on the 1st, $19,260 collected so far (77%),
@@ -1729,6 +1765,10 @@ export function thisMonthLine(c: Community, asOf: string = c.asOf): string | nul
   const homes = c.homes.filter((o) => !o.placeholder);
   if (homes.length === 0) return null;
   const month = monthOf(asOf);
+  // Reminders and collection mean nothing before the first bill has gone out.
+  if (!anyChargeIssued(c)) {
+    return c.nextChargeDate ? `First bill goes out ${formatDate(c.nextChargeDate)}.` : null;
+  }
   const dues = duesCollection(c, yearOf(asOf), asOf);
   const day = billDay(c);
   const row = dues.months.find((m) => m.month === month);

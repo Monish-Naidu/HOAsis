@@ -11,6 +11,9 @@ import {
   filterLedger,
   invoiceAddress,
   lateFeesOwed,
+  isIsoDate,
+  firstMoneyOn,
+  ledgerSide,
   ledgerTotals,
   ledgerYears,
   monthlyFlows,
@@ -591,13 +594,53 @@ describe("vendorDecisions", () => {
 });
 
 describe("delinquency", () => {
-  it("does not count a home with nobody on record as a household paying on time", () => {
+  it("counts every home on the register, as the aging table does", () => {
     const homes = mehrMeadows.homes.slice(0, 4).map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 }));
     homes.push({ ...homes[0], id: "empty", placeholder: true, displayName: "Lot 99" });
     const d = delinquency({ ...mehrMeadows, homes });
-    expect(d.households).toBe(4);
-    expect(d.current).toBe(4);
+    expect(d.households).toBe(5);
+    expect(d.current).toBe(5);
     expect(d.collectionRate).toBe(1);
+  });
+
+  it("reads 24 of 24 current for homes that have no charges yet", () => {
+    const base = mehrMeadows.homes[0];
+    const homes = Array.from({ length: 24 }, (_, i) => ({
+      ...base,
+      id: `h${i}`,
+      placeholder: true,
+      daysPastDue: 0,
+      balanceCents: 0,
+    }));
+    const c = { ...mehrMeadows, homes, homeCharges: {} };
+    const d = delinquency(c);
+    expect(d.households).toBe(24);
+    expect(d.current).toBe(24);
+    expect(d.households).toBe(agingBuckets(c).buckets.reduce((t, b) => t + b.count, 0));
+  });
+});
+
+describe("ledgerSide", () => {
+  const line = (over: Partial<(typeof mehrMeadows.ledger)[number]>) => ({ ...mehrMeadows.ledger[0], ...over });
+
+  it("puts a line in exactly the headline that counts it", () => {
+    expect(ledgerSide(line({ amountCents: 100, category: "Assessments", status: "cleared" }))).toBe("in");
+    const rows = [
+      line({ id: "a", amountCents: 5000, category: "Assessments", status: "cleared" }),
+      line({ id: "b", amountCents: -2000, category: "Landscaping", status: "cleared" }),
+      line({ id: "c", amountCents: -9000, category: "Reserve transfer", status: "cleared" }),
+      line({ id: "d", amountCents: 9000, category: "Reserve transfer", status: "cleared" }),
+      line({ id: "e", amountCents: -700, category: "Assessments", description: "Payment reversed: Lot 3", status: "cleared" }),
+      line({ id: "f", amountCents: -400, category: "Landscaping", status: "needs-review" }),
+    ];
+    const t = ledgerTotals(rows);
+    const side = (d: "in" | "out") => filterLedger(rows, { direction: d });
+    expect(side("in").map((e) => e.id)).toEqual(["a", "e"]);
+    expect(side("out").map((e) => e.id)).toEqual(["b"]);
+    expect(t.inCents).toBe(4300);
+    expect(t.outCents).toBe(2000);
+    expect(ledgerTotals(side("in")).inCents).toBe(t.inCents);
+    expect(ledgerTotals(side("out")).outCents).toBe(t.outCents);
   });
 });
 
@@ -654,5 +697,20 @@ describe("period words and stepping", () => {
     expect(stepPeriod("last-30-days", periodRange("last-30-days", asOf), -1, asOf)).toBeNull();
     expect(stepPeriod("last-12-months", periodRange("last-12-months", asOf), -1, asOf)).toBeNull();
     expect(stepPeriod("custom", { from: "2026-03-05", to: "2026-04-09" }, -1, asOf)).toBeNull();
+  });
+});
+
+describe("period guards", () => {
+  it("accepts real dates only", () => {
+    expect(isIsoDate("2026-02-28")).toBe(true);
+    expect(isIsoDate("2026-02-30")).toBe(false);
+    expect(isIsoDate("26-1-1")).toBe(false);
+    expect(isIsoDate(null)).toBe(false);
+  });
+
+  it("finds the first money row, and null with none", () => {
+    const first = firstMoneyOn(mehrMeadows);
+    expect(first).toBe([...mehrMeadows.ledger].map((e) => e.date).sort()[0]);
+    expect(firstMoneyOn({ ...mehrMeadows, ledger: [], history: undefined })).toBeNull();
   });
 });

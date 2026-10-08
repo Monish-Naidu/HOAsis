@@ -6,6 +6,7 @@ import {
   repliedOn,
   requestGroup,
   requestStatusLabel,
+  scheduledFor,
   statusAfterReply,
 } from "@/lib/request-status";
 import { vendorNameProblem, vendorService, VENDOR_NAME_MAX } from "@/lib/vendor-name";
@@ -109,5 +110,34 @@ describe("a vendor's name", () => {
     expect(vendorService({ service: "Grounds and irrigation", defaultCategory: "Landscaping" })).toBe(
       "Grounds and irrigation",
     );
+  });
+});
+
+describe("the pill and the group come from one place", () => {
+  const maint = (status: RequestStatus, extra: object = {}) => req("maintenance", status, extra);
+
+  it("never says Needs info on a request waiting for a decision", () => {
+    expect(requestGroup(req("architectural", "info-needed"))).toBe("decision");
+    expect(requestStatusLabel(req("architectural", "info-needed"))).toBe("Under review");
+  });
+
+  it("never says Sent on a request that needs scheduling", () => {
+    expect(requestGroup(maint("submitted"))).toBe("scheduling");
+    expect(requestStatusLabel(maint("submitted"))).toBe("Not scheduled");
+    expect(requestStatusLabel(maint("info-needed"))).toBe("Not scheduled");
+  });
+
+  it("reads Scheduled with the date from the work order or from the note", () => {
+    expect(requestStatusLabel(maint("in-review"))).toBe("Scheduled");
+    expect(requestStatusLabel(maint("in-review", { workOrder: { scheduledOn: "2026-10-03" } }))).toBe("Scheduled Oct 3");
+    const thread = [{ at: "2026-10-01", actorRole: "board", kind: "status", body: "Scheduled for October 9, 2026." }];
+    expect(scheduledFor({ thread })).toBe("2026-10-09");
+    expect(requestStatusLabel(maint("in-review", { thread }))).toBe("Scheduled Oct 9");
+  });
+
+  it("reads Fixed for a finished repair and Closed for anything else", () => {
+    expect(requestStatusLabel(maint("closed"))).toBe("Fixed");
+    expect(requestStatusLabel(req("records", "closed"))).toBe("Closed");
+    expect(requestStatusLabel(maint("approved"))).toBe("Approved");
   });
 });

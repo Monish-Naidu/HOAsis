@@ -1934,7 +1934,7 @@ describe("emailing what the board wrote", () => {
     await waitFor(() => expect(errors).toHaveLength(1));
 
     expect(fetched).toHaveLength(1);
-    expect(errors).toEqual(["Emailing the announcement: 2 emails were not sent. It is saved here"]);
+    expect(errors).toEqual(["Emailing the announcement: 2 emails were not sent. The announcement is posted in Messages."]);
   });
 
   it("stops asking after twelve calls and says who was left", async () => {
@@ -1945,7 +1945,7 @@ describe("emailing what the board wrote", () => {
     await waitFor(() => expect(errors).toHaveLength(1));
 
     expect(fetched).toHaveLength(12);
-    expect(errors).toEqual(["Emailing the announcement: 488 emails were not sent. It is saved here"]);
+    expect(errors).toEqual(["Emailing the announcement: 488 emails were not sent. The announcement is posted in Messages."]);
   });
 
   it("does not keep asking a server that is not getting any further", async () => {
@@ -1957,7 +1957,7 @@ describe("emailing what the board wrote", () => {
     await waitFor(() => expect(errors).toHaveLength(1));
 
     expect(fetched).toHaveLength(2);
-    expect(errors).toEqual(["Emailing the announcement: 500 emails were not sent. It is saved here"]);
+    expect(errors).toEqual(["Emailing the announcement: 500 emails were not sent. The announcement is posted in Messages."]);
   });
 
   it("says so when everybody already had it, and nobody was emailed", async () => {
@@ -1989,7 +1989,7 @@ describe("emailing what the board wrote", () => {
 
     expect(fetched).toHaveLength(2);
     expect(errors).toEqual([
-      "Emailing the announcement: 5 emails were not sent. It is saved here",
+      "Emailing the announcement: 5 emails were not sent. The announcement is posted in Messages.",
       "Emailing the announcement: the same notice already went to 30 owners in the last hour, so it was not emailed again",
     ]);
   });

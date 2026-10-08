@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { fiscalMonth, periodRange, type PeriodPreset } from "@/lib/metrics";
+import { fiscalMonth, isIsoDate, periodRange, type PeriodPreset } from "@/lib/metrics";
 import { readFilter } from "@/lib/url-filter";
 import { useAppState } from "@/lib/app-state";
 import { todayIsoDate } from "@/lib/utils";
@@ -34,11 +34,19 @@ export function usePeriod(presets: readonly PeriodPreset[], fallback: PeriodPres
   // Older links (the top bar's search, a year on the trends page) name their
   // dates and no period; they open on those dates.
   const legacy = Boolean(rawFrom && rawTo && rawPeriod === null);
-  const preset: PeriodPreset = legacy ? "custom" : readFilter(rawPeriod, presets, fallback);
+  const asked: PeriodPreset = legacy ? "custom" : readFilter(rawPeriod, presets, fallback);
   const customDefault = periodRange("custom", asOf);
+  const customFrom = rawFrom ?? customDefault.from;
+  const customTo = rawTo ?? customDefault.to;
+  // A range that is not two real dates in order would render nothing at all,
+  // so it reads as the default period instead of an empty screen.
+  const preset: PeriodPreset =
+    asked === "custom" && !(isIsoDate(customFrom) && isIsoDate(customTo) && customFrom <= customTo)
+      ? fallback
+      : asked;
   const fromUrl: PeriodValue =
     preset === "custom"
-      ? { preset, from: rawFrom ?? customDefault.from, to: rawTo ?? customDefault.to }
+      ? { preset, from: customFrom, to: customTo }
       : { preset, ...periodRange(preset, asOf, fyMonth) };
 
   const sig = `${rawPeriod}|${rawFrom}|${rawTo}`;

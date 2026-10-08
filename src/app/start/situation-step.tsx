@@ -10,7 +10,7 @@ import type {
   SharedSpace,
 } from "@/lib/data/new-community";
 import { cn } from "@/lib/utils";
-import { HOME_TYPES, homeTypesOf, soleType } from "@/lib/home-types";
+import { HOME_TYPE_LABEL, HOME_TYPES, homeTypesOf, soleType } from "@/lib/home-types";
 import { fieldClass } from "@/components/ui/primitives";
 
 /**
@@ -28,19 +28,19 @@ import { fieldClass } from "@/components/ui/primitives";
 const PROPERTY: { id: PropertyType; label: string; detail: string; icon: typeof Home }[] = [
   {
     id: "single-family",
-    label: "Detached homes",
+    label: HOME_TYPE_LABEL["single-family"].many,
     detail: "Each owner owns their house and their lot",
     icon: Home,
   },
   {
     id: "townhomes",
-    label: "Townhomes",
+    label: HOME_TYPE_LABEL["townhomes"].many,
     detail: "Attached homes, shared walls, often shared roofs",
     icon: Rows3,
   },
   {
     id: "condos",
-    label: "Condominiums",
+    label: HOME_TYPE_LABEL["condos"].many,
     detail: "Owners own the interior, the association owns the building",
     icon: Building2,
   },

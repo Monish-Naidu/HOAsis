@@ -231,7 +231,7 @@ function SignInEmail({ email, isRemote }: { email: string; isRemote: boolean }) 
                 />
               </label>
               <div className="flex gap-2">
-                <Button type="submit" variant="primary" size="md" disabled={busy}>
+                <Button type="submit" variant="primary" size="md" disabled={busy || !next.trim()}>
                   Send confirmation
                 </Button>
                 <Button type="button" variant="ghost" size="md" onClick={() => setChanging(false)}>

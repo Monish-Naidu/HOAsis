@@ -538,7 +538,7 @@ describe("a home's own dues in the browser copy", () => {
     const save = screen.getByRole("button", { name: "Save dues" });
     for (const [typed, message] of [
       ["10000000", "That looks too high. Dues are per home, per period."],
-      ["285.555", "Enter dollars and cents, like 285.00"],
+      ["285.555", "Use whole cents, like 12.50"],
       ["12e3", "Enter dollars and cents, like 285.00"],
     ]) {
       fireEvent.change(screen.getByLabelText("Dues for this home"), { target: { value: typed } });

@@ -62,7 +62,7 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
     },
     compliance: { count: comp.overdue.length, tone: "danger", hint: "overdue filings" },
     communications: { count: unread, tone: "neutral", hint: "unread conversations" },
-    homeowners: { count: delinq.past.length, tone: "warn", hint: "homes past due" },
+    homeowners: { count: delinq.past.length, tone: "warn", hint: "past due" },
     // The same number as the dashboard and the Vendors page, from one selector.
     vendors: { count: vendorDecisions(community).count, tone: "warn", hint: "payments waiting on a signature" },
   };
@@ -158,6 +158,8 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
               <span className="truncate">{label}</span>
               {badge && badge.count > 0 ? (
                 <span
+                  title={badge.hint ? `${badge.count} ${badge.hint}` : undefined}
+                  aria-label={badge.hint ? `${badge.count} ${badge.hint}` : undefined}
                   className={cn(
                     "tnum ml-auto hidden rounded px-1.5 py-0.5 text-caption font-bold lg:inline-block",
                     badge.tone === "danger" && "bg-danger-soft text-danger",

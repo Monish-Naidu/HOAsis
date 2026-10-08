@@ -5,7 +5,8 @@ import { ChevronDown, Megaphone } from "lucide-react";
 import { Card, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import type { Announcement } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
+import { currentAnnouncements } from "@/lib/meeting-notices";
+import { formatDate, todayIsoDate } from "@/lib/utils";
 
 /** How many show before the "Earlier announcements" fold: the pinned one and the newest. */
 const SHOWN = 3;
@@ -21,7 +22,9 @@ const SHOWN = 3;
  */
 export function Announcements() {
   const { community } = useAppState();
-  const newestFirst = pinnedFirst(community.announcements);
+  const newestFirst = pinnedFirst(
+    currentAnnouncements(community.announcements, community.meetings, community.documents, todayIsoDate()),
+  );
   const pinned = newestFirst.find((a) => a.pinned);
   const others = newestFirst.filter((a) => a !== pinned);
   const shown = others.slice(0, pinned ? SHOWN - 1 : SHOWN);
