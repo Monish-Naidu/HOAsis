@@ -398,7 +398,11 @@ function RequestsScreen() {
       />
 
       {requests.length > 0 ? (
-        <div className="mb-4 flex flex-col gap-2">
+        // Two dimensions of one question: where a request is, and what kind it
+        // is. Side by side, each group only as wide as its own options, so
+        // neither reads as a bar stretched across the page; they wrap to two
+        // rows when the window cannot hold both.
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <Segmented
             label="Show requests that are"
             value={step}
