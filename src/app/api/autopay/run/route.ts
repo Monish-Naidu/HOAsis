@@ -94,6 +94,27 @@ export async function GET(request: NextRequest) {
   };
   const run = cronPlan(request, { budgetMs: CRON_BUDGET_MS });
 
+  // Only the homes that could be charged today are walked. A plan whose day
+  // has not come is a "wait" whatever else is true (decideAutopay), and a
+  // home already charged or skipped this month is decided; only a failed
+  // month is looked at again. At 2,000 associations this is the difference
+  // between five queries per autopay home per day and five per home per
+  // month, and the one-row-per-month rule below is unchanged.
+  const dayOfMonth = Number(today.slice(8, 10));
+  const decided = new Set<string>();
+  {
+    const { data: runs, error: runsError } = await admin
+      .from("autopay_runs")
+      .select("unit_id")
+      .eq("month", month)
+      .in("state", ["charged", "skipped"]);
+    if (runsError) {
+      log.error("could not read this month's runs", { err: runsError.message });
+    } else {
+      for (const r of runs ?? []) decided.add(r.unit_id);
+    }
+  }
+
   const walk = await walkPages(
     run,
     (after, limit) => {
@@ -104,15 +125,18 @@ export async function GET(request: NextRequest) {
         )
         .not("autopay", "is", null)
         .is("ends_on", null)
+        // The plan's day, as a JSON number, on or before today's.
+        .lte("autopay->day", dayOfMonth)
         .order("id")
         .limit(limit);
       if (after) query = query.gt("id", after);
       return query;
     },
     async (member) => {
-      report.checked++;
       const plan = member.autopay as AutopayPlan | null;
       if (!plan || typeof plan.day !== "number") return;
+      if (decided.has(member.unit_id)) return;
+      report.checked++;
       const tag = `${member.full_name} (${member.unit_id.slice(0, 8)})`;
 
       try {

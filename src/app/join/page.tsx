@@ -18,7 +18,7 @@ export default function JoinPage() {
         </Link>
         <ThemeToggle />
       </header>
-      <main className="grid place-items-center px-5 pb-16 pt-4">
+      <main id="main" className="grid place-items-center px-5 pb-16 pt-4">
         <div className="w-full max-w-sm">
           <Suspense fallback={null}>
             <JoinPanel />

@@ -12,7 +12,7 @@ export default function LibraryPage() {
   return (
     <div className="min-h-dvh bg-bg">
       <MarketingHeader />
-      <main className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16">
+      <main id="main" className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16">
         <header className="mb-8">
           <h1 className="max-w-3xl text-[34px] font-semibold leading-[1.1] tracking-[-0.035em] text-fg sm:text-[48px]">
             Everything we know about running an HOA, free.

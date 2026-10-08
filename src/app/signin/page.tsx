@@ -41,7 +41,7 @@ export default function AuthLanding() {
           </div>
         </header>
 
-        <main className="flex flex-1 items-center justify-center px-5 pb-12 sm:px-8">
+        <main id="main" className="flex flex-1 items-center justify-center px-5 pb-12 sm:px-8">
           <div className="w-full min-w-0 max-w-[26rem]">
             <div className="mb-8 hidden lg:block">
               <Link href="/">

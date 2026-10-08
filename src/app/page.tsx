@@ -830,7 +830,7 @@ export default function MarketingHome() {
       {/* Hero, slide one. The header sits on this field with no bar of its
           own, which is why the section starts at the top of the page and the
           copy carries the top padding. */}
-      <section className="relative isolate -mt-[69px] overflow-hidden bg-hero-field pt-[69px]">
+      <section id="main" className="relative isolate -mt-[69px] overflow-hidden bg-hero-field pt-[69px]">
         {/* The field: a soft aurora behind the headline column, so the left
             half of the hero is not a flat wash next to a lit photograph. */}
         <div className="pointer-events-none absolute inset-0 -z-20 bg-aurora" aria-hidden />

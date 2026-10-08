@@ -38,7 +38,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   return (
     <div className="min-h-dvh bg-bg">
       <MarketingHeader />
-      <main className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
+      <main id="main" className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <Link
           href="/library"
           className="inline-flex items-center gap-1.5 text-body font-medium text-fg-muted hover:text-fg"

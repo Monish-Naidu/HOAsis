@@ -65,6 +65,8 @@ export function HomeBadge() {
           type="file"
           accept="image/jpeg,image/png,image/webp,image/avif"
           className="sr-only"
+          aria-label="Choose a photo of the home"
+          tabIndex={-1}
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) void choose(file);

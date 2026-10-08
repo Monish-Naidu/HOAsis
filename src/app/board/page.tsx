@@ -280,7 +280,7 @@ function NeedsYou() {
         title="Needs you today"
         action={
           rows.length ? (
-            <span className="tnum inline-flex h-6 items-center rounded-full bg-primary-soft px-2.5 text-caption font-bold text-primary">
+            <span className="tnum inline-flex h-6 items-center rounded-full bg-brand-soft px-2.5 text-caption font-bold text-brand-soft-fg">
               {rows.reduce((n, row) => n + row.count, 0)}
             </span>
           ) : null

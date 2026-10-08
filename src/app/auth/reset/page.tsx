@@ -12,7 +12,7 @@ export default function ResetPage() {
           <Wordmark size={34} />
         </Link>
       </header>
-      <main className="flex flex-1 items-start justify-center px-5 pb-20">
+      <main id="main" className="flex flex-1 items-start justify-center px-5 pb-20">
         <div className="w-full max-w-sm">
           <ResetPanel />
         </div>
