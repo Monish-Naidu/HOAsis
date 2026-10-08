@@ -543,3 +543,42 @@ Finances, 390px with no overflow, the dashboard figures against Finances,
 Past due chips in the URL, Homeowners filters in the URL across a new
 browser, Settings activity, the owner writing to the treasurer from a
 phone, the theme buttons.
+
+## 23. The UI pass, 2026-10-08
+
+Monish: "Can you do a UI pass? Make sure things are sized correctly,
+there's no weird gaps, everything fits and looks seamless and that if
+there are boxes/borders they don't stretch just to fill space. Go
+through best UI practices for modern apps. Do that in all screens and
+all flows."
+
+Method: 88 screenshots, every screen in light and dark at 1440 and 390,
+read against the `frontend-design` skill and `docs/design/ui-baseline.md`
+by two reviewers, then fixed in three chunks with hard file boundaries
+(board, owner, marketing). No restyle: palette, 17px card titles,
+hairlines, spacing and layouts unchanged. Pull request #30, waiting on
+Monish to look.
+
+Fixed: the dashboard's phone tiles share a baseline and stop truncating;
+Finances is two tiles up on a phone and its chart row tops out; Voting
+no longer strands a third ballot at half width; the Messages composer is
+pinned to the foot of its card; a vendor's name stays on one line;
+closed requests wrap; Starting balances asks once; Documents' two status
+cards share a row shape; Past due says what the bar measures; Reserves'
+tile row loses its lone icon. On the owner's side the theme control
+takes the full width with its hint beneath, titles stop being chopped
+beside a badge (Next up, Requests, Documents, the live meeting card),
+"Sample" is said once, the attach caption joins its control, a lone type
+tile spans the row, the Messages empty state matches Notices, the RSVP
+buttons match, every activity row ends in a chevron, Pay drops the
+duplicate figure, the forum's chips fade at the edge. On marketing the
+sign-in photograph fills its column, About's footer follows the content,
+the pricing columns finish level, and the landing page's phone strip,
+feature cards and avatars are fixed.
+
+| Found but not fixed here | What it is | Status |
+| --- | --- | --- |
+| `playwright.config.ts` viewport is ignored | The top-level `use` asks for 1440x900, but the project spreads `devices["Desktop Chrome"]`, which overrides it with 1280x720. Every browser test has run at 1280 since the config was written | open: fixing it changes what every spec sees, so it is its own change with the suite re-run |
+| `tests/e2e/03-roles.spec.ts` "Requests works" is flaky under load | It counts visible rail links straight after `networkidle`, with no retry, and the resident shell picks its layout after hydration. Failed once on CI, passed on re-run and 3 of 3 locally | open: assert with `toBeVisible()` so Playwright retries, rather than counting once |
+| Reserves, "The study itself" | A full-width card holding one short form row. Considered and left: a full-width card with a left-aligned row is this product's normal, not a stretched box | left as is |
+| The dashboard's "Next meeting" tile | Its four lines of text make the tile beside it taller than its content on a phone. Tile rows matching height is right; the length is content, not layout | left as is |
