@@ -201,7 +201,7 @@ function CommunicationsScreen() {
                 </span>
               }
             />
-            <div className="flex-1 space-y-4 px-5 py-4">
+            <div className="space-y-4 px-5 py-4">
               {active.messages.map((m) => (
                 <div key={m.id} className="flex gap-3">
                   <span
@@ -230,8 +230,10 @@ function CommunicationsScreen() {
               ))}
             </div>
 
-            {/* Composer */}
-            <div className="border-t border-border p-4">
+            {/* Composer. The card stretches to the inbox beside it, so the
+                composer sits at the foot and the spare height reads as the
+                message area. */}
+            <div className="mt-auto border-t border-border p-4">
               <div className="mb-2.5 flex flex-wrap items-center gap-2 text-footnote">
                 <span className="text-fg-subtle">To</span>
                 <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">

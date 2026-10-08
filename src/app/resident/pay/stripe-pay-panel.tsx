@@ -317,7 +317,7 @@ export function StripePayPanel({
               >
                 <Icon className="size-4 shrink-0 text-fg-muted" />
                 <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
+                  <span className="flex items-center gap-2 [&>span:not(:first-child)]:shrink-0">
                     {/* The last four stay whole: they are how a person tells two cards apart. */}
                     <span className="flex min-w-0 text-body font-medium text-fg">
                       <span className="truncate">{instrument.label}</span>
@@ -481,11 +481,18 @@ function ConfirmSaved({
   return (
     <Card className="p-4">
       <dl className="mb-4 space-y-1">
-        <div className="flex justify-between text-body">
-          <dt className="text-fg-muted">Dues</dt>
-          <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
-        </div>
-        <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
+        {cost.amountCents !== cost.residentPaysCents ? (
+          <div className="flex justify-between text-body">
+            <dt className="text-fg-muted">Dues</dt>
+            <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "flex justify-between text-headline",
+            cost.amountCents !== cost.residentPaysCents && "mt-2 border-t border-border pt-2",
+          )}
+        >
           <dt className="font-semibold text-fg">You pay</dt>
           <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
         </div>
@@ -544,11 +551,18 @@ function ConfirmForm({
   return (
     <Card className="p-4">
       <dl className="mb-4 space-y-1">
-        <div className="flex justify-between text-body">
-          <dt className="text-fg-muted">Dues</dt>
-          <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
-        </div>
-        <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
+        {cost.amountCents !== cost.residentPaysCents ? (
+          <div className="flex justify-between text-body">
+            <dt className="text-fg-muted">Dues</dt>
+            <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "flex justify-between text-headline",
+            cost.amountCents !== cost.residentPaysCents && "mt-2 border-t border-border pt-2",
+          )}
+        >
           <dt className="font-semibold text-fg">You pay</dt>
           <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
         </div>

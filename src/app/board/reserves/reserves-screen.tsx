@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowRightLeft, PiggyBank, Plus } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Plus } from "lucide-react";
 import { Button, Callout, Card, CardHeader, Meter, PageHeader, Stat } from "@/components/ui/primitives";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
 import { ReserveStudyCard } from "@/components/app/reserve-study-card";
@@ -159,7 +159,6 @@ export function ReservesScreen() {
               ? `${money(summary.funded, { cents: false })} assigned, ${money(unassigned, { cents: false })} not yet`
               : `${money(summary.funded, { cents: false })} assigned to components`
           }
-          icon={<PiggyBank className="size-4" />}
         />
         <Stat
           label="Percent funded"

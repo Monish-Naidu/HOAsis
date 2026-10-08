@@ -211,7 +211,7 @@ describe("More", () => {
 describe("documents in the signed-out demo", () => {
   it("tags a row with no file behind it as a sample", () => {
     wrap(<ResidentDocuments />);
-    expect(screen.getAllByText("Sample").length).toBeGreaterThan(0);
+    expect(screen.getByText(/^Sample documents\./)).toBeTruthy();
   });
 });
 

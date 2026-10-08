@@ -88,11 +88,19 @@ function DocumentsScreen() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search, for example fence, late fee, or minutes"
+          placeholder="Search, like fence or minutes"
           aria-label="Search documents and governing documents"
           className={cn(fieldClass, "pl-9 pr-3")}
         />
       </label>
+
+      {/* A sample document has no file behind it, so its row does not open.
+          Said once for the signed-out demo rather than on every row. */}
+      {!isRemote && visible.some((d) => !d.url) ? (
+        <p className="-mt-3 text-footnote text-fg-muted">
+          Sample documents. They show how the list works and do not open.
+        </p>
+      ) : null}
 
       {articleHits.length > 0 ? (
         <section>
@@ -212,13 +220,6 @@ function DocumentsScreen() {
                       {formatDate(d.updatedDate, "medium")} · {d.size}
                     </span>
                   </span>
-                  {/* A sample document has no file behind it, so the row
-                      does not open. Say so, in the signed-out demo only. */}
-                  {!d.url && !isRemote ? (
-                    <span className="shrink-0 rounded-md bg-surface-3 px-1.5 py-0.5 text-footnote font-medium text-fg-muted">
-                      Sample
-                    </span>
-                  ) : null}
                 </>
               );
               // A row opens the file when there is one. The demo's documents

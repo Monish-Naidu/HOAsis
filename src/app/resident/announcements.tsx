@@ -64,9 +64,9 @@ export function Announcements() {
 
       {earlier.length > 0 ? (
         <details className="group mt-4">
-          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-footnote font-semibold text-fg-muted [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 rounded-card border border-border bg-surface px-4 py-3 text-callout font-medium text-fg transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
             Earlier announcements ({earlier.length})
-            <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
+            <ChevronDown className="size-4 text-fg-subtle transition-transform group-open:rotate-180" />
           </summary>
           <div className="mt-3 grid gap-3 @3xl:grid-cols-2 [&>*]:min-w-0">
             {earlier.map((a) => (

@@ -204,7 +204,7 @@ export function ThemeToggle({
   return (
     <div className={className}>
     <div
-      className="inline-flex max-w-full items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5"
+      className="flex w-full items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5 [&>button]:flex-1"
       role="radiogroup"
       aria-label="Color theme"
     >

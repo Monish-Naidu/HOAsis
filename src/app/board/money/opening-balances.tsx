@@ -69,7 +69,7 @@ export function OpeningBalances() {
         <ChevronDown className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
       </summary>
       <p className="border-t border-border px-5 pt-3 text-footnote text-fg-muted">
-        What the bank held when you started here. It is not counted as income.
+        What was in each account when you started here? It is not counted as income.
       </p>
       <ul className="divide-y divide-border">
         {community.bankAccounts.map((account) => {
@@ -120,8 +120,7 @@ function OpeningRow({ account }: { account: BankAccount }) {
         }}
       >
         <p className="text-body font-medium text-fg">{name}</p>
-        <p className="text-footnote text-fg-muted">What was in this account when you started here?</p>
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto] sm:items-end">
           <Field label="Amount">
             <input
               type="number"

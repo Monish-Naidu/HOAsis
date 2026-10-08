@@ -71,12 +71,12 @@ export function PriceCalculator() {
         className="pointer-events-none absolute -inset-x-10 -inset-y-12 -z-10 bg-aurora [mask-image:radial-gradient(closest-side,black_55%,transparent)]"
         aria-hidden
       />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-5">
         {/* The plan card: the rate, the dial, the button. No coloured band
             across the top: a card never has a coloured header, and the
             price is the colour this card needs. */}
         <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-float">
-          <div className="p-6">
+          <div className="flex h-full flex-col p-6">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <Badge tone="blue">One plan</Badge>
               <Badge tone="ok">{TRIAL_DAYS} days free, no card</Badge>
@@ -164,10 +164,14 @@ export function PriceCalculator() {
               </div>
             </div>
 
-            <ButtonLink href="/start" variant="hero" size="xl" className="group mt-5 w-full">
-              Start free for {TRIAL_DAYS} days
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </ButtonLink>
+            {/* The columns finish level, so any height the right column has
+                over this one lands as air above the button, not in a box. */}
+            <div className="mt-auto pt-5">
+              <ButtonLink href="/start" variant="hero" size="xl" className="group w-full">
+                Start free for {TRIAL_DAYS} days
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </ButtonLink>
+            </div>
           </div>
         </div>
 

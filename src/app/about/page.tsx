@@ -65,7 +65,7 @@ const BELIEFS: { icon: typeof ShieldCheck; tint: TintName; title: string; body: 
 
 export default function AboutPage() {
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className="bg-bg">
       <MarketingHeader />
       <main id="main" className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <Reveal>

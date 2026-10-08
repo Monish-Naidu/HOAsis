@@ -148,7 +148,7 @@ function ThisMonth() {
   if (!mayOpen("/board/money", sees)) return null;
   const line = thisMonthLine(community);
   if (!line) return null;
-  return <p className="mt-4 max-w-[80ch] text-body leading-relaxed text-fg-muted">{line}</p>;
+  return <p className="mt-3 text-body leading-relaxed text-fg-muted [text-wrap:pretty]">{line}</p>;
 }
 
 /* --------------------------------------------------------------- needs you */
@@ -300,7 +300,7 @@ function NeedsYou() {
                 className="group flex min-h-12 items-center gap-3 px-5 py-3 text-body text-fg transition-colors hover:bg-surface-2"
               >
                 <IconTile icon={row.icon} tint={row.tint} size="sm" />
-                <span className="min-w-0 flex-1 truncate">
+                <span className="min-w-0 flex-1">
                   {row.whole ? (
                     row.label
                   ) : (
@@ -433,7 +433,10 @@ function StatTiles() {
             className={LINKED}
             icon={<Percent className="size-4" />}
             accent={pace === "behind" ? "amber" : undefined}
-            label={`Dues collected, ${thisYear}`}
+            // Short enough to share a line with the icon in a half-width tile on a
+            // phone; the longer name wrapped to three lines and pushed its figure
+            // below the other tiles'.
+            label={`Dues, ${thisYear}`}
             value={dues.measurable ? <CountUp kind="percent" value={Math.round(dues.rate * 100)} /> : "Not yet"}
             tone={pace === "behind" ? "warn" : "neutral"}
             hint={

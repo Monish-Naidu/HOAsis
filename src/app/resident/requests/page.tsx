@@ -140,7 +140,7 @@ function RequestRow({
             </span>
           ) : null}
         </div>
-        <p className="mt-0.5 truncate text-body font-medium text-fg">{request.title}</p>
+        <p className="mt-0.5 line-clamp-2 text-body font-medium text-fg">{request.title}</p>
         <p className="mt-0.5 text-footnote text-fg-muted">
           {request.reference} · {formatDate(request.submittedDate)}
         </p>

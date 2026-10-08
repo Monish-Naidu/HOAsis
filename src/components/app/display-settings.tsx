@@ -19,7 +19,7 @@ export function DisplaySettings() {
       </div>
       <div className="border-t border-border pt-4">
         <p className="text-body font-medium text-fg">Light or dark</p>
-        <ThemeToggle expanded className="mt-3 flex w-full max-w-md [&>button]:flex-1" />
+        <ThemeToggle expanded className="mt-3 max-w-md" />
       </div>
     </Card>
   );

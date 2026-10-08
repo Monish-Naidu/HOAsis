@@ -63,7 +63,7 @@ export function CollectionsScreen() {
       </div>
 
       <Card className="mt-6">
-        <CardHeader title="Past due by age" subtitle="Every balance, by days past due" />
+        <CardHeader title="Past due by age" subtitle="Bar width is dollars owed. Households are counted under each age." />
         <AgingBar buckets={aging.buckets} />
       </Card>
 
