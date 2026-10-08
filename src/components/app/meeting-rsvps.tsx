@@ -78,7 +78,7 @@ export function MeetingRsvps() {
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Button
                   variant={mine === "yes" ? "primary" : "secondary"}
-                  size="sm"
+                  size="md"
                   aria-pressed={mine === "yes"}
                   onClick={() =>
                     void rsvpMeeting(m.id, "yes").then((ok) => {
@@ -89,10 +89,10 @@ export function MeetingRsvps() {
                   I&apos;m coming
                 </Button>
                 <Button
-                  variant={mine === "no" ? "secondary" : "ghost"}
-                  size="sm"
+                  variant="secondary"
+                  size="md"
                   aria-pressed={mine === "no"}
-                  className={cn(mine === "no" && "border-border-2")}
+                  className={cn(mine === "no" && "bg-surface-3")}
                   onClick={() =>
                     void rsvpMeeting(m.id, "no").then((ok) => {
                       if (ok) notify("Noted. The board knows you cannot make it.", "info");
@@ -208,10 +208,10 @@ export function LiveMeetingCard() {
   if (!live) return null;
   return (
     <Card className="overflow-hidden border-ok/30">
-      <div className="flex items-center gap-2 bg-ok-soft px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-3 bg-ok-soft px-4 py-3">
         <Radio className="size-3.5 shrink-0 text-ok" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-body font-semibold text-ok">{live.title}</p>
+        <div className="min-w-0 flex-1 basis-40">
+          <p className="text-body font-semibold text-ok">{live.title}</p>
           <p className="text-footnote text-ok opacity-90">{liveMeetingLine(live.attendees.length)}</p>
         </div>
         {/* A link to the call, and nothing drawn to look like one. The room
@@ -220,7 +220,7 @@ export function LiveMeetingCard() {
           href={meetingJoin(live, community.association.id).videoUrl}
           target="_blank"
           rel="noreferrer"
-          className={buttonClass("secondary", "md")}
+          className={`${buttonClass("secondary", "md")} w-full justify-center sm:w-auto`}
         >
           <Video className="size-3.5" />
           Join the call

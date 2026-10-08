@@ -319,7 +319,7 @@ export function VendorsScreen() {
                         className="scroll-mt-32 border-b border-border text-body transition-colors last:border-b-0 hover:bg-surface-2 lg:scroll-mt-24"
                       >
                         <td className="px-5 py-3">
-                          <p className="font-medium text-fg">{v.name}</p>
+                          <p className="whitespace-nowrap font-medium text-fg">{v.name}</p>
                           <p className="text-footnote text-fg-muted">{vendorService(v)}</p>
                         </td>
                         <td className="px-3 py-3">

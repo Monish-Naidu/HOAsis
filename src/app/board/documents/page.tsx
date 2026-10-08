@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BookOpen,
   ChevronRight,
+  ClipboardCheck,
   ExternalLink,
   FileSpreadsheet,
   FileText,
@@ -127,26 +128,32 @@ function DocumentsScreen() {
           board cannot do anything with a row count. What they can act on is
           the gap between what they hold and what they are expected to hold,
           so that is what the top of the page is now. */}
-      <Card className="mb-6">
-        <CardHeader
-          title={
-            gaps.complete
-              ? "All expected records are on file"
-              : `${gaps.missing.length} of ${gaps.total} expected records are not on file`
-          }
-          subtitle={
-            gaps.complete
-              ? "Nothing missing."
-              : "Records owners can inspect and lenders ask for."
-          }
-          action={
-            <span className="tnum text-body font-semibold text-fg">
-              {gaps.onFileCount} / {gaps.total}
+      <Card className="mb-3 overflow-hidden">
+        {/* The same row as the two links below: a tile, a title, a line under
+            it, a figure at the right, all in the same padding. */}
+        <div className="flex items-center gap-3 p-4">
+          <IconTile
+            icon={gaps.complete ? ClipboardCheck : AlertTriangle}
+            tint={gaps.complete ? "teal" : "amber"}
+            size="md"
+            className="shrink-0"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-body font-semibold text-fg">
+              {gaps.complete
+                ? "All expected records are on file"
+                : `${gaps.missing.length} of ${gaps.total} expected records are not on file`}
             </span>
-          }
-        />
+            <span className="block text-footnote leading-snug text-fg-muted">
+              {gaps.complete ? "Nothing missing." : "Records owners can inspect and lenders ask for."}
+            </span>
+          </span>
+          <span className="tnum shrink-0 text-body font-semibold text-fg">
+            {gaps.onFileCount} / {gaps.total}
+          </span>
+        </div>
         {gaps.missing.length > 0 ? (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border border-t border-border">
             {gaps.missing.map((record) => (
               <div key={record.key} className="flex items-start gap-3 px-5 py-3">
                 <IconTile icon={AlertTriangle} tint="amber" size="xs" className="mt-0.5 shrink-0" />

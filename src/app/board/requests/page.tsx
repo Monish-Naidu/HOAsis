@@ -233,7 +233,7 @@ function RequestsScreen() {
         <div className="min-w-0 flex-1">
           <p className="text-body font-medium leading-snug text-fg">{r.title}</p>
           <p className="mt-0.5 text-footnote text-fg-muted">
-            {r.ownerName} · {homeLabel(community, r.unit)} · {formatDate(r.submittedDate)}
+            {r.ownerName} · {homeLabel(community, r.unit)} · <span className="whitespace-nowrap">{formatDate(r.submittedDate)}</span>
           </p>
           <p className="mt-1 line-clamp-2 text-footnote leading-relaxed text-fg-muted">{r.summary}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -354,9 +354,9 @@ function RequestsScreen() {
       >
         <Avatar name={r.ownerName} tone="neutral" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-body font-medium text-fg">{r.title}</p>
+          <p className="line-clamp-2 text-body font-medium leading-snug text-fg">{r.title}</p>
           <p className="text-footnote text-fg-muted">
-            {r.ownerName} · {homeLabel(community, r.unit)} · {formatDate(r.submittedDate)}
+            {r.ownerName} · {homeLabel(community, r.unit)} · <span className="whitespace-nowrap">{formatDate(r.submittedDate)}</span>
           </p>
           <RequestDetail request={r} canChange={canChange} onReply={reply} />
         </div>

@@ -66,7 +66,7 @@ function Chip({
 }
 
 const actionButton =
-  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg";
+  "inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg";
 
 /**
  * Neighbor to neighbor. Nothing posted here creates an obligation for the
@@ -199,7 +199,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
               />
               {composing ? (
                 <>
-                  <div className="no-scrollbar -mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1">
+                  <div className="no-scrollbar -mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pr-8 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]">
                     {forumCategories.map((c) => (
                       <Chip key={c} active={category === c} onClick={() => setCategory(c)}>
                         {c}
@@ -276,7 +276,7 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
         </Card>
       ) : null}
 
-      <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1">
+      <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pr-8 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]">
         {(["All", ...forumCategories] as const).map((c) => (
           <Chip key={c} active={filter === c} onClick={() => setFilter(c)}>
             {c}

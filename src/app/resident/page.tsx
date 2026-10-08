@@ -396,9 +396,8 @@ function RecentActivity() {
             <span className={cn("tnum shrink-0 text-body font-semibold", row.amountTone)}>
               {row.amount}
             </span>
-          ) : (
-            <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-          )}
+          ) : null}
+          <ChevronRight className="-ml-1 size-4 shrink-0 text-fg-subtle" />
         </Link>
       ))}
     </Card>

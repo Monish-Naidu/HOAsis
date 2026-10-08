@@ -20,8 +20,12 @@ export const metadata = { title: "Sign in" };
  */
 export default function AuthLanding() {
   return (
-    <div className="grid min-h-dvh items-start bg-bg lg:grid-cols-[1.05fr_1fr] xl:grid-cols-[1.15fr_1fr]">
-      <CommunityPanel />
+    <div className="grid min-h-dvh bg-bg lg:grid-cols-[1.05fr_1fr] xl:grid-cols-[1.15fr_1fr]">
+      {/* The aside pins itself to the viewport; this wrapper is what stretches
+          to the form column, so the photograph has a full column to stick in. */}
+      <div className="hidden lg:block">
+        <CommunityPanel />
+      </div>
 
       <div className="flex min-h-dvh flex-col lg:min-h-0">
         <header className="flex items-center justify-between px-5 py-5 sm:px-8">

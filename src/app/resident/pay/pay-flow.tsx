@@ -680,7 +680,7 @@ export function PayFlow() {
                       className={cn("transition-transform duration-200", active && "scale-105")}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-2">
+                      <span className="flex items-center gap-2 [&>span:not(:first-child)]:shrink-0">
                         {/* The last four stay whole: they are how a person tells two cards apart. */}
                         <span className="flex min-w-0 text-body font-medium text-fg">
                           <span className="truncate">{instrument.label}</span>
@@ -758,17 +758,21 @@ export function PayFlow() {
       {selected && cost ? (
         <Card className="p-4">
           <dl className="space-y-1">
-            <div className="flex justify-between text-body">
-              <dt className="text-fg-muted">Dues</dt>
-              <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
-            </div>
+            {/* Only when something sits between the dues and the total, a fee
+                or a credit. The same figure twice is noise. */}
+            {cost.amountCents !== cost.residentPaysCents ? (
+              <div className="flex justify-between text-body">
+                <dt className="text-fg-muted">Dues</dt>
+                <dd className="tnum font-medium text-fg">{money(cost.amountCents)}</dd>
+              </div>
+            ) : null}
             {policy.paidBy === "owner" && cost.platformCents > 0 ? (
               <div className="flex justify-between text-body">
                 <dt className="text-fg-muted">Payment fee</dt>
                 <dd className="tnum font-medium text-fg">{money(cost.platformCents)}</dd>
               </div>
             ) : null}
-            <div className="mt-2 flex justify-between border-t border-border pt-2 text-headline">
+            <div className={cn("flex justify-between text-headline", cost.amountCents !== cost.residentPaysCents && "mt-2 border-t border-border pt-2")}>
               <dt className="font-semibold text-fg">You pay</dt>
               <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
             </div>

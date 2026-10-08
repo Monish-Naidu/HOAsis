@@ -242,7 +242,7 @@ export function NewRequestForm() {
               type="button"
               onClick={() => setKind(id)}
               className={cn(
-                "rounded-card border p-3 text-left transition-colors",
+                "rounded-card border p-3 text-left transition-colors last:odd:col-span-2",
                 kind === id
                   ? "border-navy-700 bg-brand-soft dark:border-navy-300"
                   : "border-border bg-surface hover:bg-surface-2",
@@ -381,7 +381,8 @@ export function NewRequestForm() {
               className={cn(textareaClass, "resize-none")}
             />
           </label>
-          <label className="flex w-full cursor-pointer items-center gap-2 p-4 text-left text-body font-medium text-fg-muted hover:bg-surface-2">
+          <div>
+          <label className="flex w-full cursor-pointer items-center gap-2 p-4 pb-2 text-left text-body font-medium text-fg-muted hover:bg-surface-2">
             <Paperclip className="size-3.5" />
             {files.length ? "Add another" : "Add photos or a PDF"}
             <input
@@ -397,7 +398,8 @@ export function NewRequestForm() {
               }}
             />
           </label>
-          <p className="px-4 pb-3 text-footnote text-fg-subtle">{FILE_LIMITS}</p>
+          <p className="px-4 pb-4 text-footnote text-fg-subtle">{FILE_LIMITS}</p>
+          </div>
           <ChosenFiles files={files} onRemove={(i) => setFiles((all) => all.filter((_, j) => j !== i))} />
         </Card>
       </section>

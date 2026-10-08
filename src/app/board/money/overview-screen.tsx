@@ -118,7 +118,7 @@ export function OverviewScreen() {
       ) : null}
 
       {/* The bank position. */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile
           label="Operating"
           value={money(cash.operating, { cents: false })}
@@ -217,7 +217,7 @@ export function OverviewScreen() {
               ) : null}
             </p>
           ) : null}
-          <div className="grid gap-4 xl:grid-cols-5">
+          <div className="grid items-start gap-4 xl:grid-cols-5">
             {hasFlows ? (
               <Card className={cn("flex flex-col", spending.rows.length > 0 ? "xl:col-span-3" : "xl:col-span-5")}>
                 <CardHeader

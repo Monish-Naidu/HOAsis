@@ -602,12 +602,12 @@ function PocketNotices({
           className={itemClassNames[3]}
         >
           <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="flex -space-x-2">
+            <div className="flex -space-x-1.5">
               {live.attendees.slice(0, 3).map((person) => (
                 <Avatar
                   key={person.name}
                   name={person.name}
-                  className="size-7 text-[10px] ring-2 ring-surface"
+                  className="size-8 text-[11px] ring-2 ring-surface"
                 />
               ))}
             </div>
@@ -944,9 +944,9 @@ export default function MarketingHome() {
         {/* Four equal cells, each promise centred in its own, so the row
             reads as evenly spaced from edge to edge rather than as a list
             that starts on the left and runs out. */}
-        <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-4 gap-y-5 px-5 py-7 text-[15px] font-semibold sm:grid-cols-4 sm:text-[17px] sm:tracking-[-0.01em]">
+        <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-4 gap-y-5 px-5 py-7 text-[14px] font-semibold sm:grid-cols-4 sm:text-[17px] sm:tracking-[-0.01em]">
           {ASSURANCES.map(({ icon, label, tint }) => (
-            <li key={label} className="flex items-center justify-center gap-3">
+            <li key={label} className="flex items-center justify-start gap-2.5 leading-tight sm:justify-center sm:gap-3">
               <IconTile icon={icon} tint={tint} size="md" />
               {label}
             </li>
@@ -1069,7 +1069,7 @@ export default function MarketingHome() {
               four different heights the row read as unfinished. Nothing here
               lifts or tilts under the pointer either; on this page only
               buttons move. */}
-          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+          <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:items-stretch lg:overflow-visible lg:px-0">
             {FEATURES.map(({ icon, tint, title, line, mini }) => (
               <div key={title} className="flex w-[300px] shrink-0 snap-start lg:w-auto">
                 <Card className="relative flex w-full flex-col overflow-hidden p-6">
@@ -1080,7 +1080,7 @@ export default function MarketingHome() {
                     </h3>
                     <p className="mt-1 text-[15px] leading-snug text-fg-muted">{line}</p>
                   </div>
-                  <div className="mt-auto pt-5">{mini}</div>
+                  <div className="pt-5 lg:mt-auto">{mini}</div>
                 </Card>
               </div>
             ))}
@@ -1109,8 +1109,8 @@ export default function MarketingHome() {
                     className="flex flex-col items-center gap-3 bg-surface px-3 py-6 text-center"
                   >
                     <IconTile icon={icon} tint={tint} size="lg" />
-                    <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em] text-fg">
-                      <Check className="size-3.5 shrink-0 text-ok" strokeWidth={3} />
+                    <span className="inline-flex items-start gap-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em] text-fg">
+                      <Check className="mt-[3px] size-3.5 shrink-0 text-ok" strokeWidth={3} />
                       {label}
                     </span>
                   </li>

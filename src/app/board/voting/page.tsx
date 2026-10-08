@@ -8,7 +8,7 @@ import { useToast } from "@/components/app/toast";
 import { Button, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { ballotNeedsSealing, ballotPhase } from "@/lib/phases";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 /**
  * Ask, count, close.
@@ -75,7 +75,7 @@ export default function BoardVoting() {
             />
           </Card>
         ) : (
-          <div className={cn("grid gap-4", open.length > 1 && "xl:grid-cols-2")}>
+          <div className="grid gap-4">
             {open.map((b) => (
               <div key={b.id} id={`ballot-${b.id}`} className="scroll-mt-32 lg:scroll-mt-24">
                 <BallotCard
@@ -95,7 +95,7 @@ export default function BoardVoting() {
       {scheduled.length > 0 ? (
         <section className="mt-6">
           <h2 className="mb-3 text-footnote font-semibold text-fg-muted">Scheduled</h2>
-          <div className={cn("grid gap-4", scheduled.length > 1 && "xl:grid-cols-2")}>
+          <div className="grid gap-4">
             {scheduled.map((b) => (
               <div key={b.id} id={`ballot-${b.id}`} className="scroll-mt-32 lg:scroll-mt-24">
                 <BallotCard ballot={b} />

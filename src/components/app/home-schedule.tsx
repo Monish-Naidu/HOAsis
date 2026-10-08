@@ -71,8 +71,8 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-body font-medium text-fg">{e.title}</p>
-                  <p className="truncate text-footnote text-fg-muted">
+                  <p className="text-body font-medium text-fg">{e.title}</p>
+                  <p className="text-footnote text-fg-muted">
                     {relativeDays(e.date)}
                     {e.detail ? ` · ${e.detail}` : ""}
                   </p>
@@ -82,11 +82,11 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
             ))}
             <Link
               href="/resident/calendar"
-              className="flex items-center gap-2 border-t border-border px-4 py-2.5 text-footnote font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
+              className="flex min-h-12 items-center gap-2 border-t border-border px-4 py-3 text-callout font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
             >
-              <CalendarDays className="size-3.5" />
+              <CalendarDays className="size-4" />
               See all meetings and events
-              <ChevronRight className="ml-auto size-3.5" />
+              <ChevronRight className="ml-auto size-4" />
             </Link>
           </>
         ) : (

@@ -193,11 +193,13 @@ export function MessagesScreen() {
       ) : null}
 
       {threads.length === 0 && !composing ? (
-        <EmptyState
-          icon={<MessagesSquare className="size-5" />}
-          title="No messages yet"
-          description="Ask the board anything. Something broken or a change to your home? Send a request instead, so it gets a decision."
-        />
+        <Card>
+          <EmptyState
+            icon={<MessagesSquare className="size-6" />}
+            title="No messages yet"
+            description="Ask the board anything. Something broken or a change to your home? Send a request instead, so it gets a decision."
+          />
+        </Card>
       ) : null}
 
       {threads.length ? (
