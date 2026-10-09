@@ -109,17 +109,19 @@ export type PhoneCheck = { ok: true; phone: string } | { ok: false; message: str
 
 /**
  * A phone number a person gives for their own record. Empty clears it.
- * Otherwise at least seven digits, written with only digits, spaces,
+ * Otherwise seven to fifteen digits, written with only digits, spaces,
  * parentheses, plus, dash and dot, and optionally an extension ("x12",
- * "ext 12") at the end. The extension's digits do not count toward the seven.
+ * "ext 12") of up to six digits at the end.
  */
 export function checkPhone(raw: string): PhoneCheck {
   const phone = raw.trim();
   if (!phone) return { ok: true, phone: "" };
-  const match = /^([\d\s().+-]+?)(?:\s*(?:x|ext\.?)\s*\d+)?$/i.exec(phone);
+  const match = /^([\d\s().+-]+?)(?:\s*(?:x|ext\.?)\s*(\d+))?$/i.exec(phone);
   if (!match) return { ok: false, message: PHONE_MESSAGE };
   const digits = match[1].replace(/\D/g, "");
-  if (digits.length < 7) return { ok: false, message: PHONE_MESSAGE };
+  if (digits.length < 7 || digits.length > 15 || (match[2]?.length ?? 0) > 6) {
+    return { ok: false, message: PHONE_MESSAGE };
+  }
   return { ok: true, phone };
 }
 
