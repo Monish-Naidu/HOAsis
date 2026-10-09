@@ -70,9 +70,21 @@ describe("resident phone", () => {
     for (const raw of ["(425) 555-0142", "425.555.0142", "+1 425 555 0142", "555-0142", "(425) 555-0142 x12", "425-555-0142 ext. 7"]) {
       expect(checkPhone(raw).ok, raw).toBe(true);
     }
+    expect(checkPhone("123456789012345").ok).toBe(true);
+    expect(checkPhone("1234567890 x12345").ok).toBe(true);
   });
   it("refuses abc, too few digits and stray characters", () => {
-    for (const raw of ["abc", "12345", "555-01", "425-555-0142 call me", "425/555/0142", "x123"]) {
+    for (const raw of [
+      "abc",
+      "12345",
+      "555-01",
+      "425-555-0142 call me",
+      "425/555/0142",
+      "x123",
+      "1234567890123456",
+      "1234567890123456789012345678901234",
+      "1234567890 x1234567",
+    ]) {
       expect(checkPhone(raw), raw).toEqual({ ok: false, message: PHONE_MESSAGE });
     }
   });
