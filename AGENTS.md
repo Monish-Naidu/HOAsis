@@ -11,7 +11,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Context Engine (CCE)
 
 This project uses Code Context Engine for intelligent code retrieval and
-cross-session memory.
+cross-session memory. Its tools come from the `context-engine` MCP server:
+where that server is connected, the rules in this section apply. In a tool
+without it, read and grep the files directly and skip this section.
 
 ### Searching the codebase
 
@@ -51,11 +53,17 @@ Keep money in integer cents and dates as `YYYY-MM-DD`. Screens import through `@
 
 ### Output style
 
-Respond in compressed style. Drop articles (a, an, the) in prose. Use
-sentence fragments over full sentences. Use short synonyms (fix not resolve,
-check not investigate). Pattern: [thing] [action] [reason]. [next step].
-No filler, hedging, pleasantries, trailing summaries, or restating what
-the user said. One sentence if one sentence is enough.
+Two registers.
+
+Findings, code review and routine answers: compressed. Drop articles (a,
+an, the) in prose. Use sentence fragments over full sentences. Use short
+synonyms (fix not resolve, check not investigate). Pattern: [thing] [action]
+[reason]. [next step]. No filler, hedging, pleasantries, trailing summaries,
+or restating what the user said. One sentence if one sentence is enough.
+
+Design, plans, and anything written to be pasted or reread later (prompts,
+docs, pull request text): plain short sentences, full prose, structure that
+carries the meaning.
 
 When suggesting code changes, show only the changed lines with 3 lines of
 context. Never rewrite entire files. Multiple changes in one file: show each

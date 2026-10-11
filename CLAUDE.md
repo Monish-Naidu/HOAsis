@@ -8,7 +8,8 @@ them signs every browser out). Signed-in users run on Supabase (Postgres with
 row level security), Stripe and Resend; the fixtures serve only the signed-out
 demo. Trust the code and `docs/tenancy.md` over `README.md`. This file is only
 what cannot be read from the code. Workflows live in `.claude/skills/`,
-reviewers in `.claude/agents/`, the priority list in `docs/work-tracker.md`.
+reviewers in `.claude/agents/`, the paste-able missions in
+`.claude/prompts/`, the priority list in `docs/work-tracker.md`.
 
 ## How work is done here
 
@@ -54,8 +55,9 @@ reviewers in `.claude/agents/`, the priority list in `docs/work-tracker.md`.
 - **UI changes follow the `frontend-design` skill**: ground the design in the
   subject, plan, review the plan against the brief, build, critique from
   screenshots. `docs/design/ui-baseline.md` holds this product's tokens and
-  patterns; where the two differ, the skill wins. A restyle Monish has not
-  seen goes to a pull request with a preview, not to `main`.
+  patterns; where the two differ, the skill wins. The skill is a Claude Code
+  plugin; in a tool without it, `ui-baseline.md` alone is the rule. A restyle
+  Monish has not seen goes to a pull request with a preview, not to `main`.
 - **Screens import from `@/lib/data` only.** Never a fixture file directly.
 - **`Home` is a home on the register** (its balance, bill, seats); a person is an `Account` or a
   seat. `homeId` is a unit id (the `unit_id` column).
