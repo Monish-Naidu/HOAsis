@@ -85,7 +85,8 @@ const MAPLE = summary("maple", "Maple Ridge");
 const OAK = summary("oak", "Oak Hills");
 
 /** A community is opaque to the store, so a labelled stub is enough. */
-const copy = (id: string, version: string) => ({ id, label: `${id} ${version}` }) as unknown as Community;
+const copy = (id: string, version: string) =>
+  ({ id, label: `${id} ${version}` }) as unknown as Community;
 
 /** A read the test resolves when it chooses. */
 function pending<T>() {
@@ -207,7 +208,9 @@ describe("a read that comes back late", () => {
     expect(remoteSnapshot().status).toBe("ready");
     // A write landed while the load was reading, so it reads once more.
     await vi.waitFor(() => expect(reads.loadCommunity).toHaveBeenCalledTimes(4));
-    await vi.waitFor(() => expect(remoteSnapshot().community).toMatchObject({ label: "maple refreshed" }));
+    await vi.waitFor(() =>
+      expect(remoteSnapshot().community).toMatchObject({ label: "maple refreshed" }),
+    );
   });
 
   it("drops a load that a sign-out overtook", async () => {
@@ -245,7 +248,9 @@ describe("a read that comes back late", () => {
 
 describe("a load that fails", () => {
   it("says so in the state and keeps who was asking", async () => {
-    reads.loadMyAssociations.mockRejectedValueOnce(new Error("Could not load your associations: timeout"));
+    reads.loadMyAssociations.mockRejectedValueOnce(
+      new Error("Could not load your associations: timeout"),
+    );
     await loadRemote("pat");
 
     expect(remoteSnapshot()).toMatchObject({
@@ -264,7 +269,11 @@ describe("a load that fails", () => {
     reads.loadCommunity.mockResolvedValueOnce(copy("maple", "second try"));
     await retryRemote();
 
-    expect(remoteSnapshot()).toMatchObject({ status: "ready", activeId: "maple", message: undefined });
+    expect(remoteSnapshot()).toMatchObject({
+      status: "ready",
+      activeId: "maple",
+      message: undefined,
+    });
   });
 
   it("is not asked again when nothing failed", async () => {
@@ -278,7 +287,9 @@ describe("a load that fails", () => {
 describe("the association a link asked for", () => {
   it("is opened once, and a later load stays where the member went", async () => {
     reads.loadMyAssociations.mockResolvedValue([MAPLE, OAK]);
-    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) => copy(id, "loaded"));
+    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) =>
+      copy(id, "loaded"),
+    );
 
     // Arrived by /c/oak-slug, so the first load opens Oak Hills.
     preferRemoteSlug("oak-slug");
@@ -302,7 +313,9 @@ describe("the association a link asked for", () => {
     expect(remoteSnapshot().status).toBe("error");
 
     // The ask was not spent on the load that failed.
-    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) => copy(id, "loaded"));
+    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) =>
+      copy(id, "loaded"),
+    );
     await retryRemote();
     expect(remoteSnapshot()).toMatchObject({ status: "ready", activeId: "oak" });
 
@@ -320,7 +333,9 @@ describe("the association a link asked for", () => {
     const load = loadRemote("pat");
     await vi.waitFor(() => expect(reads.loadCommunity).toHaveBeenCalledTimes(1));
 
-    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) => copy(id, "loaded"));
+    reads.loadCommunity.mockImplementation(async (_client: unknown, id: string) =>
+      copy(id, "loaded"),
+    );
     await setRemoteAssociation("maple");
     slow.resolve(copy("oak", "too late"));
     await load;
@@ -343,7 +358,10 @@ describe("remoteWrite", () => {
     // Row level security hides a row it will not let you change: the update
     // matches nothing and the database reports no error.
     const { messages, stop } = reported();
-    const ok = await remoteWrite("Saving the kind of home", async () => ({ error: null, count: 0 }));
+    const ok = await remoteWrite("Saving the kind of home", async () => ({
+      error: null,
+      count: 0,
+    }));
     stop();
 
     expect(ok).toBe(false);
@@ -425,7 +443,10 @@ describe("remoteWrite", () => {
 
   it("still reports what the database said when it did refuse outright", async () => {
     const { messages, stop } = reported();
-    const ok = await remoteWrite("Saving", async () => ({ error: { message: "permission denied" }, count: null }));
+    const ok = await remoteWrite("Saving", async () => ({
+      error: { message: "permission denied" },
+      count: null,
+    }));
     stop();
     expect(ok).toBe(false);
     expect(messages).toEqual(["Saving: permission denied"]);

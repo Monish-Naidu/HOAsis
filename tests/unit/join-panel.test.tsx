@@ -11,7 +11,13 @@ import userEvent from "@testing-library/user-event";
 
 let search = "invite=A1B2C3&email=dana%40home.com";
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   useSearchParams: () => new URLSearchParams(search),
 }));
 
@@ -21,7 +27,9 @@ vi.mock("@/lib/supabase/env", async (original) => ({
 }));
 
 vi.mock("@/lib/auth", () => ({
-  useAuth: () => ({ user: { email: "dana@work.com", user_metadata: { full_name: "Dana Whitfield" } } }),
+  useAuth: () => ({
+    user: { email: "dana@work.com", user_metadata: { full_name: "Dana Whitfield" } },
+  }),
   signUp: vi.fn(async () => ({ ok: true })),
 }));
 
@@ -32,7 +40,11 @@ vi.mock("@/lib/supabase/client", () => ({
   supabaseBrowser: () => ({
     rpc: claim,
     // The association row comes back: this account is a member of it.
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { slug: "maple-court" }, error: null }) }) }) }),
+    from: () => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: { slug: "maple-court" }, error: null }) }),
+      }),
+    }),
   }),
 }));
 
@@ -41,7 +53,12 @@ const requestToJoin = vi.fn(async () => ({ ok: true }));
 const found = Promise.resolve({ name: "Maple Court HOA", place: "Bothell, WA" });
 vi.mock("@/lib/app-state", async (original) => ({
   ...(await original<typeof import("@/lib/app-state")>()),
-  useAppState: () => ({ setCommunity: vi.fn(), signIn: vi.fn(), lookupJoinCode: () => found, requestToJoin }),
+  useAppState: () => ({
+    setCommunity: vi.fn(),
+    signIn: vi.fn(),
+    lookupJoinCode: () => found,
+    requestToJoin,
+  }),
   useCommunityById: () => undefined,
   useStorageReady: () => true,
 }));
@@ -74,7 +91,9 @@ describe("an invitation sent to another address, opened by somebody who already 
 
     const told = await screen.findByRole("status");
     expect(told.textContent).toContain("This invitation was sent to dana@home.com.");
-    expect(told.textContent).toContain("You are signed in as dana@work.com, which already has a home here.");
+    expect(told.textContent).toContain(
+      "You are signed in as dana@work.com, which already has a home here.",
+    );
     expect(told.textContent).toContain("ask the board to change its email to dana@work.com");
     // Told first. Nothing has opened, and no request went to the board.
     expect(assign).not.toHaveBeenCalled();

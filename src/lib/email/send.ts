@@ -4,7 +4,15 @@ import { assessmentDueEmail, pastDueEmail } from "./templates";
 import { emailSender } from "./sender";
 import { signInUrl } from "./sign-in-link";
 import { readReplyTo } from "./reply-to";
-import { createPacer, logAttempt, recentlySent, sentKey, stoppedLine, unrecordedLine, type Pacer } from "./pace";
+import {
+  createPacer,
+  logAttempt,
+  recentlySent,
+  sentKey,
+  stoppedLine,
+  unrecordedLine,
+  type Pacer,
+} from "./pace";
 
 /**
  * Sending dues email.
@@ -97,7 +105,14 @@ export async function sendDuesEmails(input: {
   pacer?: Pacer;
 }): Promise<SendResult> {
   const admin = supabaseAdmin();
-  const result: SendResult = { sent: 0, failed: 0, skipped: 0, errors: [], already: 0, remaining: 0 };
+  const result: SendResult = {
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    errors: [],
+    already: 0,
+    remaining: 0,
+  };
 
   // The recipient list comes from the database, which owns the opt out rule.
   // Assembling it here would mean reimplementing that rule and getting it
@@ -134,8 +149,7 @@ export async function sendDuesEmails(input: {
     associationName: input.associationName,
     ownerName: person.full_name || "Neighbor",
     unitLabel: person.unit_label,
-    balanceCents:
-      person.balance_cents > 0 ? person.balance_cents : 0,
+    balanceCents: person.balance_cents > 0 ? person.balance_cents : 0,
     dueDate: input.dueDate,
     payUrl: `${input.origin}/resident/pay`,
     // Statutory. There is no opt out to offer, and the footer says why.
@@ -181,7 +195,8 @@ export async function sendDuesEmails(input: {
 
     if (input.dryRun || !client) {
       result.sent++;
-      if (input.dryRun) (result.would ??= []).push({ email: person.email, unit: person.unit_label });
+      if (input.dryRun)
+        (result.would ??= []).push({ email: person.email, unit: person.unit_label });
       continue;
     }
 

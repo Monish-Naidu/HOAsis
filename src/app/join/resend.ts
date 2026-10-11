@@ -26,8 +26,14 @@ export async function resendConfirmation(email: string): Promise<ResendResult> {
     });
     if (response.ok) return { ok: true };
     if (response.status !== 503) {
-      const body = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
-      return { ok: false, message: body.error ?? body.message ?? "Could not send it again. Try in a minute." };
+      const body = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+      };
+      return {
+        ok: false,
+        message: body.error ?? body.message ?? "Could not send it again. Try in a minute.",
+      };
     }
   } catch {
     // Network trouble reaching our own route. Supabase's path is still there.

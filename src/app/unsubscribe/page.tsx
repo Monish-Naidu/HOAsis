@@ -33,8 +33,7 @@ export default async function UnsubscribePage({
 }) {
   const { p: profileId, c: category, t: token } = await searchParams;
 
-  const valid =
-    profileId && category && token && verifyUnsubscribe(profileId, category, token);
+  const valid = profileId && category && token && verifyUnsubscribe(profileId, category, token);
 
   let done = false;
   let failure: string | null = null;
@@ -78,8 +77,8 @@ export default async function UnsubscribePage({
               </p>
               <p className="mt-4 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5 text-footnote leading-snug text-fg-muted">
                 <ShieldCheck className="mt-px size-4 shrink-0 text-fg-subtle" />
-                Notices about your account, such as dues coming due or a balance
-                past due, will still reach you. Your board is required to send those.
+                Notices about your account, such as dues coming due or a balance past due, will
+                still reach you. Your board is required to send those.
               </p>
             </>
           ) : (

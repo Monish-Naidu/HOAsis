@@ -94,7 +94,9 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
   await page.getByRole("button", { name: new RegExp(a.origin) }).click();
   // Owners who already run it are asked where they are coming from.
   if (a.origin === "We already run our association") {
-    await page.getByRole("button", { name: new RegExp(a.previously ?? "Another platform") }).click();
+    await page
+      .getByRole("button", { name: new RegExp(a.previously ?? "Another platform") })
+      .click();
   }
   await step(page);
   await page.getByRole("button", { name: new RegExp(a.property) }).click();
@@ -127,7 +129,10 @@ async function onboard(page: import("@playwright/test").Page, a: Answers) {
     for (let n = lots.from; n <= lots.to; n += 1) {
       if (n === lots.from) continue;
       await page.getByRole("button", { name: /^Add a (home|unit|lot)$/ }).click();
-      await page.getByLabel(/^Address of home \d+$/).last().fill(`${n} Founder Way`);
+      await page
+        .getByLabel(/^Address of home \d+$/)
+        .last()
+        .fill(`${n} Founder Way`);
     }
   }
   await step(page);
@@ -168,9 +173,7 @@ test.describe("the three questions", () => {
     await expect(go, "a blank name and email let the board through").toBeDisabled();
   });
 
-  test("names the two situations it supports, and what each one changes", async ({
-    page,
-  }) => {
+  test("names the two situations it supports, and what each one changes", async ({ page }) => {
     await lookAround(page);
 
     await page.getByLabel(/Association name/i).fill("Three Ways HOA");
@@ -284,7 +287,9 @@ test.describe("the plan is built from the answers", () => {
     // The one step that named the state was the budget, and the Budget page
     // is switched off for launch, so the step is too. When it comes back
     // this goes back to checking for "California".
-    expect(health.text, "the plan points at a page that is switched off").not.toContain("Budget what you spend");
+    expect(health.text, "the plan points at a page that is switched off").not.toContain(
+      "Budget what you spend",
+    );
     expect(health.text, "the records group is missing").toContain("Records owners can ask for");
   });
 });
@@ -306,9 +311,7 @@ test.describe("getting to money", () => {
     // One line, from one answer. This is a copy in the browser, which cannot
     // take money, so it must say so and never claim "You can take payments".
     // (A signed in association says how many steps are left until Stripe is on.)
-    expect(health.text).toMatch(
-      /cannot take payments|steps? left before owners can pay online/,
-    );
+    expect(health.text).toMatch(/cannot take payments|steps? left before owners can pay online/);
     expect(health.text, "a browser copy claimed it can take payments").not.toContain(
       "You can take payments",
     );
@@ -366,7 +369,10 @@ test.describe("the plan is its own screen", () => {
     // A plan that has to be finished before the product opens is a plan people
     // abandon, so both exits are asserted: the header, and the welcome's own.
     await expect(page.getByRole("link", { name: "Skip for now" })).toBeVisible();
-    await page.getByRole("link", { name: /Open the dashboard/ }).first().click();
+    await page
+      .getByRole("link", { name: /Open the dashboard/ })
+      .first()
+      .click();
     await page.waitForURL("**/board**");
 
     expect(page.url(), "the dashboard link did not leave the plan").toContain("/board");
@@ -385,9 +391,7 @@ test.describe("the plan is its own screen", () => {
 
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan inside the workspace");
-    expect(health.text, "the plan is not available in the workspace").toMatch(
-      /Get paid/,
-    );
+    expect(health.text, "the plan is not available in the workspace").toMatch(/Get paid/);
   });
 });
 
@@ -408,9 +412,7 @@ test.describe("the dashboard", () => {
     // Naming the association proves we are actually inside it. Asserting only
     // that headings exist passes on the sign in page, which is where this
     // landed while the test was wiping its own state.
-    expect(health.text, "not signed into the new association").toContain(
-      "Dashboard Shape HOA",
-    );
+    expect(health.text, "not signed into the new association").toContain("Dashboard Shape HOA");
   });
 });
 
@@ -487,9 +489,7 @@ test.describe("the first weeks of a community still being built", () => {
     }
   });
 
-  test("a builder is told to constitute it and to charge its own unsold lots", async ({
-    page,
-  }) => {
+  test("a builder is told to constitute it and to charge its own unsold lots", async ({ page }) => {
     await onboard(page, {
       name: "Greenfield HOA",
       state: "Washington",
@@ -504,7 +504,9 @@ test.describe("the first weeks of a community still being built", () => {
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "builder plan");
     expect(health.text).toContain("Before the bank will open an account");
-    expect(health.text, "the EIN is the thing that unblocks a bank account").toContain("Get an EIN");
+    expect(health.text, "the EIN is the thing that unblocks a bank account").toContain(
+      "Get an EIN",
+    );
     expect(health.text).toContain("Register the association and name a registered agent");
     // A builder setting its own budget has every incentive to leave this out,
     // and it is the largest source of turnover litigation.
@@ -540,9 +542,7 @@ test.describe("the first weeks of a community still being built", () => {
 });
 
 test.describe("an association that already runs itself", () => {
-  test("is asked what each home owes today, not to import a ledger", async ({
-    page,
-  }) => {
+  test("is asked what each home owes today, not to import a ledger", async ({ page }) => {
     await onboard(page, {
       name: "Willow Creek HOA",
       state: "Washington",
@@ -558,9 +558,10 @@ test.describe("an association that already runs itself", () => {
     expect(health.text, "the opening balances step is missing").toContain(
       "Enter what each home owes",
     );
-    expect(health.text, "an established association was given the builder's paperwork").not.toContain(
-      "Before the bank will open an account",
-    );
+    expect(
+      health.text,
+      "an established association was given the builder's paperwork",
+    ).not.toContain("Before the bank will open an account");
     // And still nothing about exporting from wherever they were.
     for (const word of ["spreadsheet", "CSV", "management company"]) {
       expect(health.text, `the plan still mentions ${word}`).not.toContain(word);
@@ -600,9 +601,7 @@ test.describe("an association that already runs itself", () => {
 
     await page.goto("/board/homeowners/opening-balances");
     const health = await expectHealthy(page, "opening balances");
-    expect(health.text, "the screen does not say what it is for").toContain(
-      "day you switched",
-    );
+    expect(health.text, "the screen does not say what it is for").toContain("day you switched");
 
     // Home 2, which the founder does not hold. Detached homes of an
     // established association go by address.
@@ -655,9 +654,7 @@ test.describe("what kind of homes changes the plan", () => {
     const health = await expectHealthy(page, "townhome plan");
 
     expect(health.text).toContain("who fixes what");
-    expect(health.text, "the party wall problem is not named").toMatch(
-      /party wall|shared roof/i,
-    );
+    expect(health.text, "the party wall problem is not named").toMatch(/party wall|shared roof/i);
     // A townhome association does not own a building the way a condo does.
     expect(health.text, "townhomes were asked about milestone inspections").not.toContain(
       "structural inspection",
@@ -703,8 +700,14 @@ test.describe("a community with more than one kind of home", () => {
     await step(page);
     await page.getByRole("button", { name: /Townhomes/ }).click();
     await page.getByRole("button", { name: /Condos/ }).click();
-    await expect(page.getByRole("button", { name: /Townhomes/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: /Condos/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /Townhomes/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(page.getByRole("button", { name: /Condos/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await step(page);
 
     // Dues by kind.
@@ -726,7 +729,9 @@ test.describe("a community with more than one kind of home", () => {
     await page.getByLabel(/^Phase 2 last (home|unit|lot)$/).fill("40");
     // A new range starts as the kind nobody has used yet.
     await expect(
-      page.getByRole("radiogroup", { name: "Kind of home in Phase 2" }).getByRole("radio", { name: "Condos" }),
+      page
+        .getByRole("radiogroup", { name: "Kind of home in Phase 2" })
+        .getByRole("radio", { name: "Condos" }),
     ).toHaveAttribute("aria-checked", "true");
     const summary = await inspect(page);
     expect(summary.text).toContain("20 townhomes at $300");
@@ -770,9 +775,7 @@ test.describe("get started and signing up are the same flow", () => {
       "Confirming your email can wait until the end",
     );
     // Looking around is still allowed, and says what it is.
-    expect(health.text, "exploring is not offered as a real choice").toContain(
-      "Look around first",
-    );
+    expect(health.text, "exploring is not offered as a real choice").toContain("Look around first");
     expect(health.text, "the browser only copy is not explained").toContain(
       "builds a copy in this browser only",
     );
@@ -809,10 +812,9 @@ test.describe("get started and signing up are the same flow", () => {
     await expect(page.getByLabel("Your name"), "the name was not carried forward").toHaveValue(
       "Pat Founder",
     );
-    await expect(
-      page.getByLabel("Your email"),
-      "the email was not carried forward",
-    ).toHaveValue("pat@example.com");
+    await expect(page.getByLabel("Your email"), "the email was not carried forward").toHaveValue(
+      "pat@example.com",
+    );
   });
 
   test("looking around ends in a copy that says it is one", async ({ page }) => {

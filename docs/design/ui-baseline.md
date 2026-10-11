@@ -257,12 +257,12 @@ construction, moved by "Transfer presidency", never left empty, because
 `permissions` (changing seats) belongs to that office alone. Defaults when a
 seat is appointed, all adjustable by the President except their own:
 
-| Office | Default access |
-| --- | --- |
-| President | everything, plus changing seats |
-| Vice President | everything the President sees, except changing seats |
-| Treasurer | Finances, Vendors, Homeowners, Documents, Messages, Compliance |
-| Secretary | Documents, Messages, Meetings and voting, Requests, Compliance, Community |
+| Office         | Default access                                                            |
+| -------------- | ------------------------------------------------------------------------- |
+| President      | everything, plus changing seats                                           |
+| Vice President | everything the President sees, except changing seats                      |
+| Treasurer      | Finances, Vendors, Homeowners, Documents, Messages, Compliance            |
+| Secretary      | Documents, Messages, Meetings and voting, Requests, Compliance, Community |
 
 Two lists per seat since 2026-09-26: what it may **change** (`capabilities`,
 every write in the schema asks this) and what it may **see** (`views`,

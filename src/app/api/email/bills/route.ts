@@ -51,11 +51,21 @@ export async function GET(request: NextRequest) {
 
   const plan = cronPlan(request, { budgetMs: CRON_BUDGET_MS });
   const report = {
-    today, dryRun, checked: 0,
-    mailed: [] as string[], quiet: [] as string[], optedOut: [] as string[], errors: [] as string[],
+    today,
+    dryRun,
+    checked: 0,
+    mailed: [] as string[],
+    quiet: [] as string[],
+    optedOut: [] as string[],
+    errors: [] as string[],
     /** Dry run only: the association and the addresses a real run would write to. */
-    wouldMail: [] as { association: string; dueOn: string; recipients: { email: string; unit: string }[] }[],
-    complete: true, next: null as string | null,
+    wouldMail: [] as {
+      association: string;
+      dueOn: string;
+      recipients: { email: string; unit: string }[];
+    }[],
+    complete: true,
+    next: null as string | null,
   };
 
   // The association before the one being visited. A send that stops at the
@@ -68,7 +78,9 @@ export async function GET(request: NextRequest) {
     (after, limit) => {
       let query = admin
         .from("associations")
-        .select("id, name, bills_by_email, subscription_status, past_due_since, trial_ends_at, billing_subscription_id")
+        .select(
+          "id, name, bills_by_email, subscription_status, past_due_since, trial_ends_at, billing_subscription_id",
+        )
         .is("deleted_at", null)
         .order("id")
         .limit(limit);
@@ -128,13 +140,19 @@ export async function GET(request: NextRequest) {
           pacer: createPacer({ budgetMs }),
         });
         if (dryRun) {
-          report.wouldMail.push({ association: a.name, dueOn: due.dueOn, recipients: result.would ?? [] });
+          report.wouldMail.push({
+            association: a.name,
+            dueOn: due.dueOn,
+            recipients: result.would ?? [],
+          });
         }
         report.mailed.push(
           `${a.name}: ${dryRun ? "would send" : "sent"} ${result.sent}, already ${result.already}, skipped ${result.skipped}, failed ${result.failed}`,
         );
-        for (const message of result.errors.slice(0, 5)) report.errors.push(`${a.name}: ${message}`);
-        if (result.unrecorded) log.error("bill email record not saved", { associationId: a.id, err: result.unrecorded });
+        for (const message of result.errors.slice(0, 5))
+          report.errors.push(`${a.name}: ${message}`);
+        if (result.unrecorded)
+          log.error("bill email record not saved", { associationId: a.id, err: result.unrecorded });
         // Stopped at the budget with people left: finish them in the next call.
         if (result.remaining > 0) {
           unfinished = true;
@@ -149,14 +167,30 @@ export async function GET(request: NextRequest) {
   );
 
   const summary = {
-    checked: report.checked, mailed: report.mailed.length, optedOut: report.optedOut.length,
-    quiet: report.quiet.length, errors: report.errors.length, complete: walk.complete && !unfinished,
-    after: plan.after, dryRun,
+    checked: report.checked,
+    mailed: report.mailed.length,
+    optedOut: report.optedOut.length,
+    quiet: report.quiet.length,
+    errors: report.errors.length,
+    complete: walk.complete && !unfinished,
+    after: plan.after,
+    dryRun,
   };
   if (walk.error) {
     log.error("bill emails run failed", { err: walk.error, ...summary });
-    if (!dryRun) await recordCronRun({ job: "email-bills", requestId: log.requestId, startedAt, ok: false, summary, error: walk.error });
-    return NextResponse.json({ error: walk.error, reference: log.requestId, ...report }, { status: 500 });
+    if (!dryRun)
+      await recordCronRun({
+        job: "email-bills",
+        requestId: log.requestId,
+        startedAt,
+        ok: false,
+        summary,
+        error: walk.error,
+      });
+    return NextResponse.json(
+      { error: walk.error, reference: log.requestId, ...report },
+      { status: 500 },
+    );
   }
   if (unfinished || (!walk.complete && walk.last)) {
     report.complete = false;
@@ -178,7 +212,14 @@ export async function GET(request: NextRequest) {
     }
   }
   log.info("bill emails run finished", summary);
-  if (!dryRun) await recordCronRun({ job: "email-bills", requestId: log.requestId, startedAt, ok: report.errors.length === 0, summary });
+  if (!dryRun)
+    await recordCronRun({
+      job: "email-bills",
+      requestId: log.requestId,
+      startedAt,
+      ok: report.errors.length === 0,
+      summary,
+    });
 
   return NextResponse.json(report);
 }

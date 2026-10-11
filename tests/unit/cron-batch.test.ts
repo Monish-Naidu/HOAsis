@@ -14,7 +14,9 @@ describe("cron batching", () => {
     expect(plan.after).toBeNull();
     expect(plan.continuation("abc")).toBe("https://x.test/api/assessments/run?dry=1&after=abc");
     expect(cronPlan(request("https://x.test/run?after=abc")).after).toBe("abc");
-    expect(continuationUrl("https://x.test/run?after=old", "new")).toBe("https://x.test/run?after=new");
+    expect(continuationUrl("https://x.test/run?after=old", "new")).toBe(
+      "https://x.test/run?after=new",
+    );
   });
 
   it("walks every page when there is time", async () => {

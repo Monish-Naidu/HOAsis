@@ -9,7 +9,14 @@
 
 import { useState } from "react";
 import { CalendarPlus, X } from "lucide-react";
-import { Button, Card, CardHeader, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Button,
+  Card,
+  CardHeader,
+  Select,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { addDays, formatDate, todayIsoDate } from "@/lib/utils";
@@ -48,8 +55,7 @@ export function ScheduleMeeting({ onClose }: { onClose: () => void }) {
   const [timeTouched, setTimeTouched] = useState(false);
   const checkedTime = checkMeetingTime(time);
 
-  const field =
-    fieldClass;
+  const field = fieldClass;
   const label = "mb-1 block text-footnote font-semibold text-fg-muted";
 
   const ready = title.trim().length > 0 && date >= todayIsoDate() && location.trim().length > 0;

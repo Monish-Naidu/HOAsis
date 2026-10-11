@@ -11,7 +11,13 @@ import {
   vendorPaidThisYear,
   yearSummary,
 } from "@/lib/metrics";
-import { addStatementLine, balanceSplit, compareStatement, isDuesLine, orderStatement } from "@/lib/statement";
+import {
+  addStatementLine,
+  balanceSplit,
+  compareStatement,
+  isDuesLine,
+  orderStatement,
+} from "@/lib/statement";
 import { statementLines } from "@/lib/data/remote";
 import type { ChargeLine, LedgerEntry, Home } from "@/lib/types";
 
@@ -54,21 +60,32 @@ describe("what was billed is the dues lines on the statements", () => {
       amountCents: 28_500,
       balanceAfterCents: 28_500,
     };
-    const billed = duesCollection({ ...withHome, homeCharges: { ...c.homeCharges, "own-new": [augBill] } }, 2026);
+    const billed = duesCollection(
+      { ...withHome, homeCharges: { ...c.homeCharges, "own-new": [augBill] } },
+      2026,
+    );
     expect(billed.expectedYtd).toBe(before.expectedYtd + 28_500);
     expect(billed.months[0].expectedCents).toBe(before.months[0].expectedCents);
   });
 
   it("leaves a bill that has not fallen due out of the year so far", () => {
     // September's bill is on the statements on August 20 and is not billed yet.
-    const posted = Object.values(c.homeCharges).flat().filter((l) => l.date === "2026-09-01");
+    const posted = Object.values(c.homeCharges)
+      .flat()
+      .filter((l) => l.date === "2026-09-01");
     expect(posted.length).toBeGreaterThan(0);
     expect(before.months.map((m) => m.label)).not.toContain("Sep");
   });
 
   it("tells a dues line from a late fee, a fine and an opening balance", () => {
     const line = (label: string, category?: string): ChargeLine => ({
-      id: label, date: AUG_20, label, kind: "charge", amountCents: 100, balanceAfterCents: 100, category,
+      id: label,
+      date: AUG_20,
+      label,
+      kind: "charge",
+      amountCents: 100,
+      balanceAfterCents: 100,
+      category,
     });
     expect(isDuesLine(line("August assessment"))).toBe(true);
     expect(isDuesLine(line("August 2026 dues"))).toBe(true);
@@ -95,27 +112,57 @@ describe("one count of homes", () => {
 
 describe("owed now, and billed but not yet due", () => {
   const charge = (id: string, date: string, amountCents: number): ChargeLine => ({
-    id, date, label: "Assessment", kind: "charge", amountCents, balanceAfterCents: 0,
+    id,
+    date,
+    label: "Assessment",
+    kind: "charge",
+    amountCents,
+    balanceAfterCents: 0,
   });
   const pay = (id: string, date: string, amountCents: number): ChargeLine => ({
-    id, date, label: "Bank payment", kind: "payment", amountCents: -amountCents, balanceAfterCents: 0,
+    id,
+    date,
+    label: "Bank payment",
+    kind: "payment",
+    amountCents: -amountCents,
+    balanceAfterCents: 0,
   });
 
   it("calls a home with only a coming bill next bill, not a current balance", () => {
-    const split = balanceSplit([charge("sep", "2026-09-01", 28_500), pay("aug-p", "2026-08-03", 28_500), charge("aug", "2026-08-01", 28_500)], 28_500, AUG_20);
+    const split = balanceSplit(
+      [
+        charge("sep", "2026-09-01", 28_500),
+        pay("aug-p", "2026-08-03", 28_500),
+        charge("aug", "2026-08-01", 28_500),
+      ],
+      28_500,
+      AUG_20,
+    );
     expect(split.owedNowCents).toBe(0);
     expect(split.notYetDueCents).toBe(28_500);
-    expect(split.nextBill).toEqual({ date: "2026-09-01", amountCents: 28_500, label: "Assessment" });
+    expect(split.nextBill).toEqual({
+      date: "2026-09-01",
+      amountCents: 28_500,
+      label: "Assessment",
+    });
   });
 
   it("owes now whatever is past its date, apart from the coming bill", () => {
-    const split = balanceSplit([charge("sep", "2026-09-01", 28_500), charge("aug", "2026-08-01", 28_500)], 57_000, AUG_20);
+    const split = balanceSplit(
+      [charge("sep", "2026-09-01", 28_500), charge("aug", "2026-08-01", 28_500)],
+      57_000,
+      AUG_20,
+    );
     expect(split.owedNowCents).toBe(28_500);
     expect(split.notYetDueCents).toBe(28_500);
   });
 
   it("reads a bill paid early as nothing owed, and still knows the bill", () => {
-    const split = balanceSplit([pay("early", AUG_20, 28_500), charge("sep", "2026-09-01", 28_500)], 0, AUG_20);
+    const split = balanceSplit(
+      [pay("early", AUG_20, 28_500), charge("sep", "2026-09-01", 28_500)],
+      0,
+      AUG_20,
+    );
     expect(split).toMatchObject({ owedNowCents: 0, notYetDueCents: 0 });
     expect(split.upcoming?.amountCents).toBe(28_500);
   });
@@ -137,13 +184,31 @@ describe("owed now, and billed but not yet due", () => {
 });
 
 describe("statement order", () => {
-  const line = (id: string, date: string, kind: ChargeLine["kind"], amountCents: number): ChargeLine => ({
-    id, date, label: id, kind, amountCents, balanceAfterCents: 0,
+  const line = (
+    id: string,
+    date: string,
+    kind: ChargeLine["kind"],
+    amountCents: number,
+  ): ChargeLine => ({
+    id,
+    date,
+    label: id,
+    kind,
+    amountCents,
+    balanceAfterCents: 0,
   });
 
   it("puts a charge before the payment that settles it on the same day", () => {
-    expect(compareStatement({ date: "2026-08-01", kind: "charge" }, { date: "2026-08-01", kind: "payment" })).toBeLessThan(0);
-    const ordered = orderStatement([line("pay", "2026-08-01", "payment", -28_500), line("bill", "2026-08-01", "charge", 28_500)], 0);
+    expect(
+      compareStatement(
+        { date: "2026-08-01", kind: "charge" },
+        { date: "2026-08-01", kind: "payment" },
+      ),
+    ).toBeLessThan(0);
+    const ordered = orderStatement(
+      [line("pay", "2026-08-01", "payment", -28_500), line("bill", "2026-08-01", "charge", 28_500)],
+      0,
+    );
     // Newest first: the payment above the bill, and the balance never dips below zero.
     expect(ordered.map((l) => l.id)).toEqual(["pay", "bill"]);
     expect(ordered.map((l) => l.balanceAfterCents)).toEqual([0, 28_500]);
@@ -164,10 +229,19 @@ describe("statement order", () => {
 
   it("is how a signed in statement is built too", () => {
     const row = (id: string, kind: "charge" | "payment", amount: number, created: string) => ({
-      id, unit_id: "u", due_on: "2026-08-01", created_at: created, label: id, kind, amount_cents: amount,
+      id,
+      unit_id: "u",
+      due_on: "2026-08-01",
+      created_at: created,
+      label: id,
+      kind,
+      amount_cents: amount,
     });
     // The payment was written first; the charge still leads on its day.
-    const lines = statementLines([row("pay", "payment", -28_500, "2026-08-01T01:00"), row("bill", "charge", 28_500, "2026-08-01T02:00")]);
+    const lines = statementLines([
+      row("pay", "payment", -28_500, "2026-08-01T01:00"),
+      row("bill", "charge", 28_500, "2026-08-01T02:00"),
+    ]);
     expect(lines.map((l) => l.id)).toEqual(["pay", "bill"]);
     expect(lines.map((l) => l.balanceAfterCents)).toEqual([0, 28_500]);
   });
@@ -192,13 +266,40 @@ describe("spending", () => {
 
 /** The two lines a hand-recorded check writes, and the two a reversal adds, as the database and the demo write them (0083, 0088). */
 function checkAndReversal(homeId: string, paidOn: string, reversedOn: string, cents: number) {
-  const ledger = (id: string, date: string, description: string, amountCents: number): LedgerEntry => ({
-    id, date, description, counterparty: "Owner", category: "Assessments", accountId: "acct-operating",
-    amountCents, status: "cleared", homeId,
+  const ledger = (
+    id: string,
+    date: string,
+    description: string,
+    amountCents: number,
+  ): LedgerEntry => ({
+    id,
+    date,
+    description,
+    counterparty: "Owner",
+    category: "Assessments",
+    accountId: "acct-operating",
+    amountCents,
+    status: "cleared",
+    homeId,
   });
   return {
-    payment: { id: "chk", date: paidOn, label: "Check payment #1", kind: "payment", amountCents: -cents, balanceAfterCents: 0 } as ChargeLine,
-    reversal: { id: "rev", date: reversedOn, label: "Payment reversed: entered twice", kind: "charge", amountCents: cents, balanceAfterCents: 0, category: "other" } as ChargeLine,
+    payment: {
+      id: "chk",
+      date: paidOn,
+      label: "Check payment #1",
+      kind: "payment",
+      amountCents: -cents,
+      balanceAfterCents: 0,
+    } as ChargeLine,
+    reversal: {
+      id: "rev",
+      date: reversedOn,
+      label: "Payment reversed: entered twice",
+      kind: "charge",
+      amountCents: cents,
+      balanceAfterCents: 0,
+      category: "other",
+    } as ChargeLine,
     deposit: ledger("led-chk", paidOn, "Assessment payment, unit 42", cents),
     takenBack: ledger("led-rev", reversedOn, "Payment reversed, unit 42", -cents),
   };
@@ -206,7 +307,10 @@ function checkAndReversal(homeId: string, paidOn: string, reversedOn: string, ce
 
 describe("a payment recorded and then reversed", () => {
   const home = c.homes[0];
-  const homeCharges = (extra: ChargeLine[]) => ({ ...c.homeCharges, [home.id]: [...extra, ...(c.homeCharges[home.id] ?? [])] });
+  const homeCharges = (extra: ChargeLine[]) => ({
+    ...c.homeCharges,
+    [home.id]: [...extra, ...(c.homeCharges[home.id] ?? [])],
+  });
   const figures = (x: Community) => ({
     collected: duesCollection(x, 2026),
     flows: monthlyFlowsBetween(x, "2026-01-01", AUG_20),
@@ -215,7 +319,12 @@ describe("a payment recorded and then reversed", () => {
     totals: ledgerTotals(x.ledger),
   });
   const before = figures(c);
-  const { payment, reversal, deposit, takenBack } = checkAndReversal(home.id, "2026-08-10", "2026-08-12", 100);
+  const { payment, reversal, deposit, takenBack } = checkAndReversal(
+    home.id,
+    "2026-08-10",
+    "2026-08-12",
+    100,
+  );
 
   it("leaves collected, money in and spending exactly where they were", () => {
     const after = figures({
@@ -236,7 +345,11 @@ describe("a payment recorded and then reversed", () => {
   it("is not spending, and not a category, while the payment alone is money in", () => {
     const only = figures({ ...c, ledger: [takenBack, ...c.ledger] });
     expect(only.spending).toEqual(before.spending);
-    const paid = figures({ ...c, homeCharges: homeCharges([payment]), ledger: [deposit, ...c.ledger] });
+    const paid = figures({
+      ...c,
+      homeCharges: homeCharges([payment]),
+      ledger: [deposit, ...c.ledger],
+    });
     expect(paid.collected.collectedYtd).toBe(before.collected.collectedYtd + 100);
     expect(paid.year.incomeCents).toBe(before.year.incomeCents + 100);
   });
@@ -244,7 +357,11 @@ describe("a payment recorded and then reversed", () => {
   it("takes a reversal off in the month it happens, not the month of the payment", () => {
     // Paid in July, taken back in August: July keeps the dollar, August loses it.
     const lines = checkAndReversal(home.id, "2026-07-10", "2026-08-12", 100);
-    const x: Community = { ...c, homeCharges: homeCharges([lines.reversal, lines.payment]), ledger: [lines.takenBack, lines.deposit, ...c.ledger] };
+    const x: Community = {
+      ...c,
+      homeCharges: homeCharges([lines.reversal, lines.payment]),
+      ledger: [lines.takenBack, lines.deposit, ...c.ledger],
+    };
     const flows = monthlyFlowsBetween(x, "2026-07-01", AUG_20);
     const base = monthlyFlowsBetween(c, "2026-07-01", AUG_20);
     expect(flows[0].inCents).toBe(base[0].inCents + 100);
@@ -252,14 +369,24 @@ describe("a payment recorded and then reversed", () => {
     expect(flows[1].outCents).toBe(base[1].outCents);
     const months = duesCollection(x, 2026).months;
     const baseMonths = duesCollection(c, 2026).months;
-    expect(months.find((m) => m.label === "Jul")!.collectedCents).toBe(baseMonths.find((m) => m.label === "Jul")!.collectedCents + 100);
-    expect(months.find((m) => m.label === "Aug")!.collectedCents).toBe(baseMonths.find((m) => m.label === "Aug")!.collectedCents - 100);
+    expect(months.find((m) => m.label === "Jul")!.collectedCents).toBe(
+      baseMonths.find((m) => m.label === "Jul")!.collectedCents + 100,
+    );
+    expect(months.find((m) => m.label === "Aug")!.collectedCents).toBe(
+      baseMonths.find((m) => m.label === "Aug")!.collectedCents - 100,
+    );
   });
 
   it("does not take a card fee pass-through for a reversal", () => {
-    const fee: LedgerEntry = { ...takenBack, id: "fee", description: "Card fee pass-through, August", amountCents: -4_120 };
-    expect(spendingBetween({ ...c, ledger: [fee, ...c.ledger] }, "2026-08-01", AUG_20).totalCents)
-      .toBe(spendingBetween(c, "2026-08-01", AUG_20).totalCents + 4_120);
+    const fee: LedgerEntry = {
+      ...takenBack,
+      id: "fee",
+      description: "Card fee pass-through, August",
+      amountCents: -4_120,
+    };
+    expect(
+      spendingBetween({ ...c, ledger: [fee, ...c.ledger] }, "2026-08-01", AUG_20).totalCents,
+    ).toBe(spendingBetween(c, "2026-08-01", AUG_20).totalCents + 4_120);
   });
 });
 
@@ -273,12 +400,28 @@ describe("the current month does not flip the year", () => {
     homeCharges: {
       ...c.homeCharges,
       [home.id]: [
-        { id: "oct", date: OCT_6, label: "Check payment", kind: "payment", amountCents: -100, balanceAfterCents: 0 },
+        {
+          id: "oct",
+          date: OCT_6,
+          label: "Check payment",
+          kind: "payment",
+          amountCents: -100,
+          balanceAfterCents: 0,
+        },
         ...(c.homeCharges[home.id] ?? []),
       ],
     },
     ledger: [
-      { id: "oct-led", date: OCT_6, description: "Assessment payment, unit 1", counterparty: "Owner", category: "Assessments", accountId: "acct-operating", amountCents: 100, status: "cleared" },
+      {
+        id: "oct-led",
+        date: OCT_6,
+        description: "Assessment payment, unit 1",
+        counterparty: "Owner",
+        category: "Assessments",
+        accountId: "acct-operating",
+        amountCents: 100,
+        status: "cleared",
+      },
       ...c.ledger,
     ],
   });
@@ -295,7 +438,12 @@ describe("the current month does not flip the year", () => {
 
   it("shows the month's own bill apart, as not yet posted", () => {
     const b = duesCollection(paid, 2026, OCT_6);
-    expect(b.thisMonth).toEqual({ month: 10, label: "Oct", expectedCents: b.expectedCents, collectedCents: 100 });
+    expect(b.thisMonth).toEqual({
+      month: 10,
+      label: "Oct",
+      expectedCents: b.expectedCents,
+      collectedCents: 100,
+    });
     // A month whose dues line exists is a billed month, not "this month's".
     expect(duesCollection(c, 2026).thisMonth).toBeUndefined();
   });
@@ -304,7 +452,9 @@ describe("the current month does not flip the year", () => {
     const x = duesCollection(base, 2026, OCT_6);
     // September's bill is posted and unpaid on October 6: billed, nothing in.
     const sep = x.months.find((m) => m.label === "Sep")!;
-    const posted = Object.values(c.homeCharges).flat().filter((l) => isDuesLine(l) && l.date === "2026-09-01");
+    const posted = Object.values(c.homeCharges)
+      .flat()
+      .filter((l) => isDuesLine(l) && l.date === "2026-09-01");
     expect(sep.expectedCents).toBe(posted.reduce((t, l) => t + l.amountCents, 0));
     expect(sep.collectedCents).toBe(0);
   });
@@ -318,11 +468,28 @@ describe("the current month does not flip the year", () => {
 
 describe("what a vendor was paid this year is what Transactions lists", () => {
   const vendor = { id: "v-walk", name: "Walk Test Plumbing" };
-  const line = (id: string, date: string, amountCents: number, patch: Partial<LedgerEntry> = {}): LedgerEntry => ({
-    id, date, description: "Plumbing", counterparty: vendor.name, category: "Repairs & maintenance",
-    accountId: "acct-operating", amountCents, status: "cleared", ...patch,
+  const line = (
+    id: string,
+    date: string,
+    amountCents: number,
+    patch: Partial<LedgerEntry> = {},
+  ): LedgerEntry => ({
+    id,
+    date,
+    description: "Plumbing",
+    counterparty: vendor.name,
+    category: "Repairs & maintenance",
+    accountId: "acct-operating",
+    amountCents,
+    status: "cleared",
+    ...patch,
   });
-  const x = (ledger: LedgerEntry[], payouts: Community["payouts"] = []): Community => ({ ...c, ledger, payouts, vendors: [] });
+  const x = (ledger: LedgerEntry[], payouts: Community["payouts"] = []): Community => ({
+    ...c,
+    ledger,
+    payouts,
+    vendors: [],
+  });
 
   it("sums ledger lines by counterparty when there is no payout row", () => {
     const ledger = [line("a", "2026-08-01", -100), line("b", "2026-03-02", -2_500)];
@@ -331,7 +498,9 @@ describe("what a vendor was paid this year is what Transactions lists", () => {
 
   it("matches by payout when the line carries one, whatever the counterparty says", () => {
     const payouts = [{ id: "po-1", vendorId: vendor.id } as Community["payouts"][number]];
-    const ledger = [line("a", "2026-08-01", -700, { counterparty: "Walk Plumbing LLC", payoutId: "po-1" })];
+    const ledger = [
+      line("a", "2026-08-01", -700, { counterparty: "Walk Plumbing LLC", payoutId: "po-1" }),
+    ];
     expect(vendorPaidThisYear(x(ledger, payouts), vendor, AUG_20)).toBe(700);
   });
 
@@ -348,7 +517,9 @@ describe("what a vendor was paid this year is what Transactions lists", () => {
 
   it("is the sum Transactions shows for that vendor in the year", () => {
     const some = c.vendors[0];
-    const listed = ledgerTotals(c.ledger.filter((e) => e.counterparty === some.name && e.date.startsWith("2026"))).outCents;
+    const listed = ledgerTotals(
+      c.ledger.filter((e) => e.counterparty === some.name && e.date.startsWith("2026")),
+    ).outCents;
     expect(vendorPaidThisYear(c, some, AUG_20)).toBe(listed);
   });
 });

@@ -68,7 +68,10 @@ describe("buildOwnerLedger", () => {
 
 describe("deep arrears", () => {
   it("writes enough history to carry a year of missed assessments", () => {
-    const lines = buildHomeLedger({ ...base, balanceCents: 342_000, standing: "collections" }, opts);
+    const lines = buildHomeLedger(
+      { ...base, balanceCents: 342_000, standing: "collections" },
+      opts,
+    );
     expect(lines[0].balanceAfterCents).toBe(342_000);
     const fees = lines.filter((l) => l.label.includes("late fee"));
     expect(fees).toHaveLength(0);
@@ -96,7 +99,17 @@ describe("a community built through onboarding", () => {
 
   it("starts empty rather than seeded with sample data", () => {
     const c = buildCommunity(draft, "2026-08-24");
-    for (const slice of ["ledger", "vendors", "payouts", "requests", "documents", "ballots", "posts", "bankAccounts", "reserveComponents"] as const) {
+    for (const slice of [
+      "ledger",
+      "vendors",
+      "payouts",
+      "requests",
+      "documents",
+      "ballots",
+      "posts",
+      "bankAccounts",
+      "reserveComponents",
+    ] as const) {
       expect(c[slice], slice).toHaveLength(0);
     }
   });
@@ -132,7 +145,9 @@ describe("a community built through onboarding", () => {
 
   it("bills on the next occurrence of the due day", () => {
     expect(buildCommunity(draft, "2026-08-24").nextChargeDate).toBe("2026-09-01");
-    expect(buildCommunity({ ...draft, dueDay: 28 }, "2026-08-24").nextChargeDate).toBe("2026-08-28");
+    expect(buildCommunity({ ...draft, dueDay: 28 }, "2026-08-24").nextChargeDate).toBe(
+      "2026-08-28",
+    );
   });
 
   it("gives every household an account and an empty ledger", () => {

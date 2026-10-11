@@ -58,11 +58,6 @@ export class ValidationError extends HoasisError {
   readonly code = "validation_failed";
 }
 
-/** A lookup that the caller expected to succeed did not. */
-export class NotFoundError extends HoasisError {
-  readonly code = "not_found";
-}
-
 /** True for anything this codebase raised deliberately. */
 export function isHoasisError(value: unknown): value is HoasisError {
   return value instanceof HoasisError;

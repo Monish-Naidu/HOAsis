@@ -8,7 +8,13 @@ import { StatTile } from "@/components/app/finance-ui";
 import { AutopayFailuresCard, useAutopayFailures } from "./autopay-failures-card";
 import { failedThisMonth } from "@/lib/payments/autopay-failures";
 import { useAppState } from "@/lib/app-state";
-import { agingBuckets, delinquency, duesCollection, lateFeesOwed, pastDueHint } from "@/lib/metrics";
+import {
+  agingBuckets,
+  delinquency,
+  duesCollection,
+  lateFeesOwed,
+  pastDueHint,
+} from "@/lib/metrics";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -26,10 +32,7 @@ export function CollectionsScreen() {
 
   return (
     <>
-      <PageHeader
-        title="Past due"
-        description="Past due balances and the next notice for each."
-      />
+      <PageHeader title="Past due" description="Past due balances and the next notice for each." />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
@@ -63,7 +66,10 @@ export function CollectionsScreen() {
       </div>
 
       <Card className="mt-6">
-        <CardHeader title="Past due by age" subtitle="Bar width is dollars owed. Households are counted under each age." />
+        <CardHeader
+          title="Past due by age"
+          subtitle="Bar width is dollars owed. Households are counted under each age."
+        />
         <AgingBar buckets={aging.buckets} />
       </Card>
 
@@ -74,7 +80,12 @@ export function CollectionsScreen() {
       {/* The ladder is the list of who is behind and what is owed them; the
           table of past-due households that sat here said it again. */}
       <Card className="mt-6">
-        <CardHeader title={community.association.duesCadence === "monthly" ? "Dues by month" : "Dues by bill"} subtitle={dues.measurable ? `${thisYear}, collected against billed` : "Nothing billed yet"} />
+        <CardHeader
+          title={community.association.duesCadence === "monthly" ? "Dues by month" : "Dues by bill"}
+          subtitle={
+            dues.measurable ? `${thisYear}, collected against billed` : "Nothing billed yet"
+          }
+        />
         {dues.measurable ? (
           <ul className="divide-y divide-border">
             {[...dues.months].reverse().map((m) => (
@@ -82,8 +93,10 @@ export function CollectionsScreen() {
                 <div className="flex items-center justify-between gap-3 text-footnote">
                   <span className="font-medium text-fg">{m.label}</span>
                   <span className="tnum text-fg-muted">
-                    <span className="font-semibold text-fg">{money(m.collectedCents, { cents: false })}</span> of{" "}
-                    {money(m.expectedCents, { cents: false })} · {Math.round(m.rate * 100)}%
+                    <span className="font-semibold text-fg">
+                      {money(m.collectedCents, { cents: false })}
+                    </span>{" "}
+                    of {money(m.expectedCents, { cents: false })} · {Math.round(m.rate * 100)}%
                   </span>
                 </div>
                 <Meter
@@ -96,7 +109,9 @@ export function CollectionsScreen() {
             ))}
           </ul>
         ) : (
-          <p className="px-5 py-6 text-body text-fg-muted">Dues appear here once the first month is billed.</p>
+          <p className="px-5 py-6 text-body text-fg-muted">
+            Dues appear here once the first month is billed.
+          </p>
         )}
       </Card>
 

@@ -1,6 +1,27 @@
 import type { Community } from "@/lib/data/community";
 import type { CommunityDraft } from "@/lib/data/new-community";
-import type { AccessLevel, Account, AccountRole, Announcement, AutopayPlan, BankAccount, Capability, DocumentRecord, ForumPost, HomeRequest, HomeType, MeetingAttendee, MessageThread, Home, PhotoVantage, ThreadAddress, VendorInvoice, Violation, ViolationReport, WorkOrder } from "@/lib/types";
+import type {
+  AccessLevel,
+  Account,
+  AccountRole,
+  Announcement,
+  AutopayPlan,
+  BankAccount,
+  Capability,
+  DocumentRecord,
+  ForumPost,
+  HomeRequest,
+  HomeType,
+  MeetingAttendee,
+  MessageThread,
+  Home,
+  PhotoVantage,
+  ThreadAddress,
+  VendorInvoice,
+  Violation,
+  ViolationReport,
+  WorkOrder,
+} from "@/lib/types";
 import type { ManualMethod, PaymentInstrument } from "@/lib/payments/instruments";
 import type { ManualPaymentRow } from "@/lib/payments/manual-payments";
 import type { ReplyEmail } from "@/lib/email/plain-error";
@@ -149,9 +170,7 @@ export interface AppState {
    * pays. Resolves once a real association has the write, so a screen can
    * wait before it says saved; false when it was refused.
    */
-  setHomeDues: (
-    changes: { homeId: string; cents: number | null }[],
-  ) => boolean | Promise<boolean>;
+  setHomeDues: (changes: { homeId: string; cents: number | null }[]) => boolean | Promise<boolean>;
   removeOwner: (homeId: string) => () => void;
   /**
    * A home changes hands. The seller's seat ends on the closing date, the
@@ -265,11 +284,7 @@ export interface AppState {
    */
   sendMeetingNotice: (meetingId: string) => string | false | Promise<string | false>;
   /** Returns an undo, because publishing broadcasts and rejecting discards. */
-  moderatePost: (
-    postId: string,
-    decision: "published" | "rejected",
-    reason?: string,
-  ) => () => void;
+  moderatePost: (postId: string, decision: "published" | "rejected", reason?: string) => () => void;
   togglePinned: (postId: string) => void;
   removePost: (postId: string) => () => void;
   /**
@@ -288,19 +303,13 @@ export interface AppState {
    * Confirming moves a transaction into every report. There is no undo: a
    * confirmed money line is not edited back (0106). To take one back, reverse it.
    */
-  confirmLedgerEntry: (
-    entryId: string,
-    category?: Community["ledger"][number]["category"],
-  ) => void;
+  confirmLedgerEntry: (entryId: string, category?: Community["ledger"][number]["category"]) => void;
   /**
    * Takes a line back by writing its opposite, with a reason, and leaves the
    * line itself on the books. Resolves to an undo once it is written, or false
    * when it was refused. The undo is a fresh copy of the line, not a delete.
    */
-  reverseLedgerEntry: (
-    entryId: string,
-    reason: string,
-  ) => LedgerReversal | Promise<LedgerReversal>;
+  reverseLedgerEntry: (entryId: string, reason: string) => LedgerReversal | Promise<LedgerReversal>;
   /**
    * Money moved from operating into reserves: two lines, one per account, so
    * both balances move. A transfer booked on the operating side alone read
@@ -421,11 +430,18 @@ export interface AppState {
   /** Whether the signed in person is coming to a meeting. */
   rsvpMeeting: (meetingId: string, response: "yes" | "no") => Promise<boolean>;
   /** Moves a meeting that has not happened. Refused in the past; resolves false if nothing was kept. */
-  rescheduleMeeting: (meetingId: string, to: { date: string; time?: string; location?: string }) => Promise<boolean>;
+  rescheduleMeeting: (
+    meetingId: string,
+    to: { date: string; time?: string; location?: string },
+  ) => Promise<boolean>;
   /** Cancels a meeting that has not happened; it stays on the record with the reason. */
   cancelMeeting: (meetingId: string, reason: string) => Promise<boolean>;
   /** Minutes and who came, for a meeting that was held. Saving again replaces them. */
-  recordMinutes: (meetingId: string, minutes: string, attended: MeetingAttendee[]) => Promise<boolean>;
+  recordMinutes: (
+    meetingId: string,
+    minutes: string,
+    attended: MeetingAttendee[],
+  ) => Promise<boolean>;
   addActionItem: (input: {
     title: string;
     ownerName: string;

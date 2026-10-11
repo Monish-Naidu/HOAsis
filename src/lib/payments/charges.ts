@@ -10,7 +10,7 @@ import { daysBetween, money, pluralize } from "@/lib/utils";
 export const MAX_CHARGE_CENTS: Cents = 10_000_000;
 export const MAX_CHARGE_LABEL = 80;
 /** How far from today a due date may be, either way. */
-export const MAX_CHARGE_DAYS = 366;
+const MAX_CHARGE_DAYS = 366;
 
 /**
  * Dollars as typed to whole cents, or 0 when it is not a positive amount.

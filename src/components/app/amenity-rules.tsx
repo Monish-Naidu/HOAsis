@@ -45,8 +45,7 @@ export function AmenityRules({
   const patchBlackout = (index: number, patch: Partial<Blackout>) =>
     setBlackouts(blackouts.map((b, i) => (i === index ? { ...b, ...patch } : b)));
 
-  const field =
-    cn(fieldClass, "w-auto");
+  const field = cn(fieldClass, "w-auto");
 
   return (
     <div className="mt-2">

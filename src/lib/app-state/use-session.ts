@@ -4,7 +4,14 @@ import { setRemoteAssociation } from "@/lib/data/remote-store";
 import { signOutOfSupabase } from "@/lib/auth";
 import type { Capability } from "@/lib/types";
 import { pickSeat } from "@/lib/home-choice";
-import { type BaseDeps, communityStore, homeStore, NO_SESSION, sessionStore, sliceStore } from "./core";
+import {
+  type BaseDeps,
+  communityStore,
+  homeStore,
+  NO_SESSION,
+  sessionStore,
+  sliceStore,
+} from "./core";
 import type { View } from "./types";
 
 /**

@@ -266,7 +266,10 @@ function WizardQuestions({
     if (!auth.user) {
       if (awaitingConfirmation) {
         // The pending draft holds it from here, through the email round trip.
-        savePendingDraft(finalizeDraft({ ...draft, bankAccount: undefined }), draft.founder.email.trim());
+        savePendingDraft(
+          finalizeDraft({ ...draft, bankAccount: undefined }),
+          draft.founder.email.trim(),
+        );
         clearProgress();
         setSentToEmail(true);
         return;
@@ -339,7 +342,9 @@ function WizardQuestions({
       // on a plan is asked, in the order that gets money moving first.
       router.push("/start/plan");
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "The association could not be created. Try again.");
+      setFailure(
+        error instanceof Error ? error.message : "The association could not be created. Try again.",
+      );
       setBusy(false);
     }
   }
@@ -396,7 +401,8 @@ function WizardQuestions({
         id: "place",
         group: "Your association",
         title: "Where is it?",
-        detail: "The state decides which rules apply to you, so the library can show the right ones.",
+        detail:
+          "The state decides which rules apply to you, so the library can show the right ones.",
         enterContinues: true,
         canContinue: Boolean(draft.city.trim() && draft.state),
         body: (
@@ -440,58 +446,59 @@ function WizardQuestions({
         enterContinues: true,
         canContinue:
           duesProblem(draft.duesCents) === null &&
-          (!draft.duesByType || homeTypesOf(draft).every((t) => duesProblem(draft.duesByType?.[t] ?? 0) === null)) &&
+          (!draft.duesByType ||
+            homeTypesOf(draft).every((t) => duesProblem(draft.duesByType?.[t] ?? 0) === null)) &&
           !draftOwnDuesProblem(draft) &&
           lateFeeAnswered(draft),
         body: (
           <div className="flex flex-col gap-4">
             <DuesMode draft={draft} patch={patch} />
-          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
-            {draft.duesByType ? null : (
-            <DollarField
-              label={draft.duesByHome ? `Most ${w.homes} pay` : `Each ${w.home} pays`}
-              hint={
-                draft.duesByHome
-                  ? `A range or a ${w.home} that pays something else is set when you list the ${w.homes}.`
-                  : undefined
-              }
-              cents={draft.duesCents}
-              onCents={(cents) => patch({ duesCents: cents ?? 0 })}
-              problem={(cents) => (cents === undefined ? null : duesProblem(cents))}
-              placeholder="45.00"
-              autoFocus
-            />
-            )}
-            <Field label="How often">
-              <select
-                value={draft.duesCadence}
-                onChange={(e) =>
-                  patch({ duesCadence: e.target.value as CommunityDraft["duesCadence"] })
-                }
-                className={input}
-              >
-                {CADENCES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Due on">
-              <select
-                value={draft.dueDay}
-                onChange={(e) => patch({ dueDay: Number(e.target.value) })}
-                className={input}
-              >
-                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-                  <option key={d} value={d}>
-                    {ordinal(d)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          <LateFee draft={draft} patch={patch} />
+            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
+              {draft.duesByType ? null : (
+                <DollarField
+                  label={draft.duesByHome ? `Most ${w.homes} pay` : `Each ${w.home} pays`}
+                  hint={
+                    draft.duesByHome
+                      ? `A range or a ${w.home} that pays something else is set when you list the ${w.homes}.`
+                      : undefined
+                  }
+                  cents={draft.duesCents}
+                  onCents={(cents) => patch({ duesCents: cents ?? 0 })}
+                  problem={(cents) => (cents === undefined ? null : duesProblem(cents))}
+                  placeholder="45.00"
+                  autoFocus
+                />
+              )}
+              <Field label="How often">
+                <select
+                  value={draft.duesCadence}
+                  onChange={(e) =>
+                    patch({ duesCadence: e.target.value as CommunityDraft["duesCadence"] })
+                  }
+                  className={input}
+                >
+                  {CADENCES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Due on">
+                <select
+                  value={draft.dueDay}
+                  onChange={(e) => patch({ dueDay: Number(e.target.value) })}
+                  className={input}
+                >
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={d}>
+                      {ordinal(d)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <LateFee draft={draft} patch={patch} />
           </div>
         ),
       },
@@ -508,7 +515,8 @@ function WizardQuestions({
         id: "spaces",
         group: "Your community",
         title: "Anything shared that owners use?",
-        detail: "Pick what you have. Owners can reserve these once they are listed. Each one is something the association will have to repair or replace one day.",
+        detail:
+          "Pick what you have. Owners can reserve these once they are listed. Each one is something the association will have to repair or replace one day.",
         skipLabel: "Nothing shared",
         onSkip: () => patch({ sharedSpaces: [] }),
         body: <SpacesPicker draft={draft} patch={patch} />,
@@ -518,9 +526,7 @@ function WizardQuestions({
         group: "Your community",
         title: "Who is setting this up?",
         detail: "This sets the words on every screen after this one.",
-        canContinue: Boolean(
-          draft.origin && (draft.origin !== "existing" || draft.previously),
-        ),
+        canContinue: Boolean(draft.origin && (draft.origin !== "existing" || draft.previously)),
         body: <OriginPicker draft={draft} patch={patch} />,
       },
       you: {
@@ -542,10 +548,10 @@ function WizardQuestions({
         // numbered anything.
         canContinue: Boolean(
           draft.founder.name.trim() &&
-            draft.founder.email.trim() &&
-            emailProblem(draft.founder.email) === null &&
-            (byNumber ? draft.founder.unit.trim() : true) &&
-            (w.fromBuilder ? true : draft.founder.address?.trim()),
+          draft.founder.email.trim() &&
+          emailProblem(draft.founder.email) === null &&
+          (byNumber ? draft.founder.unit.trim() : true) &&
+          (w.fromBuilder ? true : draft.founder.address?.trim()),
         ),
         body: (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -857,7 +863,9 @@ function BooksStep({ draft, patch }: StepProps) {
         <Field label="Budget year starts in" hint="Most associations use January.">
           <select
             value={fyMonth}
-            onChange={(e) => set({ fiscalYearStart: `${String(e.target.value).padStart(2, "0")}-01` })}
+            onChange={(e) =>
+              set({ fiscalYearStart: `${String(e.target.value).padStart(2, "0")}-01` })
+            }
             className={input}
           >
             {MONTHS.map((name, i) => (
@@ -958,7 +966,12 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="divide-y divide-border overflow-hidden">
-        <div className={cn("hidden items-center gap-2 bg-surface-2 px-3.5 py-2 text-footnote font-semibold text-fg-muted sm:grid", cols)}>
+        <div
+          className={cn(
+            "hidden items-center gap-2 bg-surface-2 px-3.5 py-2 text-footnote font-semibold text-fg-muted sm:grid",
+            cols,
+          )}
+        >
           <span>Address</span>
           <span>Owner</span>
           <span>Email</span>
@@ -988,10 +1001,15 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
           ) : null}
         </div>
         {rows.map((row, index) => (
-          <div key={index} className={cn("grid grid-cols-1 items-center gap-2 px-3.5 py-2.5", cols)}>
+          <div
+            key={index}
+            className={cn("grid grid-cols-1 items-center gap-2 px-3.5 py-2.5", cols)}
+          >
             <label className="block">
               {/* The column headers hide on a phone; the words come back here. */}
-              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Address</span>
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">
+                Address
+              </span>
               <input
                 value={row.address ?? row.unit}
                 onChange={(e) => editRow(index, { address: e.target.value })}
@@ -1003,7 +1021,9 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Owner</span>
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">
+                Owner
+              </span>
               <input
                 value={row.name}
                 onChange={(e) => editRow(index, { name: e.target.value })}
@@ -1013,7 +1033,9 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Email</span>
+              <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">
+                Email
+              </span>
               <input
                 type="email"
                 value={row.email}
@@ -1025,7 +1047,9 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
             </label>
             {byHome ? (
               <label className="block">
-                <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">Pays</span>
+                <span className="mb-1 block text-footnote font-semibold text-fg-muted sm:hidden">
+                  Pays
+                </span>
                 <OwnAmount
                   label={`Dues for home ${index + 1}`}
                   value={row.duesCents}
@@ -1107,8 +1131,8 @@ function AddressList({ draft, patch, w }: StepProps & { w: Wording }) {
       <MixLine draft={draft} />
 
       <Callout tone="info" icon={<Users className="size-4" />} title="You can stop here">
-        Your own {w.home} is already on the list. Add the rest now, or add owners one at a
-        time from Homeowners once you are in. Nothing is lost by moving on.
+        Your own {w.home} is already on the list. Add the rest now, or add owners one at a time from
+        Homeowners once you are in. Nothing is lost by moving on.
       </Callout>
     </div>
   );
@@ -1304,7 +1328,9 @@ function RangesStep({ draft, patch }: StepProps) {
                 ) : null}
                 {draft.duesByHome ? (
                   <div className="flex flex-wrap items-center gap-2 px-3.5 pb-2.5">
-                    <span className="text-footnote text-fg-subtle">Each {w.home} in this range pays</span>
+                    <span className="text-footnote text-fg-subtle">
+                      Each {w.home} in this range pays
+                    </span>
                     <div className="w-28">
                       <OwnAmount
                         label={`Each ${w.home} in this range pays, ${phase.label}`}
@@ -1361,93 +1387,93 @@ function RangesStep({ draft, patch }: StepProps) {
             // else here is how a builder ends up not owning their own home.
             const isMine = mine !== "" && home.unit.trim() === mine;
             return (
-            <div key={home.unit} className="px-3.5 py-2.5">
-              <div className="flex items-center gap-3">
-                <span className="w-16 shrink-0 truncate text-footnote font-medium text-fg-subtle sm:w-20">
-                  {home.unit}
-                  {mixed ? (
-                    <span className="block truncate text-caption font-normal">
-                      {HOME_TYPE_LABEL[home.homeType ?? types[0]].short}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="min-w-0 flex-1">
-                  {isMine ? (
-                    <span className="block text-body font-medium text-fg">
-                      {draft.founder.name.trim() || "You"}
-                      <span className="ml-1.5 text-footnote font-normal text-fg-subtle">
-                        yours
+              <div key={home.unit} className="px-3.5 py-2.5">
+                <div className="flex items-center gap-3">
+                  <span className="w-16 shrink-0 truncate text-footnote font-medium text-fg-subtle sm:w-20">
+                    {home.unit}
+                    {mixed ? (
+                      <span className="block truncate text-caption font-normal">
+                        {HOME_TYPE_LABEL[home.homeType ?? types[0]].short}
                       </span>
-                    </span>
-                  ) : home.name.trim() ? (
-                    <>
-                      <span className="block truncate text-body font-medium text-fg">
-                        {home.name}
+                    ) : null}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    {isMine ? (
+                      <span className="block text-body font-medium text-fg">
+                        {draft.founder.name.trim() || "You"}
+                        <span className="ml-1.5 text-footnote font-normal text-fg-subtle">
+                          yours
+                        </span>
                       </span>
-                      {home.email ? (
-                        <span className="block truncate text-footnote text-fg-subtle">
-                          {home.email}
+                    ) : home.name.trim() ? (
+                      <>
+                        <span className="block truncate text-body font-medium text-fg">
+                          {home.name}
                         </span>
-                      ) : (
-                        <span className="block text-footnote text-warn">
-                          No email, so no invitation
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="block truncate text-body text-fg-subtle">
-                      {builderSetting ? "Not sold yet" : "No owner listed"}
-                    </span>
+                        {home.email ? (
+                          <span className="block truncate text-footnote text-fg-subtle">
+                            {home.email}
+                          </span>
+                        ) : (
+                          <span className="block text-footnote text-warn">
+                            No email, so no invitation
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="block truncate text-body text-fg-subtle">
+                        {builderSetting ? "Not sold yet" : "No owner listed"}
+                      </span>
+                    )}
+                  </span>
+                  {isMine ? null : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNamingUnit(namingUnit === home.unit ? null : home.unit);
+                        setBuyer({ name: home.name, email: home.email });
+                      }}
+                      className="shrink-0 text-footnote font-medium text-primary hover:underline"
+                    >
+                      {home.name.trim() ? "Edit" : builderSetting ? "It has sold" : "Add the owner"}
+                    </button>
                   )}
-                </span>
-                {isMine ? null : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNamingUnit(namingUnit === home.unit ? null : home.unit);
-                      setBuyer({ name: home.name, email: home.email });
-                    }}
-                    className="shrink-0 text-footnote font-medium text-primary hover:underline"
-                  >
-                    {home.name.trim() ? "Edit" : builderSetting ? "It has sold" : "Add the owner"}
-                  </button>
-                )}
-              </div>
+                </div>
 
-              {namingUnit === home.unit && !isMine ? (
-                <form
-                  className="mt-2.5 grid items-end gap-2 sm:grid-cols-[1fr_1fr_auto]"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    saveBuyer(home.unit);
-                  }}
-                >
-                  <Field label={builderSetting ? "Buyer name" : "Owner name"}>
-                    <input
-                      value={buyer.name}
-                      onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
-                      placeholder={builderSetting ? "Buyer name" : "Owner name"}
-                      aria-label={`Owner of ${home.unit}`}
-                      autoFocus
-                      className={input}
-                    />
-                  </Field>
-                  <Field label="Email">
-                    <input
-                      type="email"
-                      value={buyer.email}
-                      onChange={(e) => setBuyer({ ...buyer, email: e.target.value })}
-                      placeholder="Email"
-                      aria-label={`Email for ${home.unit}`}
-                      className={input}
-                    />
-                  </Field>
-                  <Button type="submit" variant="secondary" size="sm">
-                    Save
-                  </Button>
-                </form>
-              ) : null}
-            </div>
+                {namingUnit === home.unit && !isMine ? (
+                  <form
+                    className="mt-2.5 grid items-end gap-2 sm:grid-cols-[1fr_1fr_auto]"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      saveBuyer(home.unit);
+                    }}
+                  >
+                    <Field label={builderSetting ? "Buyer name" : "Owner name"}>
+                      <input
+                        value={buyer.name}
+                        onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
+                        placeholder={builderSetting ? "Buyer name" : "Owner name"}
+                        aria-label={`Owner of ${home.unit}`}
+                        autoFocus
+                        className={input}
+                      />
+                    </Field>
+                    <Field label="Email">
+                      <input
+                        type="email"
+                        value={buyer.email}
+                        onChange={(e) => setBuyer({ ...buyer, email: e.target.value })}
+                        placeholder="Email"
+                        aria-label={`Email for ${home.unit}`}
+                        className={input}
+                      />
+                    </Field>
+                    <Button type="submit" variant="secondary" size="sm">
+                      Save
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
             );
           })}
           {draft.households.length > shown ? (
@@ -1528,14 +1554,14 @@ function RangesStep({ draft, patch }: StepProps) {
       >
         {builderSetting ? (
           <>
-            You do not need names now. Add a buyer as each home closes. Until then the{" "}
-            {w.home} is billed to the builder.
+            You do not need names now. Add a buyer as each home closes. Until then the {w.home} is
+            billed to the builder.
           </>
         ) : (
           <>
-            You do not need them now. Add owners here, or invite everyone from Homeowners
-            once you are in. A {w.home} with nobody on it still has a balance and a vote, so
-            nothing is missing from your budget while you fill them in.
+            You do not need them now. Add owners here, or invite everyone from Homeowners once you
+            are in. A {w.home} with nobody on it still has a balance and a vote, so nothing is
+            missing from your budget while you fill them in.
           </>
         )}
       </Callout>
@@ -1601,7 +1627,11 @@ function DuesMode({ draft, patch }: StepProps) {
   const types = homeTypesOf(draft);
   const w = wordingFor(types, draft.origin);
   const mixed = types.length > 1;
-  const mode: "same" | "kind" | "home" = draft.duesByHome ? "home" : draft.duesByType ? "kind" : "same";
+  const mode: "same" | "kind" | "home" = draft.duesByHome
+    ? "home"
+    : draft.duesByType
+      ? "kind"
+      : "same";
   function setAmount(t: PropertyType, cents: number) {
     const next = { ...(draft.duesByType ?? {}), [t]: cents };
     // The association's own amount is the first kind's, so a home whose
@@ -1648,7 +1678,9 @@ function DuesMode({ draft, patch }: StepProps) {
         ))}
       </div>
       {mode === "home" ? (
-        <p className="text-footnote text-fg-subtle">For buildings where a larger {w.home} pays more.</p>
+        <p className="text-footnote text-fg-subtle">
+          For buildings where a larger {w.home} pays more.
+        </p>
       ) : null}
       {mode === "kind" ? (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -1846,7 +1878,9 @@ function LateFee({ draft, patch }: StepProps) {
               }
               className={cn(
                 "rounded-lg px-3.5 py-2 text-body font-medium transition-colors",
-                fee.charge === mode.id ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
+                fee.charge === mode.id
+                  ? "bg-surface text-fg shadow-card"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               {mode.label}
@@ -1911,8 +1945,7 @@ function MixLine({ draft: entered }: { draft: CommunityDraft }) {
   );
 }
 
-const input =
-  fieldClass;
+const input = fieldClass;
 
 /**
  * The founder's number and address, ordered and worded by who is asking.
@@ -1941,8 +1974,14 @@ function FounderNumber({
   return (
     <Field
       label={required ? `${w.Home} number` : `${w.Home} number, if you use them`}
-      hint={required ? hint : `Leave it blank if ${w.homes} go by address. Otherwise, as it appears on your records.`}
-      error={required && touched && !draft.founder.unit.trim() ? `Enter your ${w.home} number` : null}
+      hint={
+        required
+          ? hint
+          : `Leave it blank if ${w.homes} go by address. Otherwise, as it appears on your records.`
+      }
+      error={
+        required && touched && !draft.founder.unit.trim() ? `Enter your ${w.home} number` : null
+      }
     >
       <input
         value={draft.founder.unit}

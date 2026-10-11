@@ -27,9 +27,15 @@ describe("ballotPhase", () => {
     // Scheduled stays scheduled even past its dates: the database takes
     // votes only on an open ballot, so calling it open would offer choices
     // that are then refused.
-    expect(ballotPhase({ status: "scheduled", closesDate: "2026-10-01" }, "2026-10-05")).toBe("scheduled");
-    expect(ballotPhase({ status: "closed", closesDate: "2026-12-01" }, "2026-10-05")).toBe("closed");
-    expect(ballotPhase({ status: "certified", closesDate: "2026-01-21" }, "2026-10-05")).toBe("certified");
+    expect(ballotPhase({ status: "scheduled", closesDate: "2026-10-01" }, "2026-10-05")).toBe(
+      "scheduled",
+    );
+    expect(ballotPhase({ status: "closed", closesDate: "2026-12-01" }, "2026-10-05")).toBe(
+      "closed",
+    );
+    expect(ballotPhase({ status: "certified", closesDate: "2026-01-21" }, "2026-10-05")).toBe(
+      "certified",
+    );
   });
 });
 
@@ -44,9 +50,15 @@ describe("ballotNeedsSealing", () => {
   });
 
   it("is false once the close is written, and for a ballot that never opened", () => {
-    expect(ballotNeedsSealing({ status: "closed", closesDate: "2026-10-01" }, "2026-10-05")).toBe(false);
-    expect(ballotNeedsSealing({ status: "certified", closesDate: "2026-10-01" }, "2026-10-05")).toBe(false);
-    expect(ballotNeedsSealing({ status: "scheduled", closesDate: "2026-10-01" }, "2026-10-05")).toBe(false);
+    expect(ballotNeedsSealing({ status: "closed", closesDate: "2026-10-01" }, "2026-10-05")).toBe(
+      false,
+    );
+    expect(
+      ballotNeedsSealing({ status: "certified", closesDate: "2026-10-01" }, "2026-10-05"),
+    ).toBe(false);
+    expect(
+      ballotNeedsSealing({ status: "scheduled", closesDate: "2026-10-01" }, "2026-10-05"),
+    ).toBe(false);
   });
 });
 
@@ -75,14 +87,16 @@ describe("the demo against its own pinned date", () => {
   for (const community of allCommunities()) {
     it(`${community.label} stores no open ballot or scheduled meeting that is already over`, () => {
       for (const ballot of community.ballots) {
-        expect(ballotPhase(ballot, community.asOf), `${ballot.title} is stored ${ballot.status}`).toBe(
-          ballot.status,
-        );
+        expect(
+          ballotPhase(ballot, community.asOf),
+          `${ballot.title} is stored ${ballot.status}`,
+        ).toBe(ballot.status);
       }
       for (const meeting of community.meetings) {
-        expect(meetingPhase(meeting, community.asOf), `${meeting.title} is stored ${meeting.status}`).toBe(
-          meeting.status,
-        );
+        expect(
+          meetingPhase(meeting, community.asOf),
+          `${meeting.title} is stored ${meeting.status}`,
+        ).toBe(meeting.status);
       }
     });
   }

@@ -37,7 +37,9 @@ export async function GET(request: NextRequest) {
   const dryRun = request.nextUrl.searchParams.get("dry") === "1";
   const now = new Date().toISOString();
   if (!dryRun) {
-    const { data: closed, error: closeError } = await supabaseAdmin().rpc("close_ended_fiscal_years");
+    const { data: closed, error: closeError } = await supabaseAdmin().rpc(
+      "close_ended_fiscal_years",
+    );
     if (closeError) log.error("fiscal years did not close", { err: closeError.message });
     else if (closed) log.info("fiscal years closed", { count: closed });
   }
@@ -46,14 +48,28 @@ export async function GET(request: NextRequest) {
   const to = platformOwnerEmails();
 
   if (!digest.send || dryRun || to.length === 0) {
-    log.info("digest not sent", { send: digest.send, dryRun, recipients: to.length, subject: digest.subject });
-    return NextResponse.json({ sent: 0, wouldSend: digest.send, recipients: to.length, subject: digest.subject, text: digest.text });
+    log.info("digest not sent", {
+      send: digest.send,
+      dryRun,
+      recipients: to.length,
+      subject: digest.subject,
+    });
+    return NextResponse.json({
+      sent: 0,
+      wouldSend: digest.send,
+      recipients: to.length,
+      subject: digest.subject,
+      text: digest.text,
+    });
   }
 
   const key = resendKey();
   if (!key) {
     log.error("digest could not be sent: no email key");
-    return NextResponse.json({ error: "Email is not set up", subject: digest.subject }, { status: 500 });
+    return NextResponse.json(
+      { error: "Email is not set up", subject: digest.subject },
+      { status: 500 },
+    );
   }
   const sent = await new Resend(key).emails.send({
     from: emailSender(),

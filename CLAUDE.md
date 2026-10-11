@@ -8,7 +8,8 @@ them signs every browser out). Signed-in users run on Supabase (Postgres with
 row level security), Stripe and Resend; the fixtures serve only the signed-out
 demo. Trust the code and `docs/tenancy.md` over `README.md`. This file is only
 what cannot be read from the code. Workflows live in `.claude/skills/`,
-reviewers in `.claude/agents/`, the priority list in `docs/work-tracker.md`.
+reviewers in `.claude/agents/`, the paste-able missions in
+`.claude/prompts/`, the priority list in `docs/work-tracker.md`.
 
 ## How work is done here
 
@@ -36,26 +37,27 @@ reviewers in `.claude/agents/`, the priority list in `docs/work-tracker.md`.
 
 ## Where things go
 
-| Kind of code | Lives in | Rule |
-| --- | --- | --- |
-| Routes and pages | `src/app/` | Server components; thin: read selectors, render, hand off to a client component only for real interaction |
-| Shared screen pieces | `src/components/app/` | One component per concern; `src/components/ui/primitives.tsx` for anything used three times |
-| Pure logic and selectors | `src/lib/*.ts` | No React, no fetch, no `new Date()`; every exported function has a unit test |
-| Data layer | `src/lib/data/` | `index.ts` is the only import screens use; `remote.ts` maps Supabase rows; fixtures are the demo |
-| Mutations | `src/lib/app-state.tsx` | Signed-in branch calls one SQL function through `remoteWrite`; demo branch edits local state the same way the database would |
-| Money, email, meetings | `src/lib/payments/`, `src/lib/email/`, `src/lib/meetings/` | Server-only where a key is involved |
-| Server routes and jobs | `src/app/api/` | Authorised with `CRON_SECRET` or a webhook signature; log with `logger()`; record a cron run |
-| Database | `supabase/migrations/NNNN_name.sql` | Numbered, never edited once applied; redefine a function by copying it whole into a new file; grants explicit; every change proven by a `scripts/verify-*.mjs` suite |
-| Tests | `tests/unit`, `tests/integration`, `tests/e2e` | Pure logic, screens with the fake server, the signed-out demo in a browser |
-| Notes for people | `docs/` | Decisions, the tracker, go-live steps; not a second copy of the code |
+| Kind of code             | Lives in                                                   | Rule                                                                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Routes and pages         | `src/app/`                                                 | Server components; thin: read selectors, render, hand off to a client component only for real interaction                                                            |
+| Shared screen pieces     | `src/components/app/`                                      | One component per concern; `src/components/ui/primitives.tsx` for anything used three times                                                                          |
+| Pure logic and selectors | `src/lib/*.ts`                                             | No React, no fetch, no `new Date()`; every exported function has a unit test                                                                                         |
+| Data layer               | `src/lib/data/`                                            | `index.ts` is the only import screens use; `remote.ts` maps Supabase rows; fixtures are the demo                                                                     |
+| Mutations                | `src/lib/app-state.tsx`                                    | Signed-in branch calls one SQL function through `remoteWrite`; demo branch edits local state the same way the database would                                         |
+| Money, email, meetings   | `src/lib/payments/`, `src/lib/email/`, `src/lib/meetings/` | Server-only where a key is involved                                                                                                                                  |
+| Server routes and jobs   | `src/app/api/`                                             | Authorised with `CRON_SECRET` or a webhook signature; log with `logger()`; record a cron run                                                                         |
+| Database                 | `supabase/migrations/NNNN_name.sql`                        | Numbered, never edited once applied; redefine a function by copying it whole into a new file; grants explicit; every change proven by a `scripts/verify-*.mjs` suite |
+| Tests                    | `tests/unit`, `tests/integration`, `tests/e2e`             | Pure logic, screens with the fake server, the signed-out demo in a browser                                                                                           |
+| Notes for people         | `docs/`                                                    | Decisions, the tracker, go-live steps; not a second copy of the code                                                                                                 |
 
 ## Rules that matter
 
 - **UI changes follow the `frontend-design` skill**: ground the design in the
   subject, plan, review the plan against the brief, build, critique from
   screenshots. `docs/design/ui-baseline.md` holds this product's tokens and
-  patterns; where the two differ, the skill wins. A restyle Monish has not
-  seen goes to a pull request with a preview, not to `main`.
+  patterns; where the two differ, the skill wins. The skill is a Claude Code
+  plugin; in a tool without it, `ui-baseline.md` alone is the rule. A restyle
+  Monish has not seen goes to a pull request with a preview, not to `main`.
 - **Screens import from `@/lib/data` only.** Never a fixture file directly.
 - **`Home` is a home on the register** (its balance, bill, seats); a person is an `Account` or a
   seat. `homeId` is a unit id (the `unit_id` column).

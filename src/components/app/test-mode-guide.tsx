@@ -18,8 +18,16 @@ export const STRIPE_TEST_MODE = (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 
 const NUMBERS: { label: string; value: string; note: string }[] = [
   { label: "Routing number", value: "110000000", note: "Use with every test account below" },
-  { label: "Bank, succeeds", value: "000123456789", note: "Typed in by hand, it asks for micro-deposits: use code SM11AA" },
-  { label: "Bank, micro-deposit amounts", value: "32 and 45", note: "When the page asks for amounts instead of a code" },
+  {
+    label: "Bank, succeeds",
+    value: "000123456789",
+    note: "Typed in by hand, it asks for micro-deposits: use code SM11AA",
+  },
+  {
+    label: "Bank, micro-deposit amounts",
+    value: "32 and 45",
+    note: "When the page asks for amounts instead of a code",
+  },
   { label: "Bank, fails", value: "000111111113", note: "The payment is returned" },
   { label: "Card, works", value: "4242 4242 4242 4242", note: "Any future date, any CVC, any ZIP" },
   { label: "Card, declines", value: "4000 0000 0000 0002", note: "Shows the decline path" },
@@ -44,23 +52,27 @@ export function TestModeGuide({
         <FlaskConical className="size-4 shrink-0" />
         Test mode: no real money moves. How to try it
         <span className="ml-auto text-footnote font-medium opacity-70 group-open:hidden">Show</span>
-        <span className="ml-auto hidden text-footnote font-medium opacity-70 group-open:inline">Hide</span>
+        <span className="ml-auto hidden text-footnote font-medium opacity-70 group-open:inline">
+          Hide
+        </span>
       </summary>
       <div className="space-y-3 border-t border-warn/20 px-4 py-3 text-body leading-relaxed">
         {audience === "board" ? (
           <ol className="list-decimal space-y-1 pl-5">
-            <li>Press <strong>Set up payments</strong>. Stripe opens its onboarding form.</li>
             <li>
-              At the top of that form use <strong>Skip this account form</strong>. Stripe fills in
-              a fake, verified business and brings you back here.
+              Press <strong>Set up payments</strong>. Stripe opens its onboarding form.
+            </li>
+            <li>
+              At the top of that form use <strong>Skip this account form</strong>. Stripe fills in a
+              fake, verified business and brings you back here.
             </li>
             <li>
               This row reads <strong>Payments are live</strong> once Stripe has switched the account
               on, usually within a minute. Reload if it still says Resume setup.
             </li>
             <li>
-              Switch to <strong>Resident</strong> at the top, open <strong>Payments</strong>, and pay
-              with the numbers below. The payment appears under Finances a moment later.
+              Switch to <strong>Resident</strong> at the top, open <strong>Payments</strong>, and
+              pay with the numbers below. The payment appears under Finances a moment later.
             </li>
           </ol>
         ) : (
@@ -68,13 +80,13 @@ export function TestModeGuide({
             <li>
               Pick <strong>New bank account</strong>, then in Stripe&apos;s form choose{" "}
               <strong>Test (Non-OAuth)</strong> for an instant bank, or{" "}
-              <strong>Enter bank details manually</strong> and press <strong>Autofill</strong>.
-              Or pick <strong>New card</strong> and use a card number.
+              <strong>Enter bank details manually</strong> and press <strong>Autofill</strong>. Or
+              pick <strong>New card</strong> and use a card number.
             </li>
             <li>
               Press Pay. A card settles while you watch. A bank typed in by hand shows{" "}
-              <strong>Confirm the deposits</strong>: open it, enter the code, and the payment
-              goes through on its own.
+              <strong>Confirm the deposits</strong>: open it, enter the code, and the payment goes
+              through on its own.
             </li>
             <li>
               To save a method for autopay, use <strong>Add a payment method</strong> instead, then
@@ -88,7 +100,9 @@ export function TestModeGuide({
               {NUMBERS.map((n) => (
                 <tr key={n.label} className="border-t border-warn/15">
                   <td className="py-1.5 pr-3 font-medium whitespace-nowrap">{n.label}</td>
-                  <td className="tnum py-1.5 pr-3 font-mono whitespace-nowrap select-all">{n.value}</td>
+                  <td className="tnum py-1.5 pr-3 font-mono whitespace-nowrap select-all">
+                    {n.value}
+                  </td>
                   <td className="py-1.5 opacity-80">{n.note}</td>
                 </tr>
               ))}

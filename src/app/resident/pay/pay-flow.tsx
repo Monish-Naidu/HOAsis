@@ -4,17 +4,18 @@ import { Term } from "@/components/app/term";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Apple, Check, CreditCard, Info, Landmark, Plus, Repeat, X } from "lucide-react";
 import {
-  Apple,
-  Check,
-  CreditCard,
-  Info,
-  Landmark,
-  Plus,
-  Repeat,
-  X,
-} from "lucide-react";
-import { Badge, Button, Callout, Card, IconTile, SectionTitle, SuccessMark, Toggle, fieldClass } from "@/components/ui/primitives";
+  Badge,
+  Button,
+  Callout,
+  Card,
+  IconTile,
+  SectionTitle,
+  SuccessMark,
+  Toggle,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { useAppState, useCurrentHome, useMyInstruments } from "@/lib/app-state";
 import {
@@ -27,7 +28,16 @@ import {
   type PaymentInstrument,
   NO_PLATFORM_FEE,
 } from "@/lib/payments/instruments";
-import { cn, formatDate, money, ordinal, pluralize, relativeDays, today, todayIsoDate } from "@/lib/utils";
+import {
+  cn,
+  formatDate,
+  money,
+  ordinal,
+  pluralize,
+  relativeDays,
+  today,
+  todayIsoDate,
+} from "@/lib/utils";
 import { checkPayAmount, overpayNote } from "@/lib/input-checks";
 import { AddMethod } from "./add-method";
 import { InstrumentMenu } from "./instrument-menu";
@@ -189,9 +199,7 @@ export function PayFlow() {
 
   const policy = NO_PLATFORM_FEE;
   const cheapest = cheapestRail(instruments, amountCents, policy);
-  const cost = selected
-    ? computePaymentCost(selected.kind, amountCents, policy)
-    : null;
+  const cost = selected ? computePaymentCost(selected.kind, amountCents, policy) : null;
 
   if (!home) return null;
 
@@ -200,11 +208,16 @@ export function PayFlow() {
     return (
       <div className="animate-rise space-y-5">
         <Card className="relative overflow-hidden p-6 text-center">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-aurora opacity-80" aria-hidden />
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-aurora opacity-80"
+            aria-hidden
+          />
           <div className="relative mx-auto mb-4 flex justify-center">
             <SuccessMark size={64} />
           </div>
-          <h1 className="relative text-title2 font-semibold tracking-[-0.02em] text-fg">Payment sent</h1>
+          <h1 className="relative text-title2 font-semibold tracking-[-0.02em] text-fg">
+            Payment sent
+          </h1>
           <p className="tnum relative mt-1 text-title2 font-semibold tracking-[-0.02em] text-fg">
             <CountUp cents={paid.amountCents} showCents />
           </p>
@@ -282,7 +295,9 @@ export function PayFlow() {
           >
             <span className="block text-footnote font-medium text-fg-muted">Other amount</span>
             {amountMode === "custom" && amountCents ? (
-              <span className="tnum mt-0.5 block text-headline font-semibold text-fg">{money(amountCents)}</span>
+              <span className="tnum mt-0.5 block text-headline font-semibold text-fg">
+                {money(amountCents)}
+              </span>
             ) : (
               <span className="mt-0.5 block text-headline font-medium text-fg-subtle">Choose</span>
             )}
@@ -290,20 +305,20 @@ export function PayFlow() {
         </div>
         {amountMode === "custom" ? (
           <>
-          <label className="mt-3 block">
-            <span className="sr-only">Payment amount</span>
-            <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
-              <span className="text-headline text-fg-muted">$</span>
-              <input
-                autoFocus
-                inputMode="decimal"
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                placeholder="0.00"
-                className="tnum w-full bg-transparent text-headline font-medium text-fg outline-none placeholder:text-fg-subtle"
-              />
-            </div>
-          </label>
+            <label className="mt-3 block">
+              <span className="sr-only">Payment amount</span>
+              <div className="flex h-11 items-center gap-1 rounded-lg border border-border-2 bg-surface-2 px-3">
+                <span className="text-headline text-fg-muted">$</span>
+                <input
+                  autoFocus
+                  inputMode="decimal"
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  placeholder="0.00"
+                  className="tnum w-full bg-transparent text-headline font-medium text-fg outline-none placeholder:text-fg-subtle"
+                />
+              </div>
+            </label>
             {customCheck.ok ? (
               overpayNote(customCheck.extraCents) ? (
                 <span className="mt-1.5 block text-footnote leading-snug text-warn">
@@ -329,78 +344,78 @@ export function PayFlow() {
 
   // Autopay, shared by the demo and Stripe branches as a JSX value.
   const autopaySection = (
-        <section id="autopay" className="scroll-mt-20">
-          <SectionTitle>
-            <Term k="autopay">Autopay</Term>
-          </SectionTitle>
-          <Card className="p-4">
-            <div className="flex items-start gap-3">
-              <IconTile icon={Repeat} tint="violet" size="md" className="mt-0.5" />
-              <div className="min-w-0 flex-1">
-                <p className="text-body font-semibold text-fg">
-                  Autopay your balance on the {ordinal(autopayDay)}
-                </p>
-                <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
-                  {autopayFrom
-                    ? `Usually ${money(duesCents)}, or whatever the bill says. Anything else you owe, such as a late fee, is included. From ${describeInstrument(autopayFrom)}. Cancel any time.`
-                    : instruments.length > 0
-                      ? "Confirm your bank to turn this on."
-                      : "Add a payment method to turn this on."}
-                </p>
+    <section id="autopay" className="scroll-mt-20">
+      <SectionTitle>
+        <Term k="autopay">Autopay</Term>
+      </SectionTitle>
+      <Card className="p-4">
+        <div className="flex items-start gap-3">
+          <IconTile icon={Repeat} tint="violet" size="md" className="mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-body font-semibold text-fg">
+              Autopay your balance on the {ordinal(autopayDay)}
+            </p>
+            <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
+              {autopayFrom
+                ? `Usually ${money(duesCents)}, or whatever the bill says. Anything else you owe, such as a late fee, is included. From ${describeInstrument(autopayFrom)}. Cancel any time.`
+                : instruments.length > 0
+                  ? "Confirm your bank to turn this on."
+                  : "Add a payment method to turn this on."}
+            </p>
+          </div>
+          <Toggle
+            checked={autopay}
+            onChange={(on) => {
+              setAutopayOn(on);
+              persistAutopay({ on });
+            }}
+            // Off is always allowed: a plan whose method has gone must
+            // still be possible to cancel.
+            disabled={!autopayFrom && !autopay}
+            label="Turn on autopay"
+          />
+        </div>
+
+        {autopay ? (
+          <>
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="mb-2 text-footnote font-semibold text-fg-muted">Day of the month</p>
+              <div className="grid grid-cols-8 gap-1.5">
+                {Array.from({ length: settings.autopayLateAfterDay }, (_, i) => i + 1).map(
+                  (day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        setAutopayDay(day);
+                        persistAutopay({ on: true, day });
+                      }}
+                      aria-pressed={autopayDay === day}
+                      className={cn(
+                        "tnum flex h-8 items-center justify-center rounded-md text-footnote font-medium transition-colors",
+                        autopayDay === day
+                          ? "bg-brand-gradient text-primary-fg shadow-raised"
+                          : day === settings.autopayLateAfterDay
+                            ? "border border-warn/40 bg-warn-soft text-warn"
+                            : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
+                      )}
+                    >
+                      {day}
+                    </button>
+                  ),
+                )}
               </div>
-              <Toggle
-                checked={autopay}
-                onChange={(on) => {
-                  setAutopayOn(on);
-                  persistAutopay({ on });
-                }}
-                // Off is always allowed: a plan whose method has gone must
-                // still be possible to cancel.
-                disabled={!autopayFrom && !autopay}
-                label="Turn on autopay"
-              />
+              <p className="mt-2 text-footnote leading-snug text-fg-subtle">
+                The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
+                dues are late.
+                {collections.lateFeeCents > 0
+                  ? ` A ${money(collections.lateFeeCents)} late fee applies from ${collections.lateNoticeDay} days past due.`
+                  : ""}
+              </p>
             </div>
 
-            {autopay ? (
+            {moduleOn("autopay-extras") ? (
               <>
-                <div className="mt-3 border-t border-border pt-3">
-                  <p className="mb-2 text-footnote font-semibold text-fg-muted">
-                    Day of the month
-                  </p>
-                  <div className="grid grid-cols-8 gap-1.5">
-                    {Array.from({ length: settings.autopayLateAfterDay }, (_, i) => i + 1).map((day) => (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => {
-                          setAutopayDay(day);
-                          persistAutopay({ on: true, day });
-                        }}
-                        aria-pressed={autopayDay === day}
-                        className={cn(
-                          "tnum flex h-8 items-center justify-center rounded-md text-footnote font-medium transition-colors",
-                          autopayDay === day
-                            ? "bg-brand-gradient text-primary-fg shadow-raised"
-                            : day === settings.autopayLateAfterDay
-                              ? "border border-warn/40 bg-warn-soft text-warn"
-                              : "border border-border text-fg-muted hover:bg-surface-2 hover:text-fg",
-                        )}
-                      >
-                        {day}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-footnote leading-snug text-fg-subtle">
-                    The board set the {ordinal(settings.autopayLateAfterDay)} as the last day before
-                    dues are late.
-                    {collections.lateFeeCents > 0
-                      ? ` A ${money(collections.lateFeeCents)} late fee applies from ${collections.lateNoticeDay} days past due.`
-                      : ""}
-                  </p>
-                </div>
-
-                {moduleOn("autopay-extras") ? (
-                  <>
                 {/* The cap. The one fear that keeps people off autopay is a
                     special assessment or a fine draining the account on the
                     first. Above the cap, the balance waits for them. */}
@@ -436,9 +451,7 @@ export function PayFlow() {
                         value={capText}
                         onChange={(e) => setCapText(e.target.value)}
                         onBlur={() => {
-                          const parsed = Math.round(
-                            Number(capText.replace(/[^0-9.]/g, "")) * 100,
-                          );
+                          const parsed = Math.round(Number(capText.replace(/[^0-9.]/g, "")) * 100);
                           const next = Number.isFinite(parsed) && parsed > 0 ? parsed : duesCents;
                           setCapCents(next);
                           setCapText(String(next / 100));
@@ -494,18 +507,17 @@ export function PayFlow() {
                     </div>
                   )}
                 </div>
-
-                  </>
-                ) : null}
-
-                <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-footnote font-medium text-ok">
-                  Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}
-                  {skipsUpcoming ? ` · ${monthLabel(upcomingMonth)} skipped` : ""}
-                </div>
               </>
             ) : null}
-          </Card>
-        </section>
+
+            <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-footnote font-medium text-ok">
+              Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}
+              {skipsUpcoming ? ` · ${monthLabel(upcomingMonth)} skipped` : ""}
+            </div>
+          </>
+        ) : null}
+      </Card>
+    </section>
   );
 
   // A real association pays through Stripe or not at all. The demo path below
@@ -579,12 +591,7 @@ export function PayFlow() {
               // the other thing: keeping a method on file for autopay without
               // paying today. Two identical-looking ways to add one was one
               // too many.
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full"
-                onClick={() => setAdding(true)}
-              >
+              <Button variant="ghost" size="sm" className="w-full" onClick={() => setAdding(true)}>
                 <Plus className="size-3.5" />
                 Save a card or bank account
               </Button>
@@ -747,7 +754,12 @@ export function PayFlow() {
             </Button>
           </div>
         ) : (
-          <Button variant="secondary" size="md" className="mt-3 w-full" onClick={() => setAdding(true)}>
+          <Button
+            variant="secondary"
+            size="md"
+            className="mt-3 w-full"
+            onClick={() => setAdding(true)}
+          >
             <Plus className="size-3.5" />
             Add a payment method
           </Button>
@@ -772,7 +784,12 @@ export function PayFlow() {
                 <dd className="tnum font-medium text-fg">{money(cost.platformCents)}</dd>
               </div>
             ) : null}
-            <div className={cn("flex justify-between text-headline", cost.amountCents !== cost.residentPaysCents && "mt-2 border-t border-border pt-2")}>
+            <div
+              className={cn(
+                "flex justify-between text-headline",
+                cost.amountCents !== cost.residentPaysCents && "mt-2 border-t border-border pt-2",
+              )}
+            >
               <dt className="font-semibold text-fg">You pay</dt>
               <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
             </div>

@@ -5,7 +5,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/vendors",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -64,7 +70,9 @@ describe("Add vendor", () => {
       `  ${existing.name.toUpperCase()} `,
     );
     await user.selectOptions(screen.getByLabelText("What they do for you"), "Landscaping");
-    expect(screen.getByRole("alert")).toHaveTextContent(`A vendor called ${existing.name} already exists`);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      `A vendor called ${existing.name} already exists`,
+    );
     expect(screen.getByRole("button", { name: "Save vendor" })).toBeDisabled();
     const count = seen.state.vendors.length;
     act(() => seen.state.addVendor({ ...existing, id: "v-dup" }));
@@ -76,9 +84,17 @@ describe("Add vendor", () => {
     wrap(<VendorsScreen />);
     act(() => seen.state.signIn("acct-arya"));
     await user.click(screen.getByRole("button", { name: "Add vendor" }));
-    await user.type(screen.getByPlaceholderText("Company or person you pay"), "Lakeside Pool Service");
-    await user.selectOptions(screen.getByLabelText("What they do for you"), "Repairs & maintenance");
+    await user.type(
+      screen.getByPlaceholderText("Company or person you pay"),
+      "Lakeside Pool Service",
+    );
+    await user.selectOptions(
+      screen.getByLabelText("What they do for you"),
+      "Repairs & maintenance",
+    );
     await user.click(screen.getByRole("button", { name: "Save vendor" }));
-    expect(seen.state.vendors.find((v) => v.name === "Lakeside Pool Service")?.service).toBe("Repairs & maintenance");
+    expect(seen.state.vendors.find((v) => v.name === "Lakeside Pool Service")?.service).toBe(
+      "Repairs & maintenance",
+    );
   });
 });

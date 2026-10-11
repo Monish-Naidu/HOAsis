@@ -31,7 +31,10 @@ test.describe("board workspace", () => {
       // Wait for the screen itself. Counting headings a fixed quarter second
       // after the click read an empty page on a slow runner (Homeowners, on
       // GitHub, 2026-10-05) where the same build passed everywhere else.
-      await expect(page.locator("main h1, main h2").first(), `${tab} rendered nothing`).toBeVisible();
+      await expect(
+        page.locator("main h1, main h2").first(),
+        `${tab} rendered nothing`,
+      ).toBeVisible();
       const health = await expectHealthy(page, `admin ${tab}`);
       expect(health.headingCount, `${tab} rendered nothing`).toBeGreaterThan(0);
     });
@@ -112,9 +115,7 @@ test.describe("board actions", () => {
     await expect
       .poll(
         async () =>
-          Number(
-            (await inspect(page)).text.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0",
-          ),
+          Number((await inspect(page)).text.match(/To confirm\s*\n?\s*(\d+)/)?.[1] ?? "0"),
         { message: "confirming did not move the transaction" },
       )
       .toBe(needsReview - 1);
@@ -124,9 +125,7 @@ test.describe("board actions", () => {
     await expect(page.getByRole("button", { name: /^Undo$/ })).toHaveCount(0);
   });
 
-  test("adding and removing a household both work, and removal is reversible", async ({
-    page,
-  }) => {
+  test("adding and removing a household both work, and removal is reversible", async ({ page }) => {
     await page.goto("/board/homeowners");
     await page.waitForLoadState("networkidle");
 
@@ -143,26 +142,25 @@ test.describe("board actions", () => {
     await search.fill("E2E Probe");
     const probeRow = page.getByRole("button", { name: "E2E Probe Household, unit 999" });
     await expect(probeRow, "the household was not added").toBeVisible();
-    expect(
-      (await inspect(page)).text,
-      "the household was not added",
-    ).toContain("E2E Probe Household");
+    expect((await inspect(page)).text, "the household was not added").toContain(
+      "E2E Probe Household",
+    );
 
     // Remove lives in the household's panel, so open the row first.
     await probeRow.click();
-    await page
-      .getByRole("button", { name: "Remove E2E Probe Household from the roster" })
-      .click();
+    await page.getByRole("button", { name: "Remove E2E Probe Household from the roster" }).click();
     await expect(probeRow).toHaveCount(0);
     expect((await inspect(page)).text).not.toContain("E2E Probe Household");
 
-    await page.getByRole("button", { name: /^Undo$/ }).last().click();
+    await page
+      .getByRole("button", { name: /^Undo$/ })
+      .last()
+      .click();
     await search.fill("E2E Probe");
     await expect(probeRow, "undo did not bring the household back").toBeVisible();
-    expect(
-      (await inspect(page)).text,
-      "undo did not bring the household back",
-    ).toContain("E2E Probe Household");
+    expect((await inspect(page)).text, "undo did not bring the household back").toContain(
+      "E2E Probe Household",
+    );
   });
 
   test("a rejected forum post can be put back", async ({ page }) => {
@@ -185,7 +183,11 @@ test.describe("board actions", () => {
     await page.goto("/board/money/collections");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("link", { name: "Send reminders" }).or(page.getByRole("button", { name: "Send reminders" })).first().click();
+    await page
+      .getByRole("link", { name: "Send reminders" })
+      .or(page.getByRole("button", { name: "Send reminders" }))
+      .first()
+      .click();
     await page.waitForLoadState("networkidle");
 
     // Every household behind is listed with the letter its rung calls for,
@@ -193,7 +195,10 @@ test.describe("board actions", () => {
     const list = page.locator("main ul");
     // Waited for rather than counted after a fixed pause: on a slow runner
     // the roster had not rendered half a second in, and zero was counted.
-    await expect(list.getByText(/reminder|notice/i).first(), "nobody was assigned a letter").toBeVisible();
+    await expect(
+      list.getByText(/reminder|notice/i).first(),
+      "nobody was assigned a letter",
+    ).toBeVisible();
     const badges = await list.getByText(/reminder|notice/i).count();
     expect(badges, "nobody was assigned a letter").toBeGreaterThan(0);
 
@@ -308,8 +313,8 @@ test.describe("shared costs", () => {
     await page.waitForLoadState("networkidle");
 
     const tabs = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
-        (a.textContent ?? "").trim().split("\n")[0],
+      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map(
+        (a) => (a.textContent ?? "").trim().split("\n")[0],
       ),
     );
     expect(
@@ -392,20 +397,31 @@ test.describe("money is one place", () => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
   });
 
-  test("the sidebar carries Finances, and Reserves and shared costs stay behind it", async ({ page }) => {
+  test("the sidebar carries Finances, and Reserves and shared costs stay behind it", async ({
+    page,
+  }) => {
     await page.goto("/board");
     await page.waitForLoadState("networkidle");
 
     const tabs = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
-        (a.textContent ?? "").trim().split("\n")[0],
+      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map(
+        (a) => (a.textContent ?? "").trim().split("\n")[0],
       ),
     );
     // Nine rows since 2026-09-24: Reserves is a tab inside Finances, not a
     // line of its own, and it lights Finances while it is open.
-    expect(tabs.some((t) => t.startsWith("Reserve")), "Reserves is still its own line").toBe(false);
-    expect(tabs.some((t) => t.startsWith("Shared costs")), "Shared costs is still its own line").toBe(false);
-    expect(tabs.some((t) => t.startsWith("Finances")), "Finances vanished entirely").toBe(true);
+    expect(
+      tabs.some((t) => t.startsWith("Reserve")),
+      "Reserves is still its own line",
+    ).toBe(false);
+    expect(
+      tabs.some((t) => t.startsWith("Shared costs")),
+      "Shared costs is still its own line",
+    ).toBe(false);
+    expect(
+      tabs.some((t) => t.startsWith("Finances")),
+      "Finances vanished entirely",
+    ).toBe(true);
 
     await page.goto("/board/reserves");
     await page.waitForLoadState("networkidle");
@@ -421,7 +437,10 @@ test.describe("money is one place", () => {
     // The reserves live behind the Finances tabs, not on a line of their own.
     expect(health.text, "reserves are not reachable from money").toContain("Reserves");
 
-    await page.getByRole("navigation", { name: "Finances" }).getByRole("link", { name: "Reserves" }).click();
+    await page
+      .getByRole("navigation", { name: "Finances" })
+      .getByRole("link", { name: "Reserves" })
+      .click();
     await page.waitForURL("**/board/reserves");
     await expectHealthy(page, "reserves through the control");
   });
@@ -522,13 +541,18 @@ test.describe("vendors", () => {
     await page.getByLabel("Reference").fill("1042");
 
     await page.getByRole("button", { name: "Record payment" }).click();
-    await expect(page.getByText("1042").first(), "the recorded payment never appeared").toBeVisible();
+    await expect(
+      page.getByText("1042").first(),
+      "the recorded payment never appeared",
+    ).toBeVisible();
 
     const health = await expectHealthy(page, "vendors after recording a payment");
     expect(health.text, "the recorded payment never appeared").toContain("1042");
   });
 
-  test("there is no route that sends a vendor money, only a payment already made", async ({ page }) => {
+  test("there is no route that sends a vendor money, only a payment already made", async ({
+    page,
+  }) => {
     await page.goto("/board/vendors");
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Record a payment" }).click();

@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowRightLeft, Plus } from "lucide-react";
-import { Button, Callout, Card, CardHeader, Meter, PageHeader, Stat } from "@/components/ui/primitives";
+import {
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  Meter,
+  PageHeader,
+  Stat,
+} from "@/components/ui/primitives";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
 import { ReserveStudyCard } from "@/components/app/reserve-study-card";
 import { ReserveTransferForm } from "@/components/app/reserve-transfer-form";
@@ -63,7 +71,9 @@ export function ReservesScreen() {
   const inAccounts = cashPosition(community).reserve;
   const unassigned = inAccounts - summary.funded;
 
-  const next = summary.urgent[0] ?? [...components].sort((a, b) => a.remainingLifeYears - b.remainingLifeYears)[0];
+  const next =
+    summary.urgent[0] ??
+    [...components].sort((a, b) => a.remainingLifeYears - b.remainingLifeYears)[0];
 
   if (!summary.hasStudy) {
     return (
@@ -79,8 +89,8 @@ export function ReservesScreen() {
           icon={<AlertTriangle className="size-4" />}
           title="No reserve study, so nothing here can be measured"
         >
-          Percent funded compares what you have set aside against what the things you own
-          will cost to replace. Without a study there is nothing to compare against.
+          Percent funded compares what you have set aside against what the things you own will cost
+          to replace. Without a study there is nothing to compare against.
         </Callout>
 
         <ReserveStudyCard />
@@ -115,7 +125,10 @@ export function ReservesScreen() {
                 body: "Roof, paving, pool equipment: what it costs, when it is due, what is set aside. The page fills in from there.",
               },
             ].map((step, index) => (
-              <li key={step.title} className="flex gap-3 border-b border-border py-3 last:border-b-0">
+              <li
+                key={step.title}
+                className="flex gap-3 border-b border-border py-3 last:border-b-0"
+              >
                 <span className="tnum flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-footnote font-semibold text-brand-soft-fg">
                   {index + 1}
                 </span>
@@ -219,7 +232,10 @@ export function ReservesScreen() {
       ) : null}
 
       <Card className="mt-6">
-        <CardHeader title="What the money is for" subtitle="Each component, when it is due, and what is set aside" />
+        <CardHeader
+          title="What the money is for"
+          subtitle="Each component, when it is due, and what is set aside"
+        />
         {/* On a phone, one row per component: name and cost on a line, the
             year and how much is set aside under it. The table's money
             columns were off the edge at 375 with nothing saying so. */}
@@ -271,50 +287,50 @@ export function ReservesScreen() {
             </thead>
             <tbody>
               {sorted.map((component) => {
-                  const share = component.replacementCostCents
-                    ? component.fundedCents / component.replacementCostCents
-                    : 0;
-                  return (
-                    <tr
-                      key={component.id}
-                      className="border-b border-border text-body last:border-b-0"
-                    >
-                      <td className="px-5 py-3">
-                        <p className="font-medium text-fg">{component.name}</p>
-                        {component.note ? (
-                          <p className="text-footnote text-fg-muted">{component.note}</p>
-                        ) : null}
-                      </td>
-                      <td className="tnum px-3 py-3 text-right">
-                        <span
-                          className={
-                            component.remainingLifeYears <= 2
-                              ? "font-semibold text-warn"
-                              : "text-fg-muted"
-                          }
-                        >
-                          {year + component.remainingLifeYears}
-                        </span>
-                      </td>
-                      <td className="tnum px-3 py-3 text-right text-fg-muted">
-                        {shortMoney(component.replacementCostCents)}
-                      </td>
-                      <td className="tnum px-3 py-3 text-right font-medium text-fg">
-                        {shortMoney(component.fundedCents)}
-                      </td>
-                      <td className="px-5 py-3">
-                        <Meter
-                          value={share}
-                          tone={share >= 0.8 ? "ok" : share >= 0.4 ? "brand" : "warn"}
-                          aria-label={`${component.name} ${Math.round(share * 100)} percent funded`}
-                        />
-                        <span className="tnum mt-1 block text-footnote text-fg-subtle">
-                          {Math.round(share * 100)}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                const share = component.replacementCostCents
+                  ? component.fundedCents / component.replacementCostCents
+                  : 0;
+                return (
+                  <tr
+                    key={component.id}
+                    className="border-b border-border text-body last:border-b-0"
+                  >
+                    <td className="px-5 py-3">
+                      <p className="font-medium text-fg">{component.name}</p>
+                      {component.note ? (
+                        <p className="text-footnote text-fg-muted">{component.note}</p>
+                      ) : null}
+                    </td>
+                    <td className="tnum px-3 py-3 text-right">
+                      <span
+                        className={
+                          component.remainingLifeYears <= 2
+                            ? "font-semibold text-warn"
+                            : "text-fg-muted"
+                        }
+                      >
+                        {year + component.remainingLifeYears}
+                      </span>
+                    </td>
+                    <td className="tnum px-3 py-3 text-right text-fg-muted">
+                      {shortMoney(component.replacementCostCents)}
+                    </td>
+                    <td className="tnum px-3 py-3 text-right font-medium text-fg">
+                      {shortMoney(component.fundedCents)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <Meter
+                        value={share}
+                        tone={share >= 0.8 ? "ok" : share >= 0.4 ? "brand" : "warn"}
+                        aria-label={`${component.name} ${Math.round(share * 100)} percent funded`}
+                      />
+                      <span className="tnum mt-1 block text-footnote text-fg-subtle">
+                        {Math.round(share * 100)}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -116,7 +116,10 @@ export async function signUp(
     }
     if (response.status !== 503) {
       const body = (await response.json().catch(() => ({}))) as { message?: string };
-      return { ok: false, message: readable(body.message ?? "Something went wrong. Please try again.") };
+      return {
+        ok: false,
+        message: readable(body.message ?? "Something went wrong. Please try again."),
+      };
     }
   } catch {
     // Network trouble reaching our own route. Supabase's path is still there.
@@ -144,10 +147,7 @@ export async function signUp(
   return { ok: true };
 }
 
-export async function signInWithPassword(
-  email: string,
-  password: string,
-): Promise<AuthResult> {
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
   const client = supabaseBrowser();
   const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
   return error ? { ok: false, message: readable(error.message) } : { ok: true };
@@ -195,7 +195,10 @@ export async function setNewPassword(password: string): Promise<AuthResult> {
  */
 export async function requestEmailChange(newEmail: string): Promise<AuthResult> {
   if (!hasSupabase) {
-    return { ok: false, message: "This is a demo. Sign in to your own association to change your email." };
+    return {
+      ok: false,
+      message: "This is a demo. Sign in to your own association to change your email.",
+    };
   }
   const client = supabaseBrowser();
   const { error } = await client.auth.updateUser(

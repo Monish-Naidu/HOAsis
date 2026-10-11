@@ -19,7 +19,22 @@ import {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Avatar, Badge, Button, ButtonLink, Callout, Card, EmptyState, KeyValue, PageHeader, Segmented, Select, Field, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Avatar,
+  Badge,
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  EmptyState,
+  KeyValue,
+  PageHeader,
+  Segmented,
+  Select,
+  Field,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { RemindersComposer } from "@/components/app/reminders-composer";
 import { AskedToJoin } from "./asked-to-join";
 import { JoinCodeRow } from "./join-code-row";
@@ -83,8 +98,7 @@ const EMPTY_FILTER: Record<Exclude<HomeFilter, "all">, string> = {
   "no-email": "Every household has an email on file",
 };
 
-const input =
-  fieldClass;
+const input = fieldClass;
 
 /** The invitation route looks up at most this many homes in one call. */
 const INVITE_BATCH = 200;
@@ -167,7 +181,9 @@ export async function sendInvitations(
       }
       if (!ok) {
         refusal =
-          typeof answer.error === "string" && answer.error ? answer.error : "Could not send the invitations. Try again in a few minutes.";
+          typeof answer.error === "string" && answer.error
+            ? answer.error
+            : "Could not send the invitations. Try again in a few minutes.";
         break;
       }
       remaining = counted(answer.remaining);
@@ -180,7 +196,10 @@ export async function sendInvitations(
       // bad address is tried again on the next call, so the worst single
       // call is the count.
       failed = Math.max(failed, counted(answer.failed) - remaining);
-      line = Array.isArray(answer.errors) && typeof answer.errors[0] === "string" ? answer.errors[0] : undefined;
+      line =
+        Array.isArray(answer.errors) && typeof answer.errors[0] === "string"
+          ? answer.errors[0]
+          : undefined;
       if (remaining === 0 || remaining >= left) break;
       left = remaining;
     }
@@ -206,7 +225,10 @@ export function inviteToast(
   only?: string,
 ): { message: string; tone: "ok" | "warn" } {
   if (outcome.refused && outcome.sent + outcome.already === 0) {
-    return { message: outcome.reason ?? "Could not send the invitations. Try again in a few minutes.", tone: "warn" };
+    return {
+      message: outcome.reason ?? "Could not send the invitations. Try again in a few minutes.",
+      tone: "warn",
+    };
   }
   if (only && outcome.sent === 1 && outcome.failed === 0) {
     return { message: `Invitation sent to ${only}`, tone: "ok" };
@@ -330,9 +352,9 @@ export function HomeownersScreen() {
   // The two money chips need the books; the other three are facts about the
   // register, so a seat that cannot see balances still gets them.
   const counts = homeFilterCounts(homes);
-  const segments = HOME_FILTERS.filter((key) => seesMoney || (key !== "paid-up" && key !== "past-due")).map(
-    (key) => ({ key, label: HOME_FILTER_LABEL[key], count: counts[key] }),
-  );
+  const segments = HOME_FILTERS.filter(
+    (key) => seesMoney || (key !== "paid-up" && key !== "past-due"),
+  ).map((key) => ({ key, label: HOME_FILTER_LABEL[key], count: counts[key] }));
 
   function toggle(home: Home, withComposer = false) {
     const opening = openId !== home.id || withComposer;
@@ -342,7 +364,10 @@ export function HomeownersScreen() {
 
   function saveOwner() {
     try {
-      const home = addOwner({ ...entry, homeType: mixed ? (entry.homeType ?? kinds[0].type) : undefined });
+      const home = addOwner({
+        ...entry,
+        homeType: mixed ? (entry.homeType ?? kinds[0].type) : undefined,
+      });
       setEntry({ name: "", email: "", unit: "" });
       setAdding(false);
       notify(`Added ${home.displayName}, ${homeLabel(community, home.unit)}`, "ok", {
@@ -482,7 +507,12 @@ export function HomeownersScreen() {
       { header: "Household", value: (o) => o.displayName },
       { header: "Address", value: (o) => o.address },
       ...(mixed
-        ? [{ header: "Kind", value: (o: Home) => (o.homeType ? HOME_TYPE_LABEL[o.homeType].one : "") }]
+        ? [
+            {
+              header: "Kind",
+              value: (o: Home) => (o.homeType ? HOME_TYPE_LABEL[o.homeType].one : ""),
+            },
+          ]
         : []),
       { header: "Email", value: (o) => o.email },
       { header: "Phone", value: (o) => o.phone },
@@ -503,7 +533,11 @@ export function HomeownersScreen() {
 
   if (!maySeeRoster) {
     return (
-      <Callout tone="warn" icon={<Lock className="size-4" />} title="You cannot see the homeowner register">
+      <Callout
+        tone="warn"
+        icon={<Lock className="size-4" />}
+        title="You cannot see the homeowner register"
+      >
         It shows every household&apos;s balance and contact details, so it needs access to Finances
         or Messages. The President can give you that access.
       </Callout>
@@ -516,7 +550,11 @@ export function HomeownersScreen() {
     <>
       <PageHeader
         title="Homeowners"
-        description={seesMoney ? "Every home, its owner, contact details, and balance." : "Every home, its owner, and how to reach them."}
+        description={
+          seesMoney
+            ? "Every home, its owner, contact details, and balance."
+            : "Every home, its owner, and how to reach them."
+        }
         action={
           <div className="flex gap-2">
             <Button
@@ -578,11 +616,17 @@ export function HomeownersScreen() {
                 setFilter(next);
                 setShown(PAGE);
               }}
-              options={segments.map((seg) => ({ value: seg.key, label: seg.label, count: seg.count }))}
+              options={segments.map((seg) => ({
+                value: seg.key,
+                label: seg.label,
+                count: seg.count,
+              }))}
               className="pointer-coarse:[&>button]:h-9"
             />
           ) : (
-            <p className="tnum text-footnote font-medium text-fg-muted">{pluralize(homes.length, "home")}</p>
+            <p className="tnum text-footnote font-medium text-fg-muted">
+              {pluralize(homes.length, "home")}
+            </p>
           )}
           <div className="flex flex-wrap items-center gap-1">
             {mixed ? (
@@ -715,7 +759,9 @@ export function HomeownersScreen() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-body font-semibold text-fg">
-                  {seller ? `Record the sale of ${homeLabel(community, seller.unit)}` : "Record a sale"}
+                  {seller
+                    ? `Record the sale of ${homeLabel(community, seller.unit)}`
+                    : "Record a sale"}
                 </p>
                 <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
                   {seller
@@ -786,7 +832,10 @@ export function HomeownersScreen() {
                 size="md"
                 // The picker's max stops a click; this stops a typed date.
                 disabled={
-                  !seller || !sale.name.trim() || !sale.closingDate || sale.closingDate > todayIsoDate()
+                  !seller ||
+                  !sale.name.trim() ||
+                  !sale.closingDate ||
+                  sale.closingDate > todayIsoDate()
                 }
                 onClick={recordSale}
               >
@@ -840,7 +889,13 @@ export function HomeownersScreen() {
         {/* Roster */}
         {visible.length === 0 ? (
           <EmptyState
-            title={query.trim() ? "Nobody matches" : filter === "all" ? "No households yet" : EMPTY_FILTER[filter]}
+            title={
+              query.trim()
+                ? "Nobody matches"
+                : filter === "all"
+                  ? "No households yet"
+                  : EMPTY_FILTER[filter]
+            }
             description={
               query.trim()
                 ? "Try a name, unit, address or email."
@@ -872,42 +927,47 @@ export function HomeownersScreen() {
                       className="col-span-1 grid min-w-0 grid-cols-subgrid items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand md:col-span-3"
                     >
                       <span className="flex min-w-0 items-center gap-3">
-                      {o.isCorporateOwner ? (
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-3 text-fg-muted">
-                          <Building2 className="size-4" />
-                        </span>
-                      ) : (
-                        // An unsold lot has no named resident. The display name
-                        // is the builder, who holds it and owes the assessment.
-                        <Avatar name={o.members[0] ?? o.displayName} className="size-9" />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                          <span className="min-w-0 truncate text-body font-medium text-fg">
-                            {o.displayName}
+                        {o.isCorporateOwner ? (
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-3 text-fg-muted">
+                            <Building2 className="size-4" />
                           </span>
-                          {o.boardRole ? <Badge tone="brand">{o.boardRole}</Badge> : null}
-                          {isRemote && o.email && !o.placeholder && !accounts.some((a) => a.homeId === o.id) ? (
-                            <Badge tone="neutral">Not signed up</Badge>
-                          ) : null}
+                        ) : (
+                          // An unsold lot has no named resident. The display name
+                          // is the builder, who holds it and owes the assessment.
+                          <Avatar name={o.members[0] ?? o.displayName} className="size-9" />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className="min-w-0 truncate text-body font-medium text-fg">
+                              {o.displayName}
+                            </span>
+                            {o.boardRole ? <Badge tone="brand">{o.boardRole}</Badge> : null}
+                            {isRemote &&
+                            o.email &&
+                            !o.placeholder &&
+                            !accounts.some((a) => a.homeId === o.id) ? (
+                              <Badge tone="neutral">Not signed up</Badge>
+                            ) : null}
+                          </span>
+                          <span className="block truncate text-footnote text-fg-muted">
+                            {homeLabel(community, o.unit)}
+                            {mixed && o.homeType ? ` · ${HOME_TYPE_LABEL[o.homeType].short}` : ""}
+                            {o.address &&
+                            o.address !== o.unit &&
+                            o.address !== homeLabel(community, o.unit) &&
+                            !o.address.endsWith(`, ${homeLabel(community, o.unit)}`)
+                              ? ` · ${o.address}`
+                              : ""}
+                          </span>
+                          <span className="block truncate text-footnote text-fg-subtle md:hidden">
+                            {o.email}
+                          </span>
                         </span>
-                        <span className="block truncate text-footnote text-fg-muted">
-                          {homeLabel(community, o.unit)}
-                          {mixed && o.homeType ? ` · ${HOME_TYPE_LABEL[o.homeType].short}` : ""}
-                          {o.address &&
-                          o.address !== o.unit &&
-                          o.address !== homeLabel(community, o.unit) &&
-                          !o.address.endsWith(`, ${homeLabel(community, o.unit)}`)
-                            ? ` · ${o.address}`
-                            : ""}
-                        </span>
-                        <span className="block truncate text-footnote text-fg-subtle md:hidden">
-                          {o.email}
-                        </span>
-                      </span>
                       </span>
                       <span className="hidden min-w-0 md:block">
-                        <span className="block truncate text-footnote text-fg-muted">{o.email}</span>
+                        <span className="block truncate text-footnote text-fg-muted">
+                          {o.email}
+                        </span>
                         <span className="tnum block text-footnote text-fg-subtle">{o.phone}</span>
                       </span>
                       <ChevronDown
@@ -934,7 +994,9 @@ export function HomeownersScreen() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        aria-label={o.placeholder ? `Add the owner of ${o.unit}` : `Message ${o.displayName}`}
+                        aria-label={
+                          o.placeholder ? `Add the owner of ${o.unit}` : `Message ${o.displayName}`
+                        }
                         title={o.placeholder ? "Add owner" : "Message"}
                         onClick={() => toggle(o, true)}
                         className={cn(
@@ -969,28 +1031,46 @@ export function HomeownersScreen() {
                       onRecordPayment={
                         changesMoney && !o.placeholder
                           ? (input) =>
-                              Promise.resolve(recordManualPayment({ homeId: o.id, ...input })).then((ok) => {
-                                if (ok) notify(`Recorded ${money(input.amountCents)} from ${o.displayName}`, "ok");
-                                return ok;
-                              })
+                              Promise.resolve(recordManualPayment({ homeId: o.id, ...input })).then(
+                                (ok) => {
+                                  if (ok)
+                                    notify(
+                                      `Recorded ${money(input.amountCents)} from ${o.displayName}`,
+                                      "ok",
+                                    );
+                                  return ok;
+                                },
+                              )
                           : undefined
                       }
                       homeName={homeLabel(community, o.unit)}
-                      onLoadHandPayments={changesMoney && !o.placeholder ? () => manualPaymentsFor(o.id) : undefined}
+                      onLoadHandPayments={
+                        changesMoney && !o.placeholder ? () => manualPaymentsFor(o.id) : undefined
+                      }
                       onReverseHandPayment={
                         changesMoney && !o.placeholder
                           ? (paymentId, reason) =>
-                              Promise.resolve(reverseManualPayment(paymentId, reason)).then((ok) => {
-                                if (ok) notify(`Payment reversed for ${homeLabel(community, o.unit)}.`, "ok");
-                                return ok;
-                              })
+                              Promise.resolve(reverseManualPayment(paymentId, reason)).then(
+                                (ok) => {
+                                  if (ok)
+                                    notify(
+                                      `Payment reversed for ${homeLabel(community, o.unit)}.`,
+                                      "ok",
+                                    );
+                                  return ok;
+                                },
+                              )
                           : undefined
                       }
                       onAddCredit={
                         changesMoney && !o.placeholder
                           ? (input) =>
                               Promise.resolve(addCredit({ homeId: o.id, ...input })).then((ok) => {
-                                if (ok) notify(`Added a ${money(input.amountCents)} credit to ${o.displayName}`, "ok");
+                                if (ok)
+                                  notify(
+                                    `Added a ${money(input.amountCents)} credit to ${o.displayName}`,
+                                    "ok",
+                                  );
                                 return ok;
                               })
                           : undefined
@@ -999,7 +1079,8 @@ export function HomeownersScreen() {
                         changesMoney && !o.placeholder
                           ? (input) =>
                               Promise.resolve(addCharge({ homeId: o.id, ...input })).then((ok) => {
-                                if (ok) notify(`Charge added to ${homeLabel(community, o.unit)}.`, "ok");
+                                if (ok)
+                                  notify(`Charge added to ${homeLabel(community, o.unit)}.`, "ok");
                                 return ok;
                               })
                           : undefined
@@ -1015,7 +1096,10 @@ export function HomeownersScreen() {
                                     homeType: o.homeType,
                                     duesCents: cents ?? undefined,
                                   });
-                                  notify(`${homeLabel(community, o.unit)} pays ${money(pays)} from the next bill.`, "ok");
+                                  notify(
+                                    `${homeLabel(community, o.unit)} pays ${money(pays)} from the next bill.`,
+                                    "ok",
+                                  );
                                 }
                                 return ok;
                               })
@@ -1052,7 +1136,9 @@ export function HomeownersScreen() {
                           : undefined
                       }
                       onChangeEmail={
-                        mayChangeRoster && !o.placeholder && (!isRemote || !accounts.some((a) => a.homeId === o.id))
+                        mayChangeRoster &&
+                        !o.placeholder &&
+                        (!isRemote || !accounts.some((a) => a.homeId === o.id))
                           ? (email) =>
                               Promise.resolve(changeOwnerEmail(o.id, email)).then((ok) => {
                                 if (ok) notify(`${o.displayName}'s email is now ${email}`, "ok");
@@ -1070,9 +1156,16 @@ export function HomeownersScreen() {
                                 // the first owner, because the route writes to
                                 // every address on a home.
                                 if (isRemote && community.association.joinCode) {
-                                  const link = remoteInviteUrl(community.association.joinCode, email, window.location.origin);
+                                  const link = remoteInviteUrl(
+                                    community.association.joinCode,
+                                    email,
+                                    window.location.origin,
+                                  );
                                   void navigator.clipboard?.writeText(link).catch(() => undefined);
-                                  notify(`${name} added to ${homeLabel(community, o.unit)}. Their invitation link is copied`, "ok");
+                                  notify(
+                                    `${name} added to ${homeLabel(community, o.unit)}. Their invitation link is copied`,
+                                    "ok",
+                                  );
                                 } else {
                                   notify(`${name} added to ${homeLabel(community, o.unit)}`, "ok");
                                 }
@@ -1082,16 +1175,21 @@ export function HomeownersScreen() {
                       }
                       people={seatsOf(o)}
                       removableSeats={
-                        mayChangeRoster && !o.placeholder ? removableSeats(seatsOf(o), account?.id ?? null) : []
+                        mayChangeRoster && !o.placeholder
+                          ? removableSeats(seatsOf(o), account?.id ?? null)
+                          : []
                       }
                       onRemoveSeat={(seat) =>
                         Promise.resolve(removeCoOwner(o.id, seat.id)).then((ok) => {
-                          if (ok) notify(removedToast(seat.name, homeLabel(community, o.unit)), "ok");
+                          if (ok)
+                            notify(removedToast(seat.name, homeLabel(community, o.unit)), "ok");
                           return ok;
                         })
                       }
                       onInvite={() => copyInvite(o)}
-                      onEmailInvite={isRemote && o.email && mayInvite ? () => void emailInvites([o]) : undefined}
+                      onEmailInvite={
+                        isRemote && o.email && mayInvite ? () => void emailInvites([o]) : undefined
+                      }
                       signedUp={!isRemote || accounts.some((a) => a.homeId === o.id)}
                       onRemove={() => remove(o)}
                     />
@@ -1126,7 +1224,10 @@ export function HomeownersScreen() {
         {showOpeningBalances && changesMoney ? (
           <p className="border-t border-border px-5 py-3 text-footnote text-fg-muted">
             Switched from another system?{" "}
-            <Link href="/board/homeowners/opening-balances" className="font-medium text-accent hover:underline">
+            <Link
+              href="/board/homeowners/opening-balances"
+              className="font-medium text-accent hover:underline"
+            >
               Enter what each home owed on day one
             </Link>
             .
@@ -1261,7 +1362,9 @@ function HouseholdDetail({
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
   const [subject, setSubject] = useState<string | null>(null);
-  const [editing, setEditing] = useState<"email" | "second" | "payment" | "hand" | "credit" | "charge" | "dues" | "statement" | null>(null);
+  const [editing, setEditing] = useState<
+    "email" | "second" | "payment" | "hand" | "credit" | "charge" | "dues" | "statement" | null
+  >(null);
   const [hand, setHand] = useState<HandPaymentsState>({ status: "loading" });
 
   // Read in the click that opens the form or the list, not in an effect, and
@@ -1299,7 +1402,10 @@ function HouseholdDetail({
             </a>
           </KeyValue>
           <KeyValue label="Phone">
-            <a href={`tel:${home.phone.replace(/[^\d+]/g, "")}`} className="text-accent hover:underline">
+            <a
+              href={`tel:${home.phone.replace(/[^\d+]/g, "")}`}
+              className="text-accent hover:underline"
+            >
               {home.phone}
             </a>
           </KeyValue>
@@ -1326,7 +1432,12 @@ function HouseholdDetail({
             <KeyValue label="Mail goes to">{home.mailingAddress}</KeyValue>
           ) : null}
           {removable.length ? (
-            <PeopleOnHome people={people} removable={removable} homeLabel={homeName} onRemove={onRemoveSeat} />
+            <PeopleOnHome
+              people={people}
+              removable={removable}
+              homeLabel={homeName}
+              onRemove={onRemoveSeat}
+            />
           ) : home.members.length > 1 ? (
             <KeyValue label="On title">{home.members.join(", ")}</KeyValue>
           ) : null}
@@ -1338,7 +1449,10 @@ function HouseholdDetail({
               </dt>
               <dd className="mt-1 space-y-1">
                 {home.previousOwners.map((t) => (
-                  <p key={`${t.name}-${t.to}`} className="flex items-baseline justify-between gap-4 text-body">
+                  <p
+                    key={`${t.name}-${t.to}`}
+                    className="flex items-baseline justify-between gap-4 text-body"
+                  >
                     <span className="min-w-0 truncate font-medium text-fg">{t.name}</span>
                     <span className="tnum shrink-0 text-footnote text-fg-muted">
                       {formatDate(t.from, "long")} to {formatDate(t.to, "long")}
@@ -1362,68 +1476,77 @@ function HouseholdDetail({
         {home.placeholder ? (
           <AddOwnerForm unit={home.unit} onSave={onSetOwner} />
         ) : (
-        <div>
-          <label className="block">
-            <span className="mb-1.5 flex items-center justify-between gap-3 text-footnote font-semibold text-fg-muted">
-              <span>Message {home.members[0]?.split(" ")[0] ?? home.displayName}</span>
-              {letter && !subject ? (
-                <button
-                  type="button"
-                  onClick={startFromLetter}
-                  className="font-medium text-accent hover:underline"
-                >
-                  Start from the {letter.name.toLowerCase()}
-                </button>
-              ) : null}
-            </span>
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={subject ? 10 : 4}
-              autoFocus={focusComposer}
-              aria-label={`Message to ${home.displayName}`}
-              placeholder="Write a short note. They can reply by email."
-              className={cn(textareaClass, "resize-none")}
-            />
-          </label>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-footnote text-fg-muted">
-              {subject ? (
-                <>Subject: {subject}</>
-              ) : thread ? (
-                <>
-                  Continues &ldquo;{thread.subject}&rdquo;.{" "}
-                  <a href="/board/communications" className="text-accent hover:underline">
-                    Open thread
-                  </a>
-                </>
-              ) : (
-                `Sent by email to ${home.email}`
-              )}
-            </p>
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={!draft.trim()}
-              onClick={() => {
-                onSend(draft.trim(), subject ?? undefined);
-                setDraft("");
-                setSubject(null);
-              }}
-            >
-              <Send className="size-3.5" />
-              Send
-            </Button>
+          <div>
+            <label className="block">
+              <span className="mb-1.5 flex items-center justify-between gap-3 text-footnote font-semibold text-fg-muted">
+                <span>Message {home.members[0]?.split(" ")[0] ?? home.displayName}</span>
+                {letter && !subject ? (
+                  <button
+                    type="button"
+                    onClick={startFromLetter}
+                    className="font-medium text-accent hover:underline"
+                  >
+                    Start from the {letter.name.toLowerCase()}
+                  </button>
+                ) : null}
+              </span>
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                rows={subject ? 10 : 4}
+                autoFocus={focusComposer}
+                aria-label={`Message to ${home.displayName}`}
+                placeholder="Write a short note. They can reply by email."
+                className={cn(textareaClass, "resize-none")}
+              />
+            </label>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-footnote text-fg-muted">
+                {subject ? (
+                  <>Subject: {subject}</>
+                ) : thread ? (
+                  <>
+                    Continues &ldquo;{thread.subject}&rdquo;.{" "}
+                    <a href="/board/communications" className="text-accent hover:underline">
+                      Open thread
+                    </a>
+                  </>
+                ) : (
+                  `Sent by email to ${home.email}`
+                )}
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!draft.trim()}
+                onClick={() => {
+                  onSend(draft.trim(), subject ?? undefined);
+                  setDraft("");
+                  setSubject(null);
+                }}
+              >
+                <Send className="size-3.5" />
+                Send
+              </Button>
+            </div>
           </div>
-        </div>
         )}
       </div>
 
       {editing === "email" && onChangeEmail ? (
-        <ChangeEmailForm current={home.email} onSave={onChangeEmail} onCancel={() => setEditing(null)} />
+        <ChangeEmailForm
+          current={home.email}
+          onSave={onChangeEmail}
+          onCancel={() => setEditing(null)}
+        />
       ) : null}
       {editing === "second" && onAddSecondOwner ? (
-        <SecondOwnerForm unit={home.unit} homeName={homeName} onSave={onAddSecondOwner} onCancel={() => setEditing(null)} />
+        <SecondOwnerForm
+          unit={home.unit}
+          homeName={homeName}
+          onSave={onAddSecondOwner}
+          onCancel={() => setEditing(null)}
+        />
       ) : null}
 
       {editing === "payment" && onRecordPayment ? (
@@ -1432,7 +1555,9 @@ function HouseholdDetail({
           homeName={homeName}
           existing={hand.status === "ready" ? hand.rows : undefined}
           balanceCents={home.balanceCents}
-          onSave={(input) => onRecordPayment(input).then((ok) => ok && loadHandPayments().then(() => ok))}
+          onSave={(input) =>
+            onRecordPayment(input).then((ok) => ok && loadHandPayments().then(() => ok))
+          }
           onCancel={() => setEditing(null)}
         />
       ) : null}
@@ -1441,13 +1566,20 @@ function HouseholdDetail({
           homeName={homeName}
           state={hand}
           onReverse={(paymentId, reason) =>
-            onReverseHandPayment(paymentId, reason).then((ok) => ok && loadHandPayments().then(() => ok))
+            onReverseHandPayment(paymentId, reason).then(
+              (ok) => ok && loadHandPayments().then(() => ok),
+            )
           }
           onClose={() => setEditing(null)}
         />
       ) : null}
       {editing === "credit" && onAddCredit ? (
-        <AddCreditForm unit={home.unit} homeName={homeName} onSave={onAddCredit} onCancel={() => setEditing(null)} />
+        <AddCreditForm
+          unit={home.unit}
+          homeName={homeName}
+          onSave={onAddCredit}
+          onCancel={() => setEditing(null)}
+        />
       ) : null}
       {editing === "statement" ? (
         <PrintStatementForm home={home} homeName={homeName} onClose={() => setEditing(null)} />

@@ -465,7 +465,11 @@ describe("admin actions change real records", () => {
     expect(ledger.length).toBe(before + 2);
     expect(ledger.some((e) => e.id === target.id)).toBe(true);
     const net = ledger
-      .filter((e) => e.description === target.description || e.description === `Reversal: ${target.description}`)
+      .filter(
+        (e) =>
+          e.description === target.description ||
+          e.description === `Reversal: ${target.description}`,
+      )
       .reduce((sum, e) => sum + e.amountCents, 0);
     expect(net).toBe(target.amountCents);
   });
@@ -483,9 +487,9 @@ describe("admin actions change real records", () => {
     expect(released.status).toBe("scheduled");
 
     act(() => result.current.state.approvePayout(waiting.id));
-    expect(
-      result.current.state.payouts.find((p) => p.id === waiting.id)!.approvals,
-    ).toHaveLength(waiting.approvalsRequired);
+    expect(result.current.state.payouts.find((p) => p.id === waiting.id)!.approvals).toHaveLength(
+      waiting.approvalsRequired,
+    );
   });
 
   it("deciding a request records who decided and appends to the thread", () => {
@@ -616,9 +620,7 @@ describe("reports from residents", () => {
   it("refuses to mark a report verified with nothing written down", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const report = result.current.state.community.violationReports.find(
-      (r) => r.status === "new",
-    )!;
+    const report = result.current.state.community.violationReports.find((r) => r.status === "new")!;
 
     // Ticking a box is not an investigation, and the note is the thing a
     // notice would rest on.
@@ -633,9 +635,7 @@ describe("reports from residents", () => {
   it("refuses to raise a notice from a report nobody has looked at", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const report = result.current.state.community.violationReports.find(
-      (r) => r.status === "new",
-    )!;
+    const report = result.current.state.community.violationReports.find((r) => r.status === "new")!;
     const before = result.current.state.community.violations.length;
 
     expect(() =>
@@ -654,9 +654,7 @@ describe("reports from residents", () => {
   it("allows it once somebody looked, and carries none of the reporter's words across", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const report = result.current.state.community.violationReports.find(
-      (r) => r.status === "new",
-    )!;
+    const report = result.current.state.community.violationReports.find((r) => r.status === "new")!;
 
     act(() =>
       result.current.state.verifyReport(
@@ -683,22 +681,16 @@ describe("reports from residents", () => {
 
     // And the report now points back, so the trail from complaint to notice is
     // walkable in both directions.
-    const after = result.current.state.community.violationReports.find(
-      (r) => r.id === report.id,
-    )!;
+    const after = result.current.state.community.violationReports.find((r) => r.id === report.id)!;
     expect(after.violationId).toBe(raised.id);
   });
 
   it("a dismissed report stays dismissed and cannot become a notice", () => {
     const { result } = renderApp();
     act(() => result.current.state.signIn(ARYA));
-    const report = result.current.state.community.violationReports.find(
-      (r) => r.status === "new",
-    )!;
+    const report = result.current.state.community.violationReports.find((r) => r.status === "new")!;
 
-    act(() =>
-      result.current.state.dismissReport(report.id, "Looked on the 22nd. Nothing there."),
-    );
+    act(() => result.current.state.dismissReport(report.id, "Looked on the 22nd. Nothing there."));
     expect(() =>
       act(() =>
         result.current.state.raiseNoticeFromReport(report.id, {
@@ -794,16 +786,14 @@ describe("opening balances", () => {
       ]),
     );
     act(() =>
-      result.current.state.setOpeningBalances("2026-07-01", [
-        { homeId: home.id, amountCents: 0 },
-      ]),
+      result.current.state.setOpeningBalances("2026-07-01", [{ homeId: home.id, amountCents: 0 }]),
     );
 
     const lines = result.current.state.community.homeCharges[home.id] ?? [];
     expect(lines.some((l) => l.label === "Balance brought forward")).toBe(false);
-    expect(
-      result.current.state.community.homes.find((o) => o.id === home.id)!.balanceCents,
-    ).toBe(0);
+    expect(result.current.state.community.homes.find((o) => o.id === home.id)!.balanceCents).toBe(
+      0,
+    );
   });
 });
 
@@ -845,9 +835,7 @@ describe("the setup plan and unsold lots", () => {
       "2026-08-26",
     );
 
-    expect(invites.done(community), "a real household with no email was let through").toBe(
-      false,
-    );
+    expect(invites.done(community), "a real household with no email was let through").toBe(false);
   });
 });
 
@@ -1003,9 +991,9 @@ describe("the community handed to screens", () => {
 
     // Screens and the pure selectors in metrics.ts both read off `community`,
     // so it has to reflect the change the store just took.
-    expect(
-      result.current.community.ballots.find((b) => b.id === ballot.id)!.myVoteOptionId,
-    ).toBe(ballot.options[0].id);
+    expect(result.current.community.ballots.find((b) => b.id === ballot.id)!.myVoteOptionId).toBe(
+      ballot.options[0].id,
+    );
   });
 
   it("reflects an added vendor", () => {
@@ -1112,7 +1100,9 @@ describe("letting somebody in on a home already on the register (demo)", () => {
     const seats = result.current.accounts.filter((a) => a.homeId === home.id);
     expect(seats.some((a) => a.email === request.email)).toBe(true);
     expect(seats).toHaveLength(seatsBefore + 1);
-    expect(result.current.community.joinRequests.find((j) => j.id === request.id)!.status).toBe("approved");
+    expect(result.current.community.joinRequests.find((j) => j.id === request.id)!.status).toBe(
+      "approved",
+    );
   });
 
   it("gives an empty home its owner without making a second home", async () => {
@@ -1148,13 +1138,19 @@ describe("letting somebody in on a home already on the register (demo)", () => {
     const before = result.current.accounts.filter((a) => a.homeId === home.id).length;
 
     await act(async () => {
-      expect(await result.current.addSecondOwner(home.id, { name: "Lee Two", email: "lee@example.com" })).toBe(true);
+      expect(
+        await result.current.addSecondOwner(home.id, { name: "Lee Two", email: "lee@example.com" }),
+      ).toBe(true);
     });
 
-    expect(result.current.community.homes.find((o) => o.id === home.id)!.members).toContain("Lee Two");
+    expect(result.current.community.homes.find((o) => o.id === home.id)!.members).toContain(
+      "Lee Two",
+    );
     expect(result.current.accounts.filter((a) => a.homeId === home.id)).toHaveLength(before + 1);
     // One home, one balance: nothing about the second owner is billed.
-    expect(result.current.community.homes.find((o) => o.id === home.id)!.balanceCents).toBe(home.balanceCents);
+    expect(result.current.community.homes.find((o) => o.id === home.id)!.balanceCents).toBe(
+      home.balanceCents,
+    );
   });
 
   it("changes the email invitations go to", async () => {
@@ -1165,7 +1161,9 @@ describe("letting somebody in on a home already on the register (demo)", () => {
       await result.current.changeOwnerEmail(home.id, "fixed@example.com");
     });
 
-    expect(result.current.community.homes.find((o) => o.id === home.id)!.email).toBe("fixed@example.com");
+    expect(result.current.community.homes.find((o) => o.id === home.id)!.email).toBe(
+      "fixed@example.com",
+    );
   });
 });
 
@@ -1174,7 +1172,8 @@ describe("letting somebody in on a home already on the register (demo)", () => {
  * posted for a later date (the September bill, on August 20) sits above a
  * payment made today; the payment is no longer the first line.
  */
-const lastPayment = (lines: { kind: string }[]) => lines.find((l) => l.kind === "payment") as ChargeLine;
+const lastPayment = (lines: { kind: string }[]) =>
+  lines.find((l) => l.kind === "payment") as ChargeLine;
 
 describe("taking a payment", () => {
   it("writes the statement, the balance, the books, the budget, and the bank together", () => {
@@ -1227,7 +1226,9 @@ describe("taking a payment", () => {
     // fallen due, as record_payment does, and the first home on the list owes
     // only the September bill, which has not.
     const home = result.current.community.homes.find(
-      (o) => o.daysPastDue > 0 && (result.current.community.homeCharges[o.id] ?? []).some((c) => c.kind === "charge"),
+      (o) =>
+        o.daysPastDue > 0 &&
+        (result.current.community.homeCharges[o.id] ?? []).some((c) => c.kind === "charge"),
     )!;
     // The oldest charge that still owes something, which is not the same as
     // the oldest charge: earlier ones have already been paid off.
@@ -1235,7 +1236,10 @@ describe("taking a payment", () => {
     const coveredBy = new Map<string, number>();
     for (const line of lines) {
       for (const applied of line.appliedTo ?? []) {
-        coveredBy.set(applied.chargeId, (coveredBy.get(applied.chargeId) ?? 0) + applied.amountCents);
+        coveredBy.set(
+          applied.chargeId,
+          (coveredBy.get(applied.chargeId) ?? 0) + applied.amountCents,
+        );
       }
     }
     const oldest = [...lines]
@@ -1310,7 +1314,11 @@ describe("recording an owner's check or cash (demo)", () => {
     });
     expect(after.homes.find((o) => o.id === home.id)!.balanceCents).toBe(home.balanceCents - 6_000);
     expect(result.current.ledger.length).toBe(ledgerBefore + 1);
-    expect(result.current.ledger[0]).toMatchObject({ amountCents: 6_000, category: "Assessments", date: "2026-08-18" });
+    expect(result.current.ledger[0]).toMatchObject({
+      amountCents: 6_000,
+      category: "Assessments",
+      date: "2026-08-18",
+    });
     expect(after.bankAccounts.find((a) => a.id === operating.id)!.balanceCents).toBe(
       operating.balanceCents + 6_000,
     );
@@ -1319,7 +1327,9 @@ describe("recording an owner's check or cash (demo)", () => {
   it("reads Cash payment with no number, and applies to the oldest charge first", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     const home = result.current.community.homes.find(
-      (o) => (result.current.community.homeCharges[o.id] ?? []).some((c) => c.kind === "charge") && o.daysPastDue > 0,
+      (o) =>
+        (result.current.community.homeCharges[o.id] ?? []).some((c) => c.kind === "charge") &&
+        o.daysPastDue > 0,
     )!;
     act(() => {
       void result.current.recordManualPayment({
@@ -1344,7 +1354,11 @@ describe("a credit on a statement (demo)", () => {
     const bankBefore = result.current.community.bankAccounts.map((a) => a.balanceCents);
 
     act(() => {
-      void result.current.addCredit({ homeId: home.id, amountCents: 2_500, reason: "Late fee waived" });
+      void result.current.addCredit({
+        homeId: home.id,
+        amountCents: 2_500,
+        reason: "Late fee waived",
+      });
     });
 
     const after = result.current.community;
@@ -1378,16 +1392,28 @@ describe("opening bank balances (demo)", () => {
     const before = account.balanceCents;
 
     act(() => {
-      void result.current.setOpeningBankBalance(account.id, { amountCents: 86_000_00, asOf: "2026-08-01" });
+      void result.current.setOpeningBankBalance(account.id, {
+        amountCents: 86_000_00,
+        asOf: "2026-08-01",
+      });
     });
     const lines = () =>
-      result.current.ledger.filter((e) => e.accountId === account.id && e.category === "Opening balance");
+      result.current.ledger.filter(
+        (e) => e.accountId === account.id && e.category === "Opening balance",
+      );
     expect(lines()).toHaveLength(1);
-    expect(lines()[0]).toMatchObject({ amountCents: 86_000_00, status: "cleared", date: "2026-08-01" });
+    expect(lines()[0]).toMatchObject({
+      amountCents: 86_000_00,
+      status: "cleared",
+      date: "2026-08-01",
+    });
     expect(result.current.community.bankAccounts[0].balanceCents).toBe(before + 86_000_00);
 
     act(() => {
-      void result.current.setOpeningBankBalance(account.id, { amountCents: 80_000_00, asOf: "2026-08-01" });
+      void result.current.setOpeningBankBalance(account.id, {
+        amountCents: 80_000_00,
+        asOf: "2026-08-01",
+      });
     });
     expect(lines()).toHaveLength(1);
     expect(lines()[0].amountCents).toBe(80_000_00);
@@ -1403,7 +1429,11 @@ describe("the demo's Activity", () => {
     const thread = result.current.state.threads[0];
 
     act(() => {
-      void result.current.state.addCredit({ homeId: home.id, amountCents: 2_500, reason: "Late fee waived" });
+      void result.current.state.addCredit({
+        homeId: home.id,
+        amountCents: 2_500,
+        reason: "Late fee waived",
+      });
       void result.current.state.setHomeDues([{ homeId: home.id, cents: 31_000 }]);
       void result.current.state.changeOwnerEmail(home.id, "new.address@example.com");
       result.current.state.addVendor({

@@ -52,11 +52,15 @@ const intents: Intent[] = [
       }
       return {
         text: `No late payment. You have ${money(o.balanceCents)} due${
-          o.nextChargeDate ? ` ${formatDate(o.nextChargeDate, "long")}, ${relativeDays(o.nextChargeDate)}` : ""
+          o.nextChargeDate
+            ? ` ${formatDate(o.nextChargeDate, "long")}, ${relativeDays(o.nextChargeDate)}`
+            : ""
         }.`,
         facts: [
           { label: "Balance", value: money(o.balanceCents) },
-          ...(o.nextChargeDate ? [{ label: "Due", value: formatDate(o.nextChargeDate, "long") }] : []),
+          ...(o.nextChargeDate
+            ? [{ label: "Due", value: formatDate(o.nextChargeDate, "long") }]
+            : []),
           { label: "Autopay", value: o.autopay ? "On" : "Off" },
         ],
         action: { label: "Pay dues", href: "/resident/pay" },
@@ -137,7 +141,17 @@ const intents: Intent[] = [
   },
   {
     id: "new-request",
-    keywords: ["request", "submit", "write", "help", "repair", "broken", "approval", "fence", "solar"],
+    keywords: [
+      "request",
+      "submit",
+      "write",
+      "help",
+      "repair",
+      "broken",
+      "approval",
+      "fence",
+      "solar",
+    ],
     phrases: [
       "help me write a request",
       "new request",
@@ -155,9 +169,7 @@ const intents: Intent[] = [
     keywords: ["status", "my", "open", "pending", "waiting", "approved"],
     phrases: ["my requests", "status of my request", "request status"],
     answer: (c) => {
-      const open = c.requests.filter(
-        (r) => !["approved", "denied", "closed"].includes(r.status),
-      );
+      const open = c.requests.filter((r) => !["approved", "denied", "closed"].includes(r.status));
       if (!c.requests.length) {
         return {
           text: "You have not submitted any requests yet.",
@@ -178,7 +190,17 @@ const intents: Intent[] = [
   },
   {
     id: "funds",
-    keywords: ["funds", "money", "reserve", "reserves", "cash", "interest", "savings", "account", "hoa"],
+    keywords: [
+      "funds",
+      "money",
+      "reserve",
+      "reserves",
+      "cash",
+      "interest",
+      "savings",
+      "account",
+      "hoa",
+    ],
     phrases: [
       "how much money",
       "how much is in",
@@ -194,20 +216,23 @@ const intents: Intent[] = [
         };
       }
       return {
-      text: `The association holds ${money(c.association.operatingCents, { cents: false })} in operating and ${money(
-        c.association.reserveCents,
-        { cents: false },
-      )} in reserves, earning ${c.association.blendedApy.toFixed(2)}%.`,
-      facts: [
-        { label: "Operating", value: money(c.association.operatingCents, { cents: false }) },
-        { label: "Reserves", value: money(c.association.reserveCents, { cents: false }) },
-        { label: "Interest this year", value: money(c.association.interestYtdCents, { cents: false }) },
-        {
-          label: "Reserves funded",
-          value: `${Math.round(c.association.reservePercentFunded * 100)}%`,
-        },
-      ],
-      action: { label: "See association funds", href: "/resident/finances" },
+        text: `The association holds ${money(c.association.operatingCents, { cents: false })} in operating and ${money(
+          c.association.reserveCents,
+          { cents: false },
+        )} in reserves, earning ${c.association.blendedApy.toFixed(2)}%.`,
+        facts: [
+          { label: "Operating", value: money(c.association.operatingCents, { cents: false }) },
+          { label: "Reserves", value: money(c.association.reserveCents, { cents: false }) },
+          {
+            label: "Interest this year",
+            value: money(c.association.interestYtdCents, { cents: false }),
+          },
+          {
+            label: "Reserves funded",
+            value: `${Math.round(c.association.reservePercentFunded * 100)}%`,
+          },
+        ],
+        action: { label: "See association funds", href: "/resident/finances" },
       };
     },
   },
@@ -224,7 +249,17 @@ const intents: Intent[] = [
   },
   {
     id: "documents",
-    keywords: ["document", "documents", "ccr", "ccrs", "bylaws", "budget", "minutes", "rules", "study"],
+    keywords: [
+      "document",
+      "documents",
+      "ccr",
+      "ccrs",
+      "bylaws",
+      "budget",
+      "minutes",
+      "rules",
+      "study",
+    ],
     phrases: ["where are the documents", "find the ccrs", "meeting minutes"],
     answer: (c) => ({
       text: `${c.documentCount} documents are available to you, including the CC&Rs, bylaws, rules, the adopted budget, the reserve study, and meeting minutes.`,
@@ -256,9 +291,40 @@ const intents: Intent[] = [
 ];
 
 const STOP = new Set([
-  "a", "an", "the", "is", "are", "do", "does", "did", "i", "my", "me", "we", "our",
-  "have", "has", "any", "there", "what", "when", "how", "of", "to", "in", "on", "for",
-  "and", "or", "it", "this", "that", "can", "you", "please", "hoa",
+  "a",
+  "an",
+  "the",
+  "is",
+  "are",
+  "do",
+  "does",
+  "did",
+  "i",
+  "my",
+  "me",
+  "we",
+  "our",
+  "have",
+  "has",
+  "any",
+  "there",
+  "what",
+  "when",
+  "how",
+  "of",
+  "to",
+  "in",
+  "on",
+  "for",
+  "and",
+  "or",
+  "it",
+  "this",
+  "that",
+  "can",
+  "you",
+  "please",
+  "hoa",
 ]);
 
 export function answerQuestion(question: string, context: AssistantScope): Answer {
@@ -287,11 +353,3 @@ export function answerQuestion(question: string, context: AssistantScope): Answe
     text: "I could not match that one. I can answer questions about your balance and payments, autopay, meetings, ballots, your requests, association funds, dues, documents, and amenities.",
   };
 }
-
-export const suggestedQuestions = [
-  "Do I have a late payment?",
-  "Are there any meetings coming up?",
-  "Help me write a request",
-  "How much money does the HOA have?",
-  "Do I need to vote on anything?",
-];

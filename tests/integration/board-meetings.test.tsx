@@ -5,7 +5,13 @@ import type { ReactNode } from "react";
 import type { Meeting } from "@/lib/types";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/meetings",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -59,7 +65,9 @@ describe("the board's Meetings page", () => {
   it("describes what it does and promises no recording", () => {
     wrap(<BoardMeetings />);
     act(() => seen.state.signIn("acct-arya"));
-    expect(screen.getByText("Upcoming meetings, who is coming, and action items.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Upcoming meetings, who is coming, and action items."),
+    ).toBeInTheDocument();
     expect(screen.getByText("What was on the agenda")).toBeInTheDocument();
     // The annual meeting in the demo is marked as recorded; nothing records.
     expect(document.body.textContent).not.toMatch(/·\s*recording/i);
@@ -73,14 +81,18 @@ describe("the board's Meetings page", () => {
       seen.state.addMeeting(meeting({ id: "mtg-today", title: "Budget meeting" }));
     });
     // Nothing of the room: no tiles, no camera, no roll of who joined.
-    expect(screen.queryByRole("button", { name: /camera|mute|leave|join$/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /camera|mute|leave|join$/i }),
+    ).not.toBeInTheDocument();
     const links = screen.getAllByRole("link", { name: "Join the call" });
     // The demo's own meeting is today and still marked live, and the one added is today.
     expect(links.map((l) => l.getAttribute("href"))).toContain(
       videoJoinUrl({ id: "mtg-today" }, seen.state.community.association.id),
     );
     expect(links.length).toBe(
-      seen.state.community.meetings.filter((m) => m.status !== "ended" && (m.date === "2026-08-20" || m.status === "live")).length,
+      seen.state.community.meetings.filter(
+        (m) => m.status !== "ended" && (m.date === "2026-08-20" || m.status === "live"),
+      ).length,
     );
   });
 
@@ -88,7 +100,9 @@ describe("the board's Meetings page", () => {
     wrap(<BoardMeetings />);
     act(() => {
       seen.state.signIn("acct-arya");
-      seen.state.addMeeting(meeting({ id: "mtg-later", title: "Later meeting", date: "2026-12-01" }));
+      seen.state.addMeeting(
+        meeting({ id: "mtg-later", title: "Later meeting", date: "2026-12-01" }),
+      );
     });
     const row = document.getElementById("mtg-mtg-later")!;
     expect(within(row).queryByText("Today, 6:30 PM")).not.toBeInTheDocument();
@@ -138,12 +152,25 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
     await act(async () => {
       await seen.state.rescheduleMeeting("mtg-move", { date: "2026-09-17", time: "7:00 PM" });
     });
-    expect(find("mtg-move")).toMatchObject({ date: "2026-09-17", time: "7:00 PM", rescheduledFrom: "2026-09-10", location: "Clubhouse" });
+    expect(find("mtg-move")).toMatchObject({
+      date: "2026-09-17",
+      time: "7:00 PM",
+      rescheduledFrom: "2026-09-10",
+      location: "Clubhouse",
+    });
     await act(async () => {
-      await seen.state.rescheduleMeeting("mtg-move", { date: "2026-09-24", location: "Pool house" });
+      await seen.state.rescheduleMeeting("mtg-move", {
+        date: "2026-09-24",
+        location: "Pool house",
+      });
     });
     // Moved twice, it still says when it was first noticed for.
-    expect(find("mtg-move")).toMatchObject({ date: "2026-09-24", rescheduledFrom: "2026-09-10", location: "Pool house", time: "7:00 PM" });
+    expect(find("mtg-move")).toMatchObject({
+      date: "2026-09-24",
+      rescheduledFrom: "2026-09-10",
+      location: "Pool house",
+      time: "7:00 PM",
+    });
     expect(screen.getByText("Was Sep 10", { exact: false })).toBeInTheDocument();
   });
 
@@ -154,8 +181,12 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
       seen.state.addMeeting(meeting({ id: "mtg-a", date: "2026-09-10" }));
       seen.state.addMeeting(meeting({ id: "mtg-old", date: "2026-01-05" }));
     });
-    expect(() => seen.state.rescheduleMeeting("mtg-a", { date: "2026-08-19" })).toThrow("Pick a date that has not passed.");
-    expect(() => seen.state.rescheduleMeeting("mtg-old", { date: "2026-09-01" })).toThrow("That meeting is over.");
+    expect(() => seen.state.rescheduleMeeting("mtg-a", { date: "2026-08-19" })).toThrow(
+      "Pick a date that has not passed.",
+    );
+    expect(() => seen.state.rescheduleMeeting("mtg-old", { date: "2026-09-01" })).toThrow(
+      "That meeting is over.",
+    );
     await act(async () => {
       await seen.state.rescheduleMeeting("mtg-a", { date: "2026-09-10" });
     });
@@ -168,18 +199,30 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
       seen.state.signIn("acct-arya");
       seen.state.addMeeting(meeting({ id: "mtg-c", title: "Storm meeting", date: "2026-09-10" }));
     });
-    expect(() => seen.state.cancelMeeting("mtg-c", " ")).toThrow("Say why the meeting is cancelled.");
+    expect(() => seen.state.cancelMeeting("mtg-c", " ")).toThrow(
+      "Say why the meeting is cancelled.",
+    );
     await act(async () => {
       await seen.state.cancelMeeting("mtg-c", "Storm warning");
     });
-    expect(find("mtg-c")).toMatchObject({ status: "cancelled", cancelReason: "Storm warning", cancelledDate: "2026-08-20" });
+    expect(find("mtg-c")).toMatchObject({
+      status: "cancelled",
+      cancelReason: "Storm warning",
+      cancelledDate: "2026-08-20",
+    });
     const row = document.getElementById("mtg-mtg-c")!;
     expect(within(row).getByText("Cancelled")).toBeInTheDocument();
     expect(within(row).getByText("Cancelled: Storm warning")).toBeInTheDocument();
-    expect(within(row).queryByRole("button", { name: "Cancel the meeting" })).not.toBeInTheDocument();
+    expect(
+      within(row).queryByRole("button", { name: "Cancel the meeting" }),
+    ).not.toBeInTheDocument();
     expect(() => seen.state.cancelMeeting("mtg-c", "Again")).toThrow("That meeting is over.");
-    expect(() => seen.state.rescheduleMeeting("mtg-c", { date: "2026-09-12" })).toThrow("That meeting is over.");
-    expect(() => seen.state.recordMinutes("mtg-c", "Nothing happened here.", [])).toThrow("A cancelled meeting has no minutes.");
+    expect(() => seen.state.rescheduleMeeting("mtg-c", { date: "2026-09-12" })).toThrow(
+      "That meeting is over.",
+    );
+    expect(() => seen.state.recordMinutes("mtg-c", "Nothing happened here.", [])).toThrow(
+      "A cancelled meeting has no minutes.",
+    );
   });
 
   it("records minutes for a meeting that was held, and again to change them", async () => {
@@ -189,12 +232,21 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
       seen.state.addMeeting(meeting({ id: "mtg-m", title: "Held meeting", date: "2026-08-10" }));
       seen.state.addMeeting(meeting({ id: "mtg-next", date: "2026-09-10" }));
     });
-    expect(() => seen.state.recordMinutes("mtg-next", "Not held yet, so no.", [])).toThrow("The meeting has not happened yet.");
-    expect(() => seen.state.recordMinutes("mtg-m", "short", [])).toThrow("Write the minutes first.");
+    expect(() => seen.state.recordMinutes("mtg-next", "Not held yet, so no.", [])).toThrow(
+      "The meeting has not happened yet.",
+    );
+    expect(() => seen.state.recordMinutes("mtg-m", "short", [])).toThrow(
+      "Write the minutes first.",
+    );
     await act(async () => {
       await seen.state.recordMinutes("mtg-m", "  Approved the budget.  ", [person]);
     });
-    expect(find("mtg-m")).toMatchObject({ minutes: "Approved the budget.", minutesDate: "2026-08-20", status: "ended", attended: [person] });
+    expect(find("mtg-m")).toMatchObject({
+      minutes: "Approved the budget.",
+      minutesDate: "2026-08-20",
+      status: "ended",
+      attended: [person],
+    });
     const row = document.getElementById("mtg-mtg-m")!;
     expect(within(row).getByText("Approved the budget.")).toBeInTheDocument();
     expect(within(row).getByText("1 attended")).toBeInTheDocument();
@@ -202,7 +254,9 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
     await act(async () => {
       await seen.state.recordMinutes("mtg-m", "Approved the budget and the paving.", []);
     });
-    expect(find("mtg-m")).toMatchObject({ minutes: "Approved the budget and the paving.", attended: [] });
+    expect(find("mtg-m")).toMatchObject({
+      minutes: "Approved the budget and the paving.",
+      attended: [],
+    });
   });
 });
-

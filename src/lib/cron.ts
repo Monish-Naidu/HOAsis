@@ -23,7 +23,7 @@ import { after, type NextRequest } from "next/server";
 export const CRON_BUDGET_MS = 40_000;
 
 /** Rows fetched per page. */
-export const CRON_PAGE = 100;
+const CRON_PAGE = 100;
 
 export interface CronPlan {
   /** Where to resume: the last id finished by the previous call, or null. */
@@ -77,7 +77,10 @@ export function scheduleContinuation(request: NextRequest, url: string): void {
  */
 export async function walkPages<T extends { id: string }>(
   plan: CronPlan,
-  page: (afterId: string | null, limit: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  page: (
+    afterId: string | null,
+    limit: number,
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
   visit: (row: T) => Promise<void>,
   pageSize = CRON_PAGE,
 ): Promise<{ complete: boolean; last: string | null; error?: string }> {

@@ -216,7 +216,13 @@ export function SignInPanel() {
 
         <form onSubmit={submit} className="space-y-3 p-5">
           {mode === "create" ? (
-            <Field label="Full name" value={name} onChange={setName} placeholder="Jane Doe" autoComplete="name" />
+            <Field
+              label="Full name"
+              value={name}
+              onChange={setName}
+              placeholder="Jane Doe"
+              autoComplete="name"
+            />
           ) : null}
           <Field
             label="Email"
@@ -283,8 +289,8 @@ export function SignInPanel() {
             </p>
           ) : (
             <p className="text-center text-footnote leading-snug text-fg-subtle">
-              If your board already added your home, sign up with the email they used and it
-              opens on its own. Have a join code?{" "}
+              If your board already added your home, sign up with the email they used and it opens
+              on its own. Have a join code?{" "}
               <Link href="/join" className="font-medium text-fg underline underline-offset-2">
                 Join with the code
               </Link>
@@ -325,8 +331,8 @@ export function SignInPanel() {
               Real accounts on a real association.
             </p>
             <p className="mt-1 text-footnote leading-snug text-fg-muted">
-              Pick one and you are in. Sign out from the card at the foot of the sidebar to try
-              the next, and see what a treasurer, an officer and an owner each see.
+              Pick one and you are in. Sign out from the card at the foot of the sidebar to try the
+              next, and see what a treasurer, an officer and an owner each see.
             </p>
           </div>
           {TEST_LOGINS.map((l) => (
@@ -341,7 +347,9 @@ export function SignInPanel() {
                 <span className="block text-body font-medium text-fg">{l.label}</span>
                 <span className="block truncate text-footnote text-fg-muted">{l.who}</span>
               </span>
-              <span className="text-footnote font-medium text-accent">{busy ? "Signing in…" : "Sign in"}</span>
+              <span className="text-footnote font-medium text-accent">
+                {busy ? "Signing in…" : "Sign in"}
+              </span>
             </button>
           ))}
         </Card>
@@ -425,9 +433,7 @@ function Field({
   const isPassword = type === "password";
   return (
     <label className="block">
-      <span className="mb-1 block text-footnote font-semibold text-fg-muted">
-        {label}
-      </span>
+      <span className="mb-1 block text-footnote font-semibold text-fg-muted">{label}</span>
       <span className="relative block">
         <input
           type={isPassword && shown ? "text" : type}

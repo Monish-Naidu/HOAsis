@@ -29,7 +29,10 @@ describe("activityText", () => {
   it("finds the home from its id when the row only carries that", () => {
     expect(
       activityText(
-        row({ summary: "Payment of $10.00 recorded for 4B by check", details: { unit_id: "u-4b" } }),
+        row({
+          summary: "Payment of $10.00 recorded for 4B by check",
+          details: { unit_id: "u-4b" },
+        }),
         lot,
         (id) => (id === "u-4b" ? "4B" : undefined),
       ),
@@ -51,22 +54,28 @@ describe("activityText", () => {
   });
 
   it("writes a stored date the way the screens do", () => {
-    expect(activityText(row({ summary: 'Meeting "Annual" scheduled for 2026-10-14' }), lot, noUnits)).toBe(
-      'Meeting "Annual" scheduled for Oct 14',
-    );
+    expect(
+      activityText(row({ summary: 'Meeting "Annual" scheduled for 2026-10-14' }), lot, noUnits),
+    ).toBe('Meeting "Annual" scheduled for Oct 14');
   });
 
   it("leaves a row with no home alone", () => {
-    expect(activityText(row({ summary: "Vendor Acme added" }), lot, noUnits)).toBe("Vendor Acme added");
+    expect(activityText(row({ summary: "Vendor Acme added" }), lot, noUnits)).toBe(
+      "Vendor Acme added",
+    );
   });
 });
 
 describe("activityWords", () => {
   it("words each write the way the database does", () => {
-    expect(activityWords.credit(2500, "1", "Late fee waived")).toBe("Credit of $25.00 added for 1: Late fee waived");
+    expect(activityWords.credit(2500, "1", "Late fee waived")).toBe(
+      "Credit of $25.00 added for 1: Late fee waived",
+    );
     expect(activityWords.dues("1", 15000)).toBe("Dues for 1 set to $150.00");
     expect(activityWords.dues("1", null)).toBe("Dues for 1 set back to the standard amount");
-    expect(activityWords.meeting("Annual", "2026-10-14")).toBe('Meeting "Annual" scheduled for 2026-10-14');
+    expect(activityWords.meeting("Annual", "2026-10-14")).toBe(
+      'Meeting "Annual" scheduled for 2026-10-14',
+    );
     expect(activityWords.notice("1", "Trash cans")).toBe("Notice sent for 1: Trash cans");
   });
 });

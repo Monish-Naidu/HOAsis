@@ -110,8 +110,8 @@ export function NoticeLetter({
         <div className="mt-5 space-y-4">
           <p>Dear {violation.ownerName},</p>
           <p>
-            On {formatDate(violation.openedDate, "long")} the association observed the following
-            at {where}: {violation.rule}
+            On {formatDate(violation.openedDate, "long")} the association observed the following at{" "}
+            {where}: {violation.rule}
           </p>
           {violation.fix ? <p>What needs fixing: {violation.fix}</p> : null}
           <p>
@@ -148,8 +148,8 @@ export function NoticeLetter({
           )}
           <p>
             If you believe this notice is mistaken, or the work is already done, you may reply
-            through the resident portal, where you can also see the photographs and dates the
-            board is relying on. An appeal goes to the board and is answered on the record.
+            through the resident portal, where you can also see the photographs and dates the board
+            is relying on. An appeal goes to the board and is answered on the record.
           </p>
           <p>Sincerely,</p>
           <div>

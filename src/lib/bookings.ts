@@ -14,7 +14,16 @@ import { money, todayIsoDate } from "@/lib/utils";
  */
 
 export const DEFAULT_RULES: Required<
-  Pick<BookingRules, "opensHour" | "closesHour" | "slotMinutes" | "maxHours" | "maxPerDay" | "maxPerWeek" | "advanceDays">
+  Pick<
+    BookingRules,
+    | "opensHour"
+    | "closesHour"
+    | "slotMinutes"
+    | "maxHours"
+    | "maxPerDay"
+    | "maxPerWeek"
+    | "advanceDays"
+  >
 > = {
   opensHour: 8,
   closesHour: 22,
@@ -171,9 +180,7 @@ export function describeRules(amenity: CommunityAmenity): string {
         ? `${r.slotMinutes / 60} hours at a time`
         : `${r.slotMinutes} minutes at a time`,
   );
-  parts.push(
-    r.maxPerDay === 1 ? "once a day" : `up to ${r.maxPerDay} times a day`,
-  );
+  parts.push(r.maxPerDay === 1 ? "once a day" : `up to ${r.maxPerDay} times a day`);
   if (r.maxPerWeek < r.maxPerDay * 7) parts.push(`${r.maxPerWeek} times a week`);
   parts.push(`book up to ${r.advanceDays} days ahead`);
   // Whole dollars in a sentence; a sign reads "$40", not "$40.00".

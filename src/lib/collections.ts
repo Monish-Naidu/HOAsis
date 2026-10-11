@@ -28,12 +28,7 @@ export type { CollectionPolicy };
  * them.
  */
 
-export type CollectionStage =
-  | "current"
-  | "reminder"
-  | "late-notice"
-  | "demand"
-  | "counsel";
+export type CollectionStage = "current" | "reminder" | "late-notice" | "demand" | "counsel";
 
 export const DEFAULT_COLLECTION_POLICY: CollectionPolicy = {
   reminderDay: 15,
@@ -106,21 +101,7 @@ export function policyProblems(policy: CollectionPolicy): string[] {
   return problems;
 }
 
-const STAGE_ORDER: CollectionStage[] = [
-  "current",
-  "reminder",
-  "late-notice",
-  "demand",
-  "counsel",
-];
-
-export const STAGE_LABEL: Record<CollectionStage, string> = {
-  current: "Current",
-  reminder: "Reminder due",
-  "late-notice": "Notice due",
-  demand: "Demand due",
-  counsel: "Refer to attorney",
-};
+const STAGE_ORDER: CollectionStage[] = ["current", "reminder", "late-notice", "demand", "counsel"];
 
 export function stageFor(daysPastDue: number, policy: CollectionPolicy): CollectionStage {
   if (daysPastDue >= policy.counselDay) return "counsel";
@@ -258,7 +239,15 @@ export function collectionsLadder(c: Community, policy: CollectionPolicy) {
  * homes whose autopay failed. One predicate serves the list and its counts,
  * so a chip never promises more homes than it opens.
  */
-export const LADDER_FILTERS = ["all", "current", "reminder", "late-notice", "demand", "counsel", "autopay-failed"] as const;
+export const LADDER_FILTERS = [
+  "all",
+  "current",
+  "reminder",
+  "late-notice",
+  "demand",
+  "counsel",
+  "autopay-failed",
+] as const;
 export type LadderFilter = (typeof LADDER_FILTERS)[number];
 
 export function matchesLadderFilter(
@@ -276,6 +265,7 @@ export function ladderFilterCounts(
   autopayFailed: ReadonlySet<string> = new Set(),
 ): Record<LadderFilter, number> {
   const counts = {} as Record<LadderFilter, number>;
-  for (const f of LADDER_FILTERS) counts[f] = rows.filter((r) => matchesLadderFilter(r, f, autopayFailed)).length;
+  for (const f of LADDER_FILTERS)
+    counts[f] = rows.filter((r) => matchesLadderFilter(r, f, autopayFailed)).length;
   return counts;
 }

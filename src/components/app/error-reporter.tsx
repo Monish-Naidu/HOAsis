@@ -35,7 +35,11 @@ export function reportClientError(report: ClientErrorReport): void {
     stack: report.stack?.slice(0, 4000) ?? null,
     route: report.route ?? window.location.pathname,
     level: report.level ?? "error",
-    extra: { ...(report.extra ?? {}), digest: report.digest ?? undefined, href: window.location.href },
+    extra: {
+      ...(report.extra ?? {}),
+      digest: report.digest ?? undefined,
+      href: window.location.href,
+    },
   });
   try {
     // keepalive so a report survives the navigation that often follows an error.
@@ -51,7 +55,8 @@ export function reportClientError(report: ClientErrorReport): void {
 }
 
 function describe(reason: unknown): { message: string; stack: string | null } {
-  if (reason instanceof Error) return { message: reason.message || reason.name, stack: reason.stack ?? null };
+  if (reason instanceof Error)
+    return { message: reason.message || reason.name, stack: reason.stack ?? null };
   if (typeof reason === "string") return { message: reason, stack: null };
   try {
     return { message: JSON.stringify(reason).slice(0, 300), stack: null };
@@ -62,19 +67,34 @@ function describe(reason: unknown): { message: string; stack: string | null } {
 }
 
 // Browser noise that is not a bug in this app.
-const IGNORED = [/ResizeObserver loop/i, /^Script error\.?$/i, /Load failed/i, /NetworkError when attempting to fetch/i];
+const IGNORED = [
+  /ResizeObserver loop/i,
+  /^Script error\.?$/i,
+  /Load failed/i,
+  /NetworkError when attempting to fetch/i,
+];
 
 export function ErrorReporter() {
   useEffect(() => {
     const onRejection = (event: PromiseRejectionEvent) => {
       const { message, stack } = describe(event.reason);
       if (!message || IGNORED.some((re) => re.test(message))) return;
-      reportClientError({ reference: newRequestId(), message, stack, extra: { kind: "unhandledrejection" } });
+      reportClientError({
+        reference: newRequestId(),
+        message,
+        stack,
+        extra: { kind: "unhandledrejection" },
+      });
     };
     const onError = (event: ErrorEvent) => {
       const { message, stack } = describe(event.error ?? event.message);
       if (!message || IGNORED.some((re) => re.test(message))) return;
-      reportClientError({ reference: newRequestId(), message, stack, extra: { kind: "window.error" } });
+      reportClientError({
+        reference: newRequestId(),
+        message,
+        stack,
+        extra: { kind: "window.error" },
+      });
     };
     window.addEventListener("unhandledrejection", onRejection);
     window.addEventListener("error", onError);

@@ -19,7 +19,7 @@ import { TabPill } from "@/components/app/tab-pill";
 import { RailNav, RailRow, type RailBadge } from "@/components/app/rail";
 import { cn } from "@/lib/utils";
 
-export type NavBadge = RailBadge;
+type NavBadge = RailBadge;
 
 const rows = BOARD_ROUTES.filter((route) => !route.hidden);
 
@@ -64,7 +64,11 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
     communications: { count: unread, tone: "neutral", hint: "unread conversations" },
     homeowners: { count: delinq.past.length, tone: "warn", hint: "past due" },
     // The same number as the dashboard and the Vendors page, from one selector.
-    vendors: { count: vendorDecisions(community).count, tone: "warn", hint: "payments waiting on a signature" },
+    vendors: {
+      count: vendorDecisions(community).count,
+      tone: "warn",
+      hint: "payments waiting on a signature",
+    },
   };
 
   // Three separate questions, asked of every page in a row: may they open
@@ -73,7 +77,9 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
   // vote but not see meetings still finds Voting under Meetings.
   const visible = rows
     .map((row) => {
-      const offered = sectionPages(row).filter((page) => routeOffered(page, sees, community, dismissedSetupTasks));
+      const offered = sectionPages(row).filter((page) =>
+        routeOffered(page, sees, community, dismissedSetupTasks),
+      );
       return offered.length ? { ...row, href: offered[0].href } : null;
     })
     .filter((row) => row !== null);
@@ -123,7 +129,11 @@ export function BoardNav({ variant = "bar" }: { variant?: "rail" | "bar" }) {
 
   return (
     <nav ref={navRef} aria-label="Board sections">
-      <TabPill activeKey={activeRoute?.key ?? ""} className="flex gap-1" pillClassName="bg-primary-soft rounded-xl">
+      <TabPill
+        activeKey={activeRoute?.key ?? ""}
+        className="flex gap-1"
+        pillClassName="bg-primary-soft rounded-xl"
+      >
         {visible.map(({ href, label, icon: Icon, key }) => {
           const active = key === activeRoute?.key;
           const badge = badges[key];

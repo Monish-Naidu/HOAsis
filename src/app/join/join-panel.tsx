@@ -4,7 +4,14 @@ import { Suspense, use, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowRight, DoorOpen, ShieldCheck } from "lucide-react";
-import { Button, ButtonLink, Card, SuccessMark, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  SuccessMark,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { useAppState, useCommunityById, useStorageReady } from "@/lib/app-state";
 import { useAuth, signUp } from "@/lib/auth";
 import { parseInvitation } from "@/lib/invitations";
@@ -69,8 +76,8 @@ export function JoinPanel() {
           This invitation is not valid
         </h1>
         <p className="mt-2 text-body leading-relaxed text-fg-muted">
-          The link may have been mistyped, or the home may no longer be on the board&apos;s list. Ask
-          your board to send it again, or join with the association&apos;s code.
+          The link may have been mistyped, or the home may no longer be on the board&apos;s list.
+          Ask your board to send it again, or join with the association&apos;s code.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <ButtonLink href="/join" variant="primary" size="lg">
@@ -115,16 +122,15 @@ export function JoinPanel() {
 
         <p className="flex items-start gap-2 pt-1 text-footnote leading-snug text-fg-subtle">
           <ShieldCheck className="mt-px size-3.5 shrink-0" />
-          This link is for your home. Your board sees your balance and your requests;
-          your neighbors do not.
+          This link is for your home. Your board sees your balance and your requests; your neighbors
+          do not.
         </p>
       </div>
     </Card>
   );
 }
 
-const field =
-  cn(fieldClass, "disabled:bg-surface-2 disabled:text-fg-muted");
+const field = cn(fieldClass, "disabled:bg-surface-2 disabled:text-fg-muted");
 const label = "mb-1 block text-footnote font-semibold text-fg-muted";
 
 /* ------------------------------------------------------------------ code */
@@ -159,7 +165,11 @@ function JoinWithCode({
   if (code) {
     if (!lookups.has(code)) lookups.set(code, lookupJoinCode(code));
     return (
-      <Suspense fallback={<Card className="h-64 animate-pulse bg-surface-2" aria-label="Finding your association" />}>
+      <Suspense
+        fallback={
+          <Card className="h-64 animate-pulse bg-surface-2" aria-label="Finding your association" />
+        }
+      >
         <JoinForm
           code={code}
           lookup={lookups.get(code)!}
@@ -204,7 +214,12 @@ function JoinWithCode({
           <input
             value={draft}
             onChange={(e) =>
-              setDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
+              setDraft(
+                e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")
+                  .slice(0, 6),
+              )
             }
             placeholder="A1B2C3"
             autoCapitalize="characters"
@@ -214,7 +229,13 @@ function JoinWithCode({
             autoFocus
           />
         </label>
-        <Button variant="primary" size="md" type="submit" className="w-full" disabled={!canContinue}>
+        <Button
+          variant="primary"
+          size="md"
+          type="submit"
+          className="w-full"
+          disabled={!canContinue}
+        >
           Find my association
           <ArrowRight className="size-4" />
         </Button>
@@ -541,7 +562,13 @@ function JoinForm({
           </p>
         ) : null}
 
-        <Button variant="primary" size="md" type="submit" className="w-full" disabled={!ready || busy}>
+        <Button
+          variant="primary"
+          size="md"
+          type="submit"
+          className="w-full"
+          disabled={!ready || busy}
+        >
           {busy
             ? "One moment"
             : otherSeat
@@ -578,7 +605,9 @@ function JoinForm({
  * limiter's "Too many attempts".
  */
 export function ResendLine({ email }: { email: string }) {
-  const [state, setState] = useState<{ kind: "idle" | "sending" | "sent" } | { kind: "refused"; message: string }>({
+  const [state, setState] = useState<
+    { kind: "idle" | "sending" | "sent" } | { kind: "refused"; message: string }
+  >({
     kind: "idle",
   });
   return (

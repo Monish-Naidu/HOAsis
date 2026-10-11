@@ -69,13 +69,13 @@ take the balance the next morning when the screen promised next month.
 sweep). For every current membership with a plan it calls `decideAutopay`
 (`src/lib/payments/autopay.ts`, pure, tested):
 
-| Today is                                  | Does                                   |
-| ----------------------------------------- | -------------------------------------- |
-| before the chosen day, or before `startMonth` | nothing, no row                    |
-| the skipped month                         | one `skipped` row                      |
-| nothing due                               | nothing, no row, tries again tomorrow  |
-| balance within the cap, or no cap         | charges the balance                    |
-| balance above the cap                     | charges regular dues only              |
+| Today is                                      | Does                                  |
+| --------------------------------------------- | ------------------------------------- |
+| before the chosen day, or before `startMonth` | nothing, no row                       |
+| the skipped month                             | one `skipped` row                     |
+| nothing due                                   | nothing, no row, tries again tomorrow |
+| balance within the cap, or no cap             | charges the balance                   |
+| balance above the cap                         | charges regular dues only             |
 
 A charge is one `autopay_runs` row (migration 0033, unique on unit and
 month), claimed **before** Stripe is called so a second run of the same day

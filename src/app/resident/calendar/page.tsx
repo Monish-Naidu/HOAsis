@@ -38,7 +38,11 @@ export default function ResidentCalendar() {
           anybody looking for a date. */}
       <MeetingRsvps />
       <MeetingMinutes />
-      <CalendarView entries={calendarEntries(community)} asOf={community.asOf} showUpcoming={false} />
+      <CalendarView
+        entries={calendarEntries(community)}
+        asOf={community.asOf}
+        showUpcoming={false}
+      />
     </div>
   );
 }

@@ -33,7 +33,13 @@ function summarise(c: Community, from: string): CommunityHistory {
   for (const e of c.ledger) {
     if (e.date >= from) continue;
     const key = `${e.date.slice(0, 7)}|${e.category}`;
-    const row = months.get(key) ?? { month: e.date.slice(0, 7), category: e.category, inCents: 0, outCents: 0, count: 0 };
+    const row = months.get(key) ?? {
+      month: e.date.slice(0, 7),
+      category: e.category,
+      inCents: 0,
+      outCents: 0,
+      count: 0,
+    };
     if (e.amountCents >= 0) row.inCents += e.amountCents;
     else row.outCents += -e.amountCents;
     row.count += 1;
@@ -46,7 +52,12 @@ function summarise(c: Community, from: string): CommunityHistory {
     for (const line of lines) {
       if (line.date >= from) continue;
       const key = `${line.date.slice(0, 7)}|${line.kind}`;
-      const row = statements.get(key) ?? { month: line.date.slice(0, 7), kind: line.kind, cents: 0, count: 0 };
+      const row = statements.get(key) ?? {
+        month: line.date.slice(0, 7),
+        kind: line.kind,
+        cents: 0,
+        count: 0,
+      };
       row.cents += line.amountCents;
       row.count += 1;
       statements.set(key, row);
@@ -103,8 +114,12 @@ describe("the server's month sums read the same as the lines", () => {
     for (const year of ledgerYears(whole)) {
       expect(spendingByCategory(part, year)).toEqual(spendingByCategory(whole, year));
     }
-    expect(spendingBetween(part, "2024-09-01", whole.asOf)).toEqual(spendingBetween(whole, "2024-09-01", whole.asOf));
-    expect(monthlyFlowsBetween(part, "2024-09-01", whole.asOf)).toEqual(monthlyFlowsBetween(whole, "2024-09-01", whole.asOf));
+    expect(spendingBetween(part, "2024-09-01", whole.asOf)).toEqual(
+      spendingBetween(whole, "2024-09-01", whole.asOf),
+    );
+    expect(monthlyFlowsBetween(part, "2024-09-01", whole.asOf)).toEqual(
+      monthlyFlowsBetween(whole, "2024-09-01", whole.asOf),
+    );
   });
 
   it("totals each year, compares two, and trends a category the same", () => {
@@ -135,7 +150,11 @@ describe("the server's month sums read the same as the lines", () => {
   });
 
   it("steps the sums aside once every line has been fetched", () => {
-    const loaded: Community = { ...part, ledger: whole.ledger, history: { ...part.history!, ledgerLoaded: true } };
+    const loaded: Community = {
+      ...part,
+      ledger: whole.ledger,
+      history: { ...part.history!, ledgerLoaded: true },
+    };
     // Every line, less the ones waiting on review, which no report counts.
     expect(ledgerFlows(loaded)).toEqual(whole.ledger.filter((e) => e.status !== "needs-review"));
     expect(netByYear(loaded)).toEqual(netByYear(whole));
@@ -154,9 +173,33 @@ describe("the server's month sums read the same as the lines", () => {
 
 describe("statementLines", () => {
   const rows = [
-    { id: "b", unit_id: "u", due_on: "2026-02-01", created_at: "2026-02-01T00:00:00Z", label: "February dues", kind: "charge" as const, amount_cents: 100 },
-    { id: "a", unit_id: "u", due_on: "2026-01-01", created_at: "2026-01-01T00:00:00Z", label: "January dues", kind: "charge" as const, amount_cents: 100 },
-    { id: "c", unit_id: "u", due_on: "2026-02-01", created_at: "2026-02-01T09:00:00Z", label: "Payment", kind: "payment" as const, amount_cents: -150 },
+    {
+      id: "b",
+      unit_id: "u",
+      due_on: "2026-02-01",
+      created_at: "2026-02-01T00:00:00Z",
+      label: "February dues",
+      kind: "charge" as const,
+      amount_cents: 100,
+    },
+    {
+      id: "a",
+      unit_id: "u",
+      due_on: "2026-01-01",
+      created_at: "2026-01-01T00:00:00Z",
+      label: "January dues",
+      kind: "charge" as const,
+      amount_cents: 100,
+    },
+    {
+      id: "c",
+      unit_id: "u",
+      due_on: "2026-02-01",
+      created_at: "2026-02-01T09:00:00Z",
+      label: "Payment",
+      kind: "payment" as const,
+      amount_cents: -150,
+    },
   ];
 
   it("runs the balance oldest first and lists newest first", () => {

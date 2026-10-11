@@ -11,7 +11,11 @@ export function readFileText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(reader.error ?? new Error("That file could not be read. Check that it is a CSV and try again."));
+    reader.onerror = () =>
+      reject(
+        reader.error ??
+          new Error("That file could not be read. Check that it is a CSV and try again."),
+      );
     reader.readAsText(file);
   });
 }

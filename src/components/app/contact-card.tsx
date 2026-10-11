@@ -33,8 +33,7 @@ export function ContactCard() {
 
   if (!home) return null;
 
-  const field =
-    fieldClass;
+  const field = fieldClass;
 
   function save() {
     const checked = checkPhone(phone);
@@ -54,95 +53,95 @@ export function ContactCard() {
     <div className="space-y-6">
       <SignInEmail email={email} isRemote={isRemote} />
       <div>
-      <div className="flex items-end justify-between gap-3">
-        <SectionTitle>How to reach you</SectionTitle>
-        {editing ? null : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setPhone(home.phone);
-              setMailing(home.mailingAddress ?? "");
-              setPhoneProblem(null);
-              setEditing(true);
-            }}
-          >
-            <Pencil className="size-3.5" />
-            Edit
-          </Button>
-        )}
-      </div>
-      <Card
-        as="form"
-        className="mt-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          save();
-        }}
-      >
-        {editing ? (
-          <div className="space-y-4 px-4 py-4">
-            <label className="block">
-              <span className="mb-1 block text-footnote font-semibold text-fg-muted">Phone</span>
-              <input
-                type="tel"
-                autoComplete="tel"
-                maxLength={25}
-                value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value);
-                  setPhoneProblem(null);
-                }}
-                placeholder="(425) 555-0142"
-                aria-invalid={phoneProblem ? true : undefined}
-                className={field}
-                autoFocus
-              />
-              {phoneProblem ? (
-                <span role="alert" className="mt-1 block text-footnote text-danger">
-                  {phoneProblem}
+        <div className="flex items-end justify-between gap-3">
+          <SectionTitle>How to reach you</SectionTitle>
+          {editing ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setPhone(home.phone);
+                setMailing(home.mailingAddress ?? "");
+                setPhoneProblem(null);
+                setEditing(true);
+              }}
+            >
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+          )}
+        </div>
+        <Card
+          as="form"
+          className="mt-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          {editing ? (
+            <div className="space-y-4 px-4 py-4">
+              <label className="block">
+                <span className="mb-1 block text-footnote font-semibold text-fg-muted">Phone</span>
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  maxLength={25}
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setPhoneProblem(null);
+                  }}
+                  placeholder="(425) 555-0142"
+                  aria-invalid={phoneProblem ? true : undefined}
+                  className={field}
+                  autoFocus
+                />
+                {phoneProblem ? (
+                  <span role="alert" className="mt-1 block text-footnote text-danger">
+                    {phoneProblem}
+                  </span>
+                ) : null}
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-footnote font-semibold text-fg-muted">
+                  Mailing address, if not the home
                 </span>
-              ) : null}
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-footnote font-semibold text-fg-muted">
-                Mailing address, if not the home
-              </span>
-              <input
-                autoComplete="street-address"
-                value={mailing}
-                onChange={(e) => setMailing(e.target.value)}
-                placeholder="PO Box 210, Bothell, WA 98011"
-                className={field}
-              />
-              <span className="mt-1 block text-footnote leading-snug text-fg-subtle">
-                Anything the association must send on paper goes here.
-              </span>
-            </label>
-            <div className="flex gap-2">
-              <Button type="submit" variant="primary" size="md">
-                Save
-              </Button>
-              <Button variant="ghost" size="md" onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
+                <input
+                  autoComplete="street-address"
+                  value={mailing}
+                  onChange={(e) => setMailing(e.target.value)}
+                  placeholder="PO Box 210, Bothell, WA 98011"
+                  className={field}
+                />
+                <span className="mt-1 block text-footnote leading-snug text-fg-subtle">
+                  Anything the association must send on paper goes here.
+                </span>
+              </label>
+              <div className="flex gap-2">
+                <Button type="submit" variant="primary" size="md">
+                  Save
+                </Button>
+                <Button variant="ghost" size="md" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <dl className="divide-y divide-border">
-            <div className="flex items-start justify-between gap-4 px-4 py-3">
-              <dt className="text-footnote text-fg-muted">Phone</dt>
-              <dd className="text-right text-body text-fg">{home.phone || "Not on file"}</dd>
-            </div>
-            <div className="flex items-start justify-between gap-4 px-4 py-3">
-              <dt className="text-footnote text-fg-muted">Mail goes to</dt>
-              <dd className="min-w-0 text-right text-body text-fg">
-                {home.mailingAddress || home.address || "The home"}
-              </dd>
-            </div>
-          </dl>
-        )}
-      </Card>
+          ) : (
+            <dl className="divide-y divide-border">
+              <div className="flex items-start justify-between gap-4 px-4 py-3">
+                <dt className="text-footnote text-fg-muted">Phone</dt>
+                <dd className="text-right text-body text-fg">{home.phone || "Not on file"}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-4 px-4 py-3">
+                <dt className="text-footnote text-fg-muted">Mail goes to</dt>
+                <dd className="min-w-0 text-right text-body text-fg">
+                  {home.mailingAddress || home.address || "The home"}
+                </dd>
+              </div>
+            </dl>
+          )}
+        </Card>
       </div>
     </div>
   );
@@ -210,7 +209,9 @@ function SignInEmail({ email, isRemote }: { email: string; isRemote: boolean }) 
         <div className="px-4 py-3">
           <div className="flex items-start justify-between gap-4">
             <p className="text-footnote text-fg-muted">Sign in with</p>
-            <p className="min-w-0 truncate text-right text-body text-fg">{email || "Not on file"}</p>
+            <p className="min-w-0 truncate text-right text-body text-fg">
+              {email || "Not on file"}
+            </p>
           </div>
           {changing ? (
             <form
@@ -221,7 +222,9 @@ function SignInEmail({ email, isRemote }: { email: string; isRemote: boolean }) 
               }}
             >
               <label className="block">
-                <span className="mb-1 block text-footnote font-semibold text-fg-muted">New email</span>
+                <span className="mb-1 block text-footnote font-semibold text-fg-muted">
+                  New email
+                </span>
                 <input
                   type="email"
                   autoComplete="email"

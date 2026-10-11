@@ -44,7 +44,11 @@ export function AskedToJoin({
     try {
       if (mode === "new") {
         const ok = await approveJoinRequest(request.id, request.unit.trim());
-        if (ok) notify(`${request.name} is on the roster at ${homeLabel(community, request.unit.trim())}`, "ok");
+        if (ok)
+          notify(
+            `${request.name} is on the roster at ${homeLabel(community, request.unit.trim())}`,
+            "ok",
+          );
         return;
       }
       const home = community.homes.find((o) => o.id === choice);
@@ -136,13 +140,19 @@ function RequestRow({
   );
   // Starts on the best match and on nothing otherwise. The board can always
   // change it, and nothing happens until they press a button.
-  const [choice, setChoice] = useState(() => bestMatch(community, community.homes, typed)?.id ?? "");
+  const [choice, setChoice] = useState(
+    () => bestMatch(community, community.homes, typed)?.id ?? "",
+  );
   const [busy, setBusy] = useState(false);
 
   const home = homes.find((o) => o.id === choice) ?? null;
   const taken = Boolean(typed) && community.homes.some((o) => o.unit === typed);
   const plan = home
-    ? seatPlan(home, request, accounts.some((a) => a.homeId === home.id))
+    ? seatPlan(
+        home,
+        request,
+        accounts.some((a) => a.homeId === home.id),
+      )
     : null;
   const first = request.name.split(/\s+/)[0] || request.name;
 
@@ -203,7 +213,12 @@ function RequestRow({
         {/* Secondary, always: a list of several requests was a column of
             filled buttons, and the page's own filled button is elsewhere. */}
         {choice === NEW_HOME ? (
-          <Button variant="secondary" size="sm" disabled={busy || !typed || taken} onClick={() => run("new")}>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={busy || !typed || taken}
+            onClick={() => run("new")}
+          >
             Let them in
           </Button>
         ) : plan === "different" ? (
@@ -211,7 +226,12 @@ function RequestRow({
             Add as a second owner
           </Button>
         ) : (
-          <Button variant="secondary" size="sm" disabled={busy || !choice} onClick={() => run("seat")}>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={busy || !choice}
+            onClick={() => run("seat")}
+          >
             Let them in
           </Button>
         )}
@@ -229,8 +249,8 @@ function RequestRow({
       ) : null}
       {plan === "different" && home ? (
         <p className="mt-2 text-footnote text-fg-muted">
-          {homeLabel(community, home.unit)} already has an owner, {home.displayName}. {first} can share it, or
-          if {first} bought it,{" "}
+          {homeLabel(community, home.unit)} already has an owner, {home.displayName}. {first} can
+          share it, or if {first} bought it,{" "}
           {onRecordSale ? (
             <button
               type="button"

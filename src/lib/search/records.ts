@@ -122,7 +122,7 @@ const MONTHS = [
 ];
 
 /** "2026-10-03" → "october 2026 oct". The month by name is how people say a date. */
-export function dateWords(iso: string): string {
+function dateWords(iso: string): string {
   const m = Number(iso.slice(5, 7));
   const name = MONTHS[m - 1];
   if (!name) return iso.slice(0, 4);
@@ -130,7 +130,7 @@ export function dateWords(iso: string): string {
 }
 
 /** 28500 → "285 285.00", the two ways a person types an amount. */
-export function amountWords(cents: number): string {
+function amountWords(cents: number): string {
   const abs = Math.abs(cents);
   const dollars = Math.floor(abs / 100);
   return `${dollars} ${(abs / 100).toFixed(2)}`;
@@ -163,7 +163,11 @@ export function boardIndex(c: Community): SearchHit[] {
       kind: "household",
       title: o.displayName,
       // Homes numbered without addresses read "Unit 4 · · $9,950.00 owed" otherwise.
-      subtitle: [homeLabel(c, o.unit), o.address, o.balanceCents > 0 ? `${money(o.balanceCents)} owed` : ""]
+      subtitle: [
+        homeLabel(c, o.unit),
+        o.address,
+        o.balanceCents > 0 ? `${money(o.balanceCents)} owed` : "",
+      ]
         .filter(Boolean)
         .join(" · "),
       date: o.moveInDate,
@@ -213,7 +217,10 @@ export function boardIndex(c: Community): SearchHit[] {
       subtitle: `${t.participants.join(", ")}${t.unit ? ` · ${homeLabel(c, t.unit)}` : ""} · ${formatDate(t.updatedDate)}`,
       date: t.updatedDate,
       href: `/board/communications?thread=${q(t.id)}`,
-      keywords: `${t.tag} ${t.unit ?? ""} ${dateWords(t.updatedDate)} ${t.messages.map((m) => m.body).join(" ").slice(0, 600)}`,
+      keywords: `${t.tag} ${t.unit ?? ""} ${dateWords(t.updatedDate)} ${t.messages
+        .map((m) => m.body)
+        .join(" ")
+        .slice(0, 600)}`,
     });
   }
   for (const m of c.meetings) {

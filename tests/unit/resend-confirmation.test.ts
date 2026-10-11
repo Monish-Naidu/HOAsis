@@ -18,7 +18,11 @@ const fake = createFakeSupabase({
 const send = vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null }));
 
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
-vi.mock("resend", () => ({ Resend: class { emails = { send }; } }));
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send };
+  },
+}));
 vi.mock("@/lib/email/sender", () => ({ emailSender: () => "Your HOAsis <hello@example.com>" }));
 vi.mock("@/lib/log", () => ({ logger: () => ({ info() {}, warn() {}, error() {} }) }));
 
@@ -48,7 +52,9 @@ describe("the resend route", () => {
     const response = await ask("pat-a@example.com");
 
     expect(response.status).toBe(200);
-    expect(fake.callsTo("auth.admin.generateLink")[0].args).toEqual([{ type: "magiclink", email: "pat-a@example.com" }]);
+    expect(fake.callsTo("auth.admin.generateLink")[0].args).toEqual([
+      { type: "magiclink", email: "pat-a@example.com" },
+    ]);
     expect(send).toHaveBeenCalledTimes(1);
     const mail = send.mock.calls[0] as unknown as [{ to: string; text: string }];
     expect(mail[0].to).toBe("pat-a@example.com");
@@ -59,7 +65,9 @@ describe("the resend route", () => {
     fake.once("profiles", { data: null });
     expect((await ask("nobody@example.com")).status).toBe(200);
 
-    fake.once("auth.admin.getUserById", { data: { user: { id: "u1", email_confirmed_at: "2026-08-01", user_metadata: {} } } });
+    fake.once("auth.admin.getUserById", {
+      data: { user: { id: "u1", email_confirmed_at: "2026-08-01", user_metadata: {} } },
+    });
     expect((await ask("done@example.com")).status).toBe(200);
 
     // Asking Auth for a link to an unknown address would create the account.

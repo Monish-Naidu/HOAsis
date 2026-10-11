@@ -26,7 +26,7 @@ the benefit of and bind all owners of separate interests in the development" (Ca
 arrived. Articles, bylaws, and rules are corporate governance by comparison; they bind you
 because you became a member of a corporation, not because of what you bought. Every product
 decision about documents follows from this one split. One wrinkle worth carrying: Texas requires
-*every* dedicatory instrument, bylaws and rules included, to be filed in the county real property
+_every_ dedicatory instrument, bylaws and rules included, to be filed in the county real property
 records, and says an instrument "has no effect until the instrument is filed" (Tex. Prop. Code
 §§ 202.001, 202.006). So "was this recorded, and when, and under what instrument number" is a
 field we need on more than just the declaration.
@@ -38,7 +38,7 @@ is not. Colorado enumerates nine policies every association must adopt (C.R.S.
 § 38-33.3-209.5) and California enumerates the rule topics a board may act on (Cal. Civ. Code
 § 4355(a)). Those two lists are, almost exactly, our shippable template catalog. The industry's
 own body agrees on the other side of the line: CAI and its College of Community Association
-Lawyers published *Guiding Principles for Community Association Governing Documents*, and it
+Lawyers published _Guiding Principles for Community Association Governing Documents_, and it
 is a resource **for lawyers** containing principles, not model language. If CAI will not
 publish model declaration text, we should not either.
 
@@ -55,7 +55,7 @@ housing exposure at machine speed.
 **4. The safe and genuinely valuable version is a confirmed rule catalog with citations.**
 Parse the document into articles and sections, index it, and answer "what does the declaration
 say about fences" with the quoted text, the section number, and a link to the page image.
-Then propose candidate restrictions as *drafts* that a human board member confirms one by one.
+Then propose candidate restrictions as _drafts_ that a human board member confirms one by one.
 Most boards have never had their restrictions in a list. Building that list is the product.
 Deciding who broke one is not.
 
@@ -77,7 +77,7 @@ facts a human already decided.
 
 ## 2. The document hierarchy, explained plainly
 
-*Library draft. Written for an owner or a new board member.*
+_Library draft. Written for an owner or a new board member._
 
 ### The one sentence version
 
@@ -218,7 +218,7 @@ that the declaration never authorized.
 **Belongs in the declaration.** What an owner owns and what is common area. The obligation to
 pay assessments and the association's lien rights. The substantive use restrictions, meaning the
 ones that limit what an owner may do with their own lot. The authority to require architectural
-approval. Insurance obligations. The amendment procedure itself. CAI's *Guiding Principles*
+approval. Insurance obligations. The amendment procedure itself. CAI's _Guiding Principles_
 organizes its 25 sections around exactly this kind of content: use restrictions, insurance,
 assessment collections, architectural control.
 
@@ -257,19 +257,19 @@ reserve studies.
 
 **Common misfilings, and what goes wrong.**
 
-- *Fine schedule in the CC&Rs.* Fines change. A schedule in the declaration needs an owner vote
+- _Fine schedule in the CC&Rs._ Fines change. A schedule in the declaration needs an owner vote
   and a recording to update. California treats the schedule as a board-adopted item distributed
   annually (Cal. Civ. Code § 5850, § 5310(a)), and lists member discipline including the
   schedule of monetary penalties as a rule topic (§ 4355(a)(3)).
-- *A new restriction adopted as a rule.* A rule must be "within the authority of the board
+- _A new restriction adopted as a rule._ A rule must be "within the authority of the board
   conferred by law or by the declaration, articles of incorporation or association, or bylaws"
   (Cal. Civ. Code § 4350(b)) and must not conflict with the declaration (§ 4350(c)). A board
   cannot invent a restriction the declaration does not support and then enforce it as if it
   were a covenant. If the rule and the declaration disagree, the declaration wins
   (§ 4205(d)) and the rule is not enforceable.
-- *Election procedures in the declaration.* They will need to change when the statute changes,
+- _Election procedures in the declaration._ They will need to change when the statute changes,
   and now every change costs an owner vote.
-- *An amendment adopted but never recorded.* In California and Florida it is not effective
+- _An amendment adopted but never recorded._ In California and Florida it is not effective
   (Cal. Civ. Code § 4270(a); Fla. Stat. § 720.306(1)(b)). In Texas, an unrecorded dedicatory
   instrument "has no effect" at all (Tex. Prop. Code § 202.006).
 
@@ -292,8 +292,8 @@ member, or piece of software reading a declaration has to hold both facts at onc
 Not really, and the negative result is informative.
 
 CAI, the trade body for the industry, together with its College of Community Association
-Lawyers, publishes *Guiding Principles for Community Association Governing Documents: A Resource
-for Lawyers*. The title is the finding. It is aimed at attorneys drafting documents for new
+Lawyers, publishes _Guiding Principles for Community Association Governing Documents: A Resource
+for Lawyers_. The title is the finding. It is aimed at attorneys drafting documents for new
 communities or in developer transition, and secondarily at boards and managers considering
 amendments. It contains 25 sections discussing "the purpose and intent of governing provisions."
 It is principles, not model language, and CAI-IL's own summary notes the guidelines "do not
@@ -326,7 +326,7 @@ conclusions involved must be carefully determined."
 
 Two pieces of history define the boundary.
 
-*Quicken Family Lawyer.* Parsons Technology sold software that interviewed the user and produced
+_Quicken Family Lawyer._ Parsons Technology sold software that interviewed the user and produced
 a legal document from about 100 forms. A Texas court held it was the practice of law and enjoined
 its sale in Texas. The Texas legislature then amended the statute. Today Tex. Gov't Code
 § 81.101(c) says the practice of law "does not include the design, creation, publication,
@@ -338,7 +338,7 @@ for the advice of an attorney."
 That is a real safe harbor, and the disclaimer condition is the whole of it. But it is a Texas
 statute. Most states have nothing like it.
 
-*Janson v. LegalZoom.* A Missouri federal court found LegalZoom's document preparation service
+_Janson v. LegalZoom._ A Missouri federal court found LegalZoom's document preparation service
 was not protected self-help. The distinction the court drew is the one that should govern our
 design. Per the order as quoted in contemporaneous reporting, "LegalZoom's internet portal offers
 consumers not a piece of self-help merchandise, but a legal document service which goes well
@@ -539,14 +539,14 @@ Two measurements are directly relevant, and both are sobering.
 regulated documents across mortgage, finance, supply chain, and medical, with 1,356 field-level
 questions and a separate 1,500 page layout track. Results for the top systems:
 
-| System | Per-field | Per-question | Cost/page | Latency |
-| --- | --- | --- | --- | --- |
-| Extend Performance v2 | 96.0% | 90.9% | $0.040 | 13.7 s |
-| LlamaParse (Agentic) | 92.2% | 84.5% | $0.0125 | 23.7 s |
-| Reducto (Agentic) | 91.4% | 83.8% | $0.060 | 23.0 s |
-| Gemini 3.5 Flash | 89.3% | 82.2% | $0.0113 | 18.9 s |
-| Azure Document Intelligence | 89.1% | 79.6% | $0.010 | 6.5 s |
-| AWS Textract | 70.7% | 54.0% | $0.015 | 4.7 s |
+| System                      | Per-field | Per-question | Cost/page | Latency |
+| --------------------------- | --------- | ------------ | --------- | ------- |
+| Extend Performance v2       | 96.0%     | 90.9%        | $0.040    | 13.7 s  |
+| LlamaParse (Agentic)        | 92.2%     | 84.5%        | $0.0125   | 23.7 s  |
+| Reducto (Agentic)           | 91.4%     | 83.8%        | $0.060    | 23.0 s  |
+| Gemini 3.5 Flash            | 89.3%     | 82.2%        | $0.0113   | 18.9 s  |
+| Azure Document Intelligence | 89.1%     | 79.6%        | $0.010    | 6.5 s   |
+| AWS Textract                | 70.7%     | 54.0%        | $0.015    | 4.7 s   |
 
 Best layout adjusted F1 was 0.835 across 1,500 pages.
 
@@ -558,11 +558,11 @@ which means "we use a good parser" is a real engineering decision, not a checkbo
 
 Caveat, stated plainly: RealDocBench was authored by Extend AI, whose own system tops it. The
 paper acknowledges this and publishes its harness. Treat the absolute numbers as approximate and
-the ordering as vendor-influenced. Treat the *shape* of the result, being a ten point gap between
+the ordering as vendor-influenced. Treat the _shape_ of the result, being a ten point gap between
 per-field and per-question accuracy, as the real finding.
 
-**Legal question answering.** Magesh, Surani, Dahl, Suzgun, Manning, and Ho, *Hallucination-Free?
-Assessing the Reliability of Leading AI Legal Research Tools*, Journal of Empirical Legal Studies
+**Legal question answering.** Magesh, Surani, Dahl, Suzgun, Manning, and Ho, _Hallucination-Free?
+Assessing the Reliability of Leading AI Legal Research Tools_, Journal of Empirical Legal Studies
 (accepted 14 March 2025), Stanford RegLab. This is the closest published analogue to "read the
 governing documents and answer a legal question."
 
@@ -643,9 +643,9 @@ observe, which means front yards over back yards, photographed streets over unph
 owners who upload pictures over owners who do not. Uneven enforcement by construction. Uneven
 enforcement is the classic defense: waiver, estoppel, and selective enforcement all turn on the
 association tolerating the same conduct elsewhere. The canonical selective enforcement case is
-*White Egret Condominium, Inc. v. Franklin*, 379 So. 2d 346 (Fla. 1979), where children were
+_White Egret Condominium, Inc. v. Franklin_, 379 So. 2d 346 (Fla. 1979), where children were
 prohibited in one unit and tolerated in others. A product that dramatically increases detection
-volume without increasing detection *evenness* hands owners that defense and hands the board its
+volume without increasing detection _evenness_ hands owners that defense and hands the board its
 own audit trail proving it.
 
 **5. Fair housing exposure, and it lands on the board, not on us.** The Fair Housing Act makes it
@@ -678,7 +678,7 @@ product says page 34 is unreadable rather than answering around it. Confidence i
 "read" or "not read," not as a percentage.
 
 **Tier 2: a rule catalog, human-confirmed. Ship it, and this is the actual product.** The system
-proposes candidate restrictions from the text as *drafts*, each carrying the quoted source text and
+proposes candidate restrictions from the text as _drafts_, each carrying the quoted source text and
 its citation. A board member reviews each one and confirms, edits, or rejects it. Nothing enters
 the catalog without a human accepting it. The output is the thing almost no board has: a plain
 list of what the restrictions actually are, in order, with the source text behind each entry.
@@ -987,28 +987,28 @@ All fetched 2026-08-26.
 ### Cases
 
 - https://blog.ericgoldman.org/archives/2011/08/missouri_federa_1.htm , Eric Goldman,
-  Technology & Marketing Law Blog, quoting the order in *Janson v. LegalZoom.com, Inc.*,
+  Technology & Marketing Law Blog, quoting the order in _Janson v. LegalZoom.com, Inc._,
   802 F. Supp. 2d 1053 (W.D. Mo. 2011), on the self-help merchandise versus legal document
   service distinction
 - https://www.floridacondohoalawblog.com/2022/03/30/three-common-covenant-enforcement-defenses-waiver-estoppel-and-selective-enforcement/ ,
   Becker, Florida Condo & HOA Law Blog, on waiver, estoppel, and selective enforcement, citing
-  *White Egret Condominium, Inc. v. Franklin*, 379 So. 2d 346 (Fla. 1979)
+  _White Egret Condominium, Inc. v. Franklin_, 379 So. 2d 346 (Fla. 1979)
 
 ### Research and benchmarks
 
-- https://arxiv.org/pdf/2606.07401 , *RealDocBench: A Benchmark for Field-Level QA and Layout
-  Understanding on Real-World Regulated Documents*, Extend AI, arXiv 2606.07401, June 2026.
+- https://arxiv.org/pdf/2606.07401 , _RealDocBench: A Benchmark for Field-Level QA and Layout
+  Understanding on Real-World Regulated Documents_, Extend AI, arXiv 2606.07401, June 2026.
   Per-field and per-question accuracy, layout adjusted F1, cost and latency for 18 systems
 - https://dho.stanford.edu/wp-content/uploads/Legal_RAG_Hallucinations.pdf and
   https://arxiv.org/abs/2405.20362 , Magesh, Surani, Dahl, Suzgun, Manning, Ho,
-  *Hallucination-Free? Assessing the Reliability of Leading AI Legal Research Tools*,
+  _Hallucination-Free? Assessing the Reliability of Leading AI Legal Research Tools_,
   Journal of Empirical Legal Studies, accepted 14 March 2025. 17% to 33% hallucination rates,
   65% and 42% accuracy figures, definition of hallucination as incorrect or misgrounded
 
 ### Industry
 
 - https://blog.caionline.org/guide-for-drafting-association-governing-documents/ , CAI blog on
-  *Guiding Principles for Community Association Governing Documents: A Resource for Lawyers*,
+  _Guiding Principles for Community Association Governing Documents: A Resource for Lawyers_,
   25 sections, principles rather than model language, audience is attorneys plus boards and managers
 - https://www.cai-illinois.org/guiding-principles-for-community-association-governing-documents/ ,
   CAI Illinois summary of the same resource, including the caveat that the guidelines cannot be
@@ -1060,15 +1060,15 @@ All fetched 2026-08-26.
 
 **Read in secondary sources, not in the primary source.**
 
-- *UPLC v. Parsons Technology*, 179 F.3d 956 (5th Cir. 1999). The Fifth Circuit PDF on
+- _UPLC v. Parsons Technology_, 179 F.3d 956 (5th Cir. 1999). The Fifth Circuit PDF on
   ca5.uscourts.gov could not be extracted and Justia returned 403. The history described here,
   being the district court injunction against Quicken Family Lawyer followed by the Texas
   legislature's amendment, comes from search result summaries. **The load-bearing fact, the text
   of Tex. Gov't Code § 81.101(c), was read directly and is reliable.** The case history is
   background and should not be cited without pulling the opinion.
-- *Janson v. LegalZoom*, 802 F. Supp. 2d 1053 (W.D. Mo. 2011). Quotations come from Eric Goldman's
+- _Janson v. LegalZoom_, 802 F. Supp. 2d 1053 (W.D. Mo. 2011). Quotations come from Eric Goldman's
   blog reproducing the order, not from the order itself.
-- *White Egret Condominium v. Franklin*, 379 So. 2d 346 (Fla. 1979). Citation and holding come from
+- _White Egret Condominium v. Franklin_, 379 So. 2d 346 (Fla. 1979). Citation and holding come from
   a law firm blog, not from the opinion.
 - Texas Property Code sections. statutes.capitol.texas.gov now serves its statute text through
   JavaScript, and both WebFetch and a direct curl returned only the navigation shell. All Texas
@@ -1081,7 +1081,7 @@ All fetched 2026-08-26.
 **Could not be fetched at all.**
 
 - caionline.org returned 403 on the press room and governing documents pages. Only the CAI blog and
-  the CAI Illinois chapter page were reachable, so the description of *Guiding Principles* rests on
+  the CAI Illinois chapter page were reachable, so the description of _Guiding Principles_ rests on
   those two summaries rather than the resource itself. Whether CAI sells any actual fill-in template
   documents to members behind its paywall is **not established**.
 - HUD's assistance animal notice (FHEO-2020-01) returned 404 at two URL paths. No HUD guidance was
@@ -1101,7 +1101,7 @@ All fetched 2026-08-26.
   product**. The claim "nobody ships CC&R templates" is well supported by the Condo Control
   Document Shop catalog, which is an actual product catalog rather than a feature blurb, but it
   is not proven for vendors whose pages were not read.
-- Whether any vendor offers violation-*letter* templates specifically could not be confirmed.
+- Whether any vendor offers violation-_letter_ templates specifically could not be confirmed.
   PayHOA's page says "Effortlessly enforce CC&Rs" and does not say what that includes.
 - No HOA-specific document AI or CC&R parsing startup was identified. That is a **failure to find,
   not a finding of absence**; the searches that would have surfaced them could not be run.

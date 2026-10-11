@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRightLeft, LogOut, RotateCcw, Trash2 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, Select, fieldClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  Select,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { homeLabel } from "@/lib/wording";
 import { useToast } from "@/components/app/toast";
@@ -29,8 +37,7 @@ import { cn } from "@/lib/utils";
 
 type Flow = null | "transfer" | "leave" | "cancel" | "delete";
 
-const inputClass =
-  fieldClass;
+const inputClass = fieldClass;
 
 export function DangerZone() {
   const { community, account, isRemote, resetDemo } = useAppState();
@@ -79,10 +86,7 @@ export function DangerZone() {
     );
   }
 
-  async function run(
-    label: string,
-    fn: () => PromiseLike<{ error: { message: string } | null }>,
-  ) {
+  async function run(label: string, fn: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true);
     try {
       const { error } = await fn();
@@ -93,7 +97,10 @@ export function DangerZone() {
       notify(label, "ok");
       return true;
     } catch (error) {
-      notify(error instanceof Error ? error.message : "That did not go through. Try again.", "warn");
+      notify(
+        error instanceof Error ? error.message : "That did not go through. Try again.",
+        "warn",
+      );
       return false;
     } finally {
       setBusy(false);
@@ -117,7 +124,10 @@ export function DangerZone() {
       window.location.assign(data.url);
     } catch (error) {
       setBusy(false);
-      notify(error instanceof Error ? error.message : "Stripe did not open. Try again in a moment.", "warn");
+      notify(
+        error instanceof Error ? error.message : "Stripe did not open. Try again in a moment.",
+        "warn",
+      );
     }
   }
 
@@ -141,9 +151,7 @@ export function DangerZone() {
             onOpen={() => setFlow(flow === "transfer" ? null : "transfer")}
           >
             <label className="block">
-              <span className="mb-1.5 block text-footnote font-medium text-fg">
-                Who takes over
-              </span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">Who takes over</span>
               <Select
                 value={successor}
                 onChange={(e) => setSuccessor(e.target.value)}
@@ -159,8 +167,8 @@ export function DangerZone() {
             </label>
             {!others.length ? (
               <Callout tone="warn" title="There is nobody else yet">
-                Invite another owner and wait for them to sign up. Somebody has to be able
-                to accept the office.
+                Invite another owner and wait for them to sign up. Somebody has to be able to accept
+                the office.
               </Callout>
             ) : null}
             <Button
@@ -199,8 +207,8 @@ export function DangerZone() {
           onOpen={() => setFlow(flow === "leave" ? null : "leave")}
         >
           <Callout tone="warn" title="You will lose access immediately">
-            A board member who manages access can add you back, but you will not be able
-            to do it yourself.
+            A board member who manages access can add you back, but you will not be able to do it
+            yourself.
           </Callout>
           <Button
             variant="danger"
@@ -256,12 +264,12 @@ export function DangerZone() {
           ) : exit === "portal" ? (
             <>
               <Callout tone="info" title="Your records stay put">
-                Cancelling stops the bill. It does not delete anything, and it does not lock
-                anybody out. Your books, documents and history remain exactly as they are.
+                Cancelling stops the bill. It does not delete anything, and it does not lock anybody
+                out. Your books, documents and history remain exactly as they are.
               </Callout>
               <p className="text-footnote leading-relaxed text-fg-muted">
-                The card is billed through Stripe, so the cancel is made on Stripe&apos;s
-                billing page. This screen follows once Stripe confirms it.
+                The card is billed through Stripe, so the cancel is made on Stripe&apos;s billing
+                page. This screen follows once Stripe confirms it.
               </p>
               <Button
                 variant="secondary"
@@ -287,8 +295,8 @@ export function DangerZone() {
                 />
               </label>
               <Callout tone="info" title="Your records stay put">
-                Cancelling stops the bill. It does not delete anything, and it does not lock
-                anybody out. Your books, documents and history remain exactly as they are.
+                Cancelling stops the bill. It does not delete anything, and it does not lock anybody
+                out. Your books, documents and history remain exactly as they are.
               </Callout>
               <Button
                 variant="secondary"
@@ -329,11 +337,10 @@ export function DangerZone() {
             onOpen={() => setFlow(flow === "delete" ? null : "delete")}
           >
             <Callout tone="danger" title="This affects every owner, not just you">
-              Owners have payment records here that they are entitled to, and that your
-              association is usually required to keep for years. Export anything you need
-              first: once it is deleted, nobody can sign in to it, you included. For thirty
-              days you can write to {SUPPORT_EMAIL} to have it brought back. After that it
-              cannot be recovered.
+              Owners have payment records here that they are entitled to, and that your association
+              is usually required to keep for years. Export anything you need first: once it is
+              deleted, nobody can sign in to it, you included. For thirty days you can write to{" "}
+              {SUPPORT_EMAIL} to have it brought back. After that it cannot be recovered.
             </Callout>
             <label className="block">
               <span className="mb-1.5 block text-footnote font-medium text-fg">
@@ -354,8 +361,7 @@ export function DangerZone() {
               className="self-start"
               disabled={
                 busy ||
-                typed.trim().toLowerCase() !==
-                  community.settings.displayName.trim().toLowerCase()
+                typed.trim().toLowerCase() !== community.settings.displayName.trim().toLowerCase()
               }
               onClick={async () => {
                 const ok = await run("Association scheduled for deletion", () =>
@@ -414,9 +420,7 @@ function Row({
           </span>
           <div className="min-w-0">
             <p className="text-body font-semibold text-fg">{title}</p>
-            <p className="mt-0.5 max-w-xl text-footnote leading-relaxed text-fg-muted">
-              {detail}
-            </p>
+            <p className="mt-0.5 max-w-xl text-footnote leading-relaxed text-fg-muted">{detail}</p>
           </div>
         </div>
         {disabled ? (

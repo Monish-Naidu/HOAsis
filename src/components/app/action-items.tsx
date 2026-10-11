@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { ListChecks, Plus, X } from "lucide-react";
-import { Button, Card, CardHeader, Checkbox, EmptyState, Select, fieldClass } from "@/components/ui/primitives";
+import {
+  Button,
+  Card,
+  CardHeader,
+  Checkbox,
+  EmptyState,
+  Select,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { ActionItem } from "@/lib/types";
@@ -18,8 +26,7 @@ import { cn, daysFromToday, formatDate, relativeDays, todayIsoDate } from "@/lib
  * homework and the next meeting's first agenda item.
  */
 
-const FIELD =
-  fieldClass;
+const FIELD = fieldClass;
 const LABEL = "mb-1 block text-footnote font-semibold text-fg-muted";
 
 export function ActionItems({
@@ -79,7 +86,12 @@ export function ActionItems({
               setAdding(false);
               notify(`${input.ownerName || "Somebody"} owes: ${input.title}`);
             } catch (error) {
-              notify(error instanceof Error ? error.message : "That action item was not added. Try again.", "warn");
+              notify(
+                error instanceof Error
+                  ? error.message
+                  : "That action item was not added. Try again.",
+                "warn",
+              );
             }
           }}
         />
@@ -149,12 +161,7 @@ function Row({
         className="mt-1"
       />
       <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            "text-body leading-snug text-fg",
-            done && "text-fg-muted line-through",
-          )}
-        >
+        <p className={cn("text-body leading-snug text-fg", done && "text-fg-muted line-through")}>
           {item.title}
         </p>
         <p className="mt-0.5 text-footnote text-fg-muted">
@@ -218,7 +225,11 @@ function AddForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className={LABEL}>Who</span>
-          <Select value={owner} onChange={(e) => setOwner(e.target.value)} className="w-full [&>select]:h-10">
+          <Select
+            value={owner}
+            onChange={(e) => setOwner(e.target.value)}
+            className="w-full [&>select]:h-10"
+          >
             {board.map((a) => (
               <option key={a.id} value={a.name}>
                 {a.name}

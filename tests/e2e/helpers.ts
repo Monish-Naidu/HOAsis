@@ -99,8 +99,7 @@ export async function waitForHydration(page: Page) {
   await page
     .waitForFunction(
       () => {
-        const target =
-          document.querySelector("main button") ?? document.querySelector("main a");
+        const target = document.querySelector("main button") ?? document.querySelector("main a");
         if (!target) return true; // A page with no controls is hydrated enough.
         return Object.keys(target).some((k) => k.startsWith("__reactProps$"));
       },
@@ -132,8 +131,7 @@ export async function inspect(page: Page): Promise<PageHealth> {
   await waitForHydration(page);
   return page.evaluate(() => {
     const body = document.body.innerText;
-    const crashed =
-      body.includes("This page did not load") || body.includes("The app failed");
+    const crashed = body.includes("This page did not load") || body.includes("The app failed");
 
     const main = document.querySelector("main");
     const text = main?.innerText ?? body;
@@ -159,7 +157,9 @@ export async function inspect(page: Page): Promise<PageHealth> {
       if (!name) unlabeled++;
 
       const key = Object.keys(el).find((k) => k.startsWith("__reactProps$"));
-      const props = key ? (el as unknown as Record<string, { onClick?: unknown; onChange?: unknown }>)[key] : null;
+      const props = key
+        ? (el as unknown as Record<string, { onClick?: unknown; onChange?: unknown }>)[key]
+        : null;
       const wired =
         Boolean(props?.onClick) ||
         Boolean(props?.onChange) ||
@@ -211,7 +211,10 @@ export const ADMIN_TABS = [
 
 /** The pages folded under a sidebar row, as the tabs along its top. */
 export const BOARD_SECTION_TABS: Record<string, { row: string; tabs: string[] }> = {
-  "/board/money": { row: "Finances", tabs: ["Overview", "Transactions", "Past due", "Reserves", "Statements"] },
+  "/board/money": {
+    row: "Finances",
+    tabs: ["Overview", "Transactions", "Past due", "Reserves", "Statements"],
+  },
   "/board/requests": { row: "Requests", tabs: ["Requests", "Notices"] },
   "/board/communications": { row: "Messages", tabs: ["Inbox", "Announcements", "Community"] },
   "/board/meetings": { row: "Meetings", tabs: ["Meetings", "Voting"] },
@@ -250,6 +253,7 @@ export async function openTab(page: Page, prefix: string, label: string) {
   await link.click();
   // The URL is the signal the navigation landed; networkidle then covers the
   // data the new screen fetches.
-  if (href) await page.waitForURL((url) => url.pathname + url.search === href || url.pathname === href);
+  if (href)
+    await page.waitForURL((url) => url.pathname + url.search === href || url.pathname === href);
   await page.waitForLoadState("networkidle");
 }

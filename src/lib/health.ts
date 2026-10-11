@@ -10,7 +10,7 @@ import { hasSupabase } from "@/lib/supabase/env";
  * returned, only presence.
  */
 
-export interface HealthCheck {
+interface HealthCheck {
   ok: boolean;
   /** One short line a person can act on. Never a secret. */
   detail: string;
@@ -56,9 +56,10 @@ export async function runHealthChecks(): Promise<HealthReport> {
   const stripe = present("STRIPE_SECRET_KEY", "key present");
   const resend = present("RESEND_API_KEY", "key present");
   const cron = present("CRON_SECRET", "secret present");
-  const sentry: HealthCheck = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
-    ? { ok: true, detail: "DSN present" }
-    : { ok: true, detail: "not configured (optional)" };
+  const sentry: HealthCheck =
+    process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
+      ? { ok: true, detail: "DSN present" }
+      : { ok: true, detail: "not configured (optional)" };
   return {
     ok: supabase.ok && stripe.ok && resend.ok && cron.ok,
     at: new Date().toISOString(),

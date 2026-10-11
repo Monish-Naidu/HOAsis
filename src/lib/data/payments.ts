@@ -49,9 +49,27 @@ export const paymentInstruments: PaymentInstrument[] = [
 
 /** Institutions the linking flow offers. Stands in for an aggregator's list. */
 export const supportedInstitutions = [
-  { id: "becu", name: "BECU", accounts: [{ type: "checking" as const, mask: "2288" }, { type: "savings" as const, mask: "9014" }] },
+  {
+    id: "becu",
+    name: "BECU",
+    accounts: [
+      { type: "checking" as const, mask: "2288" },
+      { type: "savings" as const, mask: "9014" },
+    ],
+  },
   { id: "chase", name: "Chase", accounts: [{ type: "checking" as const, mask: "5567" }] },
   { id: "wafd", name: "WaFd Bank", accounts: [{ type: "checking" as const, mask: "3310" }] },
-  { id: "coastal", name: "Coastal Community Bank", accounts: [{ type: "checking" as const, mask: "7742" }, { type: "savings" as const, mask: "1180" }] },
-  { id: "sound", name: "Sound Credit Union", accounts: [{ type: "checking" as const, mask: "6621" }] },
+  {
+    id: "coastal",
+    name: "Coastal Community Bank",
+    accounts: [
+      { type: "checking" as const, mask: "7742" },
+      { type: "savings" as const, mask: "1180" },
+    ],
+  },
+  {
+    id: "sound",
+    name: "Sound Credit Union",
+    accounts: [{ type: "checking" as const, mask: "6621" }],
+  },
 ];

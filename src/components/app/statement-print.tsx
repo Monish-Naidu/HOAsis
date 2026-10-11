@@ -44,7 +44,15 @@ function balance(cents: number) {
  * screen and prints on one or two pages. Fixed colors on purpose: paper has no
  * theme.
  */
-export function StatementPrint({ community, home, year }: { community: Community; home: Home; year: number }) {
+export function StatementPrint({
+  community,
+  home,
+  year,
+}: {
+  community: Community;
+  home: Home;
+  year: number;
+}) {
   const association = community.association;
   const s = statementFor(community, home.id, year);
   const people = home.members.length > 0 ? home.members.join(" and ") : home.displayName;
@@ -56,7 +64,9 @@ export function StatementPrint({ community, home, year }: { community: Community
         {association.addressLine ? <p>{association.addressLine}</p> : null}
         <p className="mt-2 text-base font-semibold">Statement of account</p>
         <p>
-          {s.periodLabel === String(year) ? `${formatDate(s.from, "long")} to ${formatDate(s.to, "long")}` : s.periodLabel}
+          {s.periodLabel === String(year)
+            ? `${formatDate(s.from, "long")} to ${formatDate(s.to, "long")}`
+            : s.periodLabel}
         </p>
       </header>
 
@@ -68,8 +78,8 @@ export function StatementPrint({ community, home, year }: { community: Community
 
       {s.linesBegin ? (
         <p className="mt-3 border border-black p-2">
-          Lines before {formatDate(s.linesBegin, "long")} are not on this page, so the opening balance and
-          totals are incomplete.
+          Lines before {formatDate(s.linesBegin, "long")} are not on this page, so the opening
+          balance and totals are incomplete.
         </p>
       ) : null}
 
@@ -121,7 +131,10 @@ export function StatementPrint({ community, home, year }: { community: Community
           ["Balance brought forward", balance(s.openingCents)],
           ["Balance at end of period", balance(s.closingCents)],
         ].map(([label, value], i, all) => (
-          <div key={label} className={`flex justify-between gap-4 py-0.5 ${i === all.length - 1 ? "border-t border-black font-semibold" : ""}`}>
+          <div
+            key={label}
+            className={`flex justify-between gap-4 py-0.5 ${i === all.length - 1 ? "border-t border-black font-semibold" : ""}`}
+          >
             <dt>{label}</dt>
             <dd className="tabular-nums">{value}</dd>
           </div>
@@ -148,7 +161,12 @@ export function YearSelect({
   const { community } = useAppState();
   const fy = community.association.fiscalYearStart;
   return (
-    <Select size="sm" value={value} onChange={(e) => onChange(Number(e.target.value))} aria-label={label}>
+    <Select
+      size="sm"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      aria-label={label}
+    >
       {years.map((y) => (
         <option key={y} value={y}>
           {statementPeriodLabel(fy, y)}

@@ -117,8 +117,8 @@ export function SlotPicker({
         </p>
       ) : free === 0 ? (
         <p className="mt-3 text-footnote text-warn">
-          {slots[0]?.blockedBecause ?? "Nothing free"} on{" "}
-          {formatDate(date, "medium")}. Try another day.
+          {slots[0]?.blockedBecause ?? "Nothing free"} on {formatDate(date, "medium")}. Try another
+          day.
         </p>
       ) : null}
 
@@ -130,9 +130,7 @@ export function SlotPicker({
               ? `${money(rules.feeCents)} a booking, charged to your statement when the board confirms.`
               : null}
             {rules.feeCents && rules.depositCents ? " " : null}
-            {rules.depositCents
-              ? `${money(rules.depositCents)} deposit, returned after.`
-              : null}
+            {rules.depositCents ? `${money(rules.depositCents)} deposit, returned after.` : null}
           </span>
         </p>
       ) : null}

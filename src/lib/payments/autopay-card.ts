@@ -20,7 +20,9 @@ function monthAfter(ym: string): string {
 function dayIn(ym: string, day: number): string {
   const year = Number(ym.slice(0, 4));
   const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-  const last = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][Number(ym.slice(5, 7)) - 1];
+  const last = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][
+    Number(ym.slice(5, 7)) - 1
+  ];
   return `${ym}-${String(Math.min(Math.max(1, day), last)).padStart(2, "0")}`;
 }
 

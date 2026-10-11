@@ -63,7 +63,9 @@ export function RecordPaymentForm({
   const overpay = check.ok ? homeOverpayNote(check.extraCents) : null;
   // Said before saving, and saving is still allowed: two checks of the same
   // amount on one day happen, but a double entry is the likelier cause.
-  const repeat = existing ? findDuplicatePayment(existing, { amountCents: cents, receivedOn }) : null;
+  const repeat = existing
+    ? findDuplicatePayment(existing, { amountCents: cents, receivedOn })
+    : null;
   return (
     <form
       className="mt-4 space-y-2 border-t border-border pt-3"
@@ -134,7 +136,10 @@ export function RecordPaymentForm({
       ) : null}
       {overpay ? <p className="text-footnote text-fg-muted">{overpay}</p> : null}
       {repeat ? (
-        <p role="alert" className="rounded-md bg-warn-soft px-3 py-2 text-footnote font-medium text-warn">
+        <p
+          role="alert"
+          className="rounded-md bg-warn-soft px-3 py-2 text-footnote font-medium text-warn"
+        >
           {duplicatePaymentWarning(homeName ?? unit, repeat)}
         </p>
       ) : null}
@@ -304,7 +309,9 @@ export function AddChargeForm({
           </Field>
         </div>
       </div>
-      {summary && cents > 0 ? <p className="tnum text-footnote text-fg-muted">{summary(cents)}</p> : null}
+      {summary && cents > 0 ? (
+        <p className="tnum text-footnote text-fg-muted">{summary(cents)}</p>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancel
@@ -401,7 +408,13 @@ export function ChangeDuesForm({
       ) : null}
       <div className="flex flex-wrap justify-end gap-2">
         {hasOwn ? (
-          <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => save(null)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => save(null)}
+          >
             Use the standard rate
           </Button>
         ) : null}
@@ -418,9 +431,7 @@ export function ChangeDuesForm({
 
 /** What the list of hand-recorded payments is showing: reading, read, or failed. */
 export type HandPaymentsState =
-  | { status: "loading" }
-  | { status: "error" }
-  | { status: "ready"; rows: ManualPaymentRow[] };
+  { status: "loading" } | { status: "error" } | { status: "ready"; rows: ManualPaymentRow[] };
 
 /**
  * A home's checks and cash entered by hand, newest first. A live row can be
@@ -442,7 +453,9 @@ export function HandPaymentsPanel({
   return (
     <div className="mt-4 space-y-2 border-t border-border pt-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-footnote font-semibold text-fg-muted">Payments recorded by hand for {homeName}</p>
+        <p className="text-footnote font-semibold text-fg-muted">
+          Payments recorded by hand for {homeName}
+        </p>
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           Close
         </Button>
@@ -497,7 +510,7 @@ export function HandPaymentsPanel({
 }
 
 /** One field: why. The reason is kept on the statement and in the activity record. */
-export function ReversePaymentForm({
+function ReversePaymentForm({
   onSave,
   onCancel,
 }: {
@@ -544,7 +557,15 @@ export function ReversePaymentForm({
  * A home's statement for a year, on paper: for an owner selling, a tax return
  * or a lender. Same layout the owner prints from their own page.
  */
-export function PrintStatementForm({ home, homeName, onClose }: { home: Home; homeName: string; onClose: () => void }) {
+export function PrintStatementForm({
+  home,
+  homeName,
+  onClose,
+}: {
+  home: Home;
+  homeName: string;
+  onClose: () => void;
+}) {
   return (
     <div className="mt-4 space-y-2 border-t border-border pt-3">
       <p className="text-footnote font-semibold text-fg-muted">A statement for {homeName}</p>

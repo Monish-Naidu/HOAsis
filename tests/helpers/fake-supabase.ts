@@ -66,11 +66,20 @@ export function createFakeSupabase(defaults: Record<string, FakeAnswer> = {}) {
         break;
       }
     }
-    if (answer === undefined) for (const key of keys) if (sticky.has(key)) { answer = sticky.get(key); break; }
+    if (answer === undefined)
+      for (const key of keys)
+        if (sticky.has(key)) {
+          answer = sticky.get(key);
+          break;
+        }
     const result = typeof answer === "function" ? await answer(call) : (answer ?? NOTHING);
     const { data = null, error = null, count } = result;
     // A single-row read of a list answers its first row, as PostgREST would.
-    return { data: single && Array.isArray(data) ? (data[0] ?? null) : data, error, ...(count === undefined ? {} : { count }) };
+    return {
+      data: single && Array.isArray(data) ? (data[0] ?? null) : data,
+      error,
+      ...(count === undefined ? {} : { count }),
+    };
   }
 
   /** Any method chains and is recorded; a bare await or the two single-row enders settle it. */
@@ -86,7 +95,9 @@ export function createFakeSupabase(defaults: Record<string, FakeAnswer> = {}) {
           }
           return (...args: unknown[]) => {
             call.chain.push([prop, ...args]);
-            return prop === "single" || prop === "maybeSingle" ? settle(call, keysFor(), true) : proxy;
+            return prop === "single" || prop === "maybeSingle"
+              ? settle(call, keysFor(), true)
+              : proxy;
           };
         },
       },

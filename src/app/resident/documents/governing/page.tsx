@@ -28,8 +28,7 @@ export default function ResidentGoverningDocuments() {
           The rules you live under
         </h1>
         <p className="mt-1 text-body leading-relaxed text-fg-muted">
-          Three documents, searchable together, in plain words, with the exact wording one
-          tap away.
+          Three documents, searchable together, in plain words, with the exact wording one tap away.
         </p>
       </div>
 
@@ -55,8 +54,8 @@ export default function ResidentGoverningDocuments() {
                 The eight things worth knowing
               </span>
               <span className="block text-footnote leading-snug text-fg-muted">
-                Flags, solar, signs, parking, working from home, renting out, what needs
-                approval, and what happens if you fall behind
+                Flags, solar, signs, parking, working from home, renting out, what needs approval,
+                and what happens if you fall behind
               </span>
             </span>
             <ChevronRight className="size-4 shrink-0 text-fg-subtle" />

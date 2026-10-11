@@ -48,7 +48,10 @@ export function BillingRow() {
       window.location.assign(data.url);
     } catch (error) {
       setBusy(false);
-      notify(error instanceof Error ? error.message : "Stripe did not open. Try again in a moment.", "warn");
+      notify(
+        error instanceof Error ? error.message : "Stripe did not open. Try again in a moment.",
+        "warn",
+      );
     }
   }
 

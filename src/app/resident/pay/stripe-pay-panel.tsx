@@ -32,7 +32,13 @@ import { InstrumentMenu } from "./instrument-menu";
 type Phase =
   | { name: "rail" }
   | { name: "element"; clientSecret: string; account: string; cost: PaymentCost; rail: Rail }
-  | { name: "confirm-saved"; clientSecret: string; account: string; cost: PaymentCost; label: string }
+  | {
+      name: "confirm-saved";
+      clientSecret: string;
+      account: string;
+      cost: PaymentCost;
+      label: string;
+    }
   | { name: "finish-setup"; setupIntentId: string }
   | { name: "waiting"; intentId: string }
   | { name: "settled"; amountCents: number }
@@ -182,7 +188,10 @@ export function StripePayPanel({
         ),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "The payment did not start. Check your connection and try again.");
+      if (!response.ok)
+        throw new Error(
+          data.error ?? "The payment did not start. Check your connection and try again.",
+        );
       setPhase(
         saved
           ? {
@@ -201,7 +210,11 @@ export function StripePayPanel({
             },
       );
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : "The payment did not start. Check your connection and try again.");
+      setProblem(
+        error instanceof Error
+          ? error.message
+          : "The payment did not start. Check your connection and try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -385,9 +398,7 @@ export function StripePayPanel({
           </button>
         ))}
       </div>
-      {problem ? (
-        <p className="mt-3 text-footnote font-medium text-danger">{problem}</p>
-      ) : null}
+      {problem ? <p className="mt-3 text-footnote font-medium text-danger">{problem}</p> : null}
       <Button
         variant="primary"
         size="lg"
@@ -395,7 +406,11 @@ export function StripePayPanel({
         disabled={busy || amountCents <= 0 || !savedUsable}
         onClick={begin}
       >
-        {busy ? "One moment…" : amountCents > 0 ? `Continue to pay ${money(amountCents)}` : "Continue"}
+        {busy
+          ? "One moment…"
+          : amountCents > 0
+            ? `Continue to pay ${money(amountCents)}`
+            : "Continue"}
       </Button>
       <p className="mt-2.5 flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
         <Info className="mt-px size-3 shrink-0" />
@@ -467,7 +482,10 @@ function ConfirmSaved({
     });
     setBusy(false);
     if (result.error) {
-      setProblem(result.error.message ?? "The payment did not go through. Try again, or use another card or bank account.");
+      setProblem(
+        result.error.message ??
+          "The payment did not go through. Try again, or use another card or bank account.",
+      );
       return;
     }
     const intent = result.paymentIntent;
@@ -537,7 +555,10 @@ function ConfirmForm({
     });
     setBusy(false);
     if (result.error) {
-      setProblem(result.error.message ?? "The payment did not go through. Try again, or use another card or bank account.");
+      setProblem(
+        result.error.message ??
+          "The payment did not go through. Try again, or use another card or bank account.",
+      );
       return;
     }
     const intent = result.paymentIntent;
@@ -636,7 +657,11 @@ function Receipt({
         </div>
       </Card>
       {tone === "ok" ? (
-        <Callout tone="ok" icon={<CheckCircle2 className="size-4" />} title="Applied to your oldest charge first" />
+        <Callout
+          tone="ok"
+          icon={<CheckCircle2 className="size-4" />}
+          title="Applied to your oldest charge first"
+        />
       ) : null}
     </div>
   );

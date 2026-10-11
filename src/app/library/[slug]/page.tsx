@@ -16,9 +16,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const article = articleBySlug(slug);
-  return article
-    ? { title: article.title, description: article.summary }
-    : { title: "Not found" };
+  return article ? { title: article.title, description: article.summary } : { title: "Not found" };
 }
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -68,10 +66,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         <article className="mt-8">
           {article.body.split("\n\n").map((block, index) =>
             block.startsWith("## ") ? (
-              <h2
-                key={index}
-                className="mt-8 text-title3 font-semibold tracking-[-0.02em] text-fg"
-              >
+              <h2 key={index} className="mt-8 text-title3 font-semibold tracking-[-0.02em] text-fg">
                 {block.replace("## ", "")}
               </h2>
             ) : (
@@ -95,9 +90,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               Where this comes from
             </h2>
             <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-              Every statute number, deadline and threshold above was read on the page linked
-              here, on the date shown. Statutes change, so check the date before you rely on
-              one.
+              Every statute number, deadline and threshold above was read on the page linked here,
+              on the date shown. Statutes change, so check the date before you rely on one.
             </p>
             <ol className="mt-4 space-y-2.5">
               {article.sources.map((source, index) => (

@@ -11,7 +11,13 @@ import { setToday } from "@/lib/utils";
  */
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/voting",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -82,10 +88,14 @@ describe("the board's Voting page", () => {
     // A ballot already closed in the record has nothing left to write.
     expect(row("sealed").queryByRole("button")).not.toBeInTheDocument();
 
-    await userEvent.setup().click(row("ran-out").getByRole("button", { name: "Record the result" }));
+    await userEvent
+      .setup()
+      .click(row("ran-out").getByRole("button", { name: "Record the result" }));
     expect(closeBallot).toHaveBeenCalledTimes(1);
     expect(closeBallot).toHaveBeenCalledWith("ran-out");
-    expect(await screen.findByText(/Recorded\. Yes won · 12 of 20 homes voted\./)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Recorded\. Yes won · 12 of 20 homes voted\./),
+    ).toBeInTheDocument();
   });
 
   it("keeps End voting now, and nothing else, on a ballot still running", () => {

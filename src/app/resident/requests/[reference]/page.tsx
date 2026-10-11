@@ -18,11 +18,7 @@ import { requestStatusLabel, requestStatusTone } from "@/lib/request-status";
 import { formatDate, money, relativeDays } from "@/lib/utils";
 import { AttachmentList } from "../request-files";
 
-export default function RequestDetail({
-  params,
-}: {
-  params: Promise<{ reference: string }>;
-}) {
+export default function RequestDetail({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = use(params);
   const { requests } = useAppState();
   const request = requests.find((r) => r.reference === decodeURIComponent(reference));
@@ -194,7 +190,9 @@ export default function RequestDetail({
                 {request.workOrder.costCents ? (
                   <div className="flex justify-between text-footnote">
                     <dt className="text-fg-muted">Cost</dt>
-                    <dd className="tnum font-medium text-fg">{money(request.workOrder.costCents)}</dd>
+                    <dd className="tnum font-medium text-fg">
+                      {money(request.workOrder.costCents)}
+                    </dd>
                   </div>
                 ) : null}
               </dl>

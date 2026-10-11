@@ -14,10 +14,12 @@ import { createLimiter, type Limiter } from "@/lib/rate-limit";
 
 process.env.RESEND_API_KEY = "re_test_unit";
 
-const send = vi.fn<(message: { to: string }) => Promise<{ data: { id: string }; error: null }>>(async () => ({
-  data: { id: "email-1" },
-  error: null,
-}));
+const send = vi.fn<(message: { to: string }) => Promise<{ data: { id: string }; error: null }>>(
+  async () => ({
+    data: { id: "email-1" },
+    error: null,
+  }),
+);
 vi.mock("resend", () => ({
   Resend: class {
     emails = { send };
@@ -30,7 +32,10 @@ let turnsAllowed = Infinity;
 const turn = vi.fn(async () => undefined);
 vi.mock("@/lib/email/pace", async (original) => {
   const real = await original<typeof import("@/lib/email/pace")>();
-  return { ...real, createPacer: () => ({ turn, outOfTime: () => turn.mock.calls.length >= turnsAllowed }) };
+  return {
+    ...real,
+    createPacer: () => ({ turn, outOfTime: () => turn.mock.calls.length >= turnsAllowed }),
+  };
 });
 
 // The route's own limiter and its own arithmetic, with the ceiling held
@@ -47,7 +52,13 @@ vi.mock("@/lib/email/invite-limit", async (original) => {
   };
 });
 
-type Member = { unit_id: string; full_name: string; invited_email: string | null; profile_id: string | null; units: { label: string } };
+type Member = {
+  unit_id: string;
+  full_name: string;
+  invited_email: string | null;
+  profile_id: string | null;
+  units: { label: string };
+};
 let members: Member[] = [];
 let logged: { to_email: string; subject: string; unit_id: string | null }[] = [];
 
@@ -55,7 +66,15 @@ const fake = createFakeSupabase({
   "auth.getUser": { data: { user: { id: "profile-board" } } },
   rpc: { data: true },
   memberships: () => ({ data: members, error: null }),
-  associations: { data: { name: "Maple Court HOA", join_code: "MAPLE1", slug: "maple-court", city: "Bothell", state: "WA" } },
+  associations: {
+    data: {
+      name: "Maple Court HOA",
+      join_code: "MAPLE1",
+      slug: "maple-court",
+      city: "Bothell",
+      state: "WA",
+    },
+  },
   // email_log is read a page at a time by the repeat guard.
   "email_log.select": (call) => {
     const [from, to] = call.argsOf("range") as [number, number];
@@ -63,8 +82,14 @@ const fake = createFakeSupabase({
   },
   // A send that went is what the next press's repeat guard reads back.
   "email_log.insert": (call) => {
-    const row = call.argsOf("insert")![0] as { to_email: string; subject: string; unit_id: string | null; error: string | null };
-    if (!row.error) logged.push({ to_email: row.to_email, subject: row.subject, unit_id: row.unit_id });
+    const row = call.argsOf("insert")![0] as {
+      to_email: string;
+      subject: string;
+      unit_id: string | null;
+      error: string | null;
+    };
+    if (!row.error)
+      logged.push({ to_email: row.to_email, subject: row.subject, unit_id: row.unit_id });
     return { error: null };
   },
 });
@@ -86,7 +111,13 @@ function invite(unitIds: string[]) {
 }
 
 function household(n: number): Member {
-  return { unit_id: `unit-${n}`, full_name: `Owner ${n}`, invited_email: `owner${n}@example.com`, profile_id: null, units: { label: String(n) } };
+  return {
+    unit_id: `unit-${n}`,
+    full_name: `Owner ${n}`,
+    invited_email: `owner${n}@example.com`,
+    profile_id: null,
+    units: { label: String(n) },
+  };
 }
 
 const subjectFor = (n: number) => `Your home at ${n} is ready on Your HOAsis`;
@@ -112,7 +143,10 @@ describe("inviting a batch of households", () => {
     const response = await POST(invite(["unit-1", "unit-2", "unit-3"]));
     // Counted on its own: `skipped` is a household with no address.
     expect(await response.json()).toMatchObject({ sent: 2, skipped: 0, already: 1 });
-    expect(send.mock.calls.map(([message]) => message.to)).toEqual(["owner2@example.com", "owner3@example.com"]);
+    expect(send.mock.calls.map(([message]) => message.to)).toEqual([
+      "owner2@example.com",
+      "owner3@example.com",
+    ]);
   });
 
   it("stops with an answer when time is up, and says sending again is safe", async () => {
@@ -122,7 +156,9 @@ describe("inviting a batch of households", () => {
     expect(response.status).toBe(200);
     expect(send).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({ sent: 1, remaining: 2, failed: 2 });
-    expect(result.errors[0]).toMatch(/^Stopped at the time limit\. 2 people were not reached\. Send again/);
+    expect(result.errors[0]).toMatch(
+      /^Stopped at the time limit\. 2 people were not reached\. Send again/,
+    );
   });
 });
 
@@ -146,7 +182,10 @@ describe("the hourly ceiling over a batch finished in several presses", () => {
     // fourth asked for a total of eight hundred and was refused, with fifty
     // homes still waiting.
     members = Array.from({ length: 200 }, (_, i) => household(i + 1));
-    const answers = await pressUntilDone(members.map((m) => m.unit_id), 50);
+    const answers = await pressUntilDone(
+      members.map((m) => m.unit_id),
+      50,
+    );
     expect(answers.map((a) => a.status)).toEqual([200, 200, 200, 200]);
     expect(answers.map((a) => a.sent)).toEqual([50, 50, 50, 50]);
     expect(answers.map((a) => a.remaining)).toEqual([150, 100, 50, 0]);

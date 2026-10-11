@@ -132,17 +132,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     demoActivity,
   };
 
-  const {
-    mySeats,
-    account,
-    chooseHome,
-    signIn,
-    signOut,
-    setView,
-    setCommunity,
-    can,
-    sees,
-  } = useSessionActions(baseDeps);
+  const { mySeats, account, chooseHome, signIn, signOut, setView, setCommunity, can, sees } =
+    useSessionActions(baseDeps);
 
   const deps: AppDeps = { ...baseDeps, mySeats, account, can };
 
@@ -261,22 +252,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     castVote,
   } = useMeetingsActions({ ...deps, addAnnouncement });
 
-  const {
-    setWorkOrder,
-    addRequest,
-    attachFiles,
-    updateRequestStatus,
-    replyToRequest,
-  } = useRequestsActions(deps);
+  const { setWorkOrder, addRequest, attachFiles, updateRequestStatus, replyToRequest } =
+    useRequestsActions(deps);
 
   const { markW9Requested, addVendor, removeVendor } = useVendorsActions(deps);
 
-  const {
-    uploadDocuments,
-    addGoverningArticles,
-    setDocumentVisibility,
-    removeDocument,
-  } = useDocumentsActions(deps);
+  const { uploadDocuments, addGoverningArticles, setDocumentVisibility, removeDocument } =
+    useDocumentsActions(deps);
 
   const liveCommunity = useMemo<Community>(
     () => ({
@@ -358,7 +340,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     community: community_,
     communities: remote.community
       ? remote.associations.map((a) => ({ id: a.id, label: a.name, place: a.place, slug: a.slug }))
-      : communityList.map((c) => ({ id: c.id, label: c.label, place: c.association.addressLine, slug: c.id })),
+      : communityList.map((c) => ({
+          id: c.id,
+          label: c.label,
+          place: c.association.addressLine,
+          slug: c.id,
+        })),
     setCommunity,
     account,
     mySeats,

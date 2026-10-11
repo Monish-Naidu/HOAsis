@@ -14,7 +14,8 @@ import { MODULES, moduleOffCopy, moduleOn } from "@/lib/modules";
 describe("modules", () => {
   it("names every board route it hides", () => {
     for (const route of BOARD_ROUTES) {
-      if (route.module) expect(MODULES[route.module], `${route.href} names an unknown module`).toBeTruthy();
+      if (route.module)
+        expect(MODULES[route.module], `${route.href} names an unknown module`).toBeTruthy();
     }
   });
 
@@ -38,10 +39,23 @@ describe("modules", () => {
     // Monish, 2026-09-19: Vendors, Reserves, Documents, Settings and Forum
     // stay. Compliance and shared costs wait. Flipping one of these is a
     // product decision, so the test names them.
-    for (const key of ["vendors", "reserves", "documents", "settings", "forum", "voting", "notices"] as const) {
+    for (const key of [
+      "vendors",
+      "reserves",
+      "documents",
+      "settings",
+      "forum",
+      "voting",
+      "notices",
+    ] as const) {
       expect(MODULES[key].on, `${key} should be on`).toBe(true);
     }
-    for (const key of ["compliance", "shared-costs", "enforcement-full", "resident-report"] as const) {
+    for (const key of [
+      "compliance",
+      "shared-costs",
+      "enforcement-full",
+      "resident-report",
+    ] as const) {
       expect(MODULES[key].on, `${key} should be off`).toBe(false);
     }
   });

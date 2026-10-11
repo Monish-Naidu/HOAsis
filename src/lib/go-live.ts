@@ -24,16 +24,9 @@ import { homeCount } from "@/lib/metrics";
  * because it is the one place the seven questions are answered together.
  */
 
-export type GoLiveKey =
-  | "roster"
-  | "dues"
-  | "stripe"
-  | "first-bill"
-  | "invites"
-  | "joined"
-  | "billing";
+type GoLiveKey = "roster" | "dues" | "stripe" | "first-bill" | "invites" | "joined" | "billing";
 
-export interface GoLiveItem {
+interface GoLiveItem {
   key: GoLiveKey;
   label: string;
   /** What the records say, in one line. */
@@ -84,7 +77,8 @@ export function billingStatus(community: Community, today: ISODate) {
       : phase?.phase === "ended"
         ? `The free days ended ${formatDate(phase.endsOn, "long")}`
         : "The free period starts when you create the association";
-  const urgent = !done && (phase?.phase === "ended" || (phase?.phase === "trialing" && phase.closing));
+  const urgent =
+    !done && (phase?.phase === "ended" || (phase?.phase === "trialing" && phase.closing));
   return { phase, done, detail, urgent: Boolean(urgent) };
 }
 
@@ -113,9 +107,13 @@ export function goLiveChecklist(community: Community, today: ISODate): GoLive {
 
   const reachable = named.filter((o) => o.email.trim());
   const invitesSent = community.emailLog.some((e) => e.category === "invite" && !e.error);
-  const residents = community.accounts.filter((acct) => acct.role === "resident" || acct.homeId !== president?.id);
+  const residents = community.accounts.filter(
+    (acct) => acct.role === "resident" || acct.homeId !== president?.id,
+  );
   const joined = residents.length > 0;
-  const invitesDone = invitesSent || (reachable.length > 0 && reachable.every((o) => residents.some((r) => r.homeId === o.id)));
+  const invitesDone =
+    invitesSent ||
+    (reachable.length > 0 && reachable.every((o) => residents.some((r) => r.homeId === o.id)));
 
   const billing = billingStatus(community, today);
   const billingDone = billing.done;

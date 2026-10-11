@@ -1,6 +1,16 @@
 import { useCallback } from "react";
 import type { Community } from "@/lib/data/community";
-import { type AppDeps, destructive, isUuid, logDemoActivity, newId, remoteWrite, sessionStore, sliceStore, ValidationError } from "./core";
+import {
+  type AppDeps,
+  destructive,
+  isUuid,
+  logDemoActivity,
+  newId,
+  remoteWrite,
+  sessionStore,
+  sliceStore,
+  ValidationError,
+} from "./core";
 import { addDays, money, todayIsoDate } from "@/lib/utils";
 import { WRITE_TIMEOUT_MS } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -8,8 +18,20 @@ import type { Json } from "@/lib/supabase/database.types";
 import type { AutopayPlan, BankAccount, VendorInvoice } from "@/lib/types";
 import { canReverse, correctionCents, reversalLine, withReversals } from "@/lib/ledger-corrections";
 import { chargeProblem } from "@/lib/payments/charges";
-import { MANUAL_METHOD_LABEL, type ManualMethod, manualPaymentLabel, type PaymentInstrument } from "@/lib/payments/instruments";
-import { type HandMethod, type ManualPaymentRow, pairManualPayments, parseManualLabel, recentManualPayments, reversalReasonProblem } from "@/lib/payments/manual-payments";
+import {
+  MANUAL_METHOD_LABEL,
+  type ManualMethod,
+  manualPaymentLabel,
+  type PaymentInstrument,
+} from "@/lib/payments/instruments";
+import {
+  type HandMethod,
+  type ManualPaymentRow,
+  pairManualPayments,
+  parseManualLabel,
+  recentManualPayments,
+  reversalReasonProblem,
+} from "@/lib/payments/manual-payments";
 import { placeLabel } from "@/lib/wording";
 import { addStatementLine } from "@/lib/statement";
 import { activityWords } from "@/lib/activity";
@@ -39,13 +61,15 @@ export function useMoneyActions(deps: AppDeps) {
       }
       const rc = remote.community;
       void remoteWrite("Connecting the account", () =>
-        supabaseBrowser().from("bank_accounts").insert({
-          id: isUuid(account.id) ? account.id : newId(),
-          association_id: rc.id,
-          kind: account.kind,
-          institution: account.institution,
-          mask: account.mask,
-        }),
+        supabaseBrowser()
+          .from("bank_accounts")
+          .insert({
+            id: isUuid(account.id) ? account.id : newId(),
+            association_id: rc.id,
+            kind: account.kind,
+            institution: account.institution,
+            mask: account.mask,
+          }),
       );
     },
     [remote.community, communityId],
@@ -341,7 +365,9 @@ export function useMoneyActions(deps: AppDeps) {
             amountCents,
             balanceAfterCents: balanceAfter,
           },
-          ...(all[paidHomeId] ?? []).map((l) => (l.id === paymentId ? { ...l, reversed: true } : l)),
+          ...(all[paidHomeId] ?? []).map((l) =>
+            l.id === paymentId ? { ...l, reversed: true } : l,
+          ),
         ],
       }));
       homes.update((all) =>
@@ -506,10 +532,15 @@ export function useMoneyActions(deps: AppDeps) {
       const home = sliceStore(communityId, "homes")
         .getSnapshot()
         .find((o) => o.id === input.homeId);
-      logDemoActivity(communityId, "charge", activityWords.credit(input.amountCents, home?.unit ?? "a home", reason), {
-        unit_id: input.homeId,
-        home: home?.unit,
-      });
+      logDemoActivity(
+        communityId,
+        "charge",
+        activityWords.credit(input.amountCents, home?.unit ?? "a home", reason),
+        {
+          unit_id: input.homeId,
+          home: home?.unit,
+        },
+      );
       const balanceAfter = (home?.balanceCents ?? 0) - input.amountCents;
       sliceStore(communityId, "homeCharges").update((all) => ({
         ...all,
@@ -677,7 +708,9 @@ export function useMoneyActions(deps: AppDeps) {
       ]);
       sliceStore(communityId, "bankAccounts").update((all) =>
         all.map((a) =>
-          a.id === accountId ? { ...a, balanceCents: a.balanceCents - earlier + input.amountCents } : a,
+          a.id === accountId
+            ? { ...a, balanceCents: a.balanceCents - earlier + input.amountCents }
+            : a,
         ),
       );
       return true;
@@ -692,39 +725,49 @@ export function useMoneyActions(deps: AppDeps) {
         // difference rather than a delete and a rewrite (0106), so the
         // statement shows both and the balance view sums them.
         const rc = remote.community;
-        return remoteWrite("Saving opening balances", async () => {
-          const supabase = supabaseBrowser();
-          const { data, error: readError } = await supabase
-            .from("charges")
-            .select("unit_id, amount_cents, due_on")
-            .eq("association_id", rc.id)
-            .eq("label", "Balance brought forward");
-          if (readError) throw new Error(readError.message);
-          const held = (data ?? []) as { unit_id: string; amount_cents: number; due_on: string }[];
-          for (const { homeId, amountCents } of balances) {
-            const mine = held.filter((row) => row.unit_id === homeId);
-            const delta = correctionCents(
-              mine.map((row) => row.amount_cents),
-              amountCents,
-            );
-            if (delta === 0) {
-              // The same figure under a new date would be an edit to the old line.
-              if (mine.some((row) => row.due_on !== asOf)) {
-                throw new Error("an opening balance keeps its date. Change the amount to correct it");
+        return remoteWrite(
+          "Saving opening balances",
+          async () => {
+            const supabase = supabaseBrowser();
+            const { data, error: readError } = await supabase
+              .from("charges")
+              .select("unit_id, amount_cents, due_on")
+              .eq("association_id", rc.id)
+              .eq("label", "Balance brought forward");
+            if (readError) throw new Error(readError.message);
+            const held = (data ?? []) as {
+              unit_id: string;
+              amount_cents: number;
+              due_on: string;
+            }[];
+            for (const { homeId, amountCents } of balances) {
+              const mine = held.filter((row) => row.unit_id === homeId);
+              const delta = correctionCents(
+                mine.map((row) => row.amount_cents),
+                amountCents,
+              );
+              if (delta === 0) {
+                // The same figure under a new date would be an edit to the old line.
+                if (mine.some((row) => row.due_on !== asOf)) {
+                  throw new Error(
+                    "an opening balance keeps its date. Change the amount to correct it",
+                  );
+                }
+                continue;
               }
-              continue;
+              const { error } = await supabase.from("charges").insert({
+                association_id: rc.id,
+                unit_id: homeId,
+                kind: delta > 0 ? "charge" : "credit",
+                label: "Balance brought forward",
+                amount_cents: delta,
+                due_on: asOf,
+              });
+              if (error) throw new Error(error.message);
             }
-            const { error } = await supabase.from("charges").insert({
-              association_id: rc.id,
-              unit_id: homeId,
-              kind: delta > 0 ? "charge" : "credit",
-              label: "Balance brought forward",
-              amount_cents: delta,
-              due_on: asOf,
-            });
-            if (error) throw new Error(error.message);
-          }
-        }, { timeoutMs: WRITE_TIMEOUT_MS + balances.length * 1_000 });
+          },
+          { timeoutMs: WRITE_TIMEOUT_MS + balances.length * 1_000 },
+        );
       }
       const byHome = new Map(balances.map((b) => [b.homeId, b.amountCents]));
 
@@ -745,9 +788,7 @@ export function useMoneyActions(deps: AppDeps) {
       sliceStore(communityId, "homeCharges").update((all) => {
         const next = { ...all };
         for (const { homeId, amountCents } of balances) {
-          const existing = (next[homeId] ?? []).filter(
-            (line) => line.id !== `${homeId}-opening`,
-          );
+          const existing = (next[homeId] ?? []).filter((line) => line.id !== `${homeId}-opening`);
           if (amountCents === 0) {
             next[homeId] = existing;
             continue;
@@ -795,9 +836,7 @@ export function useMoneyActions(deps: AppDeps) {
       if (!me) return Promise.resolve(false);
       sliceStore(communityId, "homes").update((all) =>
         all.map((o) =>
-          o.id === me.homeId
-            ? { ...o, autopay: Boolean(plan), autopayPlan: plan ?? undefined }
-            : o,
+          o.id === me.homeId ? { ...o, autopay: Boolean(plan), autopayPlan: plan ?? undefined } : o,
         ),
       );
       return Promise.resolve(true);
@@ -961,16 +1000,18 @@ export function useMoneyActions(deps: AppDeps) {
           return {
             undo: () => {
               void remoteWrite("Putting the transaction back", () =>
-                supabaseBrowser().from("ledger_entries").insert({
-                  association_id: rc.id,
-                  bank_account_id: isUuid(entry.accountId) ? entry.accountId : null,
-                  occurred_on: entry.date,
-                  description: entry.description,
-                  counterparty: entry.counterparty,
-                  category: entry.category,
-                  amount_cents: entry.amountCents,
-                  confirmed_at: null,
-                }),
+                supabaseBrowser()
+                  .from("ledger_entries")
+                  .insert({
+                    association_id: rc.id,
+                    bank_account_id: isUuid(entry.accountId) ? entry.accountId : null,
+                    occurred_on: entry.date,
+                    description: entry.description,
+                    counterparty: entry.counterparty,
+                    category: entry.category,
+                    amount_cents: entry.amountCents,
+                    confirmed_at: null,
+                  }),
               );
             },
           };
@@ -1004,7 +1045,8 @@ export function useMoneyActions(deps: AppDeps) {
 
   const recordReserveTransfer = useCallback(
     (amountCents: number, date: string) => {
-      if (amountCents <= 0) throw new ValidationError("Enter an amount", { amount: "Enter an amount" });
+      if (amountCents <= 0)
+        throw new ValidationError("Enter an amount", { amount: "Enter an amount" });
       const source = remote.community ?? null;
       const accounts = source ? source.bankAccounts : bankAccountList;
       const operating = accounts.find((b) => b.kind === "operating");
@@ -1013,23 +1055,35 @@ export function useMoneyActions(deps: AppDeps) {
         throw new ValidationError("Add an operating and a reserve account first", {});
       }
       const pair = [
-        { accountId: operating.id, amountCents: -amountCents, description: "Transfer to reserve account", counterparty: reserve.name },
-        { accountId: reserve.id, amountCents, description: "Transfer from operating account", counterparty: operating.name },
+        {
+          accountId: operating.id,
+          amountCents: -amountCents,
+          description: "Transfer to reserve account",
+          counterparty: reserve.name,
+        },
+        {
+          accountId: reserve.id,
+          amountCents,
+          description: "Transfer from operating account",
+          counterparty: operating.name,
+        },
       ];
       if (source) {
         void remoteWrite("Recording the transfer", () =>
-          supabaseBrowser().from("ledger_entries").insert(
-            pair.map((line) => ({
-              association_id: source.id,
-              bank_account_id: isUuid(line.accountId) ? line.accountId : null,
-              occurred_on: date,
-              description: line.description,
-              counterparty: line.counterparty,
-              category: "Reserve transfer",
-              amount_cents: line.amountCents,
-              confirmed_at: new Date().toISOString(),
-            })),
-          ),
+          supabaseBrowser()
+            .from("ledger_entries")
+            .insert(
+              pair.map((line) => ({
+                association_id: source.id,
+                bank_account_id: isUuid(line.accountId) ? line.accountId : null,
+                occurred_on: date,
+                description: line.description,
+                counterparty: line.counterparty,
+                category: "Reserve transfer",
+                amount_cents: line.amountCents,
+                confirmed_at: new Date().toISOString(),
+              })),
+            ),
         );
         return;
       }
@@ -1106,7 +1160,8 @@ export function useMoneyActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         const payout = rc.payouts.find((p) => p.id === payoutId);
-        if (!payout || (payout.status !== "scheduled" && payout.status !== "in-transit")) return false;
+        if (!payout || (payout.status !== "scheduled" && payout.status !== "in-transit"))
+          return false;
         return remoteWrite("Marking the payment paid", async () => {
           const supabase = supabaseBrowser();
           // Only a payment still waiting to go out: a second press, or another
@@ -1124,7 +1179,9 @@ export function useMoneyActions(deps: AppDeps) {
             association_id: rc.id,
             bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
             occurred_on: today,
-            description: payout.invoiceNumber ? `${payout.vendor}, ${payout.invoiceNumber}` : payout.vendor,
+            description: payout.invoiceNumber
+              ? `${payout.vendor}, ${payout.invoiceNumber}`
+              : payout.vendor,
             counterparty: payout.vendor,
             category: vendor?.defaultCategory ?? "Vendors",
             amount_cents: -payout.amountCents,
@@ -1132,9 +1189,14 @@ export function useMoneyActions(deps: AppDeps) {
           });
         });
       }
-      const payout = sliceStore(communityId, "payouts").getSnapshot().find((p) => p.id === payoutId);
-      if (!payout || (payout.status !== "scheduled" && payout.status !== "in-transit")) return false;
-      const vendor = sliceStore(communityId, "vendors").getSnapshot().find((v) => v.id === payout.vendorId);
+      const payout = sliceStore(communityId, "payouts")
+        .getSnapshot()
+        .find((p) => p.id === payoutId);
+      if (!payout || (payout.status !== "scheduled" && payout.status !== "in-transit"))
+        return false;
+      const vendor = sliceStore(communityId, "vendors")
+        .getSnapshot()
+        .find((v) => v.id === payout.vendorId);
       const operating = sliceStore(communityId, "bankAccounts")
         .getSnapshot()
         .find((a) => a.kind === "operating");
@@ -1158,7 +1220,9 @@ export function useMoneyActions(deps: AppDeps) {
           {
             id: `le-${payoutId}`,
             date: today,
-            description: payout.invoiceNumber ? `${payout.vendor}, ${payout.invoiceNumber}` : payout.vendor,
+            description: payout.invoiceNumber
+              ? `${payout.vendor}, ${payout.invoiceNumber}`
+              : payout.vendor,
             counterparty: payout.vendor,
             category,
             accountId: operating?.id ?? "unassigned",
@@ -1249,7 +1313,9 @@ export function useMoneyActions(deps: AppDeps) {
       const entry: Community["ledger"][number] = {
         id: `le-${payout.id}`,
         date: payout.issuedDate,
-        description: payout.invoiceNumber ? `${payout.vendor}, ${payout.invoiceNumber}` : payout.vendor,
+        description: payout.invoiceNumber
+          ? `${payout.vendor}, ${payout.invoiceNumber}`
+          : payout.vendor,
         counterparty: payout.vendor,
         category,
         accountId: operating?.id ?? "unassigned",
@@ -1262,13 +1328,17 @@ export function useMoneyActions(deps: AppDeps) {
       if (operating) {
         sliceStore(communityId, "bankAccounts").update((all) =>
           all.map((acct) =>
-            acct.id === operating.id ? { ...acct, balanceCents: acct.balanceCents - payout.amountCents } : acct,
+            acct.id === operating.id
+              ? { ...acct, balanceCents: acct.balanceCents - payout.amountCents }
+              : acct,
           ),
         );
       }
       if (vendor && payout.issuedDate.slice(0, 4) === todayIsoDate().slice(0, 4)) {
         sliceStore(communityId, "vendors").update((all) =>
-          all.map((v) => (v.id === vendor.id ? { ...v, ytdPaidCents: v.ytdPaidCents + payout.amountCents } : v)),
+          all.map((v) =>
+            v.id === vendor.id ? { ...v, ytdPaidCents: v.ytdPaidCents + payout.amountCents } : v,
+          ),
         );
       }
       sliceStore(communityId, "budget").update((all) =>
@@ -1311,7 +1381,9 @@ export function useMoneyActions(deps: AppDeps) {
     (invoiceId: string) => {
       invoicesLocalOnly();
       sliceStore(communityId, "invoices").update((all) =>
-        all.map((i) => (i.id === invoiceId && i.status === "new" ? { ...i, status: "approved" } : i)),
+        all.map((i) =>
+          i.id === invoiceId && i.status === "new" ? { ...i, status: "approved" } : i,
+        ),
       );
     },
     [invoicesLocalOnly, communityId],
@@ -1343,9 +1415,13 @@ export function useMoneyActions(deps: AppDeps) {
       const operating =
         sliceStore(communityId, "bankAccounts")
           .getSnapshot()
-          .find((a) => a.kind === "operating") ?? sliceStore(communityId, "bankAccounts").getSnapshot()[0];
+          .find((a) => a.kind === "operating") ??
+        sliceStore(communityId, "bankAccounts").getSnapshot()[0];
       if (!operating) {
-        throw new ValidationError("Connect the association's bank account before paying a bill", {});
+        throw new ValidationError(
+          "Connect the association's bank account before paying a bill",
+          {},
+        );
       }
       const me = sliceStore(communityId, "accounts")
         .getSnapshot()
@@ -1438,17 +1514,19 @@ export function useMoneyActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the component", () =>
-          supabaseBrowser().from("reserve_components").insert({
-            id: isUuid(component.id) ? component.id : newId(),
-            association_id: rc.id,
-            name: component.name,
-            useful_life_years: component.usefulLifeYears,
-            remaining_life_years: component.remainingLifeYears,
-            replacement_cost_cents: component.replacementCostCents,
-            funded_cents: component.fundedCents,
-            last_inspection: component.lastInspection ?? null,
-            note: component.note ?? null,
-          }),
+          supabaseBrowser()
+            .from("reserve_components")
+            .insert({
+              id: isUuid(component.id) ? component.id : newId(),
+              association_id: rc.id,
+              name: component.name,
+              useful_life_years: component.usefulLifeYears,
+              remaining_life_years: component.remainingLifeYears,
+              replacement_cost_cents: component.replacementCostCents,
+              funded_cents: component.fundedCents,
+              last_inspection: component.lastInspection ?? null,
+              note: component.note ?? null,
+            }),
         );
         return;
       }
@@ -1462,18 +1540,20 @@ export function useMoneyActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the shared cost", () =>
-          supabaseBrowser().from("shared_costs").insert({
-            id: isUuid(cost.id) ? cost.id : newId(),
-            association_id: rc.id,
-            name: cost.name,
-            kind: cost.kind,
-            provider: cost.provider,
-            account_ref: cost.accountRef,
-            allocation: cost.allocation,
-            markup_percent: cost.markupPercent,
-            active: cost.active,
-            usage_unit: cost.usageUnit,
-          }),
+          supabaseBrowser()
+            .from("shared_costs")
+            .insert({
+              id: isUuid(cost.id) ? cost.id : newId(),
+              association_id: rc.id,
+              name: cost.name,
+              kind: cost.kind,
+              provider: cost.provider,
+              account_ref: cost.accountRef,
+              allocation: cost.allocation,
+              markup_percent: cost.markupPercent,
+              active: cost.active,
+              usage_unit: cost.usageUnit,
+            }),
         );
         return;
       }

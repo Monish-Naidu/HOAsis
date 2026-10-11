@@ -61,11 +61,22 @@ export function HomeSwitcher({
   );
 }
 
-function HomeList({ place, onClose }: { place: { left: number; top: number }; onClose: () => void }) {
+function HomeList({
+  place,
+  onClose,
+}: {
+  place: { left: number; top: number };
+  onClose: () => void;
+}) {
   const { mySeats, account, community, chooseHome } = useAppState();
   return createPortal(
     <>
-      <button type="button" aria-label="Close" className="fixed inset-0 z-40 cursor-default" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Close"
+        className="fixed inset-0 z-40 cursor-default"
+        onClick={onClose}
+      />
       <ul
         role="listbox"
         aria-label="Your homes"

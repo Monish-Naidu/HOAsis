@@ -111,7 +111,8 @@ export function duesSourceLabel(
 ): string {
   const source = duesSource(association, home);
   if (source === "own") return "its own amount";
-  if (source === "kind" && home?.homeType) return `${HOME_TYPE_LABEL[home.homeType].one.toLowerCase()} rate`;
+  if (source === "kind" && home?.homeType)
+    return `${HOME_TYPE_LABEL[home.homeType].one.toLowerCase()} rate`;
   return "the association's rate";
 }
 

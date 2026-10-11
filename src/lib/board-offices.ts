@@ -1,4 +1,10 @@
-import { ROLE_LABEL, type Account, type MessageThread, type Office, type ThreadAddress } from "./types";
+import {
+  ROLE_LABEL,
+  type Account,
+  type MessageThread,
+  type Office,
+  type ThreadAddress,
+} from "./types";
 
 /**
  * The offices an owner can write to, and the rules that follow from it.
@@ -65,7 +71,10 @@ export function officeOf(role: Account["role"] | undefined): Office | null {
  * to the board as a whole, which is everyone's. A viewer with no office sees
  * only the board's.
  */
-export function isMine(thread: Pick<MessageThread, "toRole">, viewer: Account["role"] | undefined): boolean {
+export function isMine(
+  thread: Pick<MessageThread, "toRole">,
+  viewer: Account["role"] | undefined,
+): boolean {
   return thread.toRole === "board" || thread.toRole === officeOf(viewer);
 }
 
@@ -94,7 +103,10 @@ export function unansweredByAddress(
  * "Dana Whitcomb, for the board" for a seat with no office. A message with
  * no name is the board.
  */
-export function boardSignature(name: string | undefined, office: Office | null | undefined): string {
+export function boardSignature(
+  name: string | undefined,
+  office: Office | null | undefined,
+): string {
   const who = (name ?? "").trim();
   if (!who) return office ? `${ROLE_LABEL[office]}, for the board` : "The board";
   return office ? `${who}, ${ROLE_LABEL[office]}, for the board` : `${who}, for the board`;

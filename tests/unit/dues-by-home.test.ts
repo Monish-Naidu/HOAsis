@@ -46,7 +46,9 @@ describe("what a home pays", () => {
 
   it("goes back to the kind's or the association's when the home's own is cleared", () => {
     expect(homeDues(association, { homeType: "condos", duesCents: undefined })).toBe(30_000);
-    expect(homeDues({ duesCents: 21_000 }, { homeType: "condos", duesCents: undefined })).toBe(21_000);
+    expect(homeDues({ duesCents: 21_000 }, { homeType: "condos", duesCents: undefined })).toBe(
+      21_000,
+    );
   });
 
   it("reads a zero as not set, as the database does", () => {
@@ -59,7 +61,9 @@ describe("what a home pays", () => {
     expect(duesSource(association, { homeType: "condos" })).toBe("kind");
     expect(duesSource(association, { homeType: "townhomes" })).toBe("association");
     // A kind set to the association's own amount is just the association's.
-    expect(duesSource({ duesCents: 21_000, duesByType: { condos: 21_000 } }, { homeType: "condos" })).toBe("association");
+    expect(
+      duesSource({ duesCents: 21_000, duesByType: { condos: 21_000 } }, { homeType: "condos" }),
+    ).toBe("association");
     expect(duesSourceLabel(association, { duesCents: 5 })).toBe("its own amount");
     expect(duesSourceLabel(association, { homeType: "condos" })).toBe("condo rate");
     expect(duesSourceLabel(association, {})).toBe("the association's rate");
@@ -244,11 +248,14 @@ describe("the Dues column", () => {
     expect(rows[5].problems).toEqual([]);
   });
 
-  it.each(["Assessment", "Monthly dues", "Monthly Assessment", "dues"])("is also called %s", (header) => {
-    const parsed = parseRosterCsv(`Unit,${header}\n1,250`);
-    expect(parsed.columns.dues).toBe(header);
-    expect(parsed.rows[0].duesCents).toBe(25_000);
-  });
+  it.each(["Assessment", "Monthly dues", "Monthly Assessment", "dues"])(
+    "is also called %s",
+    (header) => {
+      const parsed = parseRosterCsv(`Unit,${header}\n1,250`);
+      expect(parsed.columns.dues).toBe(header);
+      expect(parsed.rows[0].duesCents).toBe(25_000);
+    },
+  );
 
   it("is not mistaken for a balance, and a balance is not mistaken for dues", () => {
     const parsed = parseRosterCsv("Unit,Balance due,Dues\n1,40,250");
@@ -275,7 +282,9 @@ describe("the Dues column", () => {
     expect(next.households.find((h) => h.unit === "202")?.duesCents).toBe(34_000);
     expect(finalizeDraft(next).households.find((h) => h.unit === "202")?.duesCents).toBe(34_000);
     // A blank cell adds nothing and does not switch the answer by itself.
-    expect(mergeRoster(draft, parseRosterCsv("Unit,Dues\n102,\n").rows).patch.duesByHome).toBeUndefined();
+    expect(
+      mergeRoster(draft, parseRosterCsv("Unit,Dues\n102,\n").rows).patch.duesByHome,
+    ).toBeUndefined();
   });
 });
 

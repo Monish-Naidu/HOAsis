@@ -16,7 +16,14 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { Callout, Card, CardHeader, IconTile, Stat, type TintName } from "@/components/ui/primitives";
+import {
+  Callout,
+  Card,
+  CardHeader,
+  IconTile,
+  Stat,
+  type TintName,
+} from "@/components/ui/primitives";
 import { CountUp } from "@/components/ui/count-up";
 import { moduleOn } from "@/lib/modules";
 import {
@@ -106,7 +113,10 @@ export default function BoardDashboard() {
         >
           {exposure.rows
             .filter((row) => row.uninsured > 0)
-            .map((row) => `${row.institution} holds ${money(row.balance, { cents: false })} against a ${money(row.limit, { cents: false })} limit.`)
+            .map(
+              (row) =>
+                `${row.institution} holds ${money(row.balance, { cents: false })} against a ${money(row.limit, { cents: false })} limit.`,
+            )
             .join(" ")}
         </Callout>
       ) : null}
@@ -168,9 +178,7 @@ function NeedsYou() {
   // The same count as the Messages badge in the nav.
   const waitingThreads = useUnreadThreadCount();
   const vendors = vendorDecisions(community);
-  const openRequests = requests.filter(
-    (r) => !["approved", "denied", "closed"].includes(r.status),
-  );
+  const openRequests = requests.filter((r) => !["approved", "denied", "closed"].includes(r.status));
   const joins = community.joinRequests.filter((j) => j.status === "pending");
   const saysFixed = community.violations.filter(
     (v) => v.stage !== "cured" && Boolean(v.ownerFixedDate),
@@ -193,7 +201,14 @@ function NeedsYou() {
 
   // Each row wears the tint of the tab it opens, so the eye learns "teal is
   // money, blue is requests" here and finds the same colour on the tab.
-  type NeedRow = { count: number; label: string; href: string; icon: typeof Landmark; tint: TintName; whole?: boolean };
+  type NeedRow = {
+    count: number;
+    label: string;
+    href: string;
+    icon: typeof Landmark;
+    tint: TintName;
+    whole?: boolean;
+  };
   // In the order a board acts: money, then people, then requests, then the
   // board's own loose ends. Each says what to do, not what is the matter.
   const all: NeedRow[] = [
@@ -332,7 +347,11 @@ type CardLink = { href: string; label: string };
  * be pressed on its own. Two anchors cannot nest, so `Stat` is not given an
  * href here.
  */
-function cardHint(lines: (string | null | undefined)[], primary: CardLink | null, secondary?: CardLink | null) {
+function cardHint(
+  lines: (string | null | undefined)[],
+  primary: CardLink | null,
+  secondary?: CardLink | null,
+) {
   return (
     <>
       {lines.filter(Boolean).map((line) => (
@@ -351,7 +370,10 @@ function cardHint(lines: (string | null | undefined)[], primary: CardLink | null
             </Link>
           ) : null}
           {secondary ? (
-            <Link href={secondary.href} className="relative z-10 font-semibold text-primary hover:underline">
+            <Link
+              href={secondary.href}
+              className="relative z-10 font-semibold text-primary hover:underline"
+            >
               {secondary.label}
             </Link>
           ) : null}
@@ -386,8 +408,11 @@ function StatTiles() {
   const meeting = nextMeetingOf(community);
   const live = meeting?.status === "live";
   const status = meeting ? meetingStatus(meeting) : null;
-  const setup = canLink("/board/setup") ? { href: "/board/setup", label: "Open the setup list" } : null;
-  const to = (href: string, label: string): CardLink | null => (canLink(href) ? { href, label } : null);
+  const setup = canLink("/board/setup")
+    ? { href: "/board/setup", label: "Open the setup list" }
+    : null;
+  const to = (href: string, label: string): CardLink | null =>
+    canLink(href) ? { href, label } : null;
 
   // Money tiles only for those who can read the books. Without the finances
   // capability the ledger comes back empty, and "$0, everyone is current"
@@ -407,7 +432,10 @@ function StatTiles() {
             hint={
               first.cash
                 ? cardHint([first.cash], setup)
-                : cardHint([runwayLine(community) ?? "Operating account", reserveLine(community)], to("/board/money", "Open Finances"))
+                : cardHint(
+                    [runwayLine(community) ?? "Operating account", reserveLine(community)],
+                    to("/board/money", "Open Finances"),
+                  )
             }
           />
           <Stat
@@ -425,7 +453,9 @@ function StatTiles() {
                     to("/board/money/collections", "Open Past due"),
                     // Only when the policy says a letter is owed and has not
                     // gone out, the same test as the button on Past due.
-                    ladder.dueNow.length > 0 ? to("/board/homeowners?remind=1", "Send reminders") : null,
+                    ladder.dueNow.length > 0
+                      ? to("/board/homeowners?remind=1", "Send reminders")
+                      : null,
                   )
             }
           />
@@ -437,7 +467,13 @@ function StatTiles() {
             // phone; the longer name wrapped to three lines and pushed its figure
             // below the other tiles'.
             label={`Dues, ${thisYear}`}
-            value={dues.measurable ? <CountUp kind="percent" value={Math.round(dues.rate * 100)} /> : "Not yet"}
+            value={
+              dues.measurable ? (
+                <CountUp kind="percent" value={Math.round(dues.rate * 100)} />
+              ) : (
+                "Not yet"
+              )
+            }
             tone={pace === "behind" ? "warn" : "neutral"}
             hint={
               first.dues
@@ -462,7 +498,10 @@ function StatTiles() {
           icon={<Users className="size-4" />}
           label="Homes signed up"
           value={<CountUp kind="number" value={signedUp} />}
-          hint={cardHint([`of ${pluralize(households, "home")}`], to("/board/homeowners", "Open Homeowners"))}
+          hint={cardHint(
+            [`of ${pluralize(households, "home")}`],
+            to("/board/homeowners", "Open Homeowners"),
+          )}
         />
       )}
       <Stat
@@ -485,7 +524,9 @@ function StatTiles() {
             ? cardHint(
                 [`${meeting.title} \u00b7 ${meeting.time}`, status.line],
                 // An unsent notice is the thing to do; otherwise the page.
-                status.noticeSent || live ? to("/board/meetings", "Open Meetings") : to("/board/meetings", "Send notice"),
+                status.noticeSent || live
+                  ? to("/board/meetings", "Open Meetings")
+                  : to("/board/meetings", "Send notice"),
               )
             : cardHint(["No meeting scheduled"], to("/board/meetings", "Schedule one"))
         }

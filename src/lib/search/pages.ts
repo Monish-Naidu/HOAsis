@@ -57,18 +57,35 @@ const RESIDENT_WORDS: Record<string, string> = {
 };
 
 /** Resident pages that are not tabs but still worth a row. */
-const RESIDENT_EXTRA: { href: string; label: string; words: string; module?: "resident-report" }[] = [
-  { href: "/resident/requests/new", label: "New request", words: "submit ask approval architectural start a request" },
-  { href: "/resident/notices", label: "Notices", words: "violations warnings fines rules" },
-  { href: "/resident/report", label: "Report a problem", words: "issue broken maintenance complaint", module: "resident-report" },
-  {
-    href: "/resident/documents/governing",
-    label: "Governing documents",
-    words: "ccrs bylaws covenants rules declaration",
-  },
-];
+const RESIDENT_EXTRA: { href: string; label: string; words: string; module?: "resident-report" }[] =
+  [
+    {
+      href: "/resident/requests/new",
+      label: "New request",
+      words: "submit ask approval architectural start a request",
+    },
+    { href: "/resident/notices", label: "Notices", words: "violations warnings fines rules" },
+    {
+      href: "/resident/report",
+      label: "Report a problem",
+      words: "issue broken maintenance complaint",
+      module: "resident-report",
+    },
+    {
+      href: "/resident/documents/governing",
+      label: "Governing documents",
+      words: "ccrs bylaws covenants rules declaration",
+    },
+  ];
 
-function pageHit(id: string, title: string, subtitle: string, href: string, keywords: string, extra?: Partial<SearchHit>): SearchHit {
+function pageHit(
+  id: string,
+  title: string,
+  subtitle: string,
+  href: string,
+  keywords: string,
+  extra?: Partial<SearchHit>,
+): SearchHit {
   return {
     id,
     kind: "page",
@@ -125,7 +142,9 @@ export function residentPages(community: Community): SearchHit[] {
       pageHit(
         `page-${tab.href}`,
         name,
-        parent ? `${parent.webLabel ?? parent.label} · ${tab.tab ?? name}` : (tab.blurb ?? "Your account"),
+        parent
+          ? `${parent.webLabel ?? parent.label} · ${tab.tab ?? name}`
+          : (tab.blurb ?? "Your account"),
         tab.href,
         `${RESIDENT_WORDS[tab.href] ?? ""} ${tab.label} ${tab.tab ?? ""} page tab open`,
         { tint: tab.tint ?? TINT.page, icon: tab.icon },
@@ -135,13 +154,22 @@ export function residentPages(community: Community): SearchHit[] {
   for (const p of RESIDENT_EXTRA) {
     if (p.module && !moduleOn(p.module)) continue;
     // A page under a tab is offered only when the tab is.
-    const tab = [...shown].sort((a, b) => b.href.length - a.href.length).find((t) => p.href.startsWith(t.href));
+    const tab = [...shown]
+      .sort((a, b) => b.href.length - a.href.length)
+      .find((t) => p.href.startsWith(t.href));
     if (!tab) continue;
     hits.push(
-      pageHit(`page-${p.href}`, p.label, `${tab.webLabel ?? tab.label}`, p.href, `${p.words} page open`, {
-        tint: tab.tint ?? TINT.page,
-        icon: tab.icon,
-      }),
+      pageHit(
+        `page-${p.href}`,
+        p.label,
+        `${tab.webLabel ?? tab.label}`,
+        p.href,
+        `${p.words} page open`,
+        {
+          tint: tab.tint ?? TINT.page,
+          icon: tab.icon,
+        },
+      ),
     );
   }
   return hits;

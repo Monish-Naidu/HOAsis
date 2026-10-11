@@ -15,7 +15,9 @@ const ORIGIN = "https://yourhoasis.com";
 describe("sameOriginPath", () => {
   it("keeps a path on this site, query and all", () => {
     expect(sameOriginPath("/resident/pay", ORIGIN)).toBe("/resident/pay");
-    expect(sameOriginPath("/c/maple-court/resident?tab=dues#top", ORIGIN)).toBe("/c/maple-court/resident?tab=dues#top");
+    expect(sameOriginPath("/c/maple-court/resident?tab=dues#top", ORIGIN)).toBe(
+      "/c/maple-court/resident?tab=dues#top",
+    );
     expect(sameOriginPath("/auth/reset", ORIGIN)).toBe("/auth/reset");
   });
 
@@ -64,7 +66,9 @@ beforeEach(() => {
 describe("the callback route", () => {
   it("verifies an emailed token and lands on the screen the notice was about", async () => {
     const response = await callback("token_hash=hash_123&type=magiclink&next=%2Fresident%2Fpay");
-    expect(fake.callsTo("auth.verifyOtp")[0].args).toEqual([{ token_hash: "hash_123", type: "magiclink" }]);
+    expect(fake.callsTo("auth.verifyOtp")[0].args).toEqual([
+      { token_hash: "hash_123", type: "magiclink" },
+    ]);
     expect(fake.callsTo("rpc:claim_my_seats")).toHaveLength(1);
     expect(response.headers.get("location")).toBe(`${ORIGIN}/resident/pay`);
   });
@@ -81,7 +85,9 @@ describe("the callback route", () => {
 
   it("sends a link that did not verify to sign in, still bound for the same screen", async () => {
     fake.once("auth.verifyOtp", { error: { message: "Email link is invalid or has expired" } });
-    const response = await callback("token_hash=spent&type=magiclink&next=%2Fc%2Fmaple-court%2Fresident%2Fpay");
+    const response = await callback(
+      "token_hash=spent&type=magiclink&next=%2Fc%2Fmaple-court%2Fresident%2Fpay",
+    );
     const location = new URL(response.headers.get("location")!);
     expect(location.origin).toBe(ORIGIN);
     expect(location.pathname).toBe("/signin");

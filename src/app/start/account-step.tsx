@@ -48,8 +48,7 @@ export function AccountStep({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
-  const input =
-    fieldClass;
+  const input = fieldClass;
 
   const name = draft.founder.name.trim();
   const email = draft.founder.email.trim();
@@ -195,9 +194,9 @@ export function AccountStep({
         .
       </p>
       <p className="text-footnote leading-relaxed text-fg-subtle">
-        Looking around builds a copy in this browser only. It is not saved anywhere else,
-        nobody else can sign in to it, and it is not the association. Come back signed in
-        when you are ready and it takes three minutes.
+        Looking around builds a copy in this browser only. It is not saved anywhere else, nobody
+        else can sign in to it, and it is not the association. Come back signed in when you are
+        ready and it takes three minutes.
       </p>
     </form>
   );
@@ -219,13 +218,17 @@ export function CheckEmailPanel({ draft, email }: { draft: CommunityDraft; email
         Check your email
       </h1>
       <p className="mt-2 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
-        We sent a confirmation link to <span className="font-semibold text-fg">{email}</span>.
-        Open it and {draft.name || "your association"} will be created with everything you
-        just entered.
+        We sent a confirmation link to <span className="font-semibold text-fg">{email}</span>. Open
+        it and {draft.name || "your association"} will be created with everything you just entered.
       </p>
-      <Callout tone="ok" className="mt-6" title="Nothing is lost" icon={<Check className="size-4" />}>
-        Your setup is saved on this device, including {pluralHomes(unitCount(draft))}. You will
-        not be asked to type it again.
+      <Callout
+        tone="ok"
+        className="mt-6"
+        title="Nothing is lost"
+        icon={<Check className="size-4" />}
+      >
+        Your setup is saved on this device, including {pluralHomes(unitCount(draft))}. You will not
+        be asked to type it again.
       </Callout>
     </div>
   );

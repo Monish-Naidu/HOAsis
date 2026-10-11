@@ -58,8 +58,7 @@ export function createLimiter({ limit, windowMs, now = Date.now }: LimiterOption
       const at = now();
       sweep(at);
       const stored = windows.get(key);
-      const current =
-        stored && at - stored.started < windowMs ? stored : { started: at, count: 0 };
+      const current = stored && at - stored.started < windowMs ? stored : { started: at, count: 0 };
       if (current.count + cost > limit) {
         const retryAfterSeconds = Math.max(1, Math.ceil((current.started + windowMs - at) / 1000));
         return { ok: false, retryAfterSeconds, remaining: 0 };

@@ -13,12 +13,12 @@ We charged $4 per home per month. Both direct competitors charge a flat monthly
 rate per size band, and the bands are not expensive.
 
 | Homes | EasyHOA | PayHOA | HOAsis at $4/home | We cost |
-| ---: | ---: | ---: | ---: | :--- |
-| 25 | $49 | $54 | **$100** | 2.0× |
-| 50 | $69 | ~$74 | **$200** | 2.9× |
-| 100 | $89 | ~$99 | **$400** | 4.5× |
-| 150 | $99 | ~$124 | **$600** | 6.1× |
-| 250 | custom | custom | **$1,000** | — |
+| ----: | ------: | -----: | ----------------: | :------ |
+|    25 |     $49 |    $54 |          **$100** | 2.0×    |
+|    50 |     $69 |   ~$74 |          **$200** | 2.9×    |
+|   100 |     $89 |   ~$99 |          **$400** | 4.5×    |
+|   150 |     $99 |  ~$124 |          **$600** | 6.1×    |
+|   250 |  custom | custom |        **$1,000** | —       |
 
 Mehr Meadows, our own demo association, is 88 homes. On the old pricing that
 board would have paid **$352 a month** against EasyHOA's **$89**: $3,156 more a
@@ -31,13 +31,13 @@ are comparing us to EasyHOA's $89, not to a manager's $1,200.
 
 **Decided and shipped, 26 August.** We moved to flat bands:
 
-| Band | HOAsis | EasyHOA | PayHOA |
-| --- | ---: | ---: | ---: |
-| Up to 25 homes | **$39** | $49 | $54 |
-| 26–75 homes | **$69** | $69–89 | ~$74–99 |
-| 76–150 homes | **$109** | $89–99 | ~$99–124 |
-| 151–400 homes | **$179** | custom | custom |
-| 400+ | custom | custom | custom |
+| Band           |   HOAsis | EasyHOA |   PayHOA |
+| -------------- | -------: | ------: | -------: |
+| Up to 25 homes |  **$39** |     $49 |      $54 |
+| 26–75 homes    |  **$69** |  $69–89 |  ~$74–99 |
+| 76–150 homes   | **$109** |  $89–99 | ~$99–124 |
+| 151–400 homes  | **$179** |  custom |   custom |
+| 400+           |   custom |  custom |   custom |
 
 Cheapest at the small end, where self-management is most common and the buyer
 is most price-sensitive. A premium in the middle, where the reserve model
@@ -140,8 +140,8 @@ escalation, and churn. **We already solve it structurally.** Every payment
 applies oldest-charge-first, and `payment_allocations` records exactly which
 charge each dollar cleared. An owner can see it. A board can prove it.
 
-Marketing line: *"Every payment shows which charges it cleared. In writing.
-Oldest first, every time."*
+Marketing line: _"Every payment shows which charges it cleared. In writing.
+Oldest first, every time."_
 
 ### 3. Fee opacity is their second complaint
 
@@ -189,7 +189,7 @@ Here is the gap:
 - **The utility billing vendors do not do the association's books.** They produce an
   allocation file and hand it back. Reconciliation, statements, delinquency and
   reserves are somebody else's problem.
-- **The HOA platforms do not do utilities.** PayHOA supports a *separate account*
+- **The HOA platforms do not do utilities.** PayHOA supports a _separate account_
   for utility expenses and recommends tracking them there, which is bookkeeping
   advice, not a feature. Neither PayHOA nor EasyHOA allocates a provider bill across
   homes, publishes the provider's name to owners, or shows what a utility has cost
@@ -233,17 +233,17 @@ legal pass.
 
 Listing these plainly because pretending otherwise wastes our own time.
 
-| Gap | They have it | Severity |
-| --- | --- | --- |
-| **Price** | Both | **Existential** |
-| Live bank feed | Both | High. Our reconciliation story needs it to be true. |
-| Chart of accounts | Both | High. An accountant will ask. |
-| Violation tracking | PayHOA | Medium. Common board job we do not do. |
-| SMS | EasyHOA (unlimited) | Medium. Boards ask for it. |
-| Community website | EasyHOA | Medium. We have the pieces. |
-| Phone system | EasyHOA | Low. Odd, sticky, expensive to build. |
-| Payments actually working | Both | **Existential.** Ours is not wired to Stripe yet. |
-| Track record | Both, since 2018 | High and slow to fix. |
+| Gap                       | They have it        | Severity                                            |
+| ------------------------- | ------------------- | --------------------------------------------------- |
+| **Price**                 | Both                | **Existential**                                     |
+| Live bank feed            | Both                | High. Our reconciliation story needs it to be true. |
+| Chart of accounts         | Both                | High. An accountant will ask.                       |
+| Violation tracking        | PayHOA              | Medium. Common board job we do not do.              |
+| SMS                       | EasyHOA (unlimited) | Medium. Boards ask for it.                          |
+| Community website         | EasyHOA             | Medium. We have the pieces.                         |
+| Phone system              | EasyHOA             | Low. Odd, sticky, expensive to build.               |
+| Payments actually working | Both                | **Existential.** Ours is not wired to Stripe yet.   |
+| Track record              | Both, since 2018    | High and slow to fix.                               |
 
 ---
 
@@ -386,14 +386,14 @@ this. Charging for it would be ugly and possibly unlawful.
 
 ### Rough picture, 100 homes
 
-| Line | Annual | Confidence |
-| --- | ---: | --- |
-| Subscription ($109/mo) | $1,308 | Certain |
-| Payment fees (100 homes × 12 × $2, mostly ACH) | ~$1,980 | High |
-| Resale certificates (5 sales) | $500 | Medium |
-| Treasury share on reserves | $500–1,500 | Speculative |
-| Reserve study referral | $0–400 | Speculative |
-| **Total** | **$4,300–5,700** | — |
+| Line                                           |           Annual | Confidence  |
+| ---------------------------------------------- | ---------------: | ----------- |
+| Subscription ($109/mo)                         |           $1,308 | Certain     |
+| Payment fees (100 homes × 12 × $2, mostly ACH) |          ~$1,980 | High        |
+| Resale certificates (5 sales)                  |             $500 | Medium      |
+| Treasury share on reserves                     |       $500–1,500 | Speculative |
+| Reserve study referral                         |           $0–400 | Speculative |
+| **Total**                                      | **$4,300–5,700** | —           |
 
 Payments are already the larger half of the business, which is worth
 internalising: **we are a payments company with an HOA product attached**, and
@@ -403,7 +403,7 @@ the subscription mostly exists to make the payments happen.
 
 ## Positioning
 
-Current line: *"Everything a management company does. Run from your own website."*
+Current line: _"Everything a management company does. Run from your own website."_
 
 That aims at the wrong opponent. A board looking at us has already left the
 management company; they are choosing between three pieces of software.

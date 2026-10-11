@@ -22,7 +22,7 @@
 
 export const REQUEST_ID_HEADER = "x-request-id";
 
-export type LogLevel = "info" | "warn" | "error";
+type LogLevel = "info" | "warn" | "error";
 
 export type LogFields = Record<string, unknown>;
 
@@ -76,7 +76,8 @@ export function requestIdFrom(headers: HeaderReader): string {
 /* ------------------------------------------------------------------ scrubbing */
 
 const EMAIL = /([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
-const SECRET_KEY = /secret|token|password|passwd|authorization|cookie|api[_-]?key|card|cvc|cvv|\bpan\b|account_?number|routing|ssn|hashed|action_link|client_secret/i;
+const SECRET_KEY =
+  /secret|token|password|passwd|authorization|cookie|api[_-]?key|card|cvc|cvv|\bpan\b|account_?number|routing|ssn|hashed|action_link|client_secret/i;
 const SECRET_VALUE = /^(sk|rk|whsec|re|pk)_[A-Za-z0-9]|_secret_|^eyJ[A-Za-z0-9_-]{10,}/;
 const MAX_STRING = 300;
 const MAX_STACK = 1500;

@@ -44,7 +44,9 @@ test.describe("notices", () => {
     const opened = await inspect(page);
     expect(opened.crashed, "opening the notice crashed").toBe(false);
     expect(opened.text, "the notice did not open").toContain("Commercial vehicle parked overnight");
-    expect(opened.text, "an empty photograph frame is still drawn").not.toContain("Photograph 1 of 3");
+    expect(opened.text, "an empty photograph frame is still drawn").not.toContain(
+      "Photograph 1 of 3",
+    );
   });
 
   test("a notice is a home, what needs fixing, and one button", async ({ page }) => {
@@ -57,9 +59,9 @@ test.describe("notices", () => {
 
     await page.getByLabel("Which home").selectOption({ index: 1 });
     await page.getByLabel("The rule").fill("Trash bins");
-    await page.getByLabel("What needs fixing").fill(
-      "Trash cans are out front on non-collection days. Please keep them behind the fence.",
-    );
+    await page
+      .getByLabel("What needs fixing")
+      .fill("Trash cans are out front on non-collection days. Please keep them behind the fence.");
     await expect(send).toBeEnabled();
     await send.click();
     await expect(page.getByText(/Trash cans are out front/).first()).toBeVisible();
@@ -132,7 +134,10 @@ test.describe("switched off pages", () => {
 
 test.describe("how a notice reaches people", () => {
   test.beforeEach(() => {
-    test.skip(!MODULES["delivery-panel"].on, "the delivery panel is off at launch, see lib/modules.ts");
+    test.skip(
+      !MODULES["delivery-panel"].on,
+      "the delivery panel is off at launch, see lib/modules.ts",
+    );
   });
 
   test("says plainly when the letter is the notice", async ({ page }) => {
@@ -140,9 +145,7 @@ test.describe("how a notice reaches people", () => {
     await page.goto("/board/communications");
     await expectHealthy(page, "communications");
 
-    await page
-      .getByRole("button", { name: "Lien or preforeclosure warning", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Lien or preforeclosure warning", exact: true }).click();
     await expect(page.locator("main")).toContainText("the letter is the notice");
 
     const health = await inspect(page);

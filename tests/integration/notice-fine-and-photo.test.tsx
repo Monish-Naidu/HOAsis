@@ -5,7 +5,9 @@ import { AppStateProvider, useAppState } from "@/lib/app-state";
 import { fineProblem } from "@/lib/app-state/use-enforcement";
 import { addDays, todayIsoDate } from "@/lib/utils";
 
-const wrapper = ({ children }: { children: ReactNode }) => <AppStateProvider>{children}</AppStateProvider>;
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <AppStateProvider>{children}</AppStateProvider>
+);
 
 const ARYA = "acct-arya";
 
@@ -61,8 +63,14 @@ describe("fineViolation in the demo", () => {
     expect(find().fineCents).toBe(15000);
     expect(find().nextActionDate).toBe(addDays(todayIsoDate(), 30));
     const lines = hook.result.current.community.homeCharges[home.id];
-    expect(lines[0]).toMatchObject({ amountCents: 15000, kind: "charge", date: addDays(todayIsoDate(), 30) });
-    expect(hook.result.current.community.homes.find((o) => o.id === home.id)!.balanceCents).toBe(before + 15000);
+    expect(lines[0]).toMatchObject({
+      amountCents: 15000,
+      kind: "charge",
+      date: addDays(todayIsoDate(), 30),
+    });
+    expect(hook.result.current.community.homes.find((o) => o.id === home.id)!.balanceCents).toBe(
+      before + 15000,
+    );
   });
 
   it("fines once: the same amount twice charges once", async () => {
@@ -105,7 +113,12 @@ describe("addViolationPhoto in the demo", () => {
     const { hook, id, find } = boardAtHearing();
     let ok = false;
     await act(async () => {
-      ok = await hook.result.current.addViolationPhoto(id, photo(), "  Bins at the curb ", "common-area");
+      ok = await hook.result.current.addViolationPhoto(
+        id,
+        photo(),
+        "  Bins at the curb ",
+        "common-area",
+      );
     });
     expect(ok).toBe(true);
     expect(find().photos).toHaveLength(1);

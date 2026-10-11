@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { daysFromToday, formatDate, money, pluralize, shortMoney, relativeDays, setToday, todayIsoDate } from "@/lib/utils";
+import {
+  daysFromToday,
+  formatDate,
+  money,
+  pluralize,
+  shortMoney,
+  relativeDays,
+  setToday,
+  todayIsoDate,
+} from "@/lib/utils";
 import { monthGrid, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
 import { renderTemplate } from "@/lib/data/templates";
 import {
@@ -125,9 +134,7 @@ describe("association arithmetic", () => {
 
     expect(becu, "the seeded accounts are both at BECU").toBeTruthy();
     expect(becu!.balance, "balances at one bank are combined").toBe(
-      bankAccounts
-        .filter((a) => a.institution === "BECU")
-        .reduce((t, a) => t + a.balanceCents, 0),
+      bankAccounts.filter((a) => a.institution === "BECU").reduce((t, a) => t + a.balanceCents, 0),
     );
     expect(becu!.uninsured).toBe(Math.max(0, becu!.balance - becu!.limit));
     expect(becu!.uninsured, "a funded association is over the limit").toBeGreaterThan(0);

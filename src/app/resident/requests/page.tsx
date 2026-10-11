@@ -9,8 +9,6 @@ import { kindLabel, requestStatusLabel, requestStatusTone } from "@/lib/request-
 import { formatDate, pluralize, relativeDays } from "@/lib/utils";
 import { openNoticesForHome } from "@/lib/resident-wording";
 
-
-
 export default function ResidentRequests() {
   const mine = useMyRequests();
   const { open, decided, history } = bucketRequests(mine);

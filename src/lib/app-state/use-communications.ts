@@ -1,10 +1,27 @@
 import { useCallback } from "react";
 import type { Community } from "@/lib/data/community";
-import { type AppDeps, destructive, emailNotice, logDemoActivity, newId, remoteWrite, sessionStore, sliceStore, ValidationError } from "./core";
+import {
+  type AppDeps,
+  destructive,
+  emailNotice,
+  logDemoActivity,
+  newId,
+  remoteWrite,
+  sessionStore,
+  sliceStore,
+  ValidationError,
+} from "./core";
 import { todayIsoDate } from "@/lib/utils";
 import { officeOf } from "@/lib/board-offices";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import type { Announcement, ForumPost, ForumReply, MessageThread, Office, ThreadAddress } from "@/lib/types";
+import type {
+  Announcement,
+  ForumPost,
+  ForumReply,
+  MessageThread,
+  Office,
+  ThreadAddress,
+} from "@/lib/types";
 import { activityWords } from "@/lib/activity";
 import { type ReplyEmail, replyEmailState } from "@/lib/email/plain-error";
 
@@ -20,18 +37,20 @@ export function useCommunicationsActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Posting", () =>
-          supabaseBrowser().from("posts").insert({
-            id: newId(),
-            association_id: rc.id,
-            author_id: remote.profileId,
-            author_name: post.author,
-            unit_label: post.unit,
-            author_role: post.authorRole ?? null,
-            category: post.category,
-            title: post.title,
-            body: post.body,
-            status: post.status,
-          }),
+          supabaseBrowser()
+            .from("posts")
+            .insert({
+              id: newId(),
+              association_id: rc.id,
+              author_id: remote.profileId,
+              author_name: post.author,
+              unit_label: post.unit,
+              author_role: post.authorRole ?? null,
+              category: post.category,
+              title: post.title,
+              body: post.body,
+              status: post.status,
+            }),
         );
         return;
       }
@@ -61,15 +80,17 @@ export function useCommunicationsActions(deps: AppDeps) {
           : "The board";
         const id = newId();
         void remoteWrite("Posting the announcement", () =>
-          supabaseBrowser().from("announcements").insert({
-            id,
-            association_id: rc.id,
-            author_name: author,
-            category: a.category,
-            title: a.title,
-            body: a.body,
-            pinned: a.pinned ?? false,
-          }),
+          supabaseBrowser()
+            .from("announcements")
+            .insert({
+              id,
+              association_id: rc.id,
+              author_name: author,
+              category: a.category,
+              title: a.title,
+              body: a.body,
+              pinned: a.pinned ?? false,
+            }),
         ).then((ok) => {
           if (ok && email === "announcement") void emailNotice(rc.id, { kind: "announcement", id });
         });
@@ -81,7 +102,9 @@ export function useCommunicationsActions(deps: AppDeps) {
       const author = me
         ? `${me.name}${roleLabel[me.role] ? `, ${roleLabel[me.role]}` : ""}`
         : "The board";
-      logDemoActivity(communityId, "announcement", activityWords.posted(a.title), { category: a.category });
+      logDemoActivity(communityId, "announcement", activityWords.posted(a.title), {
+        category: a.category,
+      });
       sliceStore(communityId, "announcements").update((all) => [
         {
           id: newId(),
@@ -106,9 +129,7 @@ export function useCommunicationsActions(deps: AppDeps) {
         );
         return;
       }
-      sliceStore(communityId, "announcements").update((all) =>
-        all.filter((a) => a.id !== id),
-      );
+      sliceStore(communityId, "announcements").update((all) => all.filter((a) => a.id !== id));
     },
     [remote.community, communityId],
   );
@@ -248,15 +269,17 @@ export function useCommunicationsActions(deps: AppDeps) {
           secretary: "Secretary",
         };
         void remoteWrite("Replying", () =>
-          supabaseBrowser().from("post_replies").insert({
-            association_id: rc.id,
-            post_id: postId,
-            author_id: remote.profileId,
-            author_name: me?.name ?? "Neighbor",
-            author_role: me ? (roleLabel[me.role] ?? null) : null,
-            unit_label: home?.unit ?? "",
-            body: text,
-          }),
+          supabaseBrowser()
+            .from("post_replies")
+            .insert({
+              association_id: rc.id,
+              post_id: postId,
+              author_id: remote.profileId,
+              author_name: me?.name ?? "Neighbor",
+              author_role: me ? (roleLabel[me.role] ?? null) : null,
+              unit_label: home?.unit ?? "",
+              body: text,
+            }),
         );
         return true;
       }
@@ -264,7 +287,9 @@ export function useCommunicationsActions(deps: AppDeps) {
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
       const home = me
-        ? sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === me.homeId)
+        ? sliceStore(communityId, "homes")
+            .getSnapshot()
+            .find((o) => o.id === me.homeId)
         : undefined;
       const roleLabel: Record<string, string> = {
         president: "Board President",
@@ -326,7 +351,9 @@ export function useCommunicationsActions(deps: AppDeps) {
         }
         return ok;
       }
-      const home = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId);
+      const home = sliceStore(communityId, "homes")
+        .getSnapshot()
+        .find((o) => o.id === homeId);
       const from = home?.members[0] ?? home?.displayName ?? "Owner";
       sliceStore(communityId, "threads").update((all) => [
         {
@@ -366,7 +393,9 @@ export function useCommunicationsActions(deps: AppDeps) {
           supabaseBrowser().rpc("reply_as_owner", { p_thread_id: threadId, p_body: body.trim() }),
         );
       }
-      const home = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId);
+      const home = sliceStore(communityId, "homes")
+        .getSnapshot()
+        .find((o) => o.id === homeId);
       sliceStore(communityId, "threads").update((all) =>
         all.map((t) =>
           t.id === threadId
@@ -439,7 +468,9 @@ export function useCommunicationsActions(deps: AppDeps) {
       const sender = sliceStore(communityId, "accounts")
         .getSnapshot()
         .find((a) => a.id === sessionStore.getSnapshot().accountId);
-      const replied = sliceStore(communityId, "threads").getSnapshot().find((t) => t.id === threadId);
+      const replied = sliceStore(communityId, "threads")
+        .getSnapshot()
+        .find((t) => t.id === threadId);
       logDemoActivity(communityId, "thread", activityWords.reply(replied?.unit ?? "an owner"), {
         unit_id: replied?.homeId,
         home: replied?.unit,
@@ -456,7 +487,9 @@ export function useCommunicationsActions(deps: AppDeps) {
                   ...thread.messages,
                   {
                     ...message(sender?.name ?? "Board", thread.messages.length),
-                    ...(officeOf(sender?.role) ? { fromOffice: officeOf(sender?.role) as Office } : {}),
+                    ...(officeOf(sender?.role)
+                      ? { fromOffice: officeOf(sender?.role) as Office }
+                      : {}),
                   },
                 ],
               }
@@ -494,17 +527,19 @@ export function useCommunicationsActions(deps: AppDeps) {
         // Resolves once the letter is on its thread, so a screen sending
         // several can say how many landed. The email follows on its own.
         return remoteWrite("Sending the letter", () =>
-          supabaseBrowser().from("threads").insert({
-            id,
-            association_id: rc.id,
-            subject,
-            unit_id: homeId,
-            participants: [home.displayName, senderName],
-            tag,
-            updated_on: todayIsoDate(),
-            unread: false,
-            messages: [message(senderName)],
-          }),
+          supabaseBrowser()
+            .from("threads")
+            .insert({
+              id,
+              association_id: rc.id,
+              subject,
+              unit_id: homeId,
+              participants: [home.displayName, senderName],
+              tag,
+              updated_on: todayIsoDate(),
+              unread: false,
+              messages: [message(senderName)],
+            }),
         ).then((ok) => {
           // A dues letter is a statutory notice; a note is a message the
           // owner may turn off. The tag is what tells them apart.

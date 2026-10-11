@@ -29,7 +29,10 @@ export function Rail({
       aria-label={label}
       className="rail fixed inset-y-3 left-3 z-40 hidden w-60 flex-col overflow-hidden rounded-[26px] shadow-float lg:flex"
     >
-      <Link href={home} className="bird-lift relative flex items-center justify-center px-4 pb-2 pt-6">
+      <Link
+        href={home}
+        className="bird-lift relative flex items-center justify-center px-4 pb-2 pt-6"
+      >
         <RailWordmark size={34} />
       </Link>
       <div className="no-scrollbar relative flex flex-1 overflow-y-auto px-3 py-3">{children}</div>
@@ -47,7 +50,7 @@ export function Rail({
  * tile goes frosted white, because it already sits on the blue pill. The
  * tile remounts when it becomes selected, so it pops once as it lands.
  */
-export function RailIcon({
+function RailIcon({
   icon: Icon,
   tint = "blue",
   active = false,

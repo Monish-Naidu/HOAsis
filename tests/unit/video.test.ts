@@ -32,7 +32,9 @@ describe("videoRoomName", () => {
   });
 
   it("differs across associations sharing a meeting id", () => {
-    expect(videoRoomName({ id: "mtg-1" }, "assoc-a")).not.toBe(videoRoomName({ id: "mtg-1" }, "assoc-b"));
+    expect(videoRoomName({ id: "mtg-1" }, "assoc-a")).not.toBe(
+      videoRoomName({ id: "mtg-1" }, "assoc-b"),
+    );
   });
 
   it("is not the visible ids alone: same ids, different hash than a plain join", () => {
@@ -49,7 +51,9 @@ describe("videoRoomName", () => {
   });
 
   it("uses a pinned room when the meeting has one", () => {
-    expect(videoRoomName({ id: "mtg-1", videoRoom: "Board Room 2026" }, "assoc-a")).toBe("board-room-2026");
+    expect(videoRoomName({ id: "mtg-1", videoRoom: "Board Room 2026" }, "assoc-a")).toBe(
+      "board-room-2026",
+    );
     expect(videoRoomName({ id: "mtg-1", videoRoom: "  " }, "assoc-a")).toMatch(/^hoasis-/);
   });
 });
@@ -74,7 +78,9 @@ describe("meetingJoin", () => {
   });
 
   it("treats a typed link as the video link, and keeps the passcode with it", () => {
-    expect(meetingJoin({ ...meeting, dialIn: " https://zoom.us/j/123 ", passcode: "4321" }, "assoc-a")).toEqual({
+    expect(
+      meetingJoin({ ...meeting, dialIn: " https://zoom.us/j/123 ", passcode: "4321" }, "assoc-a"),
+    ).toEqual({
       videoUrl: "https://zoom.us/j/123",
       dialIn: "",
       passcode: "4321",
@@ -82,7 +88,9 @@ describe("meetingJoin", () => {
   });
 
   it("keeps a phone number as the dial in, beside the automatic room", () => {
-    expect(meetingJoin({ ...meeting, dialIn: "(425) 555-0110", passcode: "99" }, "assoc-a")).toEqual({
+    expect(
+      meetingJoin({ ...meeting, dialIn: "(425) 555-0110", passcode: "99" }, "assoc-a"),
+    ).toEqual({
       videoUrl: videoJoinUrl(meeting, "assoc-a"),
       dialIn: "(425) 555-0110",
       passcode: "99",

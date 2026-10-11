@@ -197,7 +197,8 @@ export const requests: HomeRequest[] = [
     reference: "REQ-2026-120",
     kind: "amenity",
     title: "Clubhouse reservation, Saturday Sept 12, 4–9 PM",
-    summary: "Family birthday party, approximately 30 guests. Requesting the main room and kitchen.",
+    summary:
+      "Family birthday party, approximately 30 guests. Requesting the main room and kitchen.",
     homeId: "own-055",
     ownerName: "Rhea Calloway",
     unit: "55",
@@ -222,7 +223,8 @@ export const requests: HomeRequest[] = [
     reference: "REQ-2026-122",
     kind: "maintenance",
     title: "Common area light out at the Willow Creek Ln mailboxes",
-    summary: "Pole light has been dark for about a week. It's the only light at the mailbox cluster.",
+    summary:
+      "Pole light has been dark for about a week. It's the only light at the mailbox cluster.",
     homeId: "own-012",
     ownerName: "Owen Brady",
     unit: "12",

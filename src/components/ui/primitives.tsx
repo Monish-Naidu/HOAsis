@@ -5,7 +5,14 @@
  * used a third time belongs here rather than re-styled inline.
  */
 
-import { cloneElement, useId, type ComponentProps, type FormEventHandler, type ReactElement, type ReactNode } from "react";
+import {
+  cloneElement,
+  useId,
+  type ComponentProps,
+  type FormEventHandler,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -113,9 +120,7 @@ export function SectionTitle({
 }) {
   return (
     <div className={cn("mb-3 flex items-baseline justify-between gap-4", className)}>
-      <h2 className="text-footnote font-semibold text-fg-muted">
-        {children}
-      </h2>
+      <h2 className="text-footnote font-semibold text-fg-muted">{children}</h2>
       {action}
     </div>
   );
@@ -144,15 +149,15 @@ export function PageHeader({
         {icon === false ? null : icon === undefined ? <RouteTile /> : icon}
         <div className="min-w-0">
           {eyebrow ? (
-            <p className="mb-1 text-footnote font-semibold text-fg-muted">
-              {eyebrow}
-            </p>
+            <p className="mb-1 text-footnote font-semibold text-fg-muted">{eyebrow}</p>
           ) : null}
           <h1 className="text-title1 font-semibold leading-tight tracking-[-0.025em] text-fg">
             {title}
           </h1>
           {description ? (
-            <p className="mt-1 max-w-2xl text-callout leading-relaxed text-fg-muted">{description}</p>
+            <p className="mt-1 max-w-2xl text-callout leading-relaxed text-fg-muted">
+              {description}
+            </p>
           ) : null}
         </div>
       </div>
@@ -177,7 +182,7 @@ export function PageHeader({
 export type TintName = "blue" | "teal" | "amber" | "coral" | "violet" | "neutral";
 
 /** The hairline along the top of a card or a stat tile. */
-export const ACCENT_BAR: Record<TintName, string> = {
+const ACCENT_BAR: Record<TintName, string> = {
   blue: "bg-tint-blue",
   teal: "bg-tint-teal",
   amber: "bg-tint-amber",
@@ -314,7 +319,8 @@ const buttonStyles = {
     // The one filled button on a screen: the brand gradient, lit on hover.
     primary:
       "shimmer bg-brand-gradient text-primary-fg shadow-raised hover:shadow-glow hover:brightness-[1.05]",
-    secondary: "border border-border-2 bg-surface text-fg hover:border-fg-subtle hover:bg-surface-2",
+    secondary:
+      "border border-border-2 bg-surface text-fg hover:border-fg-subtle hover:bg-surface-2",
     ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
     danger: "border border-danger/30 bg-danger-soft text-danger hover:border-danger/50",
     quiet: "bg-surface-3 text-fg hover:opacity-80",
@@ -427,7 +433,10 @@ export function Badge({
     >
       {dot ? (
         <span className="relative flex size-1.5">
-          <span className="absolute inset-0 rounded-full bg-current opacity-40" style={{ transform: "scale(1.9)" }} />
+          <span
+            className="absolute inset-0 rounded-full bg-current opacity-40"
+            style={{ transform: "scale(1.9)" }}
+          />
           <span className="relative size-1.5 rounded-full bg-current" />
         </span>
       ) : null}
@@ -490,9 +499,7 @@ export function Stat({
         <span className={cn("absolute inset-x-0 top-0 h-[3px]", STAT_ACCENT[accent])} aria-hidden />
       ) : null}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-footnote font-semibold text-fg-muted">
-          {label}
-        </p>
+        <p className="text-footnote font-semibold text-fg-muted">{label}</p>
         {icon ? (
           accent ? (
             <IconTile tint={accent} size="sm">
@@ -560,7 +567,10 @@ export function Meter({
       aria-label={ariaLabel}
     >
       <div
-        className={cn("h-full rounded-full transition-[width] duration-[640ms] ease-[cubic-bezier(0.16,1,0.3,1)]", fill)}
+        className={cn(
+          "h-full rounded-full transition-[width] duration-[640ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+          fill,
+        )}
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -608,24 +618,6 @@ export function Avatar({
   );
 }
 
-export function Row({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
 export function KeyValue({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
@@ -658,9 +650,7 @@ export function EmptyState({
         </IconTile>
       ) : null}
       <p className="text-callout font-medium text-fg">{title}</p>
-      {description ? (
-        <p className="mt-1 max-w-sm text-body text-fg-muted">{description}</p>
-      ) : null}
+      {description ? <p className="mt-1 max-w-sm text-body text-fg-muted">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -830,7 +820,9 @@ export function Segmented<T extends string>({
           className={cn(
             "inline-flex shrink-0 items-center gap-1.5 rounded-md font-medium transition-colors",
             // A finger needs more than a pointer does.
-            size === "lg" ? "min-h-10 px-4 text-callout pointer-coarse:min-h-11" : "min-h-8 px-3 text-footnote pointer-coarse:min-h-11",
+            size === "lg"
+              ? "min-h-10 px-4 text-callout pointer-coarse:min-h-11"
+              : "min-h-8 px-3 text-footnote pointer-coarse:min-h-11",
             value === o.value ? "bg-surface text-fg shadow-card" : "text-fg-muted hover:text-fg",
           )}
         >
@@ -875,7 +867,12 @@ export function Field({
   /** For a grid whose column headers already name the field. */
   srOnlyLabel?: boolean;
   className?: string;
-  children: ReactElement<{ id?: string; "aria-describedby"?: string; "aria-invalid"?: boolean; required?: boolean }>;
+  children: ReactElement<{
+    id?: string;
+    "aria-describedby"?: string;
+    "aria-invalid"?: boolean;
+    required?: boolean;
+  }>;
 }) {
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
@@ -924,7 +921,9 @@ export function Select({
       <select
         className={cn(
           "w-full min-w-0 appearance-none rounded-lg border border-border-2 bg-surface pl-3 pr-8 text-fg outline-none transition-colors hover:border-fg-subtle focus:border-primary focus-visible:ring-2 focus-visible:ring-ring/40",
-          size === "sm" ? "min-h-9 text-footnote pointer-coarse:min-h-11" : "min-h-10 text-callout pointer-coarse:min-h-11",
+          size === "sm"
+            ? "min-h-9 text-footnote pointer-coarse:min-h-11"
+            : "min-h-10 text-callout pointer-coarse:min-h-11",
         )}
         {...props}
       >
@@ -947,10 +946,7 @@ export function Select({
 }
 
 /** A checkbox in the primary blue. */
-export function Checkbox({
-  className,
-  ...props
-}: Omit<ComponentProps<"input">, "type">) {
+export function Checkbox({ className, ...props }: Omit<ComponentProps<"input">, "type">) {
   return (
     <input
       type="checkbox"

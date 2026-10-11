@@ -14,7 +14,7 @@ and value 4.7. Any "PayHOA sucks" positioning will fail.
 
 The real opening is different: **PayHOA is loved for support and price, and structurally
 behind on mobile, accounting depth, and state compliance.** Users write 5-star reviews
-*and then list serious gaps in the cons box*. That pattern — high satisfaction, high
+_and then list serious gaps in the cons box_. That pattern — high satisfaction, high
 unmet need — is the ideal wedge. These are people who like their vendor and would still
 switch for the right thing.
 
@@ -29,6 +29,7 @@ associations self-manage, representing ~2.5M volunteer board members.
 Ranked by how often it appears and how emotionally it lands.
 
 ### 1. Customer support — the #1 praise, by a wide margin
+
 Rated 4.7/5. Reviewers describe it as "fabulous," name individual staff, and note that
 company leadership personally responds. Extensive knowledge base with step-by-step
 instructions. Typical response 1–2 days.
@@ -37,26 +38,32 @@ instructions. Typical response 1–2 days.
 > screwing up someone else's money. Support is what they're really buying.
 
 ### 2. Price vs. hiring a management company
+
 The core value prop. "Significantly less expensive than professional management" appears
 constantly. It's what lets a board self-manage and keep the money in the community.
 
 ### 3. No feature gating across tiers
+
 A 25-unit HOA on the entry plan gets the identical feature set as a 300-unit HOA. Boards
 explicitly praise this. Copy this. Tiered feature gating would read as hostile to this
 audience.
 
 ### 4. Consolidation — one tool replacing QuickBooks + Google Drive + email
+
 > "The functionality aligns better with what we were previously using as an organization
 > (a combination of QuickBooks, Google Drive, and email communications)."
 
 ### 5. Dues collection, autopay, and automated reminders
+
 The single most-cited functional win. Automated reminders measurably reduce late payments.
 ACH + card options for homeowners.
 
 ### 6. Onboarding/migration actually works
+
 Users report importing homeowner and fiscal data from prior systems within a few weeks.
 
 ### 7. Other consistent praise
+
 - Centralized document repository with automatic archiving of historical records
 - Mass messaging across email / text / phone, logged against owner profiles
 - 1099 tax reporting
@@ -70,6 +77,7 @@ Users report importing homeowner and fiscal data from prior systems within a few
 ### TIER 1 — Structural. Repeated across years and reviewer types.
 
 #### 1.1 No native mobile app ⭐ biggest single gap
+
 The most-repeated complaint in the entire corpus, from both board members and residents:
 
 > "Wish it was an app rather than a portal." — President, 5★
@@ -81,16 +89,17 @@ The most-repeated complaint in the entire corpus, from both board members and re
 
 Also: no Apple Pay / Google Pay. Reported page slowness on phones and PCs.
 
-*Note: one aggregator lists PayHOA as supporting iOS/Android, but this appears to describe
+_Note: one aggregator lists PayHOA as supporting iOS/Android, but this appears to describe
 responsive web access, not native apps. Reviewer complaints through 2026 are consistent
-and unambiguous.*
+and unambiguous._
 
 **Why it matters:** residents are the largest user population and they only ever do three
 things — pay, look something up, submit a request. All three are mobile-shaped. PayHOA
 serves them a desktop portal.
 
 #### 1.2 Bank sync and reconciliation are unreliable
-The most *damaging* complaint, because it attacks trust in the numbers.
+
+The most _damaging_ complaint, because it attacks trust in the numbers.
 
 - Transactions update **only once per day**
 - Frequent disconnections; some regional banks unsupported entirely
@@ -104,6 +113,7 @@ The most *damaging* complaint, because it attacks trust in the numbers.
 > "Financial reports are unable to be run reliably... many entries are double entry." — Resident, 4★
 
 #### 1.3 Accounting is shallow and "clunky"
+
 - Workflow described as clunky, requiring excessive navigation
 - **Cash basis works; accrual is weak** — "all accounting features work best in cash only"
 - No recurring journal entry option
@@ -120,6 +130,7 @@ The most *damaging* complaint, because it attacks trust in the numbers.
 > w/ GAAP." — Retired board member, 4★
 
 #### 1.4 Reports are rigid
+
 - Limited customization; "rigid" is the recurring word
 - **Cannot save search filters** — reconfigure columns on every single page reload
 - Weak sorting and filtering
@@ -132,6 +143,7 @@ The most *damaging* complaint, because it attacks trust in the numbers.
 ### TIER 2 — Workflow friction. Frequent, fixable, high switching value.
 
 #### 2.1 No vendor ACH / electronic payments
+
 Payables go out as physical checks.
 
 > "Unable to pay vendors via ACH/Electronic Payment. Payment via check is time consuming,
@@ -142,10 +154,12 @@ printer-check support for some users, check-cutting carries a subscription cost,
 checks have reportedly been **cancelled without notice**.
 
 #### 2.2 Physical mail is slow
+
 > "Significant time lag in direct mail delivery, sometimes up to 2 1/2 weeks... 10+ days
 > even first class." — Vice President, 5★
 
 #### 2.3 Email is send-only and awkward
+
 - **Cannot receive or archive incoming email** — outbound only
 - No Gmail or Apple Mail integration
 - **Cannot CC anyone** on emails sent from the system
@@ -154,6 +168,7 @@ checks have reportedly been **cancelled without notice**.
 - Limited email formatting
 
 #### 2.4 Voting and surveys are primitive
+
 - Ballot description text box has **no formatting at all** — "no spacing, no bold text,"
   everything renders as one continuous paragraph
 - **No high-level results overview** — you must open each ballot individually to tally
@@ -163,6 +178,7 @@ checks have reportedly been **cancelled without notice**.
 - Only PDFs — no fillable forms
 
 #### 2.5 Navigation and information architecture
+
 - Violation templates "hard to find"
 - Calendar/events not intuitively located
 - Document opening process unintuitive
@@ -172,6 +188,7 @@ checks have reportedly been **cancelled without notice**.
 - Work cannot be saved mid-session
 
 #### 2.6 Payment application is opaque
+
 > "Difficult to clearly understand how individual payments applied to specific charges or
 > outstanding balances." — Board Member, 5★
 
@@ -180,6 +197,7 @@ as an owner; no option to disable payment reminders for accounts already on auto
 (so autopay users get nagged); limited autopay date flexibility.
 
 #### 2.7 Requests / violations workflow
+
 - "Requests function cumbersome for residents... not routine enough"
 - Interest and late-fee calculations complex to configure
 - **No way to email an approved request form** so a homeowner can prove approval to an
@@ -190,6 +208,7 @@ as an owner; no option to disable payment reminders for accounts already on auto
 ### TIER 3 — Compliance and trust. The most defensible wedge.
 
 #### 3.1 Florida website compliance failure ⚠️ live legal exposure
+
 Multiple reviewers flag this directly:
 
 > "Optional website doesn't comply with Florida HOA requirements." — CAM, 5★
@@ -199,6 +218,7 @@ And structurally: **PayHOA's website builder cannot publish public documents wit
 requiring secure login** — which is precisely what the statute requires.
 
 The regulatory backdrop:
+
 - **Florida:** as of Jan 1, 2026, every condo association with **25+ units** (down from
   150+) must operate an official website or secure member portal with posted records.
   Expanded transparency/online-records obligations for HOAs and condos both. New directors
@@ -217,7 +237,9 @@ Compliance is dated, enumerable, and expanding. Nobody in this segment is treati
 a first-class product surface.
 
 #### 3.2 Support has real cracks under the 4.7 average
+
 The average is high but the tail is ugly, and the tail is where churn lives:
+
 - **No evenings or weekends** support
 - **No live phone support** — "having some live telephone support would be helpful"
 - Chat support response delays; time zone gaps
@@ -227,18 +249,21 @@ The average is high but the tail is ugly, and the tail is where churn lives:
 - Vendor page outage went unanswered "far too long"
 
 #### 3.3 Fee and pricing resentment
+
 Subscription (all features at every tier, ~10% off annual):
+
 | Units | Monthly |
-|---|---|
-| 0–25 | $49–54 |
-| 51–99 | $99 |
-| ≤300 | $179 |
-| ~500 | $199 |
-| 500+ | custom |
+| ----- | ------- |
+| 0–25  | $49–54  |
+| 51–99 | $99     |
+| ≤300  | $179    |
+| ~500  | $199    |
+| 500+  | custom  |
 
 ≈$1.09/unit/mo at 100 units, ≈$0.55/unit/mo above 500.
 
 Where the resentment actually is:
+
 - **Card processing: 3.5% + $0.50** — materially above the ~2.9% + $0.30 market norm
 - **ACH: $2.45 flat** — above the ~1% / sub-dollar norm for association ACH
 - ACH fees charged to the HOA; boards may pass to homeowners as a "convenience fee"
@@ -251,6 +276,7 @@ Where the resentment actually is:
 - "Time lag between collected revenue deposit longer than preferred"
 
 #### 3.4 Emerging: AI backlash
+
 Worth watching — a 2026 signal, not yet a chorus:
 
 > "Newer features feel vibe coded... dislike AI-assisted ledger categorization."
@@ -267,17 +293,20 @@ silent auto-categorization.
 Ranked by defensibility × evidence strength.
 
 ### A. Mobile-native, resident-first
+
 The clearest, most-repeated gap. Residents do three things: pay, look something up, file a
 request. Ship real iOS/Android apps with Apple Pay / Google Pay. PayHOA serves the largest
 user population a desktop portal in 2026.
 
 ### B. Books that tie out
+
 Make "does it reconcile?" a first-class, always-visible product concept. Real-time or
 near-real-time bank feeds (not daily batch), broad institution coverage including regional
-banks, correct multi-account routing, duplicate detection, and one number that is *the*
+banks, correct multi-account routing, duplicate detection, and one number that is _the_
 number. PayHOA's reports not tying to each other is a trust wound — attack it directly.
 
 ### C. Compliance as a product surface
+
 A state-law engine: FL 25+ unit website mandate with genuinely public (no-login) document
 publishing, CA reserve study cadence + SB 326 integration, SB 410's 10-business-day records
 clock, board-member education tracking (FL's 4-hour/90-day rule), reserve study schedules
@@ -285,22 +314,27 @@ for all 13 mandating states, audit thresholds. Dated deadlines, per-state checkl
 automatic evidence trails. This is boring, enumerable, legally urgent, and unowned.
 
 ### D. Honest payment economics
+
 3.5% + $0.50 is fat. Price at or near cost and say so loudly. Every dues cycle is a
 recurring, visible reminder of why the board switched. This is also the fastest ROI story
 in a sales conversation with a volunteer treasurer.
 
 ### E. Vendor ACH on day one
+
 12-day check cycles are indefensible. Table stakes that PayHOA hasn't met.
 
 ### F. Communications that behave like email
+
 Two-way threading, inbound archiving against the owner record, CC/BCC, real formatting,
 autosaved drafts. Their module is send-only and loses your work.
 
 ### G. Reports you can build and save
+
 Saved views, saved filters, drill-down to source transaction, real export. Low engineering
 cost, high daily-friction relief.
 
 ### H. Match their support, or don't bother
+
 Support is what PayHOA is genuinely loved for. Any product that wins here has to be at
 least as good — and the obvious daylight is **evenings, weekends, and live phone**, which
 they explicitly don't offer. Volunteer board members do HOA work at night and on weekends.

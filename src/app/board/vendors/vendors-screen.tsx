@@ -13,7 +13,19 @@ import {
   Trash2,
   Truck,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, Checkbox, EmptyState, PageHeader, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  Checkbox,
+  EmptyState,
+  PageHeader,
+  Select,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useVendorGaps } from "@/lib/app-state";
@@ -32,8 +44,7 @@ const PAYOUT_STATUS = {
   "needs-approval": { label: "Needs approval", tone: "warn" },
 } as const;
 
-const field =
-  fieldClass;
+const field = fieldClass;
 
 /** How many payments the record shows before it is asked for the rest. */
 const RECENT_PAYMENTS = 25;
@@ -79,9 +90,7 @@ export function VendorsScreen() {
       ytdPaidCents: 0,
       defaultCategory: draft.category,
     });
-    notify(
-      draft.w9OnFile ? `Added ${draft.name}` : `Added ${draft.name}. No W-9 on file yet.`,
-    );
+    notify(draft.w9OnFile ? `Added ${draft.name}` : `Added ${draft.name}. No W-9 on file yet.`);
     setDraft({ name: "", service: "", category: "", achEnabled: true, w9OnFile: false });
     setAdding(false);
   }
@@ -119,7 +128,10 @@ export function VendorsScreen() {
       />
 
       {recording ? (
-        <RecordPayment onClose={() => setRecording(false)} initialAmount={params.get("amount") ?? ""} />
+        <RecordPayment
+          onClose={() => setRecording(false)}
+          initialAmount={params.get("amount") ?? ""}
+        />
       ) : null}
 
       {adding ? (
@@ -159,7 +171,9 @@ export function VendorsScreen() {
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="mb-1.5 block text-footnote font-medium text-fg">What they do for you</span>
+              <span className="mb-1.5 block text-footnote font-medium text-fg">
+                What they do for you
+              </span>
               <Select
                 value={draft.category}
                 onChange={(e) => setDraft({ ...draft, category: e.target.value as LedgerCategory })}
@@ -198,7 +212,13 @@ export function VendorsScreen() {
               <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={!draft.name.trim() || !draft.category || Boolean(nameProblem)} onClick={saveVendor}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={!draft.name.trim() || !draft.category || Boolean(nameProblem)}
+                onClick={saveVendor}
+              >
                 Save vendor
               </Button>
             </div>
@@ -226,7 +246,9 @@ export function VendorsScreen() {
               onClick={() => {
                 markW9Requested(gaps.missingW9[0].id);
                 // Nothing is emailed: this only records that the board asked.
-                notify(`Saved that you asked ${gaps.missingW9[0].name} for a W-9. Nothing was emailed, so ask them yourself.`);
+                notify(
+                  `Saved that you asked ${gaps.missingW9[0].name} for a W-9. Nothing was emailed, so ask them yourself.`,
+                );
               }}
             >
               Mark as asked
@@ -334,7 +356,10 @@ export function VendorsScreen() {
                               name={v.name}
                               onRemove={() => {
                                 const undo = removeVendor(v.id);
-                                notify(`Removed ${v.name}`, "warn", { label: "Undo", onClick: undo });
+                                notify(`Removed ${v.name}`, "warn", {
+                                  label: "Undo",
+                                  onClick: undo,
+                                });
                               }}
                             />
                           </span>
@@ -451,9 +476,7 @@ function PayoutRow({ payout: p }: { payout: Payout }) {
           <p className="text-footnote text-fg-muted">{p.invoiceNumber}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="tnum text-body font-semibold text-fg">
-            {money(p.amountCents)}
-          </p>
+          <p className="tnum text-body font-semibold text-fg">{money(p.amountCents)}</p>
           <Badge tone={PAYOUT_STATUS[p.status].tone} className="mt-0.5">
             {PAYOUT_STATUS[p.status].label}
           </Badge>

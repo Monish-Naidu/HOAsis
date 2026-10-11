@@ -85,14 +85,20 @@ function subscribe(l: () => void) {
   listeners.add(l);
   return () => listeners.delete(l);
 }
-export function openSearch() {
+function openSearch() {
   setOpen(true);
 }
 
 const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** The button in a top bar. Compact is the icon alone, for a phone header. */
-export function SearchButton({ compact = false, className }: { compact?: boolean; className?: string }) {
+export function SearchButton({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   // The server cannot know the platform; the key cap resolves on the client.
   const mac = useSyncExternalStore(
     () => () => {},
@@ -134,7 +140,11 @@ export function SearchButton({ compact = false, className }: { compact?: boolean
 }
 
 export function SearchPalette() {
-  const open = useSyncExternalStore(subscribe, () => openState, () => false);
+  const open = useSyncExternalStore(
+    subscribe,
+    () => openState,
+    () => false,
+  );
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -150,7 +160,6 @@ export function SearchPalette() {
   if (!open) return null;
   return <Palette onClose={() => setOpen(false)} />;
 }
-
 
 /** One row in the list: a hit from the index, a shortcut, or a recent choice. */
 interface Row {
@@ -203,7 +212,8 @@ function Palette({ onClose }: { onClose: () => void }) {
   // table. Pages go through `routeOffered` themselves. Folded once here, so
   // a keystroke is one pass over the index and no string normalisation.
   const index = useMemo(() => {
-    if (!board) return prepareIndex([...residentPages(community), ...residentIndex(community, home)]);
+    if (!board)
+      return prepareIndex([...residentPages(community), ...residentIndex(community, home)]);
     const allowed = (kind: SearchKind) => {
       if (kind === "page" || kind === "shortcut" || kind === "charge") return true;
       const href = KIND_ROUTE[kind];
@@ -213,7 +223,10 @@ function Palette({ onClose }: { onClose: () => void }) {
       if (!route) return true;
       return moduleOn(route.module) && (!route.need || route.need.some((c) => sees(c)));
     };
-    return prepareIndex([...boardPages(community, sees), ...boardIndex(community).filter((h) => allowed(h.kind))]);
+    return prepareIndex([
+      ...boardPages(community, sees),
+      ...boardIndex(community).filter((h) => allowed(h.kind)),
+    ]);
   }, [board, community, home, sees]);
 
   const trimmed = query.trim();
@@ -327,7 +340,10 @@ function Palette({ onClose }: { onClose: () => void }) {
         onKeyDown={onKey}
         className="pop-in w-full max-w-[640px] overflow-hidden rounded-card border border-border bg-surface shadow-float"
       >
-        <div data-bare-focus className="flex h-14 items-center gap-3 border-b border-border pl-4 pr-2">
+        <div
+          data-bare-focus
+          className="flex h-14 items-center gap-3 border-b border-border pl-4 pr-2"
+        >
           <Search className="size-4 shrink-0 text-fg-subtle" />
           <input
             ref={inputRef}
@@ -358,7 +374,13 @@ function Palette({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div ref={listRef} id="search-results" role="listbox" aria-label="Results" className="max-h-[60vh] overflow-y-auto">
+        <div
+          ref={listRef}
+          id="search-results"
+          role="listbox"
+          aria-label="Results"
+          className="max-h-[60vh] overflow-y-auto"
+        >
           {flat.length === 0 ? (
             trimmed === "" ? (
               <div className="px-4 py-5">
@@ -370,9 +392,12 @@ function Palette({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               <div className="px-4 py-5">
-                <p className="text-footnote text-fg-muted">Nothing matches &ldquo;{trimmed}&rdquo;.</p>
+                <p className="text-footnote text-fg-muted">
+                  Nothing matches &ldquo;{trimmed}&rdquo;.
+                </p>
                 <p className="mt-2 text-caption text-fg-subtle">
-                  Try fewer words, a different spelling, or part of a name. You can search: {canSearch}
+                  Try fewer words, a different spelling, or part of a name. You can search:{" "}
+                  {canSearch}
                 </p>
               </div>
             )
@@ -402,7 +427,12 @@ function Palette({ onClose }: { onClose: () => void }) {
                     const on = row === active;
                     const Icon = group.section === "Recent" ? Clock : (row.icon ?? ICON[row.kind]);
                     return (
-                      <li key={row.key} id={`search-opt-${row.key}`} role="option" aria-selected={on}>
+                      <li
+                        key={row.key}
+                        id={`search-opt-${row.key}`}
+                        role="option"
+                        aria-selected={on}
+                      >
                         <button
                           type="button"
                           tabIndex={-1}
@@ -425,7 +455,9 @@ function Palette({ onClose }: { onClose: () => void }) {
                             </span>
                           </span>
                           {on ? (
-                            <span className="hidden shrink-0 text-caption text-fg-subtle sm:inline">↵</span>
+                            <span className="hidden shrink-0 text-caption text-fg-subtle sm:inline">
+                              ↵
+                            </span>
                           ) : null}
                         </button>
                       </li>

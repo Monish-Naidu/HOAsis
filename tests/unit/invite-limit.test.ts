@@ -33,7 +33,8 @@ describe("the invitation limit", () => {
     expect(spendInvites(limiter, "assoc-1", INVITES_PER_HOUR + 1).ok).toBe(false);
     // And many small calls add up the same way.
     const other = createInviteLimiter(clock().now);
-    for (let i = 0; i < INVITES_PER_HOUR; i++) expect(spendInvites(other, "assoc-2", 1).ok).toBe(true);
+    for (let i = 0; i < INVITES_PER_HOUR; i++)
+      expect(spendInvites(other, "assoc-2", 1).ok).toBe(true);
     expect(spendInvites(other, "assoc-2", 1).ok).toBe(false);
   });
 

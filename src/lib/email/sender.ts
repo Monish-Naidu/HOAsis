@@ -12,7 +12,7 @@
  * once rather than failing silently for every resident.
  */
 
-export const SHARED_SENDER = "Your HOAsis <onboarding@resend.dev>";
+const SHARED_SENDER = "Your HOAsis <onboarding@resend.dev>";
 
 let warned = false;
 
@@ -30,7 +30,7 @@ export function emailSender(): string {
 }
 
 /** True for the shared sender, which reaches nobody but the account owner. */
-export function isSharedSender(from: string): boolean {
+function isSharedSender(from: string): boolean {
   const address = from.match(/<([^>]+)>/)?.[1] ?? from;
   return address.trim().toLowerCase().endsWith("@resend.dev");
 }

@@ -142,35 +142,28 @@ export function CalendarView({
             {formatDate(selected, "long")}
           </p>
           {selectedEntries.length ? (
-            selectedEntries.map((e, i) => (
-              <EntryRow key={e.id} entry={e} divided={i > 0} />
-            ))
+            selectedEntries.map((e, i) => <EntryRow key={e.id} entry={e} divided={i > 0} />)
           ) : (
-            <EmptyState
-              icon={<CalendarOff className="size-5" />}
-              title="Nothing on this day"
-            />
+            <EmptyState icon={<CalendarOff className="size-5" />} title="Nothing on this day" />
           )}
         </Card>
       ) : null}
 
       {showUpcoming ? (
-      <div>
-        <h2 className="mb-3 text-footnote font-semibold text-fg-muted">
-          Next up
-        </h2>
-        <Card>
-          {upcoming.length ? (
-            upcoming.map((e, i) => <EntryRow key={e.id} entry={e} divided={i > 0} showDate />)
-          ) : (
-            <EmptyState
-              icon={<CalendarOff className="size-5" />}
-              title="Nothing scheduled"
-              description="Meetings and events appear here once scheduled."
-            />
-          )}
-        </Card>
-      </div>
+        <div>
+          <h2 className="mb-3 text-footnote font-semibold text-fg-muted">Next up</h2>
+          <Card>
+            {upcoming.length ? (
+              upcoming.map((e, i) => <EntryRow key={e.id} entry={e} divided={i > 0} showDate />)
+            ) : (
+              <EmptyState
+                icon={<CalendarOff className="size-5" />}
+                title="Nothing scheduled"
+                description="Meetings and events appear here once scheduled."
+              />
+            )}
+          </Card>
+        </div>
       ) : null}
     </div>
   );

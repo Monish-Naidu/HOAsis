@@ -202,7 +202,9 @@ describe("the governing documents", () => {
   it("never proposes a change that removes everything by accident", () => {
     for (const amendment of governingAmendments) {
       if (amendment.kind === "remove") continue;
-      expect(amendment.text.length, `${amendment.title} would empty the article`).toBeGreaterThan(0);
+      expect(amendment.text.length, `${amendment.title} would empty the article`).toBeGreaterThan(
+        0,
+      );
     }
   });
 });

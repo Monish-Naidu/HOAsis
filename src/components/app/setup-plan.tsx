@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
+import { ArrowRight, Camera, Check, PartyPopper, Upload } from "lucide-react";
 import {
-  ArrowRight,
-  Camera,
-  Check,
-  PartyPopper,
-  Upload,
-} from "lucide-react";
-import { Button, ButtonLink, Callout, Card, SuccessMark, fieldClass } from "@/components/ui/primitives";
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  SuccessMark,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
 import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/app/question-flow";
@@ -58,11 +59,13 @@ import { homeLabel } from "@/lib/wording";
 const QUESTION: Record<string, { title: string; detail: string }> = {
   ein: {
     title: "Does the association have an EIN?",
-    detail: "Free from the IRS. A bank will not open an account in the association's name without it.",
+    detail:
+      "Free from the IRS. A bank will not open an account in the association's name without it.",
   },
   register: {
     title: "Is the association registered, with an agent named?",
-    detail: "A nonprofit corporation with your state, and an agent who accepts legal papers for it.",
+    detail:
+      "A nonprofit corporation with your state, and an agent who accepts legal papers for it.",
   },
   roster: {
     title: "Is every home listed, with its owner?",
@@ -70,7 +73,8 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
   },
   "opening-balances": {
     title: "What does each home owe today?",
-    detail: "One figure per home, as of the day you switched. Nothing before that has to come across.",
+    detail:
+      "One figure per home, as of the day you switched. Nothing before that has to come across.",
   },
   payments: {
     title: "Can owners pay online yet?",
@@ -143,7 +147,11 @@ export function SetupFlow({ welcome = false }: { welcome?: boolean }) {
   const auth = useAuth();
   const remote = useRemote();
   const { community } = useAppState();
-  if (auth.loading || remote.status === "loading" || (auth.user && remote.status === "signed-out")) {
+  if (
+    auth.loading ||
+    remote.status === "loading" ||
+    (auth.user && remote.status === "signed-out")
+  ) {
     return null;
   }
   return <SetupQuestions key={community.id} welcome={welcome} />;
@@ -168,7 +176,10 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
       ? requested
       : (firstOpen ?? tasks[0]?.key ?? ""),
   );
-  const index = Math.max(0, tasks.findIndex((task) => task.key === flow.current));
+  const index = Math.max(
+    0,
+    tasks.findIndex((task) => task.key === flow.current),
+  );
   const task = tasks[index];
 
   // Forward lands on the next question still open. Nobody should have to
@@ -185,13 +196,7 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
   }
 
   if (stage === "welcome") {
-    return (
-      <Welcome
-        plan={plan}
-        count={counts.left}
-        onStart={() => setStage("questions")}
-      />
-    );
+    return <Welcome plan={plan} count={counts.left} onStart={() => setStage("questions")} />;
   }
 
   if (stage === "done" || !task) {
@@ -251,7 +256,9 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
           <summary className="cursor-pointer select-none text-footnote font-semibold text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden">
             Why this matters
           </summary>
-          <p className="mt-2 max-w-[64ch] text-footnote leading-relaxed text-fg-muted">{task.why}</p>
+          <p className="mt-2 max-w-[64ch] text-footnote leading-relaxed text-fg-muted">
+            {task.why}
+          </p>
         </details>
       </div>
     ),
@@ -320,8 +327,7 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
       <p className="mt-3 max-w-[52ch] text-headline leading-relaxed text-fg-muted">
         {pluralize(homes, "home")} on the register
         {isMixed(community.profile) && mix ? ` (${mix})` : ""}
-        {dues > 0 && !varies ? `, ${money(dues)} ${cadence} each` : ""}.{" "}
-        {plan.payments.sentence}
+        {dues > 0 && !varies ? `, ${money(dues)} ${cadence} each` : ""}. {plan.payments.sentence}
       </p>
 
       {local ? (
@@ -355,7 +361,9 @@ function Welcome({ plan, count, onStart }: { plan: Plan; count: number; onStart:
           <div className="flex items-start gap-3 px-4 py-3">
             <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-warn" />
             <span className="min-w-0">
-              <span className="block text-body font-medium text-fg">Online payments are not on yet</span>
+              <span className="block text-body font-medium text-fg">
+                Online payments are not on yet
+              </span>
               <span className="block text-footnote text-fg-muted">
                 {local
                   ? "A copy in this browser cannot take payments. Set it up for real to turn them on."
@@ -432,11 +440,7 @@ function Finished({
     <div className="animate-rise mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
       <span className="mb-5 flex items-center gap-4">
         <HummingbirdArriving size={44} />
-        {plan.allDone ? (
-          <SuccessMark size={44} tone="primary" />
-        ) : (
-          <SuccessMark size={44} />
-        )}
+        {plan.allDone ? <SuccessMark size={44} tone="primary" /> : <SuccessMark size={44} />}
       </span>
       <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg sm:text-[38px]">
         {plan.allDone ? "Everything is set up" : "That is everything for now"}
@@ -591,67 +595,67 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
         {phase.tasks.map((task) => {
           const situational = HANDOVER_KEYS.includes(task.key) || BUILDER_KEYS.includes(task.key);
           return (
-          <div
-            key={task.key}
-            className={cn("flex items-start gap-3 px-4 py-3.5", task.complete && "opacity-70")}
-          >
-            <span
-              className={cn(
-                "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
-                task.complete ? "border-ok bg-ok text-white" : "border-border-2 text-transparent",
-              )}
-              aria-hidden
+            <div
+              key={task.key}
+              className={cn("flex items-start gap-3 px-4 py-3.5", task.complete && "opacity-70")}
             >
-              <Check className="size-3" strokeWidth={3} />
-            </span>
-            <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  "block text-body font-semibold text-fg",
-                  task.complete && "line-through",
+                  "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
+                  task.complete ? "border-ok bg-ok text-white" : "border-border-2 text-transparent",
                 )}
+                aria-hidden
               >
-                {task.label}
+                <Check className="size-3" strokeWidth={3} />
               </span>
-              {situational ? (
-                <>
-                  <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
-                    {task.detail}
-                  </span>
-                  {/* Order is the whole argument at a handover, so the reason a
-                      step sits where it does is stated rather than implied. */}
-                  <span className="mt-1.5 block border-l-2 border-border-2 pl-3 text-footnote leading-relaxed text-fg-muted">
-                    {task.why}
-                  </span>
-                </>
-              ) : (
-                <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
-                  {task.because ?? task.detail}
+              <span className="min-w-0 flex-1">
+                <span
+                  className={cn(
+                    "block text-body font-semibold text-fg",
+                    task.complete && "line-through",
+                  )}
+                >
+                  {task.label}
                 </span>
-              )}
-            </span>
-            {task.unavailable ? (
-              <span className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle">
-                Not available here
+                {situational ? (
+                  <>
+                    <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
+                      {task.detail}
+                    </span>
+                    {/* Order is the whole argument at a handover, so the reason a
+                      step sits where it does is stated rather than implied. */}
+                    <span className="mt-1.5 block border-l-2 border-border-2 pl-3 text-footnote leading-relaxed text-fg-muted">
+                      {task.why}
+                    </span>
+                  </>
+                ) : (
+                  <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
+                    {task.because ?? task.detail}
+                  </span>
+                )}
               </span>
-            ) : task.complete ? (
-              <Link
-                href={task.href || `/start/plan?task=${task.key}`}
-                className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle hover:text-fg"
-              >
-                {/* The first bill is a fact to read, not a setting to edit. */}
-                {task.key === "first-bill" ? "Look" : "Change"}
-              </Link>
-            ) : (
-              <Link
-                href={`/start/plan?task=${task.key}`}
-                className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-footnote font-semibold text-accent hover:underline"
-              >
-                Do this
-                <ArrowRight className="size-3" />
-              </Link>
-            )}
-          </div>
+              {task.unavailable ? (
+                <span className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle">
+                  Not available here
+                </span>
+              ) : task.complete ? (
+                <Link
+                  href={task.href || `/start/plan?task=${task.key}`}
+                  className="mt-0.5 shrink-0 text-footnote font-medium text-fg-subtle hover:text-fg"
+                >
+                  {/* The first bill is a fact to read, not a setting to edit. */}
+                  {task.key === "first-bill" ? "Look" : "Change"}
+                </Link>
+              ) : (
+                <Link
+                  href={`/start/plan?task=${task.key}`}
+                  className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-footnote font-semibold text-accent hover:underline"
+                >
+                  Do this
+                  <ArrowRight className="size-3" />
+                </Link>
+              )}
+            </div>
           );
         })}
       </Card>
@@ -685,7 +689,7 @@ function screenName(href: string): string {
  * this question, not the overview. Every link out of a question goes
  * through here so the return bar always knows where "back" is.
  */
-export function setupLink(task: PlanTask, href = task.href): string {
+function setupLink(task: PlanTask, href = task.href): string {
   // A hash goes last, after the query, or the browser reads the query as part of it.
   const [path, hash] = href.split("#");
   return `${path}?from=setup&task=${encodeURIComponent(task.key)}${hash ? `#${hash}` : ""}`;
@@ -767,8 +771,7 @@ function TaskAction({ task }: { task: PlanTask }) {
   }
 }
 
-const field =
-  fieldClass;
+const field = fieldClass;
 
 /** Paperwork happens outside the product. The detail says what, the link says where, "Done" says it is. */
 function PaperworkInline({ task }: { task: PlanTask }) {
@@ -1017,7 +1020,12 @@ function HouseholdInline({ task }: { task: PlanTask }) {
       notify(`Added ${home.displayName}, home ${home.unit}`);
       setEntry({ name: "", email: "", unit: "" });
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not add that home. Check the details and try again.", "warn");
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not add that home. Check the details and try again.",
+        "warn",
+      );
     }
   }
   return (
@@ -1095,7 +1103,9 @@ function BoardInline({ task }: { task: PlanTask }) {
           <label key={account.id} className="flex items-center gap-3 px-4 py-2.5">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-body font-medium text-fg">{account.name}</span>
-              <span className="block text-footnote text-fg-subtle">{homeLabel(community, account.unit)}</span>
+              <span className="block text-footnote text-fg-subtle">
+                {homeLabel(community, account.unit)}
+              </span>
             </span>
             <select
               value={account.role}
@@ -1205,7 +1215,9 @@ function PhotoInline() {
         <Camera className="size-4" />
         {busy ? "Uploading" : photo ? "Change the photo" : "Choose a photo"}
       </Button>
-      <p className="w-full text-footnote text-fg-subtle">Any picture of the neighborhood does the job.</p>
+      <p className="w-full text-footnote text-fg-subtle">
+        Any picture of the neighborhood does the job.
+      </p>
     </div>
   );
 }
@@ -1224,8 +1236,8 @@ export function SetupPlanSummary() {
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   if (plan.allDone) return null;
   const counts = setupCounts(plan);
-  const next = plan
-    .phases.flatMap((phase) => phase.tasks)
+  const next = plan.phases
+    .flatMap((phase) => phase.tasks)
     .find((task) => !task.complete && !task.unavailable);
 
   // Straight into the next question. The overview stays one click away
@@ -1241,8 +1253,7 @@ export function SetupPlanSummary() {
           Setting up: {counts.done} of {counts.total} done
         </span>
         <span className="mt-0.5 block truncate text-footnote leading-relaxed text-fg-muted">
-          {next ? `Next: ${next.label}.` : ""}{" "}
-          {plan.payments.sentence}
+          {next ? `Next: ${next.label}.` : ""} {plan.payments.sentence}
         </span>
       </span>
       <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand-gradient px-3.5 text-footnote font-semibold text-primary-fg shadow-sm sm:inline-flex">
@@ -1279,5 +1290,3 @@ function Ring({ percent, done, total }: { percent: number; done: number; total: 
     </span>
   );
 }
-
-

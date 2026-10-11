@@ -3,10 +3,25 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, MessagesSquare, Plus, Send } from "lucide-react";
-import { addressLabel, boardOffices, boardSignature, officeChoiceLabel, OFFICES, toLabel } from "@/lib/board-offices";
+import {
+  addressLabel,
+  boardOffices,
+  boardSignature,
+  officeChoiceLabel,
+  OFFICES,
+  toLabel,
+} from "@/lib/board-offices";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useToast } from "@/components/app/toast";
-import { Badge, Button, Card, EmptyState, SectionTitle, Select, fieldClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  SectionTitle,
+  Select,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { useAppState, useCurrentHome } from "@/lib/app-state";
 import type { MessageEvent, MessageThread, ThreadAddress } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
@@ -19,8 +34,7 @@ const TOPICS: { value: MessageThread["tag"]; label: string }[] = [
   { value: "Governance", label: "Rules or meetings" },
 ];
 
-const field =
-  fieldClass;
+const field = fieldClass;
 
 /**
  * An owner's conversations with the board.
@@ -68,7 +82,12 @@ export function MessagesScreen() {
         setComposing(false);
       }
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Your message did not send. Check your connection and try again.", "warn");
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Your message did not send. Check your connection and try again.",
+        "warn",
+      );
     } finally {
       setSending(false);
     }
@@ -99,7 +118,9 @@ export function MessagesScreen() {
               <div key={o.office} className="flex items-center gap-3 px-4 py-3">
                 <span className="min-w-0 flex-1">
                   <span className="block text-body font-semibold text-fg">{o.label}</span>
-                  <span className="block text-footnote text-fg">{o.holder ?? "Nobody holds this office yet"}</span>
+                  <span className="block text-footnote text-fg">
+                    {o.holder ?? "Nobody holds this office yet"}
+                  </span>
                   <span className="block text-footnote text-fg-muted">{o.handles}</span>
                 </span>
                 <Button
@@ -242,7 +263,9 @@ function ThreadRow({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="truncate text-body font-medium text-fg">{thread.subject}</span>
-            {thread.toRole !== "board" ? <Badge tone="neutral">{toLabel(thread.toRole)}</Badge> : null}
+            {thread.toRole !== "board" ? (
+              <Badge tone="neutral">{toLabel(thread.toRole)}</Badge>
+            ) : null}
             {waitingOnBoard ? (
               <Badge tone="neutral">Waiting on the board</Badge>
             ) : (
@@ -262,7 +285,9 @@ function ThreadRow({
         {thread.messages.map((m) => (
           <div key={m.id}>
             <p className="text-footnote">
-              <span className="font-semibold text-fg">{m.fromRole === "resident" ? "You" : senderName(m)}</span>{" "}
+              <span className="font-semibold text-fg">
+                {m.fromRole === "resident" ? "You" : senderName(m)}
+              </span>{" "}
               <span className="text-fg-subtle">{formatDate(m.at, "medium")}</span>
             </p>
             <p className="mt-0.5 whitespace-pre-line text-body leading-relaxed text-fg">{m.body}</p>

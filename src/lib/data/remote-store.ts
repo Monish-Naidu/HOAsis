@@ -220,7 +220,13 @@ export async function loadRemote(profileId: string | null): Promise<void> {
     if (!associations.length) {
       // Signed in, but belongs to nothing yet. That is a real state with its
       // own screen, not an error.
-      set({ status: "empty", associations: [], activeId: null, community: null, message: undefined });
+      set({
+        status: "empty",
+        associations: [],
+        activeId: null,
+        community: null,
+        message: undefined,
+      });
       return;
     }
 
@@ -382,9 +388,10 @@ export const REREAD_TIMEOUT_MS = 20_000;
 /** What a counted write that matched no row is told. Row level security hid the row. */
 export const NOTHING_CHANGED = "nothing was changed. You may not have access to change this";
 
-type RemoteWrite = () => PromiseLike<
-  { error: { message: string } | null; count?: number | null } | void
->;
+type RemoteWrite = () => PromiseLike<{
+  error: { message: string } | null;
+  count?: number | null;
+} | void>;
 
 export function remoteWrite(
   label: string,
@@ -393,7 +400,9 @@ export function remoteWrite(
   options?: { timeoutMs?: number },
 ): Promise<boolean> {
   // `runWrite` never rejects, so one failure cannot stall the queue.
-  const mine = writeQueue.then(() => runWrite(label, write, options?.timeoutMs ?? WRITE_TIMEOUT_MS));
+  const mine = writeQueue.then(() =>
+    runWrite(label, write, options?.timeoutMs ?? WRITE_TIMEOUT_MS),
+  );
   writeQueue = mine;
   return mine;
 }
@@ -459,9 +468,7 @@ async function runWrite(label: string, write: RemoteWrite, timeoutMs: number): P
     await reread();
     return true;
   } catch (error) {
-    reportRemoteError(
-      `${label}: ${error instanceof Error ? error.message : "it was not saved"}`,
-    );
+    reportRemoteError(`${label}: ${error instanceof Error ? error.message : "it was not saved"}`);
     await reread();
     return false;
   }
@@ -495,7 +502,9 @@ export async function loadEarlierLedger(): Promise<boolean> {
     });
     return true;
   } catch (error) {
-    reportRemoteError(error instanceof Error ? error.message : "Could not load earlier transactions");
+    reportRemoteError(
+      error instanceof Error ? error.message : "Could not load earlier transactions",
+    );
     return false;
   }
 }
@@ -520,7 +529,9 @@ export async function loadEarlierStatement(unitId: string): Promise<boolean> {
     });
     return true;
   } catch (error) {
-    reportRemoteError(error instanceof Error ? error.message : "Could not load the earlier statement");
+    reportRemoteError(
+      error instanceof Error ? error.message : "Could not load the earlier statement",
+    );
     return false;
   }
 }

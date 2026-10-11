@@ -75,7 +75,7 @@ export function decideAutopay(input: {
  * within about a week; past two, the likelier story is a failure event that
  * never arrived, and a home must not sit out autopay forever on its account.
  */
-export const PENDING_PAYMENT_MAX_AGE_DAYS = 14;
+const PENDING_PAYMENT_MAX_AGE_DAYS = 14;
 
 /** The earliest day a pending payment may date from and still count, YYYY-MM-DD. */
 export function pendingSince(today: string): string {
@@ -85,10 +85,7 @@ export function pendingSince(today: string): string {
 }
 
 /** A saved instrument the cron can actually charge: a Stripe method, verified. */
-export function isChargeable(instrument: {
-  token?: string;
-  status?: string;
-}): boolean {
+export function isChargeable(instrument: { token?: string; status?: string }): boolean {
   return Boolean(instrument.token?.startsWith("pm_")) && instrument.status !== "verifying";
 }
 

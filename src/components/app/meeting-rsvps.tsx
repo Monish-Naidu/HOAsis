@@ -2,7 +2,14 @@
 
 import { CalendarOff, Copy, Radio, Users, Video } from "lucide-react";
 import { useToast } from "@/components/app/toast";
-import { Badge, Button, Card, EmptyState, SectionTitle, buttonClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  SectionTitle,
+  buttonClass,
+} from "@/components/ui/primitives";
 import { EntryRow } from "@/components/app/calendar-view";
 import { kindLabel, kindTone, upcomingFrom } from "@/lib/calendar";
 import { calendarEntries } from "@/lib/metrics";
@@ -40,9 +47,14 @@ export function MeetingRsvps() {
         {upcoming.map((entry, i) => {
           const m =
             entry.kind === "meeting"
-              ? community.meetings.find((x) => `cal-${x.id}` === entry.id && x.status === "scheduled")
+              ? community.meetings.find(
+                  (x) => `cal-${x.id}` === entry.id && x.status === "scheduled",
+                )
               : undefined;
-          const called = entry.kind === "meeting" ? community.meetings.find((x) => `cal-${x.id}` === entry.id) : undefined;
+          const called =
+            entry.kind === "meeting"
+              ? community.meetings.find((x) => `cal-${x.id}` === entry.id)
+              : undefined;
           if (called?.status === "cancelled") {
             return (
               <div key={called.id} className={cn("px-4 py-3", i > 0 && "border-t border-border")}>
@@ -50,8 +62,12 @@ export function MeetingRsvps() {
                   <p className="text-body font-medium text-fg-muted line-through">{called.title}</p>
                   <Badge tone="danger">Cancelled</Badge>
                 </div>
-                <p className="mt-0.5 text-footnote text-fg-muted">{formatDate(called.date, "long")}</p>
-                <p className="mt-0.5 text-footnote font-medium text-danger">{cancelledLine(called)}</p>
+                <p className="mt-0.5 text-footnote text-fg-muted">
+                  {formatDate(called.date, "long")}
+                </p>
+                <p className="mt-0.5 text-footnote font-medium text-danger">
+                  {cancelledLine(called)}
+                </p>
               </div>
             );
           }
@@ -212,7 +228,9 @@ export function LiveMeetingCard() {
         <Radio className="size-3.5 shrink-0 text-ok" />
         <div className="min-w-0 flex-1 basis-40">
           <p className="text-body font-semibold text-ok">{live.title}</p>
-          <p className="text-footnote text-ok opacity-90">{liveMeetingLine(live.attendees.length)}</p>
+          <p className="text-footnote text-ok opacity-90">
+            {liveMeetingLine(live.attendees.length)}
+          </p>
         </div>
         {/* A link to the call, and nothing drawn to look like one. The room
             of initials and camera tiles had no call behind it. */}

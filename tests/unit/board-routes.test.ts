@@ -101,18 +101,26 @@ describe("sections", () => {
 
   it("orders a section's tabs as the audit named them", () => {
     const money = BOARD_ROUTES.find((r) => r.key === "money")!;
-    expect(sectionPages(money).map((r) => r.tab ?? r.label).slice(0, 4)).toEqual([
-      "Overview",
-      "Transactions",
-      "Past due",
-      "Reserves",
-    ]);
+    expect(
+      sectionPages(money)
+        .map((r) => r.tab ?? r.label)
+        .slice(0, 4),
+    ).toEqual(["Overview", "Transactions", "Past due", "Reserves"]);
   });
 
   it("names every section's tabs the way the rail and the page titles do", () => {
     const tabs = (key: string) =>
       sectionPages(BOARD_ROUTES.find((r) => r.key === key)!).map((r) => r.tab ?? r.label);
-    expect(tabs("money")).toEqual(["Overview", "Transactions", "Past due", "Reserves", "Budget", "Trends", "Statements", "Shared costs"]);
+    expect(tabs("money")).toEqual([
+      "Overview",
+      "Transactions",
+      "Past due",
+      "Reserves",
+      "Budget",
+      "Trends",
+      "Statements",
+      "Shared costs",
+    ]);
     expect(tabs("requests")).toEqual(["Requests", "Notices"]);
     expect(tabs("communications")).toEqual(["Inbox", "Announcements", "Community"]);
     expect(tabs("meetings")).toEqual(["Meetings", "Voting"]);
@@ -131,12 +139,16 @@ describe("sections", () => {
     };
     for (const [capability, key] of Object.entries(railName)) {
       const route = BOARD_ROUTES.find((r) => r.key === key)!;
-      expect(CAPABILITY_LABEL[capability as keyof typeof CAPABILITY_LABEL], capability).toBe(route.label);
+      expect(CAPABILITY_LABEL[capability as keyof typeof CAPABILITY_LABEL], capability).toBe(
+        route.label,
+      );
     }
   });
 
   it("keeps the Past due URL, so a bookmark to Collections still opens", () => {
-    expect(BOARD_ROUTES.find((r) => r.key === "money-collections")?.href).toBe("/board/money/collections");
+    expect(BOARD_ROUTES.find((r) => r.key === "money-collections")?.href).toBe(
+      "/board/money/collections",
+    );
   });
 
   it("gives a folded money page the section's teal", () => {

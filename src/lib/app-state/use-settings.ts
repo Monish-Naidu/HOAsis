@@ -2,12 +2,36 @@ import { useCallback, useMemo } from "react";
 import type { Community } from "@/lib/data/community";
 import { DUES_HIGH_MESSAGE, MAX_DUES_CENTS } from "@/lib/input-checks";
 import { todayIsoDate } from "@/lib/utils";
-import { type AppDeps, communityStore, destructive, dismissStore, isUuid, latest, MUTABLE_SLICES, newId, remoteWrite, resetCommunity, sessionStore, sessionUserId, sliceStore } from "./core";
+import {
+  type AppDeps,
+  communityStore,
+  destructive,
+  dismissStore,
+  isUuid,
+  latest,
+  MUTABLE_SLICES,
+  newId,
+  remoteWrite,
+  resetCommunity,
+  sessionStore,
+  sessionUserId,
+  sliceStore,
+} from "./core";
 import { saveCreatedCommunity } from "@/lib/data/created-communities";
-import { loadRemote, NOTHING_CHANGED, preferRemoteAssociation, reportRemoteError } from "@/lib/data/remote-store";
+import {
+  loadRemote,
+  NOTHING_CHANGED,
+  preferRemoteAssociation,
+  reportRemoteError,
+} from "@/lib/data/remote-store";
 import { setHomeDues as writeHomeDues } from "@/lib/roster/apply";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { buildCommunity, type CommunityDraft, draftCollectionPolicy, reservableSpaceNames } from "@/lib/data/new-community";
+import {
+  buildCommunity,
+  type CommunityDraft,
+  draftCollectionPolicy,
+  reservableSpaceNames,
+} from "@/lib/data/new-community";
 import { isRecord } from "@/lib/core/guards";
 import type { SettingsPatch } from "./types";
 
@@ -228,16 +252,18 @@ export function useSettingsActions(deps: AppDeps) {
       return () => {
         if (!amenity) return;
         void remoteWrite("Restoring the amenity", () =>
-          supabaseBrowser().from("amenities").insert({
-            id: amenity.id,
-            association_id: rc.id,
-            name: amenity.name,
-            detail: amenity.detail,
-            reservable: amenity.reservable,
-            status: amenity.status,
-            max_hours: amenity.rules?.maxHours ?? amenity.maxHours ?? null,
-            rules: amenity.rules ?? null,
-          }),
+          supabaseBrowser()
+            .from("amenities")
+            .insert({
+              id: amenity.id,
+              association_id: rc.id,
+              name: amenity.name,
+              detail: amenity.detail,
+              reservable: amenity.reservable,
+              status: amenity.status,
+              max_hours: amenity.rules?.maxHours ?? amenity.maxHours ?? null,
+              rules: amenity.rules ?? null,
+            }),
         );
       };
     },
@@ -397,9 +423,7 @@ export function useSettingsActions(deps: AppDeps) {
   const dismissSetupTask = useCallback(
     (key: string) => {
       if (!remote.community) {
-        dismissStore(communityId).update((all) =>
-          all.includes(key) ? all : [...all, key],
-        );
+        dismissStore(communityId).update((all) => (all.includes(key) ? all : [...all, key]));
         return;
       }
       // Through the same door as every other write, so a refusal is said.
@@ -521,7 +545,10 @@ export function useSettingsActions(deps: AppDeps) {
             : // A stock template, edited: the row replaces it, keyed by its id.
               supabaseBrowser()
                 .from("message_templates")
-                .upsert({ ...row, baseline_id: template.id }, { onConflict: "association_id,baseline_id" }),
+                .upsert(
+                  { ...row, baseline_id: template.id },
+                  { onConflict: "association_id,baseline_id" },
+                ),
         );
         return;
       }

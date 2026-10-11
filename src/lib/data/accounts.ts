@@ -41,15 +41,21 @@ export function caps(on: Capability[], permissions = false): Capabilities {
 export const NO_CAPABILITIES = caps([]);
 
 /** Every area open to look at: what an officer sees by default. */
-export const ALL_VIEWS: Capabilities = caps([...GRANTABLE]);
+const ALL_VIEWS: Capabilities = caps([...GRANTABLE]);
 
 /** May this seat open the area, to read or to change? */
-export function sees(account: Pick<Account, "capabilities" | "views"> | null | undefined, c: Capability): boolean {
+export function sees(
+  account: Pick<Account, "capabilities" | "views"> | null | undefined,
+  c: Capability,
+): boolean {
   return Boolean(account && (account.capabilities[c] || account.views[c]));
 }
 
 /** The level a seat holds in one area, for the grid in Settings. */
-export function accessLevel(account: Pick<Account, "capabilities" | "views">, c: Capability): AccessLevel {
+export function accessLevel(
+  account: Pick<Account, "capabilities" | "views">,
+  c: Capability,
+): AccessLevel {
   if (account.capabilities[c]) return "change";
   if (account.views[c]) return "view";
   return "none";
@@ -123,7 +129,14 @@ export const accounts: Account[] = [
     email: "s.bergman@example.com",
     unit: "31",
     role: "secretary",
-    capabilities: caps(["documents", "communications", "voting", "requests", "compliance", "forum"]),
+    capabilities: caps([
+      "documents",
+      "communications",
+      "voting",
+      "requests",
+      "compliance",
+      "forum",
+    ]),
     views: ALL_VIEWS,
   },
   {

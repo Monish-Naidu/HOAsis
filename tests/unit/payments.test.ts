@@ -135,7 +135,13 @@ describe("tokenizeCard", () => {
   it("refuses to tokenize a card that failed validation", () => {
     expect(() =>
       tokenizeCard(
-        { number: "4242424242424243", expMonth: 12, expYear: 2028, cvc: "123", postalCode: "98036" },
+        {
+          number: "4242424242424243",
+          expMonth: 12,
+          expYear: 2028,
+          cvc: "123",
+          postalCode: "98036",
+        },
         CONTEXT,
       ),
     ).toThrow(ValidationError);
@@ -310,7 +316,9 @@ describe("platform fee", () => {
   });
 
   it("names nothing cheapest when there is only one method", () => {
-    expect(cheapestInstrument([{ kind: "ach" } as PaymentInstrument], AMOUNT, OWNER_PAYS)).toBeUndefined();
+    expect(
+      cheapestInstrument([{ kind: "ach" } as PaymentInstrument], AMOUNT, OWNER_PAYS),
+    ).toBeUndefined();
   });
 
   it("undercuts the incumbent where the claim is actually true", () => {

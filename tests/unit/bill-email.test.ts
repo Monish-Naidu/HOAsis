@@ -12,8 +12,12 @@ import { unsentDuesBill } from "@/lib/metrics";
 
 const TODAY = "2026-10-01";
 const bill = (over: Partial<PostedCharge> = {}): PostedCharge => ({
-  category: "dues", kind: "charge", label: "October 2026 dues", due_on: "2026-10-01",
-  created_at: "2026-10-01T13:00:04Z", ...over,
+  category: "dues",
+  kind: "charge",
+  label: "October 2026 dues",
+  due_on: "2026-10-01",
+  created_at: "2026-10-01T13:00:04Z",
+  ...over,
 });
 
 describe("billPostedToday", () => {
@@ -34,7 +38,9 @@ describe("billPostedToday", () => {
     expect(billPostedToday(rows, TODAY)).toBeNull();
   });
   it("is not fooled by a brought forward line sitting next to a real bill", () => {
-    expect(billPostedToday([bill({ label: "Balance brought forward" }), bill()], TODAY)).toEqual({ dueOn: "2026-10-01" });
+    expect(billPostedToday([bill({ label: "Balance brought forward" }), bill()], TODAY)).toEqual({
+      dueOn: "2026-10-01",
+    });
   });
 });
 
@@ -69,21 +75,50 @@ describe("unsentDuesBill, the Needs you today row", () => {
   };
 
   it("shows for an opted out board with a recent bill and no email logged", () => {
-    expect(unsentDuesBill(signedIn({ billsByEmail: false }))).toEqual({ label: "October dues posted" });
+    expect(unsentDuesBill(signedIn({ billsByEmail: false }))).toEqual({
+      label: "October dues posted",
+    });
   });
   it("is quiet while the email is on, because the job sends it", () => {
     expect(unsentDuesBill(signedIn({ billsByEmail: true }))).toBeNull();
     expect(unsentDuesBill(signedIn({}))).toBeNull();
   });
   it("is quiet once an assessment email was logged since the bill posted", () => {
-    const sent = { id: "e1", to: "a@example.com", category: "assessment", subject: "s", sentAt: "2026-10-02T09:00:00Z" };
+    const sent = {
+      id: "e1",
+      to: "a@example.com",
+      category: "assessment",
+      subject: "s",
+      sentAt: "2026-10-02T09:00:00Z",
+    };
     expect(unsentDuesBill(signedIn({ billsByEmail: false, emailLog: [sent] }))).toBeNull();
   });
   it("is not quieted by an email from before the bill, a failed one, or another category", () => {
-    const before = { id: "e1", to: "a@example.com", category: "assessment", subject: "s", sentAt: "2026-09-30T09:00:00Z" };
-    const failed = { id: "e2", to: "a@example.com", category: "assessment", subject: "s", sentAt: "2026-10-02T09:00:00Z", error: "bounced" };
-    const other = { id: "e3", to: "a@example.com", category: "message", subject: "s", sentAt: "2026-10-02T09:00:00Z" };
-    expect(unsentDuesBill(signedIn({ billsByEmail: false, emailLog: [before, failed, other] }))).not.toBeNull();
+    const before = {
+      id: "e1",
+      to: "a@example.com",
+      category: "assessment",
+      subject: "s",
+      sentAt: "2026-09-30T09:00:00Z",
+    };
+    const failed = {
+      id: "e2",
+      to: "a@example.com",
+      category: "assessment",
+      subject: "s",
+      sentAt: "2026-10-02T09:00:00Z",
+      error: "bounced",
+    };
+    const other = {
+      id: "e3",
+      to: "a@example.com",
+      category: "message",
+      subject: "s",
+      sentAt: "2026-10-02T09:00:00Z",
+    };
+    expect(
+      unsentDuesBill(signedIn({ billsByEmail: false, emailLog: [before, failed, other] })),
+    ).not.toBeNull();
   });
   it("lapses after seven days and has nothing to say with no bill on the books", () => {
     expect(unsentDuesBill(signedIn({ billsByEmail: false, asOf: "2026-10-08" }))).not.toBeNull();
@@ -92,7 +127,9 @@ describe("unsentDuesBill, the Needs you today row", () => {
   });
   it("shows in the demo, which has no email log or bills, only when the switch is off", () => {
     const demo = { ...mehrMeadows, history: undefined, recentDuesBill: undefined };
-    expect(unsentDuesBill({ ...demo, association: { ...demo.association, billsByEmail: false } })).not.toBeNull();
+    expect(
+      unsentDuesBill({ ...demo, association: { ...demo.association, billsByEmail: false } }),
+    ).not.toBeNull();
     expect(unsentDuesBill(demo)).toBeNull();
   });
 });

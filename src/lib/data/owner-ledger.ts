@@ -20,8 +20,18 @@ const CARD_RATE = 0.029;
 const CARD_FIXED_CENTS = 30;
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 export interface LedgerOptions {
@@ -72,7 +82,9 @@ export function buildHomeLedger(home: Home, options: LedgerOptions): ChargeLine[
 
   const seed = seedOf(home);
   const isAch = home.autopay || seed % 2 === 0;
-  const method = home.autopayMethod ?? (isAch ? `Bank ••${2000 + (seed % 7000)}` : `Visa ••${1000 + (seed % 8000)}`);
+  const method =
+    home.autopayMethod ??
+    (isAch ? `Bank ••${2000 + (seed % 7000)}` : `Visa ••${1000 + (seed % 8000)}`);
   const payDay = 2 + (seed % 6);
 
   const unpaidMonths = Math.floor(home.balanceCents / assessmentCents);

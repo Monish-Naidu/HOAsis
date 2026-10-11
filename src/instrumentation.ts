@@ -28,7 +28,10 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
   const requestId = Array.isArray(header) ? header[0] : header;
   const log = logger(context.routePath || request.path, null, { requestId });
   const err = error instanceof Error ? error : new Error(String(error));
-  const digest = typeof error === "object" && error !== null && "digest" in error ? String(error.digest) : undefined;
+  const digest =
+    typeof error === "object" && error !== null && "digest" in error
+      ? String(error.digest)
+      : undefined;
   log.error("unhandled server error", {
     err,
     digest,

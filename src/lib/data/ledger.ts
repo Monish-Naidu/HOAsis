@@ -743,20 +743,37 @@ interface YearPlan {
 }
 
 const YEAR_PLAN: Record<number, YearPlan> = {
-  2024: { duesCents: 26_500, insuranceCents: 668_100, reserveCents: 564_000, priceLevel: 0.91, autopay: 31 },
-  2025: { duesCents: 27_500, insuranceCents: 705_900, reserveCents: 588_000, priceLevel: 0.96, autopay: 34 },
-  2026: { duesCents: 28_500, insuranceCents: 742_300, reserveCents: 612_000, priceLevel: 1, autopay: 36 },
+  2024: {
+    duesCents: 26_500,
+    insuranceCents: 668_100,
+    reserveCents: 564_000,
+    priceLevel: 0.91,
+    autopay: 31,
+  },
+  2025: {
+    duesCents: 27_500,
+    insuranceCents: 705_900,
+    reserveCents: 588_000,
+    priceLevel: 0.96,
+    autopay: 34,
+  },
+  2026: {
+    duesCents: 28_500,
+    insuranceCents: 742_300,
+    reserveCents: 612_000,
+    priceLevel: 1,
+    autopay: 36,
+  },
 };
 
 /** Common area electric, by month, at 2026 prices. Summer irrigation pumps show. */
 const ELECTRIC_BY_MONTH = [
-  104_200, 98_400, 92_100, 88_600, 91_530, 98_120,
-  124_860, 118_240, 106_300, 96_700, 101_900, 108_500,
+  104_200, 98_400, 92_100, 88_600, 91_530, 98_120, 124_860, 118_240, 106_300, 96_700, 101_900,
+  108_500,
 ];
 /** Water and sewer for the common areas, same shape, smaller swing. */
 const WATER_BY_MONTH = [
-  80_200, 79_400, 81_300, 84_900, 88_600, 92_410,
-  101_340, 96_780, 90_200, 85_100, 81_700, 80_900,
+  80_200, 79_400, 81_300, 84_900, 88_600, 92_410, 101_340, 96_780, 90_200, 85_100, 81_700, 80_900,
 ];
 /** Counsel bills quarterly. The third quarter carries the annual meeting prep. */
 const LEGAL_BY_QUARTER = [120_000, 85_000, 210_000, 140_000];
@@ -764,20 +781,50 @@ const QUARTER_MONTHS = [2, 5, 8, 11];
 
 /** The repairs that came up, in the order they came up. Blank months happen. */
 const REPAIRS: ({ counterparty: string; description: string; cents: number } | null)[] = [
-  { counterparty: "Ace Gate & Access", description: "Ace Gate & Access, south gate keypad", cents: 72_000 },
+  {
+    counterparty: "Ace Gate & Access",
+    description: "Ace Gate & Access, south gate keypad",
+    cents: 72_000,
+  },
   null,
-  { counterparty: "Summit Roofing", description: "Summit Roofing, clubhouse gutter repair", cents: 89_400 },
-  { counterparty: "WaterWorks Irrigation", description: "WaterWorks Irrigation, backflow test and valve", cents: 61_500 },
+  {
+    counterparty: "Summit Roofing",
+    description: "Summit Roofing, clubhouse gutter repair",
+    cents: 89_400,
+  },
+  {
+    counterparty: "WaterWorks Irrigation",
+    description: "WaterWorks Irrigation, backflow test and valve",
+    cents: 61_500,
+  },
   null,
-  { counterparty: "Ace Gate & Access", description: "Ace Gate & Access, north gate motor", cents: 138_000 },
+  {
+    counterparty: "Ace Gate & Access",
+    description: "Ace Gate & Access, north gate motor",
+    cents: 138_000,
+  },
   null,
-  { counterparty: "WaterWorks Irrigation", description: "WaterWorks Irrigation, main line repair", cents: 156_200 },
+  {
+    counterparty: "WaterWorks Irrigation",
+    description: "WaterWorks Irrigation, main line repair",
+    cents: 156_200,
+  },
   { counterparty: "Summit Roofing", description: "Summit Roofing, mail kiosk roof", cents: 43_800 },
 ];
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 /** A stable fraction in [0, 1) from a string, so the same month always wobbles the same way. */
@@ -803,8 +850,11 @@ function buildMonth(year: number, month: number): LedgerEntry[] {
   const key = (tag: string) => `${year}-${mm}-${tag}`;
   const monthIndex = (year - 2024) * 12 + month;
   const rows: Omit<LedgerEntry, "id">[] = [];
-  const operating = (row: Omit<LedgerEntry, "id" | "accountId" | "status" | "matchedBy"> & { matchedBy?: "auto" | "manual" }) =>
-    rows.push({ accountId: "acct-operating", status: "cleared", matchedBy: "auto", ...row });
+  const operating = (
+    row: Omit<LedgerEntry, "id" | "accountId" | "status" | "matchedBy"> & {
+      matchedBy?: "auto" | "manual";
+    },
+  ) => rows.push({ accountId: "acct-operating", status: "cleared", matchedBy: "auto", ...row });
 
   // Dues, in the same three batches the platform still pays out: autopay on
   // the 5th, the bulk of the rest mid month, the stragglers after the 20th.
@@ -904,7 +954,8 @@ function buildMonth(year: number, month: number): LedgerEntry[] {
       description: `Kestrel & Boyd LLP, quarterly retainer and ${["annual filing", "records requests", "annual meeting prep", "covenant review"][quarter]}`,
       counterparty: "Kestrel & Boyd LLP",
       category: "Legal & professional",
-      amountCents: -Math.round((LEGAL_BY_QUARTER[quarter] * (1 + 0.06 * (year - 2024))) / 100) * 100,
+      amountCents:
+        -Math.round((LEGAL_BY_QUARTER[quarter] * (1 + 0.06 * (year - 2024))) / 100) * 100,
     });
     operating({
       date: day(3),
@@ -967,7 +1018,7 @@ function buildMonth(year: number, month: number): LedgerEntry[] {
 }
 
 /** January 2024 through April 2026, newest first. */
-export function buildLedgerHistory(): LedgerEntry[] {
+function buildLedgerHistory(): LedgerEntry[] {
   const months: { year: number; month: number }[] = [];
   for (let year = 2024; year <= 2026; year++) {
     for (let month = 0; month < 12; month++) {

@@ -35,8 +35,8 @@ export function LocalCopyBanner() {
         </ButtonLink>
       }
     >
-      Nothing here is saved anywhere else and nobody else can sign in. Create an account, then
-      go through Setting up again once you are signed in. It takes about three minutes.
+      Nothing here is saved anywhere else and nobody else can sign in. Create an account, then go
+      through Setting up again once you are signed in. It takes about three minutes.
     </Callout>
   );
 }

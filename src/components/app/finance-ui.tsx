@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Minus,
+} from "lucide-react";
 import { Button, Segmented as SegmentedControl, Select } from "@/components/ui/primitives";
 import {
   periodRange,
@@ -103,7 +110,13 @@ export function StatTile({
       <p
         className={cn(
           "tnum mt-2 text-title2 font-semibold leading-none tracking-[-0.03em]",
-          tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : tone === "danger" ? "text-danger" : "text-fg",
+          tone === "ok"
+            ? "text-ok"
+            : tone === "warn"
+              ? "text-warn"
+              : tone === "danger"
+                ? "text-danger"
+                : "text-fg",
         )}
       >
         {value}
@@ -199,7 +212,14 @@ export function SelectField<T extends string>({
 
 /* ----------------------------------------------------------------- period */
 
-const MENU_PRESETS: PeriodPreset[] = ["this-month", "last-month", "last-30-days", "this-year", "last-year", "last-12-months"];
+const MENU_PRESETS: PeriodPreset[] = [
+  "this-month",
+  "last-month",
+  "last-30-days",
+  "this-year",
+  "last-year",
+  "last-12-months",
+];
 
 /**
  * One button for the period, in words and dates: "Last 30 days · Sep 7 to
@@ -251,7 +271,11 @@ export function PeriodControl({
   // Custom dates are applied when the menu closes, so a half-typed range is
   // never searched while it is still wrong.
   const applyAndClose = useCallback(() => {
-    if (customPicked && draftOk && (value.preset !== "custom" || draft.from !== value.from || draft.to !== value.to)) {
+    if (
+      customPicked &&
+      draftOk &&
+      (value.preset !== "custom" || draft.from !== value.from || draft.to !== value.to)
+    ) {
       onChange({ preset: "custom", from: draft.from, to: draft.to });
     }
     setOpen(false);
@@ -307,7 +331,12 @@ export function PeriodControl({
           </span>
           <span className="tnum text-fg-muted">{words.dates}</span>
         </span>
-        <ChevronDown className={cn("size-4 shrink-0 text-fg-subtle transition-transform", open && "rotate-180")} />
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 text-fg-subtle transition-transform",
+            open && "rotate-180",
+          )}
+        />
       </button>
       <button
         type="button"
@@ -347,7 +376,9 @@ export function PeriodControl({
                       )}
                     >
                       {presetMenuLabel(p, fyMonth)}
-                      <span className="tnum text-caption font-normal text-fg-muted">{rangeWords(r.from, r.to)}</span>
+                      <span className="tnum text-caption font-normal text-fg-muted">
+                        {rangeWords(r.from, r.to)}
+                      </span>
                     </button>
                   </li>
                 );
@@ -429,7 +460,10 @@ export function InlineBar({
       className={cn("block h-1.5 w-full overflow-hidden rounded-full bg-surface-3", className)}
     >
       <span
-        className={cn("block h-full rounded-full transition-[width] duration-[640ms] ease-[cubic-bezier(0.16,1,0.3,1)]", colorClass)}
+        className={cn(
+          "block h-full rounded-full transition-[width] duration-[640ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+          colorClass,
+        )}
         style={{ width: `${pct}%` }}
       />
     </span>

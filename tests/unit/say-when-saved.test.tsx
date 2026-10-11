@@ -20,7 +20,13 @@ vi.mock("@/lib/app-state", async (original) => ({
   useAppState: () => state.current,
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -34,7 +40,9 @@ const { useCoverPhotoUpload } = await import("@/components/app/community-hero");
 const { DangerZone } = await import("@/components/app/danger-zone");
 const { default: BoardMeetings } = await import("@/app/board/meetings/page");
 
-const inToasts = ({ children }: { children: ReactNode }) => <ToastProvider>{children}</ToastProvider>;
+const inToasts = ({ children }: { children: ReactNode }) => (
+  <ToastProvider>{children}</ToastProvider>
+);
 
 /** A write the test answers when it chooses. */
 function held() {
@@ -48,7 +56,9 @@ beforeEach(() => {
 });
 
 describe("the reserve study card", () => {
-  const filed = { reserveStudy: { documentId: "doc-1", name: "Study 2024.pdf", studyDate: "2024-05-01" } };
+  const filed = {
+    reserveStudy: { documentId: "doc-1", name: "Study 2024.pdf", studyDate: "2024-05-01" },
+  };
   const given = (fake: Fake) => {
     state.current = { community: { settings: {}, documents: [] }, ...fake };
   };
@@ -68,7 +78,10 @@ describe("the reserve study card", () => {
   });
 
   it("does not say unlinked when the save was refused", async () => {
-    given({ community: { settings: filed, documents: [] }, updateSettings: vi.fn(async () => false) });
+    given({
+      community: { settings: filed, documents: [] },
+      updateSettings: vi.fn(async () => false),
+    });
     render(<ReserveStudyCard />, { wrapper: inToasts });
 
     await userEvent.click(screen.getByRole("button", { name: "Unlink this study" }));
@@ -85,7 +98,9 @@ describe("the reserve study card", () => {
     const upload = async (updateSettings: () => Promise<boolean>) => {
       given({ uploadDocuments, updateSettings });
       const view = render(<ReserveStudyCard />, { wrapper: inToasts });
-      fireEvent.change(screen.getByLabelText("Date on the study"), { target: { value: "2024-05-01" } });
+      fireEvent.change(screen.getByLabelText("Date on the study"), {
+        target: { value: "2024-05-01" },
+      });
       await userEvent.upload(screen.getByLabelText("Upload the study"), study);
       await act(async () => {});
       return view;
@@ -100,7 +115,9 @@ describe("the reserve study card", () => {
     expect(saved).toHaveBeenCalledWith({
       reserveStudy: { documentId: "doc-9", name: "Study 2024.pdf", studyDate: "2024-05-01" },
     });
-    expect(screen.getByText("Study 2024.pdf is on file. It is under Documents too.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Study 2024.pdf is on file. It is under Documents too."),
+    ).toBeInTheDocument();
   });
 });
 
@@ -117,7 +134,9 @@ describe("the cover photo", () => {
   it("says updated when the save took", async () => {
     const updateSettings = vi.fn(() => true);
     await choose(updateSettings);
-    expect(updateSettings).toHaveBeenCalledWith({ photoUrl: expect.stringMatching(/^data:image\/png/) });
+    expect(updateSettings).toHaveBeenCalledWith({
+      photoUrl: expect.stringMatching(/^data:image\/png/),
+    });
     expect(screen.getByText("Cover photo updated")).toBeInTheDocument();
   });
 
@@ -220,13 +239,19 @@ describe("deleting an association", () => {
     // The database refuses the delete until then, and only a toast said why.
     open({ subscriptionStatus: "active", billing: { subscriptionId: "sub_123" } });
     expect(
-      screen.getByText(/Cancel the subscription first: it cannot be deleted while billing is on file\./),
+      screen.getByText(
+        /Cancel the subscription first: it cannot be deleted while billing is on file\./,
+      ),
     ).toBeInTheDocument();
   });
 
   it("says nothing of it during the free period, with nothing to cancel", () => {
     open({ subscriptionStatus: "trialing" });
-    expect(screen.getByText("Removes it for everybody right away. Support can bring it back for thirty days.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Removes it for everybody right away. Support can bring it back for thirty days.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Cancel the subscription first/)).not.toBeInTheDocument();
   });
 });

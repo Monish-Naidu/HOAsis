@@ -45,7 +45,10 @@ function ReturnBar() {
   const plan = buildPlan(community, profileFromCommunity(community), dismissedSetupTasks);
   const counts = setupCounts(plan);
   const tasks = plan.phases.flatMap((phase) => phase.tasks);
-  const doneKeys = tasks.filter((task) => task.complete).map((task) => task.key).join(",");
+  const doneKeys = tasks
+    .filter((task) => task.complete)
+    .map((task) => task.key)
+    .join(",");
   const previous = useRef<string | null>(null);
 
   const fromSetup = params.get("from") === "setup";

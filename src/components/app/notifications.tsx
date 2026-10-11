@@ -156,7 +156,10 @@ function useResidentNotices(): Notice[] {
   if (toVote.length > 0) {
     notices.push({
       id: "vote",
-      title: toVote.length === 1 ? "A ballot needs your vote" : `${toVote.length} ballots need your vote`,
+      title:
+        toVote.length === 1
+          ? "A ballot needs your vote"
+          : `${toVote.length} ballots need your vote`,
       detail: `${toVote[0].title} · closes ${relativeDays(toVote[0].closesDate)}`,
       href: "/resident/vote",
       icon: Vote,

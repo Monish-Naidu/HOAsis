@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  AlertTriangle,
-  Building2,
-  CreditCard,
-  Landmark,
-  ShieldCheck,
-} from "lucide-react";
+import { AlertTriangle, Building2, CreditCard, Landmark, ShieldCheck } from "lucide-react";
 import { Badge, Button, Callout, Card } from "@/components/ui/primitives";
 import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { supportedInstitutions } from "@/lib/data";
@@ -144,9 +138,7 @@ function LinkBank({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="p-4">
-      <p className="mb-3 text-body font-medium text-fg">
-        Which {institution.name} account?
-      </p>
+      <p className="mb-3 text-body font-medium text-fg">Which {institution.name} account?</p>
       <div className="space-y-1.5">
         {institution.accounts.map((account) => (
           <button
@@ -220,7 +212,9 @@ function AddCard({ onDone }: { onDone: () => void }) {
     } catch (error) {
       setProblems(
         isHoasisError(error)
-          ? String(error.context.problems ?? error.message).split(". ").filter(Boolean)
+          ? String(error.context.problems ?? error.message)
+              .split(". ")
+              .filter(Boolean)
           : ["Something went wrong. Check the details and try again."],
       );
     }
@@ -237,9 +231,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
       </Callout>
 
       <label className="block">
-        <span className="mb-1 block text-footnote font-semibold text-fg-muted">
-          Card number
-        </span>
+        <span className="mb-1 block text-footnote font-semibold text-fg-muted">Card number</span>
         <div className="flex h-10 items-center gap-2 rounded-lg border border-border bg-surface-2 px-3">
           <CreditCard className="size-4 shrink-0 text-fg-subtle" />
           <input
@@ -256,9 +248,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
 
       <div className="grid grid-cols-3 gap-2">
         <label className="block">
-          <span className="mb-1 block text-footnote font-semibold text-fg-muted">
-            Expires
-          </span>
+          <span className="mb-1 block text-footnote font-semibold text-fg-muted">Expires</span>
           <input
             inputMode="numeric"
             autoComplete="off"
@@ -285,9 +275,7 @@ function AddCard({ onDone }: { onDone: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-footnote font-semibold text-fg-muted">
-            ZIP
-          </span>
+          <span className="mb-1 block text-footnote font-semibold text-fg-muted">ZIP</span>
           <input
             inputMode="numeric"
             autoComplete="off"

@@ -81,9 +81,7 @@ export function ResetPanel() {
             className={fieldClass}
           />
           {tooShort ? (
-            <span className="mt-1 block text-footnote text-danger">
-              At least 8 characters.
-            </span>
+            <span className="mt-1 block text-footnote text-danger">At least 8 characters.</span>
           ) : null}
         </label>
 
@@ -97,9 +95,7 @@ export function ResetPanel() {
             className={fieldClass}
           />
           {mismatch ? (
-            <span className="mt-1 block text-footnote text-danger">
-              These do not match.
-            </span>
+            <span className="mt-1 block text-footnote text-danger">These do not match.</span>
           ) : null}
         </label>
 

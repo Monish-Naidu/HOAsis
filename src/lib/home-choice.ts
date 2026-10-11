@@ -10,7 +10,10 @@ import type { Account } from "./types";
  * and the first seat stands in, which is what the app did before a choice
  * existed.
  */
-export function pickSeat(seats: Account[], chosenUnitId: string | null | undefined): Account | null {
+export function pickSeat(
+  seats: Account[],
+  chosenUnitId: string | null | undefined,
+): Account | null {
   if (seats.length === 0) return null;
   return seats.find((s) => s.homeId === chosenUnitId) ?? seats[0];
 }

@@ -21,8 +21,8 @@ export function dollarsToCents(raw: string): number {
   return Math.round(Number(text) * 100);
 }
 
-export const WHOLE_CENTS_MESSAGE = "Enter dollars and cents, like 285.00";
-export const FRACTION_CENTS_MESSAGE = "Use whole cents, like 12.50";
+const WHOLE_CENTS_MESSAGE = "Enter dollars and cents, like 285.00";
+const FRACTION_CENTS_MESSAGE = "Use whole cents, like 12.50";
 
 /**
  * Why text that is not a plain amount was refused: a third decimal gets its
@@ -64,11 +64,10 @@ export function homeOverpayNote(extraCents: number): string | null {
 /* Resident payment */
 
 /** What a resident may pay above what they owe, left as credit. */
-export const MAX_EXTRA_PAYMENT_CENTS = 1_000_000;
+const MAX_EXTRA_PAYMENT_CENTS = 1_000_000;
 
 export type PayAmountCheck =
-  | { ok: true; cents: number; extraCents: number }
-  | { ok: false; message: string };
+  { ok: true; cents: number; extraCents: number } | { ok: false; message: string };
 
 /**
  * The "Other amount" a resident typed on the pay screen.
@@ -82,14 +81,21 @@ export function checkPayAmount(raw: string, balanceCents: number): PayAmountChec
   const none = { ok: false, message: "Enter an amount above $0" } as const;
   const cents = dollarsToCents(raw);
   // A third decimal is a different problem from letters or zero, and says so.
-  if (!Number.isFinite(cents) && raw.trim() && amountFormatMessage(raw) === FRACTION_CENTS_MESSAGE) {
+  if (
+    !Number.isFinite(cents) &&
+    raw.trim() &&
+    amountFormatMessage(raw) === FRACTION_CENTS_MESSAGE
+  ) {
     return { ok: false, message: FRACTION_CENTS_MESSAGE };
   }
   if (!Number.isFinite(cents) || cents <= 0) return none;
   const owed = Math.max(balanceCents, 0);
   const ceiling = owed + MAX_EXTRA_PAYMENT_CENTS;
   if (cents > ceiling) {
-    return { ok: false, message: `The most you can pay at once is ${money(ceiling)}. Enter a smaller amount.` };
+    return {
+      ok: false,
+      message: `The most you can pay at once is ${money(ceiling)}. Enter a smaller amount.`,
+    };
   }
   return { ok: true, cents, extraCents: Math.max(cents - owed, 0) };
 }
@@ -148,8 +154,8 @@ export function duesTextProblem(raw: string): string | null {
   return Number.isFinite(cents) ? duesProblem(cents) : amountFormatMessage(raw);
 }
 
-export const LATE_FEE_MIN_DAYS = 2;
-export const LATE_FEE_MAX_DAYS = 365;
+const LATE_FEE_MIN_DAYS = 2;
+const LATE_FEE_MAX_DAYS = 365;
 
 /**
  * The late fee's days. The collections ladder puts the formal notice on this
@@ -157,7 +163,12 @@ export const LATE_FEE_MAX_DAYS = 365;
  * (`policyWithLateFee`).
  */
 export function lateFeeDaysProblem(days: number | undefined): string | null {
-  if (days !== undefined && Number.isInteger(days) && days >= LATE_FEE_MIN_DAYS && days <= LATE_FEE_MAX_DAYS) {
+  if (
+    days !== undefined &&
+    Number.isInteger(days) &&
+    days >= LATE_FEE_MIN_DAYS &&
+    days <= LATE_FEE_MAX_DAYS
+  ) {
     return null;
   }
   return `Enter a number of days, ${LATE_FEE_MIN_DAYS} to ${LATE_FEE_MAX_DAYS}`;
@@ -199,8 +210,6 @@ export function associationNameProblem(raw: string): string | null {
     ? `Keep the name to ${MAX_ASSOCIATION_NAME} characters or fewer.`
     : null;
 }
-
-export const HOME_NUMBER_MESSAGE = "Enter your home number";
 
 export const RANGE_END_MESSAGE = "Enter the last number in the range.";
 
@@ -265,14 +274,20 @@ export function checkMeetingTime(raw: string): TimeCheck {
     const hour = Number(twelve[1]);
     const minute = Number(twelve[2] ?? "0");
     if (hour < 1 || hour > 12 || minute > 59) return bad;
-    return { ok: true, time: `${hour}:${String(minute).padStart(2, "0")} ${twelve[3].toUpperCase()}M` };
+    return {
+      ok: true,
+      time: `${hour}:${String(minute).padStart(2, "0")} ${twelve[3].toUpperCase()}M`,
+    };
   }
   const twentyFour = /^(\d{1,2}):(\d{2})$/.exec(text);
   if (twentyFour) {
     const hour = Number(twentyFour[1]);
     const minute = Number(twentyFour[2]);
     if (hour > 23 || minute > 59) return bad;
-    return { ok: true, time: `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}` };
+    return {
+      ok: true,
+      time: `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`,
+    };
   }
   return bad;
 }

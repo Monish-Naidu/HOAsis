@@ -8,14 +8,14 @@ before committing, they change.
 
 ## Where things run today
 
-| Piece | Today | What it does |
-| --- | --- | --- |
-| The site and app | Vercel (Next.js, one project, `main` deploys itself) | Pages, the API routes, the three daily jobs (dues, autopay, billing sweep) run as Vercel cron |
+| Piece                | Today                                                                             | What it does                                                                                       |
+| -------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| The site and app     | Vercel (Next.js, one project, `main` deploys itself)                              | Pages, the API routes, the three daily jobs (dues, autopay, billing sweep) run as Vercel cron      |
 | Database and sign-in | Supabase (Postgres with row level security, Supabase Auth, one free-tier project) | Every table, every policy, every SQL function in `supabase/migrations/`, magic links and passwords |
-| Payments | Stripe (Connect for the associations' money, Billing for ours) | Unchanged by any of this |
-| Email | Resend (domain not yet verified) | Unchanged by any of this |
-| Errors | Sentry, plus our own `app_errors` table and `/admin` | See `docs/telemetry.md` |
-| DNS | Cloudflare | yourhoasis.com |
+| Payments             | Stripe (Connect for the associations' money, Billing for ours)                    | Unchanged by any of this                                                                           |
+| Email                | Resend (domain not yet verified)                                                  | Unchanged by any of this                                                                           |
+| Errors               | Sentry, plus our own `app_errors` table and `/admin`                              | See `docs/telemetry.md`                                                                            |
+| DNS                  | Cloudflare                                                                        | yourhoasis.com                                                                                     |
 
 Two of those six would move. Stripe, Resend, Sentry and Cloudflare stay
 whatever we do.
@@ -26,11 +26,11 @@ whatever we do.
 
 Three ways to run Next.js on Azure. One fits.
 
-| Option | Fit | Why |
-| --- | --- | --- |
-| **Azure Container Apps** (recommended) | Good | Runs the app as a container built from the repo's `Dockerfile` (to be added; Next.js has a standalone output mode for exactly this). Scales to zero when nobody is on it, so a quiet night costs nearly nothing. Has its own cron ("jobs") for the three daily runs. HTTPS and a custom domain are built in. |
-| Azure Static Web Apps | Poor | Meant for mostly static sites; its Next.js support runs the server parts as Azure Functions with limits that bite (request size, run time, no cron of its own). Our app is mostly server routes and signed-in pages. |
-| Azure App Service | Fine, costlier | A plain Linux web app running `next start`. Simpler than containers, but it never scales to zero, so the cheapest always-on plan is about $13 a month before we have a customer. |
+| Option                                 | Fit            | Why                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Azure Container Apps** (recommended) | Good           | Runs the app as a container built from the repo's `Dockerfile` (to be added; Next.js has a standalone output mode for exactly this). Scales to zero when nobody is on it, so a quiet night costs nearly nothing. Has its own cron ("jobs") for the three daily runs. HTTPS and a custom domain are built in. |
+| Azure Static Web Apps                  | Poor           | Meant for mostly static sites; its Next.js support runs the server parts as Azure Functions with limits that bite (request size, run time, no cron of its own). Our app is mostly server routes and signed-in pages.                                                                                         |
+| Azure App Service                      | Fine, costlier | A plain Linux web app running `next start`. Simpler than containers, but it never scales to zero, so the cheapest always-on plan is about $13 a month before we have a customer.                                                                                                                             |
 
 Cost on Container Apps at our size: the consumption plan gives a monthly
 free grant (the first 180,000 vCPU-seconds and 360,000 GiB-seconds, and
@@ -43,12 +43,12 @@ hobby limits.
 
 This is the hard half, and the reason to think twice.
 
-| Piece | Becomes | Effort |
-| --- | --- | --- |
-| Postgres, every table and policy | **Azure Database for PostgreSQL, Flexible Server** | Low. It is the same Postgres. The 99 migrations apply as they are, minus the Supabase-only parts below. Cheapest burstable tier is about $13 a month plus storage; a production tier with high availability is $100 or more. Supabase free is $0 and Pro is $25. |
+| Piece                                                                        | Becomes                                                                                                                                                                                         | Effort                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres, every table and policy                                             | **Azure Database for PostgreSQL, Flexible Server**                                                                                                                                              | Low. It is the same Postgres. The 99 migrations apply as they are, minus the Supabase-only parts below. Cheapest burstable tier is about $13 a month plus storage; a production tier with high availability is $100 or more. Supabase free is $0 and Pro is $25.                                                                                          |
 | Supabase Auth (sign-up, magic links, password reset, the `auth.users` table) | One of: keep Supabase Auth as a hosted service; or **Microsoft Entra External ID** (Azure's customer sign-in); or run the open-source Supabase Auth server (GoTrue) ourselves in Container Apps | Medium to high. Our SQL leans on `auth.uid()` and `auth.role()` in every policy and function, and on triggers on `auth.users` (0003, 0090). Entra would mean replacing those with a JWT claim mapping and rewriting the sign-in, join, invite and email-change flows. Running GoTrue ourselves keeps every policy as it is but adds a service to operate. |
-| PostgREST (the browser talks to the database through it) | Keep the open-source PostgREST in a container, or move every browser read and write behind our own API routes | Medium. The app's data layer (`src/lib/data/remote.ts`, `src/lib/app-state.tsx`) uses the Supabase client everywhere. Self-hosting PostgREST keeps that code; dropping it is a rewrite. |
-| Realtime, storage | Not used | None. |
+| PostgREST (the browser talks to the database through it)                     | Keep the open-source PostgREST in a container, or move every browser read and write behind our own API routes                                                                                   | Medium. The app's data layer (`src/lib/data/remote.ts`, `src/lib/app-state.tsx`) uses the Supabase client everywhere. Self-hosting PostgREST keeps that code; dropping it is a rewrite.                                                                                                                                                                   |
+| Realtime, storage                                                            | Not used                                                                                                                                                                                        | None.                                                                                                                                                                                                                                                                                                                                                     |
 
 The honest shape of it: **moving the app is a day; moving the database is a
 week if we keep the Supabase pieces running in containers, and a month if
@@ -71,15 +71,15 @@ our app beside them. Everything in the repo would work unchanged.
    nothing to undo.
 3. **Decide the database.** Three paths, in order of my preference:
    a. **Stay on Supabase** for the database and sign-in, app on Azure.
-      Cheapest and least risky. Supabase Pro at $25 a month is what we
-      would pay for backups and no pausing anyway.
+   Cheapest and least risky. Supabase Pro at $25 a month is what we
+   would pay for backups and no pausing anyway.
    b. **Supabase on Azure:** Flexible Server plus GoTrue and PostgREST in
-      containers. Keeps the code, adds operations. One to two weeks
-      including the data move, a rehearsal and a cut-over night.
+   containers. Keeps the code, adds operations. One to two weeks
+   including the data move, a rehearsal and a cut-over night.
    c. **Replace sign-in with Entra External ID** and put PostgREST behind
-      our API. A month. Only worth it if Azure sign-in is required for a
-      reason outside the product (an enterprise customer, a credit program
-      that demands it).
+   our API. A month. Only worth it if Azure sign-in is required for a
+   reason outside the product (an enterprise customer, a credit program
+   that demands it).
 4. **Cut over (one evening).** Freeze writes (the billing gate can show
    "back in an hour"), `pg_dump` from Supabase, restore to Flexible Server,
    point the app's environment at it, run `pnpm db:verify` against it,

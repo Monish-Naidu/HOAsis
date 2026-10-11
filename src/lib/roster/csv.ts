@@ -50,17 +50,85 @@ export type RosterColumn = "name" | "email" | "unit" | "address" | "phone" | "ba
 
 /** What each column may be called in the file, lower case, punctuation stripped. */
 const HEADERS: Record<RosterColumn, string[]> = {
-  name: ["name", "owner", "owners", "ownername", "homeowner", "homeownername", "household", "resident", "fullname", "member"],
+  name: [
+    "name",
+    "owner",
+    "owners",
+    "ownername",
+    "homeowner",
+    "homeownername",
+    "household",
+    "resident",
+    "fullname",
+    "member",
+  ],
   email: ["email", "emailaddress", "emails", "owneremail", "e-mail", "mail"],
-  unit: ["unit", "unitnumber", "unitno", "unit#", "lot", "lotnumber", "lotno", "lot#", "home", "homenumber", "number", "no", "#", "apt", "apartment", "space", "site"],
-  address: ["address", "streetaddress", "street", "propertyaddress", "homeaddress", "situs", "situsaddress", "location"],
+  unit: [
+    "unit",
+    "unitnumber",
+    "unitno",
+    "unit#",
+    "lot",
+    "lotnumber",
+    "lotno",
+    "lot#",
+    "home",
+    "homenumber",
+    "number",
+    "no",
+    "#",
+    "apt",
+    "apartment",
+    "space",
+    "site",
+  ],
+  address: [
+    "address",
+    "streetaddress",
+    "street",
+    "propertyaddress",
+    "homeaddress",
+    "situs",
+    "situsaddress",
+    "location",
+  ],
   phone: ["phone", "phonenumber", "telephone", "mobile", "cell", "tel"],
-  dues: ["dues", "assessment", "monthlydues", "regulardues", "regularassessment", "monthlyassessment", "duesamount", "assessmentamount"],
-  balance: ["openingbalance", "balance", "balancedue", "owed", "amountowed", "amountdue", "due", "outstanding", "arrears", "balanceforward", "balancebroughtforward", "startingbalance"],
+  dues: [
+    "dues",
+    "assessment",
+    "monthlydues",
+    "regulardues",
+    "regularassessment",
+    "monthlyassessment",
+    "duesamount",
+    "assessmentamount",
+  ],
+  balance: [
+    "openingbalance",
+    "balance",
+    "balancedue",
+    "owed",
+    "amountowed",
+    "amountdue",
+    "due",
+    "outstanding",
+    "arrears",
+    "balanceforward",
+    "balancebroughtforward",
+    "startingbalance",
+  ],
 };
 
 /** The file a board downloads to fill in. */
-export const ROSTER_TEMPLATE_COLUMNS = ["Name", "Email", "Unit", "Address", "Phone", "Opening balance", "Dues"] as const;
+const ROSTER_TEMPLATE_COLUMNS = [
+  "Name",
+  "Email",
+  "Unit",
+  "Address",
+  "Phone",
+  "Opening balance",
+  "Dues",
+] as const;
 
 export function rosterTemplateCsv(): string {
   const lines = [
@@ -210,7 +278,9 @@ export function parseRosterCsv(text: string): RosterParse {
     return { rows: [], columns, problems };
   }
   if (index.name === undefined) {
-    problems.push('No "Name" column, so every home comes in without an owner. Owners can be added later.');
+    problems.push(
+      'No "Name" column, so every home comes in without an owner. Owners can be added later.',
+    );
   }
   if (index.email === undefined) {
     problems.push('No "Email" column, so nobody can be invited from this file.');
@@ -259,7 +329,9 @@ export function parseRosterCsv(text: string): RosterParse {
       row.problems.push(`"${email}" does not look like an email address.`);
     }
     if (balance === null) {
-      row.problems.push(`"${rawBalance}" is not an amount. Use 185.00, $185, or (20.00) for a credit.`);
+      row.problems.push(
+        `"${rawBalance}" is not an amount. Use 185.00, $185, or (20.00) for a credit.`,
+      );
     }
     if (dues === null || (dues !== undefined && dues < 0)) {
       row.problems.push(`"${rawDues}" is not a dues amount. Use 285.00 or $285.`);

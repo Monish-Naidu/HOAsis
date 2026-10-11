@@ -4,7 +4,10 @@ import userEvent from "@testing-library/user-event";
 
 const resend = vi.fn();
 vi.mock("@/app/join/resend", () => ({ resendConfirmation: resend }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 const { ResendLine } = await import("@/app/join/join-panel");
 
@@ -22,12 +25,17 @@ describe("Send it again", () => {
   });
 
   it("says why when the limiter refused", async () => {
-    resend.mockResolvedValue({ ok: false, message: "Too many attempts. Wait a minute and try again." });
+    resend.mockResolvedValue({
+      ok: false,
+      message: "Too many attempts. Wait a minute and try again.",
+    });
     render(<ResendLine email="pat@example.com" />);
 
     await userEvent.click(screen.getByRole("button", { name: "Send it again" }));
 
-    expect(await screen.findByText("Too many attempts. Wait a minute and try again.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Too many attempts. Wait a minute and try again."),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Sent again")).not.toBeInTheDocument();
   });
 });

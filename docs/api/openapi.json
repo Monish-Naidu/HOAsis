@@ -1,0 +1,362 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Your HOAsis API route inventory",
+    "version": "1.0.0",
+    "description": "Generated from exported Next.js route handlers. Payload contracts and authorization rules remain defined in each route source file."
+  },
+  "paths": {
+    "/assessments/run": {
+      "get": {
+        "operationId": "get_assessments_run",
+        "summary": "GET /assessments/run",
+        "description": "Handler source: src/app/api/assessments/run/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/auth/resend": {
+      "post": {
+        "operationId": "post_auth_resend",
+        "summary": "POST /auth/resend",
+        "description": "Handler source: src/app/api/auth/resend/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "operationId": "post_auth_signup",
+        "summary": "POST /auth/signup",
+        "description": "Handler source: src/app/api/auth/signup/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/autopay/run": {
+      "get": {
+        "operationId": "get_autopay_run",
+        "summary": "GET /autopay/run",
+        "description": "Handler source: src/app/api/autopay/run/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "operationId": "post_billing_checkout",
+        "summary": "POST /billing/checkout",
+        "description": "Handler source: src/app/api/billing/checkout/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/billing/portal": {
+      "post": {
+        "operationId": "post_billing_portal",
+        "summary": "POST /billing/portal",
+        "description": "Handler source: src/app/api/billing/portal/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/billing/sweep": {
+      "get": {
+        "operationId": "get_billing_sweep",
+        "summary": "GET /billing/sweep",
+        "description": "Handler source: src/app/api/billing/sweep/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/billing/webhook": {
+      "post": {
+        "operationId": "post_billing_webhook",
+        "summary": "POST /billing/webhook",
+        "description": "Handler source: src/app/api/billing/webhook/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/dev/associations": {
+      "get": {
+        "operationId": "get_dev_associations",
+        "summary": "GET /dev/associations",
+        "description": "Handler source: src/app/api/dev/associations/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete_dev_associations",
+        "summary": "DELETE /dev/associations",
+        "description": "Handler source: src/app/api/dev/associations/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/dev/reset": {
+      "get": {
+        "operationId": "get_dev_reset",
+        "summary": "GET /dev/reset",
+        "description": "Handler source: src/app/api/dev/reset/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      },
+      "post": {
+        "operationId": "post_dev_reset",
+        "summary": "POST /dev/reset",
+        "description": "Handler source: src/app/api/dev/reset/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/email/bills": {
+      "get": {
+        "operationId": "get_email_bills",
+        "summary": "GET /email/bills",
+        "description": "Handler source: src/app/api/email/bills/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/email/invite": {
+      "post": {
+        "operationId": "post_email_invite",
+        "summary": "POST /email/invite",
+        "description": "Handler source: src/app/api/email/invite/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/email/notify": {
+      "post": {
+        "operationId": "post_email_notify",
+        "summary": "POST /email/notify",
+        "description": "Handler source: src/app/api/email/notify/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/email/office-message": {
+      "post": {
+        "operationId": "post_email_office_message",
+        "summary": "POST /email/office-message",
+        "description": "Handler source: src/app/api/email/office-message/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/email/send": {
+      "post": {
+        "operationId": "post_email_send",
+        "summary": "POST /email/send",
+        "description": "Handler source: src/app/api/email/send/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/email/webhook": {
+      "post": {
+        "operationId": "post_email_webhook",
+        "summary": "POST /email/webhook",
+        "description": "Handler source: src/app/api/email/webhook/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "get_health",
+        "summary": "GET /health",
+        "description": "Handler source: src/app/api/health/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/join/lookup": {
+      "get": {
+        "operationId": "get_join_lookup",
+        "summary": "GET /join/lookup",
+        "description": "Handler source: src/app/api/join/lookup/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/log": {
+      "post": {
+        "operationId": "post_log",
+        "summary": "POST /log",
+        "description": "Handler source: src/app/api/log/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/ops/digest": {
+      "get": {
+        "operationId": "get_ops_digest",
+        "summary": "GET /ops/digest",
+        "description": "Handler source: src/app/api/ops/digest/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/stripe/connect": {
+      "get": {
+        "operationId": "get_stripe_connect",
+        "summary": "GET /stripe/connect",
+        "description": "Handler source: src/app/api/stripe/connect/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      },
+      "post": {
+        "operationId": "post_stripe_connect",
+        "summary": "POST /stripe/connect",
+        "description": "Handler source: src/app/api/stripe/connect/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/stripe/instruments": {
+      "post": {
+        "operationId": "post_stripe_instruments",
+        "summary": "POST /stripe/instruments",
+        "description": "Handler source: src/app/api/stripe/instruments/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete_stripe_instruments",
+        "summary": "DELETE /stripe/instruments",
+        "description": "Handler source: src/app/api/stripe/instruments/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/stripe/payment-intent": {
+      "post": {
+        "operationId": "post_stripe_payment_intent",
+        "summary": "POST /stripe/payment-intent",
+        "description": "Handler source: src/app/api/stripe/payment-intent/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/stripe/setup-intent": {
+      "post": {
+        "operationId": "post_stripe_setup_intent",
+        "summary": "POST /stripe/setup-intent",
+        "description": "Handler source: src/app/api/stripe/setup-intent/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/stripe/status": {
+      "get": {
+        "operationId": "get_stripe_status",
+        "summary": "GET /stripe/status",
+        "description": "Handler source: src/app/api/stripe/status/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
+    "/stripe/webhook": {
+      "post": {
+        "operationId": "post_stripe_webhook",
+        "summary": "POST /stripe/webhook",
+        "description": "Handler source: src/app/api/stripe/webhook/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    }
+  }
+}

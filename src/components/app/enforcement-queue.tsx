@@ -16,7 +16,16 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Badge, Button, Callout, Card, EmptyState, PageHeader, Stat, textareaClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  EmptyState,
+  PageHeader,
+  Stat,
+  textareaClass,
+} from "@/components/ui/primitives";
 import type { Tone } from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
@@ -123,8 +132,7 @@ const SOURCES: { key: SourceFilter; label: string }[] = [
   { key: "city", label: "City" },
 ];
 
-const INPUT =
-  cn(textareaClass, "mt-1.5");
+const INPUT = cn(textareaClass, "mt-1.5");
 const LABEL = "text-footnote font-semibold text-fg-muted";
 
 /** "Unit 63" for a home, the words as given for anything else. */
@@ -132,10 +140,7 @@ function placeLabel(unit: string): string {
   return placeLabelOf(unit);
 }
 
-type Editor =
-  | { id: string; mode: "verify" | "dismiss" }
-  | { id: string; mode: "notice" }
-  | null;
+type Editor = { id: string; mode: "verify" | "dismiss" } | { id: string; mode: "notice" } | null;
 
 export function EnforcementQueue() {
   const {
@@ -235,7 +240,10 @@ export function EnforcementQueue() {
       setEditor(null);
       setOpenId(null);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "The notice was not opened. Try again.", "warn");
+      notify(
+        error instanceof Error ? error.message : "The notice was not opened. Try again.",
+        "warn",
+      );
     }
   }
 
@@ -259,11 +267,7 @@ export function EnforcementQueue() {
         title="Violations"
         description="Reports from neighbors, open notices, and letters from the city."
         action={
-          <Button
-            variant="secondary"
-            onClick={() => setLogging(!logging)}
-            aria-expanded={logging}
-          >
+          <Button variant="secondary" onClick={() => setLogging(!logging)} aria-expanded={logging}>
             <Landmark className="size-4" />
             Log a city notice
           </Button>
@@ -282,7 +286,12 @@ export function EnforcementQueue() {
               switchTab(daysFromToday(input.deadline) <= 14 ? "needsYou" : "open");
               setSource("all");
             } catch (error) {
-              notify(error instanceof Error ? error.message : "The city notice was not logged. Try again.", "warn");
+              notify(
+                error instanceof Error
+                  ? error.message
+                  : "The city notice was not logged. Try again.",
+                "warn",
+              );
             }
           }}
         />
@@ -316,8 +325,7 @@ export function EnforcementQueue() {
               being used as an instrument in. Board only. */}
           {patterns.map((pattern) => (
             <p key={`${pattern.reporterId}-${pattern.subjectUnit}`} className="text-footnote">
-              {pattern.reporterName} has reported unit {pattern.subjectUnit} {pattern.count}{" "}
-              times.{" "}
+              {pattern.reporterName} has reported unit {pattern.subjectUnit} {pattern.count} times.{" "}
               {pattern.verified === 0
                 ? "None confirmed. Ask whether this is a dispute between two households before treating the next one as enforcement."
                 : `${pattern.verified} of ${pattern.count} checked out. Enforce those on their own facts and keep the pattern in mind.`}
@@ -546,9 +554,7 @@ function QueueRow({
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-fg-muted">
             <Badge tone={src.tone} className="px-1.5 py-0 text-caption">
-              {city && item.kind === "violation"
-                ? (item.violation.agency ?? "City")
-                : src.label}
+              {city && item.kind === "violation" ? (item.violation.agency ?? "City") : src.label}
             </Badge>
             <span>{where}</span>
             <span className="text-fg-subtle">
@@ -734,7 +740,9 @@ function ReportDetail({
         <div className="rounded-card border border-border bg-surface-2 p-3.5">
           <label className="block">
             <span className={LABEL}>
-              {noteMode === "verify" ? "What you saw, in your own words" : "Why this is being closed"}
+              {noteMode === "verify"
+                ? "What you saw, in your own words"
+                : "Why this is being closed"}
             </span>
             <textarea
               value={note}
@@ -756,8 +764,8 @@ function ReportDetail({
           </label>
           {noteMode === "verify" ? (
             <p className="mt-1.5 text-footnote leading-relaxed text-fg-subtle">
-              This is what a notice would rest on, not what the neighbor told you. Write what
-              you personally observed and when.
+              This is what a notice would rest on, not what the neighbor told you. Write what you
+              personally observed and when.
             </p>
           ) : null}
           <div className="mt-2.5 flex gap-2">
@@ -774,9 +782,8 @@ function ReportDetail({
       {raisable ? (
         <div className="space-y-2.5">
           <p className="text-footnote leading-relaxed text-fg-muted">
-            Confirmed, so a notice can be opened against unit {report.subjectUnit} on what you
-            saw. It will carry your observation and your citation, and none of the reporter&apos;s
-            words.
+            Confirmed, so a notice can be opened against unit {report.subjectUnit} on what you saw.
+            It will carry your observation and your citation, and none of the reporter&apos;s words.
           </p>
           {editor?.mode !== "notice" ? (
             <Button
@@ -882,10 +889,8 @@ function ViolationDetail({
             Owner says fixed {formatDate(violation.ownerFixedDate, "medium")}
           </p>
           <p className="mt-0.5 text-fg-muted">
-            {violation.ownerFixedNote
-              ? `"${violation.ownerFixedNote}"`
-              : "No note was left."}{" "}
-            Have somebody look, then mark it resolved if it is.
+            {violation.ownerFixedNote ? `"${violation.ownerFixedNote}"` : "No note was left."} Have
+            somebody look, then mark it resolved if it is.
           </p>
         </div>
       ) : null}
@@ -899,8 +904,9 @@ function ViolationDetail({
           <p className="mt-0.5 text-fg-muted">
             Received {formatDate(violation.openedDate)}. Deadline{" "}
             <span className="font-medium text-fg">{formatDate(violation.nextActionDate)}</span>
-            {openMatter ? ` (${relativeDays(violation.nextActionDate)})` : ""}. An agency notice
-            is not a neighbor&apos;s report, so nobody needs to check it first. It needs fixing by the date.
+            {openMatter ? ` (${relativeDays(violation.nextActionDate)})` : ""}. An agency notice is
+            not a neighbor&apos;s report, so nobody needs to check it first. It needs fixing by the
+            date.
           </p>
         </div>
       ) : cited ? (
@@ -956,7 +962,9 @@ function ViolationDetail({
 
       {report ? (
         <div className="space-y-2 rounded-card border border-border bg-surface-2 p-3.5">
-          <p className="text-footnote font-semibold text-fg-muted">Started from {report.reference}</p>
+          <p className="text-footnote font-semibold text-fg-muted">
+            Started from {report.reference}
+          </p>
           <p className="text-footnote leading-relaxed text-fg-muted">{report.what}</p>
           <ReporterLine report={report} />
           <VerificationNote report={report} />
@@ -1043,8 +1051,8 @@ function CityNoticeForm({
         <div className="min-w-0 flex-1">
           <p className="text-body font-semibold text-fg">Log a city notice</p>
           <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
-            A notice from a city or county agency. It is added to the list with its deadline.
-            Nobody needs to check it first.
+            A notice from a city or county agency. It is added to the list with its deadline. Nobody
+            needs to check it first.
           </p>
         </div>
       </div>

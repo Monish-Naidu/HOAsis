@@ -11,9 +11,7 @@
  */
 import { createHarness } from "./lib/harness.mjs";
 
-const {
-  admin, stamp, check, makeUser, cleanup, cleanupAll, report,
-} = createHarness({
+const { admin, stamp, check, makeUser, cleanup, cleanupAll, report } = createHarness({
   passwordPrefix: "scale-",
   strictSignIn: false,
   demotePresident: true,
@@ -56,7 +54,10 @@ try {
     cleanup.associations.push(associationId);
     // Books open on the founding day unless told otherwise (0056); this suite
     // bills periods that fell due before today.
-    await admin.from("associations").update({ billing_starts_on: "2000-01-01" }).eq("id", associationId);
+    await admin
+      .from("associations")
+      .update({ billing_starts_on: "2000-01-01" })
+      .eq("id", associationId);
 
     // Slow onboarding is abandoned onboarding, and this is one round trip.
     check(
@@ -66,12 +67,14 @@ try {
     );
 
     const { count: units } = await admin
-      .from("units").select("*", { count: "exact", head: true })
+      .from("units")
+      .select("*", { count: "exact", head: true })
       .eq("association_id", associationId);
     check(`${scale.name}: every home is on the register`, units === scale.homes, `${units}`);
 
     const { count: memberships } = await admin
-      .from("memberships").select("*", { count: "exact", head: true })
+      .from("memberships")
+      .select("*", { count: "exact", head: true })
       .eq("association_id", associationId);
     check(
       `${scale.name}: every home has a membership`,
@@ -123,11 +126,14 @@ try {
     );
     check(
       `${scale.name}: total owed is homes times dues`,
-      (balances.data ?? []).reduce((t, b) => t + b.balance_cents, 0) ===
-        scale.homes * scale.dues,
+      (balances.data ?? []).reduce((t, b) => t + b.balance_cents, 0) === scale.homes * scale.dues,
       `${(balances.data ?? []).reduce((t, b) => t + b.balance_cents, 0)}`,
     );
-    check(`${scale.name}: one charge per home`, charges.data?.length === scale.homes, `${charges.data?.length}`);
+    check(
+      `${scale.name}: one charge per home`,
+      charges.data?.length === scale.homes,
+      `${charges.data?.length}`,
+    );
   }
 
   // The floor. An association of one is a house, not an association, but the
@@ -135,33 +141,66 @@ try {
   const soloEmail = `solo-${stamp}@example.com`;
   const solo = await makeUser("Solo", soloEmail);
   const { data: soloId, error: soloError } = await solo.client.rpc("create_association", {
-    p_name: "Single Home HOA", p_city: "Bothell", p_state: "WA",
-    p_dues_cents: 5_000, p_dues_cadence: "monthly", p_due_day: 1,
-    p_founder_name: "Solo Founder", p_founder_unit: "1", p_households: [],
+    p_name: "Single Home HOA",
+    p_city: "Bothell",
+    p_state: "WA",
+    p_dues_cents: 5_000,
+    p_dues_cadence: "monthly",
+    p_due_day: 1,
+    p_founder_name: "Solo Founder",
+    p_founder_unit: "1",
+    p_households: [],
   });
   if (soloId) cleanup.associations.push(soloId);
-  check("an association of one home is allowed", !soloError && Boolean(soloId), soloError?.message ?? "");
+  check(
+    "an association of one home is allowed",
+    !soloError && Boolean(soloId),
+    soloError?.message ?? "",
+  );
 
   // Nonsense a form should refuse rather than store.
   const { error: noName } = await solo.client.rpc("create_association", {
-    p_name: "   ", p_city: "Bothell", p_state: "WA",
-    p_dues_cents: 5_000, p_dues_cadence: "monthly", p_due_day: 1,
-    p_founder_name: "X", p_founder_unit: "1",
+    p_name: "   ",
+    p_city: "Bothell",
+    p_state: "WA",
+    p_dues_cents: 5_000,
+    p_dues_cadence: "monthly",
+    p_due_day: 1,
+    p_founder_name: "X",
+    p_founder_unit: "1",
   });
-  check("an association with no name is refused", Boolean(noName), noName?.message?.slice(0, 40) ?? "no error");
+  check(
+    "an association with no name is refused",
+    Boolean(noName),
+    noName?.message?.slice(0, 40) ?? "no error",
+  );
 
   const { error: negative } = await solo.client.rpc("create_association", {
-    p_name: "Negative HOA", p_city: "Bothell", p_state: "WA",
-    p_dues_cents: -100, p_dues_cadence: "monthly", p_due_day: 1,
-    p_founder_name: "X", p_founder_unit: "1",
+    p_name: "Negative HOA",
+    p_city: "Bothell",
+    p_state: "WA",
+    p_dues_cents: -100,
+    p_dues_cadence: "monthly",
+    p_due_day: 1,
+    p_founder_name: "X",
+    p_founder_unit: "1",
   });
-  check("negative dues are refused", Boolean(negative), negative?.message?.slice(0, 40) ?? "no error");
+  check(
+    "negative dues are refused",
+    Boolean(negative),
+    negative?.message?.slice(0, 40) ?? "no error",
+  );
 
   // Duplicate units within one association would give a household two bills.
   const { data: dupId } = await solo.client.rpc("create_association", {
-    p_name: "Duplicate Unit HOA", p_city: "Bothell", p_state: "WA",
-    p_dues_cents: 5_000, p_dues_cadence: "monthly", p_due_day: 1,
-    p_founder_name: "X", p_founder_unit: "1",
+    p_name: "Duplicate Unit HOA",
+    p_city: "Bothell",
+    p_state: "WA",
+    p_dues_cents: 5_000,
+    p_dues_cadence: "monthly",
+    p_due_day: 1,
+    p_founder_name: "X",
+    p_founder_unit: "1",
     p_households: [
       { name: "A", email: `a-${stamp}@example.com`, unit: "2" },
       { name: "B", email: `b-${stamp}@example.com`, unit: "2" },
@@ -169,8 +208,14 @@ try {
   });
   if (dupId) cleanup.associations.push(dupId);
   const { count: dupUnits } = await admin
-    .from("units").select("*", { count: "exact", head: true }).eq("association_id", dupId);
-  check("a repeated unit number is collapsed rather than duplicated", dupUnits === 2, `${dupUnits} units`);
+    .from("units")
+    .select("*", { count: "exact", head: true })
+    .eq("association_id", dupId);
+  check(
+    "a repeated unit number is collapsed rather than duplicated",
+    dupUnits === 2,
+    `${dupUnits} units`,
+  );
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {

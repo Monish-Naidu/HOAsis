@@ -46,7 +46,7 @@ central fact of this whole document.
    promise. Full reasoning in section 4.
 
 6. **Do build a "report a concern" path that is explicitly not a violation.** A resident
-   report should create a *concern*, visible only to the board, which a board member must
+   report should create a _concern_, visible only to the board, which a board member must
    convert into a violation by inspecting it themselves. The concern and the violation are
    two different records. This is the single most important modeling decision in this
    document.
@@ -72,7 +72,7 @@ central fact of this whole document.
 **The strategic point.** The competitive analysis flagged violation tracking as table
 stakes we lack. It is table stakes, but the way to win it is not feature parity. Every
 competitor treats a violation as a task with a photo attached. The research says a
-violation is a *legal record with a due process clock on it*, and that almost nothing in
+violation is a _legal record with a due process clock on it_, and that almost nothing in
 the market models the clock. A board that gets the sequence wrong loses the fine. That is
 the wedge.
 
@@ -134,17 +134,17 @@ membership. (Same section, (2)(b)(II).)
 
 ### 2.3 The eight states, side by side
 
-| State | Notice delivery | Cure period | Days before hearing | Who hears it | Fine cap |
-| --- | --- | --- | --- | --- | --- |
-| **Texas** | Certified mail, required | "Reasonable period," no fixed number | Owner has 30 days after mailing to request; hearing within 30 days of request; 10 days' notice of hearing date | The board | Not capped by statute |
-| **Florida** | Owner's "designated mailing or e-mail address" | Cure at any point before hearing kills the fine | 14 days | Committee of 3+, no officers, directors, employees, or their spouse/parent/child/sibling | $100/violation, $1,000 aggregate; under $1,000 cannot become a lien |
-| **California** | Personal delivery or individual delivery under Civ. Code 4040 | Cure before the meeting bars discipline | 10 days | The board | $100/violation unless the board makes written health/safety findings in an open meeting |
-| **Colorado** | Certified mail, return receipt requested | 30 days, then a second 30 days | Not specified; "informal" process allowed | "Impartial decision maker" | $500 total per violation; no daily fines |
-| **Nevada** | Mailed to the unit and to any address the owner specified | "Reasonable opportunity"; 14 days before it becomes a continuing violation | "Reasonable opportunity to prepare" | Board, or a committee of 3+ if the documents allow | $100/violation, $1,000 per hearing |
-| **Virginia** | Hand delivery, or registered/certified mail, return receipt requested | "Reasonable opportunity to correct" | 14 days | Board or other tribunal named in the documents | $50 single offense, $10/day continuing, max 90 days |
-| **Arizona** | Not specified for the notice itself | Not specified | Owner responds within 21 days by certified mail; association replies within 10 business days | Board, plus a state administrative hearing option | Not capped; late charge on a penalty capped at greater of $15 or 10% |
-| **North Carolina** | Not specified | Fine may start 5 days after the decision | Not specified | "Adjudicatory panel," appealable to the full board within 15 days | $100/day after 5 days |
-| **Washington** | Not specified; the bylaws supply the procedure | Not specified | Not specified | The board, or "the representative designated by the board" | Not capped; must follow "a previously established schedule... furnished to the owners" |
+| State              | Notice delivery                                                       | Cure period                                                                | Days before hearing                                                                                            | Who hears it                                                                             | Fine cap                                                                                |
+| ------------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Texas**          | Certified mail, required                                              | "Reasonable period," no fixed number                                       | Owner has 30 days after mailing to request; hearing within 30 days of request; 10 days' notice of hearing date | The board                                                                                | Not capped by statute                                                                   |
+| **Florida**        | Owner's "designated mailing or e-mail address"                        | Cure at any point before hearing kills the fine                            | 14 days                                                                                                        | Committee of 3+, no officers, directors, employees, or their spouse/parent/child/sibling | $100/violation, $1,000 aggregate; under $1,000 cannot become a lien                     |
+| **California**     | Personal delivery or individual delivery under Civ. Code 4040         | Cure before the meeting bars discipline                                    | 10 days                                                                                                        | The board                                                                                | $100/violation unless the board makes written health/safety findings in an open meeting |
+| **Colorado**       | Certified mail, return receipt requested                              | 30 days, then a second 30 days                                             | Not specified; "informal" process allowed                                                                      | "Impartial decision maker"                                                               | $500 total per violation; no daily fines                                                |
+| **Nevada**         | Mailed to the unit and to any address the owner specified             | "Reasonable opportunity"; 14 days before it becomes a continuing violation | "Reasonable opportunity to prepare"                                                                            | Board, or a committee of 3+ if the documents allow                                       | $100/violation, $1,000 per hearing                                                      |
+| **Virginia**       | Hand delivery, or registered/certified mail, return receipt requested | "Reasonable opportunity to correct"                                        | 14 days                                                                                                        | Board or other tribunal named in the documents                                           | $50 single offense, $10/day continuing, max 90 days                                     |
+| **Arizona**        | Not specified for the notice itself                                   | Not specified                                                              | Owner responds within 21 days by certified mail; association replies within 10 business days                   | Board, plus a state administrative hearing option                                        | Not capped; late charge on a penalty capped at greater of $15 or 10%                    |
+| **North Carolina** | Not specified                                                         | Fine may start 5 days after the decision                                   | Not specified                                                                                                  | "Adjudicatory panel," appealable to the full board within 15 days                        | $100/day after 5 days                                                                   |
+| **Washington**     | Not specified; the bylaws supply the procedure                        | Not specified                                                              | Not specified                                                                                                  | The board, or "the representative designated by the board"                               | Not capped; must follow "a previously established schedule... furnished to the owners"  |
 
 Sources for the table, all fetched 26 Aug 2026:
 Texas [209.006](https://texas.public.law/statutes/tex._prop._code_section_209.006) and
@@ -264,7 +264,7 @@ It costs nothing and it removes the single easiest defense.
 
 ## 3. Neighbor reporting: what the market does
 
-*Pending.*
+_Pending._
 
 ---
 
@@ -320,9 +320,9 @@ one who should be held responsible." C.R.S. 38-33.3-209.5(2)(b)(I).
 - **Not confidential.** The reporter's name is recorded, is visible to the board, and will
   be disclosed if a hearing, a statute, or a subpoena requires it.
 
-The submit form should say this in one sentence, before the person types anything: *We
+The submit form should say this in one sentence, before the person types anything: _We
 record who reports. We do not put your name on the notice. If this goes to a hearing, or if
-state law requires it, your name may be disclosed.* Anyone unwilling to report on those
+state law requires it, your name may be disclosed._ Anyone unwilling to report on those
 terms is telling you something useful about the report.
 
 ### 4.2 The board should see who reported, and should see the pattern
@@ -470,7 +470,7 @@ one-click report button does, and it is the position worth taking publicly.
 **From the street or a common area, yes.** The rule everywhere is that a person has no
 reasonable expectation of privacy in what is plainly visible from a place the photographer
 has a legal right to be. Florida's drone statute states the line as clearly as any statute
-in the country, in the course of describing when the expectation of privacy *does* exist:
+in the country, in the course of describing when the expectation of privacy _does_ exist:
 
 > a person is presumed to have a reasonable expectation of privacy on his or her privately
 > owned real property if he or she is not observable by persons located at ground level in
@@ -578,12 +578,12 @@ compliant everywhere.
 
 ### 6.1 The four channels
 
-| Channel | Legal standing | Consent needed | Good for |
-| --- | --- | --- | --- |
-| **Mail** | The only universally sufficient method. Certified mail is required for enforcement notices in TX, CO, and VA. | None | Anything statutory. Fine notices, hearing notices, liens, collections. |
-| **Email** | Sufficient for many notices, but only where the statute allows it and the owner opted in. | Written consent (FL, CA), or a registered address (TX) | Statements, meeting packets, minutes, newsletters, receipts. |
-| **SMS** | No statute found makes a text sufficient for statutory notice. Treat it as a nudge that points at something else. | Express consent, plus 10DLC registration. See section 7. | Reminders, emergency alerts, "you have a new notice, log in." |
-| **In-app** | Not notice. It is a record. | None | The permanent, always-there view: balance, violation history, documents. |
+| Channel    | Legal standing                                                                                                    | Consent needed                                           | Good for                                                                 |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Mail**   | The only universally sufficient method. Certified mail is required for enforcement notices in TX, CO, and VA.     | None                                                     | Anything statutory. Fine notices, hearing notices, liens, collections.   |
+| **Email**  | Sufficient for many notices, but only where the statute allows it and the owner opted in.                         | Written consent (FL, CA), or a registered address (TX)   | Statements, meeting packets, minutes, newsletters, receipts.             |
+| **SMS**    | No statute found makes a text sufficient for statutory notice. Treat it as a nudge that points at something else. | Express consent, plus 10DLC registration. See section 7. | Reminders, emergency alerts, "you have a new notice, log in."            |
+| **In-app** | Not notice. It is a record.                                                                                       | None                                                     | The permanent, always-there view: balance, violation history, documents. |
 
 ### 6.2 What must go by mail
 
@@ -629,7 +629,7 @@ No email option in the text. The decision has to go back by the same route.
 non-health-and-safety violation the association must "through certified mail, return
 receipt requested, provide the unit owner written notice." C.R.S.
 38-33.3-209.5(1.7)(b)(III)(A). For delinquency notices, Colorado goes further and requires
-certified mail *and* physically posting a copy at the unit *and* one of: first-class mail,
+certified mail _and_ physically posting a copy at the unit _and_ one of: first-class mail,
 a text message to a cell number the owner gave the association, or email to an address the
 owner gave. C.R.S. 38-33.3-209.5(1.7)(a)(I).
 
@@ -685,8 +685,7 @@ reasonably calculated to provide notice to the recipient." Electronic transmissi
 that the recipient has given **written consent**, has **designated an address, location, or
 system** for delivery, and can **revoke consent at any time**. The recipient may also ask
 that the electronic address stay confidential.
-([app.leg.wa.gov](https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.515), fetched 26 Aug
-2026)
+([app.leg.wa.gov](https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.515), fetched 26 Aug 2026)
 
 Three fields, then: consent flag, designated address, revocation. Store all three with
 timestamps, per channel.
@@ -786,7 +785,7 @@ falls on the sender and because the carriers demand it anyway.
 
 **Two things narrow the exposure further.**
 
-The equipment definition. In *Facebook, Inc. v. Duguid*, decided 1 April 2021, the Supreme
+The equipment definition. In _Facebook, Inc. v. Duguid_, decided 1 April 2021, the Supreme
 Court held:
 
 > To qualify as an automatic telephone dialing system under the TCPA, a device must have
@@ -805,7 +804,7 @@ or carrier enforcement, and it is not a reason to skip consent.
 The one-to-one consent rule is gone. The FCC's 2023 order would have required separate
 consent per seller and required calls to be "logically and topically associated" with the
 interaction that produced consent. The Eleventh Circuit vacated that part on 24 January
-2025 in *Insurance Marketing Coalition Ltd. v. FCC*, 127 F.4th 303 (11th Cir. 2025), No.
+2025 in _Insurance Marketing Coalition Ltd. v. FCC_, 127 F.4th 303 (11th Cir. 2025), No.
 24-10277: "we grant IMC's petition for review, vacate Part III.D of the 2023 Order, and
 remand for further proceedings."
 ([media.ca11.uscourts.gov](http://media.ca11.uscourts.gov/opinions/pub/files/202410277.pdf),
@@ -814,8 +813,7 @@ never going to bind an HOA anyway.
 
 **Revocation is where the real exposure is, and the rules are recent and specific.** In FCC
 24-24 (CG Docket 02-278, adopted 15 February 2024) the Commission codified the following.
-([docs.fcc.gov](https://docs.fcc.gov/public/attachments/FCC-24-24A1.pdf), fetched 26 Aug
-2026)
+([docs.fcc.gov](https://docs.fcc.gov/public/attachments/FCC-24-24A1.pdf), fetched 26 Aug 2026)
 
 - **Per se revocation keywords.** "[U]sing the words stop, quit, end, revoke, opt out,
   cancel, or unsubscribe via reply text message constitutes a per se reasonable means to
@@ -887,11 +885,11 @@ an error.
 
 Twilio's brand tiers, from the same page:
 
-| Brand type | Daily volume to T-Mobile | Campaigns per brand |
-| --- | --- | --- |
-| Sole Proprietor | ~1,000 SMS/MMS | 1 |
-| Low-Volume Standard | ~2,000 SMS/MMS | up to 5 |
-| Standard | 2,000 to unlimited, by trust score | up to 5 |
+| Brand type          | Daily volume to T-Mobile           | Campaigns per brand |
+| ------------------- | ---------------------------------- | ------------------- |
+| Sole Proprietor     | ~1,000 SMS/MMS                     | 1                   |
+| Low-Volume Standard | ~2,000 SMS/MMS                     | up to 5             |
+| Standard            | 2,000 to unlimited, by trust score | up to 5             |
 
 A 50-home association sending four messages per home per month is 200 messages a month.
 Throughput is a non-issue at that scale. The registration friction is the issue.
@@ -976,68 +974,68 @@ All fetched 26 August 2026 unless noted.
 
 ### Statutes and regulations
 
-| Source | URL |
-| --- | --- |
-| Ariz. Rev. Stat. 33-1803 (HOA, notice of violation) | https://www.azleg.gov/ars/33/01803.htm |
-| Ariz. Rev. Stat. 33-1242 (condominium, same) | https://www.azleg.gov/ars/33/01242.htm |
-| Cal. Civ. Code 4040 (individual delivery) | https://california.public.law/codes/civil_code_section_4040 |
-| Cal. Civ. Code 4041 (annual delivery preference) | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=4041 |
-| Cal. Civ. Code 5850 (fine schedule, $100 cap) | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=5850 |
-| Cal. Civ. Code 5855 (10-day notice, 14-day decision) | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=5855 |
-| Cal. Civ. Code 1708.8 (invasion of privacy) | https://california.public.law/codes/civil_code_section_1708.8 |
-| C.R.S. 38-33.3-209.5 (responsible governance, fines, cure) | https://colorado.public.law/statutes/crs_38-33.3-209.5 |
-| Fla. Stat. 720.303 (meetings, records, electronic notice) | https://www.flsenate.gov/Laws/Statutes/2024/720.303 |
-| Fla. Stat. 720.305 (fines, hearing committee) | https://www.flsenate.gov/Laws/Statutes/2024/720.305 |
-| Fla. Stat. 617.0141 (notice, electronic transmission) | https://www.flsenate.gov/Laws/Statutes/2024/617.0141 |
-| Fla. Stat. 934.50 (drones) | https://www.flsenate.gov/Laws/Statutes/2024/934.50 |
-| Fla. Stat. 501.059 (Telephone Solicitation Act) | https://www.flsenate.gov/Laws/Statutes/2024/501.059 |
-| Nev. Rev. Stat. 116.31031 (fines, photograph requirement) | https://www.leg.state.nv.us/NRS/NRS-116.html |
-| N.C. Gen. Stat. 47F-3-107.1 (adjudicatory panel) | https://www.ncleg.gov/EnactedLegislation/Statutes/HTML/BySection/Chapter_47F/GS_47F-3-107.1.html |
-| Tex. Prop. Code 209.006 (certified mail notice) | https://texas.public.law/statutes/tex._prop._code_section_209.006 |
-| Tex. Prop. Code 209.007 (hearing, evidence packet) | https://texas.public.law/statutes/tex._prop._code_section_209.007 |
-| Tex. Prop. Code 209.0042 (alternative notice, opt-in) | https://texas.public.law/statutes/tex._prop._code_section_209.0042 |
-| Tex. Prop. Code 209.0051 (open board meetings, email notice) | https://texas.public.law/statutes/tex._prop._code_section_209.0051 |
-| Tex. Prop. Code 202.003 (liberal construction of covenants) | https://texas.public.law/statutes/tex._prop._code_section_202.003 |
-| Tex. Gov't Code 423.002, 423.003 (drones) | https://texas.public.law/statutes/tex._gov%27t_code_section_423.003 |
-| Va. Code 55.1-1819 (rules, hearing, certified mail) | https://law.lis.virginia.gov/vacode/title55.1/chapter18/section55.1-1819/ |
-| RCW 64.38.020 (WA HOA powers, fines) | https://app.leg.wa.gov/RCW/default.aspx?cite=64.38.020 |
-| RCW 64.90.405 (WUCIOA, fines) | https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.405 |
-| RCW 64.90.515 (WUCIOA, notice and electronic consent) | https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.515 |
-| 47 C.F.R. 64.1200 (TCPA rules) | https://www.law.cornell.edu/cfr/text/47/64.1200 |
-| 47 U.S.C. 227 (TCPA, damages) | https://www.law.cornell.edu/uscode/text/47/227 |
-| 15 U.S.C. 7001 (E-SIGN consumer consent) | https://www.law.cornell.edu/uscode/text/15/7001 |
-| 24 C.F.R. 100.7 (FHA direct and vicarious liability) | https://www.law.cornell.edu/cfr/text/24/100.7 |
-| 24 C.F.R. 100.600 (FHA harassment) | https://www.law.cornell.edu/cfr/text/24/100.600 |
+| Source                                                       | URL                                                                                              |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Ariz. Rev. Stat. 33-1803 (HOA, notice of violation)          | https://www.azleg.gov/ars/33/01803.htm                                                           |
+| Ariz. Rev. Stat. 33-1242 (condominium, same)                 | https://www.azleg.gov/ars/33/01242.htm                                                           |
+| Cal. Civ. Code 4040 (individual delivery)                    | https://california.public.law/codes/civil_code_section_4040                                      |
+| Cal. Civ. Code 4041 (annual delivery preference)             | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=4041  |
+| Cal. Civ. Code 5850 (fine schedule, $100 cap)                | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=5850  |
+| Cal. Civ. Code 5855 (10-day notice, 14-day decision)         | https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=5855  |
+| Cal. Civ. Code 1708.8 (invasion of privacy)                  | https://california.public.law/codes/civil_code_section_1708.8                                    |
+| C.R.S. 38-33.3-209.5 (responsible governance, fines, cure)   | https://colorado.public.law/statutes/crs_38-33.3-209.5                                           |
+| Fla. Stat. 720.303 (meetings, records, electronic notice)    | https://www.flsenate.gov/Laws/Statutes/2024/720.303                                              |
+| Fla. Stat. 720.305 (fines, hearing committee)                | https://www.flsenate.gov/Laws/Statutes/2024/720.305                                              |
+| Fla. Stat. 617.0141 (notice, electronic transmission)        | https://www.flsenate.gov/Laws/Statutes/2024/617.0141                                             |
+| Fla. Stat. 934.50 (drones)                                   | https://www.flsenate.gov/Laws/Statutes/2024/934.50                                               |
+| Fla. Stat. 501.059 (Telephone Solicitation Act)              | https://www.flsenate.gov/Laws/Statutes/2024/501.059                                              |
+| Nev. Rev. Stat. 116.31031 (fines, photograph requirement)    | https://www.leg.state.nv.us/NRS/NRS-116.html                                                     |
+| N.C. Gen. Stat. 47F-3-107.1 (adjudicatory panel)             | https://www.ncleg.gov/EnactedLegislation/Statutes/HTML/BySection/Chapter_47F/GS_47F-3-107.1.html |
+| Tex. Prop. Code 209.006 (certified mail notice)              | https://texas.public.law/statutes/tex._prop._code_section_209.006                                |
+| Tex. Prop. Code 209.007 (hearing, evidence packet)           | https://texas.public.law/statutes/tex._prop._code_section_209.007                                |
+| Tex. Prop. Code 209.0042 (alternative notice, opt-in)        | https://texas.public.law/statutes/tex._prop._code_section_209.0042                               |
+| Tex. Prop. Code 209.0051 (open board meetings, email notice) | https://texas.public.law/statutes/tex._prop._code_section_209.0051                               |
+| Tex. Prop. Code 202.003 (liberal construction of covenants)  | https://texas.public.law/statutes/tex._prop._code_section_202.003                                |
+| Tex. Gov't Code 423.002, 423.003 (drones)                    | https://texas.public.law/statutes/tex._gov%27t_code_section_423.003                              |
+| Va. Code 55.1-1819 (rules, hearing, certified mail)          | https://law.lis.virginia.gov/vacode/title55.1/chapter18/section55.1-1819/                        |
+| RCW 64.38.020 (WA HOA powers, fines)                         | https://app.leg.wa.gov/RCW/default.aspx?cite=64.38.020                                           |
+| RCW 64.90.405 (WUCIOA, fines)                                | https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.405                                           |
+| RCW 64.90.515 (WUCIOA, notice and electronic consent)        | https://app.leg.wa.gov/RCW/default.aspx?cite=64.90.515                                           |
+| 47 C.F.R. 64.1200 (TCPA rules)                               | https://www.law.cornell.edu/cfr/text/47/64.1200                                                  |
+| 47 U.S.C. 227 (TCPA, damages)                                | https://www.law.cornell.edu/uscode/text/47/227                                                   |
+| 15 U.S.C. 7001 (E-SIGN consumer consent)                     | https://www.law.cornell.edu/uscode/text/15/7001                                                  |
+| 24 C.F.R. 100.7 (FHA direct and vicarious liability)         | https://www.law.cornell.edu/cfr/text/24/100.7                                                    |
+| 24 C.F.R. 100.600 (FHA harassment)                           | https://www.law.cornell.edu/cfr/text/24/100.600                                                  |
 
 ### Cases and agency orders
 
-| Source | URL |
-| --- | --- |
-| *Facebook, Inc. v. Duguid*, 592 U.S. 395 (2021), No. 19-511 | https://www.supremecourt.gov/opinions/20pdf/19-511_p86b.pdf |
-| *Insurance Marketing Coalition Ltd. v. FCC*, 127 F.4th 303 (11th Cir. 2025), No. 24-10277 | http://media.ca11.uscourts.gov/opinions/pub/files/202410277.pdf |
-| FCC 24-24, Report and Order, CG Docket 02-278 (revocation of consent), adopted 15 Feb 2024 | https://docs.fcc.gov/public/attachments/FCC-24-24A1.pdf |
+| Source                                                                                     | URL                                                             |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| _Facebook, Inc. v. Duguid_, 592 U.S. 395 (2021), No. 19-511                                | https://www.supremecourt.gov/opinions/20pdf/19-511_p86b.pdf     |
+| _Insurance Marketing Coalition Ltd. v. FCC_, 127 F.4th 303 (11th Cir. 2025), No. 24-10277  | http://media.ca11.uscourts.gov/opinions/pub/files/202410277.pdf |
+| FCC 24-24, Report and Order, CG Docket 02-278 (revocation of consent), adopted 15 Feb 2024 | https://docs.fcc.gov/public/attachments/FCC-24-24A1.pdf         |
 
 ### Industry and vendor documentation
 
-| Source | URL |
-| --- | --- |
+| Source                                               | URL                                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | CTIA, Messaging Principles and Best Practices (2019) | https://api.ctia.org/wp-content/uploads/2019/07/190719-CTIA-Messaging-Principles-and-Best-Practices-FINAL.pdf |
-| Twilio, Programmable Messaging and A2P 10DLC | https://www.twilio.com/docs/messaging/compliance/a2p-10dlc |
-| Twilio, ISV onboarding for A2P 10DLC | https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/onboarding-isv |
-| Twilio, US SMS pricing | https://www.twilio.com/en-us/sms/pricing/us |
-| Telnyx, messaging pricing | https://telnyx.com/pricing/messaging |
-| Plivo, US SMS pricing | https://www.plivo.com/sms/pricing/us/ |
+| Twilio, Programmable Messaging and A2P 10DLC         | https://www.twilio.com/docs/messaging/compliance/a2p-10dlc                                                    |
+| Twilio, ISV onboarding for A2P 10DLC                 | https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/onboarding-isv                                     |
+| Twilio, US SMS pricing                               | https://www.twilio.com/en-us/sms/pricing/us                                                                   |
+| Telnyx, messaging pricing                            | https://telnyx.com/pricing/messaging                                                                          |
+| Plivo, US SMS pricing                                | https://www.plivo.com/sms/pricing/us/                                                                         |
 
 ### Industry commentary and research
 
-| Source | URL |
-| --- | --- |
-| Foundation for Community Association Research, Statistical Review (Fact Book 2025) | https://foundation.caionline.org/publications/factbook/statistical-review/ |
-| Foundation for Community Association Research, Homeowner Satisfaction Survey dashboard | https://foundation.caionline.org/research/survey_homeowner/homeowner-satisfaction-survey-dashboard/ |
+| Source                                                                                         | URL                                                                                                               |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Foundation for Community Association Research, Statistical Review (Fact Book 2025)             | https://foundation.caionline.org/publications/factbook/statistical-review/                                        |
+| Foundation for Community Association Research, Homeowner Satisfaction Survey dashboard         | https://foundation.caionline.org/research/survey_homeowner/homeowner-satisfaction-survey-dashboard/               |
 | Hirzel Law, "Neighbor Disputes within Homeowners Associations: When Should the HOA Intervene?" | https://micondolaw.com/2021/02/01/neighbor-disputes-within-homeowners-associations-when-should-the-hoa-intervene/ |
-| Tinnelly Law Group, "AB 130 - $100 Fine Caps, Hearing Procedures, and Prohibited ADU Fees" | https://www.hoalawblog.com/ab-130-100-fine-caps-hearing-procedures-and-prohibited-adu-fees/ |
-| ManageCasa, HOA violations and enforcement guide | https://managecasa.com/articles/hoa-violations-and-enforcement-the-complete-process-guide |
-| CMGT, HOA rules enforcement resource | https://cmgt.org/resources/hoa-rules-enforcement |
+| Tinnelly Law Group, "AB 130 - $100 Fine Caps, Hearing Procedures, and Prohibited ADU Fees"     | https://www.hoalawblog.com/ab-130-100-fine-caps-hearing-procedures-and-prohibited-adu-fees/                       |
+| ManageCasa, HOA violations and enforcement guide                                               | https://managecasa.com/articles/hoa-violations-and-enforcement-the-complete-process-guide                         |
+| CMGT, HOA rules enforcement resource                                                           | https://cmgt.org/resources/hoa-rules-enforcement                                                                  |
 
 ---
 
@@ -1079,7 +1077,7 @@ requirement was found and read. No search was run for a state that prohibits an 
 from accepting an anonymous complaint in the first place. The Arizona provision is a
 disclosure duty triggered by the owner contesting, not a ban on receiving tips.
 
-**7. *Wetzel v. Glen St. Andrew Living Community* and other owner-on-owner harassment
+**7. _Wetzel v. Glen St. Andrew Living Community_ and other owner-on-owner harassment
 cases.** Cited widely for the proposition that a housing provider can be liable for failing
 to stop tenant-on-tenant harassment. The regulation it rests on, 24 CFR 100.7, was read
 directly and is cited above. The opinion itself was not read for this document.
@@ -1093,4 +1091,3 @@ researched. **If violation reporting ever accepts video, this needs its own pass
 have their own telephone solicitation statutes. Only Florida's was read. Florida's is
 limited to sales calls and does not reach association messages; **do not assume the others
 are drafted the same way.**
-

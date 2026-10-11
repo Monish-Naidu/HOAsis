@@ -9,7 +9,8 @@ export const GLOSSARY = {
   ccrs: "The Covenants, Conditions and Restrictions: the rules every home here agreed to when it was bought.",
   reserves: "Savings for big repairs, like a new roof on the clubhouse or repaving the roads.",
   funded: "How much of the money needed for future repairs is already saved. Higher is better.",
-  "special-assessment": "A one-time charge on top of your regular dues, usually for a large repair.",
+  "special-assessment":
+    "A one-time charge on top of your regular dues, usually for a large repair.",
   "business-days": "Monday to Friday, not counting holidays.",
 } as const;
 

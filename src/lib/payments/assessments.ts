@@ -29,8 +29,18 @@ export interface DuesPeriod {
 }
 
 const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function daysIn(year: number, month: number): number {
@@ -81,7 +91,9 @@ export function currentDuesPeriod(input: {
         candidates.push({ dueOn: iso(yy, m, dueDay), label: `Q${k + 1} ${yy} dues` });
       }
     }
-    return candidates.filter((c) => c.dueOn <= today).sort((a, b) => (a.dueOn < b.dueOn ? 1 : -1))[0];
+    return candidates
+      .filter((c) => c.dueOn <= today)
+      .sort((a, b) => (a.dueOn < b.dueOn ? 1 : -1))[0];
   }
 
   const thisFy = iso(year, fyMonth, dueDay);

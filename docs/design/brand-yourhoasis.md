@@ -26,7 +26,7 @@ because they were never about the same thing:
 > **The product is fast so the community can be the oasis.**
 
 The oasis was never the software. Nobody wants to live inside an HOA tool;
-a board member wants to be *done* and back on the porch. Speed is the
+a board member wants to be _done_ and back on the porch. Speed is the
 mechanism, calm is the outcome. The rebrand keeps Monish's oasis idea by
 promoting it from the product's name to the community's role in the story.
 
@@ -60,16 +60,16 @@ and `public/brand/yourhoasis-mark-white.svg`.
 
 ## The copy map (old → new)
 
-| Surface | Was | Is |
-| --- | --- | --- |
-| Hero h1 | Your community. Your oasis. | Your community. **Your HOAsis.** (2026-09-21; was "Moving your community forward." from 2026-09-01) |
-| Hero sub | ...clarity, connection, and calm... | Everything your community needs to get things done quickly, all in one place. |
-| Primary CTA | Quick Setup | Get started |
-| Secondary CTA | See the live demo | See how it works (opens the sample community on `/signin#sample`; no play icon, because there is no video) |
-| Nav account link | Sign in | Log in (marketing only; the product keeps "sign in" wording) |
-| Assurance strip | five text items | four with bare tinted glyphs, sentence case: Setup in minutes / No card to start / Cancel whenever / Live support. The 90-day trial is the pill above the headline and the pricing line. |
-| Slide 2 body | HOAsis gives your board... | ExpressHOA gives your board the tools to get the work done in minutes, so the neighborhood stays the calm place you chose. |
-| Close | Start today. | Start today. + the bridge line as the subhead. |
+| Surface          | Was                                 | Is                                                                                                                                                                                       |
+| ---------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hero h1          | Your community. Your oasis.         | Your community. **Your HOAsis.** (2026-09-21; was "Moving your community forward." from 2026-09-01)                                                                                      |
+| Hero sub         | ...clarity, connection, and calm... | Everything your community needs to get things done quickly, all in one place.                                                                                                            |
+| Primary CTA      | Quick Setup                         | Get started                                                                                                                                                                              |
+| Secondary CTA    | See the live demo                   | See how it works (opens the sample community on `/signin#sample`; no play icon, because there is no video)                                                                               |
+| Nav account link | Sign in                             | Log in (marketing only; the product keeps "sign in" wording)                                                                                                                             |
+| Assurance strip  | five text items                     | four with bare tinted glyphs, sentence case: Setup in minutes / No card to start / Cancel whenever / Live support. The 90-day trial is the pill above the headline and the pricing line. |
+| Slide 2 body     | HOAsis gives your board...          | ExpressHOA gives your board the tools to get the work done in minutes, so the neighborhood stays the calm place you chose.                                                               |
+| Close            | Start today.                        | Start today. + the bridge line as the subhead.                                                                                                                                           |
 
 Everything else that said HOAsis says ExpressHOA, including the payments
 counterparty in the demo ledger ("ExpressHOA Payments") and the record URLs
@@ -88,8 +88,8 @@ counterparty in the demo ledger ("ExpressHOA Payments") and the record URLs
 
 ## Taglines on the shelf
 
-- Your community. Your HOAsis. *(primary, since 2026-09-21)*
-- Moving your community forward. *(primary 2026-09-01 to 2026-09-21)*
-- Fast for the board. Calm for the neighborhood. *(bridge/closer)*
-- Run your HOA. Not another job. *(kept from the deck; still true)*
-- Done before dinner. *(campaign-grade, unused)*
+- Your community. Your HOAsis. _(primary, since 2026-09-21)_
+- Moving your community forward. _(primary 2026-09-01 to 2026-09-21)_
+- Fast for the board. Calm for the neighborhood. _(bridge/closer)_
+- Run your HOA. Not another job. _(kept from the deck; still true)_
+- Done before dinner. _(campaign-grade, unused)_

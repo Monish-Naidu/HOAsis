@@ -2,15 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { AlertTriangle, ArrowLeft, Check, FileSearch, ScanLine, Upload } from "lucide-react";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  Check,
-  FileSearch,
-  ScanLine,
-  Upload,
-} from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, Checkbox, EmptyState, PageHeader, Select, textareaClass } from "@/components/ui/primitives";
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  Checkbox,
+  EmptyState,
+  PageHeader,
+  Select,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { GOVERNING_DOCS, DOC_ORDER, DISCLOSURE_TOPICS } from "@/lib/governing";
@@ -94,10 +98,7 @@ export function ImportScreen() {
   const [choices, setChoices] = useState<Record<string, Choice>>({});
   const [imported, setImported] = useState(false);
 
-  const extraction = useMemo(
-    () => (source.trim() ? extractArticles(source) : null),
-    [source],
-  );
+  const extraction = useMemo(() => (source.trim() ? extractArticles(source) : null), [source]);
 
   function loadSource(text: string, name: string | null) {
     const parsed = extractArticles(text);
@@ -131,10 +132,7 @@ export function ImportScreen() {
    * click beats a button that appears to work and adds nothing.
    */
   const onFile = useMemo(
-    () =>
-      new Set(
-        community.governingDocs.filter((a) => a.document === doc).map((a) => a.number),
-      ),
+    () => new Set(community.governingDocs.filter((a) => a.document === doc).map((a) => a.number)),
     [community.governingDocs, doc],
   );
 
@@ -146,9 +144,7 @@ export function ImportScreen() {
         (a) => choices[a.key]?.keep && !onFile.has(a.number) && a.text.length > 0,
       )
     : [];
-  const collisions = extraction
-    ? extraction.articles.filter((a) => onFile.has(a.number))
-    : [];
+  const collisions = extraction ? extraction.articles.filter((a) => onFile.has(a.number)) : [];
 
   function confirmImport() {
     if (!extraction || kept.length === 0) return;
@@ -186,11 +182,14 @@ export function ImportScreen() {
         description="Turns an uploaded document into searchable text. Review each section before confirming."
       />
 
-      <Callout tone="info" icon={<ScanLine className="size-4" />} title="What this does and does not do">
-        It finds where your articles start and keeps the wording exactly as written. It does
-        not summarize a provision, decide what one means, or work out who is in violation of
-        one. Those are readings of your documents, and they belong to your board rather than
-        to us.
+      <Callout
+        tone="info"
+        icon={<ScanLine className="size-4" />}
+        title="What this does and does not do"
+      >
+        It finds where your articles start and keeps the wording exactly as written. It does not
+        summarize a provision, decide what one means, or work out who is in violation of one. Those
+        are readings of your documents, and they belong to your board rather than to us.
       </Callout>
 
       <Card className="mt-5">
@@ -286,10 +285,10 @@ export function ImportScreen() {
                   {collisions.length === 1 ? "exists" : "exist"} in {GOVERNING_DOCS[doc].short}
                 </p>
                 <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
-                  These will not be imported and the text on file will not be replaced. If
-                  this file is an amended copy, edit the article in the reader so the change
-                  is recorded as an amendment rather than as a second Article of the same
-                  number. If you meant a different document, pick it above.
+                  These will not be imported and the text on file will not be replaced. If this file
+                  is an amended copy, edit the article in the reader so the change is recorded as an
+                  amendment rather than as a second Article of the same number. If you meant a
+                  different document, pick it above.
                 </p>
               </div>
             ) : null}
@@ -301,8 +300,8 @@ export function ImportScreen() {
                 <p className="flex items-center gap-2 text-footnote font-semibold text-fg">
                   <AlertTriangle className="size-3.5 text-warn" />
                   {extraction.gaps.length} part
-                  {extraction.gaps.length === 1 ? "" : "s"} of the file could not be read as
-                  an article
+                  {extraction.gaps.length === 1 ? "" : "s"} of the file could not be read as an
+                  article
                 </p>
                 <div className="mt-2 space-y-2">
                   {extraction.gaps.map((gap, index) => (
@@ -359,14 +358,13 @@ export function ImportScreen() {
               ) : kept.length === 0 ? (
                 <p className="text-footnote leading-relaxed text-fg-muted">
                   Nothing is ticked. Anything marked{" "}
-                  <span className="font-semibold">Needs a look</span> starts off, on purpose:
-                  open it, check it against your own file, and tick the ones that came
-                  through right.
+                  <span className="font-semibold">Needs a look</span> starts off, on purpose: open
+                  it, check it against your own file, and tick the ones that came through right.
                 </p>
               ) : (
                 <p className="text-footnote text-fg-subtle">
-                  No plain summary is written for you. Each article lands showing its exact
-                  wording, and a board member writes the plain reading.
+                  No plain summary is written for you. Each article lands showing its exact wording,
+                  and a board member writes the plain reading.
                 </p>
               )}
             </div>
@@ -469,9 +467,7 @@ function ArticleRow({
                 <Select
                   size="sm"
                   value={choice.affects}
-                  onChange={(e) =>
-                    onChange({ affects: e.target.value as Choice["affects"] })
-                  }
+                  onChange={(e) => onChange({ affects: e.target.value as Choice["affects"] })}
                   aria-label={`Who ${article.number} applies to`}
                 >
                   <option value="owners">Owners</option>
@@ -518,8 +514,8 @@ function ArticleRow({
                   })}
                 </div>
                 <p className="mt-1.5 text-footnote leading-relaxed text-fg-subtle">
-                  The highlighted ones are where the words appear. That is a place to look,
-                  not an answer, so nothing is ticked for you.
+                  The highlighted ones are where the words appear. That is a place to look, not an
+                  answer, so nothing is ticked for you.
                 </p>
               </div>
             </div>

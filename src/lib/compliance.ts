@@ -30,7 +30,7 @@ import { addDays, daysFromToday } from "@/lib/utils";
  * cadence and no statute, and the screen says which it is looking at.
  */
 
-export interface RegisterItem {
+interface RegisterItem {
   key: string;
   label: string;
   evidence: string;

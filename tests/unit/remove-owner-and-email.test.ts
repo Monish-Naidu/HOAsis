@@ -1,16 +1,34 @@
 import { describe, expect, it } from "vitest";
 import { checkNewEmail, emailChangeSent } from "@/lib/email-change";
-import { firstName, removableSeats, removeConfirmText, removedToast, type OwnerSeat } from "@/lib/co-owners";
+import {
+  firstName,
+  removableSeats,
+  removeConfirmText,
+  removedToast,
+  type OwnerSeat,
+} from "@/lib/co-owners";
 
 describe("checkNewEmail", () => {
   it("accepts a good address and trims it", () => {
-    expect(checkNewEmail("  new@example.com ", "old@example.com")).toEqual({ ok: true, email: "new@example.com" });
+    expect(checkNewEmail("  new@example.com ", "old@example.com")).toEqual({
+      ok: true,
+      email: "new@example.com",
+    });
   });
   it("refuses an empty one", () => {
     expect(checkNewEmail("   ", "old@example.com").ok).toBe(false);
   });
   it("needs exactly one @ and a dot after it", () => {
-    for (const bad of ["nobody", "a@b", "a@@b.com", "a@b@c.com", "@b.com", "a@.com", "a@b.", "a b@c.com"]) {
+    for (const bad of [
+      "nobody",
+      "a@b",
+      "a@@b.com",
+      "a@b@c.com",
+      "@b.com",
+      "a@.com",
+      "a@b.",
+      "a b@c.com",
+    ]) {
       expect(checkNewEmail(bad, "old@example.com").ok, bad).toBe(false);
     }
   });
@@ -50,7 +68,9 @@ describe("co-owner helpers", () => {
     expect(removableSeats(seats, "p1").map((s) => s.id)).toEqual(["m2"]);
   });
   it("never offers a seat with an office", () => {
-    expect(removableSeats([{ ...seats[0], removable: false }, seats[1]], null).map((s) => s.id)).toEqual(["m2"]);
+    expect(
+      removableSeats([{ ...seats[0], removable: false }, seats[1]], null).map((s) => s.id),
+    ).toEqual(["m2"]);
   });
   it("words the confirm and the toast", () => {
     expect(removeConfirmText("Ben Park", "Ana Park", "Unit 4")).toBe(

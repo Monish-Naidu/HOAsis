@@ -4,14 +4,7 @@ import { ResidentTitle } from "@/components/app/resident-title";
 import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  BookOpen,
-  ChevronRight,
-  FileSpreadsheet,
-  FileText,
-  PenLine,
-  Search,
-} from "lucide-react";
+import { BookOpen, ChevronRight, FileSpreadsheet, FileText, PenLine, Search } from "lucide-react";
 import { Card, EmptyState, IconTile, SectionTitle, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { cn, formatDate } from "@/lib/utils";
@@ -138,8 +131,8 @@ function DocumentsScreen() {
               Read the rules you live under
             </span>
             <span className="block text-footnote leading-snug text-fg-muted">
-              The CC&amp;Rs, the bylaws and the rules, in plain words, searchable, with the
-              exact wording one tap away
+              The CC&amp;Rs, the bylaws and the rules, in plain words, searchable, with the exact
+              wording one tap away
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />

@@ -12,15 +12,15 @@ ninety days by default (migration 0025) and can be edited by hand for a board
 that asked for longer. Everything else is derived from that date and from
 `subscription_status`, by `src/lib/billing.ts`, which is pure arithmetic:
 
-| Phase        | When                                              | Board sees                                |
-| ------------ | ------------------------------------------------- | ----------------------------------------- |
-| `trialing`   | Before `trial_ends_at`, no subscription           | One quiet line: free until, days left     |
-| closing      | Last 14 days of that                              | Amber callout with "Add a card"           |
-| `ended`      | After the date, no subscription, first 14 days    | Red callout; everything still works       |
-| locked       | 14 days past the date, still nothing on file      | Billing wall on every board page but Settings |
-| `active`     | Stripe subscription exists                        | Nothing. Settings shows the card          |
-| `past_due`   | Stripe said an invoice failed                     | Red callout, "Update the card"            |
-| `canceled`   | Board cancelled on Settings                       | Nothing; Settings says so                 |
+| Phase      | When                                           | Board sees                                    |
+| ---------- | ---------------------------------------------- | --------------------------------------------- |
+| `trialing` | Before `trial_ends_at`, no subscription        | One quiet line: free until, days left         |
+| closing    | Last 14 days of that                           | Amber callout with "Add a card"               |
+| `ended`    | After the date, no subscription, first 14 days | Red callout; everything still works           |
+| locked     | 14 days past the date, still nothing on file   | Billing wall on every board page but Settings |
+| `active`   | Stripe subscription exists                     | Nothing. Settings shows the card              |
+| `past_due` | Stripe said an invoice failed                  | Red callout, "Update the card"                |
+| `canceled` | Board cancelled on Settings                    | Nothing; Settings says so                     |
 
 The resident side is never touched by any of this. An owner's statement is
 theirs whatever the board has or has not paid, and a board that comes back
@@ -77,10 +77,10 @@ date, so the row and the screen cannot disagree.
 
 None of these are in `.env.local` yet (2026-09-04):
 
-| Variable                        | Where                               |
-| ------------------------------- | ----------------------------------- |
-| `STRIPE_SECRET_KEY`             | Both webhooks, checkout, portal     |
-| `STRIPE_BILLING_WEBHOOK_SECRET` | The billing endpoint above          |
+| Variable                        | Where                                                                 |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`             | Both webhooks, checkout, portal                                       |
+| `STRIPE_BILLING_WEBHOOK_SECRET` | The billing endpoint above                                            |
 | `CRON_SECRET`                   | Vercel sets and sends it; also put it in env so the route can compare |
 
 Until then: "Add a card" toasts "Could not reach Stripe", the sweep still

@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ message: "Something went wrong. Please try again." }, { status: 400 });
+    return NextResponse.json(
+      { message: "Something went wrong. Please try again." },
+      { status: 400 },
+    );
   }
 
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -46,7 +49,10 @@ export async function POST(request: NextRequest) {
   const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
 
   if (!isEmail(email)) {
-    return NextResponse.json({ message: "That email address does not look right." }, { status: 400 });
+    return NextResponse.json(
+      { message: "That email address does not look right." },
+      { status: 400 },
+    );
   }
   if (password.length < 8) {
     return NextResponse.json({ message: "Passwords need at least 8 characters." }, { status: 400 });
@@ -115,7 +121,9 @@ export async function POST(request: NextRequest) {
     // sending domain is verified. That is our setup, not their typo, and
     // telling them to check the address sent people hunting for a mistake
     // they had not made.
-    const ours = /testing emails|verify a domain|domain is not verified/i.test(sendError.message ?? "");
+    const ours = /testing emails|verify a domain|domain is not verified/i.test(
+      sendError.message ?? "",
+    );
     return NextResponse.json(
       {
         message: ours
@@ -134,6 +142,7 @@ export async function POST(request: NextRequest) {
 function siteOrigin(request: NextRequest): string {
   const forwardedHost = request.headers.get("x-forwarded-host");
   const host = forwardedHost ?? request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const proto =
+    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
   return host ? `${proto}://${host}` : request.nextUrl.origin;
 }

@@ -38,7 +38,10 @@ export function ReserveStudyCard() {
       const outcome = await uploadDocuments([file], { category: "Financial" });
       const filed = outcome.filed[0];
       if (!filed) {
-        notify(outcome.rejected[0]?.reason ?? "The file was not uploaded. Check it and try again.", "warn");
+        notify(
+          outcome.rejected[0]?.reason ?? "The file was not uploaded. Check it and try again.",
+          "warn",
+        );
         return;
       }
       // Said only once the link is saved. A refusal has been said by the
@@ -48,7 +51,10 @@ export function ReserveStudyCard() {
       });
       if (ok) notify(`${filed.name} is on file. It is under Documents too.`);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "The file was not uploaded. Try again.", "warn");
+      notify(
+        error instanceof Error ? error.message : "The file was not uploaded. Try again.",
+        "warn",
+      );
     } finally {
       setBusy(false);
     }
@@ -87,7 +93,9 @@ export function ReserveStudyCard() {
         />
         <div className="flex flex-wrap items-end gap-3 px-5 py-4">
           <label className="block">
-            <span className="mb-1.5 block text-footnote font-medium text-fg">Date on the study</span>
+            <span className="mb-1.5 block text-footnote font-medium text-fg">
+              Date on the study
+            </span>
             <input
               type="date"
               value={studyDate}
@@ -129,7 +137,9 @@ export function ReserveStudyCard() {
             <p className="text-body font-medium text-fg">{study.name}</p>
           )}
           <p className="text-footnote text-fg-muted">
-            {document ? `Under Documents, ${document.visibility === "board" ? "board only" : "shared with owners"}.` : "Filed under Documents."}
+            {document
+              ? `Under Documents, ${document.visibility === "board" ? "board only" : "shared with owners"}.`
+              : "Filed under Documents."}
           </p>
         </div>
         <p

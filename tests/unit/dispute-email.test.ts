@@ -23,12 +23,28 @@ function links(html: string): string[] {
 }
 
 describe("who hears about a dispute", () => {
-  const seat = { full_name: "Dana Whitfield", profile_id: "p-1", invited_email: "dana@old.example", capabilities: ["finances"] };
+  const seat = {
+    full_name: "Dana Whitfield",
+    profile_id: "p-1",
+    invited_email: "dana@old.example",
+    capabilities: ["finances"],
+  };
 
   it("is every current seat that holds finances, at the account's own address", () => {
     const people = disputeRecipients(
-      [seat, { full_name: "Arya Mehr", profile_id: "p-2", invited_email: null, capabilities: ["finances", "settings"] }],
-      new Map([["p-1", "dana@example.com"], ["p-2", "arya@example.com"]]),
+      [
+        seat,
+        {
+          full_name: "Arya Mehr",
+          profile_id: "p-2",
+          invited_email: null,
+          capabilities: ["finances", "settings"],
+        },
+      ],
+      new Map([
+        ["p-1", "dana@example.com"],
+        ["p-2", "arya@example.com"],
+      ]),
     );
     expect(people).toEqual([
       { name: "Dana Whitfield", email: "dana@example.com", profileId: "p-1" },
@@ -38,7 +54,10 @@ describe("who hears about a dispute", () => {
 
   it("leaves out a seat without the finances capability", () => {
     const people = disputeRecipients(
-      [{ ...seat, capabilities: ["communications"] }, { ...seat, capabilities: null }],
+      [
+        { ...seat, capabilities: ["communications"] },
+        { ...seat, capabilities: null },
+      ],
       new Map([["p-1", "dana@example.com"]]),
     );
     expect(people).toEqual([]);
@@ -47,8 +66,18 @@ describe("who hears about a dispute", () => {
   it("falls back to the address on the roster, and skips a seat with none", () => {
     const people = disputeRecipients(
       [
-        { full_name: "Lee Park", profile_id: null, invited_email: " lee@example.com ", capabilities: ["finances"] },
-        { full_name: "No Address", profile_id: null, invited_email: null, capabilities: ["finances"] },
+        {
+          full_name: "Lee Park",
+          profile_id: null,
+          invited_email: " lee@example.com ",
+          capabilities: ["finances"],
+        },
+        {
+          full_name: "No Address",
+          profile_id: null,
+          invited_email: null,
+          capabilities: ["finances"],
+        },
       ],
       new Map(),
     );
@@ -102,7 +131,11 @@ describe("disputeEmail", () => {
   });
 
   it("escapes the names it was given and survives an unknown home", () => {
-    const built = disputeEmail("opened", { ...input, associationName: "Smith & Sons <HOA>", unitLabel: "" });
+    const built = disputeEmail("opened", {
+      ...input,
+      associationName: "Smith & Sons <HOA>",
+      unitLabel: "",
+    });
     expect(built.subject).toBe("Payment disputed: $325.00 · Smith & Sons <HOA>");
     expect(built.html).toContain("Smith &amp; Sons &lt;HOA&gt;");
     expect(built.html).not.toContain("<HOA>");
@@ -130,4 +163,3 @@ describe("paymentsPausedEmail", () => {
     expect(built.text).toContain("Checks and cash can still be recorded by hand");
   });
 });
-

@@ -1,16 +1,29 @@
 import { useCallback } from "react";
-import { type AppDeps, isUuid, logDemoActivity, newId, remoteWrite, sliceStore, ValidationError } from "./core";
+import {
+  type AppDeps,
+  isUuid,
+  logDemoActivity,
+  newId,
+  remoteWrite,
+  sliceStore,
+  ValidationError,
+} from "./core";
 import { addDays, money, todayIsoDate } from "@/lib/utils";
 import { NOTHING_CHANGED } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { PhotoVantage, Violation, ViolationReport } from "@/lib/types";
-import { attachmentFileName, attachmentPath, attachmentProblem, uploadAttachment } from "@/lib/attachments";
+import {
+  attachmentFileName,
+  attachmentPath,
+  attachmentProblem,
+  uploadAttachment,
+} from "@/lib/attachments";
 import { canRaiseNotice } from "@/lib/violations";
 import { activityWords } from "@/lib/activity";
 
 /** The range fine_violation (0113) accepts: $1 to $10,000. */
-export const FINE_MIN_CENTS = 100;
-export const FINE_MAX_CENTS = 1_000_000;
+const FINE_MIN_CENTS = 100;
+const FINE_MAX_CENTS = 1_000_000;
 
 /**
  * Why this notice cannot be fined for this amount, in the words the form
@@ -23,7 +36,8 @@ export function fineProblem(
 ): string | null {
   if (violation.stage !== "hearing") return "A fine follows a hearing";
   if (violation.fineCents > 0) return "This notice has already been fined";
-  if (!Number.isInteger(amountCents) || amountCents < FINE_MIN_CENTS) return "Enter a fine of at least $1";
+  if (!Number.isInteger(amountCents) || amountCents < FINE_MIN_CENTS)
+    return "Enter a fine of at least $1";
   if (amountCents > FINE_MAX_CENTS) return "A fine is $10,000 at most";
   return null;
 }
@@ -73,20 +87,22 @@ export function useEnforcementActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Sending the report", () =>
-          supabaseBrowser().from("violation_reports").insert({
-            id: report.id,
-            association_id: rc.id,
-            reference: report.reference,
-            reporter_profile_id: remote.profileId,
-            reporter_name: report.reporterName,
-            reporter_unit: report.reporterUnit,
-            subject_unit: report.subjectUnit,
-            subject_unit_id: isUuid(report.subjectHomeId ?? "") ? report.subjectHomeId : null,
-            what: report.what,
-            observed_on: report.observedOn,
-            submitted_on: report.submittedOn,
-            status: "new",
-          }),
+          supabaseBrowser()
+            .from("violation_reports")
+            .insert({
+              id: report.id,
+              association_id: rc.id,
+              reference: report.reference,
+              reporter_profile_id: remote.profileId,
+              reporter_name: report.reporterName,
+              reporter_unit: report.reporterUnit,
+              subject_unit: report.subjectUnit,
+              subject_unit_id: isUuid(report.subjectHomeId ?? "") ? report.subjectHomeId : null,
+              what: report.what,
+              observed_on: report.observedOn,
+              submitted_on: report.submittedOn,
+              status: "new",
+            }),
         );
         return report;
       }
@@ -306,35 +322,42 @@ export function useEnforcementActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Sending the notice", () =>
-          supabaseBrowser().from("violations").insert({
-            id: violation.id,
-            association_id: rc.id,
-            reference: violation.reference,
-            unit_id: isUuid(violation.homeId) ? violation.homeId : null,
-            unit_label: violation.unit,
-            owner_name: violation.ownerName,
-            rule: violation.rule,
-            // The words the owner reads under the title (0097). Left out of
-            // this insert, they reached the list row in the session that typed
-            // them and nobody else.
-            fix: violation.fix ?? "",
-            rule_citation: violation.ruleCitation,
-            stage: violation.stage,
-            opened_on: violation.openedDate,
-            next_action_on: violation.nextActionDate,
-            photos: [],
-            fine_cents: 0,
-            report_id: null,
-            source: "board",
-          }),
+          supabaseBrowser()
+            .from("violations")
+            .insert({
+              id: violation.id,
+              association_id: rc.id,
+              reference: violation.reference,
+              unit_id: isUuid(violation.homeId) ? violation.homeId : null,
+              unit_label: violation.unit,
+              owner_name: violation.ownerName,
+              rule: violation.rule,
+              // The words the owner reads under the title (0097). Left out of
+              // this insert, they reached the list row in the session that typed
+              // them and nobody else.
+              fix: violation.fix ?? "",
+              rule_citation: violation.ruleCitation,
+              stage: violation.stage,
+              opened_on: violation.openedDate,
+              next_action_on: violation.nextActionDate,
+              photos: [],
+              fine_cents: 0,
+              report_id: null,
+              source: "board",
+            }),
         );
         return violation;
       }
-      logDemoActivity(communityId, "violation", activityWords.notice(violation.unit, violation.rule), {
-        unit_id: violation.homeId,
-        home: violation.unit,
-        reference: violation.reference,
-      });
+      logDemoActivity(
+        communityId,
+        "violation",
+        activityWords.notice(violation.unit, violation.rule),
+        {
+          unit_id: violation.homeId,
+          home: violation.unit,
+          reference: violation.reference,
+        },
+      );
       sliceStore(communityId, "violations").update((all) => [violation, ...all]);
       return violation;
     },
@@ -427,11 +450,16 @@ export function useEnforcementActions(deps: AppDeps) {
           all.map((o) => (o.id === violation.homeId ? { ...o, balanceCents: balanceAfter } : o)),
         );
       }
-      logDemoActivity(communityId, "violation", `Fined ${violation.unit} ${money(amountCents)}: ${violation.rule}`, {
-        unit_id: violation.homeId,
-        home: violation.unit,
-        reference: violation.reference,
-      });
+      logDemoActivity(
+        communityId,
+        "violation",
+        `Fined ${violation.unit} ${money(amountCents)}: ${violation.rule}`,
+        {
+          unit_id: violation.homeId,
+          home: violation.unit,
+          reference: violation.reference,
+        },
+      );
       return Promise.resolve(true);
     },
     [can, remote.community, communityId],
@@ -452,7 +480,12 @@ export function useEnforcementActions(deps: AppDeps) {
       }
       if (remote.community) {
         const rc = remote.community;
-        const path = attachmentPath(rc.id, "violations", violationId, attachmentFileName(file.name));
+        const path = attachmentPath(
+          rc.id,
+          "violations",
+          violationId,
+          attachmentFileName(file.name),
+        );
         return remoteWrite("Adding the photo", async () => {
           const supabase = supabaseBrowser();
           const up = await uploadAttachment(supabase, path, file);
@@ -502,7 +535,10 @@ export function useEnforcementActions(deps: AppDeps) {
       const agency = input.agency.trim();
       const caseNumber = input.caseNumber.trim();
       if (!agency || !input.rule.trim() || !input.deadline) {
-        throw new ValidationError("A city notice needs the agency, what it says, and the deadline", {});
+        throw new ValidationError(
+          "A city notice needs the agency, what it says, and the deadline",
+          {},
+        );
       }
       const existing = remote.community
         ? remote.community.violations
@@ -531,25 +567,27 @@ export function useEnforcementActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Logging the notice", () =>
-          supabaseBrowser().from("violations").insert({
-            id: violation.id,
-            association_id: rc.id,
-            reference: violation.reference,
-            unit_id: isUuid(violation.homeId) ? violation.homeId : null,
-            unit_label: violation.unit,
-            owner_name: violation.ownerName,
-            rule: violation.rule,
-            rule_citation: violation.ruleCitation,
-            stage: violation.stage,
-            opened_on: violation.openedDate,
-            next_action_on: violation.nextActionDate,
-            photos: [],
-            fine_cents: 0,
-            report_id: null,
-            source: "city",
-            agency,
-            case_number: caseNumber,
-          }),
+          supabaseBrowser()
+            .from("violations")
+            .insert({
+              id: violation.id,
+              association_id: rc.id,
+              reference: violation.reference,
+              unit_id: isUuid(violation.homeId) ? violation.homeId : null,
+              unit_label: violation.unit,
+              owner_name: violation.ownerName,
+              rule: violation.rule,
+              rule_citation: violation.ruleCitation,
+              stage: violation.stage,
+              opened_on: violation.openedDate,
+              next_action_on: violation.nextActionDate,
+              photos: [],
+              fine_cents: 0,
+              report_id: null,
+              source: "city",
+              agency,
+              case_number: caseNumber,
+            }),
         );
         return violation;
       }

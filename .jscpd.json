@@ -1,0 +1,12 @@
+{
+  "threshold": 2,
+  "minLines": 8,
+  "minTokens": 50,
+  "reporters": ["threshold"],
+  "ignore": [
+    "**/*.md",
+    "**/*.json",
+    "src/lib/data/library.ts",
+    "src/lib/supabase/database.types.ts"
+  ]
+}

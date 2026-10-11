@@ -1,6 +1,4 @@
-import type { Account, BankAccount, Home, Cents, ISODate, HomeType,
-  Amenity,
-} from "@/lib/types";
+import type { Account, BankAccount, Home, Cents, ISODate, HomeType, Amenity } from "@/lib/types";
 import type { LotPhase } from "@/lib/lots";
 import type { Community } from "./community";
 import { caps, GRANTABLE, NO_CAPABILITIES } from "./accounts";
@@ -9,7 +7,14 @@ import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { isNumbered, wordingFor } from "@/lib/wording";
 import { homeTypesOf, soleType } from "@/lib/home-types";
-import { expandPhases, lotLabel, lotsInPhase, MAX_LOTS_PER_PHASE, phaseFor, phaseProblems } from "@/lib/lots";
+import {
+  expandPhases,
+  lotLabel,
+  lotsInPhase,
+  MAX_LOTS_PER_PHASE,
+  phaseFor,
+  phaseProblems,
+} from "@/lib/lots";
 import { addDays, nextDueOnOrAfter } from "@/lib/utils";
 import { policyWithLateFee } from "@/lib/collections";
 import { associationNameProblem, duesProblem } from "@/lib/input-checks";
@@ -93,7 +98,7 @@ export type AssociationOrigin = "builder" | "handover" | "existing";
 export type PreviousSetup = "manager" | "platform" | "fresh";
 
 /** Anything the association bills beyond a flat due. */
-export type ExtraCollection = "special-assessment" | "utilities";
+type ExtraCollection = "special-assessment" | "utilities";
 
 /** Shared spaces, which drive both reservations and reserve components. */
 export type SharedSpace = "pool" | "clubhouse" | "gym" | "playground" | "gate" | "elevator";
@@ -270,7 +275,7 @@ function annualDues(draft: CommunityDraft): Cents {
  * counts only when the draft bills by home; otherwise its kind's, else the
  * fallback.
  */
-export function draftDuesFor(
+function draftDuesFor(
   draft: CommunityDraft,
   homeType?: PropertyType,
   unit?: string,
@@ -286,7 +291,7 @@ export function draftDuesFor(
  * The amount a home carries of its own, or undefined. A row's amount wins
  * over its range's; one equal to the fallback is no amount of its own.
  */
-export function draftOwnDues(draft: CommunityDraft, unit?: string, ownCents?: Cents): Cents | undefined {
+function draftOwnDues(draft: CommunityDraft, unit?: string, ownCents?: Cents): Cents | undefined {
   if (!draft.duesByHome) return undefined;
   const numbered = (draft.homeNaming ?? defaultHomeNaming(draft)) === "numbers";
   const range =
@@ -392,7 +397,8 @@ export function founderLabel(draft: CommunityDraft): string {
       // " A-2", which no trimmed row equals, and the founder's lot was
       // created twice: once as theirs and once as an unsold home beside it.
       const label = lotLabel(prefix, n).trim();
-      if (label.toLowerCase() === wanted || String(n) === wanted || String(n) === bare) return label;
+      if (label.toLowerCase() === wanted || String(n) === wanted || String(n) === bare)
+        return label;
     }
   }
   return typed;
@@ -486,7 +492,8 @@ export function placeFounder(draft: CommunityDraft): CommunityDraft {
   const lots = expandPhases(phases, draft.lotPrefix ?? "").map((l) => l.trim());
   if (mine && lots.includes(mine)) return draft;
   const free = draft.households.find(
-    (h) => h.unit.trim() !== "" && !h.name.trim() && !h.email.trim() && lots.includes(h.unit.trim()),
+    (h) =>
+      h.unit.trim() !== "" && !h.name.trim() && !h.email.trim() && lots.includes(h.unit.trim()),
   );
   if (!free) return draft;
   return { ...draft, founder: { ...draft.founder, unit: free.unit.trim() } };
@@ -657,7 +664,12 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
     label: draft.name,
     asOf,
     // The day after, so "next" never names a bill that fell due today.
-    nextChargeDate: nextDueOnOrAfter(addDays(asOf, 1), draft.dueDay, draft.duesCadence, FISCAL_YEAR_START),
+    nextChargeDate: nextDueOnOrAfter(
+      addDays(asOf, 1),
+      draft.dueDay,
+      draft.duesCadence,
+      FISCAL_YEAR_START,
+    ),
 
     // Carried through so the plan can be rebuilt later without asking again.
     profile: {
@@ -682,7 +694,11 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       duesCadence: draft.duesCadence,
       addressLine: `${draft.city}, ${draft.stateName}`,
       managedBy: "self",
-      joinCode: draft.name.replace(/[^a-z0-9]/gi, "").slice(0, 6).toUpperCase() || "JOINUS",
+      joinCode:
+        draft.name
+          .replace(/[^a-z0-9]/gi, "")
+          .slice(0, 6)
+          .toUpperCase() || "JOINUS",
     },
 
     settings: {
@@ -811,7 +827,10 @@ export function amenitiesFromSpaces(
     .map((c) => c.trim())
     .filter(Boolean)
     .map((name) => ({
-      id: `amenity-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+      id: `amenity-${name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")}`,
       name,
       status: "open" as const,
       detail: "",

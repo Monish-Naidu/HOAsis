@@ -26,8 +26,8 @@ export interface AssociationForStripe {
 }
 
 /** Civic, social and fraternal associations. The closest MCC to a homeowners association. */
-export const HOA_MCC = "8641";
-export const PRODUCT_DESCRIPTION = "Homeowners association dues";
+const HOA_MCC = "8641";
+const PRODUCT_DESCRIPTION = "Homeowners association dues";
 
 /** A US number in E.164, or null when the text is not a ten-digit number. */
 export function e164(phone: string | null | undefined): string | null {
@@ -115,7 +115,10 @@ export function accountPrefill(association: AssociationForStripe, origin: string
       business_details: {
         registered_name: name,
         id_numbers: ein.length === 9 ? [{ type: "us_ein", value: ein }] : undefined,
-        address: city || state ? { country: "us", city: city || undefined, state: state || undefined } : undefined,
+        address:
+          city || state
+            ? { country: "us", city: city || undefined, state: state || undefined }
+            : undefined,
         phone: phone ?? undefined,
       },
     },
@@ -134,7 +137,11 @@ export function accountPrefill(association: AssociationForStripe, origin: string
     },
     defaults: {
       responsibilities: { fees_collector: "stripe", losses_collector: "stripe" },
-      profile: { business_url: url, doing_business_as: name, product_description: PRODUCT_DESCRIPTION },
+      profile: {
+        business_url: url,
+        doing_business_as: name,
+        product_description: PRODUCT_DESCRIPTION,
+      },
     },
   };
 }

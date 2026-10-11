@@ -54,7 +54,12 @@ export function ChangeEmailForm({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" size="sm" disabled={busy || !changed || !looksLikeEmail(email)}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          disabled={busy || !changed || !looksLikeEmail(email)}
+        >
           Save email
         </Button>
       </div>
@@ -91,7 +96,9 @@ export function SecondOwnerForm({
           .finally(() => setBusy(false));
       }}
     >
-      <p className="text-footnote font-semibold text-fg-muted">Second owner of {homeName ?? unit}</p>
+      <p className="text-footnote font-semibold text-fg-muted">
+        Second owner of {homeName ?? unit}
+      </p>
       <p className="text-footnote text-fg-muted">
         They get their own sign in. The home keeps one balance and one vote.
       </p>
@@ -170,9 +177,17 @@ export function PeopleOnHome({
           </div>
         ))}
         {confirming ? (
-          <div role="group" aria-label={`Remove ${confirming.name}`} className="mt-2 space-y-2 border-t border-border pt-2">
+          <div
+            role="group"
+            aria-label={`Remove ${confirming.name}`}
+            className="mt-2 space-y-2 border-t border-border pt-2"
+          >
             <p className="text-footnote text-fg-muted">
-              {removeConfirmText(confirming.name, others.map((o) => o.name).join(" and "), homeLabel)}
+              {removeConfirmText(
+                confirming.name,
+                others.map((o) => o.name).join(" and "),
+                homeLabel,
+              )}
             </p>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(null)}>

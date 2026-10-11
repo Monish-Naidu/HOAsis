@@ -60,7 +60,11 @@ export type InvitedOutcome =
 
 export async function openInvitedHome(
   client: InvitedClient,
-  input: { code: string; signedInEmail: string; /** The address on the invitation link, if it carries one. */ invitedEmail?: string | null },
+  input: {
+    code: string;
+    signedInEmail: string;
+    /** The address on the invitation link, if it carries one. */ invitedEmail?: string | null;
+  },
 ): Promise<InvitedOutcome> {
   const retry = "Could not open your home just now. Try again in a moment.";
   try {
@@ -100,7 +104,11 @@ export async function openInvitedHome(
  * rides along: without it the person returned to an invitation that no
  * longer knew who it was for.
  */
-export function joinReturnPath(input: { invited: boolean; code: string; email?: string | null }): string {
+export function joinReturnPath(input: {
+  invited: boolean;
+  code: string;
+  email?: string | null;
+}): string {
   const params = new URLSearchParams({ [input.invited ? "invite" : "code"]: input.code });
   const email = (input.email ?? "").trim();
   if (input.invited && email) params.set("email", email);

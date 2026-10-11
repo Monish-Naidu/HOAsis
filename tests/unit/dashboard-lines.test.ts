@@ -63,7 +63,10 @@ describe("past due", () => {
   });
 
   it("says everyone is current when nobody is behind", () => {
-    const current = { ...c, homes: c.homes.map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 })) };
+    const current = {
+      ...c,
+      homes: c.homes.map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 })),
+    };
     expect(pastDueLine(current)).toBe("Everyone is current");
   });
 });
@@ -101,7 +104,11 @@ describe("next meeting", () => {
         { name: "C", unit: "3", response: "no" as const, at: "2026-08-02" },
       ],
     };
-    expect(meetingStatus(m)).toEqual({ coming: 2, noticeSent: true, line: "2 coming · notice sent" });
+    expect(meetingStatus(m)).toEqual({
+      coming: 2,
+      noticeSent: true,
+      line: "2 coming · notice sent",
+    });
   });
 
   it("flags a notice that has not gone out, and no answers yet", () => {
@@ -111,33 +118,66 @@ describe("next meeting", () => {
   it("is the live meeting first, then the soonest to come, and undefined with none", () => {
     expect(nextMeeting(empty)).toBeUndefined();
     const base = c.meetings[0];
-    const mk = (id: string, date: string, status: "scheduled" | "live" | "ended") => ({ ...base, id, date, status });
-    const meetings = [mk("far", "2026-09-30", "scheduled"), mk("soon", "2026-08-25", "scheduled"), mk("past", "2026-08-01", "scheduled")];
+    const mk = (id: string, date: string, status: "scheduled" | "live" | "ended") => ({
+      ...base,
+      id,
+      date,
+      status,
+    });
+    const meetings = [
+      mk("far", "2026-09-30", "scheduled"),
+      mk("soon", "2026-08-25", "scheduled"),
+      mk("past", "2026-08-01", "scheduled"),
+    ];
     expect(nextMeeting({ ...c, meetings })?.id).toBe("soon");
-    expect(nextMeeting({ ...c, meetings: [...meetings, mk("now", "2026-08-20", "live")] })?.id).toBe("now");
+    expect(
+      nextMeeting({ ...c, meetings: [...meetings, mk("now", "2026-08-20", "live")] })?.id,
+    ).toBe("now");
   });
 });
 
 describe("this month sentence", () => {
   it("builds the month from the records", () => {
     const line = thisMonthLine(c)!;
-    expect(line).toMatch(/^August: billed \$[\d,]+ on the 1st, \$[\d,]+ collected so far \(\d+%\), autopay covers \d+ homes, reminders go out on the 16th\.$/);
+    expect(line).toMatch(
+      /^August: billed \$[\d,]+ on the 1st, \$[\d,]+ collected so far \(\d+%\), autopay covers \d+ homes, reminders go out on the 16th\.$/,
+    );
     const homes = c.homes.filter((o) => !o.placeholder && o.autopay).length;
     expect(line).toContain(`autopay covers ${homes} homes`);
   });
 
   it("uses the reminder day the policy sets", () => {
-    const sooner = { ...c, settings: { ...c.settings, collectionPolicy: { reminderDay: 5, lateNoticeDay: 30, demandDay: 45, counselDay: 90, lateFeeCents: 0, minimumPlanMonths: 12 } } };
+    const sooner = {
+      ...c,
+      settings: {
+        ...c.settings,
+        collectionPolicy: {
+          reminderDay: 5,
+          lateNoticeDay: 30,
+          demandDay: 45,
+          counselDay: 90,
+          lateFeeCents: 0,
+          minimumPlanMonths: 12,
+        },
+      },
+    };
     expect(thisMonthLine(sooner)).toContain("reminders go out on the 6th");
   });
 
   it("says the bill has not posted when it has not", () => {
     const asOf = "2026-10-06";
-    expect(thisMonthLine({ ...c, asOf }, asOf)).toMatch(/^October: the bill of \$[\d,]+ posts on the 1st, /);
+    expect(thisMonthLine({ ...c, asOf }, asOf)).toMatch(
+      /^October: the bill of \$[\d,]+ posts on the 1st, /,
+    );
   });
 
   it("promises no reminders before any bill has been issued", () => {
-    const fresh = { ...c, homeCharges: {}, recentDuesBill: undefined, nextChargeDate: "2026-09-01" };
+    const fresh = {
+      ...c,
+      homeCharges: {},
+      recentDuesBill: undefined,
+      nextChargeDate: "2026-09-01",
+    };
     expect(thisMonthLine(fresh)).toBe("First bill goes out Sep 1.");
   });
 
@@ -151,13 +191,17 @@ describe("a new association's cards", () => {
     expect(dashboardFirstSteps(empty)).toEqual({
       cash: "Add your bank account to see your balance",
       owed: "Add your homes to see what is owed",
-      dues: expect.stringMatching(/^(Set the dues amount|Add your homes) to see how collection is going$/),
+      dues: expect.stringMatching(
+        /^(Set the dues amount|Add your homes) to see how collection is going$/,
+      ),
     });
   });
 
   it("asks for the dues amount before the homes when there is none", () => {
     const noDues = { ...empty, association: { ...empty.association, duesCents: 0 } };
-    expect(dashboardFirstSteps(noDues).dues).toBe("Set the dues amount to see how collection is going");
+    expect(dashboardFirstSteps(noDues).dues).toBe(
+      "Set the dues amount to see how collection is going",
+    );
     const dues = { ...empty, association: { ...empty.association, duesCents: 25000 } };
     expect(dashboardFirstSteps(dues).dues).toBe("Add your homes to see how collection is going");
   });
@@ -169,7 +213,10 @@ describe("a new association's cards", () => {
 
 describe("transactions defaults", () => {
   it("the last 30 days count today, so the first of the month is not empty", () => {
-    expect(periodRange("last-30-days", "2026-10-01")).toEqual({ from: "2026-09-02", to: "2026-10-01" });
+    expect(periodRange("last-30-days", "2026-10-01")).toEqual({
+      from: "2026-09-02",
+      to: "2026-10-01",
+    });
   });
 
   it("offers the next wider period, and none past a year", () => {
@@ -183,7 +230,9 @@ describe("transactions defaults", () => {
     const all = { from: "1900-01-01", to: "2999-12-31" };
     const counts = ledgerFilterCounts(c.ledger, all);
     expect(counts.status.any).toBe(c.ledger.length);
-    expect(counts.status["needs-review"]).toBe(c.ledger.filter((e) => e.status === "needs-review").length);
+    expect(counts.status["needs-review"]).toBe(
+      c.ledger.filter((e) => e.status === "needs-review").length,
+    );
     expect(counts.categoryAll).toBe(c.ledger.length);
     // A status already chosen does not zero the other statuses' counts.
     const narrowed = ledgerFilterCounts(c.ledger, { ...all, status: "cleared" });

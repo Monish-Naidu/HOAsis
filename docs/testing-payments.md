@@ -67,14 +67,14 @@ without doing it.
 
 ## Numbers Stripe accepts
 
-| What                  | Value                 | Result                              |
-| --------------------- | --------------------- | ----------------------------------- |
-| Routing number        | `110000000`           | Use with every account below        |
-| Bank, instant         | `000123456789`        | Verifies at once, payment succeeds  |
-| Bank, micro-deposits  | `000222222227`        | Confirm amounts `32` and `45` later |
-| Bank, fails           | `000111111113`        | The payment is returned             |
-| Card, works           | `4242 4242 4242 4242` | Any future date, CVC and ZIP        |
-| Card, declines        | `4000 0000 0000 0002` | Shows the decline path              |
+| What                 | Value                 | Result                              |
+| -------------------- | --------------------- | ----------------------------------- |
+| Routing number       | `110000000`           | Use with every account below        |
+| Bank, instant        | `000123456789`        | Verifies at once, payment succeeds  |
+| Bank, micro-deposits | `000222222227`        | Confirm amounts `32` and `45` later |
+| Bank, fails          | `000111111113`        | The payment is returned             |
+| Card, works          | `4242 4242 4242 4242` | Any future date, CVC and ZIP        |
+| Card, declines       | `4000 0000 0000 0002` | Shows the decline path              |
 
 ## Seeing what Stripe saw
 

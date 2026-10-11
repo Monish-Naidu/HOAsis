@@ -36,11 +36,17 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ message: "Something went wrong. Please try again." }, { status: 400 });
+    return NextResponse.json(
+      { message: "Something went wrong. Please try again." },
+      { status: 400 },
+    );
   }
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!isEmail(email)) {
-    return NextResponse.json({ message: "That email address does not look right." }, { status: 400 });
+    return NextResponse.json(
+      { message: "That email address does not look right." },
+      { status: 400 },
+    );
   }
 
   const again = perAddress.check(email);
@@ -55,7 +61,11 @@ export async function POST(request: NextRequest) {
   const admin = supabaseAdmin();
   // Looked up before a link is minted: asking Auth for a link to an unknown
   // address would create the account.
-  const { data: profile } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
   const found = profile ? await admin.auth.admin.getUserById(profile.id) : null;
   const user = found?.data.user ?? null;
   if (!user || user.email_confirmed_at) {
@@ -67,7 +77,10 @@ export async function POST(request: NextRequest) {
   const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (error || !data.properties?.hashed_token) {
     log.warn("resend link failed", { to: email, err: error?.message ?? "no token" });
-    return NextResponse.json({ message: "Could not send the link. Try again in a minute." }, { status: 400 });
+    return NextResponse.json(
+      { message: "Could not send the link. Try again in a minute." },
+      { status: 400 },
+    );
   }
 
   // A magic link confirms an address that has not been confirmed, so the
@@ -101,6 +114,7 @@ export async function POST(request: NextRequest) {
 function siteOrigin(request: NextRequest): string {
   const forwardedHost = request.headers.get("x-forwarded-host");
   const host = forwardedHost ?? request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const proto =
+    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
   return host ? `${proto}://${host}` : request.nextUrl.origin;
 }

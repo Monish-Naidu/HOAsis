@@ -61,78 +61,66 @@ export default function ResidentAccount() {
   ).sort((a, b) => b[0].localeCompare(a[0]));
 
   const row = (line: (typeof homeCharges)[number], i: number) => {
-            const isPayment = line.kind === "payment";
-            const body = (
-              <>
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${
-                      isPayment ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted"
-                    }`}
-                  >
-                    {isPayment ? <CircleDollarSign className="size-4" /> : <Receipt className="size-4" />}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="break-words text-body font-medium text-fg">{line.label}</p>
-                    <p className="mt-0.5 text-footnote text-fg-muted">
-                      {formatDate(line.date, "long")}
-                      {line.method ? ` · ${line.method}` : ""}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p
-                      className={`tnum text-body font-semibold ${
-                        isPayment ? "text-ok" : "text-fg"
-                      }`}
-                    >
-                      {isPayment ? "−" : ""}
-                      {money(Math.abs(line.amountCents))}
-                    </p>
-                    <p className="tnum mt-0.5 text-footnote text-fg-subtle">
-                      Balance {money(line.balanceAfterCents)}
-                    </p>
-                  </div>
-                  {line.appliedTo?.length ? (
-                    <ChevronDown className="mt-1 size-3.5 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
-                  ) : null}
-                </div>
-              </>
-            );
+    const isPayment = line.kind === "payment";
+    const body = (
+      <>
+        <div className="flex items-start gap-3">
+          <span
+            className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${
+              isPayment ? "bg-ok-soft text-ok" : "bg-surface-3 text-fg-muted"
+            }`}
+          >
+            {isPayment ? <CircleDollarSign className="size-4" /> : <Receipt className="size-4" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="break-words text-body font-medium text-fg">{line.label}</p>
+            <p className="mt-0.5 text-footnote text-fg-muted">
+              {formatDate(line.date, "long")}
+              {line.method ? ` · ${line.method}` : ""}
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className={`tnum text-body font-semibold ${isPayment ? "text-ok" : "text-fg"}`}>
+              {isPayment ? "−" : ""}
+              {money(Math.abs(line.amountCents))}
+            </p>
+            <p className="tnum mt-0.5 text-footnote text-fg-subtle">
+              Balance {money(line.balanceAfterCents)}
+            </p>
+          </div>
+          {line.appliedTo?.length ? (
+            <ChevronDown className="mt-1 size-3.5 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
+          ) : null}
+        </div>
+      </>
+    );
 
-            if (!line.appliedTo?.length) {
-              return (
-                <div
-                  key={line.id}
-                  className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}
-                >
-                  {body}
-                </div>
-              );
-            }
+    if (!line.appliedTo?.length) {
+      return (
+        <div key={line.id} className={`px-4 py-3 ${i > 0 ? "border-t border-border" : ""}`}>
+          {body}
+        </div>
+      );
+    }
 
-            return (
-              <details
-                key={line.id}
-                className={`group ${i > 0 ? "border-t border-border" : ""}`}
-              >
-                <summary className="cursor-pointer list-none px-4 py-3 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-                  {body}
-                </summary>
-                <div className="border-t border-border bg-surface-2 px-4 py-3">
-                  <p className="mb-2 text-footnote font-semibold text-fg-muted">
-                    Paid toward
-                  </p>
-                  <ul className="space-y-1.5">
-                    {line.appliedTo.map((a) => (
-                      <li key={a.chargeId} className="flex justify-between text-footnote">
-                        <span className="text-fg-muted">{a.label}</span>
-                        <span className="tnum font-medium text-fg">{money(a.amountCents)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            );
+    return (
+      <details key={line.id} className={`group ${i > 0 ? "border-t border-border" : ""}`}>
+        <summary className="cursor-pointer list-none px-4 py-3 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+          {body}
+        </summary>
+        <div className="border-t border-border bg-surface-2 px-4 py-3">
+          <p className="mb-2 text-footnote font-semibold text-fg-muted">Paid toward</p>
+          <ul className="space-y-1.5">
+            {line.appliedTo.map((a) => (
+              <li key={a.chargeId} className="flex justify-between text-footnote">
+                <span className="text-fg-muted">{a.label}</span>
+                <span className="tnum font-medium text-fg">{money(a.amountCents)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
+    );
   };
 
   return (
@@ -152,9 +140,7 @@ export default function ResidentAccount() {
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-footnote font-semibold text-fg-muted">
-            Balance
-          </p>
+          <p className="text-footnote font-semibold text-fg-muted">Balance</p>
           <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(currentHome.balanceCents)}
           </p>
@@ -165,9 +151,7 @@ export default function ResidentAccount() {
           </Badge>
         </Card>
         <Card className="p-4">
-          <p className="text-footnote font-semibold text-fg-muted">
-            Paid in {paidYear}
-          </p>
+          <p className="text-footnote font-semibold text-fg-muted">Paid in {paidYear}</p>
           <p className="tnum mt-1.5 text-title2 font-semibold leading-none text-fg">
             {money(paidThisYear, { cents: false })}
           </p>
@@ -195,24 +179,24 @@ export default function ResidentAccount() {
             <span className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
               <PrintStatementControl home={currentHome} className="flex items-center gap-2" />
               <button
-              type="button"
-              onClick={() =>
-                // The ledger as a spreadsheet, for a tax return or a lender.
-                downloadCsv(
-                  `dues-${currentHome.unit}-${paidYear}.csv`,
-                  toCsv(homeCharges, [
-                    { header: "Date", value: (c) => c.date },
-                    { header: "Description", value: (c) => c.label },
-                    { header: "Method", value: (c) => c.method ?? "" },
-                    { header: "Amount", value: (c) => (c.amountCents / 100).toFixed(2) },
-                    { header: "Balance", value: (c) => (c.balanceAfterCents / 100).toFixed(2) },
-                  ]),
-                )
-              }
-              className="inline-flex items-center gap-1 text-footnote font-medium text-accent hover:underline"
-            >
-              <Download className="size-3" />
-              Download as a spreadsheet
+                type="button"
+                onClick={() =>
+                  // The ledger as a spreadsheet, for a tax return or a lender.
+                  downloadCsv(
+                    `dues-${currentHome.unit}-${paidYear}.csv`,
+                    toCsv(homeCharges, [
+                      { header: "Date", value: (c) => c.date },
+                      { header: "Description", value: (c) => c.label },
+                      { header: "Method", value: (c) => c.method ?? "" },
+                      { header: "Amount", value: (c) => (c.amountCents / 100).toFixed(2) },
+                      { header: "Balance", value: (c) => (c.balanceAfterCents / 100).toFixed(2) },
+                    ]),
+                  )
+                }
+                className="inline-flex items-center gap-1 text-footnote font-medium text-accent hover:underline"
+              >
+                <Download className="size-3" />
+                Download as a spreadsheet
               </button>
             </span>
           }
@@ -242,7 +226,9 @@ export default function ResidentAccount() {
             >
               <span className="flex items-center gap-2">
                 <History className="size-3.5" />
-                {loadingEarlier ? "Loading" : `Show transactions before ${formatDate(history?.from ?? "", "long")}`}
+                {loadingEarlier
+                  ? "Loading"
+                  : `Show transactions before ${formatDate(history?.from ?? "", "long")}`}
               </span>
               <span className="font-medium text-fg-subtle">{earlierCount} transactions</span>
             </button>

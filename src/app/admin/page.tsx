@@ -8,7 +8,13 @@ import { ThemeToggle } from "@/components/app/theme";
 import { supabaseServer } from "@/lib/supabase/server";
 import { hasSupabase } from "@/lib/supabase/env";
 import { isPlatformOwner } from "@/lib/platform-owner";
-import { CRON_JOBS, loadOpsReport, OPS_WINDOW_DAYS, STUCK_PAYMENT_DAYS, type OpsReport } from "@/lib/ops";
+import {
+  CRON_JOBS,
+  loadOpsReport,
+  OPS_WINDOW_DAYS,
+  STUCK_PAYMENT_DAYS,
+  type OpsReport,
+} from "@/lib/ops";
 import { RAIL_LABEL, type PaymentRail } from "@/lib/payments/instruments";
 import { money } from "@/lib/utils";
 
@@ -40,7 +46,10 @@ export default async function OpsPage() {
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <Link href="/board" className="text-footnote font-medium text-fg-muted underline hover:text-fg">
+          <Link
+            href="/board"
+            className="text-footnote font-medium text-fg-muted underline hover:text-fg"
+          >
             Board
           </Link>
         </div>
@@ -96,7 +105,12 @@ function ago(iso: string, now: string): string {
   return `${Math.round(hours / 24)} d ago`;
 }
 
-function Table({ head, children, empty, count }: {
+function Table({
+  head,
+  children,
+  empty,
+  count,
+}: {
   head: string[];
   children: ReactNode;
   empty: string;
@@ -133,14 +147,20 @@ function Health({ report }: { report: OpsReport }) {
       <CardHeader
         title="Health"
         subtitle={`Same answer as /api/health, checked ${when(health.at)}.`}
-        action={<Badge tone={health.ok ? "ok" : "danger"} dot>{health.ok ? "OK" : "Not OK"}</Badge>}
+        action={
+          <Badge tone={health.ok ? "ok" : "danger"} dot>
+            {health.ok ? "OK" : "Not OK"}
+          </Badge>
+        }
       />
       <Table head={["Check", "Status", "Detail"]} count={5} empty="">
         {Object.entries(health.checks).map(([name, check]) => (
           <tr key={name}>
             <td className={`${cell} font-medium text-fg`}>{name}</td>
             <td className={cell}>
-              <Badge tone={check.ok ? "ok" : "danger"} dot>{check.ok ? "ok" : "fail"}</Badge>
+              <Badge tone={check.ok ? "ok" : "danger"} dot>
+                {check.ok ? "ok" : "fail"}
+              </Badge>
             </td>
             <td className={`${cell} text-fg-muted`}>
               {check.detail}
@@ -154,9 +174,7 @@ function Health({ report }: { report: OpsReport }) {
 }
 
 function CronRuns({ report }: { report: OpsReport }) {
-  const missing = CRON_JOBS.filter(
-    (job) => !report.cronRuns.some((r) => r.job === job),
-  );
+  const missing = CRON_JOBS.filter((job) => !report.cronRuns.some((r) => r.job === job));
   return (
     <Card>
       <CardHeader
@@ -179,12 +197,20 @@ function CronRuns({ report }: { report: OpsReport }) {
               <td className={`${cell} font-medium text-fg`}>{r.job}</td>
               <td className={cell}>
                 <span className="text-fg">{ago(r.started_at, report.now)}</span>
-                <span className="ml-2 font-mono text-caption text-fg-subtle">{when(r.started_at)}</span>
-                {stale ? <Badge tone="warn" className="ml-2">stale</Badge> : null}
+                <span className="ml-2 font-mono text-caption text-fg-subtle">
+                  {when(r.started_at)}
+                </span>
+                {stale ? (
+                  <Badge tone="warn" className="ml-2">
+                    stale
+                  </Badge>
+                ) : null}
               </td>
               <td className={`${cell} text-fg-muted`}>{took} s</td>
               <td className={cell}>
-                <Badge tone={r.ok ? "ok" : "danger"} dot>{r.ok ? "ok" : "failed"}</Badge>
+                <Badge tone={r.ok ? "ok" : "danger"} dot>
+                  {r.ok ? "ok" : "failed"}
+                </Badge>
                 {r.error ? <span className="ml-2 text-danger">{r.error}</span> : null}
               </td>
               <td className={`${cell} text-fg-muted`}>{summarize(r.summary)}</td>
@@ -260,7 +286,9 @@ function ErrorGroups({ report }: { report: OpsReport }) {
             <td className={`${cell} text-fg`}>{g.message}</td>
             <td className={`${cell} text-fg-muted`}>{g.routes.join(", ")}</td>
             <td className={`${cell} text-fg-muted`}>{g.sources.join(", ")}</td>
-            <td className={`${cell} text-fg-muted whitespace-nowrap`}>{ago(g.latest, report.now)}</td>
+            <td className={`${cell} text-fg-muted whitespace-nowrap`}>
+              {ago(g.latest, report.now)}
+            </td>
           </tr>
         ))}
       </Table>
@@ -285,7 +313,9 @@ function LatestErrors({ report }: { report: OpsReport }) {
             <td className={`${cell} text-fg-muted whitespace-nowrap`}>{when(e.created_at)}</td>
             <td className={mono}>{e.reference}</td>
             <td className={cell}>
-              <Badge tone={e.level === "error" ? "danger" : e.level === "warn" ? "warn" : "neutral"}>
+              <Badge
+                tone={e.level === "error" ? "danger" : e.level === "warn" ? "warn" : "neutral"}
+              >
                 {e.level}
               </Badge>
             </td>
@@ -293,7 +323,9 @@ function LatestErrors({ report }: { report: OpsReport }) {
             <td className={`${cell} text-fg-muted`}>{e.route ?? ""}</td>
             <td className={`${cell} text-fg`}>{e.message}</td>
             <td className={`${cell} text-fg-muted`}>
-              {e.association_id ? (report.associationNames[e.association_id] ?? e.association_id.slice(0, 8)) : ""}
+              {e.association_id
+                ? (report.associationNames[e.association_id] ?? e.association_id.slice(0, 8))
+                : ""}
             </td>
           </tr>
         ))}
@@ -317,7 +349,9 @@ function EmailFailures({ report }: { report: OpsReport }) {
         {report.emailFailures.map((e) => (
           <tr key={e.id}>
             <td className={`${cell} text-fg-muted whitespace-nowrap`}>{when(e.sent_at)}</td>
-            <td className={`${cell} text-fg`}>{report.associationNames[e.association_id] ?? e.association_id.slice(0, 8)}</td>
+            <td className={`${cell} text-fg`}>
+              {report.associationNames[e.association_id] ?? e.association_id.slice(0, 8)}
+            </td>
             <td className={`${cell} text-fg-muted`}>{e.to_email}</td>
             <td className={`${cell} text-fg-muted`}>{e.category}</td>
             <td className={`${cell} text-fg`}>{e.subject}</td>
@@ -333,7 +367,10 @@ function EmailFailures({ report }: { report: OpsReport }) {
 function AutopayFailures({ report }: { report: OpsReport }) {
   return (
     <Card>
-      <CardHeader title="Autopay failures" subtitle="autopay_runs rows the daily run marked failed." />
+      <CardHeader
+        title="Autopay failures"
+        subtitle="autopay_runs rows the daily run marked failed."
+      />
       <Table
         head={["When", "Association", "Home", "Month", "Amount", "Reason"]}
         count={report.autopayFailures.length}
@@ -342,7 +379,9 @@ function AutopayFailures({ report }: { report: OpsReport }) {
         {report.autopayFailures.map((r) => (
           <tr key={r.id}>
             <td className={`${cell} text-fg-muted whitespace-nowrap`}>{when(r.created_at)}</td>
-            <td className={`${cell} text-fg`}>{report.associationNames[r.association_id] ?? r.association_id.slice(0, 8)}</td>
+            <td className={`${cell} text-fg`}>
+              {report.associationNames[r.association_id] ?? r.association_id.slice(0, 8)}
+            </td>
             <td className={mono}>{r.unit_id.slice(0, 8)}</td>
             <td className={`${cell} text-fg-muted`}>{r.month}</td>
             <td className={`${cell} text-fg tabular-nums`}>{money(r.amount_cents)}</td>
@@ -369,10 +408,14 @@ function StuckPayments({ report }: { report: OpsReport }) {
         {report.stuckPayments.map((p) => (
           <tr key={p.id}>
             <td className={`${cell} text-fg-muted whitespace-nowrap`}>{when(p.created_at)}</td>
-            <td className={`${cell} text-fg`}>{report.associationNames[p.association_id] ?? p.association_id.slice(0, 8)}</td>
+            <td className={`${cell} text-fg`}>
+              {report.associationNames[p.association_id] ?? p.association_id.slice(0, 8)}
+            </td>
             <td className={mono}>{p.unit_id.slice(0, 8)}</td>
             <td className={`${cell} text-fg tabular-nums`}>{money(p.amount_cents)}</td>
-            <td className={`${cell} text-fg-muted`}>{RAIL_LABEL[p.rail as PaymentRail] ?? p.rail}</td>
+            <td className={`${cell} text-fg-muted`}>
+              {RAIL_LABEL[p.rail as PaymentRail] ?? p.rail}
+            </td>
             <td className={mono}>{p.stripe_payment_intent_id ?? ""}</td>
           </tr>
         ))}

@@ -30,7 +30,7 @@ export interface PlanFacts {
   previously?: PreviousSetup;
 }
 
-export function factsOf(c: Community): PlanFacts {
+function factsOf(c: Community): PlanFacts {
   return { origin: c.profile?.origin, previously: c.profile?.previously };
 }
 
@@ -107,9 +107,8 @@ export function rosterStatus(c: Community, f: PlanFacts = factsOf(c)) {
 
 /** Homes with an opening balance saved. A balance set to nothing leaves no line. */
 export function openingBalanceCount(c: Community): number {
-  return c.homes.filter((o) =>
-    (c.homeCharges[o.id] ?? []).some((l) => OPENING_LINE.test(l.label)),
-  ).length;
+  return c.homes.filter((o) => (c.homeCharges[o.id] ?? []).some((l) => OPENING_LINE.test(l.label)))
+    .length;
 }
 
 /** The first dues bill: when, and for how much per home. */

@@ -7,11 +7,7 @@ import { SectionTabs } from "@/components/app/section-tabs";
 import { DemoBanner, LocalCopyBanner } from "@/components/app/local-copy-banner";
 import { TrialBanner } from "@/components/app/trial-banner";
 import { BillingGate } from "@/components/app/billing-gate";
-import {
-  AccountMenu,
-  RequireSession,
-  ViewSwitcher,
-} from "@/components/app/account-menu";
+import { AccountMenu, RequireSession, ViewSwitcher } from "@/components/app/account-menu";
 import { BoardChrome, CommunityName } from "@/components/app/community-hero";
 import { BoardBell } from "@/components/app/notifications";
 import { ThemeToggle } from "@/components/app/theme";
@@ -25,11 +21,7 @@ export const metadata = {
   title: { default: "Board", template: "%s · Your HOAsis" },
 };
 
-export default function BoardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function BoardLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireSession>
       <BoardOnly>

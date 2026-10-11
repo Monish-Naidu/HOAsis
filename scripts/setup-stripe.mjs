@@ -114,7 +114,9 @@ for (const wanted of WANTED) {
     description: wanted.description,
   });
   setEnv(wanted.envKey, created.secret);
-  console.log(`✓ ${wanted.url}\n  created ${created.id}${wanted.connect ? " (Connect)" : ""}; ${wanted.envKey} written to .env.local`);
+  console.log(
+    `✓ ${wanted.url}\n  created ${created.id}${wanted.connect ? " (Connect)" : ""}; ${wanted.envKey} written to .env.local`,
+  );
 }
 
 fs.writeFileSync(envPath, envText);
@@ -141,11 +143,19 @@ if (!env.CRON_SECRET) {
  * Hosts: the origin given on the command line, NEXT_PUBLIC_SITE_HOST when
  * set, and yourhoasis.com. localhost and *.vercel.app are skipped.
  */
-const hosts = [...new Set(
-  [new URL(origin).hostname, env.NEXT_PUBLIC_SITE_HOST, "yourhoasis.com"]
-    .map((h) => (h ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
-    .filter((h) => h && !h.includes("localhost") && !h.endsWith(".vercel.app")),
-)];
+const hosts = [
+  ...new Set(
+    [new URL(origin).hostname, env.NEXT_PUBLIC_SITE_HOST, "yourhoasis.com"]
+      .map((h) =>
+        (h ?? "")
+          .trim()
+          .toLowerCase()
+          .replace(/^https?:\/\//, "")
+          .replace(/\/.*$/, ""),
+      )
+      .filter((h) => h && !h.includes("localhost") && !h.endsWith(".vercel.app")),
+  ),
+];
 
 async function registerDomain(host, accountId) {
   const options = accountId ? { stripeAccount: accountId } : undefined;
@@ -189,7 +199,9 @@ if (hosts.length) {
         const domain = await registerDomain(host, account.stripe_account_id);
         const ok = domain.apple_pay?.status === "active" && domain.google_pay?.status === "active";
         if (!ok) inactive++;
-        console.log(`${ok ? "✓" : "!"} ${host} on ${account.name}${account.stripe_account_id ? ` (${account.stripe_account_id})` : ""}: ${walletLine(domain)}`);
+        console.log(
+          `${ok ? "✓" : "!"} ${host} on ${account.name}${account.stripe_account_id ? ` (${account.stripe_account_id})` : ""}: ${walletLine(domain)}`,
+        );
       } catch (error) {
         inactive++;
         console.log(`! ${host} on ${account.name}: ${error.message}`);

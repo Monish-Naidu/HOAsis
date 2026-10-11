@@ -49,33 +49,50 @@ export function buildDigest(report: OpsReport, now: string, adminUrl: string): D
   if (cronFailures.length) {
     sections.push({
       title: "Daily jobs that failed",
-      lines: cronFailures.map((c) => `${c.job}: ${c.error ?? "failed"} (${c.started_at.slice(0, 16).replace("T", " ")} UTC)`),
+      lines: cronFailures.map(
+        (c) =>
+          `${c.job}: ${c.error ?? "failed"} (${c.started_at.slice(0, 16).replace("T", " ")} UTC)`,
+      ),
     });
   }
   if (errors.length) {
     const groups = new Map<string, number>();
-    for (const e of errors) groups.set(e.message.slice(0, 120), (groups.get(e.message.slice(0, 120)) ?? 0) + 1);
+    for (const e of errors)
+      groups.set(e.message.slice(0, 120), (groups.get(e.message.slice(0, 120)) ?? 0) + 1);
     sections.push({
       title: `Errors in the last day (${errors.length})`,
-      lines: [...groups.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([m, n]) => (n > 1 ? `${n} × ${m}` : m)),
+      lines: [...groups.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([m, n]) => (n > 1 ? `${n} × ${m}` : m)),
     });
   }
   if (report.stuckPayments.length) {
     sections.push({
       title: "Payments pending for more than five days",
-      lines: report.stuckPayments.map((p) => `${name(p.association_id)}: ${money(p.amount_cents)} by ${p.rail}`),
+      lines: report.stuckPayments.map(
+        (p) => `${name(p.association_id)}: ${money(p.amount_cents)} by ${p.rail}`,
+      ),
     });
   }
   if (autopayFailures.length) {
     sections.push({
       title: "Autopay that did not go through",
-      lines: autopayFailures.map((a) => `${name(a.association_id)}: ${money(a.amount_cents)}, ${a.reason ?? "no reason recorded"}`),
+      lines: autopayFailures.map(
+        (a) =>
+          `${name(a.association_id)}: ${money(a.amount_cents)}, ${a.reason ?? "no reason recorded"}`,
+      ),
     });
   }
   if (emailFailures.length) {
     sections.push({
       title: `Emails that failed (${emailFailures.length})`,
-      lines: emailFailures.slice(0, 10).map((e) => `${name(e.association_id)}: ${e.subject} to ${e.to_email}: ${e.error ?? e.status ?? "failed"}`),
+      lines: emailFailures
+        .slice(0, 10)
+        .map(
+          (e) =>
+            `${name(e.association_id)}: ${e.subject} to ${e.to_email}: ${e.error ?? e.status ?? "failed"}`,
+        ),
     });
   }
   if (report.problems.length) {
@@ -85,7 +102,8 @@ export function buildDigest(report: OpsReport, now: string, adminUrl: string): D
   const monday = new Date(now).getUTCDay() === 1;
   if (!sections.length) {
     const subject = "Your HOAsis: all quiet this week";
-    const body = "Nothing failed in the last seven days: no errors, every daily job ran, no email or autopay failures, no payment stuck. This note comes on Mondays so you know the digest itself is alive.";
+    const body =
+      "Nothing failed in the last seven days: no errors, every daily job ran, no email or autopay failures, no payment stuck. This note comes on Mondays so you know the digest itself is alive.";
     return {
       send: monday,
       subject,
@@ -96,7 +114,9 @@ export function buildDigest(report: OpsReport, now: string, adminUrl: string): D
 
   const count = sections.reduce((t, s) => t + s.lines.length, 0);
   const subject = `Your HOAsis: ${count} ${count === 1 ? "thing" : "things"} to look at`;
-  const text = sections.map((s) => `${s.title}\n${s.lines.map((l) => `- ${l}`).join("\n")}`).join("\n\n") + `\n\n${adminUrl}`;
+  const text =
+    sections.map((s) => `${s.title}\n${s.lines.map((l) => `- ${l}`).join("\n")}`).join("\n\n") +
+    `\n\n${adminUrl}`;
   const html =
     sections
       .map(

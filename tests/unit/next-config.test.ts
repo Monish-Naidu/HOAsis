@@ -22,7 +22,9 @@ describe("next.config redirects", () => {
   });
 
   it("never swallows the bare /admin page", () => {
-    const underAdmin = redirectSources.filter((s) => s === "/admin" || s.startsWith("/admin/") || s.startsWith("/admin("));
+    const underAdmin = redirectSources.filter(
+      (s) => s === "/admin" || s.startsWith("/admin/") || s.startsWith("/admin("),
+    );
     expect(underAdmin.length).toBeGreaterThan(0);
     for (const pattern of underAdmin) {
       // Zero-or-more and optional segments both match /admin itself.

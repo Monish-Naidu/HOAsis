@@ -32,13 +32,17 @@ export function StatementsScreen() {
   const year = chosen !== null && years.includes(chosen) ? chosen : years[0];
 
   const all = useMemo(
-    () => community.homes.map((home) => ({ home, statement: statementFor(community, home.id, year) })),
+    () =>
+      community.homes.map((home) => ({ home, statement: statementFor(community, home.id, year) })),
     [community, year],
   );
   const shown = show === "balance" ? all.filter((r) => r.statement.closingCents !== 0) : all;
   const periodLabel = all[0]?.statement.periodLabel ?? String(year);
   // A real association loads two years of lines; the rest is summed.
-  const linesBegin = all.map((r) => r.statement.linesBegin).filter((d): d is string => d !== null).sort()[0];
+  const linesBegin = all
+    .map((r) => r.statement.linesBegin)
+    .filter((d): d is string => d !== null)
+    .sort()[0];
 
   useEffect(() => {
     if (!printing) return;
@@ -51,7 +55,10 @@ export function StatementsScreen() {
 
   return (
     <>
-      <PageHeader title="Statements" description="A statement for each home for a year. Print one, or all of them." />
+      <PageHeader
+        title="Statements"
+        description="A statement for each home for a year. Print one, or all of them."
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <YearSelect years={years} value={year} onChange={setChosen} />
@@ -90,7 +97,10 @@ export function StatementsScreen() {
       ) : null}
 
       {shown.length === 0 ? (
-        <EmptyState title="No statements to show" description="No home has a balance for this period." />
+        <EmptyState
+          title="No statements to show"
+          description="No home has a balance for this period."
+        />
       ) : (
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-left text-footnote">
@@ -113,10 +123,14 @@ export function StatementsScreen() {
                     <p className="font-medium text-fg">{homeLabel(community, home.unit)}</p>
                     <p className="text-fg-muted">{home.displayName}</p>
                   </td>
-                  <td className="tnum px-4 py-2.5 text-right text-fg-muted">{money(s.openingCents)}</td>
+                  <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                    {money(s.openingCents)}
+                  </td>
                   <td className="tnum px-4 py-2.5 text-right">{money(s.billedCents)}</td>
                   <td className="tnum px-4 py-2.5 text-right">{money(s.paidCents)}</td>
-                  <td className="tnum px-4 py-2.5 text-right font-semibold text-fg">{money(s.closingCents)}</td>
+                  <td className="tnum px-4 py-2.5 text-right font-semibold text-fg">
+                    {money(s.closingCents)}
+                  </td>
                   <td className="px-4 py-2.5 text-right">
                     <Button
                       variant="ghost"

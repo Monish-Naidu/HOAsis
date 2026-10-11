@@ -14,7 +14,9 @@ export function DisplaySettings() {
     <Card className="space-y-4 p-4 sm:p-5">
       <div>
         <p className="text-body font-medium text-fg">Text size</p>
-        <p className="mt-0.5 text-footnote text-fg-muted">Makes every word bigger on this device.</p>
+        <p className="mt-0.5 text-footnote text-fg-muted">
+          Makes every word bigger on this device.
+        </p>
         <TextSizeControl className="mt-3 max-w-md" />
       </div>
       <div className="border-t border-border pt-4">

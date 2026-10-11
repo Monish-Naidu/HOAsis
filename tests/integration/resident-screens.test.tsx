@@ -5,7 +5,13 @@ import type { ReactNode } from "react";
 
 const pathname = "/resident";
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => pathname,
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -32,7 +38,12 @@ function Controls() {
       <button
         onClick={() => {
           signIn("acct-arya");
-          addNotice({ homeId: "own-042", ownerName: "Monish Naidu", unit: "42", rule: "Fence needs paint" });
+          addNotice({
+            homeId: "own-042",
+            ownerName: "Monish Naidu",
+            unit: "42",
+            rule: "Fence needs paint",
+          });
           signIn("acct-monish");
         }}
       >
@@ -41,7 +52,12 @@ function Controls() {
       <button
         onClick={() => {
           signIn("acct-arya");
-          addNotice({ homeId: "own-055", ownerName: "Rhea Calloway", unit: "55", rule: "Bins out" });
+          addNotice({
+            homeId: "own-055",
+            ownerName: "Rhea Calloway",
+            unit: "55",
+            rule: "Bins out",
+          });
           signIn("acct-monish");
         }}
       >
@@ -76,7 +92,9 @@ describe("a notice against your home", () => {
     await user.click(screen.getByText("notice on 42"));
     const row = screen.getByText("A notice about your home").closest("a");
     expect(row).toHaveAttribute("href", "/resident/notices");
-    expect(within(row as HTMLElement).getByText(/Fence needs paint · next step/)).toBeInTheDocument();
+    expect(
+      within(row as HTMLElement).getByText(/Fence needs paint · next step/),
+    ).toBeInTheDocument();
   });
 
   it("does not appear for a notice addressed to another home", async () => {
@@ -191,7 +209,10 @@ describe("the home card's balance", () => {
     );
     await user.click(screen.getByText("sign in as owner"));
     expect(screen.getByText("Your balance")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Statement" })).toHaveAttribute("href", "/resident/account");
+    expect(screen.getByRole("link", { name: "Statement" })).toHaveAttribute(
+      "href",
+      "/resident/account",
+    );
   });
 });
 
@@ -202,7 +223,12 @@ describe("More", () => {
       .getAllByRole("link")
       .map((a) => a.getAttribute("href"))
       .filter(Boolean);
-    expect(rows).toEqual(["/resident/forum", "/resident/finances", "/resident/settings", "/resident/messages#your-board"]);
+    expect(rows).toEqual([
+      "/resident/forum",
+      "/resident/finances",
+      "/resident/settings",
+      "/resident/messages#your-board",
+    ]);
     expect(screen.getByText("Association funds")).toBeInTheDocument();
     expect(screen.queryByText("Funds")).not.toBeInTheDocument();
   });
@@ -244,7 +270,9 @@ describe("association funds", () => {
     const headings = screen
       .getAllByRole("heading")
       .map((h) => h.textContent)
-      .filter((t) => ["Where your dues go", "What reserves are saved for", "Transactions"].includes(t ?? ""));
+      .filter((t) =>
+        ["Where your dues go", "What reserves are saved for", "Transactions"].includes(t ?? ""),
+      );
     expect(headings).toEqual(["Where your dues go", "What reserves are saved for", "Transactions"]);
   });
 });

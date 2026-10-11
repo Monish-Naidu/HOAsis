@@ -30,7 +30,13 @@ const minted = {
 
 describe("callbackLink", () => {
   it("carries the token hash, how to verify it, and where to land", () => {
-    const link = new URL(callbackLink(ORIGIN, { tokenHash: "hash_123", type: "magiclink", path: "/c/maple-court/resident" }));
+    const link = new URL(
+      callbackLink(ORIGIN, {
+        tokenHash: "hash_123",
+        type: "magiclink",
+        path: "/c/maple-court/resident",
+      }),
+    );
     expect(link.origin).toBe(ORIGIN);
     expect(link.pathname).toBe("/auth/callback");
     expect(link.searchParams.get("token_hash")).toBe("hash_123");
@@ -39,36 +45,77 @@ describe("callbackLink", () => {
   });
 
   it("keeps a destination the callback will agree to follow", () => {
-    const link = new URL(callbackLink(ORIGIN, { tokenHash: "h", type: "invite", path: "/resident/requests/REQ-2026-014" }));
-    expect(sameOriginPath(link.searchParams.get("next"), ORIGIN)).toBe("/resident/requests/REQ-2026-014");
+    const link = new URL(
+      callbackLink(ORIGIN, {
+        tokenHash: "h",
+        type: "invite",
+        path: "/resident/requests/REQ-2026-014",
+      }),
+    );
+    expect(sameOriginPath(link.searchParams.get("next"), ORIGIN)).toBe(
+      "/resident/requests/REQ-2026-014",
+    );
   });
 });
 
 describe("signInUrl", () => {
   it("sends our own callback with the hashed token, never Supabase's action_link", async () => {
     const { admin, generateLink } = adminAnswering(minted);
-    const url = await signInUrl(admin, { email: "gwen@example.com", type: "magiclink", origin: ORIGIN, path: "/resident/pay" });
+    const url = await signInUrl(admin, {
+      email: "gwen@example.com",
+      type: "magiclink",
+      origin: ORIGIN,
+      path: "/resident/pay",
+    });
     expect(generateLink).toHaveBeenCalledWith({ type: "magiclink", email: "gwen@example.com" });
-    expect(url).toBe(`${ORIGIN}/auth/callback?token_hash=hash_123&type=magiclink&next=%2Fresident%2Fpay`);
+    expect(url).toBe(
+      `${ORIGIN}/auth/callback?token_hash=hash_123&type=magiclink&next=%2Fresident%2Fpay`,
+    );
     expect(url).not.toContain("supabase.co");
   });
 
   it("asks the callback to verify an invite as an invite", async () => {
     const { admin, generateLink } = adminAnswering(minted);
-    const url = await signInUrl(admin, { email: "new@example.com", type: "invite", origin: ORIGIN, path: "/resident/pay" });
+    const url = await signInUrl(admin, {
+      email: "new@example.com",
+      type: "invite",
+      origin: ORIGIN,
+      path: "/resident/pay",
+    });
     expect(generateLink).toHaveBeenCalledWith({ type: "invite", email: "new@example.com" });
     expect(new URL(url).searchParams.get("type")).toBe("invite");
   });
 
   it("falls back to the sign-in page, bound for the same screen, when no token is minted", async () => {
-    const refused = adminAnswering({ data: { properties: null, user: null }, error: { message: "User already registered" } });
+    const refused = adminAnswering({
+      data: { properties: null, user: null },
+      error: { message: "User already registered" },
+    });
     expect(
-      await signInUrl(refused.admin, { email: "a@example.com", type: "invite", origin: ORIGIN, path: "/resident/pay" }),
+      await signInUrl(refused.admin, {
+        email: "a@example.com",
+        type: "invite",
+        origin: ORIGIN,
+        path: "/resident/pay",
+      }),
     ).toBe(`${ORIGIN}/signin?next=%2Fresident%2Fpay`);
 
-    const thrown = { auth: { admin: { generateLink: vi.fn(async () => { throw new Error("fetch failed"); }) } } } as never;
+    const thrown = {
+      auth: {
+        admin: {
+          generateLink: vi.fn(async () => {
+            throw new Error("fetch failed");
+          }),
+        },
+      },
+    } as never;
     expect(
-      await signInUrl(thrown, { email: "a@example.com", type: "magiclink", origin: ORIGIN, path: "/resident/vote" }),
+      await signInUrl(thrown, {
+        email: "a@example.com",
+        type: "magiclink",
+        origin: ORIGIN,
+        path: "/resident/vote",
+      }),
     ).toBe(signInFallback(ORIGIN, "/resident/vote"));
   });
 });

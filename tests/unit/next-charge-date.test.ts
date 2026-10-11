@@ -28,7 +28,9 @@ describe("nextChargeDateFor", () => {
     const july = { due_day: 15, dues_cadence: "quarterly" as const, fiscal_year_start: "07-01" };
     expect(nextChargeDateFor("2026-10-04", july)).toBe("2026-10-15");
     expect(nextChargeDateFor("2026-10-15", july)).toBe("2027-01-15");
-    expect(nextChargeDateFor("2026-10-04", { ...july, dues_cadence: "annually" })).toBe("2027-07-15");
+    expect(nextChargeDateFor("2026-10-04", { ...july, dues_cadence: "annually" })).toBe(
+      "2027-07-15",
+    );
   });
 
   it("looks past a bill that fell due today", () => {
@@ -38,13 +40,21 @@ describe("nextChargeDateFor", () => {
   });
 
   it("waits for the first bill the board set, and ignores one already past", () => {
-    expect(nextChargeDateFor("2026-10-04", { ...quarterly, billing_starts_on: "2027-03-10" })).toBe("2027-04-01");
-    expect(nextChargeDateFor("2026-10-04", { ...monthly, billing_starts_on: "2027-01-01" })).toBe("2027-01-01");
-    expect(nextChargeDateFor("2026-10-04", { ...monthly, billing_starts_on: "2026-02-01" })).toBe("2026-11-01");
+    expect(nextChargeDateFor("2026-10-04", { ...quarterly, billing_starts_on: "2027-03-10" })).toBe(
+      "2027-04-01",
+    );
+    expect(nextChargeDateFor("2026-10-04", { ...monthly, billing_starts_on: "2027-01-01" })).toBe(
+      "2027-01-01",
+    );
+    expect(nextChargeDateFor("2026-10-04", { ...monthly, billing_starts_on: "2026-02-01" })).toBe(
+      "2026-11-01",
+    );
   });
 
   it("reads a missing fiscal year as the calendar year", () => {
-    expect(nextChargeDateFor("2026-10-04", { ...annual, fiscal_year_start: null })).toBe("2027-01-01");
+    expect(nextChargeDateFor("2026-10-04", { ...annual, fiscal_year_start: null })).toBe(
+      "2027-01-01",
+    );
   });
 });
 
@@ -56,8 +66,16 @@ describe("nextDueOnOrAfter", () => {
     for (const cadence of cadences) {
       for (const fiscal of ["01-01", "04-01", "07-01", "10-01"]) {
         for (const day of [1, 15, 28, 31]) {
-          for (const from of ["2026-01-01", "2026-02-28", "2026-06-16", "2026-10-04", "2026-12-31"]) {
-            expect(nextDueOnOrAfter(from, day, cadence, fiscal)).toBe(wizardNextDue(from, day, cadence, fiscal));
+          for (const from of [
+            "2026-01-01",
+            "2026-02-28",
+            "2026-06-16",
+            "2026-10-04",
+            "2026-12-31",
+          ]) {
+            expect(nextDueOnOrAfter(from, day, cadence, fiscal)).toBe(
+              wizardNextDue(from, day, cadence, fiscal),
+            );
           }
         }
       }
@@ -74,10 +92,18 @@ describe("a demo association's next charge", () => {
   };
 
   it("follows the cadence it was set up with", () => {
-    expect(buildCommunity({ ...draft, duesCadence: "quarterly" }, "2026-10-04").nextChargeDate).toBe("2027-01-01");
-    expect(buildCommunity({ ...draft, duesCadence: "annually" }, "2026-10-04").nextChargeDate).toBe("2027-01-01");
-    expect(buildCommunity({ ...draft, duesCadence: "monthly", dueDay: 15 }, "2026-10-04").nextChargeDate).toBe("2026-10-15");
-    expect(buildCommunity({ ...draft, duesCadence: "monthly", dueDay: 4 }, "2026-10-04").nextChargeDate).toBe("2026-11-04");
+    expect(
+      buildCommunity({ ...draft, duesCadence: "quarterly" }, "2026-10-04").nextChargeDate,
+    ).toBe("2027-01-01");
+    expect(buildCommunity({ ...draft, duesCadence: "annually" }, "2026-10-04").nextChargeDate).toBe(
+      "2027-01-01",
+    );
+    expect(
+      buildCommunity({ ...draft, duesCadence: "monthly", dueDay: 15 }, "2026-10-04").nextChargeDate,
+    ).toBe("2026-10-15");
+    expect(
+      buildCommunity({ ...draft, duesCadence: "monthly", dueDay: 4 }, "2026-10-04").nextChargeDate,
+    ).toBe("2026-11-04");
   });
 });
 

@@ -70,18 +70,21 @@ export function outcomeLine(outcome: Outcome): string {
  * not a success, one with nobody to write to is not a failure, and one that
  * found everybody already written to says so instead of "Nobody to send to".
  */
-export function sendToast(body: {
-  sent?: number;
-  failed?: number;
-  already?: number;
-}): { message: string; tone: "ok" | "warn" | "info" } {
+export function sendToast(body: { sent?: number; failed?: number; already?: number }): {
+  message: string;
+  tone: "ok" | "warn" | "info";
+} {
   const sent = Number(body.sent ?? 0);
   const failed = Number(body.failed ?? 0);
   const already = alreadyPhrase(Number(body.already ?? 0));
   const also = already ? `, ${already}` : "";
-  if (sent > 0 && failed === 0) return { message: `${pluralize(sent, "email")} sent${also}`, tone: "ok" };
+  if (sent > 0 && failed === 0)
+    return { message: `${pluralize(sent, "email")} sent${also}`, tone: "ok" };
   if (sent > 0) {
-    return { message: `${pluralize(sent, "email")} sent, ${failed} could not be sent${also}`, tone: "warn" };
+    return {
+      message: `${pluralize(sent, "email")} sent, ${failed} could not be sent${also}`,
+      tone: "warn",
+    };
   }
   if (failed > 0) {
     return { message: `No emails went out. ${pluralize(failed, "send")} failed.`, tone: "warn" };
@@ -151,68 +154,68 @@ export function DuesMailer() {
 
   return (
     <>
-    <Card className="mt-5">
-      <CardHeader
-        title="Dues email"
-        subtitle="Sent to every owner. Required notices have no unsubscribe link."
-        icon={<Mail className="size-4" />}
-      />
-
-      <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
-        <Run
-          title="Dues coming due"
-          detail={
-            duesVary(community.association, community.homes)
-              ? `Everyone, each at their own amount. Due ${formatDate(community.nextChargeDate, "medium")}.`
-              : `Everyone. ${money(community.association.duesCents)} due ${formatDate(community.nextChargeDate, "medium")}.`
-          }
-          count={withEmail}
-          countLabel="households"
-          busy={busy?.category === "assessment" ? (busy.dryRun ? "preview" : "send") : null}
-          disabled={Boolean(busy) || withEmail === 0}
-          onPreview={() => run("assessment", true)}
-          onSend={() => run("assessment", false)}
+      <Card className="mt-5">
+        <CardHeader
+          title="Dues email"
+          subtitle="Sent to every owner. Required notices have no unsubscribe link."
+          icon={<Mail className="size-4" />}
         />
-        <Run
-          title="Past due reminder"
-          detail={
-            delinq.past.length
-              ? `Only homes that owe. ${money(delinq.totalCents)} outstanding.`
-              : "Nobody owes anything, so this would reach no one."
-          }
-          count={delinq.past.length}
-          countLabel="past due"
-          tone="warn"
-          busy={busy?.category === "delinquency" ? (busy.dryRun ? "preview" : "send") : null}
-          disabled={Boolean(busy) || delinq.past.length === 0}
-          onPreview={() => run("delinquency", true)}
-          onSend={() => run("delinquency", false)}
-        />
-      </div>
 
-      {unreachable > 0 ? (
-        <p className="flex items-start gap-2 border-t border-border px-5 py-3 text-footnote leading-snug text-warn">
-          <AlertTriangle className="mt-px size-3.5 shrink-0" />
-          {pluralize(unreachable, "owner")} without an email address will not receive
-          anything. Add one on the Homeowners tab.
-        </p>
-      ) : null}
-
-      {outcome ? (
-        <div className="border-t border-border px-5 py-3">
-          <p className="text-body font-medium text-fg">{outcomeLine(outcome)}</p>
-          {outcome.errors.length ? (
-            <ul className="mt-1.5 space-y-0.5">
-              {outcome.errors.slice(0, 4).map((error) => (
-                <li key={error} className="text-footnote text-danger">
-                  {error}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+        <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
+          <Run
+            title="Dues coming due"
+            detail={
+              duesVary(community.association, community.homes)
+                ? `Everyone, each at their own amount. Due ${formatDate(community.nextChargeDate, "medium")}.`
+                : `Everyone. ${money(community.association.duesCents)} due ${formatDate(community.nextChargeDate, "medium")}.`
+            }
+            count={withEmail}
+            countLabel="households"
+            busy={busy?.category === "assessment" ? (busy.dryRun ? "preview" : "send") : null}
+            disabled={Boolean(busy) || withEmail === 0}
+            onPreview={() => run("assessment", true)}
+            onSend={() => run("assessment", false)}
+          />
+          <Run
+            title="Past due reminder"
+            detail={
+              delinq.past.length
+                ? `Only homes that owe. ${money(delinq.totalCents)} outstanding.`
+                : "Nobody owes anything, so this would reach no one."
+            }
+            count={delinq.past.length}
+            countLabel="past due"
+            tone="warn"
+            busy={busy?.category === "delinquency" ? (busy.dryRun ? "preview" : "send") : null}
+            disabled={Boolean(busy) || delinq.past.length === 0}
+            onPreview={() => run("delinquency", true)}
+            onSend={() => run("delinquency", false)}
+          />
         </div>
-      ) : null}
-    </Card>
+
+        {unreachable > 0 ? (
+          <p className="flex items-start gap-2 border-t border-border px-5 py-3 text-footnote leading-snug text-warn">
+            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            {pluralize(unreachable, "owner")} without an email address will not receive anything.
+            Add one on the Homeowners tab.
+          </p>
+        ) : null}
+
+        {outcome ? (
+          <div className="border-t border-border px-5 py-3">
+            <p className="text-body font-medium text-fg">{outcomeLine(outcome)}</p>
+            {outcome.errors.length ? (
+              <ul className="mt-1.5 space-y-0.5">
+                {outcome.errors.slice(0, 4).map((error) => (
+                  <li key={error} className="text-footnote text-danger">
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+      </Card>
       <EmailDelivery />
     </>
   );

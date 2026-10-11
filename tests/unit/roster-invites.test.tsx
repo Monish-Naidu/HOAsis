@@ -60,7 +60,15 @@ describe("sendInvitations", () => {
 
   it("asks for a batch again while the route says homes remain", async () => {
     const answers: Answer[] = [
-      { body: { sent: 120, failed: 30, already: 0, remaining: 30, errors: ["Stopped at the time limit"] } },
+      {
+        body: {
+          sent: 120,
+          failed: 30,
+          already: 0,
+          remaining: 30,
+          errors: ["Stopped at the time limit"],
+        },
+      },
       // The second call passes over the 120 the first one reached.
       { body: { sent: 30, failed: 0, already: 120, remaining: 0, errors: [] } },
     ];
@@ -85,16 +93,35 @@ describe("sendInvitations", () => {
   });
 
   it("stops asking a route that is not getting any further", async () => {
-    answer = () => ({ body: { sent: 0, failed: 40, already: 0, remaining: 40, errors: ["Stopped at the time limit"] } });
+    answer = () => ({
+      body: {
+        sent: 0,
+        failed: 40,
+        already: 0,
+        remaining: 40,
+        errors: ["Stopped at the time limit"],
+      },
+    });
     const outcome = await sendInvitations("assoc-1", homes(40));
 
     expect(calls).toHaveLength(2);
-    expect(outcome).toEqual({ sent: 0, already: 0, failed: 40, reason: "Stopped at the time limit" });
+    expect(outcome).toEqual({
+      sent: 0,
+      already: 0,
+      failed: 40,
+      reason: "Stopped at the time limit",
+    });
   });
 
   it("does not ask for ever, even when each call gets a little further", async () => {
     answer = (_ids, call) => ({
-      body: { sent: 1, failed: 150 - call, already: call - 1, remaining: 150 - call, errors: ["Stopped at the time limit"] },
+      body: {
+        sent: 1,
+        failed: 150 - call,
+        already: call - 1,
+        remaining: 150 - call,
+        errors: ["Stopped at the time limit"],
+      },
     });
     const outcome = await sendInvitations("assoc-1", homes(150));
 
@@ -156,7 +183,12 @@ describe("inviteToast", () => {
 
   it("gives the first reason when addresses failed", () => {
     expect(
-      inviteToast({ sent: 38, already: 0, failed: 2, reason: "ana@example.com: The domain is not verified" }),
+      inviteToast({
+        sent: 38,
+        already: 0,
+        failed: 2,
+        reason: "ana@example.com: The domain is not verified",
+      }),
     ).toEqual({
       message: "38 invitations sent, 2 not sent. ana@example.com: The domain is not verified",
       tone: "warn",

@@ -1,9 +1,4 @@
-import type {
-  PhotoVantage,
-  Violation,
-  ViolationPhoto,
-  ViolationReport,
-} from "@/lib/types";
+import type { PhotoVantage, Violation, ViolationPhoto, ViolationReport } from "@/lib/types";
 import { daysFromToday } from "@/lib/utils";
 
 /**
@@ -70,10 +65,7 @@ export interface ReportingPattern {
  * neighbour. Ten that never check out is something else, and a board that
  * cannot see the difference will treat both the same way.
  */
-export function reportingPatterns(
-  reports: ViolationReport[],
-  minimum = 2,
-): ReportingPattern[] {
+export function reportingPatterns(reports: ViolationReport[], minimum = 2): ReportingPattern[] {
   const groups = new Map<string, ViolationReport[]>();
 
   for (const report of reports) {
@@ -103,10 +95,9 @@ export function reportingPatterns(
  * somebody later copies. What an owner sees is the notice and the evidence
  * behind it, and both of those come from the association.
  */
-export function redactReporter(report: ViolationReport): Omit<
-  ViolationReport,
-  "reporterId" | "reporterName" | "reporterUnit"
-> {
+export function redactReporter(
+  report: ViolationReport,
+): Omit<ViolationReport, "reporterId" | "reporterName" | "reporterUnit"> {
   // The discard is the whole function: the three named fields are dropped on
   // purpose, and a rest sibling is the way to omit them without a cast.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

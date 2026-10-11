@@ -13,18 +13,23 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import { Badge, Button, Card, CardHeader, EmptyState, Meter, PageHeader, Stat, fieldClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Meter,
+  PageHeader,
+  Stat,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { assessmentProgress, communitySlug, sharedCostSummary } from "@/lib/metrics";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { useToast } from "@/components/app/toast";
 import { cn, formatDate, money, shortMoney, todayIsoDate } from "@/lib/utils";
-import type {
-  AllocationMethod,
-  SharedCost,
-  SharedCostBill,
-  SharedCostKind,
-} from "@/lib/types";
+import type { AllocationMethod, SharedCost, SharedCostBill, SharedCostKind } from "@/lib/types";
 import { CostTrend } from "./cost-trend";
 
 const ICON: Record<SharedCostKind, typeof Droplets> = {
@@ -269,9 +274,7 @@ export function SharedCostsScreen() {
                     onSave={(bill) => {
                       postSharedCostBill({ ...bill, sharedCostId: row.cost.id });
                       setBillFor(null);
-                      notify(
-                        `Bill posted. Every home's share is on its next statement.`,
-                      );
+                      notify(`Bill posted. Every home's share is on its next statement.`);
                     }}
                   />
                 ) : null}
@@ -313,9 +316,7 @@ export function SharedCostsScreen() {
                 }
               />
               <div className="px-5 py-4">
-                <p className="text-body leading-relaxed text-fg-muted">
-                  {row.assessment.reason}
-                </p>
+                <p className="text-body leading-relaxed text-fg-muted">{row.assessment.reason}</p>
                 <div className="mt-4 flex items-baseline justify-between gap-3">
                   <p className="tnum text-title3 font-semibold text-fg">
                     {shortMoney(row.collectedCents)}{" "}
@@ -368,8 +369,7 @@ function AddSharedCost({
   const [allocation, setAllocation] = useState<AllocationMethod>("equal");
   const [markup, setMarkup] = useState("0");
 
-  const field =
-    cn(fieldClass, "mt-1.5");
+  const field = cn(fieldClass, "mt-1.5");
 
   return (
     <Card as="form" onSubmit={(e) => e.preventDefault()} className="mt-5">
@@ -473,9 +473,7 @@ function AddSharedCost({
         </div>
 
         <label className="block max-w-[16rem]">
-          <span className="text-footnote font-semibold text-fg-muted">
-            Administration markup
-          </span>
+          <span className="text-footnote font-semibold text-fg-muted">Administration markup</span>
           <input
             type="number"
             min="0"
@@ -486,9 +484,8 @@ function AddSharedCost({
             className={field}
           />
           <span className="mt-1.5 block text-footnote leading-snug text-fg-muted">
-            A percentage on top, recorded separately rather than hidden in the rate.
-            Several states cap or forbid it, so leave it at zero unless your documents
-            allow it.
+            A percentage on top, recorded separately rather than hidden in the rate. Several states
+            cap or forbid it, so leave it at zero unless your documents allow it.
           </span>
         </label>
 
@@ -541,8 +538,7 @@ function PostBill({
 
   const cents = Math.round((Number(amount) || 0) * 100);
   const perHome = homes > 0 ? Math.round(cents / homes) : 0;
-  const field =
-    cn(fieldClass, "mt-1.5");
+  const field = cn(fieldClass, "mt-1.5");
 
   return (
     <div className="border-t border-border bg-surface-2 px-5 py-4">
@@ -588,8 +584,8 @@ function PostBill({
       {cents > 0 ? (
         <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-body text-fg">
           {money(cents)} across {homes} homes is{" "}
-          <span className="font-semibold">{money(perHome)}</span> each. Shares are worked
-          out to the cent, so they add up to the bill exactly.
+          <span className="font-semibold">{money(perHome)}</span> each. Shares are worked out to the
+          cent, so they add up to the bill exactly.
         </p>
       ) : null}
 
@@ -599,11 +595,9 @@ function PostBill({
           disabled={cents <= 0}
           onClick={() => {
             const start = `${period}-01`;
-            const end = new Date(Date.UTC(
-              Number(period.slice(0, 4)),
-              Number(period.slice(5, 7)),
-              1,
-            ))
+            const end = new Date(
+              Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 1),
+            )
               .toISOString()
               .slice(0, 10);
             onSave({

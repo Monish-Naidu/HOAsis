@@ -14,7 +14,8 @@ export function stripeAppearance(): Appearance {
   const root = typeof document === "undefined" ? null : document.documentElement;
   const dark = root?.classList.contains("dark") ?? false;
   const style = root ? getComputedStyle(root) : null;
-  const token = (name: string, fallback: string) => style?.getPropertyValue(name).trim() || fallback;
+  const token = (name: string, fallback: string) =>
+    style?.getPropertyValue(name).trim() || fallback;
   return {
     theme: dark ? "night" : "stripe",
     labels: "floating",
@@ -24,8 +25,7 @@ export function stripeAppearance(): Appearance {
       colorText: token("--fg", dark ? "#e9edf3" : "#16202e"),
       colorTextSecondary: token("--fg-muted", dark ? "#9aa8bd" : "#50545d"),
       colorDanger: token("--danger", dark ? "#e88a80" : "#b3382d"),
-      fontFamily:
-        '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
       fontSizeBase: "16px",
       borderRadius: "10px",
       spacingUnit: "4px",
@@ -33,7 +33,10 @@ export function stripeAppearance(): Appearance {
     rules: {
       ".Input": { borderColor: token("--border", dark ? "#1f3050" : "#e4e3df"), boxShadow: "none" },
       ".Input:focus": { boxShadow: "none", borderColor: token("--primary", "#2b6be3") },
-      ".Tab, .Block": { borderColor: token("--border", dark ? "#1f3050" : "#e4e3df"), boxShadow: "none" },
+      ".Tab, .Block": {
+        borderColor: token("--border", dark ? "#1f3050" : "#e4e3df"),
+        boxShadow: "none",
+      },
     },
   };
 }

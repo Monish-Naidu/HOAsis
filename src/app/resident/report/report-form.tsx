@@ -3,13 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Send, ShieldCheck } from "lucide-react";
-import { Button, Callout, Card, EmptyState, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Button,
+  Callout,
+  Card,
+  EmptyState,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 
-const input =
-  fieldClass;
+const input = fieldClass;
 
 /**
  * Telling the board about something you have seen.
@@ -76,16 +82,12 @@ export function ReportForm() {
           <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
             <Check className="size-6" strokeWidth={2.5} />
           </span>
-          <p className="text-title3 font-semibold tracking-[-0.02em] text-fg">
-            Sent to the board
-          </p>
+          <p className="text-title3 font-semibold tracking-[-0.02em] text-fg">Sent to the board</p>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-            Reference {sent}. Someone from the board will go and look before anything else
-            happens.
+            Reference {sent}. Someone from the board will go and look before anything else happens.
           </p>
           <p className="mt-3 text-footnote leading-relaxed text-fg-subtle">
-            The board will not share the outcome with you. That keeps things fair between
-            neighbors.
+            The board will not share the outcome with you. That keeps things fair between neighbors.
           </p>
           <Link
             href="/resident"
@@ -119,9 +121,9 @@ export function ReportForm() {
       {/* Said before they type, not after. Somebody deciding whether to report
           their neighbour is deciding on these two facts. */}
       <Callout tone="info" icon={<ShieldCheck className="size-4" />} title="What happens to this">
-        Your name goes to the board and to nobody else. The household you name is never told
-        who reported them. And this is not a notice: a board member has to go and see it for
-        themselves before anything is sent to anyone.
+        Your name goes to the board and to nobody else. The household you name is never told who
+        reported them. And this is not a notice: a board member has to go and see it for themselves
+        before anything is sent to anyone.
       </Callout>
 
       <Card as="form" onSubmit={(e) => e.preventDefault()} className="space-y-4 px-4 py-4">
@@ -156,8 +158,8 @@ export function ReportForm() {
             className={cn(textareaClass, "mt-1.5")}
           />
           <span className="mt-1 block text-footnote leading-relaxed text-fg-subtle">
-            Describe what you saw rather than who you think is at fault. The board decides
-            whether a rule was broken, and it decides that by going and looking.
+            Describe what you saw rather than who you think is at fault. The board decides whether a
+            rule was broken, and it decides that by going and looking.
           </span>
         </label>
 
@@ -179,9 +181,9 @@ export function ReportForm() {
       </Card>
 
       <p className="text-footnote leading-relaxed text-fg-subtle">
-        Reports are kept with your name against them so the board can see if the same two
-        homes keep coming up. That pattern is worth a board knowing about, and it is the only
-        reason your name is stored at all.
+        Reports are kept with your name against them so the board can see if the same two homes keep
+        coming up. That pattern is worth a board knowing about, and it is the only reason your name
+        is stored at all.
       </p>
     </div>
   );

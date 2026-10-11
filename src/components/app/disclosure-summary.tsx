@@ -95,8 +95,8 @@ export function DisclosureSummary({
                   ) : finding.status === "unconfirmed" ? (
                     <p className="mt-1 text-footnote text-warn">
                       Not confirmed yet. {finding.candidates.length} article
-                      {finding.candidates.length === 1 ? " may cover" : "s may cover"} this. Ask
-                      the board.
+                      {finding.candidates.length === 1 ? " may cover" : "s may cover"} this. Ask the
+                      board.
                     </p>
                   ) : (
                     <p className="mt-1 text-footnote text-fg-muted">
@@ -138,10 +138,7 @@ export function DisclosureSummary({
                           </summary>
                           <div className="mt-2 space-y-2">
                             {article.text.map((paragraph, index) => (
-                              <p
-                                key={index}
-                                className="text-body leading-relaxed text-fg-muted"
-                              >
+                              <p key={index} className="text-body leading-relaxed text-fg-muted">
                                 {paragraph}
                               </p>
                             ))}
@@ -172,10 +169,9 @@ export function DisclosureSummary({
                   </div>
                 ) : (
                   <p className="text-body leading-relaxed text-fg">
-                    Nothing in the documents on file addresses this. That usually means it
-                    is not restricted here, but it can also mean the provision is in a
-                    document that has not been put into words yet. State law may still
-                    apply either way.
+                    Nothing in the documents on file addresses this. That usually means it is not
+                    restricted here, but it can also mean the provision is in a document that has
+                    not been put into words yet. State law may still apply either way.
                   </p>
                 )}
 

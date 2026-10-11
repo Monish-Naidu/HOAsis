@@ -19,10 +19,7 @@ export default function DevResetPage() {
         <Link href="/">
           <Wordmark size={32} />
         </Link>
-        <Link
-          href="/signin"
-          className="text-[13px] font-medium text-fg-muted hover:text-fg"
-        >
+        <Link href="/signin" className="text-[13px] font-medium text-fg-muted hover:text-fg">
           Sign in
         </Link>
       </header>

@@ -49,7 +49,12 @@ describe("notices about a home", () => {
   const me = { id: "own-1", unit: "1" };
 
   it("keeps only open notices addressed to this home", () => {
-    const list = [v({}), v({ stage: "cured" }), v({ homeId: "own-2", unit: "2" }), v({ homeId: "own-0" })];
+    const list = [
+      v({}),
+      v({ stage: "cured" }),
+      v({ homeId: "own-2", unit: "2" }),
+      v({ homeId: "own-0" }),
+    ];
     // The last one is addressed by unit, as after a sale.
     expect(openNoticesForHome(list, me)).toHaveLength(2);
     expect(openNoticesForHome(list, null)).toEqual([]);

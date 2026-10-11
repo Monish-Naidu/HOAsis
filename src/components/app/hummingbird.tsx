@@ -36,7 +36,13 @@ export function HummingbirdLoader({
   );
 }
 
-export function HummingbirdArriving({ size = 40, className }: { size?: number; className?: string }) {
+export function HummingbirdArriving({
+  size = 40,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
   return (
     <span className={cn("bird-arrive inline-flex", className)} aria-hidden>
       <Logo size={size} />

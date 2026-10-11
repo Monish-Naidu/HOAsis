@@ -27,7 +27,12 @@ export function BillingGate({ children }: { children: React.ReactNode }) {
   // Only a trial that ran out walls the screens. A card that failed or a
   // cancelled subscription leaves the board able to read; the database
   // refuses its writes (0105) and the banner says why.
-  if (!phase || phase.phase !== "ended" || !boardLocked(phase) || pathname.startsWith("/board/settings")) {
+  if (
+    !phase ||
+    phase.phase !== "ended" ||
+    !boardLocked(phase) ||
+    pathname.startsWith("/board/settings")
+  ) {
     return <>{children}</>;
   }
 
@@ -40,12 +45,10 @@ export function BillingGate({ children }: { children: React.ReactNode }) {
         <span className="flex size-12 items-center justify-center rounded-full bg-brand-soft text-brand-soft-fg">
           <CreditCard className="size-5" />
         </span>
-        <h1 className="mt-4 text-title2 font-semibold tracking-tight text-fg">
-          {lock?.title}
-        </h1>
+        <h1 className="mt-4 text-title2 font-semibold tracking-tight text-fg">{lock?.title}</h1>
         <p className="mt-2 max-w-md text-body leading-relaxed text-fg-muted">
-          {lock?.body} Everything is still here. It is {money(monthlyFor(homes), { cents: false })} a month for {homes}{" "}
-          {homes === 1 ? "home" : "homes"}, and you can cancel whenever.
+          {lock?.body} Everything is still here. It is {money(monthlyFor(homes), { cents: false })}{" "}
+          a month for {homes} {homes === 1 ? "home" : "homes"}, and you can cancel whenever.
         </p>
         <Link
           href="/board/settings#billing"

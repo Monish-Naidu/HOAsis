@@ -54,9 +54,7 @@ export async function syncAccountStatus(
       object: "bank_account",
       limit: 10,
     });
-    const banks = external.data.filter(
-      (b): b is Stripe.BankAccount => b.object === "bank_account",
-    );
+    const banks = external.data.filter((b): b is Stripe.BankAccount => b.object === "bank_account");
     const chosen = banks.find((b) => b.default_for_currency) ?? banks[0];
     if (chosen) {
       payout = { bank: chosen.bank_name ?? "Bank", last4: chosen.last4 };
@@ -111,11 +109,17 @@ export interface PayDomainStatus {
  * preview deploys are skipped: Stripe cannot fetch the association file
  * there, and the card form works without a wallet.
  */
-export function payDomains(requestHost?: string | null): string[] {
+function payDomains(requestHost?: string | null): string[] {
   const hosts = new Set<string>();
   for (const h of [requestHost, process.env.NEXT_PUBLIC_SITE_HOST, "yourhoasis.com"]) {
-    const host = (h ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
-    if (!host || host.includes("localhost") || host.endsWith(".vercel.app") || host === "127.0.0.1") continue;
+    const host = (h ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*$/, "")
+      .replace(/:\d+$/, "");
+    if (!host || host.includes("localhost") || host.endsWith(".vercel.app") || host === "127.0.0.1")
+      continue;
     hosts.add(host);
   }
   return [...hosts];
@@ -130,10 +134,7 @@ export function payDomains(requestHost?: string | null): string[] {
  * already registered returns it, and validate() asks Stripe to look again.
  * Best effort for the caller; the card form works without a wallet.
  */
-export async function registerPayDomain(
-  accountId: string | null,
-  host: string,
-): Promise<PayDomainStatus> {
+async function registerPayDomain(accountId: string | null, host: string): Promise<PayDomainStatus> {
   const options = accountId ? { stripeAccount: accountId } : undefined;
   try {
     let domain = await stripe().paymentMethodDomains.create({ domain_name: host }, options);

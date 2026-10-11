@@ -27,25 +27,24 @@ export function AddReserveComponent({ onClose }: { onClose?: () => void }) {
   const [remaining, setRemaining] = useState("15");
   const [cost, setCost] = useState("");
 
-  const field =
-    cn(fieldClass, "w-auto");
+  const field = cn(fieldClass, "w-auto");
   const cents = Math.round((Number(cost) || 0) * 100);
 
   function submit() {
-        addReserveComponent({
-          id: `rc-${Date.now()}`,
-          name: name.trim(),
-          usefulLifeYears: Math.max(1, Number(life) || 1),
-          remainingLifeYears: Math.max(0, Number(remaining) || 0),
-          replacementCostCents: cents,
-          // Nothing saved against it yet. Assuming otherwise would flatter
-          // the funding figure, which is the one number that must not.
-          fundedCents: 0,
-        });
-        setName("");
-        setCost("");
-        onClose?.();
-        notify(`${name.trim()} added to the reserve schedule`);
+    addReserveComponent({
+      id: `rc-${Date.now()}`,
+      name: name.trim(),
+      usefulLifeYears: Math.max(1, Number(life) || 1),
+      remainingLifeYears: Math.max(0, Number(remaining) || 0),
+      replacementCostCents: cents,
+      // Nothing saved against it yet. Assuming otherwise would flatter
+      // the funding figure, which is the one number that must not.
+      fundedCents: 0,
+    });
+    setName("");
+    setCost("");
+    onClose?.();
+    notify(`${name.trim()} added to the reserve schedule`);
   }
 
   return (

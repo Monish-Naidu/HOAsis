@@ -20,7 +20,7 @@
  * is how a library becomes a liability: a board acts on a deadline that moved
  * two sessions ago and nobody can say where the number came from.
  */
-export interface LibrarySource {
+interface LibrarySource {
   url: string;
   /** What this source establishes, so a reader can check the right part of it. */
   note: string;
@@ -59,8 +59,7 @@ export type LibraryTopic =
   | "State law";
 
 export type StateCode =
-  | "WA" | "CA" | "FL" | "TX" | "CO" | "AZ" | "NC" | "GA"
-  | "NV" | "VA" | "IL" | "UT";
+  "WA" | "CA" | "FL" | "TX" | "CO" | "AZ" | "NC" | "GA" | "NV" | "VA" | "IL" | "UT";
 
 export const STATES: { code: StateCode; name: string }[] = [
   { code: "AZ", name: "Arizona" },
@@ -85,23 +84,57 @@ export const STATES: { code: StateCode; name: string }[] = [
  * guidance the library can offer is a separate question answered by `STATES`.
  */
 export const US_STATES: { code: string; name: string }[] = [
-  { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" }, { code: "AZ", name: "Arizona" },
-  { code: "AR", name: "Arkansas" }, { code: "CA", name: "California" }, { code: "CO", name: "Colorado" },
-  { code: "CT", name: "Connecticut" }, { code: "DE", name: "Delaware" }, { code: "DC", name: "District of Columbia" },
-  { code: "FL", name: "Florida" }, { code: "GA", name: "Georgia" }, { code: "HI", name: "Hawaii" },
-  { code: "ID", name: "Idaho" }, { code: "IL", name: "Illinois" }, { code: "IN", name: "Indiana" },
-  { code: "IA", name: "Iowa" }, { code: "KS", name: "Kansas" }, { code: "KY", name: "Kentucky" },
-  { code: "LA", name: "Louisiana" }, { code: "ME", name: "Maine" }, { code: "MD", name: "Maryland" },
-  { code: "MA", name: "Massachusetts" }, { code: "MI", name: "Michigan" }, { code: "MN", name: "Minnesota" },
-  { code: "MS", name: "Mississippi" }, { code: "MO", name: "Missouri" }, { code: "MT", name: "Montana" },
-  { code: "NE", name: "Nebraska" }, { code: "NV", name: "Nevada" }, { code: "NH", name: "New Hampshire" },
-  { code: "NJ", name: "New Jersey" }, { code: "NM", name: "New Mexico" }, { code: "NY", name: "New York" },
-  { code: "NC", name: "North Carolina" }, { code: "ND", name: "North Dakota" }, { code: "OH", name: "Ohio" },
-  { code: "OK", name: "Oklahoma" }, { code: "OR", name: "Oregon" }, { code: "PA", name: "Pennsylvania" },
-  { code: "RI", name: "Rhode Island" }, { code: "SC", name: "South Carolina" }, { code: "SD", name: "South Dakota" },
-  { code: "TN", name: "Tennessee" }, { code: "TX", name: "Texas" }, { code: "UT", name: "Utah" },
-  { code: "VT", name: "Vermont" }, { code: "VA", name: "Virginia" }, { code: "WA", name: "Washington" },
-  { code: "WV", name: "West Virginia" }, { code: "WI", name: "Wisconsin" }, { code: "WY", name: "Wyoming" },
+  { code: "AL", name: "Alabama" },
+  { code: "AK", name: "Alaska" },
+  { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" },
+  { code: "CA", name: "California" },
+  { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" },
+  { code: "DE", name: "Delaware" },
+  { code: "DC", name: "District of Columbia" },
+  { code: "FL", name: "Florida" },
+  { code: "GA", name: "Georgia" },
+  { code: "HI", name: "Hawaii" },
+  { code: "ID", name: "Idaho" },
+  { code: "IL", name: "Illinois" },
+  { code: "IN", name: "Indiana" },
+  { code: "IA", name: "Iowa" },
+  { code: "KS", name: "Kansas" },
+  { code: "KY", name: "Kentucky" },
+  { code: "LA", name: "Louisiana" },
+  { code: "ME", name: "Maine" },
+  { code: "MD", name: "Maryland" },
+  { code: "MA", name: "Massachusetts" },
+  { code: "MI", name: "Michigan" },
+  { code: "MN", name: "Minnesota" },
+  { code: "MS", name: "Mississippi" },
+  { code: "MO", name: "Missouri" },
+  { code: "MT", name: "Montana" },
+  { code: "NE", name: "Nebraska" },
+  { code: "NV", name: "Nevada" },
+  { code: "NH", name: "New Hampshire" },
+  { code: "NJ", name: "New Jersey" },
+  { code: "NM", name: "New Mexico" },
+  { code: "NY", name: "New York" },
+  { code: "NC", name: "North Carolina" },
+  { code: "ND", name: "North Dakota" },
+  { code: "OH", name: "Ohio" },
+  { code: "OK", name: "Oklahoma" },
+  { code: "OR", name: "Oregon" },
+  { code: "PA", name: "Pennsylvania" },
+  { code: "RI", name: "Rhode Island" },
+  { code: "SC", name: "South Carolina" },
+  { code: "SD", name: "South Dakota" },
+  { code: "TN", name: "Tennessee" },
+  { code: "TX", name: "Texas" },
+  { code: "UT", name: "Utah" },
+  { code: "VT", name: "Vermont" },
+  { code: "VA", name: "Virginia" },
+  { code: "WA", name: "Washington" },
+  { code: "WV", name: "West Virginia" },
+  { code: "WI", name: "Wisconsin" },
+  { code: "WY", name: "Wyoming" },
 ];
 
 /**
@@ -358,11 +391,13 @@ Owners should get a confirmation they can keep. The secretary should get a tally
   {
     slug: "developer-turnover-checklist",
     title: "What to demand at turnover from the developer",
-    summary: "Turnover is the one moment a board has leverage. Here is the list to hold the developer to",
+    summary:
+      "Turnover is the one moment a board has leverage. Here is the list to hold the developer to",
     topic: "Getting started",
     readMinutes: 6,
     publishedDate: "2026-08-26",
-    photoBrief: "a roll of as-built architectural drawings unrolled on a table next to a ring binder of warranty documents",
+    photoBrief:
+      "a roll of as-built architectural drawings unrolled on a table next to a ring binder of warranty documents",
     body: `Turnover, also called transition, is the point where the developer stops appointing the board and the owners elect it. It is the one moment a new board has leverage, a statutory document list, and a clock running against the developer. Boards that treat it as a ceremony inherit problems they pay for over the next 20 years.
 
 ## When turnover is triggered
@@ -478,11 +513,13 @@ Take control of the bank accounts and change the signers. Log every document rec
   {
     slug: "first-30-days-self-managed-board",
     title: "The first 30 days of a self-managed board",
-    summary: "An ordered plan for a new board, grounded in the filings and deadlines that actually bind",
+    summary:
+      "An ordered plan for a new board, grounded in the filings and deadlines that actually bind",
     topic: "Getting started",
     readMinutes: 6,
     publishedDate: "2026-08-26",
-    photoBrief: "a kitchen table with a bank signature card, a state annual report form, a checkbook, and a stack of manila folders of association records",
+    photoBrief:
+      "a kitchen table with a bank signature card, a state annual report form, a checkbook, and a stack of manila folders of association records",
     body: `A new board inherits obligations, not a clean slate. This is what to do in the first month, in order, and why each item is a legal requirement rather than a nice idea.
 
 ## Week one, get control of the money
@@ -537,7 +574,7 @@ Order the reserve study in month one, because it sets next year's assessment and
       },
       {
         url: "https://www.irs.gov/instructions/iss4",
-        note: "\"you can apply for and receive an EIN free of charge on IRS.gov\", responsible party definition",
+        note: '"you can apply for and receive an EIN free of charge on IRS.gov", responsible party definition',
         fetched: "2026-08-26",
       },
       {
@@ -690,11 +727,13 @@ Order the reserve study in month one, because it sets next year's assessment and
   {
     slug: "billing-utilities-back-to-owners",
     title: "Billing utilities back to owners: submetering, RUBS, and the law",
-    summary: "Master meter, submeter, or RUBS: what each one is, what the law allows, and where boards get caught",
+    summary:
+      "Master meter, submeter, or RUBS: what each one is, what the law allows, and where boards get caught",
     topic: "Money",
     readMinutes: 20,
     publishedDate: "2026-08-26",
-    photoBrief: "a bank of residential water submeters mounted on a wall in a condominium mechanical room, registers and shutoff valves visible",
+    photoBrief:
+      "a bank of residential water submeters mounted on a wall in a condominium mechanical room, registers and shutoff valves visible",
     body: `Your association gets one utility bill for the whole property and has to turn it into a charge on each owner's account. There are exactly three ways to do that, they are not equally legal, and in several states the moment you send an owner a bill for water or electricity you become something the utility commission regulates.
 
 ## The three models
@@ -912,7 +951,7 @@ Never mark up. Not a dollar, not a percent, unless a statute or rule in your sta
       },
       {
         url: "https://codes.findlaw.com/ca/civil-code/civ-sect-1954-202/",
-        note: "Cal. Civ. Code § 1954.202 definitions, common interest development excluded from \"landlord\", RUBS defined",
+        note: 'Cal. Civ. Code § 1954.202 definitions, common interest development excluded from "landlord", RUBS defined',
         fetched: "2026-08-26",
       },
       {
@@ -1085,11 +1124,13 @@ Never mark up. Not a dollar, not a percent, unless a statute or rule in your sta
   {
     slug: "hoa-federal-income-tax",
     title: "HOA federal income tax, 1120-H and 1120",
-    summary: "Why a nonprofit association still files a federal return, and what the section 528 election requires",
+    summary:
+      "Why a nonprofit association still files a federal return, and what the section 528 election requires",
     topic: "Money",
     readMinutes: 5,
     publishedDate: "2026-08-26",
-    photoBrief: "a printed IRS Form 1120-H on a desk beside a calculator, a bank statement, and a spiral bound association budget",
+    photoBrief:
+      "a printed IRS Form 1120-H on a desk beside a calculator, a bank statement, and a spiral bound association budget",
     body: `Being a nonprofit corporation under state law says nothing about federal income tax. Almost every association has to file a federal return, and the choice of which return is an annual decision with money attached.
 
 ## Nonprofit does not mean tax exempt
@@ -1178,7 +1219,7 @@ This is general information, not tax advice for your association. Use a CPA who 
       },
       {
         url: "https://www.irs.gov/pub/irs-wd/01-0176.pdf",
-        note: "IRS INFO 2001-0176 released 9/28/2001, \"The revenue ruling was not intended to permit a condominium management association to build a reserve.\"",
+        note: 'IRS INFO 2001-0176 released 9/28/2001, "The revenue ruling was not intended to permit a condominium management association to build a reserve."',
         fetched: "2026-08-26",
       },
       {
@@ -1200,7 +1241,8 @@ This is general information, not tax advice for your association. Use a CPA who 
     topic: "Money",
     readMinutes: 13,
     publishedDate: "2026-08-26",
-    photoBrief: "a condominium hallway ceiling with a section of water-stained drywall cut open and drying fans running on the floor",
+    photoBrief:
+      "a condominium hallway ceiling with a section of water-stained drywall cut open and drying fans running on the floor",
     body: `Most boards discover the edges of their insurance program during a claim, which is the worst possible time. This is what an association typically carries, what each policy is really for, and the one thing you should tell every owner.
 
 ## The master policy
@@ -1389,12 +1431,14 @@ None of this is a substitute for having your policies read by a broker who speci
   {
     slug: "florida-condo-milestone-and-sirs",
     title: "Florida milestone inspections and structural integrity reserve studies",
-    summary: "The Chapter 718 inspection and reserve rules with the deadlines, thresholds, and what can still be waived",
+    summary:
+      "The Chapter 718 inspection and reserve rules with the deadlines, thresholds, and what can still be waived",
     topic: "Reserves",
     states: ["FL"],
     readMinutes: 8,
     publishedDate: "2026-08-26",
-    photoBrief: "a spalled concrete balcony edge on an older Florida coastal condominium, rusted rebar exposed through the broken slab, with shoring posts underneath",
+    photoBrief:
+      "a spalled concrete balcony edge on an older Florida coastal condominium, rusted rebar exposed through the broken slab, with shoring posts underneath",
     body: `If your board runs a condominium, this is the highest stakes obligation in Florida law. Two separate requirements got created after the Surfside collapse and boards routinely confuse them. One is a structural inspection ordered by the building department. The other is a reserve funding study that changes your budget. Here is how each works.
 
 ## The milestone inspection
@@ -1498,11 +1542,13 @@ None of this reaches a homeowners association under Chapter 720, which has no mi
   {
     slug: "reserve-studies-and-percent-funded",
     title: "Reserve studies and percent funded, explained",
-    summary: "How to read a reserve study, what percent funded means, and what the number does not tell you",
+    summary:
+      "How to read a reserve study, what percent funded means, and what the number does not tell you",
     topic: "Reserves",
     readMinutes: 5,
     publishedDate: "2026-08-26",
-    photoBrief: "a flat roof mid replacement, old membrane peeled back to the deck with stacks of new insulation board staged beside it",
+    photoBrief:
+      "a flat roof mid replacement, old membrane peeled back to the deck with stacks of new insulation board staged beside it",
     body: `A reserve study is a budget document that happens to be about buildings. This covers the vocabulary a provider will use, what percent funded measures, and where boards misread it.
 
 ## What the standards are
@@ -1618,11 +1664,13 @@ CAI issues the Reserve Specialist, or RS, designation, and the standards name it
   {
     slug: "responding-to-a-records-request",
     title: "How to answer a member's records request",
-    summary: "Every state gives members an inspection right, but the deadlines and the charges differ a lot",
+    summary:
+      "Every state gives members an inspection right, but the deadlines and the charges differ a lot",
     topic: "Records and meetings",
     readMinutes: 5,
     publishedDate: "2026-08-26",
-    photoBrief: "a banker's box of association files open on a conference table with manila folders and a legal pad beside it",
+    photoBrief:
+      "a banker's box of association files open on a conference table with manila folders and a legal pad beside it",
     body: `A member asks for the association's records. What happens next is governed by a statute, not by how the board feels about the member. The right exists almost everywhere, the deadline is short, and in several states missing it costs money per day.
 
 ## The shape of the right
@@ -1696,7 +1744,7 @@ Florida adds criminal exposure. Under § 720.303(5)(e) a director or manager who
       },
       {
         url: "https://texas.public.law/statutes/tex._prop._code_section_209.005",
-        note: "Tex. Prop. Code § 209.005 full text: certified mail written request, 10 business days, 15 business day extension notice, recorded records production and copying policy and the 1 T.A.C. § 70.3 cap, subsections (k) and (l) exclusions, document retention policy, justice court remedy and attorney's fees, \"business day\" definition",
+        note: 'Tex. Prop. Code § 209.005 full text: certified mail written request, 10 business days, 15 business day extension notice, recorded records production and copying policy and the 1 T.A.C. § 70.3 cap, subsections (k) and (l) exclusions, document retention policy, justice court remedy and attorney\'s fees, "business day" definition',
         fetched: "2026-08-26",
       },
       {
@@ -1734,11 +1782,13 @@ Florida adds criminal exposure. Under § 720.303(5)(e) a director or manager who
   {
     slug: "lender-project-eligibility",
     title: "Why an underfunded association makes homes harder to sell",
-    summary: "Mortgage investors underwrite your association, not just the buyer. Here is what they check",
+    summary:
+      "Mortgage investors underwrite your association, not just the buyer. Here is what they check",
     topic: "Buying and selling",
     readMinutes: 5,
     publishedDate: "2026-08-26",
-    photoBrief: "a condominium building's exposed concrete balcony edge with spalled concrete and rusted rebar visible, shot from below",
+    photoBrief:
+      "a condominium building's exposed concrete balcony edge with spalled concrete and rusted rebar visible, shot from below",
     body: `When an owner in your community sells, the buyer's lender does not only underwrite the buyer. It underwrites the association. If the project fails the investor's test, the buyer cannot get a conventional loan, and the number of people who can buy that home drops.
 
 ## Review is heavier for condos than for PUDs
@@ -1883,12 +1933,14 @@ Underfunded reserves or 15% delinquency makes the project ineligible. Ineligible
   {
     slug: "arizona-hoa-law",
     title: "Arizona HOA law: the planned community and condominium acts",
-    summary: "Records, meetings, fines, collections and the state hearing process Arizona boards have to follow",
+    summary:
+      "Records, meetings, fines, collections and the state hearing process Arizona boards have to follow",
     topic: "State law",
     states: ["AZ"],
     readMinutes: 7,
     publishedDate: "2026-08-26",
-    photoBrief: "a desert front yard in a Phoenix subdivision with decomposed granite, a saguaro, and a for sale sign at the curb",
+    photoBrief:
+      "a desert front yard in a Phoenix subdivision with decomposed granite, a saguaro, and a for sale sign at the curb",
     body: `Arizona regulates associations in unusual detail and gives owners a state hearing officer instead of only a courtroom. This is what the two acts require of a board, and where Arizona has taken authority away from boards entirely.
 
 ## Which act applies
@@ -2076,12 +2128,14 @@ The mistakes that come up most are charging a member to look at records, blowing
   {
     slug: "arizona-recent-changes",
     title: "What changed for Arizona HOA boards in 2024, 2025 and 2026",
-    summary: "Sixteen bills across three sessions, with chapter numbers and the dates each one starts binding",
+    summary:
+      "Sixteen bills across three sessions, with chapter numbers and the dates each one starts binding",
     topic: "State law",
     states: ["AZ"],
     readMinutes: 6,
     publishedDate: "2026-08-26",
-    photoBrief: "the copper dome of the old Arizona Capitol building in Phoenix seen from the plaza, with the flagpoles in front",
+    photoBrief:
+      "the copper dome of the old Arizona Capitol building in Phoenix seen from the plaza, with the flagpoles in front",
     body: `Arizona rewrites some piece of association law every year. Three sessions are live for boards right now, and the newest batch is signed but not yet in force.
 
 ## How Arizona effective dates work
@@ -2136,7 +2190,7 @@ Four things. Take voting out of executive session if you are a planned community
       },
       {
         url: "https://www.azleg.gov/legtext/57leg/2R/laws/0222.htm",
-        note: "SB 1290 chaptered text inserting \"without action\" into § 33-1804(A), approved June 22 2026",
+        note: 'SB 1290 chaptered text inserting "without action" into § 33-1804(A), approved June 22 2026',
         fetched: "2026-08-26",
       },
       {
@@ -2176,7 +2230,7 @@ Four things. Take voting out of executive session if you are a planned community
       },
       {
         url: "https://www.azleg.gov/legtext/57leg/1R/laws/0103.htm",
-        note: "SB 1378 chaptered text adding \"or flag\" to the political sign definition, approved May 2 2025",
+        note: 'SB 1378 chaptered text adding "or flag" to the political sign definition, approved May 2 2025',
         fetched: "2026-08-26",
       },
       {
@@ -2219,12 +2273,14 @@ Four things. Take voting out of executive session if you are a planned community
   {
     slug: "california-hoa-elections",
     title: "How to run a legal HOA election in California",
-    summary: "The Davis-Stirling election deadlines, the inspector rules, and the mistakes that void a count",
+    summary:
+      "The Davis-Stirling election deadlines, the inspector rules, and the mistakes that void a count",
     topic: "State law",
     states: ["CA"],
     readMinutes: 6,
     publishedDate: "2026-08-26",
-    photoBrief: "a sealed double envelope HOA ballot on a table beside a printed candidate registration list and a handwritten tally sheet",
+    photoBrief:
+      "a sealed double envelope HOA ballot on a table beside a printed candidate registration list and a handwritten tally sheet",
     body: `California election rules are the most procedural part of Davis-Stirling and the easiest place to lose. A member who proves you skipped a step gets the results voided unless the association can show the error did not change the outcome. Here is the sequence.
 
 ## What has to go to a secret ballot
@@ -2367,12 +2423,14 @@ The asymmetry is the point. The member carries a low burden and gets fees. The a
   {
     slug: "california-hoa-law",
     title: "California HOA law: what the Davis-Stirling Act requires",
-    summary: "Every scheduled duty a California board has, with the section number and the deadline",
+    summary:
+      "Every scheduled duty a California board has, with the section number and the deadline",
     topic: "State law",
     states: ["CA"],
     readMinutes: 9,
     publishedDate: "2026-08-26",
-    photoBrief: "a condominium balcony photographed from directly below, showing the wood joists, the ledger connection to the building wall, and the underside of the waterproof deck coating",
+    photoBrief:
+      "a condominium balcony photographed from directly below, showing the wood joists, the ledger connection to the building wall, and the underside of the waterproof deck coating",
     body: `California gives volunteer boards more statutory homework than almost any other state, and almost all of it is on a schedule. This is the short version of what the Davis-Stirling Act makes your board do, and when.
 
 ## The act, and who it binds
@@ -2740,12 +2798,14 @@ None of this replaces advice from a California community association attorney re
   {
     slug: "california-recent-changes",
     title: "What changed for California HOAs in 2024, 2025, and 2026",
-    summary: "The bills that actually passed, the sections they moved, and the dates they took effect",
+    summary:
+      "The bills that actually passed, the sections they moved, and the dates they took effect",
     topic: "State law",
     states: ["CA"],
     readMinutes: 5,
     publishedDate: "2026-08-26",
-    photoBrief: "a stack of chaptered California bill printouts on a table with the chapter number stamp visible on the cover page",
+    photoBrief:
+      "a stack of chaptered California bill printouts on a table with the chapter number stamp visible on the cover page",
     body: `California moves Davis-Stirling every year, and 2025 moved it twice because a housing budget bill landed in June. Here is what actually became law, with the chapter numbers and the dates, and what did not change despite what you may have read.
 
 ## Effective January 1, 2024
@@ -2953,12 +3013,14 @@ Reprint the fine schedule against the $100 cap and add the written health or saf
   {
     slug: "colorado-hoa-law",
     title: "Colorado HOA law: what CCIOA requires of your board",
-    summary: "Registration, policies, records, meetings, budgets, fines and collections under CCIOA",
+    summary:
+      "Registration, policies, records, meetings, budgets, fines and collections under CCIOA",
     topic: "State law",
     states: ["CO"],
     readMinutes: 9,
     publishedDate: "2026-08-26",
-    photoBrief: "a printed HOA registration confirmation page from the Colorado Division of Real Estate lying on a kitchen table next to a checkbook",
+    photoBrief:
+      "a printed HOA registration confirmation page from the Colorado Division of Real Estate lying on a kitchen table next to a checkbook",
     body: `Colorado governs associations through one statute, the Colorado Common Interest Ownership Act. This is what CCIOA requires of a volunteer board, with the sections to cite.
 
 ## Does all of it apply to you
@@ -3074,12 +3136,14 @@ Letting registration lapse and then recording a lien. Fining daily, or past $500
   {
     slug: "colorado-recent-changes",
     title: "Colorado HOA law changes: 2022 through 2026",
-    summary: "Bill numbers and effective dates for every recent change to Colorado collections and enforcement",
+    summary:
+      "Bill numbers and effective dates for every recent change to Colorado collections and enforcement",
     topic: "State law",
     states: ["CO"],
     readMinutes: 7,
     publishedDate: "2026-08-26",
-    photoBrief: "the signature page of a Colorado enrolled house bill showing the Speaker and Senate President signature lines",
+    photoBrief:
+      "the signature page of a Colorado enrolled house bill showing the Speaker and Senate President signature lines",
     body: `Colorado rewrote its HOA collection and enforcement rules four times in four years. If your policies predate August 2022, every one of them is wrong. Here is what changed, with bill numbers and effective dates.
 
 ## HB 22-1137, effective August 10, 2022
@@ -3229,12 +3293,14 @@ Pull your collection policy, your covenant enforcement policy and your conduct o
   {
     slug: "florida-hoa-law",
     title: "Florida HOA law, a board member's guide to Chapter 720",
-    summary: "What Chapter 720 actually requires of a Florida homeowners association board, with the numbers",
+    summary:
+      "What Chapter 720 actually requires of a Florida homeowners association board, with the numbers",
     topic: "State law",
     states: ["FL"],
     readMinutes: 8,
     publishedDate: "2026-08-26",
-    photoBrief: "a printed Florida homeowners association declaration of covenants on a table, open to the assessments article, with the county clerk's recording stamp visible in the top corner",
+    photoBrief:
+      "a printed Florida homeowners association declaration of covenants on a table, open to the assessments article, with the county clerk's recording stamp visible in the top corner",
     body: `Florida gives homeowners associations more specific statutory duties than almost any other state, and then declines to enforce most of them. Chapter 720 sets the rules. Members enforce them by suing. Here is what the statute actually says.
 
 ## Which chapter governs you
@@ -3407,7 +3473,8 @@ If your association is close to any of these lines, that is the moment to spend 
     states: ["FL"],
     readMinutes: 6,
     publishedDate: "2026-08-26",
-    photoBrief: "the Florida Capitol building in Tallahassee photographed from the plaza, the 22-story tower flanked by the House and Senate chambers",
+    photoBrief:
+      "the Florida Capitol building in Tallahassee photographed from the plaza, the 22-story tower flanked by the House and Senate chambers",
     body: `Florida rewrote community association law three years running, then stopped. Here is what passed, what it changed, and when it took effect. Bills that died in committee are not included, which rules out most of what circulated in board newsletters.
 
 ## 2024, the year everything moved
@@ -3469,7 +3536,7 @@ The rest is worth one conversation with a Florida community association attorney
       },
       {
         url: "https://www.flsenate.gov/Session/Bill/2024/1203/BillText/er/PDF",
-        note: "enrolled HB 1203 text, section 13 \"This act shall take effect July 1, 2024\", 720.3033 education amendments",
+        note: 'enrolled HB 1203 text, section 13 "This act shall take effect July 1, 2024", 720.3033 education amendments',
         fetched: "2026-08-26",
       },
       {
@@ -3489,7 +3556,7 @@ The rest is worth one conversation with a Florida community association attorney
       },
       {
         url: "https://www.flsenate.gov/Session/Bill/2025/913",
-        note: "HB 913 (2025) approved June 23 2025, chapter 2025-175, \"Except as otherwise provided in this act, this act shall take effect July 1, 2025\"",
+        note: 'HB 913 (2025) approved June 23 2025, chapter 2025-175, "Except as otherwise provided in this act, this act shall take effect July 1, 2025"',
         fetched: "2026-08-26",
       },
       {
@@ -3504,7 +3571,7 @@ The rest is worth one conversation with a Florida community association attorney
       },
       {
         url: "https://www.flsenate.gov/Session/Bill/2025/983",
-        note: "CS/CS/HB 983 (2025) \"Died in Judiciary Committee\" 6/16/2025",
+        note: 'CS/CS/HB 983 (2025) "Died in Judiciary Committee" 6/16/2025',
         fetched: "2026-08-26",
       },
       {
@@ -3524,27 +3591,27 @@ The rest is worth one conversation with a Florida community association attorney
       },
       {
         url: "https://www.flsenate.gov/Session/Bill/2026/657",
-        note: "HB 657 (2026) \"Community Associations\", passed House 108-2 on 3/5/2026, \"3/13/2026 Senate - Died in Rules\"",
+        note: 'HB 657 (2026) "Community Associations", passed House 108-2 on 3/5/2026, "3/13/2026 Senate - Died in Rules"',
         fetched: "2026-08-26",
       },
       {
         url: "https://www.flsenate.gov/Laws/Statutes/2026/720.303",
-        note: "history line ending \"s. 3, ch. 2024-221; s. 84, ch. 2025-6; s. 47, ch. 2026-14\"",
+        note: 'history line ending "s. 3, ch. 2024-221; s. 84, ch. 2025-6; s. 47, ch. 2026-14"',
         fetched: "2026-08-26",
       },
       {
         url: "https://www.flsenate.gov/Laws/Statutes/2026/720.3033",
-        note: "history line ending \"s. 4, ch. 2024-221; s. 85, ch. 2025-6; s. 187, ch. 2026-168\"",
+        note: 'history line ending "s. 4, ch. 2024-221; s. 85, ch. 2025-6; s. 187, ch. 2026-168"',
         fetched: "2026-08-26",
       },
       {
         url: "https://www.flsenate.gov/Laws/Statutes/2024/718.111",
-        note: "note: \"Section 8, ch. 2024-244, amended paragraph (12)(g), effective January 1, 2026\"",
+        note: 'note: "Section 8, ch. 2024-244, amended paragraph (12)(g), effective January 1, 2026"',
         fetched: "2026-08-26",
       },
       {
         url: "https://www.flsenate.gov/Laws/Statutes/2023/718.111",
-        note: "prior text: \"By January 1, 2019, an association managing a condominium with 150 or more units\"",
+        note: 'prior text: "By January 1, 2019, an association managing a condominium with 150 or more units"',
         fetched: "2026-08-26",
       },
       {
@@ -3567,12 +3634,14 @@ The rest is worth one conversation with a Florida community association attorney
   {
     slug: "georgia-hoa-law",
     title: "Georgia HOA law: the opt in nobody told you about",
-    summary: "Georgia's Property Owners' Association Act only applies if your declaration says it does",
+    summary:
+      "Georgia's Property Owners' Association Act only applies if your declaration says it does",
     topic: "State law",
     states: ["GA"],
     readMinutes: 7,
     publishedDate: "2026-08-26",
-    photoBrief: "a recorded subdivision declaration open on the counter of a Georgia superior court clerk's real estate records room, showing the clerk's recording stamp and the book and page numbers",
+    photoBrief:
+      "a recorded subdivision declaration open on the counter of a Georgia superior court clerk's real estate records room, showing the clerk's recording stamp and the book and page numbers",
     body: `Most Georgia board members assume the state HOA statute applies to them. For many Georgia associations it does not. The Property Owners' Association Act is opt in, and whether your association opted in decides your lien rights, your enforcement powers, and whether your covenants expire.
 
 ## Start with one question: did your association opt in?
@@ -3652,7 +3721,7 @@ If you do not know whether your association opted in, that is the one question w
       },
       {
         url: "https://codes.findlaw.com/ga/title-44-property/ga-code-sect-44-3-235/",
-        note: "applicability and the \"benefits may only be claimed\" language",
+        note: 'applicability and the "benefits may only be claimed" language',
         fetched: "2026-08-26",
       },
       {
@@ -3795,7 +3864,8 @@ If you do not know whether your association opted in, that is the one question w
     states: ["GA"],
     readMinutes: 7,
     publishedDate: "2026-08-26",
-    photoBrief: "the cover page of a Georgia enrolled Senate bill printed on legal paper, showing the bill number and the sponsor block",
+    photoBrief:
+      "the cover page of a Georgia enrolled Senate bill printed on legal paper, showing the bill number and the sponsor block",
     body: `Georgia changed its community association law twice in three years. The 2024 act is already in force. The 2026 act is the larger one, and most of it does not bite until January 1, 2027.
 
 ## HB 220, effective July 1, 2024
@@ -3869,12 +3939,14 @@ Before January 1, 2027, budget the $100.00 registration fee, gather the governin
   {
     slug: "illinois-hoa-law",
     title: "Illinois HOA and condo law for board members",
-    summary: "Two different acts, two different sets of deadlines, and boards mix them up constantly",
+    summary:
+      "Two different acts, two different sets of deadlines, and boards mix them up constantly",
     topic: "State law",
     states: ["IL"],
     readMinutes: 8,
     publishedDate: "2026-08-26",
-    photoBrief: "a printed board meeting notice taped to the inside of a condominium building's entry vestibule wall next to the mailbox bank",
+    photoBrief:
+      "a printed board meeting notice taped to the inside of a condominium building's entry vestibule wall next to the mailbox bank",
     body: `Illinois runs two parallel statutes for community associations, and their numbers are not the same. Using a condominium deadline in a townhome association, or the reverse, is the most common way an Illinois board loses a records case or has a budget rejected.
 
 ## Which act governs you
@@ -4007,7 +4079,8 @@ The two acts look similar enough that boards copy language between them. When a 
     states: ["IL"],
     readMinutes: 5,
     publishedDate: "2026-08-26",
-    photoBrief: "an accessible parking space in a condominium garage with a faded blue wheelchair symbol painted on the concrete and a unit number stenciled on the wall",
+    photoBrief:
+      "an accessible parking space in a condominium garage with a faded blue wheelchair symbol painted on the concrete and a unit number stenciled on the wall",
     body: `Illinois did not overhaul its association statutes between 2024 and 2026. It made four changes a board can trip over, and it did not pass the one that got the most attention.
 
 ## FHA financing can no longer block a sale
@@ -4088,12 +4161,14 @@ Adopt the accessible parking policy if you have not. Adopt the ombudsperson comp
   {
     slug: "nevada-hoa-law",
     title: "Nevada HOA law: what NRS 116 requires of your board",
-    summary: "Reserves, budgets, records, meetings, fines and the nine-month super priority lien under NRS 116",
+    summary:
+      "Reserves, budgets, records, meetings, fines and the nine-month super priority lien under NRS 116",
     topic: "State law",
     states: ["NV"],
     readMinutes: 11,
     publishedDate: "2026-08-26",
-    photoBrief: "a handheld audio recorder sitting on a folding table beside a printed meeting agenda in a community clubhouse",
+    photoBrief:
+      "a handheld audio recorder sitting on a folding table beside a printed meeting agenda in a community clubhouse",
     body: `Nevada regulates associations more closely than almost any other state. NRS Chapter 116 sets the rules, NAC Chapter 116 fills in the numbers, and the Real Estate Division has an ombudsman and a commission that can fine a board member personally.
 
 ## The act, the ombudsman, and the fee
@@ -4202,7 +4277,8 @@ Sending a notice of delinquent assessment before the 60-day and 30-day steps in 
   {
     slug: "nevada-recent-changes",
     title: "Nevada HOA law changes from the 2023 and 2025 sessions",
-    summary: "Electronic ballots, website rules, records fees, solar deadlines and the new $5,000 fine",
+    summary:
+      "Electronic ballots, website rules, records fees, solar deadlines and the new $5,000 fine",
     topic: "State law",
     states: ["NV"],
     readMinutes: 6,
@@ -4332,7 +4408,8 @@ If your association has 150 or more units, check the website against the narrowe
     states: ["NC"],
     readMinutes: 8,
     publishedDate: "2026-08-26",
-    photoBrief: "a claim of lien document on a clerk of superior court counter, with the county file stamp visible",
+    photoBrief:
+      "a claim of lien document on a clerk of superior court counter, with the county file stamp visible",
     body: `North Carolina gives HOA boards a short statute and almost no oversight. No state agency regulates associations here, so the only enforcement is a lawsuit by an owner. Getting the details right is entirely your job.
 
 ## Which law applies to you
@@ -4432,12 +4509,14 @@ None of this replaces reading your own declaration and bylaws, and a lawyer shou
   {
     slug: "texas-hoa-law",
     title: "Texas HOA law: what Chapter 209 requires of your board",
-    summary: "Recording, records, meetings, fines and collections under the Texas Residential Property Owners Protection Act",
+    summary:
+      "Recording, records, meetings, fines and collections under the Texas Residential Property Owners Protection Act",
     topic: "State law",
     states: ["TX"],
     readMinutes: 7,
     publishedDate: "2026-08-26",
-    photoBrief: "a county clerk's real property records counter with a stamped and recorded deed restriction document lying on it",
+    photoBrief:
+      "a county clerk's real property records counter with a stamped and recorded deed restriction document lying on it",
     body: `Texas spreads homeowner association law across several chapters of the Property Code rather than putting it in one act. This is which chapter applies to your association, and what each one actually makes the board do.
 
 ## Which law applies to you
@@ -4538,7 +4617,8 @@ Notice what Chapter 209 does not require. There is no statutory reserve study, n
     states: ["TX"],
     readMinutes: 5,
     publishedDate: "2026-08-26",
-    photoBrief: "the Texas Capitol rotunda floor seen from above, with the terrazzo seal and the ring of galleries",
+    photoBrief:
+      "the Texas Capitol rotunda floor seen from above, with the terrazzo seal and the ring of galleries",
     body: `Texas holds regular legislative sessions in odd-numbered years, so the 89th Legislature's 2025 regular session is the one that matters for boards right now. Here is what passed, what it changed, and when it took effect.
 
 ## 2025: six bills reached the governor
@@ -4651,12 +4731,14 @@ The practical checklist is short. File the management certificate with the commi
   {
     slug: "utah-hoa-law",
     title: "Utah HOA law, a board member's guide",
-    summary: "Registration, reserves, records, fines, collections and the deductible rule Utah boards get backwards",
+    summary:
+      "Registration, reserves, records, fines, collections and the deductible rule Utah boards get backwards",
     topic: "State law",
     states: ["UT"],
     readMinutes: 13,
     publishedDate: "2026-08-26",
-    photoBrief: "a mailbox cluster and a xeriscaped common area strip with gravel mulch and low shrubs in a Utah subdivision, photographed at midday",
+    photoBrief:
+      "a mailbox cluster and a xeriscaped common area strip with gravel mulch and low shrubs in a Utah subdivision, photographed at midday",
     body: `Utah writes more specific HOA rules than most states, and attaches real consequences to missing them. The one that ends boards is registration: if the association is not registered with the Department of Commerce, its assessment lien does not exist. This guide covers what a Utah board has to do.
 
 ## Which act applies
@@ -4867,12 +4949,14 @@ If any of this is unclear as applied to your declaration, an advisory opinion fr
   {
     slug: "utah-recent-changes",
     title: "What changed in Utah HOA law, 2024 to 2026",
-    summary: "Bill numbers, chapter numbers and effective dates for three sessions of Utah HOA legislation",
+    summary:
+      "Bill numbers, chapter numbers and effective dates for three sessions of Utah HOA legislation",
     topic: "State law",
     states: ["UT"],
     readMinutes: 6,
     publishedDate: "2026-08-26",
-    photoBrief: "the Utah State Capitol in Salt Lake City photographed from the east lawn, with the dome and columns in frame",
+    photoBrief:
+      "the Utah State Capitol in Salt Lake City photographed from the east lawn, with the dome and columns in frame",
     body: `Utah passes HOA legislation nearly every session, and it takes effect fast. Utah bills generally take effect 60 days after adjournment unless the bill says otherwise, which has meant May 1, May 7 and May 6 in the last three years. Here is what passed and what a board has to do about it.
 
 ## 2024, landscaping rules and common area sales
@@ -5331,12 +5415,14 @@ If your governing documents or your resale packet template were last updated bef
   {
     slug: "washington-hoa-law",
     title: "Washington HOA law, a board member's guide",
-    summary: "WUCIOA, the 2028 repeal of the old chapters, and the rules that already apply to every association",
+    summary:
+      "WUCIOA, the 2028 repeal of the old chapters, and the rules that already apply to every association",
     topic: "State law",
     states: ["WA"],
     readMinutes: 10,
     publishedDate: "2026-08-26",
-    photoBrief: "a recorded declaration of covenants on paper with a county auditor's recording stamp in the top margin, photographed flat on a table",
+    photoBrief:
+      "a recorded declaration of covenants on paper with a county auditor's recording stamp in the top margin, photographed flat on a table",
     body: `Washington is in the middle of a migration. Every common interest community in the state, condominium or homeowners association, old or new, ends up under one statute on January 1, 2028. Some of that statute already applies to you today. This guide covers what a self-managed Washington board has to do now, and what changes.
 
 ## Which chapter governs your association
@@ -5570,12 +5656,14 @@ If you are unsure which chapter your declaration puts you under, that is the one
   {
     slug: "washington-recent-changes",
     title: "What changed in Washington HOA law, 2024 to 2026",
-    summary: "Bill numbers and effective dates for the WUCIOA rollout, the new collection rules, and the 2026 bills",
+    summary:
+      "Bill numbers and effective dates for the WUCIOA rollout, the new collection rules, and the 2026 bills",
     topic: "State law",
     states: ["WA"],
     readMinutes: 6,
     publishedDate: "2026-08-26",
-    photoBrief: "the Washington State Capitol legislative building in Olympia photographed from the north steps on an overcast day",
+    photoBrief:
+      "the Washington State Capitol legislative building in Olympia photographed from the north steps on an overcast day",
     body: `Washington has changed community association law in each of the last three sessions, and the changes are sequenced rather than one-off. This is what passed, when it takes effect, and what a board has to do about it.
 
 ## 2024, the act that ends the old chapters

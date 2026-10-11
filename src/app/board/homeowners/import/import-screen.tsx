@@ -3,7 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Lock } from "lucide-react";
-import { Button, ButtonLink, Callout, Card, Field, PageHeader, fieldClass } from "@/components/ui/primitives";
+import {
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  Field,
+  PageHeader,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { RosterPreview } from "@/components/app/roster-preview";
 import { useToast } from "@/components/app/toast";
 import { useAppState } from "@/lib/app-state";
@@ -42,8 +50,13 @@ export function ImportScreen() {
     return (
       <>
         <PageHeader eyebrow="Homeowners" title="Import the roster" />
-        <Callout tone="warn" icon={<Lock className="size-4" />} title="You need Settings access to import">
-          Adding homes to the register takes Settings access. The President can give you that access.
+        <Callout
+          tone="warn"
+          icon={<Lock className="size-4" />}
+          title="You need Settings access to import"
+        >
+          Adding homes to the register takes Settings access. The President can give you that
+          access.
         </Callout>
       </>
     );
@@ -54,7 +67,11 @@ export function ImportScreen() {
     setFailure(null);
     try {
       if (isRemote) {
-        const result = await importRoster(community.id, seesMoney ? rows : rows.map(withoutBalance), asOf);
+        const result = await importRoster(
+          community.id,
+          seesMoney ? rows : rows.map(withoutBalance),
+          asOf,
+        );
         setOutcome(result);
       } else {
         // The browser copy: the same store the roster's own form writes to.
@@ -62,15 +79,19 @@ export function ImportScreen() {
         const balances: { homeId: string; amountCents: number }[] = [];
         const dues: { homeId: string; cents: number }[] = [];
         for (const row of rows) {
-          const known = community.homes.find((o) => o.unit.toLowerCase() === row.unit.toLowerCase());
+          const known = community.homes.find(
+            (o) => o.unit.toLowerCase() === row.unit.toLowerCase(),
+          );
           if (known) {
-            if (row.openingBalanceCents !== undefined) balances.push({ homeId: known.id, amountCents: row.openingBalanceCents });
+            if (row.openingBalanceCents !== undefined)
+              balances.push({ homeId: known.id, amountCents: row.openingBalanceCents });
             if (row.duesCents) dues.push({ homeId: known.id, cents: row.duesCents });
             continue;
           }
           const home = addOwner({ name: row.name, email: row.email, unit: row.unit });
           created++;
-          if (row.openingBalanceCents !== undefined) balances.push({ homeId: home.id, amountCents: row.openingBalanceCents });
+          if (row.openingBalanceCents !== undefined)
+            balances.push({ homeId: home.id, amountCents: row.openingBalanceCents });
           if (row.duesCents) dues.push({ homeId: home.id, cents: row.duesCents });
         }
         if (balances.length) setOpeningBalances(asOf, balances);
@@ -85,7 +106,11 @@ export function ImportScreen() {
       }
       notify(`Roster imported: ${pluralize(rows.length, w.home)}`, "ok");
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "Could not import the roster. Check the file and try again.");
+      setFailure(
+        error instanceof Error
+          ? error.message
+          : "Could not import the roster. Check the file and try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -103,8 +128,13 @@ export function ImportScreen() {
           <p className="mt-4 text-headline font-semibold tracking-[-0.015em] text-fg">
             {pluralize(outcome.created, `new ${w.home}`)} on the register
             {outcome.updated ? `, ${outcome.updated} filled in` : ""}
-            {outcome.balances ? `, ${pluralize(outcome.balances, "opening balance")} as of ${formatDate(asOf, "long")}` : ""}
-            {outcome.dues ? `, ${pluralize(outcome.dues, w.home)} on their own dues from the next bill` : ""}.
+            {outcome.balances
+              ? `, ${pluralize(outcome.balances, "opening balance")} as of ${formatDate(asOf, "long")}`
+              : ""}
+            {outcome.dues
+              ? `, ${pluralize(outcome.dues, w.home)} on their own dues from the next bill`
+              : ""}
+            .
           </p>
           {outcome.duesError ? (
             <Callout tone="warn" className="mt-3" title="Some dues amounts were not saved">
@@ -155,11 +185,17 @@ export function ImportScreen() {
               label="Balances are true as of"
               hint="The day you read them off the old books. Dues due after this date are billed here; anything before it is inside the figure."
             >
-              <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} className={fieldClass} />
+              <input
+                type="date"
+                value={asOf}
+                onChange={(e) => setAsOf(e.target.value)}
+                className={fieldClass}
+              />
             </Field>
             <p className="text-footnote leading-relaxed text-fg-muted">
-              A balance column is optional. Leave it blank to keep what is already on a {w.home}; put 0 to clear it.
-              Each figure lands on the owner&apos;s statement as one line, &ldquo;Balance brought forward&rdquo;, dated as above.
+              A balance column is optional. Leave it blank to keep what is already on a {w.home};
+              put 0 to clear it. Each figure lands on the owner&apos;s statement as one line,
+              &ldquo;Balance brought forward&rdquo;, dated as above.
             </p>
           </div>
         ) : null}
@@ -182,7 +218,9 @@ export function ImportScreen() {
       </Card>
 
       <p className="mt-4 text-footnote text-fg-subtle">
-        {community.homes.length ? `${pluralize(community.homes.length, w.home)} on the register now` : "The register is empty"}
+        {community.homes.length
+          ? `${pluralize(community.homes.length, w.home)} on the register now`
+          : "The register is empty"}
         {seesMoney && community.homes.some((o) => o.balanceCents > 0)
           ? `, ${money(community.homes.reduce((t, o) => t + Math.max(0, o.balanceCents), 0))} owed`
           : ""}

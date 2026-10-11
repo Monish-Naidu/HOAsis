@@ -34,14 +34,14 @@ export interface ProjectionAssumptions {
   contributionGrowthPercent: number;
 }
 
-export interface PlannedExpenditure {
+interface PlannedExpenditure {
   componentId: string;
   name: string;
   /** Inflated to the year it actually happens. */
   costCents: Cents;
 }
 
-export interface ProjectionYear {
+interface ProjectionYear {
   /** Calendar year. */
   year: number;
   /** Years from now, starting at 1. */
@@ -130,8 +130,7 @@ export function projectReserves(
         componentId: component.id,
         name: component.name,
         costCents: Math.round(
-          component.replacementCostCents *
-            Math.pow(1 + assumptions.inflationPercent / 100, offset),
+          component.replacementCostCents * Math.pow(1 + assumptions.inflationPercent / 100, offset),
         ),
       }));
     const expenditureCents = expenditures.reduce((sum, e) => sum + e.costCents, 0);

@@ -21,12 +21,7 @@ import type { StateCode } from "@/lib/data/library";
  * decision draws, for the same reason.
  */
 
-export type ObligationCadence =
-  | "annual"
-  | "triennial"
-  | "each-budget"
-  | "on-request"
-  | "ongoing";
+export type ObligationCadence = "annual" | "triennial" | "each-budget" | "on-request" | "ongoing";
 
 export interface Obligation {
   key: string;
@@ -191,8 +186,7 @@ export const STATE_OBLIGATIONS: Partial<Record<StateCode, Obligation[]>> = {
     {
       key: "wa-annual-meeting",
       label: "Annual meeting, with the board packet to owners",
-      evidence:
-        "The notice, the packet, and the minutes recording the comment period.",
+      evidence: "The notice, the packet, and the minutes recording the comment period.",
       citation: "RCW 64.90.445",
       cadence: "annual",
       article: "washington-hoa-law",

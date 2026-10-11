@@ -1,10 +1,5 @@
 import { DISCLOSURE_TOPICS, mentionsAny } from "@/lib/governing";
-import type {
-  DisclosureTopic,
-  GoverningArticle,
-  GoverningDoc,
-  GoverningTopic,
-} from "@/lib/types";
+import type { DisclosureTopic, GoverningArticle, GoverningDoc, GoverningTopic } from "@/lib/types";
 
 /**
  * Turning an uploaded document into text a person can search.
@@ -47,7 +42,7 @@ export interface ExtractedArticle {
   startLine: number;
 }
 
-export interface ExtractionGap {
+interface ExtractionGap {
   /** Where a person should look in their own file. */
   where: string;
   reason: string;
@@ -70,16 +65,54 @@ const SECTION_HEADING = /^\s*sections?\s+(\d+(?:\.\d+)*)\b\.?\s*[-–—:.]?\s*(
 const NUMBERED_HEADING = /^\s*(\d+\.\d+(?:\.\d+)*)\s+(.{0,80})$/;
 
 const TOPIC_HINTS: { topic: GoverningTopic; terms: string[] }[] = [
-  { topic: "money", terms: ["assessment", "dues", "lien", "budget", "reserve", "delinquent", "collection"] },
-  { topic: "meetings", terms: ["meeting", "quorum", "vote", "voting", "proxy", "ballot", "election"] },
-  { topic: "enforcement", terms: ["fine", "fined", "violation", "enforce", "enforcement", "hearing", "penalty", "cure"] },
+  {
+    topic: "money",
+    terms: ["assessment", "dues", "lien", "budget", "reserve", "delinquent", "collection"],
+  },
+  {
+    topic: "meetings",
+    terms: ["meeting", "quorum", "vote", "voting", "proxy", "ballot", "election"],
+  },
+  {
+    topic: "enforcement",
+    terms: ["fine", "fined", "violation", "enforce", "enforcement", "hearing", "penalty", "cure"],
+  },
   { topic: "records", terms: ["record", "inspect", "inspection", "minutes", "audit"] },
-  { topic: "property", terms: ["lot", "dwelling", "exterior", "fence", "park", "parked", "parking", "lease", "leasing", "maintain", "maintenance", "sign", "solar"] },
-  { topic: "governance", terms: ["board", "director", "officer", "member", "amend", "amended", "association"] },
+  {
+    topic: "property",
+    terms: [
+      "lot",
+      "dwelling",
+      "exterior",
+      "fence",
+      "park",
+      "parked",
+      "parking",
+      "lease",
+      "leasing",
+      "maintain",
+      "maintenance",
+      "sign",
+      "solar",
+    ],
+  },
+  {
+    topic: "governance",
+    terms: ["board", "director", "officer", "member", "amend", "amended", "association"],
+  },
 ];
 
 const DOC_HINTS: { doc: GoverningDoc; terms: string[] }[] = [
-  { doc: "declaration", terms: ["declaration of covenants", "covenants, conditions", "cc&r", "runs with the land", "recorded in volume"] },
+  {
+    doc: "declaration",
+    terms: [
+      "declaration of covenants",
+      "covenants, conditions",
+      "cc&r",
+      "runs with the land",
+      "recorded in volume",
+    ],
+  },
   // "board of directors" was here and had to come out. It appears in all three
   // documents, so it pulled a rule set toward bylaws on a one-all tie. A hint
   // that is not distinctive is worse than no hint, because the guess it
@@ -186,9 +219,7 @@ export function extractArticles(source: string): Extraction {
    * a reader can still find the subsection a notice cites.
    */
   const hasArticles = found.some((h) => h.level === "article");
-  const headings: Heading[] = hasArticles
-    ? found.filter((h) => h.level === "article")
-    : found;
+  const headings: Heading[] = hasArticles ? found.filter((h) => h.level === "article") : found;
 
   const gaps: ExtractionGap[] = [];
   const linesWithText = lines.filter((line) => line.trim()).length;

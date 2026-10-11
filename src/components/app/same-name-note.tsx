@@ -43,7 +43,7 @@ function lookup(key: string) {
 }
 
 /** Associations already called `name`, minus the one at `excludeSlug`. */
-export function useSameNameMatches(name: string, excludeSlug?: string | null): Match[] {
+function useSameNameMatches(name: string, excludeSlug?: string | null): Match[] {
   const key = normalizeAssociationName(name);
   const found = useSyncExternalStore(
     subscribe,
@@ -82,7 +82,9 @@ export function SameNameNote({
   const others = found.length > 1 ? ` and ${found.length - 1} more` : "";
   return (
     <p className={className ?? "mt-2 text-footnote leading-snug text-fg-muted"} role="status">
-      There is already a {first.name}{where}{others} on Your HOAsis.{" "}
+      There is already a {first.name}
+      {where}
+      {others} on Your HOAsis.{" "}
       {variant === "wizard" ? (
         <>
           If that is yours,{" "}
@@ -95,7 +97,10 @@ export function SameNameNote({
           . A second association with the same name is fine too.
         </>
       ) : (
-        <>Two associations can share a name; members who belong to both will see the town next to it.</>
+        <>
+          Two associations can share a name; members who belong to both will see the town next to
+          it.
+        </>
       )}
     </p>
   );

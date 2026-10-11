@@ -43,44 +43,47 @@ export function TabPill({
    * The animation frame is because the paint immediately after a route change
    * still has the old geometry.
    */
-  const measure = useCallback((node: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    observer.current = null;
-    if (!node) return;
-    const park = () => {
-      // By key first, then by aria-current. The key lookup is what makes this
-      // callback genuinely depend on the selection rather than only being
-      // re-created by it.
-      const active =
-        node.querySelector<HTMLElement>(`[data-tab-key="${CSS.escape(activeKey)}"]`) ??
-        node.querySelector<HTMLElement>('[aria-current="page"]');
-      if (!active) {
-        setBox(null);
-        return;
+  const measure = useCallback(
+    (node: HTMLDivElement | null) => {
+      observer.current?.disconnect();
+      observer.current = null;
+      if (!node) return;
+      const park = () => {
+        // By key first, then by aria-current. The key lookup is what makes this
+        // callback genuinely depend on the selection rather than only being
+        // re-created by it.
+        const active =
+          node.querySelector<HTMLElement>(`[data-tab-key="${CSS.escape(activeKey)}"]`) ??
+          node.querySelector<HTMLElement>('[aria-current="page"]');
+        if (!active) {
+          setBox(null);
+          return;
+        }
+        setBox({
+          x: active.offsetLeft,
+          y: active.offsetTop,
+          w: active.offsetWidth,
+          h: active.offsetHeight,
+        });
+      };
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      frame.current = requestAnimationFrame(park);
+      // The rows move without the selection changing: a section appears once
+      // the association loads, the setup row leaves when the plan is done, a
+      // badge widens. The pill follows the row rather than the moment.
+      if (typeof ResizeObserver !== "undefined") {
+        observer.current = new ResizeObserver(() => {
+          if (frame.current !== null) cancelAnimationFrame(frame.current);
+          frame.current = requestAnimationFrame(park);
+        });
+        observer.current.observe(node);
+        // And each row: a larger text size re-wraps rows inside a container
+        // whose own size never changes, and the pill was left behind.
+        node.querySelectorAll("[data-tab-key], a").forEach((row) => observer.current?.observe(row));
       }
-      setBox({
-        x: active.offsetLeft,
-        y: active.offsetTop,
-        w: active.offsetWidth,
-        h: active.offsetHeight,
-      });
-    };
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(park);
-    // The rows move without the selection changing: a section appears once
-    // the association loads, the setup row leaves when the plan is done, a
-    // badge widens. The pill follows the row rather than the moment.
-    if (typeof ResizeObserver !== "undefined") {
-      observer.current = new ResizeObserver(() => {
-        if (frame.current !== null) cancelAnimationFrame(frame.current);
-        frame.current = requestAnimationFrame(park);
-      });
-      observer.current.observe(node);
-      // And each row: a larger text size re-wraps rows inside a container
-      // whose own size never changes, and the pill was left behind.
-      node.querySelectorAll("[data-tab-key], a").forEach((row) => observer.current?.observe(row));
-    }
-  }, [activeKey]);
+    },
+    [activeKey],
+  );
 
   return (
     <div

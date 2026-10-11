@@ -8,9 +8,7 @@
  */
 import { createHarness, day } from "./lib/harness.mjs";
 
-const {
-  admin, anon, stamp, check, makeUser, cleanup, cleanupAll, report,
-} = createHarness({
+const { admin, anon, stamp, check, makeUser, cleanup, cleanupAll, report } = createHarness({
   passwordPrefix: "money-",
 });
 
@@ -19,255 +17,610 @@ try {
   const president = await makeUser("president");
 
   const { data: associationId } = await president.client.rpc("create_association", {
-    p_name: "Money Loop HOA", p_city: "Bothell", p_state: "WA",
-    p_dues_cents: 6000, p_dues_cadence: "monthly", p_due_day: 1,
-    p_founder_name: "Dana Whitcomb", p_founder_unit: "1",
+    p_name: "Money Loop HOA",
+    p_city: "Bothell",
+    p_state: "WA",
+    p_dues_cents: 6000,
+    p_dues_cadence: "monthly",
+    p_due_day: 1,
+    p_founder_name: "Dana Whitcomb",
+    p_founder_unit: "1",
     p_households: [{ name: "Marcus Bell", email: residentEmail, unit: "2" }],
   });
   cleanup.associations.push(associationId);
 
   // An association's books open on the day it was founded unless told
   // otherwise (0056), and this one bills a period that fell due last week.
-  await admin.from("associations").update({ billing_starts_on: day(-60) }).eq("id", associationId);
+  await admin
+    .from("associations")
+    .update({ billing_starts_on: day(-60) })
+    .eq("id", associationId);
 
   // The bank the money lands in.
   const { error: bankError } = await president.client.from("bank_accounts").insert({
-    association_id: associationId, kind: "operating",
-    institution: "Willow Creek CU", mask: "6789",
+    association_id: associationId,
+    kind: "operating",
+    institution: "Willow Creek CU",
+    mask: "6789",
   });
   check("a finance holder can connect a bank account", !bankError, bankError?.message ?? "");
 
   // Bill the period.
   const { data: billed } = await president.client.rpc("issue_assessment", {
-    p_association_id: associationId, p_label: "September assessment", p_due_on: day(-3),
+    p_association_id: associationId,
+    p_label: "September assessment",
+    p_due_on: day(-3),
   });
   check("billing charges every home once", billed === 2, `${billed} homes billed`);
 
   const { data: again } = await president.client.rpc("issue_assessment", {
-    p_association_id: associationId, p_label: "September assessment", p_due_on: day(-3),
+    p_association_id: associationId,
+    p_label: "September assessment",
+    p_due_on: day(-3),
   });
   check("billing the same period twice adds nothing", again === 0, `${again} extra`);
 
   // The resident claims their invited seat and pays.
   const resident = await makeUser("resident");
   const { data: theirs } = await resident.client.rpc("my_associations");
-  check("the invited resident is in the association", (theirs ?? []).length === 1, String((theirs ?? []).length));
+  check(
+    "the invited resident is in the association",
+    (theirs ?? []).length === 1,
+    String((theirs ?? []).length),
+  );
 
   const { data: myUnits } = await resident.client.rpc("my_unit_ids");
   const myUnit = (myUnits ?? [])[0];
 
-  const { data: before } = await resident.client.from("unit_balances").select("balance_cents").eq("unit_id", myUnit).single();
-  check("the resident owes the assessment", before?.balance_cents === 6000, String(before?.balance_cents));
+  const { data: before } = await resident.client
+    .from("unit_balances")
+    .select("balance_cents")
+    .eq("unit_id", myUnit)
+    .single();
+  check(
+    "the resident owes the assessment",
+    before?.balance_cents === 6000,
+    String(before?.balance_cents),
+  );
 
   // An owner cannot write their own payment: that cleared a balance with no
   // money moving (0062). A real one is written by the server when the
   // processor says it settled, which is what the admin client stands for here.
   const { error: selfPayError } = await resident.client.rpc("record_payment", {
-    p_unit_id: myUnit, p_amount_cents: 6000, p_rail: "ach", p_processor_fee_cents: 35,
+    p_unit_id: myUnit,
+    p_amount_cents: 6000,
+    p_rail: "ach",
+    p_processor_fee_cents: 35,
   });
-  check("a resident cannot record their own payment", selfPayError?.code === "42501", selfPayError?.message?.slice(0, 45) ?? "no error");
+  check(
+    "a resident cannot record their own payment",
+    selfPayError?.code === "42501",
+    selfPayError?.message?.slice(0, 45) ?? "no error",
+  );
 
   const { data: paymentId, error: payError } = await admin.rpc("record_payment", {
-    p_unit_id: myUnit, p_amount_cents: 6000, p_rail: "ach", p_processor_fee_cents: 35, p_paid_by: resident.id,
+    p_unit_id: myUnit,
+    p_amount_cents: 6000,
+    p_rail: "ach",
+    p_processor_fee_cents: 35,
+    p_paid_by: resident.id,
   });
-  check("a settled payment reaches the resident's statement", !payError && Boolean(paymentId), payError?.message ?? "");
+  check(
+    "a settled payment reaches the resident's statement",
+    !payError && Boolean(paymentId),
+    payError?.message ?? "",
+  );
 
-  const { data: after } = await resident.client.from("unit_balances").select("balance_cents").eq("unit_id", myUnit).single();
+  const { data: after } = await resident.client
+    .from("unit_balances")
+    .select("balance_cents")
+    .eq("unit_id", myUnit)
+    .single();
   check("their balance clears", after?.balance_cents === 0, String(after?.balance_cents));
 
-  const { data: statement } = await resident.client.from("charges").select("kind, amount_cents").eq("unit_id", myUnit);
-  check("the payment shows on their statement",
+  const { data: statement } = await resident.client
+    .from("charges")
+    .select("kind, amount_cents")
+    .eq("unit_id", myUnit);
+  check(
+    "the payment shows on their statement",
     (statement ?? []).some((c) => c.kind === "payment" && c.amount_cents === -6000),
-    JSON.stringify(statement));
+    JSON.stringify(statement),
+  );
 
   // The board's books, net of what the processor took.
-  const { data: ledger } = await president.client.from("ledger_entries").select("amount_cents, category, confirmed_at").eq("association_id", associationId);
+  const { data: ledger } = await president.client
+    .from("ledger_entries")
+    .select("amount_cents, category, confirmed_at")
+    .eq("association_id", associationId);
   // The whole payment in and the processor's cut out as its own line
   // (0101), netting to what the bank received.
-  check("the books show the payment whole and the processor's cut as its own line",
-    (ledger ?? []).some((e) => e.amount_cents === 6000 && e.category === "Assessments")
-      && (ledger ?? []).some((e) => e.amount_cents === -35 && e.category === "Processing fees"),
-    JSON.stringify((ledger ?? []).map((e) => e.amount_cents)));
-  check("money we moved ourselves needs no human confirmation",
-    (ledger ?? [])[0]?.confirmed_at !== null, String((ledger ?? [])[0]?.confirmed_at));
+  check(
+    "the books show the payment whole and the processor's cut as its own line",
+    (ledger ?? []).some((e) => e.amount_cents === 6000 && e.category === "Assessments") &&
+      (ledger ?? []).some((e) => e.amount_cents === -35 && e.category === "Processing fees"),
+    JSON.stringify((ledger ?? []).map((e) => e.amount_cents)),
+  );
+  check(
+    "money we moved ourselves needs no human confirmation",
+    (ledger ?? [])[0]?.confirmed_at !== null,
+    String((ledger ?? [])[0]?.confirmed_at),
+  );
 
   // What the payment cleared.
-  const { data: allocations } = await resident.client.from("payment_allocations").select("amount_cents");
-  check("the payment is allocated to the charge it cleared",
+  const { data: allocations } = await resident.client
+    .from("payment_allocations")
+    .select("amount_cents");
+  check(
+    "the payment is allocated to the charge it cleared",
     (allocations ?? []).length === 1 && allocations[0].amount_cents === 6000,
-    JSON.stringify(allocations));
+    JSON.stringify(allocations),
+  );
 
   // And what must not be possible.
-  const { data: allUnits } = await admin.from("units").select("id, label").eq("association_id", associationId);
+  const { data: allUnits } = await admin
+    .from("units")
+    .select("id, label")
+    .eq("association_id", associationId);
   const neighborUnit = (allUnits ?? []).find((u) => u.id !== myUnit);
   const { error: neighborError } = await resident.client.rpc("record_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 100, p_rail: "ach",
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 100,
+    p_rail: "ach",
   });
-  check("a resident cannot record a payment for a neighbor", Boolean(neighborError), neighborError?.message?.slice(0, 45) ?? "no error");
+  check(
+    "a resident cannot record a payment for a neighbor",
+    Boolean(neighborError),
+    neighborError?.message?.slice(0, 45) ?? "no error",
+  );
 
   const { error: billError } = await resident.client.rpc("issue_assessment", {
-    p_association_id: associationId, p_label: "Sneaky", p_due_on: day(-1),
+    p_association_id: associationId,
+    p_label: "Sneaky",
+    p_due_on: day(-1),
   });
-  check("a resident cannot bill the association", Boolean(billError), billError?.message?.slice(0, 45) ?? "no error");
+  check(
+    "a resident cannot bill the association",
+    Boolean(billError),
+    billError?.message?.slice(0, 45) ?? "no error",
+  );
 
   // A visitor with no session holds the public key and nothing else. Each of
   // these once took them for the server, because both have no user id.
   const nobody = anon();
   const refused = (e) => Boolean(e) && /permission denied|42501/.test(`${e.code} ${e.message}`);
-  const { error: anonPay } = await nobody.rpc("record_payment", { p_unit_id: myUnit, p_amount_cents: 100, p_rail: "ach" });
-  check("a signed out visitor cannot record a payment", refused(anonPay), anonPay?.message?.slice(0, 60) ?? "no error");
-  const { error: anonBill } = await nobody.rpc("issue_assessment", { p_association_id: associationId, p_label: "Sneaky", p_due_on: day(-1) });
-  check("a signed out visitor cannot bill the association", refused(anonBill), anonBill?.message?.slice(0, 60) ?? "no error");
-  const { error: anonFees } = await nobody.rpc("assess_late_fees", { p_association_id: associationId });
-  check("a signed out visitor cannot post late fees", refused(anonFees), anonFees?.message?.slice(0, 60) ?? "no error");
-  const { error: anonRefund } = await nobody.rpc("record_refund", { p_stripe_payment_intent_id: "pi_nothing", p_amount_cents: 100 });
-  check("a signed out visitor cannot record a refund", refused(anonRefund), anonRefund?.message?.slice(0, 60) ?? "no error");
-  const { error: memberRefund } = await president.client.rpc("record_refund", { p_stripe_payment_intent_id: "pi_nothing", p_amount_cents: 100 });
-  check("nor can a signed in board member", refused(memberRefund), memberRefund?.message?.slice(0, 60) ?? "no error");
-  const { error: forged } = await resident.client.rpc("record_activity", {
-    p_association: associationId, p_kind: "association", p_subject: associationId, p_summary: "Forged",
+  const { error: anonPay } = await nobody.rpc("record_payment", {
+    p_unit_id: myUnit,
+    p_amount_cents: 100,
+    p_rail: "ach",
   });
-  check("nobody can write the activity record by hand", refused(forged), forged?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a signed out visitor cannot record a payment",
+    refused(anonPay),
+    anonPay?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: anonBill } = await nobody.rpc("issue_assessment", {
+    p_association_id: associationId,
+    p_label: "Sneaky",
+    p_due_on: day(-1),
+  });
+  check(
+    "a signed out visitor cannot bill the association",
+    refused(anonBill),
+    anonBill?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: anonFees } = await nobody.rpc("assess_late_fees", {
+    p_association_id: associationId,
+  });
+  check(
+    "a signed out visitor cannot post late fees",
+    refused(anonFees),
+    anonFees?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: anonRefund } = await nobody.rpc("record_refund", {
+    p_stripe_payment_intent_id: "pi_nothing",
+    p_amount_cents: 100,
+  });
+  check(
+    "a signed out visitor cannot record a refund",
+    refused(anonRefund),
+    anonRefund?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: memberRefund } = await president.client.rpc("record_refund", {
+    p_stripe_payment_intent_id: "pi_nothing",
+    p_amount_cents: 100,
+  });
+  check(
+    "nor can a signed in board member",
+    refused(memberRefund),
+    memberRefund?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: forged } = await resident.client.rpc("record_activity", {
+    p_association: associationId,
+    p_kind: "association",
+    p_subject: associationId,
+    p_summary: "Forged",
+  });
+  check(
+    "nobody can write the activity record by hand",
+    refused(forged),
+    forged?.message?.slice(0, 60) ?? "no error",
+  );
 
   // A treasurer recording a cheque that arrived in the post.
   const { error: boardPayError } = await president.client.rpc("record_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 6000, p_rail: "ach",
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 6000,
+    p_rail: "ach",
   });
-  check("a finance holder can record a payment for any home", !boardPayError, boardPayError?.message ?? "");
+  check(
+    "a finance holder can record a payment for any home",
+    !boardPayError,
+    boardPayError?.message ?? "",
+  );
 
   // A check handed to the treasurer (0083). record_payment cannot take it:
   // it knows only the processor rails and stamps the line "Card payment". A
   // fresh period is billed first so the neighbor owes $60 to pay.
   await president.client.rpc("issue_assessment", {
-    p_association_id: associationId, p_label: "Check period", p_due_on: day(-5),
+    p_association_id: associationId,
+    p_label: "Check period",
+    p_due_on: day(-5),
   });
   // Read as the President: the balance view answers a signed-in seat and
   // gives the service role no rows.
-  const { data: owedBefore } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", neighborUnit.id).single();
+  const { data: owedBefore } = await president.client
+    .from("unit_balances")
+    .select("balance_cents")
+    .eq("unit_id", neighborUnit.id)
+    .single();
   const { data: checkId, error: checkError } = await president.client.rpc("record_manual_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 6000, p_method: "check", p_reference: "1042", p_received_on: day(-1),
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 6000,
+    p_method: "check",
+    p_reference: "1042",
+    p_received_on: day(-1),
   });
-  check("a finance holder records a $60 check", !checkError && Boolean(checkId), checkError?.message ?? "");
-  const { data: owedAfter } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", neighborUnit.id).single();
-  check("the check clears the balance", owedBefore?.balance_cents === 6000 && owedAfter?.balance_cents === 0,
-    `${owedBefore?.balance_cents} then ${owedAfter?.balance_cents}`);
-  const { data: neighborLines } = await admin.from("charges").select("kind, label, amount_cents").eq("unit_id", neighborUnit.id);
-  check("the statement line reads Check payment #1042",
-    (neighborLines ?? []).some((c) => c.kind === "payment" && c.label === "Check payment #1042" && c.amount_cents === -6000),
-    JSON.stringify(neighborLines));
-  const { data: checkPayment } = await admin.from("payments").select("rail, state, processor_fee_cents, platform_fee_cents").eq("id", checkId).single();
-  check("it is a settled payment on the check rail with no fee",
-    checkPayment?.rail === "check" && checkPayment?.state === "settled" &&
-      checkPayment?.processor_fee_cents === 0 && checkPayment?.platform_fee_cents === 0,
-    JSON.stringify(checkPayment));
-  const { data: checkLedger } = await president.client.from("ledger_entries").select("amount_cents, category, confirmed_at, occurred_on").eq("payment_id", checkId);
-  check("the ledger shows $60 in, with no fee taken out, confirmed",
-    (checkLedger ?? []).length === 1 && checkLedger[0].amount_cents === 6000 &&
-      checkLedger[0].category === "Assessments" && checkLedger[0].confirmed_at !== null && checkLedger[0].occurred_on === day(-1),
-    JSON.stringify(checkLedger));
-  const { data: checkAllocations } = await admin.from("payment_allocations").select("amount_cents").eq("payment_id", checkId);
-  check("the check is allocated to the charge it cleared",
-    (checkAllocations ?? []).length === 1 && checkAllocations[0].amount_cents === 6000, JSON.stringify(checkAllocations));
+  check(
+    "a finance holder records a $60 check",
+    !checkError && Boolean(checkId),
+    checkError?.message ?? "",
+  );
+  const { data: owedAfter } = await president.client
+    .from("unit_balances")
+    .select("balance_cents")
+    .eq("unit_id", neighborUnit.id)
+    .single();
+  check(
+    "the check clears the balance",
+    owedBefore?.balance_cents === 6000 && owedAfter?.balance_cents === 0,
+    `${owedBefore?.balance_cents} then ${owedAfter?.balance_cents}`,
+  );
+  const { data: neighborLines } = await admin
+    .from("charges")
+    .select("kind, label, amount_cents")
+    .eq("unit_id", neighborUnit.id);
+  check(
+    "the statement line reads Check payment #1042",
+    (neighborLines ?? []).some(
+      (c) => c.kind === "payment" && c.label === "Check payment #1042" && c.amount_cents === -6000,
+    ),
+    JSON.stringify(neighborLines),
+  );
+  const { data: checkPayment } = await admin
+    .from("payments")
+    .select("rail, state, processor_fee_cents, platform_fee_cents")
+    .eq("id", checkId)
+    .single();
+  check(
+    "it is a settled payment on the check rail with no fee",
+    checkPayment?.rail === "check" &&
+      checkPayment?.state === "settled" &&
+      checkPayment?.processor_fee_cents === 0 &&
+      checkPayment?.platform_fee_cents === 0,
+    JSON.stringify(checkPayment),
+  );
+  const { data: checkLedger } = await president.client
+    .from("ledger_entries")
+    .select("amount_cents, category, confirmed_at, occurred_on")
+    .eq("payment_id", checkId);
+  check(
+    "the ledger shows $60 in, with no fee taken out, confirmed",
+    (checkLedger ?? []).length === 1 &&
+      checkLedger[0].amount_cents === 6000 &&
+      checkLedger[0].category === "Assessments" &&
+      checkLedger[0].confirmed_at !== null &&
+      checkLedger[0].occurred_on === day(-1),
+    JSON.stringify(checkLedger),
+  );
+  const { data: checkAllocations } = await admin
+    .from("payment_allocations")
+    .select("amount_cents")
+    .eq("payment_id", checkId);
+  check(
+    "the check is allocated to the charge it cleared",
+    (checkAllocations ?? []).length === 1 && checkAllocations[0].amount_cents === 6000,
+    JSON.stringify(checkAllocations),
+  );
   const { error: residentCheck } = await resident.client.rpc("record_manual_payment", {
-    p_unit_id: myUnit, p_amount_cents: 100, p_method: "check", p_reference: "1", p_received_on: day(0),
+    p_unit_id: myUnit,
+    p_amount_cents: 100,
+    p_method: "check",
+    p_reference: "1",
+    p_received_on: day(0),
   });
-  check("a resident cannot record a check", residentCheck?.code === "42501", residentCheck?.message?.slice(0, 45) ?? "no error");
+  check(
+    "a resident cannot record a check",
+    residentCheck?.code === "42501",
+    residentCheck?.message?.slice(0, 45) ?? "no error",
+  );
   const { error: anonCheck } = await nobody.rpc("record_manual_payment", {
-    p_unit_id: myUnit, p_amount_cents: 100, p_method: "check", p_reference: "1", p_received_on: day(0),
+    p_unit_id: myUnit,
+    p_amount_cents: 100,
+    p_method: "check",
+    p_reference: "1",
+    p_received_on: day(0),
   });
-  check("a signed out visitor cannot record a check", refused(anonCheck), anonCheck?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a signed out visitor cannot record a check",
+    refused(anonCheck),
+    anonCheck?.message?.slice(0, 60) ?? "no error",
+  );
   const { error: futureCheck } = await president.client.rpc("record_manual_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 100, p_method: "check", p_reference: "2", p_received_on: day(5),
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 100,
+    p_method: "check",
+    p_reference: "2",
+    p_received_on: day(5),
   });
-  check("a check cannot be dated in the future", Boolean(futureCheck), futureCheck?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a check cannot be dated in the future",
+    Boolean(futureCheck),
+    futureCheck?.message?.slice(0, 60) ?? "no error",
+  );
   const { error: badMethod } = await president.client.rpc("record_manual_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 100, p_method: "bitcoin", p_reference: "", p_received_on: day(0),
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 100,
+    p_method: "bitcoin",
+    p_reference: "",
+    p_received_on: day(0),
   });
-  check("a method that is not check, cash or other is refused", Boolean(badMethod), badMethod?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a method that is not check, cash or other is refused",
+    Boolean(badMethod),
+    badMethod?.message?.slice(0, 60) ?? "no error",
+  );
   // 0102: no more than what the home owes plus $10,000.
   const { error: hugeCheck } = await president.client.rpc("record_manual_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 99_999_999_9, p_method: "check", p_reference: "3", p_received_on: day(0),
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 99_999_999_9,
+    p_method: "check",
+    p_reference: "3",
+    p_received_on: day(0),
   });
-  check("a check far past what the home owes plus $10,000 is refused", Boolean(hugeCheck) && hugeCheck.code === "22000", hugeCheck?.message?.slice(0, 70) ?? "no error");
-  const { count: hugeRows } = await admin.from("payments").select("id", { count: "exact", head: true })
-    .eq("unit_id", neighborUnit.id).eq("amount_cents", 99_999_999_9);
+  check(
+    "a check far past what the home owes plus $10,000 is refused",
+    Boolean(hugeCheck) && hugeCheck.code === "22000",
+    hugeCheck?.message?.slice(0, 70) ?? "no error",
+  );
+  const { count: hugeRows } = await admin
+    .from("payments")
+    .select("id", { count: "exact", head: true })
+    .eq("unit_id", neighborUnit.id)
+    .eq("amount_cents", 99_999_999_9);
   check("the refused check left no payment behind", hugeRows === 0, String(hugeRows));
   const { data: cashId, error: cashError } = await president.client.rpc("record_manual_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 500, p_method: "cash", p_reference: "", p_received_on: day(0),
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 500,
+    p_method: "cash",
+    p_reference: "",
+    p_received_on: day(0),
   });
-  const { data: cashLine } = await admin.from("charges").select("label").eq("unit_id", neighborUnit.id).eq("label", "Cash payment");
-  check("cash reads Cash payment with no number", !cashError && Boolean(cashId) && (cashLine ?? []).length === 1, cashError?.message ?? JSON.stringify(cashLine));
+  const { data: cashLine } = await admin
+    .from("charges")
+    .select("label")
+    .eq("unit_id", neighborUnit.id)
+    .eq("label", "Cash payment");
+  check(
+    "cash reads Cash payment with no number",
+    !cashError && Boolean(cashId) && (cashLine ?? []).length === 1,
+    cashError?.message ?? JSON.stringify(cashLine),
+  );
 
   // Dues that differ home by home (0084). The neighbor's home is given its
   // own amount; the resident's home is left on the association's.
   const billedOn = async (due) => {
-    const { data } = await admin.from("charges").select("unit_id, amount_cents")
-      .eq("association_id", associationId).eq("category", "dues").eq("due_on", due);
+    const { data } = await admin
+      .from("charges")
+      .select("unit_id, amount_cents")
+      .eq("association_id", associationId)
+      .eq("category", "dues")
+      .eq("due_on", due);
     return Object.fromEntries((data ?? []).map((c) => [c.unit_id, c.amount_cents]));
   };
-  const { error: ownError } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: 21000 });
+  const { error: ownError } = await president.client.rpc("set_home_dues", {
+    p_unit_id: neighborUnit.id,
+    p_dues_cents: 21000,
+  });
   check("a finance holder sets one home's own amount", !ownError, ownError?.message ?? "");
-  await president.client.rpc("issue_assessment", { p_association_id: associationId, p_label: "Own amount period", p_due_on: day(-40) });
+  await president.client.rpc("issue_assessment", {
+    p_association_id: associationId,
+    p_label: "Own amount period",
+    p_due_on: day(-40),
+  });
   const ownBilled = await billedOn(day(-40));
-  check("a home with its own amount is billed it, and its neighbor the association's",
-    ownBilled[neighborUnit.id] === 21000 && ownBilled[myUnit] === 6000, JSON.stringify(ownBilled));
+  check(
+    "a home with its own amount is billed it, and its neighbor the association's",
+    ownBilled[neighborUnit.id] === 21000 && ownBilled[myUnit] === 6000,
+    JSON.stringify(ownBilled),
+  );
 
-  const { error: clearError } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: null });
+  const { error: clearError } = await president.client.rpc("set_home_dues", {
+    p_unit_id: neighborUnit.id,
+    p_dues_cents: null,
+  });
   check("a home's own amount can be cleared", !clearError, clearError?.message ?? "");
-  await president.client.rpc("issue_assessment", { p_association_id: associationId, p_label: "Cleared period", p_due_on: day(-45) });
+  await president.client.rpc("issue_assessment", {
+    p_association_id: associationId,
+    p_label: "Cleared period",
+    p_due_on: day(-45),
+  });
   const clearedBilled = await billedOn(day(-45));
-  check("a cleared home is back on the association's amount from the next bill",
-    clearedBilled[neighborUnit.id] === 6000 && clearedBilled[myUnit] === 6000, JSON.stringify(clearedBilled));
-  check("the bill already issued keeps the amount it was issued at", (await billedOn(day(-40)))[neighborUnit.id] === 21000);
+  check(
+    "a cleared home is back on the association's amount from the next bill",
+    clearedBilled[neighborUnit.id] === 6000 && clearedBilled[myUnit] === 6000,
+    JSON.stringify(clearedBilled),
+  );
+  check(
+    "the bill already issued keeps the amount it was issued at",
+    (await billedOn(day(-40)))[neighborUnit.id] === 21000,
+  );
 
-  const { error: negativeDues } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: -1 });
-  check("a negative amount is refused", Boolean(negativeDues), negativeDues?.message?.slice(0, 60) ?? "no error");
-  const { error: highDues } = await president.client.rpc("set_home_dues", { p_unit_id: neighborUnit.id, p_dues_cents: 10_000_001 });
-  check("one home's dues over $100,000 a period are refused", Boolean(highDues) && highDues.code === "22000", highDues?.message?.slice(0, 60) ?? "no error");
+  const { error: negativeDues } = await president.client.rpc("set_home_dues", {
+    p_unit_id: neighborUnit.id,
+    p_dues_cents: -1,
+  });
+  check(
+    "a negative amount is refused",
+    Boolean(negativeDues),
+    negativeDues?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: highDues } = await president.client.rpc("set_home_dues", {
+    p_unit_id: neighborUnit.id,
+    p_dues_cents: 10_000_001,
+  });
+  check(
+    "one home's dues over $100,000 a period are refused",
+    Boolean(highDues) && highDues.code === "22000",
+    highDues?.message?.slice(0, 60) ?? "no error",
+  );
   // The association's rate is a plain row update, held by a check constraint (0102).
-  const { error: highRate } = await admin.from("associations").update({ dues_cents: 10_000_001 }).eq("id", associationId);
-  check("the association's rate over $100,000 is refused by the table", Boolean(highRate) && highRate.code === "23514", highRate?.message?.slice(0, 60) ?? "no error");
-  const { error: residentDues } = await resident.client.rpc("set_home_dues", { p_unit_id: myUnit, p_dues_cents: 100 });
-  check("a resident cannot set a home's amount", residentDues?.code === "42501", residentDues?.message?.slice(0, 60) ?? "no error");
-  const { error: anonDues } = await nobody.rpc("set_home_dues", { p_unit_id: myUnit, p_dues_cents: 100 });
-  check("a signed out visitor cannot set a home's amount", refused(anonDues), anonDues?.message?.slice(0, 60) ?? "no error");
+  const { error: highRate } = await admin
+    .from("associations")
+    .update({ dues_cents: 10_000_001 })
+    .eq("id", associationId);
+  check(
+    "the association's rate over $100,000 is refused by the table",
+    Boolean(highRate) && highRate.code === "23514",
+    highRate?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: residentDues } = await resident.client.rpc("set_home_dues", {
+    p_unit_id: myUnit,
+    p_dues_cents: 100,
+  });
+  check(
+    "a resident cannot set a home's amount",
+    residentDues?.code === "42501",
+    residentDues?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: anonDues } = await nobody.rpc("set_home_dues", {
+    p_unit_id: myUnit,
+    p_dues_cents: 100,
+  });
+  check(
+    "a signed out visitor cannot set a home's amount",
+    refused(anonDues),
+    anonDues?.message?.slice(0, 60) ?? "no error",
+  );
   const { data: myOwn } = await admin.from("units").select("dues_cents").eq("id", myUnit).single();
-  check("the refused writes changed nothing", myOwn?.dues_cents === null, String(myOwn?.dues_cents));
+  check(
+    "the refused writes changed nothing",
+    myOwn?.dues_cents === null,
+    String(myOwn?.dues_cents),
+  );
 
   // One-off charges (0086). Balances are read as the President, never as the
   // service role: the balance view gives the admin client no rows.
   const balanceOf = async (unitId) => {
-    const { data } = await president.client.from("unit_balances").select("balance_cents").eq("unit_id", unitId).single();
+    const { data } = await president.client
+      .from("unit_balances")
+      .select("balance_cents")
+      .eq("unit_id", unitId)
+      .single();
     return data?.balance_cents;
   };
   const gateBefore = await balanceOf(neighborUnit.id);
   const { data: gateId, error: gateError } = await president.client.rpc("add_charge", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 12345, p_label: "Gate remote replacement", p_due_on: day(-2),
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 12345,
+    p_label: "Gate remote replacement",
+    p_due_on: day(-2),
   });
   const gateAfter = await balanceOf(neighborUnit.id);
-  check("a finance holder adds a one-off charge", !gateError && Boolean(gateId), gateError?.message ?? "");
-  check("the home's balance rises by exactly that", gateAfter === gateBefore + 12345, `${gateBefore} then ${gateAfter}`);
-  const { data: gateRow } = await admin.from("charges").select("kind, category, label, amount_cents").eq("id", gateId).single();
-  check("it is a charge with its label, and not dues",
-    gateRow?.kind === "charge" && gateRow?.label === "Gate remote replacement" &&
-      gateRow?.amount_cents === 12345 && gateRow?.category !== "dues", JSON.stringify(gateRow));
-  const { data: gateActivity } = await president.client.from("activity").select("summary").eq("subject_id", gateId);
-  check("the activity record names the charge", (gateActivity ?? []).length === 1, JSON.stringify(gateActivity));
+  check(
+    "a finance holder adds a one-off charge",
+    !gateError && Boolean(gateId),
+    gateError?.message ?? "",
+  );
+  check(
+    "the home's balance rises by exactly that",
+    gateAfter === gateBefore + 12345,
+    `${gateBefore} then ${gateAfter}`,
+  );
+  const { data: gateRow } = await admin
+    .from("charges")
+    .select("kind, category, label, amount_cents")
+    .eq("id", gateId)
+    .single();
+  check(
+    "it is a charge with its label, and not dues",
+    gateRow?.kind === "charge" &&
+      gateRow?.label === "Gate remote replacement" &&
+      gateRow?.amount_cents === 12345 &&
+      gateRow?.category !== "dues",
+    JSON.stringify(gateRow),
+  );
+  const { data: gateActivity } = await president.client
+    .from("activity")
+    .select("summary")
+    .eq("subject_id", gateId);
+  check(
+    "the activity record names the charge",
+    (gateActivity ?? []).length === 1,
+    JSON.stringify(gateActivity),
+  );
 
   const { error: residentCharge } = await resident.client.rpc("add_charge", {
-    p_unit_id: myUnit, p_amount_cents: 100, p_label: "Sneaky", p_due_on: day(0),
+    p_unit_id: myUnit,
+    p_amount_cents: 100,
+    p_label: "Sneaky",
+    p_due_on: day(0),
   });
-  check("a resident cannot add a charge", residentCharge?.code === "42501", residentCharge?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a resident cannot add a charge",
+    residentCharge?.code === "42501",
+    residentCharge?.message?.slice(0, 60) ?? "no error",
+  );
   const { error: residentChargeAll } = await resident.client.rpc("add_charge_to_all", {
-    p_association_id: associationId, p_amount_cents: 100, p_label: "Sneaky", p_due_on: day(0),
+    p_association_id: associationId,
+    p_amount_cents: 100,
+    p_label: "Sneaky",
+    p_due_on: day(0),
   });
-  check("a resident cannot charge every home", residentChargeAll?.code === "42501", residentChargeAll?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a resident cannot charge every home",
+    residentChargeAll?.code === "42501",
+    residentChargeAll?.message?.slice(0, 60) ?? "no error",
+  );
   const { error: anonCharge } = await nobody.rpc("add_charge", {
-    p_unit_id: myUnit, p_amount_cents: 100, p_label: "Sneaky", p_due_on: day(0),
+    p_unit_id: myUnit,
+    p_amount_cents: 100,
+    p_label: "Sneaky",
+    p_due_on: day(0),
   });
-  check("a signed out visitor cannot add a charge", refused(anonCharge), anonCharge?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a signed out visitor cannot add a charge",
+    refused(anonCharge),
+    anonCharge?.message?.slice(0, 60) ?? "no error",
+  );
   const refusedCharge = async (name, args) => {
-    const { error } = await president.client.rpc("add_charge", { p_unit_id: neighborUnit.id, p_amount_cents: 100, p_label: "Fee", p_due_on: day(0), ...args });
+    const { error } = await president.client.rpc("add_charge", {
+      p_unit_id: neighborUnit.id,
+      p_amount_cents: 100,
+      p_label: "Fee",
+      p_due_on: day(0),
+      ...args,
+    });
     check(name, error?.code === "22000", error?.message?.slice(0, 60) ?? "no error");
   };
   await refusedCharge("an amount of 0 is refused", { p_amount_cents: 0 });
@@ -277,116 +630,336 @@ try {
   await refusedCharge("a due date more than a year ahead is refused", { p_due_on: day(367) });
   await refusedCharge("a due date more than a year back is refused", { p_due_on: day(-367) });
   const { error: nobodyHome } = await president.client.rpc("add_charge", {
-    p_unit_id: crypto.randomUUID(), p_amount_cents: 100, p_label: "Fee", p_due_on: day(0),
+    p_unit_id: crypto.randomUUID(),
+    p_amount_cents: 100,
+    p_label: "Fee",
+    p_due_on: day(0),
   });
-  check("a home that does not exist is refused", Boolean(nobodyHome), nobodyHome?.message?.slice(0, 60) ?? "no error");
+  check(
+    "a home that does not exist is refused",
+    Boolean(nobodyHome),
+    nobodyHome?.message?.slice(0, 60) ?? "no error",
+  );
   check("the refused charges changed nothing", (await balanceOf(neighborUnit.id)) === gateAfter);
 
   // No late fee on a one-off charge. The policy is set so dues lines that are
   // past due would draw one; the check is that this charge's own line does not.
-  await admin.from("associations").update({
-    settings: { collectionPolicy: { lateNoticeDay: 1, lateFeeCents: 500 } },
-  }).eq("id", associationId);
-  const { error: feeError } = await admin.rpc("assess_late_fees", { p_association_id: associationId });
-  const { data: feeLines } = await admin.from("charges").select("label").eq("association_id", associationId).eq("category", "late_fee");
+  await admin
+    .from("associations")
+    .update({
+      settings: { collectionPolicy: { lateNoticeDay: 1, lateFeeCents: 500 } },
+    })
+    .eq("id", associationId);
+  const { error: feeError } = await admin.rpc("assess_late_fees", {
+    p_association_id: associationId,
+  });
+  const { data: feeLines } = await admin
+    .from("charges")
+    .select("label")
+    .eq("association_id", associationId)
+    .eq("category", "late_fee");
   check("a late fee run completes", !feeError, feeError?.message ?? "");
-  check("a one-off charge draws no late fee",
-    !(feeLines ?? []).some((c) => c.label.includes("Gate remote replacement")), JSON.stringify(feeLines));
+  check(
+    "a one-off charge draws no late fee",
+    !(feeLines ?? []).some((c) => c.label.includes("Gate remote replacement")),
+    JSON.stringify(feeLines),
+  );
 
   // A payment by hand pays it, oldest first, like any other charge.
   const owedNow = await balanceOf(neighborUnit.id);
-  const { data: gatePayment, error: gatePayError } = await president.client.rpc("record_manual_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: owedNow, p_method: "check", p_reference: "2001", p_received_on: day(-1),
-  });
-  const { data: gateAllocations } = await admin.from("payment_allocations").select("amount_cents").eq("payment_id", gatePayment).eq("charge_id", gateId);
-  check("a check pays the one-off charge",
-    !gatePayError && (gateAllocations ?? []).reduce((t, a) => t + a.amount_cents, 0) === 12345, gatePayError?.message ?? JSON.stringify(gateAllocations));
+  const { data: gatePayment, error: gatePayError } = await president.client.rpc(
+    "record_manual_payment",
+    {
+      p_unit_id: neighborUnit.id,
+      p_amount_cents: owedNow,
+      p_method: "check",
+      p_reference: "2001",
+      p_received_on: day(-1),
+    },
+  );
+  const { data: gateAllocations } = await admin
+    .from("payment_allocations")
+    .select("amount_cents")
+    .eq("payment_id", gatePayment)
+    .eq("charge_id", gateId);
+  check(
+    "a check pays the one-off charge",
+    !gatePayError && (gateAllocations ?? []).reduce((t, a) => t + a.amount_cents, 0) === 12345,
+    gatePayError?.message ?? JSON.stringify(gateAllocations),
+  );
   check("and clears the balance", (await balanceOf(neighborUnit.id)) === 0);
 
   // The same charge to every home, in one call.
   const everyBefore = [await balanceOf(neighborUnit.id), await balanceOf(myUnit)];
   const { data: charged, error: allError } = await president.client.rpc("add_charge_to_all", {
-    p_association_id: associationId, p_amount_cents: 2500, p_label: "Roof assessment", p_due_on: day(-1),
+    p_association_id: associationId,
+    p_amount_cents: 2500,
+    p_label: "Roof assessment",
+    p_due_on: day(-1),
   });
-  check("charging every home reports how many it charged", !allError && charged === 2, allError?.message ?? String(charged));
+  check(
+    "charging every home reports how many it charged",
+    !allError && charged === 2,
+    allError?.message ?? String(charged),
+  );
   const everyAfter = [await balanceOf(neighborUnit.id), await balanceOf(myUnit)];
-  check("every home's balance rises by exactly that",
-    everyAfter[0] === everyBefore[0] + 2500 && everyAfter[1] === everyBefore[1] + 2500, `${everyBefore} then ${everyAfter}`);
-  const { data: roofLines } = await admin.from("charges").select("category").eq("association_id", associationId).eq("label", "Roof assessment");
-  check("none of those lines is dues", (roofLines ?? []).length === 2 && roofLines.every((c) => c.category !== "dues"), JSON.stringify(roofLines));
+  check(
+    "every home's balance rises by exactly that",
+    everyAfter[0] === everyBefore[0] + 2500 && everyAfter[1] === everyBefore[1] + 2500,
+    `${everyBefore} then ${everyAfter}`,
+  );
+  const { data: roofLines } = await admin
+    .from("charges")
+    .select("category")
+    .eq("association_id", associationId)
+    .eq("label", "Roof assessment");
+  check(
+    "none of those lines is dues",
+    (roofLines ?? []).length === 2 && roofLines.every((c) => c.category !== "dues"),
+    JSON.stringify(roofLines),
+  );
 
   // Taking back a check (0088). Balances are read as the President from the
   // balance view, as above; the payment and the books are read as admin.
   const handBefore = await balanceOf(neighborUnit.id);
   const { data: handId, error: handError } = await president.client.rpc("record_manual_payment", {
-    p_unit_id: neighborUnit.id, p_amount_cents: 1500, p_method: "check", p_reference: "3001", p_received_on: day(-1),
+    p_unit_id: neighborUnit.id,
+    p_amount_cents: 1500,
+    p_method: "check",
+    p_reference: "3001",
+    p_received_on: day(-1),
   });
   const handPaid = await balanceOf(neighborUnit.id);
-  check("a finance holder records a check by hand", !handError && Boolean(handId), handError?.message ?? "");
-  check("the balance falls by exactly that", handPaid === handBefore - 1500, `${handBefore} then ${handPaid}`);
+  check(
+    "a finance holder records a check by hand",
+    !handError && Boolean(handId),
+    handError?.message ?? "",
+  );
+  check(
+    "the balance falls by exactly that",
+    handPaid === handBefore - 1500,
+    `${handBefore} then ${handPaid}`,
+  );
 
-  const { error: residentReverse } = await resident.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
-  check("a resident cannot reverse a payment", residentReverse?.code === "42501", residentReverse?.message?.slice(0, 60) ?? "no error");
-  const { error: anonReverse } = await nobody.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
-  check("a signed out visitor cannot reverse a payment", refused(anonReverse), anonReverse?.message?.slice(0, 60) ?? "no error");
-  for (const [name, reason] of [["a reason of one character", "x"], ["an empty reason", "  "], ["a reason over 120 characters", "x".repeat(121)]]) {
-    const { error } = await president.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: reason });
-    check(`${name} is refused`, error?.code === "22000", error?.message?.slice(0, 60) ?? "no error");
+  const { error: residentReverse } = await resident.client.rpc("reverse_manual_payment", {
+    p_payment_id: handId,
+    p_reason: "Entered twice",
+  });
+  check(
+    "a resident cannot reverse a payment",
+    residentReverse?.code === "42501",
+    residentReverse?.message?.slice(0, 60) ?? "no error",
+  );
+  const { error: anonReverse } = await nobody.rpc("reverse_manual_payment", {
+    p_payment_id: handId,
+    p_reason: "Entered twice",
+  });
+  check(
+    "a signed out visitor cannot reverse a payment",
+    refused(anonReverse),
+    anonReverse?.message?.slice(0, 60) ?? "no error",
+  );
+  for (const [name, reason] of [
+    ["a reason of one character", "x"],
+    ["an empty reason", "  "],
+    ["a reason over 120 characters", "x".repeat(121)],
+  ]) {
+    const { error } = await president.client.rpc("reverse_manual_payment", {
+      p_payment_id: handId,
+      p_reason: reason,
+    });
+    check(
+      `${name} is refused`,
+      error?.code === "22000",
+      error?.message?.slice(0, 60) ?? "no error",
+    );
   }
   check("the refused reversals changed nothing", (await balanceOf(neighborUnit.id)) === handPaid);
 
-  const { data: reversedId, error: reverseError } = await president.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
-  check("a finance holder reverses it", !reverseError && reversedId === handId, reverseError?.message ?? "");
-  check("the balance is back to exactly what it was", (await balanceOf(neighborUnit.id)) === handBefore, `${handBefore} then ${await balanceOf(neighborUnit.id)}`);
-  const { data: handRow } = await admin.from("payments").select("state, refunded_cents, amount_cents").eq("id", handId).single();
-  check("the payment reads reversed, as a full refund does",
-    handRow?.state === "refunded" && handRow?.refunded_cents === 1500 && handRow?.amount_cents === 1500, JSON.stringify(handRow));
-  const { data: handLines } = await admin.from("charges").select("kind, category, label, amount_cents")
-    .eq("unit_id", neighborUnit.id).like("label", "Payment reversed:%");
-  check("the statement says why",
-    (handLines ?? []).length === 1 && handLines[0].label === "Payment reversed: Entered twice" &&
-      handLines[0].amount_cents === 1500 && handLines[0].kind === "charge" && handLines[0].category !== "dues", JSON.stringify(handLines));
-  const { data: handBooks } = await admin.from("ledger_entries").select("amount_cents").eq("payment_id", handId);
-  check("the bank ledger nets to zero for that payment",
-    (handBooks ?? []).length === 2 && handBooks.reduce((t, e) => t + e.amount_cents, 0) === 0, JSON.stringify(handBooks));
-  const { data: handActivity } = await president.client.from("activity").select("summary").eq("subject_id", handId);
-  check("the activity record has the entry and the reversal", (handActivity ?? []).length === 2, JSON.stringify(handActivity));
+  const { data: reversedId, error: reverseError } = await president.client.rpc(
+    "reverse_manual_payment",
+    { p_payment_id: handId, p_reason: "Entered twice" },
+  );
+  check(
+    "a finance holder reverses it",
+    !reverseError && reversedId === handId,
+    reverseError?.message ?? "",
+  );
+  check(
+    "the balance is back to exactly what it was",
+    (await balanceOf(neighborUnit.id)) === handBefore,
+    `${handBefore} then ${await balanceOf(neighborUnit.id)}`,
+  );
+  const { data: handRow } = await admin
+    .from("payments")
+    .select("state, refunded_cents, amount_cents")
+    .eq("id", handId)
+    .single();
+  check(
+    "the payment reads reversed, as a full refund does",
+    handRow?.state === "refunded" &&
+      handRow?.refunded_cents === 1500 &&
+      handRow?.amount_cents === 1500,
+    JSON.stringify(handRow),
+  );
+  const { data: handLines } = await admin
+    .from("charges")
+    .select("kind, category, label, amount_cents")
+    .eq("unit_id", neighborUnit.id)
+    .like("label", "Payment reversed:%");
+  check(
+    "the statement says why",
+    (handLines ?? []).length === 1 &&
+      handLines[0].label === "Payment reversed: Entered twice" &&
+      handLines[0].amount_cents === 1500 &&
+      handLines[0].kind === "charge" &&
+      handLines[0].category !== "dues",
+    JSON.stringify(handLines),
+  );
+  const { data: handBooks } = await admin
+    .from("ledger_entries")
+    .select("amount_cents")
+    .eq("payment_id", handId);
+  check(
+    "the bank ledger nets to zero for that payment",
+    (handBooks ?? []).length === 2 && handBooks.reduce((t, e) => t + e.amount_cents, 0) === 0,
+    JSON.stringify(handBooks),
+  );
+  const { data: handActivity } = await president.client
+    .from("activity")
+    .select("summary")
+    .eq("subject_id", handId);
+  check(
+    "the activity record has the entry and the reversal",
+    (handActivity ?? []).length === 2,
+    JSON.stringify(handActivity),
+  );
 
-  const { error: secondReverse } = await president.client.rpc("reverse_manual_payment", { p_payment_id: handId, p_reason: "Entered twice" });
-  check("a second reversal is refused", secondReverse?.message?.includes("already reversed"), secondReverse?.message?.slice(0, 60) ?? "no error");
+  const { error: secondReverse } = await president.client.rpc("reverse_manual_payment", {
+    p_payment_id: handId,
+    p_reason: "Entered twice",
+  });
+  check(
+    "a second reversal is refused",
+    secondReverse?.message?.includes("already reversed"),
+    secondReverse?.message?.slice(0, 60) ?? "no error",
+  );
   check("and changes nothing", (await balanceOf(neighborUnit.id)) === handBefore);
 
-  const { data: stripeId, error: stripeInsertError } = await admin.from("payments").insert({
-    association_id: associationId, unit_id: neighborUnit.id, amount_cents: 700, rail: "card", state: "settled",
-    stripe_payment_intent_id: `pi_verify_reverse_${stamp}`, settled_at: new Date().toISOString(),
-  }).select("id").single();
-  check("a Stripe payment can be set up for the check", !stripeInsertError && Boolean(stripeId?.id), stripeInsertError?.message ?? "");
-  const { error: stripeReverse } = await president.client.rpc("reverse_manual_payment", { p_payment_id: stripeId?.id, p_reason: "Entered twice" });
-  check("a Stripe payment is refused and sent to Stripe",
-    stripeReverse?.message?.includes("came through Stripe"), stripeReverse?.message?.slice(0, 80) ?? "no error");
-  const { data: stripeRow } = await admin.from("payments").select("state, refunded_cents").eq("id", stripeId?.id).single();
-  check("and is left as it was", stripeRow?.state === "settled" && stripeRow?.refunded_cents === 0, JSON.stringify(stripeRow));
+  const { data: stripeId, error: stripeInsertError } = await admin
+    .from("payments")
+    .insert({
+      association_id: associationId,
+      unit_id: neighborUnit.id,
+      amount_cents: 700,
+      rail: "card",
+      state: "settled",
+      stripe_payment_intent_id: `pi_verify_reverse_${stamp}`,
+      settled_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  check(
+    "a Stripe payment can be set up for the check",
+    !stripeInsertError && Boolean(stripeId?.id),
+    stripeInsertError?.message ?? "",
+  );
+  const { error: stripeReverse } = await president.client.rpc("reverse_manual_payment", {
+    p_payment_id: stripeId?.id,
+    p_reason: "Entered twice",
+  });
+  check(
+    "a Stripe payment is refused and sent to Stripe",
+    stripeReverse?.message?.includes("came through Stripe"),
+    stripeReverse?.message?.slice(0, 80) ?? "no error",
+  );
+  const { data: stripeRow } = await admin
+    .from("payments")
+    .select("state, refunded_cents")
+    .eq("id", stripeId?.id)
+    .single();
+  check(
+    "and is left as it was",
+    stripeRow?.state === "settled" && stripeRow?.refunded_cents === 0,
+    JSON.stringify(stripeRow),
+  );
 
   // A home that is no longer a home is retired, records kept (0099). Its
   // balance has to be zero first, and once retired it is billed no more.
-  const { data: spareUnit, error: spareError } = await admin.from("units").insert({
-    association_id: associationId, label: "Spare",
-  }).select("id").single();
+  const { data: spareUnit, error: spareError } = await admin
+    .from("units")
+    .insert({
+      association_id: associationId,
+      label: "Spare",
+    })
+    .select("id")
+    .single();
   if (spareError) throw new Error(`spare home: ${spareError.message}`);
-  await admin.from("charges").insert({ association_id: associationId, unit_id: spareUnit.id, kind: "charge", category: "other", label: "Owed", amount_cents: 100, due_on: day(0) });
-  const { error: owedRetire } = await president.client.rpc("retire_home", { p_unit_id: spareUnit.id });
-  check("retire_home: a home that owes money cannot be retired", Boolean(owedRetire), owedRetire?.message ?? "allowed");
-  await admin.from("charges").insert({ association_id: associationId, unit_id: spareUnit.id, kind: "credit", category: "other", label: "Written off", amount_cents: -100, due_on: day(0) });
-  const { error: residentRetire } = await resident.client.rpc("retire_home", { p_unit_id: spareUnit.id });
-  check("retire_home: a resident is refused", residentRetire?.code === "42501", residentRetire?.message ?? "no error");
+  await admin.from("charges").insert({
+    association_id: associationId,
+    unit_id: spareUnit.id,
+    kind: "charge",
+    category: "other",
+    label: "Owed",
+    amount_cents: 100,
+    due_on: day(0),
+  });
+  const { error: owedRetire } = await president.client.rpc("retire_home", {
+    p_unit_id: spareUnit.id,
+  });
+  check(
+    "retire_home: a home that owes money cannot be retired",
+    Boolean(owedRetire),
+    owedRetire?.message ?? "allowed",
+  );
+  await admin.from("charges").insert({
+    association_id: associationId,
+    unit_id: spareUnit.id,
+    kind: "credit",
+    category: "other",
+    label: "Written off",
+    amount_cents: -100,
+    due_on: day(0),
+  });
+  const { error: residentRetire } = await resident.client.rpc("retire_home", {
+    p_unit_id: spareUnit.id,
+  });
+  check(
+    "retire_home: a resident is refused",
+    residentRetire?.code === "42501",
+    residentRetire?.message ?? "no error",
+  );
   const { error: retired } = await president.client.rpc("retire_home", { p_unit_id: spareUnit.id });
-  const { data: spareRow } = await admin.from("units").select("retired_on").eq("id", spareUnit.id).single();
-  check("retire_home: a settled home is retired and its records stay", !retired && spareRow?.retired_on != null, retired?.message ?? JSON.stringify(spareRow));
-  const billedBefore = (await admin.from("charges").select("id").eq("unit_id", spareUnit.id)).data?.length ?? 0;
-  await admin.rpc("issue_assessment", { p_association_id: associationId, p_label: "After retiring", p_due_on: day(0) });
-  await president.client.rpc("add_charge_to_all", { p_association_id: associationId, p_amount_cents: 500, p_label: "Everyone", p_due_on: day(0) });
-  const billedAfter = (await admin.from("charges").select("id").eq("unit_id", spareUnit.id)).data?.length ?? 0;
-  check("retire_home: a retired home is billed no more", billedAfter === billedBefore, `${billedBefore} then ${billedAfter}`);
+  const { data: spareRow } = await admin
+    .from("units")
+    .select("retired_on")
+    .eq("id", spareUnit.id)
+    .single();
+  check(
+    "retire_home: a settled home is retired and its records stay",
+    !retired && spareRow?.retired_on != null,
+    retired?.message ?? JSON.stringify(spareRow),
+  );
+  const billedBefore =
+    (await admin.from("charges").select("id").eq("unit_id", spareUnit.id)).data?.length ?? 0;
+  await admin.rpc("issue_assessment", {
+    p_association_id: associationId,
+    p_label: "After retiring",
+    p_due_on: day(0),
+  });
+  await president.client.rpc("add_charge_to_all", {
+    p_association_id: associationId,
+    p_amount_cents: 500,
+    p_label: "Everyone",
+    p_due_on: day(0),
+  });
+  const billedAfter =
+    (await admin.from("charges").select("id").eq("unit_id", spareUnit.id)).data?.length ?? 0;
+  check(
+    "retire_home: a retired home is billed no more",
+    billedAfter === billedBefore,
+    `${billedBefore} then ${billedAfter}`,
+  );
 
   // Runs that overlap (0069). The cron delivered twice, or a board member
   // pressing "bill dues now" while it runs: each call used to look for an
@@ -395,14 +968,27 @@ try {
   // above. Before the lock this failed only when the calls really did
   // interleave, so a pass on an old database proves little; a failure on a
   // new one proves a lot.
-  const together = await Promise.all(Array.from({ length: 6 }, () =>
-    admin.rpc("issue_assessment", { p_association_id: associationId, p_label: "August assessment", p_due_on: day(-33) })));
+  const together = await Promise.all(
+    Array.from({ length: 6 }, () =>
+      admin.rpc("issue_assessment", {
+        p_association_id: associationId,
+        p_label: "August assessment",
+        p_due_on: day(-33),
+      }),
+    ),
+  );
   const billedTogether = together.reduce((t, r) => t + (r.data ?? 0), 0);
-  const { data: augustLines } = await admin.from("charges").select("unit_id")
-    .eq("association_id", associationId).eq("category", "dues").eq("due_on", day(-33));
-  check("six billing runs at once bill each home once",
+  const { data: augustLines } = await admin
+    .from("charges")
+    .select("unit_id")
+    .eq("association_id", associationId)
+    .eq("category", "dues")
+    .eq("due_on", day(-33));
+  check(
+    "six billing runs at once bill each home once",
     together.every((r) => !r.error) && billedTogether === 2 && (augustLines ?? []).length === 2,
-    `${billedTogether} reported, ${(augustLines ?? []).length} lines, ${together.find((r) => r.error)?.error?.message ?? "no errors"}`);
+    `${billedTogether} reported, ${(augustLines ?? []).length} lines, ${together.find((r) => r.error)?.error?.message ?? "no errors"}`,
+  );
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {

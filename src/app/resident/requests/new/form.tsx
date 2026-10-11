@@ -5,8 +5,26 @@ import { attachmentProblem, fileSizeWords } from "@/lib/attachments";
 import { newId } from "@/lib/core/ids";
 import { ChosenFiles, FILE_ACCEPT, FILE_LIMITS } from "../request-files";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, FileSearch, FileText, Hammer, Paperclip, PartyPopper } from "lucide-react";
-import { Button, Callout, Card, SectionTitle, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ClipboardList,
+  FileSearch,
+  FileText,
+  Hammer,
+  Paperclip,
+  PartyPopper,
+} from "lucide-react";
+import {
+  Button,
+  Callout,
+  Card,
+  SectionTitle,
+  Select,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { SlotPicker } from "@/components/app/slot-picker";
 import { formatMinute, rulesFor } from "@/lib/bookings";
 import { useAppState, useCurrentHome } from "@/lib/app-state";
@@ -56,7 +74,15 @@ const kinds = [
 ] as const;
 
 export function NewRequestForm() {
-  const { amenities, forms, addRequest, attachFiles, community, isRemote, requests: allRequests } = useAppState();
+  const {
+    amenities,
+    forms,
+    addRequest,
+    attachFiles,
+    community,
+    isRemote,
+    requests: allRequests,
+  } = useAppState();
   const home = useCurrentHome();
   // The number to show once it is sent, or null when only the database
   // knows it (see `confirmedReference`).
@@ -101,10 +127,10 @@ export function NewRequestForm() {
       : kind === "amenity" && !slot
         ? "Choose a time"
         : kind === "architectural" && !formId
-        ? "Choose a form"
-        : !effectiveTitle
-          ? "Add a title"
-          : null;
+          ? "Choose a form"
+          : !effectiveTitle
+            ? "Add a title"
+            : null;
   const ready = missing === null;
 
   if (done) {
@@ -141,9 +167,7 @@ export function NewRequestForm() {
     const detail =
       kind === "amenity" && selectedAmenity
         ? `${selectedAmenity.name}${
-            slot
-              ? `, ${formatDate(slot.date, "medium")} at ${formatMinute(slot.startMinute)}`
-              : ""
+            slot ? `, ${formatDate(slot.date, "medium")} at ${formatMinute(slot.startMinute)}` : ""
           }${
             // The fee rides in the request itself, so the board's approval
             // and the owner's statement line say the same number.
@@ -230,35 +254,34 @@ export function NewRequestForm() {
 
       <div>
         <h1 className="text-title2 font-semibold tracking-[-0.025em] text-fg">New request</h1>
-        
       </div>
 
       <section>
         <SectionTitle>Type</SectionTitle>
         <div className="grid grid-cols-2 gap-2.5">
-          {kinds.filter((k) => moduleOn("module" in k ? k.module : undefined)).map(({ id, label, hint, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setKind(id)}
-              className={cn(
-                "rounded-card border p-3 text-left transition-colors last:odd:col-span-2",
-                kind === id
-                  ? "border-navy-700 bg-brand-soft dark:border-navy-300"
-                  : "border-border bg-surface hover:bg-surface-2",
-              )}
-            >
-              <Icon className="mb-2 size-4 text-fg-muted" />
-              <p className="text-body font-semibold text-fg">{label}</p>
-              <p className="mt-0.5 text-footnote leading-snug text-fg-muted">{hint}</p>
-            </button>
-          ))}
+          {kinds
+            .filter((k) => moduleOn("module" in k ? k.module : undefined))
+            .map(({ id, label, hint, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setKind(id)}
+                className={cn(
+                  "rounded-card border p-3 text-left transition-colors last:odd:col-span-2",
+                  kind === id
+                    ? "border-navy-700 bg-brand-soft dark:border-navy-300"
+                    : "border-border bg-surface hover:bg-surface-2",
+                )}
+              >
+                <Icon className="mb-2 size-4 text-fg-muted" />
+                <p className="text-body font-semibold text-fg">{label}</p>
+                <p className="mt-0.5 text-footnote leading-snug text-fg-muted">{hint}</p>
+              </button>
+            ))}
         </div>
       </section>
 
-      {chosen ? (
-        <Callout tone="info" title={chosen.clock} />
-      ) : null}
+      {chosen ? <Callout tone="info" title={chosen.clock} /> : null}
 
       {kind === "amenity" ? (
         <section>
@@ -358,9 +381,7 @@ export function NewRequestForm() {
         <Card className="divide-y divide-border">
           {kind === "amenity" ? null : (
             <label className="block p-4">
-              <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">
-                Title
-              </span>
+              <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">Title</span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -377,30 +398,37 @@ export function NewRequestForm() {
               rows={kind === "amenity" ? 3 : 5}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder={kind === "amenity" ? "Optional. How many guests, what for." : "What's going on, where, and since when?"}
+              placeholder={
+                kind === "amenity"
+                  ? "Optional. How many guests, what for."
+                  : "What's going on, where, and since when?"
+              }
               className={cn(textareaClass, "resize-none")}
             />
           </label>
           <div>
-          <label className="flex w-full cursor-pointer items-center gap-2 p-4 pb-2 text-left text-body font-medium text-fg-muted hover:bg-surface-2">
-            <Paperclip className="size-3.5" />
-            {files.length ? "Add another" : "Add photos or a PDF"}
-            <input
-              type="file"
-              multiple
-              accept={FILE_ACCEPT}
-              aria-label="Add photos or a PDF"
-              className="sr-only"
-              onChange={(e) => {
-                const picked = Array.from(e.target.files ?? []);
-                e.target.value = "";
-                if (picked.length) setFiles((all) => [...all, ...picked]);
-              }}
-            />
-          </label>
-          <p className="px-4 pb-4 text-footnote text-fg-subtle">{FILE_LIMITS}</p>
+            <label className="flex w-full cursor-pointer items-center gap-2 p-4 pb-2 text-left text-body font-medium text-fg-muted hover:bg-surface-2">
+              <Paperclip className="size-3.5" />
+              {files.length ? "Add another" : "Add photos or a PDF"}
+              <input
+                type="file"
+                multiple
+                accept={FILE_ACCEPT}
+                aria-label="Add photos or a PDF"
+                className="sr-only"
+                onChange={(e) => {
+                  const picked = Array.from(e.target.files ?? []);
+                  e.target.value = "";
+                  if (picked.length) setFiles((all) => [...all, ...picked]);
+                }}
+              />
+            </label>
+            <p className="px-4 pb-4 text-footnote text-fg-subtle">{FILE_LIMITS}</p>
           </div>
-          <ChosenFiles files={files} onRemove={(i) => setFiles((all) => all.filter((_, j) => j !== i))} />
+          <ChosenFiles
+            files={files}
+            onRemove={(i) => setFiles((all) => all.filter((_, j) => j !== i))}
+          />
         </Card>
       </section>
 
@@ -419,7 +447,8 @@ export function NewRequestForm() {
       ) : null}
       {failed ? (
         <p role="alert" className="-mt-3 text-center text-footnote text-danger">
-          Your request did not send, so nothing reached the board. Check your connection and try again.
+          Your request did not send, so nothing reached the board. Check your connection and try
+          again.
         </p>
       ) : null}
     </form>

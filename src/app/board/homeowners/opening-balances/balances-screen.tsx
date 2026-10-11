@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Scale } from "lucide-react";
-import { Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader, fieldClass } from "@/components/ui/primitives";
+import {
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  CardHeader,
+  EmptyState,
+  PageHeader,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { cn, formatDate, money, pluralize } from "@/lib/utils";
@@ -81,7 +90,10 @@ export function BalancesScreen() {
   const { notify } = useToast();
 
   const homes = useMemo(
-    () => [...community.homes].sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true })),
+    () =>
+      [...community.homes].sort((a, b) =>
+        a.unit.localeCompare(b.unit, undefined, { numeric: true }),
+      ),
     [community.homes],
   );
 
@@ -93,10 +105,10 @@ export function BalancesScreen() {
   // The date each line on file carries. The date box starts on the one the
   // statements already show (the latest, if they differ), and on today for
   // an association that has set none.
-  const [dateOnFile, setDateOnFile] = useState<Record<string, string>>(() => openingDates(community));
-  const [asOf, setAsOf] = useState(
-    () => Object.values(dateOnFile).sort().at(-1) ?? community.asOf,
+  const [dateOnFile, setDateOnFile] = useState<Record<string, string>>(() =>
+    openingDates(community),
   );
+  const [asOf, setAsOf] = useState(() => Object.values(dateOnFile).sort().at(-1) ?? community.asOf);
   // Whether the date box has been moved since the last save. Only then is a
   // different date on a line read as a correction to it: a home whose line
   // carries another day is not rewritten just because the screen was opened.
@@ -106,8 +118,7 @@ export function BalancesScreen() {
 
   const parsed = homes.map((home) => {
     const raw = entered[home.id] ?? "";
-    const redated =
-      dateMoved && dateOnFile[home.id] !== undefined && dateOnFile[home.id] !== asOf;
+    const redated = dateMoved && dateOnFile[home.id] !== undefined && dateOnFile[home.id] !== asOf;
     return {
       home,
       raw,
@@ -172,11 +183,7 @@ export function BalancesScreen() {
             title="No homes on the register yet"
             description="Add homes first, then enter their balances."
             action={
-              <ButtonLink
-                href="/board/homeowners"
-                variant="primary"
-                size="md"
-              >
+              <ButtonLink href="/board/homeowners" variant="primary" size="md">
                 Go to Homeowners
               </ButtonLink>
             }
@@ -194,10 +201,14 @@ export function BalancesScreen() {
         description="What each home owed on the day you switched. One amount per home."
       />
 
-      <Callout tone="info" icon={<Scale className="size-4" />} title="Nothing before this date moves">
-        History stays where it is. Copying years of old records is how a switch stalls, and
-        the copy is never quite right. What matters is that each balance is right on the day you
-        start billing here.
+      <Callout
+        tone="info"
+        icon={<Scale className="size-4" />}
+        title="Nothing before this date moves"
+      >
+        History stays where it is. Copying years of old records is how a switch stalls, and the copy
+        is never quite right. What matters is that each balance is right on the day you start
+        billing here.
       </Callout>
 
       <Card className="mt-5">
@@ -235,7 +246,9 @@ export function BalancesScreen() {
               {/* Two lines, like the Homeowners list: the name, then the home
                   and what it owes today, so neither is clipped at phone width. */}
               <div className="min-w-0 flex-1">
-                <span className="block truncate text-body font-medium text-fg">{home.displayName}</span>
+                <span className="block truncate text-body font-medium text-fg">
+                  {home.displayName}
+                </span>
                 {/* For reference only. It includes everything billed and paid
                     here since the switch, so it is not the figure to type. */}
                 <span className="block text-footnote text-fg-muted">
@@ -301,8 +314,8 @@ export function BalancesScreen() {
           that ladder runs off the calendar from the switch date, which is what
           makes it defensible at a hearing. */}
       <p className="mt-4 max-w-2xl text-footnote leading-relaxed text-fg-subtle">
-        Saving a balance does not make any home past due. Days past due are counted from
-        the date above, so nobody starts out behind.
+        Saving a balance does not make any home past due. Days past due are counted from the date
+        above, so nobody starts out behind.
       </p>
 
       <p className="mt-8 text-footnote text-fg-subtle">

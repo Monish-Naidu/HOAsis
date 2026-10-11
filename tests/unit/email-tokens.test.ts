@@ -4,9 +4,7 @@ beforeAll(() => {
   process.env.EMAIL_TOKEN_SECRET = "test-secret-for-unsubscribe-signing";
 });
 
-const { signUnsubscribe, verifyUnsubscribe, unsubscribeUrl } = await import(
-  "@/lib/email/tokens"
-);
+const { signUnsubscribe, verifyUnsubscribe, unsubscribeUrl } = await import("@/lib/email/tokens");
 
 const PERSON = "11111111-2222-3333-4444-555555555555";
 

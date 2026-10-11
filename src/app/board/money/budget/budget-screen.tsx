@@ -64,7 +64,11 @@ export function BudgetScreen() {
               label="Off pace"
               value={String(v.flagged.length)}
               tone={v.flagged.length ? "warn" : undefined}
-              hint={v.flagged.length ? v.flagged.map((r) => r.category).join(", ") : "Every line is where it should be"}
+              hint={
+                v.flagged.length
+                  ? v.flagged.map((r) => r.category).join(", ")
+                  : "Every line is where it should be"
+              }
             />
           </div>
 
@@ -84,9 +88,9 @@ export function BudgetScreen() {
           />
 
           <p className="mt-4 text-footnote text-fg-muted">
-            Pace is the share of a line&apos;s annual budget used so far, against {elapsedPct}% of the
-            year gone. Difference is against the budget so far, positive when the association
-            is ahead.
+            Pace is the share of a line&apos;s annual budget used so far, against {elapsedPct}% of
+            the year gone. Difference is against the budget so far, positive when the association is
+            ahead.
           </p>
         </>
       )}
@@ -131,7 +135,10 @@ function BudgetTable({
             {rows.map((r) => {
               const flag = r.overPace || r.behind;
               return (
-                <tr key={r.category} className="border-b border-border text-body transition-colors hover:bg-surface-2">
+                <tr
+                  key={r.category}
+                  className="border-b border-border text-body transition-colors hover:bg-surface-2"
+                >
                   <td className="px-5 py-3">
                     <span className="flex items-center gap-2 font-medium text-fg">
                       {r.category}
@@ -139,8 +146,12 @@ function BudgetTable({
                       {r.behind ? <Badge tone="warn">Behind</Badge> : null}
                     </span>
                   </td>
-                  <td className="tnum px-3 py-3 text-right text-fg-muted">{money(r.annualCents, { cents: false })}</td>
-                  <td className="tnum px-3 py-3 text-right font-semibold text-fg">{money(r.ytdActualCents, { cents: false })}</td>
+                  <td className="tnum px-3 py-3 text-right text-fg-muted">
+                    {money(r.annualCents, { cents: false })}
+                  </td>
+                  <td className="tnum px-3 py-3 text-right font-semibold text-fg">
+                    {money(r.ytdActualCents, { cents: false })}
+                  </td>
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-3">
                       <div className="relative flex-1">
@@ -156,18 +167,26 @@ function BudgetTable({
                           style={{ left: `${Math.min(100, elapsed * 100)}%` }}
                         />
                       </div>
-                      <span className="tnum w-10 text-right text-footnote text-fg-muted">{Math.round(r.pace * 100)}%</span>
+                      <span className="tnum w-10 text-right text-footnote text-fg-muted">
+                        {Math.round(r.pace * 100)}%
+                      </span>
                     </div>
                   </td>
                   <td
                     className={cn(
                       "tnum px-3 py-3 text-right font-medium",
-                      r.varianceCents > 0 ? "text-ok" : r.varianceCents < 0 ? "text-danger" : "text-fg-muted",
+                      r.varianceCents > 0
+                        ? "text-ok"
+                        : r.varianceCents < 0
+                          ? "text-danger"
+                          : "text-fg-muted",
                     )}
                   >
                     {money(r.varianceCents, { sign: true, cents: false })}
                   </td>
-                  <td className="tnum px-5 py-3 text-right text-fg-muted">{money(r.remainingCents, { cents: false })}</td>
+                  <td className="tnum px-5 py-3 text-right text-fg-muted">
+                    {money(r.remainingCents, { cents: false })}
+                  </td>
                 </tr>
               );
             })}
@@ -175,13 +194,23 @@ function BudgetTable({
           <tfoot>
             <tr className="text-body font-semibold text-fg">
               <td className="px-5 py-3">Total</td>
-              <td className="tnum px-3 py-3 text-right">{money(total.annualCents, { cents: false })}</td>
-              <td className="tnum px-3 py-3 text-right">{money(total.ytdActualCents, { cents: false })}</td>
-              <td className="tnum px-3 py-3 text-right text-footnote text-fg-muted">{Math.round(total.pace * 100)}%</td>
+              <td className="tnum px-3 py-3 text-right">
+                {money(total.annualCents, { cents: false })}
+              </td>
+              <td className="tnum px-3 py-3 text-right">
+                {money(total.ytdActualCents, { cents: false })}
+              </td>
+              <td className="tnum px-3 py-3 text-right text-footnote text-fg-muted">
+                {Math.round(total.pace * 100)}%
+              </td>
               <td
                 className={cn(
                   "tnum px-3 py-3 text-right",
-                  total.varianceCents > 0 ? "text-ok" : total.varianceCents < 0 ? "text-danger" : "text-fg-muted",
+                  total.varianceCents > 0
+                    ? "text-ok"
+                    : total.varianceCents < 0
+                      ? "text-danger"
+                      : "text-fg-muted",
                 )}
               >
                 {money(total.varianceCents, { sign: true, cents: false })}

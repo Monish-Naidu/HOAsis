@@ -40,7 +40,11 @@ function reachable(
   const out: OfficeRecipient[] = [];
   for (const seat of seats) {
     // The account's own email wins over the one typed on the roster, as it does for disputes.
-    const email = ((seat.profile_id ? accountEmails.get(seat.profile_id) : null) ?? seat.invited_email ?? "").trim();
+    const email = (
+      (seat.profile_id ? accountEmails.get(seat.profile_id) : null) ??
+      seat.invited_email ??
+      ""
+    ).trim();
     if (!email) continue;
     const key = email.toLowerCase();
     if (seen.has(key)) continue;
@@ -106,7 +110,9 @@ export async function sendOfficeMessageNotice(input: {
     ]);
     if (!association) return result;
 
-    const profileIds = (seats ?? []).map((s) => s.profile_id).filter((id): id is string => Boolean(id));
+    const profileIds = (seats ?? [])
+      .map((s) => s.profile_id)
+      .filter((id): id is string => Boolean(id));
     const { data: profiles } = profileIds.length
       ? await admin.from("profiles").select("id, email").in("id", profileIds)
       : { data: [] as { id: string; email: string | null }[] };

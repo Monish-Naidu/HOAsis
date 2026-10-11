@@ -40,8 +40,9 @@ export async function GET(request: NextRequest) {
       log.error("name lookup failed", { err: error.message });
       return NextResponse.json({ error: error.message, reference: log.requestId }, { status: 500 });
     }
-    const matches = ((data ?? []) as { name: string; city: string | null; state: string | null; slug: string }[])
-      .map((row) => ({ name: row.name, place: placeLabel(row.city, row.state), slug: row.slug }));
+    const matches = (
+      (data ?? []) as { name: string; city: string | null; state: string | null; slug: string }[]
+    ).map((row) => ({ name: row.name, place: placeLabel(row.city, row.state), slug: row.slug }));
     return NextResponse.json({ matches });
   }
   const { data, error } = code

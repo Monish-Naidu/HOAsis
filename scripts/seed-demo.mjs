@@ -56,7 +56,9 @@ function projectRef(url) {
   }
 }
 
-const namedRef = (process.env.TEST_RESET_PROJECT_REF ?? env.TEST_RESET_PROJECT_REF ?? "").trim().toLowerCase();
+const namedRef = (process.env.TEST_RESET_PROJECT_REF ?? env.TEST_RESET_PROJECT_REF ?? "")
+  .trim()
+  .toLowerCase();
 const actualRef = projectRef(env.NEXT_PUBLIC_SUPABASE_URL);
 if (!namedRef) {
   console.error(
@@ -80,7 +82,8 @@ const anon = () =>
   });
 
 const PASSWORD =
-  process.env.SEED_PASSWORD ?? `Expresshoa-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8)}`;
+  process.env.SEED_PASSWORD ??
+  `Expresshoa-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const OWNER = "monishnaidu18@gmail.com";
 const plus = (tag) => OWNER.replace("@", `+${tag}@`);
@@ -92,10 +95,26 @@ const today = iso(new Date());
 
 /** Rows an association did not own, in child-before-parent order. */
 const ORPHAN_TABLES = [
-  "payment_allocations", "payments", "ledger_entries", "charges", "bank_accounts",
-  "votes", "ballot_options", "ballots", "meetings", "requests", "documents", "posts",
-  "announcements", "vendors", "amenities", "email_log", "email_optouts",
-  "setup_dismissals", "memberships", "units",
+  "payment_allocations",
+  "payments",
+  "ledger_entries",
+  "charges",
+  "bank_accounts",
+  "votes",
+  "ballot_options",
+  "ballots",
+  "meetings",
+  "requests",
+  "documents",
+  "posts",
+  "announcements",
+  "vendors",
+  "amenities",
+  "email_log",
+  "email_optouts",
+  "setup_dismissals",
+  "memberships",
+  "units",
 ];
 
 /**
@@ -110,7 +129,9 @@ async function refuseNextToLiveData() {
     .or("billing_subscription_id.not.is.null,stripe_charges_enabled.eq.true")
     .limit(1);
   if (error) {
-    console.error(`Refusing: could not check for live associations (${error.message}). Nothing was touched.`);
+    console.error(
+      `Refusing: could not check for live associations (${error.message}). Nothing was touched.`,
+    );
     process.exit(1);
   }
   if (data && data.length > 0) {
@@ -294,14 +315,30 @@ const OAKVIEW = {
     "The board moved our books and notices here. Statements, payments and requests all live in one place now; if something looks off, reply to this and we will sort it out.",
   people: [
     { name: "Monish Naidu", email: OWNER, unit: "1", address: "1 Oakview Ct" },
-    { name: "Priya Sharma", email: plus("priya"), unit: "2", role: "treasurer", capabilities: ["finances", "vendors"] },
+    {
+      name: "Priya Sharma",
+      email: plus("priya"),
+      unit: "2",
+      role: "treasurer",
+      capabilities: ["finances", "vendors"],
+    },
     { name: "Jordan Lee", email: plus("jordan"), unit: "3" },
     { name: "Sofia Alvarez", email: plus("sofia"), unit: "4" },
     { name: "Ethan Park", email: plus("ethan"), unit: "5" },
   ],
   vendors: [
-    { name: "Evergreen Grounds", service: "Landscaping", default_category: "landscaping", ach_enabled: true },
-    { name: "Cascade Pool Care", service: "Pool maintenance", default_category: "amenities", ach_enabled: false },
+    {
+      name: "Evergreen Grounds",
+      service: "Landscaping",
+      default_category: "landscaping",
+      ach_enabled: true,
+    },
+    {
+      name: "Cascade Pool Care",
+      service: "Pool maintenance",
+      default_category: "amenities",
+      ach_enabled: false,
+    },
   ],
 };
 
@@ -329,7 +366,12 @@ const CEDAR = {
   ],
   emptyUnits: ["4", "5", "6", "7", "8", "9", "10", "11", "12"],
   vendors: [
-    { name: "Northwest Trail Works", service: "Trail upkeep", default_category: "landscaping", ach_enabled: true },
+    {
+      name: "Northwest Trail Works",
+      service: "Trail upkeep",
+      default_category: "landscaping",
+      ach_enabled: true,
+    },
   ],
 };
 

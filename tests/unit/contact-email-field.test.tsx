@@ -9,7 +9,13 @@ import type { ReactNode } from "react";
  */
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/settings",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -17,7 +23,9 @@ vi.mock("next/navigation", () => ({
 const { ToastProvider } = await import("@/components/app/toast");
 const { ContactEmailRow } = await import("@/app/board/settings/settings-screen");
 
-const inToasts = ({ children }: { children: ReactNode }) => <ToastProvider>{children}</ToastProvider>;
+const inToasts = ({ children }: { children: ReactNode }) => (
+  <ToastProvider>{children}</ToastProvider>
+);
 
 describe("ContactEmailRow", () => {
   it("refuses an address that does not look right and writes nothing", async () => {

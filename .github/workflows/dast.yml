@@ -1,0 +1,38 @@
+name: dynamic security scan
+
+on:
+  schedule:
+    - cron: "41 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Start the demo
+        run: |
+          pnpm start -p 3101 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:3101/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The local demo did not become ready."
+          exit 1
+      - name: Scan the running demo
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: http://localhost:3101

@@ -37,7 +37,11 @@ describe("with no request", () => {
       ["Set up a new association", "/start"],
     ]);
     expect(screen.getByText(SIGNED_IN)).toBeInTheDocument();
-    expect(screen.getByText(/They may have used a different email. Ask them to change it to pat@example.com/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /They may have used a different email. Ask them to change it to pat@example.com/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("signs out", async () => {
@@ -49,18 +53,31 @@ describe("with no request", () => {
 
 describe("waiting on a board", () => {
   beforeEach(() => {
-    requests = [{ status: "pending", name: "Maple Ridge", unitLabel: "Lot 7", createdAt: "2026-08-18T10:00:00Z" }];
+    requests = [
+      {
+        status: "pending",
+        name: "Maple Ridge",
+        unitLabel: "Lot 7",
+        createdAt: "2026-08-18T10:00:00Z",
+      },
+    ];
   });
 
   it("names the board, the home and the email, and has a way out", async () => {
     render(<NoAssociationYet />);
 
-    expect(screen.getByRole("heading", { name: "Waiting on the board of Maple Ridge" })).toBeInTheDocument();
     expect(
-      screen.getByText(/The board checks that Lot 7 is yours and\s+lets you in\. We will email pat@example\.com when they do\./),
+      screen.getByRole("heading", { name: "Waiting on the board of Maple Ridge" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /The board checks that Lot 7 is yours and\s+lets you in\. We will email pat@example\.com when they do\./,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText(SIGNED_IN)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Set up a new association" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Set up a new association" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(signOut).toHaveBeenCalled();
   });
@@ -68,15 +85,29 @@ describe("waiting on a board", () => {
 
 describe("declined", () => {
   beforeEach(() => {
-    requests = [{ status: "declined", name: "Maple Ridge", unitLabel: "Lot 7", createdAt: "2026-08-18T10:00:00Z" }];
+    requests = [
+      {
+        status: "declined",
+        name: "Maple Ridge",
+        unitLabel: "Lot 7",
+        createdAt: "2026-08-18T10:00:00Z",
+      },
+    ];
   });
 
   it("says so plainly, offers the code again, and does not push setup", () => {
     render(<NoAssociationYet />);
 
-    expect(screen.getByRole("heading", { name: "The board of Maple Ridge did not add your home" })).toBeInTheDocument();
-    expect(screen.getByText("If that is a mistake, talk to a board member, then ask again.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ask again with the join code" })).toHaveAttribute("href", "/join");
+    expect(
+      screen.getByRole("heading", { name: "The board of Maple Ridge did not add your home" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("If that is a mistake, talk to a board member, then ask again."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ask again with the join code" })).toHaveAttribute(
+      "href",
+      "/join",
+    );
     expect(screen.queryByRole("link", { name: /Set up/ })).not.toBeInTheDocument();
     expect(screen.getByText(SIGNED_IN)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();

@@ -36,16 +36,18 @@ describe("outcomeLine", () => {
     expect(outcomeLine({ ...none, already: 12, dryRun: true })).toBe(
       "0 households would receive this, 12 already sent in the last hour",
     );
-    expect(outcomeLine({ ...none, sent: 3, already: 12, skipped: 2, failed: 1, dryRun: false })).toBe(
-      "3 emails sent, 12 already sent in the last hour, 2 skipped, 1 failed",
-    );
+    expect(
+      outcomeLine({ ...none, sent: 3, already: 12, skipped: 2, failed: 1, dryRun: false }),
+    ).toBe("3 emails sent, 12 already sent in the last hour, 2 skipped, 1 failed");
   });
 
   it("says nothing about it when nobody was, or the answer has no such count", () => {
     expect(outcomeLine({ ...none, sent: 14, already: 0, dryRun: true })).toBe(
       "14 households would receive this",
     );
-    expect(outcomeLine({ ...none, sent: 14, skipped: 1, dryRun: false })).toBe("14 emails sent, 1 skipped");
+    expect(outcomeLine({ ...none, sent: 14, skipped: 1, dryRun: false })).toBe(
+      "14 emails sent, 1 skipped",
+    );
   });
 });
 
@@ -79,7 +81,14 @@ describe("the dues email card", () => {
       async () =>
         ({
           ok: true,
-          json: async () => ({ sent: 0, failed: 0, skipped: 0, already: 12, remaining: 0, errors: [] }),
+          json: async () => ({
+            sent: 0,
+            failed: 0,
+            skipped: 0,
+            already: 12,
+            remaining: 0,
+            errors: [],
+          }),
         }) as Response,
     );
     vi.stubGlobal("fetch", fetched);

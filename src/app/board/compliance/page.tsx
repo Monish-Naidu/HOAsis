@@ -12,7 +12,17 @@ import {
   Info,
   Scale,
 } from "lucide-react";
-import { Badge, Button, ButtonLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  CardHeader,
+  EmptyState,
+  Meter,
+  PageHeader,
+  Stat,
+} from "@/components/ui/primitives";
 import { interestSummary } from "@/lib/metrics";
 import { complianceRegister } from "@/lib/compliance";
 import type { ObligationCadence } from "@/lib/data/obligations";
@@ -49,7 +59,6 @@ const statusMeta: Record<
   "in-progress": { tone: "info", label: "In progress", icon: CircleDot },
 };
 
-
 export default function BoardCompliance() {
   const { community, updateSettings } = useAppState();
   const { notify } = useToast();
@@ -79,7 +88,9 @@ export default function BoardCompliance() {
     {
       label: "Last full study",
       value: study ? formatDate(study.updatedDate, "medium") : "Not on file",
-      note: study ? study.name.replace(/^Reserve Study,?\s*/i, "") || "On file" : "Nothing uploaded",
+      note: study
+        ? study.name.replace(/^Reserve Study,?\s*/i, "") || "On file"
+        : "Nothing uploaded",
     },
     {
       label: "Components tracked",
@@ -160,7 +171,7 @@ export default function BoardCompliance() {
           <Card>
             <CardHeader
               title="Obligations"
-              
+
               icon={<Scale className="size-4" />}
             />
             {ordered.map((item) => {
@@ -210,9 +221,7 @@ export default function BoardCompliance() {
                           {relativeDays(item.dueDate)}
                         </p>
                       ) : item.clockDays ? (
-                        <p className="text-footnote text-fg-subtle">
-                          {item.clockDays} day clock
-                        </p>
+                        <p className="text-footnote text-fg-subtle">{item.clockDays} day clock</p>
                       ) : null}
                     </div>
                     <ChevronDown className="mt-1 size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
@@ -226,11 +235,7 @@ export default function BoardCompliance() {
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {item.href ? (
-                        <ButtonLink
-                          href={item.href}
-                          variant="primary"
-                          size="sm"
-                        >
+                        <ButtonLink href={item.href} variant="primary" size="sm">
                           Open the screen that holds it
                           <ArrowRight className="size-3.5" />
                         </ButtonLink>
@@ -243,7 +248,8 @@ export default function BoardCompliance() {
                           Read where this comes from
                         </Link>
                       ) : null}
-                      {item.cadence === "on-request" || item.cadence === "ongoing" ? null : item.doneOn ? (
+                      {item.cadence === "on-request" ||
+                      item.cadence === "ongoing" ? null : item.doneOn ? (
                         <span className="inline-flex h-8 items-center gap-2 text-footnote text-fg-muted">
                           Done {formatDate(item.doneOn, "long")}
                           <button
@@ -255,7 +261,11 @@ export default function BoardCompliance() {
                           </button>
                         </span>
                       ) : (
-                        <Button variant="secondary" size="sm" onClick={() => markDone(item.key, item.label)}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => markDone(item.key, item.label)}
+                        >
                           <CheckCircle2 className="size-3.5" />
                           Mark done
                         </Button>
@@ -274,10 +284,7 @@ export default function BoardCompliance() {
               own. An association with no study should be told that plainly,
               because it is the finding rather than an empty panel. */}
           <Card>
-            <CardHeader
-              title="Reserve study"
-              icon={<GraduationCap className="size-4" />}
-            />
+            <CardHeader title="Reserve study" icon={<GraduationCap className="size-4" />} />
             {funding.measurable ? (
               <>
                 <div className="space-y-3 px-5 py-4">
@@ -294,7 +301,9 @@ export default function BoardCompliance() {
                 <div className="border-t border-border px-5 py-4">
                   <Meter
                     value={funding.percent}
-                    tone={funding.percent >= 0.7 ? "ok" : funding.percent >= 0.3 ? "warn" : "danger"}
+                    tone={
+                      funding.percent >= 0.7 ? "ok" : funding.percent >= 0.3 ? "warn" : "danger"
+                    }
                     aria-label={`Reserves ${Math.round(funding.percent * 100)} percent funded`}
                   />
                   <p className="mt-2 text-footnote text-fg-muted">
@@ -316,10 +325,7 @@ export default function BoardCompliance() {
               not assume the general rows carry the same weight as a cited
               one. */}
           <Card>
-            <CardHeader
-              title="Where these come from"
-              icon={<Info className="size-4" />}
-            />
+            <CardHeader title="Where these come from" icon={<Info className="size-4" />} />
             <div className="space-y-3 px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <span className="text-body text-fg">With a section, from your state guide</span>

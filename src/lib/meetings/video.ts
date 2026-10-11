@@ -11,7 +11,7 @@ import type { Meeting } from "@/lib/types";
  * with `videoRoom`, which wins over the derivation.
  */
 
-export const VIDEO_DOMAIN = "meet.jit.si";
+const VIDEO_DOMAIN = "meet.jit.si";
 
 /** Mixed into the hash so a room is not the visible ids alone. */
 const ROOM_SALT = "yourhoasis-video-2026";

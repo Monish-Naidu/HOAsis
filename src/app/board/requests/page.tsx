@@ -73,7 +73,8 @@ function RequestsScreen() {
   const chipCounts = requestFilterCounts(allGrouped, step, type);
   const grouped = applyRequestFilters(allGrouped, step, type);
   const openCount = grouped.decision.length + grouped.scheduling.length + grouped.progress.length;
-  const anyOpen = allGrouped.decision.length + allGrouped.scheduling.length + allGrouped.progress.length > 0;
+  const anyOpen =
+    allGrouped.decision.length + allGrouped.scheduling.length + allGrouped.progress.length > 0;
   // Denying is the one answer an owner cannot undo, so it asks once.
   const [denying, setDenying] = useState<string | null>(null);
   // Why, in the board's words. The owner is told this, so it is required.
@@ -95,7 +96,13 @@ function RequestsScreen() {
   }
 
   // Said only once the decision is saved: a refused write must not read as done.
-  async function decide(r: HomeRequest, status: HomeRequest["status"], note: string, said: string, tone?: "warn") {
+  async function decide(
+    r: HomeRequest,
+    status: HomeRequest["status"],
+    note: string,
+    said: string,
+    tone?: "warn",
+  ) {
     if (saving) return false;
     setSaving(r.id);
     const ok = await updateRequestStatus(r.id, status, note);
@@ -147,7 +154,14 @@ function RequestsScreen() {
       return (
         <>
           {r.status !== "in-review" && !(r.workOrder && !r.workOrder.completedOn) ? (
-            <Button variant="ghost" size="sm" onClick={() => { stopActing(); setActing({ id: r.id, what: "schedule" }); }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                stopActing();
+                setActing({ id: r.id, what: "schedule" });
+              }}
+            >
               Schedule it
             </Button>
           ) : null}
@@ -155,7 +169,10 @@ function RequestsScreen() {
             variant={only ? "primary" : "secondary"}
             size="sm"
             disabled={saving === r.id}
-            onClick={() => { stopActing(); setActing({ id: r.id, what: "fix" }); }}
+            onClick={() => {
+              stopActing();
+              setActing({ id: r.id, what: "fix" });
+            }}
           >
             Mark fixed
           </Button>
@@ -187,7 +204,14 @@ function RequestsScreen() {
             variant="ghost"
             size="sm"
             disabled={saving === r.id}
-            onClick={() => void decide(r, "in-review", "The board is reviewing this request.", `${r.reference} is under review`)}
+            onClick={() =>
+              void decide(
+                r,
+                "in-review",
+                "The board is reviewing this request.",
+                `${r.reference} is under review`,
+              )
+            }
           >
             Start review
           </Button>
@@ -198,7 +222,9 @@ function RequestsScreen() {
           variant={only ? "primary" : "secondary"}
           size="sm"
           disabled={saving === r.id}
-          onClick={() => void decide(r, "approved", "Approved by the board.", `Approved: ${r.title}`)}
+          onClick={() =>
+            void decide(r, "approved", "Approved by the board.", `Approved: ${r.title}`)
+          }
         >
           Approve
         </Button>
@@ -233,12 +259,17 @@ function RequestsScreen() {
         <div className="min-w-0 flex-1">
           <p className="text-body font-medium leading-snug text-fg">{r.title}</p>
           <p className="mt-0.5 text-footnote text-fg-muted">
-            {r.ownerName} · {homeLabel(community, r.unit)} · <span className="whitespace-nowrap">{formatDate(r.submittedDate)}</span>
+            {r.ownerName} · {homeLabel(community, r.unit)} ·{" "}
+            <span className="whitespace-nowrap">{formatDate(r.submittedDate)}</span>
           </p>
-          <p className="mt-1 line-clamp-2 text-footnote leading-relaxed text-fg-muted">{r.summary}</p>
+          <p className="mt-1 line-clamp-2 text-footnote leading-relaxed text-fg-muted">
+            {r.summary}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge tone={requestStatusTone(r)}>{requestStatusLabel(r)}</Badge>
-            {replied ? <span className="text-footnote text-fg-muted">Replied {formatDate(replied)}</span> : null}
+            {replied ? (
+              <span className="text-footnote text-fg-muted">Replied {formatDate(replied)}</span>
+            ) : null}
             {daysLeft !== null && !isMaintenanceRequest(r) ? (
               <Badge tone={daysLeft <= 5 ? "warn" : "neutral"}>
                 {daysLeft === 0 ? "Answer today" : `${pluralize(daysLeft, "day")} to answer`}
@@ -271,7 +302,11 @@ function RequestsScreen() {
                 className={cn(fieldClass, "mt-1.5", reasonError && "border-danger")}
               />
               {reasonError ? (
-                <p id={`deny-${r.id}-error`} role="alert" className="mt-1 text-footnote text-danger">
+                <p
+                  id={`deny-${r.id}-error`}
+                  role="alert"
+                  className="mt-1 text-footnote text-danger"
+                >
                   Give the owner a reason before you deny it.
                 </p>
               ) : null}
@@ -314,7 +349,10 @@ function RequestsScreen() {
                 void schedule(r);
               }}
             >
-              <label htmlFor={`schedule-${r.id}`} className="text-footnote font-semibold text-fg-muted">
+              <label
+                htmlFor={`schedule-${r.id}`}
+                className="text-footnote font-semibold text-fg-muted"
+              >
                 Date of the work (optional). The owner is told.
               </label>
               <input
@@ -356,7 +394,8 @@ function RequestsScreen() {
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-body font-medium leading-snug text-fg">{r.title}</p>
           <p className="text-footnote text-fg-muted">
-            {r.ownerName} · {homeLabel(community, r.unit)} · <span className="whitespace-nowrap">{formatDate(r.submittedDate)}</span>
+            {r.ownerName} · {homeLabel(community, r.unit)} ·{" "}
+            <span className="whitespace-nowrap">{formatDate(r.submittedDate)}</span>
           </p>
           <RequestDetail request={r} canChange={canChange} onReply={reply} />
         </div>
@@ -368,11 +407,11 @@ function RequestsScreen() {
   if (showClosed) {
     return (
       <>
-        <PageHeader
-          title="Requests"
-          description="Every request that has been closed."
-        />
-        <Link href="/board/requests" className="mb-4 inline-flex text-footnote font-medium text-primary hover:underline">
+        <PageHeader title="Requests" description="Every request that has been closed." />
+        <Link
+          href="/board/requests"
+          className="mb-4 inline-flex text-footnote font-medium text-primary hover:underline"
+        >
           Back to open requests
         </Link>
         <Card>
@@ -407,13 +446,19 @@ function RequestsScreen() {
             label="Show requests that are"
             value={step}
             onChange={setStep}
-            options={REQUEST_STEPS.map((k) => ({ value: k, label: REQUEST_STEP_LABEL[k], count: chipCounts.steps[k] }))}
+            options={REQUEST_STEPS.map((k) => ({
+              value: k,
+              label: REQUEST_STEP_LABEL[k],
+              count: chipCounts.steps[k],
+            }))}
           />
           <Segmented
             label="Kind of request"
             value={type}
             onChange={setType}
-            options={REQUEST_TYPES.filter((k) => k === "all" || k === type || chipCounts.types[k] > 0).map((k) => ({
+            options={REQUEST_TYPES.filter(
+              (k) => k === "all" || k === type || chipCounts.types[k] > 0,
+            ).map((k) => ({
               value: k,
               label: REQUEST_TYPE_LABEL[k],
               count: chipCounts.types[k],
@@ -422,7 +467,9 @@ function RequestsScreen() {
         </div>
       ) : null}
 
-      {requests.length > 0 && anyOpen && openCount + grouped.done.length + grouped.older.length === 0 ? (
+      {requests.length > 0 &&
+      anyOpen &&
+      openCount + grouped.done.length + grouped.older.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Inbox className="size-5" />}
@@ -462,7 +509,10 @@ function RequestsScreen() {
                 {grouped.older.length ? (
                   <>
                     {", "}
-                    <Link href="/board/requests?status=closed" className="text-primary hover:underline">
+                    <Link
+                      href="/board/requests?status=closed"
+                      className="text-primary hover:underline"
+                    >
                       {grouped.older.length} older in history
                     </Link>
                   </>

@@ -45,7 +45,11 @@ describe("what a file becomes", () => {
   });
 
   it("keeps a demo upload board only until somebody decides", () => {
-    const record = toDocumentRecord({ name: "Reserve study.pdf", size: 2048 }, "doc-1", "2026-08-20");
+    const record = toDocumentRecord(
+      { name: "Reserve study.pdf", size: 2048 },
+      "doc-1",
+      "2026-08-20",
+    );
     expect(record).toMatchObject({
       id: "doc-1",
       name: "Reserve study",

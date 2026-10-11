@@ -5,7 +5,16 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Pin, Send } from "lucide-react";
 import type { Announcement } from "@/lib/types";
-import { Badge, Button, Card, CardHeader, Checkbox, PageHeader, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  Checkbox,
+  PageHeader,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { DuesMailer } from "@/components/app/dues-mailer";
 import { useToast } from "@/components/app/toast";
@@ -189,4 +198,3 @@ function AnnouncementsManager({
     </Card>
   );
 }
-

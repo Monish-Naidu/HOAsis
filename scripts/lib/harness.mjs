@@ -22,7 +22,8 @@ export const day = (offset) => {
   return d.toISOString().slice(0, 10);
 };
 
-const lineOf = (r) => `${r.passed ? "  ok  " : "FAIL  "}${r.name}${r.detail ? `  (${r.detail})` : ""}`;
+const lineOf = (r) =>
+  `${r.passed ? "  ok  " : "FAIL  "}${r.name}${r.detail ? `  (${r.detail})` : ""}`;
 
 /**
  * @param {object} opts
@@ -48,8 +49,13 @@ export function createHarness({
 }) {
   const env = loadEnv();
   const authOptions = { auth: { persistSession: false } };
-  const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, authOptions);
-  const anon = () => createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, authOptions);
+  const admin = createClient(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.SUPABASE_SERVICE_ROLE_KEY,
+    authOptions,
+  );
+  const anon = () =>
+    createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, authOptions);
 
   const stamp = Date.now();
   const PASSWORD = passwordPrefix + Math.random().toString(36).slice(2) + "A1";
@@ -64,14 +70,23 @@ export function createHarness({
   /** Ids to remove at the end. A script may add its own lists (verify-community-life adds files). */
   const cleanup = { users: [], associations: [] };
 
-  async function makeUser(who, email = `${who}-${emailTag ? `${emailTag}-` : ""}${stamp}@example.com`) {
+  async function makeUser(
+    who,
+    email = `${who}-${emailTag ? `${emailTag}-` : ""}${stamp}@example.com`,
+  ) {
     const { data, error } = await admin.auth.admin.createUser({
-      email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: who },
+      email,
+      password: PASSWORD,
+      email_confirm: true,
+      user_metadata: { full_name: who },
     });
     if (error) throw new Error(`${who}: ${error.message}`);
     cleanup.users.push(data.user.id);
     const client = anon();
-    const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email,
+      password: PASSWORD,
+    });
     if (signInError && strictSignIn) throw new Error(`sign in ${who}: ${signInError.message}`);
     const claimed = claimSeats ? (await client.rpc("claim_my_seats")).data : undefined;
     return { client, id: data.user.id, email, name: who, claimed };
@@ -81,8 +96,11 @@ export function createHarness({
   async function cleanupAll() {
     for (const id of cleanup.associations) {
       if (demotePresident) {
-        await admin.from("memberships").update({ role: "resident" })
-          .eq("association_id", id).eq("role", "president");
+        await admin
+          .from("memberships")
+          .update({ role: "resident" })
+          .eq("association_id", id)
+          .eq("role", "president");
       }
       // A cleanup that fails leaves this association in the live project,
       // where the dues cron goes on billing it. So it fails the run.
@@ -111,5 +129,17 @@ export function createHarness({
     process.exit(failures ? 1 : 0);
   }
 
-  return { env, admin, anon, stamp, PASSWORD, check, results, cleanup, makeUser, cleanupAll, report };
+  return {
+    env,
+    admin,
+    anon,
+    stamp,
+    PASSWORD,
+    check,
+    results,
+    cleanup,
+    makeUser,
+    cleanupAll,
+    report,
+  };
 }

@@ -30,16 +30,16 @@ export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
   // apart, in the button and in the list.
   const twins = new Set(
     communities
-      .filter((c, i) => communities.some((o, j) => j !== i && sameAssociationName(o.label, c.label)))
+      .filter((c, i) =>
+        communities.some((o, j) => j !== i && sameAssociationName(o.label, c.label)),
+      )
       .map((c) => c.id),
   );
   const activePlace = twins.has(community.id)
     ? (communities.find((c) => c.id === community.id)?.place ?? "")
     : "";
 
-  const ink = onPhoto
-    ? "text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]"
-    : "text-fg";
+  const ink = onPhoto ? "text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]" : "text-fg";
 
   if (communities.length < 2) {
     return (
@@ -82,72 +82,90 @@ export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
       >
         {/* Under sm the bar has no room for a name: the building stands in,
             and the photo below says whose it is. */}
-        <Building2 className={cn("size-4 shrink-0 sm:hidden", onPhoto ? "text-white/85" : "text-fg-muted")} aria-hidden />
+        <Building2
+          className={cn("size-4 shrink-0 sm:hidden", onPhoto ? "text-white/85" : "text-fg-muted")}
+          aria-hidden
+        />
         <span className="hidden truncate sm:inline">{settings.displayName}</span>
         {activePlace ? (
-          <span className={cn("hidden truncate text-footnote font-normal sm:inline", onPhoto ? "text-white/80" : "text-fg-subtle")}>{activePlace}</span>
+          <span
+            className={cn(
+              "hidden truncate text-footnote font-normal sm:inline",
+              onPhoto ? "text-white/80" : "text-fg-subtle",
+            )}
+          >
+            {activePlace}
+          </span>
         ) : null}
-        <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", onPhoto ? "text-white/80" : "text-fg-subtle", open && "rotate-180")} />
+        <ChevronDown
+          className={cn(
+            "size-3.5 shrink-0 transition-transform",
+            onPhoto ? "text-white/80" : "text-fg-subtle",
+            open && "rotate-180",
+          )}
+        />
       </button>
 
       {open && place
         ? createPortal(
-        <>
-          <button
-            type="button"
-            aria-label="Close"
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <ul
-            role="listbox"
-            style={{ left: place.left, top: place.top }}
-            className="fixed z-50 w-64 max-w-[calc(100vw-1rem)] overflow-hidden rounded-card border border-border bg-surface shadow-float"
-          >
-            {communities.map((option) => (
-              <li key={option.id}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={option.id === community.id}
-                  onClick={() => {
-                    setOpen(false);
-                    if (option.id === community.id) return;
-                    // A real member switches in place and lands on the other
-                    // association's dashboard. A demo seat is a different
-                    // person, so that one goes back to the door. Sending both
-                    // to the sign-in page left a President staring at a form
-                    // and a demo chip that did nothing.
-                    if (setCommunity(option.id) === "switched") {
-                      router.push(pathname.startsWith("/resident") ? "/resident" : "/board");
-                    } else {
-                      router.push("/signin");
-                    }
-                  }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-body transition-colors hover:bg-surface-2"
-                >
-                  <Building2 className="size-3.5 shrink-0 text-fg-subtle" />
-                  <span className="min-w-0 flex-1 truncate font-medium text-fg">
-                    {option.label}
-                    {twins.has(option.id) && option.place ? (
-                      <span className="block truncate text-footnote font-normal text-fg-subtle">{option.place}</span>
-                    ) : null}
-                  </span>
-                  {option.id === community.id ? (
-                    <Check className="size-3.5 shrink-0 text-ok" />
-                  ) : null}
-                </button>
-              </li>
-            ))}
-            {!isRemote ? (
-              <li className="border-t border-border px-3 py-2">
-                <p className="text-footnote leading-snug text-fg-subtle">
-                  Switching signs you out. Accounts belong to one association.
-                </p>
-              </li>
-            ) : null}
-          </ul>
-        </>,
+            <>
+              <button
+                type="button"
+                aria-label="Close"
+                className="fixed inset-0 z-40 cursor-default"
+                onClick={() => setOpen(false)}
+              />
+              <ul
+                role="listbox"
+                style={{ left: place.left, top: place.top }}
+                className="fixed z-50 w-64 max-w-[calc(100vw-1rem)] overflow-hidden rounded-card border border-border bg-surface shadow-float"
+              >
+                {communities.map((option) => (
+                  <li key={option.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={option.id === community.id}
+                      onClick={() => {
+                        setOpen(false);
+                        if (option.id === community.id) return;
+                        // A real member switches in place and lands on the other
+                        // association's dashboard. A demo seat is a different
+                        // person, so that one goes back to the door. Sending both
+                        // to the sign-in page left a President staring at a form
+                        // and a demo chip that did nothing.
+                        if (setCommunity(option.id) === "switched") {
+                          router.push(pathname.startsWith("/resident") ? "/resident" : "/board");
+                        } else {
+                          router.push("/signin");
+                        }
+                      }}
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-body transition-colors hover:bg-surface-2"
+                    >
+                      <Building2 className="size-3.5 shrink-0 text-fg-subtle" />
+                      <span className="min-w-0 flex-1 truncate font-medium text-fg">
+                        {option.label}
+                        {twins.has(option.id) && option.place ? (
+                          <span className="block truncate text-footnote font-normal text-fg-subtle">
+                            {option.place}
+                          </span>
+                        ) : null}
+                      </span>
+                      {option.id === community.id ? (
+                        <Check className="size-3.5 shrink-0 text-ok" />
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+                {!isRemote ? (
+                  <li className="border-t border-border px-3 py-2">
+                    <p className="text-footnote leading-snug text-fg-subtle">
+                      Switching signs you out. Accounts belong to one association.
+                    </p>
+                  </li>
+                ) : null}
+              </ul>
+            </>,
             document.body,
           )
         : null}
@@ -222,13 +240,13 @@ export function CommunityHero({
           ? "h-28"
           : short
             ? "h-36 lg:h-40"
-          : toolbar && overlay
-            ? "h-44 sm:h-48 lg:h-64"
-            : toolbar
-              ? "h-48 sm:h-56 lg:h-64"
-              : overlay
-                ? "h-64 sm:h-72"
-                : "h-44 sm:h-56",
+            : toolbar && overlay
+              ? "h-44 sm:h-48 lg:h-64"
+              : toolbar
+                ? "h-48 sm:h-56 lg:h-64"
+                : overlay
+                  ? "h-64 sm:h-72"
+                  : "h-44 sm:h-56",
         className,
       )}
       aria-label={settings.displayName}
@@ -404,9 +422,7 @@ function CoverPhotoButton({ corner = "top" }: { corner?: "top" | "bottom" }) {
         type="button"
         onClick={() => input.current?.click()}
         disabled={busy}
-        aria-label={
-          community.settings.photoUrl ? "Change the cover photo" : "Add a cover photo"
-        }
+        aria-label={community.settings.photoUrl ? "Change the cover photo" : "Add a cover photo"}
         title={community.settings.photoUrl ? "Change the cover photo" : "Add a cover photo"}
         className={cn(
           "absolute right-4 z-10 flex size-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65 disabled:opacity-60 sm:right-6",
@@ -512,8 +528,7 @@ export function PhotoStrip({
   const pathname = usePathname();
   if (pathname === "/board" || pathname === "/resident") return null;
   const line =
-    subtitle ??
-    `${community.association.addressLine} · ${pluralize(homeCount(community), "home")}`;
+    subtitle ?? `${community.association.addressLine} · ${pluralize(homeCount(community), "home")}`;
   return (
     <section
       className={cn(
@@ -535,7 +550,9 @@ export function PhotoStrip({
         <p className="truncate text-headline font-semibold tracking-[-0.015em] text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]">
           {settings.displayName}
         </p>
-        <p className="truncate text-footnote text-white/85 [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]">{line}</p>
+        <p className="truncate text-footnote text-white/85 [text-shadow:0_1px_2px_rgb(0_0_0/0.35)]">
+          {line}
+        </p>
       </div>
     </section>
   );

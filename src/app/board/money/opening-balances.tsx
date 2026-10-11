@@ -10,7 +10,7 @@ import type { BankAccount } from "@/lib/types";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /** The accounts that still have no opening balance line. Derived from the books. */
-export function accountsWithoutOpening(community: Community): BankAccount[] {
+function accountsWithoutOpening(community: Community): BankAccount[] {
   return community.bankAccounts.filter(
     (a) => !community.ledger.some((e) => e.accountId === a.id && e.category === "Opening balance"),
   );
@@ -26,17 +26,30 @@ export function startingBalancesLine(community: Community, stillToSet: number): 
     community.ledger.find((e) => e.accountId === id && e.category === "Opening balance");
   const saved = community.bankAccounts.flatMap((a) => {
     const line = opening(a.id);
-    return line ? [{ kind: a.kind === "operating" ? "operating" : "reserve", cents: line.amountCents, date: line.date }] : [];
+    return line
+      ? [
+          {
+            kind: a.kind === "operating" ? "operating" : "reserve",
+            cents: line.amountCents,
+            date: line.date,
+          },
+        ]
+      : [];
   });
   if (saved.length === 0) return "Starting balances: not set yet";
   const parts = (["operating", "reserve"] as const).flatMap((kind) => {
     const of = saved.filter((r) => r.kind === kind);
     if (of.length === 0) return [];
-    return [{ kind, cents: of.reduce((t, r) => t + r.cents, 0), date: of.map((r) => r.date).sort()[0] }];
+    return [
+      { kind, cents: of.reduce((t, r) => t + r.cents, 0), date: of.map((r) => r.date).sort()[0] },
+    ];
   });
   const sameDay = parts.every((p) => p.date === parts[0].date);
   const body = parts
-    .map((p) => `${money(p.cents, { cents: false })} ${p.kind}${sameDay ? "" : ` as of ${formatDate(p.date)}`}`)
+    .map(
+      (p) =>
+        `${money(p.cents, { cents: false })} ${p.kind}${sameDay ? "" : ` as of ${formatDate(p.date)}`}`,
+    )
     .join(", ");
   const tail = sameDay ? ` as of ${formatDate(parts[0].date)}` : "";
   return `Starting balances: ${body}${tail}${stillToSet ? `, ${pluralize(stillToSet, "account")} still to set` : ""}`;
@@ -63,7 +76,10 @@ export function OpeningBalances() {
   const summary = startingBalancesLine(community, missing.length);
 
   return (
-    <details open={saved.length === 0} className="group mt-6 rounded-card border border-border bg-surface shadow-card">
+    <details
+      open={saved.length === 0}
+      className="group mt-6 rounded-card border border-border bg-surface shadow-card"
+    >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-callout font-medium text-fg transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
         <span>{summary}</span>
         <ChevronDown className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
@@ -75,13 +91,17 @@ export function OpeningBalances() {
         {community.bankAccounts.map((account) => {
           const line = opening(account.id);
           return line ? (
-            <li key={account.id} className="flex items-baseline justify-between gap-3 px-5 py-3 text-footnote">
+            <li
+              key={account.id}
+              className="flex items-baseline justify-between gap-3 px-5 py-3 text-footnote"
+            >
               <span className="font-medium text-fg">
                 {account.name}
                 {account.mask ? ` ••${account.mask}` : ""}
               </span>
               <span className="tnum text-fg-muted">
-                <span className="font-semibold text-fg">{money(line.amountCents)}</span> as of {formatDate(line.date)}
+                <span className="font-semibold text-fg">{money(line.amountCents)}</span> as of{" "}
+                {formatDate(line.date)}
               </span>
             </li>
           ) : (

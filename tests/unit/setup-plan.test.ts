@@ -18,9 +18,7 @@ const base: AssociationProfile = {
 };
 
 const keys = (profile: Partial<AssociationProfile>) =>
-  buildPlan(mehrMeadows, { ...base, ...profile }).phases.flatMap((p) =>
-    p.tasks.map((t) => t.key),
-  );
+  buildPlan(mehrMeadows, { ...base, ...profile }).phases.flatMap((p) => p.tasks.map((t) => t.key));
 
 describe("the plan is built from the answers", () => {
   it("asks a condominium about the building it owns", () => {
@@ -105,9 +103,7 @@ describe("the plan is built from the answers", () => {
 
 describe("the situation card is not a second list", () => {
   it("gives each situation a different title, not a reworded list", () => {
-    const titles = (["builder", "handover", "existing"] as const).map(
-      (o) => portingPlan(o)!.title,
-    );
+    const titles = (["builder", "handover", "existing"] as const).map((o) => portingPlan(o)!.title);
     expect(new Set(titles).size, "two situations got the same plan").toBe(3);
   });
 
@@ -158,7 +154,9 @@ describe("the situation card is not a second list", () => {
       ["existing", "fresh"],
     ] as const) {
       const plan = portingPlan(origin, previously)!;
-      const words = [plan.lede, ...plan.steps.map((s) => `${s.title} ${s.detail}`)].join(" ").toLowerCase();
+      const words = [plan.lede, ...plan.steps.map((s) => `${s.title} ${s.detail}`)]
+        .join(" ")
+        .toLowerCase();
       expect(words, `${origin} mentions a migration`).not.toMatch(
         /spreadsheet|csv|import|management company/,
       );
@@ -196,7 +194,10 @@ function draft(patch: Partial<CommunityDraft> = {}): CommunityDraft {
 }
 
 /** A signed in association: a profile, a Stripe flag, and only the founder seated. */
-function signedIn(patch: (c: Community) => void = () => {}, d: Partial<CommunityDraft> = {}): Community {
+function signedIn(
+  patch: (c: Community) => void = () => {},
+  d: Partial<CommunityDraft> = {},
+): Community {
   const c = buildCommunity(draft(d), TODAY);
   c.association.stripeChargesEnabled = false;
   c.accounts = c.accounts.filter((a) => a.role !== "resident");
@@ -207,7 +208,9 @@ function signedIn(patch: (c: Community) => void = () => {}, d: Partial<Community
 const planOf = (c: Community, dismissed: string[] = []) =>
   buildPlan(c, profileFromCommunity(c), new Set(dismissed));
 const taskOf = (c: Community, key: string, dismissed: string[] = []) =>
-  planOf(c, dismissed).phases.flatMap((p) => p.tasks).find((t) => t.key === key);
+  planOf(c, dismissed)
+    .phases.flatMap((p) => p.tasks)
+    .find((t) => t.key === key);
 const OPENING = {
   id: "o1",
   date: "2026-10-01",
@@ -270,7 +273,11 @@ describe("add every home and its owner", () => {
   });
 
   it("names the count the way a roster of twelve reads", () => {
-    const households = Array.from({ length: 11 }, (_, i) => ({ name: "", email: "", unit: String(i + 2) }));
+    const households = Array.from({ length: 11 }, (_, i) => ({
+      name: "",
+      email: "",
+      unit: String(i + 2),
+    }));
     const t = taskOf(signedIn(undefined, { households }), "roster")!;
     expect(t.because).toBe("11 of 12 homes have no owner listed.");
   });
@@ -279,14 +286,20 @@ describe("add every home and its owner", () => {
     const c = signedIn(undefined, { origin: "builder", previously: undefined });
     expect(taskOf(c, "roster")!.complete).toBe(true);
     // But the founder alone is not a register.
-    const alone = signedIn((x) => { x.homes = x.homes.slice(0, 1); }, { origin: "builder", previously: undefined });
+    const alone = signedIn(
+      (x) => {
+        x.homes = x.homes.slice(0, 1);
+      },
+      { origin: "builder", previously: undefined },
+    );
     expect(taskOf(alone, "roster")!.complete).toBe(false);
   });
 });
 
 describe("enter what each home owes today", () => {
   it("is shown only for an association that already existed", () => {
-    const has = (d: Partial<CommunityDraft>) => Boolean(taskOf(signedIn(undefined, d), "opening-balances"));
+    const has = (d: Partial<CommunityDraft>) =>
+      Boolean(taskOf(signedIn(undefined, d), "opening-balances"));
     expect(has({ origin: "existing", previously: "platform" })).toBe(true);
     expect(has({ origin: "existing", previously: "manager" })).toBe(true);
     expect(has({ origin: "existing", previously: "fresh" })).toBe(true);
@@ -300,7 +313,9 @@ describe("enter what each home owes today", () => {
 
   it("is done when one opening balance is saved", () => {
     expect(taskOf(signedIn(), "opening-balances")!.complete).toBe(false);
-    const c = signedIn((x) => { x.homeCharges[x.homes[1].id] = [OPENING]; });
+    const c = signedIn((x) => {
+      x.homeCharges[x.homes[1].id] = [OPENING];
+    });
     expect(taskOf(c, "opening-balances")!.complete).toBe(true);
     expect(taskOf(c, "opening-balances")!.because).toBe("1 home with an opening balance saved.");
   });
@@ -315,7 +330,9 @@ describe("enter what each home owes today", () => {
 describe("turn on online payments", () => {
   it("is done only when Stripe charges are enabled", () => {
     expect(taskOf(signedIn(), "payments")!.complete).toBe(false);
-    const started = signedIn((x) => { x.association.stripeAccountId = "acct_1"; });
+    const started = signedIn((x) => {
+      x.association.stripeAccountId = "acct_1";
+    });
     expect(taskOf(started, "payments")!.complete).toBe(false);
     expect(taskOf(started, "payments")!.because).toMatch(/Started, not finished/);
     const live = signedIn((x) => {
@@ -334,15 +351,31 @@ describe("turn on online payments", () => {
     // Homes, owners, invites and the rest being done does not change it.
     const everythingButStripe = signedIn((x) => {
       x.homeCharges[x.homes[1].id] = [OPENING];
-      x.emailLog = [{ id: "e", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z" },
-        { id: "f", to: "dana@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z" }];
+      x.emailLog = [
+        {
+          id: "e",
+          to: "marcus@example.com",
+          category: "invite",
+          subject: "x",
+          sentAt: "2026-10-01T10:00:00Z",
+        },
+        {
+          id: "f",
+          to: "dana@example.com",
+          category: "invite",
+          subject: "x",
+          sentAt: "2026-10-01T10:00:00Z",
+        },
+      ];
       x.homes[3].placeholder = false;
       x.homes[3].members = ["Lee Park"];
     });
     expect(planOf(everythingButStripe).canTakePayments).toBe(false);
     expect(planOf(everythingButStripe).payments.stepsLeft).toBe(1);
 
-    const withStripe = signedIn((x) => { x.association.stripeChargesEnabled = true; });
+    const withStripe = signedIn((x) => {
+      x.association.stripeChargesEnabled = true;
+    });
     expect(planOf(withStripe).canTakePayments).toBe(true);
     expect(planOf(withStripe).payments.headline).toBe("You can take payments");
   });
@@ -388,19 +421,25 @@ describe("check the first bill", () => {
     });
     const t = taskOf(c, "first-bill")!;
     const total = c.homes.length * 25_000 + 6_000;
-    expect(t.because).toContain(`$${(total / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })} across ${c.homes.length} homes, each at what it pays`);
+    expect(t.because).toContain(
+      `$${(total / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })} across ${c.homes.length} homes, each at what it pays`,
+    );
     expect(t.because).not.toContain("per home, billed");
   });
 
   it("is not done with no dues set", () => {
-    const c = signedIn((x) => { x.association.duesCents = 0; });
+    const c = signedIn((x) => {
+      x.association.duesCents = 0;
+    });
     expect(taskOf(c, "first-bill")!.complete).toBe(false);
   });
 });
 
 describe("invite the owners", () => {
   it("is not done with no owners named, and says to add them first", () => {
-    const c = signedIn((x) => { x.homes = x.homes.slice(0, 1); });
+    const c = signedIn((x) => {
+      x.homes = x.homes.slice(0, 1);
+    });
     const t = taskOf(c, "invites")!;
     expect(t.complete).toBe(false);
     expect(t.because).toMatch(/Add every home's owner first/);
@@ -414,14 +453,33 @@ describe("invite the owners", () => {
 
   it("needs every owner with an email invited or signed in, and counts the ones with none", () => {
     const one = signedIn((x) => {
-      x.emailLog = [{ id: "e", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z" }];
+      x.emailLog = [
+        {
+          id: "e",
+          to: "marcus@example.com",
+          category: "invite",
+          subject: "x",
+          sentAt: "2026-10-01T10:00:00Z",
+        },
+      ];
     });
     expect(taskOf(one, "invites")!.complete).toBe(false);
 
     const both = signedIn((x) => {
-      x.emailLog = [{ id: "e", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z" }];
+      x.emailLog = [
+        {
+          id: "e",
+          to: "marcus@example.com",
+          category: "invite",
+          subject: "x",
+          sentAt: "2026-10-01T10:00:00Z",
+        },
+      ];
       // Dana signed in on her own.
-      x.accounts = [...x.accounts, { ...x.accounts[0], id: "a-dana", homeId: x.homes[2].id, role: "resident" }];
+      x.accounts = [
+        ...x.accounts,
+        { ...x.accounts[0], id: "a-dana", homeId: x.homes[2].id, role: "resident" },
+      ];
     });
     const t = taskOf(both, "invites")!;
     expect(t.complete).toBe(true);
@@ -432,15 +490,31 @@ describe("invite the owners", () => {
   it("ignores an invitation that failed to send", () => {
     const c = signedIn((x) => {
       x.emailLog = [
-        { id: "e", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z", error: "bounced" },
-        { id: "f", to: "dana@example.com", category: "invite", subject: "x", sentAt: "2026-10-01T10:00:00Z", error: "bounced" },
+        {
+          id: "e",
+          to: "marcus@example.com",
+          category: "invite",
+          subject: "x",
+          sentAt: "2026-10-01T10:00:00Z",
+          error: "bounced",
+        },
+        {
+          id: "f",
+          to: "dana@example.com",
+          category: "invite",
+          subject: "x",
+          sentAt: "2026-10-01T10:00:00Z",
+          error: "bounced",
+        },
       ];
     });
     expect(taskOf(c, "invites")!.complete).toBe(false);
   });
 
   it("does not count the founder's own sign in as somebody being reached", () => {
-    const c = signedIn((x) => { x.homes = x.homes.map((o, i) => (i === 0 ? o : { ...o, email: "" })); });
+    const c = signedIn((x) => {
+      x.homes = x.homes.map((o, i) => (i === 0 ? o : { ...o, email: "" }));
+    });
     expect(taskOf(c, "invites")!.complete).toBe(false);
   });
 });
@@ -461,21 +535,23 @@ describe("records owners can ask for", () => {
 
   it("promises nothing the product does not do about insurance", () => {
     const t = taskOf(signedIn(), "insurance")!;
-    expect(t.detail).toBe("Carrier, policy number and renewal date, kept where the next board can find them.");
+    expect(t.detail).toBe(
+      "Carrier, policy number and renewal date, kept where the next board can find them.",
+    );
     expect(`${t.detail} ${t.why}`).not.toMatch(/told before it lapses/);
   });
 
   it("asks an association that kept records to enter its study, and a new one to get one", () => {
     expect(taskOf(signedIn(), "reserves")!.label).toBe("Enter your reserve study");
-    expect(taskOf(signedIn(undefined, { origin: "handover", previously: undefined }), "reserves")!.label).toBe(
-      "Enter your reserve study",
-    );
-    expect(taskOf(signedIn(undefined, { origin: "builder", previously: undefined }), "reserves")!.label).toBe(
-      "Get a reserve study",
-    );
-    expect(taskOf(signedIn(undefined, { origin: "existing", previously: "fresh" }), "reserves")!.label).toBe(
-      "Get a reserve study",
-    );
+    expect(
+      taskOf(signedIn(undefined, { origin: "handover", previously: undefined }), "reserves")!.label,
+    ).toBe("Enter your reserve study");
+    expect(
+      taskOf(signedIn(undefined, { origin: "builder", previously: undefined }), "reserves")!.label,
+    ).toBe("Get a reserve study");
+    expect(
+      taskOf(signedIn(undefined, { origin: "existing", previously: "fresh" }), "reserves")!.label,
+    ).toBe("Get a reserve study");
   });
 
   it("says nothing about the Budget page anywhere in the plan while it is off", () => {
@@ -535,7 +611,9 @@ describe("the rest, and what the go-live list held", () => {
 describe("one answer, everywhere", () => {
   it("does not print a payments claim anywhere but from the plan's one line", () => {
     const ui = readFileSync("src/components/app/setup-plan.tsx", "utf8");
-    expect(ui).not.toMatch(/You can already take payments|You can take payments|Dues land here|Start collecting/);
+    expect(ui).not.toMatch(
+      /You can already take payments|You can take payments|Dues land here|Start collecting/,
+    );
   });
 });
 
@@ -566,7 +644,9 @@ describe("each origin gets exactly its own group", () => {
 
   it("an association that already runs itself gets neither group", () => {
     for (const previously of ["platform", "manager"] as const) {
-      const ids = planOf(signedIn(undefined, { origin: "existing", previously })).phases.map((p) => p.id);
+      const ids = planOf(signedIn(undefined, { origin: "existing", previously })).phases.map(
+        (p) => p.id,
+      );
       expect(ids).not.toContain("before-handover");
       expect(ids).not.toContain("before-bank");
     }
@@ -585,7 +665,14 @@ describe("each origin gets exactly its own group", () => {
     expect(done.total).toBe(open.total);
     expect(done.payments.stepsLeft).toBe(open.payments.stepsLeft);
     expect(done.canTakePayments).toBe(false);
-    const all = planOf(c, ["turnover-study", "reserve-check", "unsold-dues", "warranty", "records", "handover-board"]);
+    const all = planOf(c, [
+      "turnover-study",
+      "reserve-check",
+      "unsold-dues",
+      "warranty",
+      "records",
+      "handover-board",
+    ]);
     expect(all.canTakePayments).toBe(false);
   });
 

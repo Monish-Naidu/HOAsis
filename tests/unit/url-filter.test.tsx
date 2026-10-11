@@ -54,7 +54,9 @@ describe("useUrlFilter", () => {
     replace.mockClear();
     const { result } = renderHook(() => useUrlFilter("filter", FILTERS, "all"));
     act(() => result.current[1]("past-due"));
-    expect(replace).toHaveBeenCalledWith("/board/homeowners?q=smith&filter=past-due", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/board/homeowners?q=smith&filter=past-due", {
+      scroll: false,
+    });
     expect(result.current[0]).toBe("past-due");
   });
 

@@ -9,7 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * here, once, and nowhere else. Limits match the bucket's own.
  */
 
-export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 
 export const ATTACHMENT_TYPES = [
   "image/jpeg",
@@ -23,7 +23,11 @@ export const ATTACHMENT_TYPES = [
 export type AttachmentKind = "requests" | "violations";
 
 /** Why a file cannot be attached, in the words the form shows; null when it can. */
-export function attachmentProblem(file: { size: number; type: string; name: string }): string | null {
+export function attachmentProblem(file: {
+  size: number;
+  type: string;
+  name: string;
+}): string | null {
   if (!(ATTACHMENT_TYPES as readonly string[]).includes(file.type)) {
     return "Photos (JPEG, PNG, WebP, HEIC) and PDFs only";
   }
@@ -44,12 +48,26 @@ export function fileSizeWords(bytes: number): string {
  * letters, digits, dot and dash replaced, and a short random prefix so two
  * photos called IMG_0001.jpg do not collide.
  */
-export function attachmentFileName(original: string, random: string = Math.random().toString(36).slice(2, 8)): string {
-  const base = original.trim().toLowerCase().replace(/[^a-z0-9.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "file";
+export function attachmentFileName(
+  original: string,
+  random: string = Math.random().toString(36).slice(2, 8),
+): string {
+  const base =
+    original
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9.-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "file";
   return `${random}-${base}`;
 }
 
-export function attachmentPath(associationId: string, kind: AttachmentKind, rowId: string, fileName: string): string {
+export function attachmentPath(
+  associationId: string,
+  kind: AttachmentKind,
+  rowId: string,
+  fileName: string,
+): string {
   return `${associationId}/${kind}/${rowId}/${fileName}`;
 }
 
@@ -62,6 +80,8 @@ export async function uploadAttachment(
   path: string,
   file: Blob & { type: string },
 ): Promise<{ error: string | null }> {
-  const { error } = await supabase.storage.from("attachments").upload(path, file, { contentType: file.type, upsert: false });
+  const { error } = await supabase.storage
+    .from("attachments")
+    .upload(path, file, { contentType: file.type, upsert: false });
   return { error: error ? error.message : null };
 }

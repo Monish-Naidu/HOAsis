@@ -17,14 +17,22 @@ describe("startingBalancesLine", () => {
   });
 
   it("lists operating and reserve together", () => {
-    const c = { ...mehrMeadows, bankAccounts: [op, res], ledger: [line("op", 2_400_000), line("rs", 13_500_000)] };
-    expect(startingBalancesLine(c, 0)).toBe("Starting balances: $24,000 operating, $135,000 reserve as of Oct 1, 2025");
+    const c = {
+      ...mehrMeadows,
+      bankAccounts: [op, res],
+      ledger: [line("op", 2_400_000), line("rs", 13_500_000)],
+    };
+    expect(startingBalancesLine(c, 0)).toBe(
+      "Starting balances: $24,000 operating, $135,000 reserve as of Oct 1, 2025",
+    );
   });
 
   it("says when nothing is set, and counts accounts still to set", () => {
     const none = { ...mehrMeadows, bankAccounts: [op], ledger: [] };
     expect(startingBalancesLine(none, 1)).toBe("Starting balances: not set yet");
     const some = { ...mehrMeadows, bankAccounts: [op, res], ledger: [line("op", 100_000)] };
-    expect(startingBalancesLine(some, 1)).toBe("Starting balances: $1,000 operating as of Oct 1, 2025, 1 account still to set");
+    expect(startingBalancesLine(some, 1)).toBe(
+      "Starting balances: $1,000 operating as of Oct 1, 2025, 1 account still to set",
+    );
   });
 });

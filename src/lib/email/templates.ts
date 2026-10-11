@@ -211,7 +211,10 @@ export interface TrialEmailInput {
  * ends. Same shape as the dues notices on purpose. The subject carries the
  * date, the body says the price in one line, and there is one link.
  */
-export function trialEmail(kind: "14-days" | "3-days" | "ended" | "locked", input: TrialEmailInput) {
+export function trialEmail(
+  kind: "14-days" | "3-days" | "ended" | "locked",
+  input: TrialEmailInput,
+) {
   if (kind === "locked") return lockedEmail(input);
   const price = `${money(input.monthlyCents)} a month for ${input.homes} ${
     input.homes === 1 ? "home" : "homes"
@@ -351,12 +354,16 @@ export function inviteEmail(input: {
 }) {
   const first = input.ownerName.trim().split(/\s+/)[0] || "Neighbor";
   const home = input.unitLabel ? ` at ${escapeHtml(input.unitLabel)}` : "";
-  const named = escapeHtml(input.associationName) + (input.associationPlace ? ` in ${escapeHtml(input.associationPlace)}` : "");
+  const named =
+    escapeHtml(input.associationName) +
+    (input.associationPlace ? ` in ${escapeHtml(input.associationPlace)}` : "");
   const welcome = input.kind === "welcome";
   const subject = welcome
     ? `You're in: ${input.associationName}`
     : `Your home${input.unitLabel ? ` at ${input.unitLabel}` : ""} is ready on Your HOAsis`;
-  const heading = welcome ? `The board let you in` : `${escapeHtml(input.associationName)} is on Your HOAsis`;
+  const heading = welcome
+    ? `The board let you in`
+    : `${escapeHtml(input.associationName)} is on Your HOAsis`;
   const line = welcome
     ? `Hi ${escapeHtml(first)}. The board of ${named} confirmed your home${home}. Your dues, documents and requests are ready.`
     : `Hi ${escapeHtml(first)}. Your board added your home${home} to ${named}. ${
@@ -546,7 +553,10 @@ export function disputeEmail(kind: "opened" | "won" | "lost", input: DisputeEmai
           ? `Evidence is due ${longDate(input.evidenceDueOn)}.`
           : title,
       body: `${heading(title)}${paragraphs(lines.join("\n\n"))}`,
-      cta: { label: kind === "opened" ? "Answer on Stripe" : "See it on Stripe", url: input.disputeUrl },
+      cta: {
+        label: kind === "opened" ? "Answer on Stripe" : "See it on Stripe",
+        url: input.disputeUrl,
+      },
       footer: `Sent to the people who hold finances for ${escapeHtml(input.associationName)} by Your HOAsis. This is about money in the association's account, so it cannot be turned off.`,
       // Stripe's dashboard has its own sign in.
       signsIn: false,
@@ -725,7 +735,9 @@ export function meetingNoticeEmail(
       footer: noticeFooter(input, "This is notice of a meeting of the association."),
     }),
     text: `${input.title}, ${when}\n\n${lines.join("\n")}${
-      input.agenda.length ? `\n\nAgenda:\n${input.agenda.map((a, i) => `${i + 1}. ${a}`).join("\n")}` : ""
+      input.agenda.length
+        ? `\n\nAgenda:\n${input.agenda.map((a, i) => `${i + 1}. ${a}`).join("\n")}`
+        : ""
     }\n\n${input.url}\n\n${input.associationName}`,
   };
 }
@@ -786,10 +798,7 @@ export function boardMessageEmail(
       body,
       cta: { label: input.statutory ? "See my account" : "Reply", url: input.url },
       signsIn: input.hasAccount !== false,
-      footer: noticeFooter(
-        input,
-        input.statutory ? "This is a notice about your account." : "",
-      ),
+      footer: noticeFooter(input, input.statutory ? "This is a notice about your account." : ""),
     }),
     text: `${input.subject}\n\n${input.body}\n\n${signature}\n\n${input.url}\n\n${input.associationName}${
       input.unsubscribeUrl ? `\n\nUnsubscribe: ${input.unsubscribeUrl}` : ""
@@ -841,7 +850,10 @@ export function requestUpdateEmail(
 ) {
   const subject = `${input.status}: ${input.title} · ${input.reference}`;
   const body = `${heading(`${input.title} is ${input.status.toLowerCase()}`)}${paragraphs(
-    [`${firstName(input.ownerName)}, the board updated request ${input.reference}.`, input.note].join("\n\n"),
+    [
+      `${firstName(input.ownerName)}, the board updated request ${input.reference}.`,
+      input.note,
+    ].join("\n\n"),
   )}`;
   return {
     subject,

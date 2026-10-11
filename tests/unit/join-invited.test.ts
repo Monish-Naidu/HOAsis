@@ -57,7 +57,9 @@ describe("opening an invitation while signed in", () => {
     const outcome = await openInvitedHome(client, who);
     expect(outcome.kind).toBe("other-address");
     expect(outcome).toMatchObject({ message: expect.stringContaining("dana@work.com") });
-    expect(outcome).toMatchObject({ message: expect.stringContaining("tell the board which home is yours") });
+    expect(outcome).toMatchObject({
+      message: expect.stringContaining("tell the board which home is yours"),
+    });
   });
 
   describe("when the account already has a home there and the invitation went to another address", () => {
@@ -72,7 +74,9 @@ describe("opening an invitation while signed in", () => {
       expect(order).toEqual(["claim", "member:A1B2C3"]);
       const message = outcome.kind === "other-seat" ? outcome.message : "";
       expect(message).toContain("This invitation was sent to dana@home.com.");
-      expect(message).toContain("You are signed in as dana@work.com, which already has a home here.");
+      expect(message).toContain(
+        "You are signed in as dana@work.com, which already has a home here.",
+      );
       // Both ways, and neither is a merge: the board moves the home, or it
       // gets an account of its own.
       expect(message).toContain("ask the board to change its email to dana@work.com");
@@ -97,7 +101,9 @@ describe("opening an invitation while signed in", () => {
       const { client } = clientWith({ member: { slug: "maple-court" }, claimed: 0 });
       const outcome = await openInvitedHome(client, invitedElsewhere);
       const message = outcome.kind === "other-seat" ? outcome.message : "";
-      expect(message).toContain("If the invited home is not on this account, ask the board to change its email to dana@work.com");
+      expect(message).toContain(
+        "If the invited home is not on this account, ask the board to change its email to dana@work.com",
+      );
       expect(message).not.toContain("To add the invited home");
     });
 
@@ -160,8 +166,12 @@ describe("coming back to the join page after signing in", () => {
   });
 
   it("carries only the code when there is no address, or it is a plain code join", () => {
-    expect(joinReturnPath({ invited: true, code: "A1B2C3", email: "" })).toBe("/join?invite=A1B2C3");
-    expect(joinReturnPath({ invited: false, code: "A1B2C3", email: "dana@home.com" })).toBe("/join?code=A1B2C3");
+    expect(joinReturnPath({ invited: true, code: "A1B2C3", email: "" })).toBe(
+      "/join?invite=A1B2C3",
+    );
+    expect(joinReturnPath({ invited: false, code: "A1B2C3", email: "dana@home.com" })).toBe(
+      "/join?code=A1B2C3",
+    );
   });
 
   it("survives the sign-in page's own check on where it may send somebody", () => {

@@ -144,9 +144,7 @@ export function TestTools() {
 
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
-          <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
-            Associations
-          </h2>
+          <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">Associations</h2>
           <Button variant="ghost" size="sm" onClick={() => void load()}>
             <RefreshCw className="size-3.5" />
             Refresh
@@ -159,9 +157,7 @@ export function TestTools() {
               <div key={association.id} className="flex items-center gap-3 px-5 py-3.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-[15px] font-medium text-fg">
-                      {association.name}
-                    </p>
+                    <p className="truncate text-[15px] font-medium text-fg">{association.name}</p>
                     {association.deleted_at ? <Badge tone="warn">Soft deleted</Badge> : null}
                   </div>
                   <p className="mt-0.5 text-[13px] text-fg-muted">
@@ -197,8 +193,8 @@ export function TestTools() {
             Clear everything
           </h2>
           <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-            Every association, every account, and every uploaded photo. Name one address
-            below to spare it, so you keep a way back in.
+            Every association, every account, and every uploaded photo. Name one address below to
+            spare it, so you keep a way back in.
           </p>
         </div>
         <div className="flex flex-col gap-3 px-5 py-4">

@@ -16,12 +16,19 @@ import type { ThreadAddress } from "@/lib/types";
  */
 export const maxDuration = 30;
 
-const ADDRESSES: ThreadAddress[] = ["board", "president", "vice-president", "treasurer", "secretary"];
+const ADDRESSES: ThreadAddress[] = [
+  "board",
+  "president",
+  "vice-president",
+  "treasurer",
+  "secretary",
+];
 
 export async function POST(request: NextRequest) {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return NextResponse.json({ error: "Sign in first", sent: 0, failed: 0 }, { status: 401 });
+  if (!auth.user)
+    return NextResponse.json({ error: "Sign in first", sent: 0, failed: 0 }, { status: 401 });
 
   let threadId: unknown;
   try {
@@ -30,7 +37,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Expected JSON", sent: 0, failed: 0 }, { status: 400 });
   }
   if (typeof threadId !== "string" || !threadId) {
-    return NextResponse.json({ error: "threadId is required", sent: 0, failed: 0 }, { status: 400 });
+    return NextResponse.json(
+      { error: "threadId is required", sent: 0, failed: 0 },
+      { status: 400 },
+    );
   }
 
   const { data: thread } = await supabase
@@ -46,7 +56,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nothing to send", sent: 0, failed: 0 }, { status: 404 });
   }
 
-  const to = ADDRESSES.includes(thread.to_role as ThreadAddress) ? (thread.to_role as ThreadAddress) : "board";
+  const to = ADDRESSES.includes(thread.to_role as ThreadAddress)
+    ? (thread.to_role as ThreadAddress)
+    : "board";
   const result = await sendOfficeMessageNotice({
     associationId: thread.association_id,
     threadId: thread.id,
@@ -62,6 +74,7 @@ export async function POST(request: NextRequest) {
 
 function siteOrigin(request: NextRequest): string {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const proto =
+    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
   return host ? `${proto}://${host}` : request.nextUrl.origin;
 }

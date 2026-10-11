@@ -36,10 +36,7 @@ export function SectionTabs() {
   const label = section.label;
 
   return (
-    <nav
-      aria-label={label}
-      className="-mt-1 mb-6 border-b border-border"
-    >
+    <nav aria-label={label} className="-mt-1 mb-6 border-b border-border">
       <div
         className={cn(
           "no-scrollbar -mb-px flex gap-5 overflow-x-auto pr-8 sm:gap-6 sm:pr-0",

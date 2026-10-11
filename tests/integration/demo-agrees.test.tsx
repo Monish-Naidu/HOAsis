@@ -4,7 +4,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/resident",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -12,9 +18,18 @@ vi.mock("next/navigation", () => ({
 const { AppStateProvider, useAppState, useHomeCharges } = await import("@/lib/app-state");
 const { default: ResidentHome } = await import("@/app/resident/page");
 const { default: ResidentAccount } = await import("@/app/resident/account/page");
-const { cashPosition, duesCollection, homeCount, monthlyFlowsBetween, spendingBetween, vendorPaidThisYear } = await import("@/lib/metrics");
+const {
+  cashPosition,
+  duesCollection,
+  homeCount,
+  monthlyFlowsBetween,
+  spendingBetween,
+  vendorPaidThisYear,
+} = await import("@/lib/metrics");
 
-const wrapper = ({ children }: { children: ReactNode }) => <AppStateProvider>{children}</AppStateProvider>;
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <AppStateProvider>{children}</AppStateProvider>
+);
 const TODAY = "2026-08-20";
 
 describe("a check recorded and reversed in the demo", () => {
@@ -34,11 +49,19 @@ describe("a check recorded and reversed in the demo", () => {
     };
     const before = figures();
     act(() => {
-      result.current.recordManualPayment({ homeId: home.id, amountCents: 100, method: "check", reference: "1", receivedOn: TODAY });
+      result.current.recordManualPayment({
+        homeId: home.id,
+        amountCents: 100,
+        method: "check",
+        reference: "1",
+        receivedOn: TODAY,
+      });
     });
     const during = figures();
     expect(during.dues.collectedYtd).toBe(before.dues.collectedYtd + 100);
-    const line = result.current.community.homeCharges[home.id].find((l) => l.kind === "payment" && l.label.includes("Check"))!;
+    const line = result.current.community.homeCharges[home.id].find(
+      (l) => l.kind === "payment" && l.label.includes("Check"),
+    )!;
     act(() => {
       result.current.reverseManualPayment(line.id, "Entered twice");
     });
@@ -49,7 +72,11 @@ describe("a check recorded and reversed in the demo", () => {
     expect(after.spending).toEqual(before.spending);
     expect(after.cash).toBe(before.cash);
     // The line the database writes: a charge, not dues.
-    expect(result.current.community.homeCharges[home.id].find((l) => l.label.startsWith("Payment reversed"))).toMatchObject({ kind: "charge", category: "other", amountCents: 100 });
+    expect(
+      result.current.community.homeCharges[home.id].find((l) =>
+        l.label.startsWith("Payment reversed"),
+      ),
+    ).toMatchObject({ kind: "charge", category: "other", amountCents: 100 });
   });
 });
 
@@ -60,8 +87,17 @@ describe("marking a scheduled vendor payment paid", () => {
     const vendor = result.current.vendors[0];
     act(() => {
       result.current.addPayout({
-        id: "po-sched", vendorId: vendor.id, vendor: vendor.name, invoiceNumber: "INV-9", amountCents: 20_000,
-        method: "ach", status: "scheduled", issuedDate: TODAY, expectedDate: "2026-08-01", approvals: [], approvalsRequired: 0,
+        id: "po-sched",
+        vendorId: vendor.id,
+        vendor: vendor.name,
+        invoiceNumber: "INV-9",
+        amountCents: 20_000,
+        method: "ach",
+        status: "scheduled",
+        issuedDate: TODAY,
+        expectedDate: "2026-08-01",
+        approvals: [],
+        approvalsRequired: 0,
       });
     });
     const cash = cashPosition(result.current.community).operating;
@@ -104,10 +140,17 @@ describe("a vendor payment in the demo", () => {
     });
 
     expect(cashPosition(result.current.community).operating).toBe(cashBefore - 48_000);
-    expect(result.current.vendors.find((v) => v.id === vendor.id)!.ytdPaidCents).toBe(yearBefore + 48_000);
+    expect(result.current.vendors.find((v) => v.id === vendor.id)!.ytdPaidCents).toBe(
+      yearBefore + 48_000,
+    );
     expect(result.current.ledger.length).toBe(ledgerBefore + 1);
     // On the operating account, for the amount, tied to the payment.
-    expect(result.current.ledger[0]).toMatchObject({ amountCents: -48_000, date: TODAY, payoutId: "po-test", counterparty: vendor.name });
+    expect(result.current.ledger[0]).toMatchObject({
+      amountCents: -48_000,
+      date: TODAY,
+      payoutId: "po-test",
+      counterparty: vendor.name,
+    });
     // And in this month's money out.
     const flows = monthlyFlowsBetween(result.current.community, "2026-08-01", TODAY);
     expect(flows.at(-1)!.outCents).toBeGreaterThanOrEqual(48_000);
@@ -119,8 +162,17 @@ describe("a vendor payment in the demo", () => {
     const ledgerBefore = result.current.ledger.length;
     act(() => {
       result.current.addPayout({
-        id: "po-later", vendorId: vendor.id, vendor: vendor.name, invoiceNumber: "INV-2", amountCents: 10_000,
-        method: "check", status: "scheduled", issuedDate: TODAY, expectedDate: TODAY, approvals: [], approvalsRequired: 1,
+        id: "po-later",
+        vendorId: vendor.id,
+        vendor: vendor.name,
+        invoiceNumber: "INV-2",
+        amountCents: 10_000,
+        method: "check",
+        status: "scheduled",
+        issuedDate: TODAY,
+        expectedDate: TODAY,
+        approvals: [],
+        approvalsRequired: 1,
       });
     });
     expect(result.current.ledger.length).toBe(ledgerBefore);
@@ -154,16 +206,27 @@ describe("a bank payment in the demo", () => {
     const home = result.current.community.homes.find((o) => o.daysPastDue > 0)!;
     act(() => {
       result.current.recordPayment({
-        homeId: home.id, amountCents: 28_500, processorCents: 228, platformCents: 0,
-        platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
+        homeId: home.id,
+        amountCents: 28_500,
+        processorCents: 228,
+        platformCents: 0,
+        platformPaidBy: "association",
+        method: "Bank ••2288",
+        kind: "ach",
       });
     });
-    const line = result.current.community.homeCharges[home.id].find((l) => l.kind === "payment" && l.id.startsWith("pay-"))!;
+    const line = result.current.community.homeCharges[home.id].find(
+      (l) => l.kind === "payment" && l.id.startsWith("pay-"),
+    )!;
     expect(line).toMatchObject({ label: "Bank payment", amountCents: -28_500, feeCents: 228 });
     // The whole payment in and the fee out as its own line, as record_payment
     // books it since 0101; the two net to what the bank received.
     const [fee, deposit] = result.current.ledger;
-    expect(fee).toMatchObject({ description: `Processing fee, unit ${home.unit}`, category: "Processing fees", amountCents: -228 });
+    expect(fee).toMatchObject({
+      description: `Processing fee, unit ${home.unit}`,
+      category: "Processing fees",
+      amountCents: -228,
+    });
     expect(deposit).toMatchObject({
       description: `Assessment payment, unit ${home.unit}`,
       category: "Assessments",
@@ -181,8 +244,13 @@ describe("the resident home card", () => {
         <button
           onClick={() =>
             recordPayment({
-              homeId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
-              platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
+              homeId: "own-042",
+              amountCents: 28_500,
+              processorCents: 35,
+              platformCents: 0,
+              platformPaidBy: "association",
+              method: "Bank ••2288",
+              kind: "ach",
             })
           }
         >
@@ -211,7 +279,11 @@ describe("the resident home card", () => {
     const user = userEvent.setup();
     function Change() {
       const { setHomeDues } = useAppState();
-      return <button onClick={() => setHomeDues([{ homeId: "own-042", cents: 31_000 }])}>change dues</button>;
+      return (
+        <button onClick={() => setHomeDues([{ homeId: "own-042", cents: 31_000 }])}>
+          change dues
+        </button>
+      );
     }
     render(
       <AppStateProvider>
@@ -227,19 +299,28 @@ describe("the resident home card", () => {
     expect(screen.getByRole("link", { name: "Pay early: $285" })).toBeInTheDocument();
     // The rate is the rate, and the bill already issued is named as it is.
     expect(screen.getByText(/\$310 a month in dues/)).toBeInTheDocument();
-    expect(screen.getByText(/September 1, 2026 bill is already issued at \$285/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/September 1, 2026 bill is already issued at \$285/),
+    ).toBeInTheDocument();
     // Paid ahead: the button is still the statement's amount, not the new rate.
     await user.click(screen.getByText("pay early"));
     expect(screen.getByRole("link", { name: "Pay early: $285" })).toBeInTheDocument();
   });
 
   it("puts a payment made today below the bill dated later, with balances that follow", () => {
-    const { result } = renderHook(() => ({ state: useAppState(), lines: useHomeCharges() }), { wrapper });
+    const { result } = renderHook(() => ({ state: useAppState(), lines: useHomeCharges() }), {
+      wrapper,
+    });
     act(() => result.current.state.signIn("acct-monish"));
     act(() => {
       result.current.state.recordPayment({
-        homeId: "own-042", amountCents: 28_500, processorCents: 35, platformCents: 0,
-        platformPaidBy: "association", method: "Bank ••2288", kind: "ach",
+        homeId: "own-042",
+        amountCents: 28_500,
+        processorCents: 35,
+        platformCents: 0,
+        platformPaidBy: "association",
+        method: "Bank ••2288",
+        kind: "ach",
       });
     });
     const lines = result.current.lines;

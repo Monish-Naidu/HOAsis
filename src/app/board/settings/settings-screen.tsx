@@ -23,7 +23,20 @@ import {
   Minus,
   Pencil,
 } from "lucide-react";
-import { Badge, Button, Callout, Card, CardHeader, PageHeader, SectionTitle, Select, SettingRow, Toggle, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  PageHeader,
+  SectionTitle,
+  Select,
+  SettingRow,
+  Toggle,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { checkNewEmail } from "@/lib/email-change";
 import { DangerZone } from "@/components/app/danger-zone";
 import { SameNameNote } from "@/components/app/same-name-note";
@@ -122,9 +135,7 @@ export function SettingsScreen() {
         signedUp: Boolean(holder),
         // What the seat opens, in the names on the sidebar, so a president
         // appointing a treasurer can see what that gives them.
-        opens: holder
-          ? GRANTABLE.filter((c) => holder.capabilities[c])
-          : [],
+        opens: holder ? GRANTABLE.filter((c) => holder.capabilities[c]) : [],
       };
     });
   const ROLE_ORDER: AccountRole[] = ["president", "vice-president", "treasurer", "secretary"];
@@ -138,18 +149,17 @@ export function SettingsScreen() {
   // officer took the seat, and who held one before. Absent for the demo.
   const terms = community.boardTerms ?? [];
   const sinceFor = (homeId: string, role: AccountRole) =>
-    terms.find((t) => !t.to && t.role === role && t.unit === community.homes.find((o) => o.id === homeId)?.unit)?.from;
+    terms.find(
+      (t) =>
+        !t.to && t.role === role && t.unit === community.homes.find((o) => o.id === homeId)?.unit,
+    )?.from;
   const pastTerms = terms
     .filter((t): t is typeof t & { to: string } => Boolean(t.to))
     .sort((a, b) => b.to.localeCompare(a.to) || b.from.localeCompare(a.from));
 
   if (!sees("settings")) {
     return (
-      <Callout
-        tone="warn"
-        icon={<Lock className="size-4" />}
-        title="You can't change settings"
-      >
+      <Callout tone="warn" icon={<Lock className="size-4" />} title="You can't change settings">
         The President grants this one. Ask them to turn it on for your account.
       </Callout>
     );
@@ -201,786 +211,840 @@ export function SettingsScreen() {
           top to bottom by heading, so the jump row under the title is the
           map. */}
       <div className="space-y-6">
-      <PageHeader
-        title="Settings"
-        description="Text size, name, visibility, board members, and billing."
-      />
+        <PageHeader
+          title="Settings"
+          description="Text size, name, visibility, board members, and billing."
+        />
 
-      <nav aria-label="On this page" className="-mt-2 flex flex-wrap gap-x-1 gap-y-1">
-        {SECTIONS.map((x) => (
-          <a
-            key={x.id}
-            href={`#${x.id}`}
-            className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg pointer-coarse:min-h-11"
-          >
-            {x.label}
-          </a>
-        ))}
-      </nav>
+        <nav aria-label="On this page" className="-mt-2 flex flex-wrap gap-x-1 gap-y-1">
+          {SECTIONS.map((x) => (
+            <a
+              key={x.id}
+              href={`#${x.id}`}
+              className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg pointer-coarse:min-h-11"
+            >
+              {x.label}
+            </a>
+          ))}
+        </nav>
 
-      {/* Two columns that each stack their own cards, so nothing waits on
+        {/* Two columns that each stack their own cards, so nothing waits on
           a taller neighbour and no row runs the width of the screen. One
           column left every setting's control a foot away from its label. */}
-      {/* min-w-0 on each column: a grid column's floor is its widest child's
+        {/* min-w-0 on each column: a grid column's floor is its widest child's
           natural width, and the roster table's is 720px, so a phone showed a
           sideways scroll with the right edge of every card cut off. */}
-      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-      <div className="min-w-0 space-y-6">
-      {/* Yours, not the association's: first, because it is the setting a
+        <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+          <div className="min-w-0 space-y-6">
+            {/* Yours, not the association's: first, because it is the setting a
           board member is most likely to come here looking for. */}
-      <section id="display" className="scroll-mt-32 lg:scroll-mt-24">
-        <SectionTitle>Display on this device</SectionTitle>
-        <DisplaySettings />
-      </section>
+            <section id="display" className="scroll-mt-32 lg:scroll-mt-24">
+              <SectionTitle>Display on this device</SectionTitle>
+              <DisplaySettings />
+            </section>
 
-      <section id="community" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
-        <SectionTitle>Community</SectionTitle>
-        {/* Identity */}
-        <Card>
-          <CardHeader title="Identity" subtitle="The join code, the name, and the photo" />
-          <SettingRow
-            title="Join code"
-            description="Share it with owners. They create their account with it, and you confirm their home under Homeowners."
-          >
-            <div className="flex items-center gap-2">
-              <span className="tnum rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-body font-semibold tracking-[0.2em] text-fg">
-                {community.association.joinCode ?? "Not set"}
-              </span>
-              {community.association.joinCode ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const link = `${window.location.origin}/join?code=${community.association.joinCode}`;
-                    void navigator.clipboard?.writeText(link).then(
-                      () => notify("Join link copied", "ok"),
-                      () => notify(link, "info"),
-                    );
-                  }}
+            <section id="community" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+              <SectionTitle>Community</SectionTitle>
+              {/* Identity */}
+              <Card>
+                <CardHeader title="Identity" subtitle="The join code, the name, and the photo" />
+                <SettingRow
+                  title="Join code"
+                  description="Share it with owners. They create their account with it, and you confirm their home under Homeowners."
                 >
-                  <Copy className="size-3.5" />
-                  Copy link
-                </Button>
-              ) : null}
-            </div>
-          </SettingRow>
-          <SettingRow title="Community name" description="Shown on the banner and on sign in">
-            {/* Saved when the field is left, with a word to say so. Saving
+                  <div className="flex items-center gap-2">
+                    <span className="tnum rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-body font-semibold tracking-[0.2em] text-fg">
+                      {community.association.joinCode ?? "Not set"}
+                    </span>
+                    {community.association.joinCode ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const link = `${window.location.origin}/join?code=${community.association.joinCode}`;
+                          void navigator.clipboard?.writeText(link).then(
+                            () => notify("Join link copied", "ok"),
+                            () => notify(link, "info"),
+                          );
+                        }}
+                      >
+                        <Copy className="size-3.5" />
+                        Copy link
+                      </Button>
+                    ) : null}
+                  </div>
+                </SettingRow>
+                <SettingRow title="Community name" description="Shown on the banner and on sign in">
+                  {/* Saved when the field is left, with a word to say so. Saving
                 on every keystroke rewrote the banner mid-word and never
                 told the board member the change had taken. */}
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-              }}
-              onBlur={() => {
-                const next = name.trim();
-                if (!next) {
-                  setName(settings.displayName);
-                  return;
-                }
-                if (next === settings.displayName) return;
-                updateSettings({ displayName: next });
-                notify(`Saved. The community is now ${next}.`, "ok");
-              }}
-              aria-label="Community name"
-              className={cn(fieldClass, "w-48 max-w-full")}
-            />
-            {name.trim() !== settings.displayName.trim() ? (
-              <SameNameNote
-                name={name}
-                excludeSlug={communities.find((c) => c.id === community.id)?.slug}
-                variant="plain"
-                className="mt-2 max-w-sm text-footnote leading-snug text-fg-muted"
-              />
-            ) : null}
-          </SettingRow>
-          <ContactEmailRow
-            value={community.association.contactEmail ?? ""}
-            save={(contactEmail) => updateAssociation({ contactEmail })}
-          />
-          <BillsByEmailRow
-            value={community.association.billsByEmail !== false}
-            save={(billsByEmail) => updateAssociation({ billsByEmail })}
-          />
-          <div className="border-b border-border px-5 py-4">
-            <p className="text-body font-medium text-fg">Community photo</p>
-            <p className="mt-0.5 text-footnote text-fg-muted">
-              Shown on the dashboard and at sign in.
-            </p>
-            {settings.photoUrl ? (
-              <div
-                className="mt-3 h-28 rounded-lg bg-cover bg-center"
-                style={{ backgroundImage: `url(${settings.photoUrl})` }}
-                role="img"
-                aria-label="Current community photo"
-              />
-            ) : (
-              <div className="mt-3 flex h-28 flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-2 bg-surface-2 text-fg-subtle">
-                <ImageIcon className="size-5" aria-hidden />
-                <span className="text-footnote">No photo yet</span>
-              </div>
-            )}
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <label className="press inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg pointer-coarse:min-h-11 border border-border-2 bg-surface px-3.5 text-callout font-medium text-fg hover:bg-surface-2">
-                <Upload className="size-3.5" />
-                Replace photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    // Cleared so picking the same file again still fires.
-                    event.target.value = "";
-                    if (!file) return;
-                    // The same upload the banner's camera button uses. This
-                    // used to save an object URL, which only means anything
-                    // in the tab that made it, as a real association's photo.
-                    void coverPhoto.choose(file);
-                    // The old credit named somebody else's picture.
-                    if (settings.photoCredit) updateSettings({ photoCredit: "" });
-                  }}
-                />
-              </label>
-              {settings.photoCredit ? (
-                <span className="text-footnote text-fg-subtle">{settings.photoCredit}</span>
-              ) : null}
-            </div>
-          </div>
-        </Card>
-
-        {/* Resident home */}
-        <Card>
-          <CardHeader title="Resident home" subtitle="What owners see first when they sign in" />
-          <div className="border-b border-border px-5 py-4">
-            <p className="text-body font-medium text-fg">Layout</p>
-            <p className="mt-0.5 text-footnote text-fg-muted">
-              A full calendar, or one banner you edit by hand.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {(
-                [
-                  { v: "calendar" as const, label: "Calendar", hint: "Meetings, events, ballots" },
-                  { v: "banner" as const, label: "Banner", hint: "One notice, quarterly boards" },
-                ]
-              ).map((o) => (
-                <button
-                  key={o.v}
-                  type="button"
-                  onClick={() => updateSettings({ homeLayout: o.v })}
-                  className={cn(
-                    "rounded-lg border p-3 text-left transition-colors",
-                    settings.homeLayout === o.v
-                      ? "border-primary bg-primary-soft"
-                      : "border-border hover:bg-surface-2",
-                  )}
-                >
-                  <span className="flex items-center gap-1.5 text-body font-semibold text-fg">
-                    {o.label}
-                    {settings.homeLayout === o.v ? <Check className="size-3.5" /> : null}
-                  </span>
-                  <span className="mt-0.5 block text-footnote text-fg-muted">{o.hint}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {settings.homeLayout === "banner" ? (
-            <div className="border-b border-border px-5 py-4">
-              <p className="mb-2 flex items-center gap-1.5 text-body font-medium text-fg">
-                <Megaphone className="size-3.5" />
-                Banner text
-              </p>
-              <DraftField
-                value={settings.banner.title}
-                // Only the field that changed. Sent with the whole banner as
-                // this render saw it, the detail saved a moment later put the
-                // old title back.
-                onCommit={(title) => updateSettings({ banner: { title } })}
-                aria-label="Banner title"
-                className={cn(fieldClass, "font-medium")}
-              />
-              <DraftField
-                multiline
-                rows={2}
-                value={settings.banner.detail}
-                onCommit={(detail) => updateSettings({ banner: { detail } })}
-                aria-label="Banner detail"
-                className={cn(textareaClass, "mt-2 resize-none")}
-              />
-            </div>
-          ) : null}
-        </Card>
-
-        {/* Insurance. The setup plan sends a board here and there was nothing
-            to fill in, so the task could never be completed. */}
-        <Card id="insurance">
-          <CardHeader
-            title="Insurance"
-            subtitle="The policy and its renewal date"
-          />
-          <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
-            <label className="block sm:col-span-2">
-              <span className="text-footnote font-semibold text-fg-muted">Carrier</span>
-              <DraftField
-                value={community.association.insuranceCarrier ?? ""}
-                onCommit={(insuranceCarrier) => updateAssociation({ insuranceCarrier })}
-                placeholder="Carrier name"
-                aria-label="Insurance carrier"
-                className={cn(fieldClass, "mt-1.5")}
-              />
-            </label>
-            <label className="block">
-              <span className="text-footnote font-semibold text-fg-muted">Policy number</span>
-              <DraftField
-                value={community.association.insurancePolicyNo ?? ""}
-                onCommit={(insurancePolicyNo) => updateAssociation({ insurancePolicyNo })}
-                placeholder="Policy number"
-                aria-label="Policy number"
-                className={cn(fieldClass, "mt-1.5")}
-              />
-            </label>
-            <label className="block">
-              <span className="text-footnote font-semibold text-fg-muted">Renews on</span>
-              <input
-                type="date"
-                value={community.association.insuranceExpiresOn ?? ""}
-                onChange={(e) => updateAssociation({ insuranceExpiresOn: e.target.value })}
-                aria-label="Renewal date"
-                className={cn(fieldClass, "mt-1.5")}
-              />
-            </label>
-          </div>
-          {community.association.insuranceExpiresOn ? (
-            <p
-              className={cn(
-                "border-t border-border px-5 py-3 text-footnote",
-                daysFromToday(community.association.insuranceExpiresOn) <= 60
-                  ? "font-medium text-warn"
-                  : "text-fg-muted",
-              )}
-            >
-              Renews {relativeDays(community.association.insuranceExpiresOn)}
-              {daysFromToday(community.association.insuranceExpiresOn) <= 60
-                ? ". Ask the carrier for the new policy now."
-                : "."}
-            </p>
-          ) : null}
-        </Card>
-      </section>
-
-      <section id="money" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
-        <SectionTitle>Money</SectionTitle>
-        <DuesSettings />
-
-        {/* Payments: billing, the bank, and autopay's last day */}
-        <Card>
-          <CardHeader
-            title="Payments"
-            subtitle={
-              isRemote ? "Your plan, where dues land, and when autopay runs" : "When autopay runs"
-            }
-          />
-          {isRemote ? <BillingRow /> : null}
-          {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
-          {isRemote ? <TestModeGuide audience="board" className="mx-4 my-3" /> : null}
-
-          <SettingRow
-            title="Last day for autopay"
-            description="The latest day of the month autopay can run"
-          >
-            <Select
-              value={settings.autopayLateAfterDay}
-              onChange={(e) => updateSettings({ autopayLateAfterDay: Number(e.target.value) })}
-              aria-label="Last day for autopay"
-            >
-              {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-          </SettingRow>
-        </Card>
-      </section>
-      </div>
-
-      <div className="min-w-0 space-y-6">
-      <section id="residents" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
-        <SectionTitle>Residents</SectionTitle>
-        {/* Visibility */}
-        <Card>
-          <CardHeader title="What residents can see" subtitle="Switch a section on or off for every owner" />
-          <SettingRow
-            title="Association funds"
-            description="Balances, interest, and the transaction list"
-          >
-            <Toggle
-              checked={settings.showFundsToResidents}
-              onChange={(v) =>
-                saveSetting(
-                  { showFundsToResidents: v },
-                  v ? "Residents can see association funds." : "Residents cannot see association funds.",
-                )
-              }
-              label="Show association funds to residents"
-            />
-          </SettingRow>
-          <SettingRow
-            title="Live vote results"
-            description="When off, results stay hidden until the ballot closes"
-          >
-            <Toggle
-              checked={settings.showLiveVoteResults}
-              onChange={(v) =>
-                saveSetting(
-                  { showLiveVoteResults: v },
-                  v ? "Live vote results are on." : "Live vote results are off.",
-                )
-              }
-              label="Show live vote results"
-            />
-          </SettingRow>
-          <SettingRow title="Community posts" description="Neighbor to neighbor posts">
-            <Toggle
-              checked={settings.forumEnabled}
-              onChange={(v) =>
-                saveSetting({ forumEnabled: v }, v ? "Community posts are on." : "Community posts are off.")
-              }
-              label="Allow community posts"
-            />
-          </SettingRow>
-        </Card>
-      </section>
-
-      <section id="board" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
-        <SectionTitle>The board</SectionTitle>
-        {/* The officers, and a way to add one. It listed all 88 homes with a
-            role picker each, which made the four people who hold an office
-            the hardest thing on the card to find. */}
-        <Card>
-          <CardHeader
-            title="Who is on the board"
-            subtitle="Each role comes with its own access."
-            action={
-              isPresident && !appointing && candidates.length ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setAppointing({ homeId: "", role: "secretary" })}
-                >
-                  <Plus className="size-3.5" />
-                  Add a board member
-                </Button>
-              ) : undefined
-            }
-          />
-          {appointing ? (
-            <form
-              className="flex flex-wrap items-end gap-2 border-b border-border bg-surface-2 px-5 py-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const home = candidates.find((h) => h.homeId === appointing.homeId);
-                if (!home) return;
-                setHomeRole(home.homeId, appointing.role);
-                notify(`${home.name} is ${ROLE_LABEL[appointing.role]}`, "ok");
-                setAppointing(null);
-              }}
-            >
-              <Select
-                value={appointing.homeId}
-                onChange={(e) => setAppointing({ ...appointing, homeId: e.target.value })}
-                aria-label="Which home"
-                className="min-w-[12rem] flex-1"
-              >
-                <option value="">Choose a home</option>
-                {candidates.map((h) => (
-                  <option key={h.homeId} value={h.homeId}>
-                    {homeLabel(community, h.unit)} · {h.name}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                value={appointing.role}
-                onChange={(e) =>
-                  setAppointing({ ...appointing, role: e.target.value as AccountRole })
-                }
-                aria-label="Role"
-              >
-                {(["vice-president", "treasurer", "secretary"] as const).map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABEL[r]}
-                  </option>
-                ))}
-              </Select>
-              <Button type="submit" variant="secondary" size="md" disabled={!appointing.homeId}>
-                Add
-              </Button>
-              <Button variant="ghost" size="md" onClick={() => setAppointing(null)}>
-                Cancel
-              </Button>
-            </form>
-          ) : null}
-          <div className="divide-y divide-border">
-            {officers.map((row) => (
-              <div key={row.homeId} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
-                <div className="min-w-[10rem] flex-1">
-                  <p className="truncate text-body font-medium text-fg">{row.name}</p>
-                  <p className="truncate text-footnote text-fg-muted">
-                    {homeLabel(community, row.unit)}
-                    {sinceFor(row.homeId, row.role)
-                      ? ` · since ${formatDate(sinceFor(row.homeId, row.role) as string, "long")}`
-                      : ""}
-                    {row.signedUp ? "" : " · not signed up yet"}
-                  </p>
-                  {row.opens.length ? (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                      <span className="text-footnote text-fg-subtle">Opens</span>
-                      {row.role === "president" ? (
-                        <Badge tone="neutral">Everything</Badge>
-                      ) : (
-                        sectionNames(row.opens).map((n) => (
-                          <Badge key={n} tone="neutral">
-                            {n}
-                          </Badge>
-                        ))
-                      )}
-                    </div>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                    onBlur={() => {
+                      const next = name.trim();
+                      if (!next) {
+                        setName(settings.displayName);
+                        return;
+                      }
+                      if (next === settings.displayName) return;
+                      updateSettings({ displayName: next });
+                      notify(`Saved. The community is now ${next}.`, "ok");
+                    }}
+                    aria-label="Community name"
+                    className={cn(fieldClass, "w-48 max-w-full")}
+                  />
+                  {name.trim() !== settings.displayName.trim() ? (
+                    <SameNameNote
+                      name={name}
+                      excludeSlug={communities.find((c) => c.id === community.id)?.slug}
+                      variant="plain"
+                      className="mt-2 max-w-sm text-footnote leading-snug text-fg-muted"
+                    />
                   ) : null}
+                </SettingRow>
+                <ContactEmailRow
+                  value={community.association.contactEmail ?? ""}
+                  save={(contactEmail) => updateAssociation({ contactEmail })}
+                />
+                <BillsByEmailRow
+                  value={community.association.billsByEmail !== false}
+                  save={(billsByEmail) => updateAssociation({ billsByEmail })}
+                />
+                <div className="border-b border-border px-5 py-4">
+                  <p className="text-body font-medium text-fg">Community photo</p>
+                  <p className="mt-0.5 text-footnote text-fg-muted">
+                    Shown on the dashboard and at sign in.
+                  </p>
+                  {settings.photoUrl ? (
+                    <div
+                      className="mt-3 h-28 rounded-lg bg-cover bg-center"
+                      style={{ backgroundImage: `url(${settings.photoUrl})` }}
+                      role="img"
+                      aria-label="Current community photo"
+                    />
+                  ) : (
+                    <div className="mt-3 flex h-28 flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-2 bg-surface-2 text-fg-subtle">
+                      <ImageIcon className="size-5" aria-hidden />
+                      <span className="text-footnote">No photo yet</span>
+                    </div>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <label className="press inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg pointer-coarse:min-h-11 border border-border-2 bg-surface px-3.5 text-callout font-medium text-fg hover:bg-surface-2">
+                      <Upload className="size-3.5" />
+                      Replace photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          // Cleared so picking the same file again still fires.
+                          event.target.value = "";
+                          if (!file) return;
+                          // The same upload the banner's camera button uses. This
+                          // used to save an object URL, which only means anything
+                          // in the tab that made it, as a real association's photo.
+                          void coverPhoto.choose(file);
+                          // The old credit named somebody else's picture.
+                          if (settings.photoCredit) updateSettings({ photoCredit: "" });
+                        }}
+                      />
+                    </label>
+                    {settings.photoCredit ? (
+                      <span className="text-footnote text-fg-subtle">{settings.photoCredit}</span>
+                    ) : null}
+                  </div>
                 </div>
-                {isPresident && row.role !== "president" ? (
-                  <Select
-                    value={row.role}
-                    onChange={(e) => setHomeRole(row.homeId, e.target.value as AccountRole)}
-                    aria-label={`${row.name}'s role`}
+              </Card>
+
+              {/* Resident home */}
+              <Card>
+                <CardHeader
+                  title="Resident home"
+                  subtitle="What owners see first when they sign in"
+                />
+                <div className="border-b border-border px-5 py-4">
+                  <p className="text-body font-medium text-fg">Layout</p>
+                  <p className="mt-0.5 text-footnote text-fg-muted">
+                    A full calendar, or one banner you edit by hand.
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        v: "calendar" as const,
+                        label: "Calendar",
+                        hint: "Meetings, events, ballots",
+                      },
+                      {
+                        v: "banner" as const,
+                        label: "Banner",
+                        hint: "One notice, quarterly boards",
+                      },
+                    ].map((o) => (
+                      <button
+                        key={o.v}
+                        type="button"
+                        onClick={() => updateSettings({ homeLayout: o.v })}
+                        className={cn(
+                          "rounded-lg border p-3 text-left transition-colors",
+                          settings.homeLayout === o.v
+                            ? "border-primary bg-primary-soft"
+                            : "border-border hover:bg-surface-2",
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5 text-body font-semibold text-fg">
+                          {o.label}
+                          {settings.homeLayout === o.v ? <Check className="size-3.5" /> : null}
+                        </span>
+                        <span className="mt-0.5 block text-footnote text-fg-muted">{o.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {settings.homeLayout === "banner" ? (
+                  <div className="border-b border-border px-5 py-4">
+                    <p className="mb-2 flex items-center gap-1.5 text-body font-medium text-fg">
+                      <Megaphone className="size-3.5" />
+                      Banner text
+                    </p>
+                    <DraftField
+                      value={settings.banner.title}
+                      // Only the field that changed. Sent with the whole banner as
+                      // this render saw it, the detail saved a moment later put the
+                      // old title back.
+                      onCommit={(title) => updateSettings({ banner: { title } })}
+                      aria-label="Banner title"
+                      className={cn(fieldClass, "font-medium")}
+                    />
+                    <DraftField
+                      multiline
+                      rows={2}
+                      value={settings.banner.detail}
+                      onCommit={(detail) => updateSettings({ banner: { detail } })}
+                      aria-label="Banner detail"
+                      className={cn(textareaClass, "mt-2 resize-none")}
+                    />
+                  </div>
+                ) : null}
+              </Card>
+
+              {/* Insurance. The setup plan sends a board here and there was nothing
+            to fill in, so the task could never be completed. */}
+              <Card id="insurance">
+                <CardHeader title="Insurance" subtitle="The policy and its renewal date" />
+                <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
+                  <label className="block sm:col-span-2">
+                    <span className="text-footnote font-semibold text-fg-muted">Carrier</span>
+                    <DraftField
+                      value={community.association.insuranceCarrier ?? ""}
+                      onCommit={(insuranceCarrier) => updateAssociation({ insuranceCarrier })}
+                      placeholder="Carrier name"
+                      aria-label="Insurance carrier"
+                      className={cn(fieldClass, "mt-1.5")}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-footnote font-semibold text-fg-muted">Policy number</span>
+                    <DraftField
+                      value={community.association.insurancePolicyNo ?? ""}
+                      onCommit={(insurancePolicyNo) => updateAssociation({ insurancePolicyNo })}
+                      placeholder="Policy number"
+                      aria-label="Policy number"
+                      className={cn(fieldClass, "mt-1.5")}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-footnote font-semibold text-fg-muted">Renews on</span>
+                    <input
+                      type="date"
+                      value={community.association.insuranceExpiresOn ?? ""}
+                      onChange={(e) => updateAssociation({ insuranceExpiresOn: e.target.value })}
+                      aria-label="Renewal date"
+                      className={cn(fieldClass, "mt-1.5")}
+                    />
+                  </label>
+                </div>
+                {community.association.insuranceExpiresOn ? (
+                  <p
+                    className={cn(
+                      "border-t border-border px-5 py-3 text-footnote",
+                      daysFromToday(community.association.insuranceExpiresOn) <= 60
+                        ? "font-medium text-warn"
+                        : "text-fg-muted",
+                    )}
                   >
-                    {(["vice-president", "treasurer", "secretary", "resident"] as const).map((r) => (
-                      <option key={r} value={r}>
-                        {r === "resident" ? "Not on the board" : ROLE_LABEL[r]}
+                    Renews {relativeDays(community.association.insuranceExpiresOn)}
+                    {daysFromToday(community.association.insuranceExpiresOn) <= 60
+                      ? ". Ask the carrier for the new policy now."
+                      : "."}
+                  </p>
+                ) : null}
+              </Card>
+            </section>
+
+            <section id="money" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+              <SectionTitle>Money</SectionTitle>
+              <DuesSettings />
+
+              {/* Payments: billing, the bank, and autopay's last day */}
+              <Card>
+                <CardHeader
+                  title="Payments"
+                  subtitle={
+                    isRemote
+                      ? "Your plan, where dues land, and when autopay runs"
+                      : "When autopay runs"
+                  }
+                />
+                {isRemote ? <BillingRow /> : null}
+                {isRemote ? <StripeOnboardingRow associationId={community.id} /> : null}
+                {isRemote ? <TestModeGuide audience="board" className="mx-4 my-3" /> : null}
+
+                <SettingRow
+                  title="Last day for autopay"
+                  description="The latest day of the month autopay can run"
+                >
+                  <Select
+                    value={settings.autopayLateAfterDay}
+                    onChange={(e) =>
+                      updateSettings({ autopayLateAfterDay: Number(e.target.value) })
+                    }
+                    aria-label="Last day for autopay"
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
                       </option>
                     ))}
                   </Select>
-                ) : (
-                  <Badge tone={row.role === "president" ? "brand" : "neutral"}>
-                    {ROLE_LABEL[row.role]}
-                  </Badge>
-                )}
-              </div>
-            ))}
+                </SettingRow>
+              </Card>
+            </section>
           </div>
-          <p className="max-w-prose border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
-            The President is set apart on purpose. Handing over that office is its own step,
-            because an association with no President has no way to grant access back.
-          </p>
-          {/* Who held an office before, folded: a ten year association has
-              a dozen terms behind its four sitting officers. */}
-          {pastTerms.length ? (
-            <details className="group border-t border-border">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 py-3 text-footnote font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden">
-                Past officers
-                <span className="flex items-center gap-2 font-medium text-fg-subtle">
-                  {pastTerms.length} {pastTerms.length === 1 ? "term" : "terms"}
-                  <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
-                </span>
-              </summary>
-              <ul className="divide-y divide-border border-t border-border">
-                {pastTerms.map((t) => (
-                  <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
-                    <div className="min-w-[10rem] flex-1">
-                      <p className="truncate text-body font-medium text-fg">{t.name}</p>
-                      <p className="truncate text-footnote text-fg-muted">
-                        {t.unit ? `${homeLabel(community, t.unit)} · ` : ""}
-                        <span className="tnum">
-                          {formatDate(t.from, "long")} to {formatDate(t.to, "long")}
-                        </span>
-                      </p>
-                    </div>
-                    <Badge tone="neutral">{ROLE_LABEL[t.role]}</Badge>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
-        </Card>
 
-        {/* What a board transition actually moves: nothing. The records are
+          <div className="min-w-0 space-y-6">
+            <section id="residents" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+              <SectionTitle>Residents</SectionTitle>
+              {/* Visibility */}
+              <Card>
+                <CardHeader
+                  title="What residents can see"
+                  subtitle="Switch a section on or off for every owner"
+                />
+                <SettingRow
+                  title="Association funds"
+                  description="Balances, interest, and the transaction list"
+                >
+                  <Toggle
+                    checked={settings.showFundsToResidents}
+                    onChange={(v) =>
+                      saveSetting(
+                        { showFundsToResidents: v },
+                        v
+                          ? "Residents can see association funds."
+                          : "Residents cannot see association funds.",
+                      )
+                    }
+                    label="Show association funds to residents"
+                  />
+                </SettingRow>
+                <SettingRow
+                  title="Live vote results"
+                  description="When off, results stay hidden until the ballot closes"
+                >
+                  <Toggle
+                    checked={settings.showLiveVoteResults}
+                    onChange={(v) =>
+                      saveSetting(
+                        { showLiveVoteResults: v },
+                        v ? "Live vote results are on." : "Live vote results are off.",
+                      )
+                    }
+                    label="Show live vote results"
+                  />
+                </SettingRow>
+                <SettingRow title="Community posts" description="Neighbor to neighbor posts">
+                  <Toggle
+                    checked={settings.forumEnabled}
+                    onChange={(v) =>
+                      saveSetting(
+                        { forumEnabled: v },
+                        v ? "Community posts are on." : "Community posts are off.",
+                      )
+                    }
+                    label="Allow community posts"
+                  />
+                </SettingRow>
+              </Card>
+            </section>
+
+            <section id="board" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+              <SectionTitle>The board</SectionTitle>
+              {/* The officers, and a way to add one. It listed all 88 homes with a
+            role picker each, which made the four people who hold an office
+            the hardest thing on the card to find. */}
+              <Card>
+                <CardHeader
+                  title="Who is on the board"
+                  subtitle="Each role comes with its own access."
+                  action={
+                    isPresident && !appointing && candidates.length ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setAppointing({ homeId: "", role: "secretary" })}
+                      >
+                        <Plus className="size-3.5" />
+                        Add a board member
+                      </Button>
+                    ) : undefined
+                  }
+                />
+                {appointing ? (
+                  <form
+                    className="flex flex-wrap items-end gap-2 border-b border-border bg-surface-2 px-5 py-3"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const home = candidates.find((h) => h.homeId === appointing.homeId);
+                      if (!home) return;
+                      setHomeRole(home.homeId, appointing.role);
+                      notify(`${home.name} is ${ROLE_LABEL[appointing.role]}`, "ok");
+                      setAppointing(null);
+                    }}
+                  >
+                    <Select
+                      value={appointing.homeId}
+                      onChange={(e) => setAppointing({ ...appointing, homeId: e.target.value })}
+                      aria-label="Which home"
+                      className="min-w-[12rem] flex-1"
+                    >
+                      <option value="">Choose a home</option>
+                      {candidates.map((h) => (
+                        <option key={h.homeId} value={h.homeId}>
+                          {homeLabel(community, h.unit)} · {h.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select
+                      value={appointing.role}
+                      onChange={(e) =>
+                        setAppointing({ ...appointing, role: e.target.value as AccountRole })
+                      }
+                      aria-label="Role"
+                    >
+                      {(["vice-president", "treasurer", "secretary"] as const).map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABEL[r]}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      size="md"
+                      disabled={!appointing.homeId}
+                    >
+                      Add
+                    </Button>
+                    <Button variant="ghost" size="md" onClick={() => setAppointing(null)}>
+                      Cancel
+                    </Button>
+                  </form>
+                ) : null}
+                <div className="divide-y divide-border">
+                  {officers.map((row) => (
+                    <div
+                      key={row.homeId}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3"
+                    >
+                      <div className="min-w-[10rem] flex-1">
+                        <p className="truncate text-body font-medium text-fg">{row.name}</p>
+                        <p className="truncate text-footnote text-fg-muted">
+                          {homeLabel(community, row.unit)}
+                          {sinceFor(row.homeId, row.role)
+                            ? ` · since ${formatDate(sinceFor(row.homeId, row.role) as string, "long")}`
+                            : ""}
+                          {row.signedUp ? "" : " · not signed up yet"}
+                        </p>
+                        {row.opens.length ? (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                            <span className="text-footnote text-fg-subtle">Opens</span>
+                            {row.role === "president" ? (
+                              <Badge tone="neutral">Everything</Badge>
+                            ) : (
+                              sectionNames(row.opens).map((n) => (
+                                <Badge key={n} tone="neutral">
+                                  {n}
+                                </Badge>
+                              ))
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                      {isPresident && row.role !== "president" ? (
+                        <Select
+                          value={row.role}
+                          onChange={(e) => setHomeRole(row.homeId, e.target.value as AccountRole)}
+                          aria-label={`${row.name}'s role`}
+                        >
+                          {(["vice-president", "treasurer", "secretary", "resident"] as const).map(
+                            (r) => (
+                              <option key={r} value={r}>
+                                {r === "resident" ? "Not on the board" : ROLE_LABEL[r]}
+                              </option>
+                            ),
+                          )}
+                        </Select>
+                      ) : (
+                        <Badge tone={row.role === "president" ? "brand" : "neutral"}>
+                          {ROLE_LABEL[row.role]}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="max-w-prose border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
+                  The President is set apart on purpose. Handing over that office is its own step,
+                  because an association with no President has no way to grant access back.
+                </p>
+                {/* Who held an office before, folded: a ten year association has
+              a dozen terms behind its four sitting officers. */}
+                {pastTerms.length ? (
+                  <details className="group border-t border-border">
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 py-3 text-footnote font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden">
+                      Past officers
+                      <span className="flex items-center gap-2 font-medium text-fg-subtle">
+                        {pastTerms.length} {pastTerms.length === 1 ? "term" : "terms"}
+                        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+                      </span>
+                    </summary>
+                    <ul className="divide-y divide-border border-t border-border">
+                      {pastTerms.map((t) => (
+                        <li
+                          key={t.id}
+                          className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3"
+                        >
+                          <div className="min-w-[10rem] flex-1">
+                            <p className="truncate text-body font-medium text-fg">{t.name}</p>
+                            <p className="truncate text-footnote text-fg-muted">
+                              {t.unit ? `${homeLabel(community, t.unit)} · ` : ""}
+                              <span className="tnum">
+                                {formatDate(t.from, "long")} to {formatDate(t.to, "long")}
+                              </span>
+                            </p>
+                          </div>
+                          <Badge tone="neutral">{ROLE_LABEL[t.role]}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </Card>
+
+              {/* What a board transition actually moves: nothing. The records are
             the association's, so changing who holds an office above is the
             entire handover. The counts are live so the claim stays checkable. */}
-        {moduleOn("settings-advanced") ? (
-        <Card>
-          <CardHeader
-            title="When the board changes"
-            subtitle="Records stay with the association"
-            icon={<ArrowLeftRight className="size-4" />}
-          />
-          <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">
-            {(
-              [
-                [documents.length, "documents"],
-                [community.history?.ledgerCount ?? ledger.length, "transactions"],
-                [community.homes.length, "homes"],
-                [vendors.length, "vendors"],
-                [community.meetings.length, "meetings on record"],
-                [requests.length, "requests"],
-              ] as const
-            ).map(([count, noun]) => (
-              <div key={noun} className="bg-surface px-5 py-3">
-                <p className="tnum text-title2 font-semibold leading-none text-fg">{count}</p>
-                <p className="mt-1 text-footnote text-fg-muted">{noun}</p>
-              </div>
-            ))}
-          </div>
-          <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
-            A new officer sees all of it the moment their office changes above. Nothing lives
-            in the outgoing treasurer&apos;s inbox, and nothing leaves when they do.
-          </p>
-        </Card>
-        ) : null}
+              {moduleOn("settings-advanced") ? (
+                <Card>
+                  <CardHeader
+                    title="When the board changes"
+                    subtitle="Records stay with the association"
+                    icon={<ArrowLeftRight className="size-4" />}
+                  />
+                  <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">
+                    {(
+                      [
+                        [documents.length, "documents"],
+                        [community.history?.ledgerCount ?? ledger.length, "transactions"],
+                        [community.homes.length, "homes"],
+                        [vendors.length, "vendors"],
+                        [community.meetings.length, "meetings on record"],
+                        [requests.length, "requests"],
+                      ] as const
+                    ).map(([count, noun]) => (
+                      <div key={noun} className="bg-surface px-5 py-3">
+                        <p className="tnum text-title2 font-semibold leading-none text-fg">
+                          {count}
+                        </p>
+                        <p className="mt-1 text-footnote text-fg-muted">{noun}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
+                    A new officer sees all of it the moment their office changes above. Nothing
+                    lives in the outgoing treasurer&apos;s inbox, and nothing leaves when they do.
+                  </p>
+                </Card>
+              ) : null}
 
-        {/* Permissions. Roles above cover month one; the per-person grid is
+              {/* Permissions. Roles above cover month one; the per-person grid is
             a second permission model and waits with the advanced settings. */}
-        {moduleOn("settings-advanced") ? (
-        <Card>
-          <CardHeader
-            title="What each member can do"
-            subtitle={
-              isPresident
-                ? "Only you can change these"
-                : "Only the President can change these"
-            }
-            icon={<ShieldCheck className="size-4" />}
-          />
-          {!isPresident ? (
-            <div className="px-5 pt-4">
-              <Callout tone="neutral" icon={<Lock className="size-4" />} title="Read only">
-                Access is set by the President.
-              </Callout>
-            </div>
-          ) : null}
-          {/* The grid is wider than a phone. The fade on the right edge says
+              {moduleOn("settings-advanced") ? (
+                <Card>
+                  <CardHeader
+                    title="What each member can do"
+                    subtitle={
+                      isPresident
+                        ? "Only you can change these"
+                        : "Only the President can change these"
+                    }
+                    icon={<ShieldCheck className="size-4" />}
+                  />
+                  {!isPresident ? (
+                    <div className="px-5 pt-4">
+                      <Callout tone="neutral" icon={<Lock className="size-4" />} title="Read only">
+                        Access is set by the President.
+                      </Callout>
+                    </div>
+                  ) : null}
+                  {/* The grid is wider than a phone. The fade on the right edge says
               there is more to scroll to, and the member column stays put so
               a row is never read without its name. */}
-          <div className="relative">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[880px] text-left">
-              <thead>
-                <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
-                  {/* Wide enough for a name and a title on one line each; the
+                  <div className="relative">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[880px] text-left">
+                        <thead>
+                          <tr className="border-b border-border text-footnote font-semibold text-fg-muted">
+                            {/* Wide enough for a name and a title on one line each; the
                       capability columns share what is left. */}
-                  <th className="sticky left-0 z-10 w-[13rem] min-w-[13rem] bg-surface px-5 py-2.5 font-semibold">Board member</th>
-                  {GRID_AREAS.map((c) => (
-                    <th key={c} className="px-2 py-2.5 text-center font-semibold">
-                      {CAPABILITY_LABEL[c]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {accounts
-                  .filter((a) => a.role !== "resident")
-                  .map((a) => (
-                    <tr key={a.id} className="border-b border-border last:border-b-0">
-                      <td className="sticky left-0 z-10 bg-surface px-5 py-3">
-                        <p className="text-body font-medium text-fg">{a.name}</p>
-                        <p className="text-footnote text-fg-muted">{ROLE_LABEL[a.role]}</p>
-                      </td>
-                      {GRID_AREAS.map((c) => (
-                        <td key={c} className="px-2 py-2 text-center">
-                          <AccessControl
-                            level={accessLevel(a, c)}
-                            disabled={!isPresident || a.role === "president"}
-                            label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
-                            onChange={(level) => {
-                              setCapability(a.id, c, level);
-                              // setCapability gives no answer to wait for; a refused
-                              // signed-in write is reported by the write itself.
-                              notify(accessSaid(a.name, c, level), "ok");
-                            }}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface to-transparent xl:hidden"
-          />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-5 py-3 text-footnote text-fg-subtle">
-            <span className="inline-flex items-center gap-1.5"><Minus className="size-3.5" aria-hidden /> No access</span>
-            <span className="inline-flex items-center gap-1.5"><Eye className="size-3.5" aria-hidden /> Can see</span>
-            <span className="inline-flex items-center gap-1.5"><Pencil className="size-3.5" aria-hidden /> Can change</span>
-            <span className="basis-full leading-relaxed">
-              Press a box to change it. The President&apos;s own row is locked on purpose: an
-              association that can strip its President of access has no way back in.
-            </span>
-          </div>
-        </Card>
-        ) : null}
-
-        {/* Every board action, as the database recorded it. Written by
-            triggers, so nothing can skip it; nobody can delete a row. */}
-        {isRemote ? (
-          <Card>
-            <CardHeader
-              title="Activity"
-              subtitle="Who did what, newest first. Kept for as long as the association exists."
-              icon={<History className="size-4" />}
-            />
-            <ActivityList rows={community.activity ?? []} />
-          </Card>
-        ) : null}
-      </section>
-
-      <section id="amenities" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
-        <SectionTitle>Amenities and forms</SectionTitle>
-        {/* Amenities */}
-        <Card>
-          <CardHeader
-            title="Amenities"
-            subtitle="Owners can book these from Requests"
-          />
-          {amenities.map((a) => (
-            <div
-              key={a.id}
-              className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-border px-5 py-3 last:border-b-0"
-            >
-              {/* 12rem for the name and its rules before the switch and the
-                  bin wrap under, so a phone never gets a word per line. */}
-              <div className="min-w-[12rem] flex-1">
-                <p className="truncate text-body font-medium text-fg">{a.name}</p>
-                <p className="truncate text-footnote text-fg-muted">{a.detail}</p>
-                {a.reservable ? (
-                  <AmenityRules
-                    amenity={a}
-                    onChange={(rules) => patchAmenity(a.id, { rules })}
-                  />
-                ) : null}
-              </div>
-              <span className="ml-auto flex shrink-0 items-center gap-2">
-                <label className="mt-0.5 flex items-center gap-1.5 text-footnote text-fg-muted">
-                  Reservable
-                  <Toggle
-                    checked={a.reservable}
-                    onChange={(v) => patchAmenity(a.id, { reservable: v })}
-                    label={`${a.name} reservable`}
-                  />
-                </label>
-                <button
-                  type="button"
-                  aria-label={`Remove ${a.name}`}
-                  onClick={() => {
-                    const undo = removeAmenity(a.id);
-                    notify(`Removed ${a.name}`, "warn", { label: "Undo", onClick: undo });
-                  }}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </span>
-            </div>
-          ))}
-          <form
-            className="flex items-center gap-2 border-t border-border px-5 py-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              addAmenity();
-            }}
-          >
-            <input
-              value={newAmenity}
-              onChange={(e) => setNewAmenity(e.target.value)}
-              placeholder="Add an amenity"
-              aria-label="New amenity name"
-              className={cn(fieldClass, "min-w-0 flex-1")}
-            />
-            <Button type="submit" variant="secondary" size="md" className="shrink-0" disabled={!newAmenity.trim()}>
-              <Plus className="size-3.5" />
-              Add
-            </Button>
-          </form>
-        </Card>
-
-        {/* Architectural forms */}
-        <Card>
-          <CardHeader
-            title="Home change forms"
-            subtitle="Upload your own forms. The label is what residents see."
-            icon={<FileText className="size-4" />}
-          />
-          {/* One list, not two columns: side by side, the badge wrapped
-              under every label longer than three words. */}
-          <div className="divide-y divide-border">
-            {forms.map((f) => (
-              <div key={f.id} className="flex items-start gap-3 px-5 py-3">
-                <FileText className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-body font-medium text-fg">{f.label}</p>
-                    <Badge tone={f.source === "baseline" ? "neutral" : "brand"}>{f.source === "baseline" ? "Standard" : "Yours"}</Badge>
+                            <th className="sticky left-0 z-10 w-[13rem] min-w-[13rem] bg-surface px-5 py-2.5 font-semibold">
+                              Board member
+                            </th>
+                            {GRID_AREAS.map((c) => (
+                              <th key={c} className="px-2 py-2.5 text-center font-semibold">
+                                {CAPABILITY_LABEL[c]}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {accounts
+                            .filter((a) => a.role !== "resident")
+                            .map((a) => (
+                              <tr key={a.id} className="border-b border-border last:border-b-0">
+                                <td className="sticky left-0 z-10 bg-surface px-5 py-3">
+                                  <p className="text-body font-medium text-fg">{a.name}</p>
+                                  <p className="text-footnote text-fg-muted">
+                                    {ROLE_LABEL[a.role]}
+                                  </p>
+                                </td>
+                                {GRID_AREAS.map((c) => (
+                                  <td key={c} className="px-2 py-2 text-center">
+                                    <AccessControl
+                                      level={accessLevel(a, c)}
+                                      disabled={!isPresident || a.role === "president"}
+                                      label={`${a.name}: ${CAPABILITY_LABEL[c]}`}
+                                      onChange={(level) => {
+                                        setCapability(a.id, c, level);
+                                        // setCapability gives no answer to wait for; a refused
+                                        // signed-in write is reported by the write itself.
+                                        notify(accessSaid(a.name, c, level), "ok");
+                                      }}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface to-transparent xl:hidden"
+                    />
                   </div>
-                  <p className="mt-0.5 truncate text-footnote text-fg-muted">{f.fileName}</p>
-                  <p className="text-footnote text-fg-subtle">
-                    {f.size} · updated {formatDate(f.updatedDate, "long")}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  aria-label={`Remove ${f.label}`}
-                  onClick={() => {
-                    const undo = removeForm(f.id);
-                    notify(`Removed ${f.label}`, "warn", { label: "Undo", onClick: undo });
-                  }}
-                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <form
-            className="flex items-center gap-2 border-t border-border px-5 py-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              addForm();
-            }}
-          >
-            <input
-              value={newFormLabel}
-              onChange={(e) => setNewFormLabel(e.target.value)}
-              placeholder="Label residents see, like Paint color request"
-              aria-label="New form label"
-              className={cn(fieldClass, "min-w-0 flex-1")}
-            />
-            <Button type="submit" variant="secondary" size="md" className="shrink-0" disabled={!newFormLabel.trim()}>
-              <Upload className="size-3.5" />
-              Upload
-            </Button>
-          </form>
-        </Card>
-      </section>
-      </div>
-      </div>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-5 py-3 text-footnote text-fg-subtle">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Minus className="size-3.5" aria-hidden /> No access
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Eye className="size-3.5" aria-hidden /> Can see
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Pencil className="size-3.5" aria-hidden /> Can change
+                    </span>
+                    <span className="basis-full leading-relaxed">
+                      Press a box to change it. The President&apos;s own row is locked on purpose:
+                      an association that can strip its President of access has no way back in.
+                    </span>
+                  </div>
+                </Card>
+              ) : null}
 
-          {/* Folded. Deleting the association sat one scroll below the dues
+              {/* Every board action, as the database recorded it. Written by
+            triggers, so nothing can skip it; nobody can delete a row. */}
+              {isRemote ? (
+                <Card>
+                  <CardHeader
+                    title="Activity"
+                    subtitle="Who did what, newest first. Kept for as long as the association exists."
+                    icon={<History className="size-4" />}
+                  />
+                  <ActivityList rows={community.activity ?? []} />
+                </Card>
+              ) : null}
+            </section>
+
+            <section id="amenities" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">
+              <SectionTitle>Amenities and forms</SectionTitle>
+              {/* Amenities */}
+              <Card>
+                <CardHeader title="Amenities" subtitle="Owners can book these from Requests" />
+                {amenities.map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-border px-5 py-3 last:border-b-0"
+                  >
+                    {/* 12rem for the name and its rules before the switch and the
+                  bin wrap under, so a phone never gets a word per line. */}
+                    <div className="min-w-[12rem] flex-1">
+                      <p className="truncate text-body font-medium text-fg">{a.name}</p>
+                      <p className="truncate text-footnote text-fg-muted">{a.detail}</p>
+                      {a.reservable ? (
+                        <AmenityRules
+                          amenity={a}
+                          onChange={(rules) => patchAmenity(a.id, { rules })}
+                        />
+                      ) : null}
+                    </div>
+                    <span className="ml-auto flex shrink-0 items-center gap-2">
+                      <label className="mt-0.5 flex items-center gap-1.5 text-footnote text-fg-muted">
+                        Reservable
+                        <Toggle
+                          checked={a.reservable}
+                          onChange={(v) => patchAmenity(a.id, { reservable: v })}
+                          label={`${a.name} reservable`}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${a.name}`}
+                        onClick={() => {
+                          const undo = removeAmenity(a.id);
+                          notify(`Removed ${a.name}`, "warn", { label: "Undo", onClick: undo });
+                        }}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </span>
+                  </div>
+                ))}
+                <form
+                  className="flex items-center gap-2 border-t border-border px-5 py-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    addAmenity();
+                  }}
+                >
+                  <input
+                    value={newAmenity}
+                    onChange={(e) => setNewAmenity(e.target.value)}
+                    placeholder="Add an amenity"
+                    aria-label="New amenity name"
+                    className={cn(fieldClass, "min-w-0 flex-1")}
+                  />
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    size="md"
+                    className="shrink-0"
+                    disabled={!newAmenity.trim()}
+                  >
+                    <Plus className="size-3.5" />
+                    Add
+                  </Button>
+                </form>
+              </Card>
+
+              {/* Architectural forms */}
+              <Card>
+                <CardHeader
+                  title="Home change forms"
+                  subtitle="Upload your own forms. The label is what residents see."
+                  icon={<FileText className="size-4" />}
+                />
+                {/* One list, not two columns: side by side, the badge wrapped
+              under every label longer than three words. */}
+                <div className="divide-y divide-border">
+                  {forms.map((f) => (
+                    <div key={f.id} className="flex items-start gap-3 px-5 py-3">
+                      <FileText className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-body font-medium text-fg">{f.label}</p>
+                          <Badge tone={f.source === "baseline" ? "neutral" : "brand"}>
+                            {f.source === "baseline" ? "Standard" : "Yours"}
+                          </Badge>
+                        </div>
+                        <p className="mt-0.5 truncate text-footnote text-fg-muted">{f.fileName}</p>
+                        <p className="text-footnote text-fg-subtle">
+                          {f.size} · updated {formatDate(f.updatedDate, "long")}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${f.label}`}
+                        onClick={() => {
+                          const undo = removeForm(f.id);
+                          notify(`Removed ${f.label}`, "warn", { label: "Undo", onClick: undo });
+                        }}
+                        className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <form
+                  className="flex items-center gap-2 border-t border-border px-5 py-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    addForm();
+                  }}
+                >
+                  <input
+                    value={newFormLabel}
+                    onChange={(e) => setNewFormLabel(e.target.value)}
+                    placeholder="Label residents see, like Paint color request"
+                    aria-label="New form label"
+                    className={cn(fieldClass, "min-w-0 flex-1")}
+                  />
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    size="md"
+                    className="shrink-0"
+                    disabled={!newFormLabel.trim()}
+                  >
+                    <Upload className="size-3.5" />
+                    Upload
+                  </Button>
+                </form>
+              </Card>
+            </section>
+          </div>
+        </div>
+
+        {/* Folded. Deleting the association sat one scroll below the dues
               amount, open, on a page a treasurer visits monthly. */}
-          <details id="leaving" className="group scroll-mt-32 lg:scroll-mt-24">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-card border border-border bg-surface px-5 py-3.5 text-body font-medium text-fg shadow-card transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-              <span>
-                Leaving and closing
-                <span className="ml-2 text-footnote font-normal text-fg-muted">
-                  Hand over the presidency, leave, cancel, or delete
-                </span>
+        <details id="leaving" className="group scroll-mt-32 lg:scroll-mt-24">
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-card border border-border bg-surface px-5 py-3.5 text-body font-medium text-fg shadow-card transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+            <span>
+              Leaving and closing
+              <span className="ml-2 text-footnote font-normal text-fg-muted">
+                Hand over the presidency, leave, cancel, or delete
               </span>
-              <ChevronDown className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
-            </summary>
-            <DangerZone />
-          </details>
+            </span>
+            <ChevronDown className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-180" />
+          </summary>
+          <DangerZone />
+        </details>
       </div>
     </>
   );
@@ -1049,7 +1113,11 @@ export function ContactEmailRow({
           }
           setProblem(null);
           void Promise.resolve(save(next)).then((ok) => {
-            if (ok) notify(next ? "Saved. Replies go to that address." : "Saved. Emails now say not to reply.", "ok");
+            if (ok)
+              notify(
+                next ? "Saved. Replies go to that address." : "Saved. Emails now say not to reply.",
+                "ok",
+              );
           });
         }}
         placeholder="board@yourassociation.org"
@@ -1087,7 +1155,13 @@ export function BillsByEmailRow({
         checked={value}
         onChange={(next) => {
           void Promise.resolve(save(next)).then((ok) => {
-            if (ok) notify(next ? "Saved. Owners are emailed their bill the day it posts." : "Saved. Bills will not be emailed automatically.", "ok");
+            if (ok)
+              notify(
+                next
+                  ? "Saved. Owners are emailed their bill the day it posts."
+                  : "Saved. Bills will not be emailed automatically.",
+                "ok",
+              );
           });
         }}
         label="Email each owner their bill the day it posts"
@@ -1190,7 +1264,10 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
         if (!data.accountId) setStatus({ name: "none" });
         else if (data.chargesEnabled) setStatus({ name: "live", payout: data.payout ?? null });
         else if (data.needs?.length || !data.detailsSubmitted)
-          setStatus({ name: "needs", needs: data.needs?.length ? data.needs : ["a few more details"] });
+          setStatus({
+            name: "needs",
+            needs: data.needs?.length ? data.needs : ["a few more details"],
+          });
         else setStatus({ name: "checking" });
       } catch {
         if (!cancelled) setStatus({ name: "error" });
@@ -1275,8 +1352,8 @@ function StripeOnboardingRow({ associationId }: { associationId: string }) {
       ? STRIPE_TEST_MODE
         ? "Test mode: payments are simulated. No real money moves."
         : status.payout
-        ? `Payments are live. Dues pay out to ${status.payout.bank} ••${status.payout.last4}.`
-        : "Payments are live. Dues settle to the association's own bank account."
+          ? `Payments are live. Dues pay out to ${status.payout.bank} ••${status.payout.last4}.`
+          : "Payments are live. Dues settle to the association's own bank account."
       : status.name === "needs"
         ? `Stripe needs ${status.needs.length === 1 ? "one more thing" : "a few more things"}: ${joinNeeds(status.needs)}.`
         : status.name === "checking"
@@ -1356,7 +1433,11 @@ function AccessControl({
   label: string;
   onChange: (level: AccessLevel) => void;
 }) {
-  const words: Record<AccessLevel, string> = { none: "no access", view: "can see", change: "can change" };
+  const words: Record<AccessLevel, string> = {
+    none: "no access",
+    view: "can see",
+    change: "can change",
+  };
   const Icon = level === "change" ? Pencil : level === "view" ? Eye : Minus;
   return (
     <button

@@ -18,8 +18,7 @@ import { formatDate, money, relativeDays, todayIsoDate } from "@/lib/utils";
  * so "when is somebody coming" stops being a phone call.
  */
 
-const FIELD =
-  fieldClass;
+const FIELD = fieldClass;
 const LABEL = "mb-1 block text-footnote font-semibold text-fg-muted";
 
 function dollarsToCents(value: string): number | undefined {
@@ -169,7 +168,9 @@ function WorkOrderForm({
   onSave: (order: WorkOrder) => void;
 }) {
   const [vendorId, setVendorId] = useState(initial?.vendorId ?? "");
-  const [vendorName, setVendorName] = useState(initial?.vendorId ? "" : (initial?.vendorName ?? ""));
+  const [vendorName, setVendorName] = useState(
+    initial?.vendorId ? "" : (initial?.vendorName ?? ""),
+  );
   const [scheduledOn, setScheduledOn] = useState(initial?.scheduledOn ?? "");
   const [estimate, setEstimate] = useState(centsToDollars(initial?.estimateCents));
   const [notes, setNotes] = useState(initial?.notes ?? "");

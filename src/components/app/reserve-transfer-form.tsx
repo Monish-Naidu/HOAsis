@@ -20,8 +20,7 @@ export function ReserveTransferForm({ onClose }: { onClose: () => void }) {
   const [date, setDate] = useState(todayIsoDate());
   const cents = Math.round((Number(amount) || 0) * 100);
 
-  const field =
-    cn(fieldClass, "w-auto");
+  const field = cn(fieldClass, "w-auto");
 
   return (
     <Card className="mb-6">
@@ -44,7 +43,11 @@ export function ReserveTransferForm({ onClose }: { onClose: () => void }) {
             notify(`${money(cents)} moved to reserves`);
             onClose();
           } catch (error) {
-            notify(error instanceof Error ? error.message : "The transfer was not recorded. Check the amount and try again.");
+            notify(
+              error instanceof Error
+                ? error.message
+                : "The transfer was not recorded. Check the amount and try again.",
+            );
           }
         }}
       >

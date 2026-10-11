@@ -8,22 +8,14 @@ import {
   NO_CHARGEABLE_METHOD,
   pendingSince,
 } from "@/lib/payments/autopay";
-import {
-  describeInstrument,
-  type PaymentInstrument,
-} from "@/lib/payments/instruments";
+import { describeInstrument, type PaymentInstrument } from "@/lib/payments/instruments";
 import { costFor, stripe } from "@/lib/stripe/server";
 import { currentMemberIds, savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { LOCKED_REASON, rowLocked } from "@/lib/billing";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { AutopayPlan } from "@/lib/types";
 import { duesFor } from "@/lib/home-types";
-import {
-  CRON_BUDGET_MS,
-  cronPlan,
-  scheduleContinuation,
-  walkPages,
-} from "@/lib/cron";
+import { CRON_BUDGET_MS, cronPlan, scheduleContinuation, walkPages } from "@/lib/cron";
 import { communityPath } from "@/lib/community-links";
 import { logger } from "@/lib/log";
 import { recordCronRun } from "@/lib/cron-runs";
@@ -120,9 +112,7 @@ export async function GET(request: NextRequest) {
     (after, limit) => {
       let query = admin
         .from("memberships")
-        .select(
-          "id, unit_id, association_id, profile_id, full_name, invited_email, autopay",
-        )
+        .select("id, unit_id, association_id, profile_id, full_name, invited_email, autopay")
         .not("autopay", "is", null)
         .is("ends_on", null)
         // The plan's day, as a JSON number, on or before today's.
@@ -191,12 +181,9 @@ export async function GET(request: NextRequest) {
         if (existing && existing.state !== "failed") return;
         // Not knowing what is in flight is not the same as nothing being in
         // flight. Leave the home for tomorrow rather than risk a second pull.
-        if (pendingError) throw new Error(`Could not read pending payments: ${pendingError.message}`);
-        if (
-          !association ||
-          association.deleted_at ||
-          !association.stripe_account_id
-        ) {
+        if (pendingError)
+          throw new Error(`Could not read pending payments: ${pendingError.message}`);
+        if (!association || association.deleted_at || !association.stripe_account_id) {
           report.waiting.push(`${tag}: no online payments`);
           return;
         }
@@ -215,14 +202,8 @@ export async function GET(request: NextRequest) {
           return;
         }
 
-        const balanceCents = (balance ?? []).reduce(
-          (sum, c) => sum + c.amount_cents,
-          0,
-        );
-        const pendingCents = (pending ?? []).reduce(
-          (sum, p) => sum + p.amount_cents,
-          0,
-        );
+        const balanceCents = (balance ?? []).reduce((sum, c) => sum + c.amount_cents, 0);
+        const pendingCents = (pending ?? []).reduce((sum, p) => sum + p.amount_cents, 0);
         const decision = decideAutopay({
           plan,
           today,
@@ -233,10 +214,7 @@ export async function GET(request: NextRequest) {
           duesCents: duesFor(
             {
               duesCents: association.dues_cents,
-              duesByType: (association.dues_by_type ?? {}) as Record<
-                string,
-                number
-              >,
+              duesByType: (association.dues_by_type ?? {}) as Record<string, number>,
             },
             unit?.home_type ?? undefined,
             unit?.dues_cents ?? undefined,
@@ -290,9 +268,8 @@ export async function GET(request: NextRequest) {
               }) as PaymentInstrument,
           );
         const instrument =
-          candidates.find(
-            (i) => i.id === plan.instrumentId && isChargeable(i),
-          ) ?? candidates.find((i) => isChargeable(i));
+          candidates.find((i) => i.id === plan.instrumentId && isChargeable(i)) ??
+          candidates.find((i) => isChargeable(i));
         const email = member.invited_email ?? null;
 
         // A second try at a month that failed, and only with a reason to
@@ -319,7 +296,11 @@ export async function GET(request: NextRequest) {
           if (existing) return;
           const reason = NO_CHARGEABLE_METHOD;
           report.failed.push(`${tag}: ${reason}`);
-          log.warn("autopay skipped, nothing chargeable", { associationId: association.id, unitId: member.unit_id, month });
+          log.warn("autopay skipped, nothing chargeable", {
+            associationId: association.id,
+            unitId: member.unit_id,
+            month,
+          });
           if (dryRun) return;
           await admin.from("autopay_runs").insert({
             association_id: association.id,
@@ -355,9 +336,7 @@ export async function GET(request: NextRequest) {
         const method = describeInstrument(instrument);
 
         if (dryRun) {
-          report.charged.push(
-            `${tag}: would charge ${cost.residentPaysCents} from ${method}`,
-          );
+          report.charged.push(`${tag}: would charge ${cost.residentPaysCents} from ${method}`);
           return;
         }
 
@@ -405,8 +384,7 @@ export async function GET(request: NextRequest) {
               currency: "usd",
               customer: unit.stripe_customer_id,
               payment_method: instrument.token,
-              payment_method_types:
-                rail === "ach" ? ["us_bank_account"] : ["card"],
+              payment_method_types: rail === "ach" ? ["us_bank_account"] : ["card"],
               off_session: true,
               confirm: true,
               description: `${association.name} dues, autopay ${month}`,
@@ -433,23 +411,23 @@ export async function GET(request: NextRequest) {
             },
           );
 
-          if (
-            intent.status === "requires_action" ||
-            intent.status === "requires_payment_method"
-          ) {
-            throw new Error(
-              "The bank asked for the owner to confirm this payment",
-            );
+          if (intent.status === "requires_action" || intent.status === "requires_payment_method") {
+            throw new Error("The bank asked for the owner to confirm this payment");
           }
 
           await admin
             .from("autopay_runs")
             .update({ stripe_payment_intent_id: intent.id })
             .eq("id", claim.data.id);
-          log.info("autopay charged", { associationId: association.id, unitId: member.unit_id, month, intentId: intent.id, rail, amountCents: cost.residentPaysCents });
-          report.charged.push(
-            `${tag}: ${cost.residentPaysCents} from ${method}`,
-          );
+          log.info("autopay charged", {
+            associationId: association.id,
+            unitId: member.unit_id,
+            month,
+            intentId: intent.id,
+            rail,
+            amountCents: cost.residentPaysCents,
+          });
+          report.charged.push(`${tag}: ${cost.residentPaysCents} from ${method}`);
 
           if (email) {
             await sendAutopayNotice({
@@ -478,7 +456,13 @@ export async function GET(request: NextRequest) {
             .from("autopay_runs")
             .update({ state: "failed", reason: message })
             .eq("id", claim.data.id);
-          log.warn("autopay charge failed", { associationId: association.id, unitId: member.unit_id, month, rail, reason: message });
+          log.warn("autopay charge failed", {
+            associationId: association.id,
+            unitId: member.unit_id,
+            month,
+            rail,
+            reason: message,
+          });
           report.failed.push(`${tag}: ${message}`);
           if (email) {
             await sendAutopayNotice({
@@ -499,7 +483,12 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch (problem) {
-        log.error("autopay member failed", { associationId: member.association_id, unitId: member.unit_id, month, err: problem });
+        log.error("autopay member failed", {
+          associationId: member.association_id,
+          unitId: member.unit_id,
+          month,
+          err: problem,
+        });
         report.errors.push(
           `${tag}: ${problem instanceof Error ? problem.message : String(problem)}`,
         );
@@ -508,13 +497,27 @@ export async function GET(request: NextRequest) {
   );
 
   const summary = {
-    checked: report.checked, charged: report.charged.length, skipped: report.skipped.length,
-    failed: report.failed.length, waiting: report.waiting.length, errors: report.errors.length,
-    complete: walk.complete, after: run.after, dryRun,
+    checked: report.checked,
+    charged: report.charged.length,
+    skipped: report.skipped.length,
+    failed: report.failed.length,
+    waiting: report.waiting.length,
+    errors: report.errors.length,
+    complete: walk.complete,
+    after: run.after,
+    dryRun,
   };
   if (walk.error) {
     log.error("autopay run failed", { err: walk.error, ...summary });
-    if (!dryRun) await recordCronRun({ job: "autopay", requestId: log.requestId, startedAt, ok: false, summary, error: walk.error });
+    if (!dryRun)
+      await recordCronRun({
+        job: "autopay",
+        requestId: log.requestId,
+        startedAt,
+        ok: false,
+        summary,
+        error: walk.error,
+      });
     return NextResponse.json(
       { error: walk.error, reference: log.requestId, today, dryRun, ...report },
       { status: 500 },
@@ -526,7 +529,14 @@ export async function GET(request: NextRequest) {
     if (!dryRun) scheduleContinuation(request, run.continuation(walk.last));
   }
   log.info("autopay run finished", summary);
-  if (!dryRun) await recordCronRun({ job: "autopay", requestId: log.requestId, startedAt, ok: report.errors.length === 0, summary });
+  if (!dryRun)
+    await recordCronRun({
+      job: "autopay",
+      requestId: log.requestId,
+      startedAt,
+      ok: report.errors.length === 0,
+      summary,
+    });
 
   return NextResponse.json({ today, dryRun, ...report });
 }

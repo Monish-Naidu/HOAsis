@@ -14,7 +14,5 @@ import { usePhase } from "./trial-banner";
 export function BoardPausedNote() {
   const phase = usePhase();
   if (!phase || !boardLocked(phase)) return null;
-  return (
-    <p className="text-footnote text-fg-muted">{OWNER_LOCK_NOTE}</p>
-  );
+  return <p className="text-footnote text-fg-muted">{OWNER_LOCK_NOTE}</p>;
 }

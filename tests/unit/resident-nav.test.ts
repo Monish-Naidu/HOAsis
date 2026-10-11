@@ -31,7 +31,10 @@ describe("one resident navigation", () => {
 
   it("gives the section tabs under Payments, Requests and Meetings", () => {
     const tabsOf = (href: string) =>
-      residentSectionPages(residentTabs.find((t) => t.href === href)!, tabs).map(name);
+      residentSectionPages(
+        residentTabs.find((t) => t.href === href)!,
+        tabs,
+      ).map(name);
     expect(tabsOf("/resident/pay")).toEqual(["Pay", "Statement"]);
     expect(tabsOf("/resident/requests")).toEqual(["Requests", "Messages"]);
     expect(tabsOf("/resident/calendar")).toEqual(["Meetings", "Voting"]);
@@ -57,7 +60,10 @@ describe("one resident navigation", () => {
   });
 
   it("leaves a row out of every list when its switch is off", () => {
-    const off = visibleResidentTabs({ forumEnabled: false, showFundsToResidents: false } as CommunitySettings);
+    const off = visibleResidentTabs({
+      forumEnabled: false,
+      showFundsToResidents: false,
+    } as CommunitySettings);
     expect(residentRailRows(off).map((t) => t.label)).not.toContain("Community");
     expect(residentRailRows(off).map((t) => t.label)).not.toContain("Association funds");
     expect(residentMoreRows(off).map((t) => t.label)).toEqual(["Settings"]);
@@ -121,7 +127,10 @@ describe("counts on the rail and the bar", () => {
       } as never,
       home,
     );
-    expect(badges["/resident/requests"]).toMatchObject({ count: 2, hint: "open notices about your home" });
+    expect(badges["/resident/requests"]).toMatchObject({
+      count: 2,
+      hint: "open notices about your home",
+    });
   });
 
   it("never counts replies from the board, which the page cannot mark as seen", () => {

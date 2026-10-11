@@ -73,7 +73,11 @@ describe("creating a payment intent", () => {
     expect(response.status).toBe(200);
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        metadata: expect.objectContaining({ association_id: "assoc-a", unit_id: "unit-1", assessment_cents: "28500" }),
+        metadata: expect.objectContaining({
+          association_id: "assoc-a",
+          unit_id: "unit-1",
+          assessment_cents: "28500",
+        }),
       }),
       { stripeAccount: "acct_a" },
     );
@@ -86,7 +90,10 @@ describe("the largest amount a home may pay at once", () => {
   it("is measured against two years of the home's own dues when they are larger", async () => {
     // $10,000 is over two years of $285 and under two years of $500.
     fake.on("units", { data: { ...UNIT, dues_cents: 50_000 } });
-    vi.spyOn(stripe().paymentIntents, "create").mockResolvedValue({ id: "pi_1", client_secret: "secret" } as never);
+    vi.spyOn(stripe().paymentIntents, "create").mockResolvedValue({
+      id: "pi_1",
+      client_secret: "secret",
+    } as never);
     expect((await payment.POST(post("/api/stripe/payment-intent", big))).status).toBe(200);
   });
 
@@ -106,7 +113,12 @@ describe("the receipt for a payment made by hand", () => {
       .spyOn(stripe().paymentIntents, "create")
       .mockResolvedValue({ id: "pi_1", client_secret: "secret" } as never);
     const response = await payment.POST(
-      post("/api/stripe/payment-intent", { associationId: "assoc-a", unitId: "unit-1", amountCents: 28500, rail: "ach" }),
+      post("/api/stripe/payment-intent", {
+        associationId: "assoc-a",
+        unitId: "unit-1",
+        amountCents: 28500,
+        rail: "ach",
+      }),
     );
     expect(response.status).toBe(200);
     expect(create).toHaveBeenCalledWith(
@@ -136,7 +148,10 @@ describe("starting to save a payment method", () => {
     const response = await setup.POST(post("/api/stripe/setup-intent", body));
     expect(response.status).toBe(200);
     expect(intent).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: "cus_1", metadata: { association_id: "assoc-a", unit_id: "unit-1" } }),
+      expect.objectContaining({
+        customer: "cus_1",
+        metadata: { association_id: "assoc-a", unit_id: "unit-1" },
+      }),
       { stripeAccount: "acct_a" },
     );
   });

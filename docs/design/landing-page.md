@@ -93,10 +93,10 @@ The friend's assets never arrived, so both were derived from the screenshot:
 Colours were sampled off the screenshot and added to `src/app/globals.css` and
 `src/lib/tokens.ts` as required:
 
-| Token | Light | Dark | From |
-| --- | --- | --- | --- |
-| `--royal` | `#1b3e8c` | `#1b3e8c` | the CTA button, same in both themes |
-| `--hero-field` | `#eef2f9` | `#001330` | the hero ground |
+| Token           | Light     | Dark      | From                                                               |
+| --------------- | --------- | --------- | ------------------------------------------------------------------ |
+| `--royal`       | `#1b3e8c` | `#1b3e8c` | the CTA button, same in both themes                                |
+| `--hero-field`  | `#eef2f9` | `#001330` | the hero ground                                                    |
 | `--hero-accent` | `#2f68d8` | `#7dabf8` | the accent word, darkened for the light theme so it holds contrast |
 
 Layout notes worth keeping:
@@ -139,13 +139,13 @@ copy. He singled out slides two and four as the look he wants.
 
 What each slide became:
 
-| Slide | Section on the page |
-| --- | --- |
-| 1, hero | Unchanged layout. CTA is now **Quick Setup**, as the slide's overlay says, into `/start`. The five promises along the bottom of the slide are a navy strip under the hero. |
-| 2, "Run your HOA. Not another job." | Copy left, the real dashboard screenshot in a CSS monitor right. The slide's dashboard is a drawing; ours is the product. |
-| 3, "Sound familiar? Meet Greg." | The slide had two lines whited out and the button relabelled **Start Today**; the page follows the edited version. The slide drew a video player; Monish decided on 2026-08-28 there is no video to make, so the section is the still in a frame with no play control. |
-| 4, "Built for the way HOA boards actually work." | Five cards with a miniature screen each, drawn from the demo's records: the Washington law article, the reserve components, the vendors, the library. Five across on `xl`, a snap-scrolling row below that. "Explore all features" goes to `/pricing#included`. |
-| 5, "Your entire community. In your pocket." | The phone with notice cards floating beside it, each derived from a demo record. **No store badges**: there is no native app yet, so the line reads "Works in any browser today. iPhone and Android apps are next." |
+| Slide                                            | Section on the page                                                                                                                                                                                                                                                    |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1, hero                                          | Unchanged layout. CTA is now **Quick Setup**, as the slide's overlay says, into `/start`. The five promises along the bottom of the slide are a navy strip under the hero.                                                                                             |
+| 2, "Run your HOA. Not another job."              | Copy left, the real dashboard screenshot in a CSS monitor right. The slide's dashboard is a drawing; ours is the product.                                                                                                                                              |
+| 3, "Sound familiar? Meet Greg."                  | The slide had two lines whited out and the button relabelled **Start Today**; the page follows the edited version. The slide drew a video player; Monish decided on 2026-08-28 there is no video to make, so the section is the still in a frame with no play control. |
+| 4, "Built for the way HOA boards actually work." | Five cards with a miniature screen each, drawn from the demo's records: the Washington law article, the reserve components, the vendors, the library. Five across on `xl`, a snap-scrolling row below that. "Explore all features" goes to `/pricing#included`.        |
+| 5, "Your entire community. In your pocket."      | The phone with notice cards floating beside it, each derived from a demo record. **No store badges**: there is no native app yet, so the line reads "Works in any browser today. iPhone and Android apps are next."                                                    |
 
 After the five slides there is one line of pricing and a closing band, because
 the strip promises a free trial and the next question is what comes after it.
